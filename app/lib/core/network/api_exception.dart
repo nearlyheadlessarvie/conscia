@@ -1,0 +1,54 @@
+import 'package:dio/dio.dart';
+
+class ApiException implements Exception {
+  const ApiException({
+    required this.message,
+    this.statusCode,
+    this.errorCode,
+  });
+
+  factory ApiException.fromDioException(DioException error) {
+    switch (error.type) {
+      case DioExceptionType.connectionTimeout:
+      case DioExceptionType.sendTimeout:
+      case DioExceptionType.receiveTimeout:
+        return const ApiException(message: 'Connection timed out');
+      case DioExceptionType.connectionError:
+        return const ApiException(message: 'No internet connection');
+      case DioExceptionType.badResponse:
+        final statusCode = error.response?.statusCode;
+        final data = error.response?.data;
+        final message = data is Map<String, dynamic>
+            ? (data['message'] as String?) ?? 'Request failed'
+            : 'Request failed';
+        final errorCode = data is Map<String, dynamic>
+            ? data['error'] as String?
+            : null;
+        return ApiException(
+          message: message,
+          statusCode: statusCode,
+          errorCode: errorCode,
+        );
+      case DioExceptionType.cancel:
+        return const ApiException(message: 'Request cancelled');
+      case DioExceptionType.badCertificate:
+        return const ApiException(message: 'Invalid certificate');
+      case DioExceptionType.unknown:
+        return ApiException(
+          message: error.message ?? 'An unexpected error occurred',
+        );
+    }
+  }
+
+  final String message;
+  final int? statusCode;
+  final String? errorCode;
+
+  bool get isUnauthorized => statusCode == 401;
+  bool get isForbidden => statusCode == 403;
+  bool get isNotFound => statusCode == 404;
+  bool get isServerError => (statusCode ?? 0) >= 500;
+
+  @override
+  String toString() => 'ApiException($statusCode): $message';
+}

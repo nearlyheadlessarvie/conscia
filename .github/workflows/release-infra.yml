@@ -1,0 +1,48 @@
+name: Release Infrastructure
+
+on:
+  push:
+    tags:
+      - 'infra/v*'
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Build and test infra
+        working-directory: infra
+        run: |
+          dotnet restore
+          dotnet build --no-restore
+          dotnet test --no-build --verbosity normal
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: us-east-1
+
+      - name: Install CDK
+        run: npm install -g aws-cdk
+
+      - name: CDK diff (dry run)
+        working-directory: infra
+        run: cdk diff --all
+
+      - name: Deploy all stacks
+        working-directory: infra
+        run: cdk deploy --all --require-approval never
+
+      - name: Extract version
+        id: version
+        run: echo "version=${GITHUB_REF#refs/tags/infra/v}" >> $GITHUB_OUTPUT

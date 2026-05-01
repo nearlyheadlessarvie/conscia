@@ -1,0 +1,112 @@
+using System.Net;
+using System.Net.Http.Headers;
+using System.Net.Http.Json;
+using Conscia.Application.DTOs;
+using Conscia.Application.Interfaces;
+using Conscia.Application.Models;
+using Conscia.Domain.Entities;
+using Conscia.Domain.Enums;
+using Conscia.Domain.ValueObjects;
+using Moq;
+
+namespace Conscia.Tests.Unit.Api;
+
+public class TransactionEndpointTests : IClassFixture<TestWebAppFactory>
+{
+    private readonly HttpClient _client;
+    private readonly TestWebAppFactory _factory;
+    private static readonly Guid UserId = Guid.Parse("a1b2c3d4-0001-4000-8000-000000000001");
+
+    public TransactionEndpointTests(TestWebAppFactory factory)
+    {
+        _factory = factory;
+        _client = factory.CreateClient();
+        _client.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue("Bearer", factory.GenerateTestToken());
+    }
+
+    [Fact]
+    public async Task CreateTransaction_ValidPayload_Returns201()
+    {
+        var txnId = Guid.NewGuid();
+        _factory.TransactionServiceMock
+            .Setup(s => s.CreateAsync(UserId, It.IsAny<CreateTransactionDto>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Transaction
+            {
+                Id = txnId, UserId = UserId, Type = TransactionType.Expense,
+                Amount = new Money(42.50m, "USD"), Category = "Food",
+                Date = DateTime.UtcNow, CreatedAt = DateTime.UtcNow
+            });
+
+        var response = await _client.PostAsJsonAsync("/api/v1/transactions", new
+        {
+            type = 0,
+            amount = 42.50,
+            currencyCode = "USD",
+            category = "Food",
+            date = DateTime.UtcNow.AddHours(-1).ToString("O")
+        });
+
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        var body = await response.Content.ReadAsStringAsync();
+        Assert.Contains("Food", body);
+    }
+
+    [Fact]
+    public async Task ListTransactions_ReturnsPagedResult()
+    {
+        _factory.TransactionServiceMock
+            .Setup(s => s.ListAsync(UserId, 1, 20, null, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PagedResult<Transaction>
+            {
+                Items = new List<Transaction>
+                {
+                    new() { Id = Guid.NewGuid(), Type = TransactionType.Expense, Amount = new Money(10, "USD"), Category = "Food" }
+                },
+                Page = 1, PageSize = 20, TotalCount = 1
+            });
+
+        var response = await _client.GetAsync("/api/v1/transactions");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetTransaction_NotFound_Returns404()
+    {
+        _factory.TransactionServiceMock
+            .Setup(s => s.GetByIdAsync(UserId, It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Transaction?)null);
+
+        var response = await _client.GetAsync($"/api/v1/transactions/{Guid.NewGuid()}");
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task DeleteTransaction_Success_Returns204()
+    {
+        _factory.TransactionServiceMock
+            .Setup(s => s.DeleteAsync(UserId, It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        var response = await _client.DeleteAsync($"/api/v1/transactions/{Guid.NewGuid()}");
+
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task CreateTransaction_InvalidAmount_Returns400()
+    {
+        var response = await _client.PostAsJsonAsync("/api/v1/transactions", new
+        {
+            type = 0,
+            amount = 0,
+            currencyCode = "USD",
+            category = "Food",
+            date = DateTime.UtcNow.ToString("O")
+        });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+}

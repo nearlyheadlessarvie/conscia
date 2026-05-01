@@ -1,0 +1,30 @@
+## .NET
+bin/
+obj/
+*.user
+*.suo
+*.cache
+*.dll
+*.exe
+*.pdb
+*.log
+
+## IDE
+.vs/
+.vscode/
+*.swp
+*~
+
+## OS
+.DS_Store
+Thumbs.db
+
+## Docker
+docker-compose.override.yml
+
+## Secrets
+appsettings.*.local.json
+*.pfx
+
+## Terraform / CDK
+cdk.out/

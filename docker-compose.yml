@@ -1,0 +1,82 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: conscia
+      POSTGRES_USER: conscia
+      POSTGRES_PASSWORD: conscia_dev
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U conscia"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  dynamodb-local:
+    image: amazon/dynamodb-local:latest
+    command: "-jar DynamoDBLocal.jar -sharedDb -dbPath /data"
+    ports:
+      - "8000:8000"
+    volumes:
+      - dynamodb_data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8000/shell/ || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  elasticmq:
+    image: softwaremill/elasticmq:latest
+    ports:
+      - "9324:9324"
+    volumes:
+      - ./config/elasticmq.conf:/opt/elasticmq.conf
+
+  ollama:
+    image: ollama/ollama:latest
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+
+  tesseract-api:
+    image: hertzg/tesseract-server:latest
+    ports:
+      - "8080:8080"
+
+  seq:
+    image: datalust/seq:latest
+    ports:
+      - "5341:5341"
+      - "8081:80"
+    environment:
+      ACCEPT_EULA: "Y"
+    volumes:
+      - seq_data:/data
+
+volumes:
+  postgres_data:
+  dynamodb_data:
+  minio_data:
+  ollama_data:
+  seq_data:

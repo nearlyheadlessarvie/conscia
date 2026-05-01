@@ -1,0 +1,164 @@
+using System.Diagnostics;
+using Conscia.Api.Extensions;
+using Conscia.Api.Telemetry;
+using Conscia.Application.DTOs;
+using Conscia.Application.Interfaces;
+using Conscia.Application.Models;
+using Conscia.Domain.Entities;
+using Conscia.Domain.Enums;
+using FluentValidation;
+
+namespace Conscia.Api.Endpoints;
+
+public static class AIEndpoints
+{
+    public static RouteGroupBuilder MapAIEndpoints(this IEndpointRouteBuilder routes)
+    {
+        var group = routes.MapGroup("/api/v1/ai")
+            .RequireAuthorization()
+            .WithTags("AI");
+
+        group.MapPost("/pre-purchase", async (
+            HttpContext ctx,
+            PrePurchaseRequestDto dto,
+            IAIService aiService,
+            IBudgetService budgetService,
+            ITransactionService transactionService,
+            IAIInteractionRepository aiRepo,
+            IValidator<PrePurchaseRequestDto> validator) =>
+        {
+            using var activity = ConsciaActivitySources.AI.StartActivity("PrePurchaseAdvice");
+            var sw = Stopwatch.StartNew();
+
+            var validation = await validator.ValidateAsync(dto, ctx.RequestAborted);
+            if (!validation.IsValid)
+                return Results.ValidationProblem(validation.ToDictionary());
+
+            activity?.SetTag("ai.request.category", dto.Category);
+            activity?.SetTag("ai.request.amount", dto.Amount);
+            activity?.SetTag("ai.request.currency", dto.CurrencyCode);
+
+            var userId = ctx.User.GetUserId();
+
+            decimal? budgetPercent = null;
+            var budgets = await budgetService.ListByUserAsync(userId, ctx.RequestAborted);
+            var matchedBudget = budgets.FirstOrDefault(b =>
+                b.Category.Equals(dto.Category, StringComparison.OrdinalIgnoreCase));
+            if (matchedBudget is not null)
+                budgetPercent = matchedBudget.PercentUsed;
+
+            var weekAgo = DateTime.UtcNow.AddDays(-7);
+            var recentTxns = await transactionService.ListAsync(userId, 1, 100, null, ctx.RequestAborted);
+            var recentRegrets = recentTxns.Items.Count(t => t.RegretLevel == RegretLevel.Regret);
+            var spendingThisWeek = recentTxns.Items.Count(t => t.Date >= weekAgo);
+
+            var context = new AIContext
+            {
+                UserId = userId,
+                Amount = dto.Amount,
+                CurrencyCode = dto.CurrencyCode,
+                Category = dto.Category,
+                BudgetPercentUsed = budgetPercent,
+                RecentRegrets = recentRegrets,
+                SpendingFrequencyThisWeek = spendingThisWeek
+            };
+
+            var response = await aiService.GeneratePrePurchaseResponseAsync(context, ctx.RequestAborted);
+
+            activity?.SetTag("ai.response.has_budget_context", matchedBudget is not null);
+            activity?.SetTag("ai.response.duration_ms", sw.ElapsedMilliseconds);
+
+            await aiRepo.AddAsync(new AIInteraction
+            {
+                Id = Guid.NewGuid(),
+                TransactionId = Guid.Empty,
+                UserId = userId,
+                DevilMsg = response.DevilMessage,
+                AngelMsg = response.AngelMessage,
+                NeutralMsg = response.NeutralMessage,
+                CreatedAt = DateTime.UtcNow
+            }, ctx.RequestAborted);
+
+            return Results.Ok(new
+            {
+                response.DevilMessage,
+                response.AngelMessage,
+                response.NeutralMessage,
+                Budget = matchedBudget is not null ? new
+                {
+                    matchedBudget.Category,
+                    matchedBudget.MonthlyLimit,
+                    matchedBudget.CurrentSpend,
+                    matchedBudget.PercentUsed,
+                    matchedBudget.IsOverBudget
+                } : null
+            });
+        }).WithName("PrePurchaseAdvice");
+
+        group.MapPost("/reflection", async (
+            HttpContext ctx,
+            ReflectionRequestDto dto,
+            IAIService aiService,
+            IBudgetService budgetService,
+            ITransactionService transactionService,
+            IAIInteractionRepository aiRepo) =>
+        {
+            using var activity = ConsciaActivitySources.AI.StartActivity("ReflectionAdvice");
+            var sw = Stopwatch.StartNew();
+
+            var userId = ctx.User.GetUserId();
+
+            var transaction = await transactionService.GetByIdAsync(userId, dto.TransactionId, ctx.RequestAborted);
+            if (transaction is null)
+                return Results.NotFound(new { error = "Transaction not found" });
+
+            decimal? budgetPercent = null;
+            var budgets = await budgetService.ListByUserAsync(userId, ctx.RequestAborted);
+            var matchedBudget = budgets.FirstOrDefault(b =>
+                b.Category.Equals(transaction.Category, StringComparison.OrdinalIgnoreCase));
+            if (matchedBudget is not null)
+                budgetPercent = matchedBudget.PercentUsed;
+
+            var recentTxns = await transactionService.ListAsync(userId, 1, 100, null, ctx.RequestAborted);
+            var recentRegrets = recentTxns.Items.Count(t => t.RegretLevel == RegretLevel.Regret);
+
+            var context = new AIContext
+            {
+                UserId = userId,
+                Amount = transaction.Amount.Amount,
+                CurrencyCode = transaction.Amount.CurrencyCode,
+                Category = transaction.Category,
+                BudgetPercentUsed = budgetPercent,
+                RecentRegrets = recentRegrets
+            };
+
+            var response = await aiService.GenerateReflectionAsync(context, ctx.RequestAborted);
+
+            activity?.SetTag("ai.request.category", transaction.Category);
+            activity?.SetTag("ai.request.amount", transaction.Amount.Amount);
+            activity?.SetTag("ai.request.currency", transaction.Amount.CurrencyCode);
+            activity?.SetTag("ai.response.has_budget_context", matchedBudget is not null);
+            activity?.SetTag("ai.response.duration_ms", sw.ElapsedMilliseconds);
+
+            await aiRepo.AddAsync(new AIInteraction
+            {
+                Id = Guid.NewGuid(),
+                TransactionId = dto.TransactionId,
+                UserId = userId,
+                DevilMsg = response.DevilMessage,
+                AngelMsg = response.AngelMessage,
+                NeutralMsg = response.NeutralMessage,
+                CreatedAt = DateTime.UtcNow
+            }, ctx.RequestAborted);
+
+            return Results.Ok(new
+            {
+                response.DevilMessage,
+                response.AngelMessage,
+                response.NeutralMessage
+            });
+        }).WithName("ReflectionAdvice");
+
+        return group;
+    }
+}

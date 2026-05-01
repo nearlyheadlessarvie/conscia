@@ -1,0 +1,177 @@
+using Conscia.Application.DTOs;
+using Conscia.Application.Interfaces;
+using Conscia.Application.Services;
+using Conscia.Domain.Entities;
+using Conscia.Domain.Enums;
+using Conscia.Domain.ValueObjects;
+using Microsoft.Extensions.Logging.Abstractions;
+using Moq;
+
+namespace Conscia.Tests.Unit.Application;
+
+public class TransactionServiceTests
+{
+    private readonly Mock<ITransactionRepository> _repoMock = new();
+    private readonly TransactionService _svc;
+
+    public TransactionServiceTests() => _svc = new TransactionService(_repoMock.Object, NullLogger<TransactionService>.Instance);
+
+    [Fact]
+    public async Task CreateAsync_CreatesTransactionWithOutbox()
+    {
+        var userId = Guid.NewGuid();
+        var dto = new CreateTransactionDto
+        {
+            Type = TransactionType.Expense,
+            Amount = 42.50m,
+            CurrencyCode = "USD",
+            Category = "Food",
+            Merchant = "McDonald's",
+            Date = DateTime.UtcNow
+        };
+
+        _repoMock.Setup(r => r.AddWithOutboxAsync(It.IsAny<Transaction>(), It.IsAny<OutboxEvent>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Transaction t, OutboxEvent _, CancellationToken __) => t);
+
+        var result = await _svc.CreateAsync(userId, dto);
+
+        Assert.Equal(userId, result.UserId);
+        Assert.Equal(42.50m, result.Amount.Amount);
+        Assert.Equal("USD", result.Amount.CurrencyCode);
+        Assert.Equal("Food", result.Category);
+
+        _repoMock.Verify(r => r.AddWithOutboxAsync(
+            It.Is<Transaction>(t => t.UserId == userId),
+            It.Is<OutboxEvent>(e => e.EventType == OutboxEventType.TransactionCreated),
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task CreateAsync_SetsLocation_WhenLatLongProvided()
+    {
+        var dto = new CreateTransactionDto
+        {
+            Amount = 10, CurrencyCode = "USD", Category = "Food",
+            Date = DateTime.UtcNow,
+            Latitude = 40.7128, Longitude = -74.0060, MerchantName = "NYC Shop"
+        };
+
+        _repoMock.Setup(r => r.AddWithOutboxAsync(It.IsAny<Transaction>(), It.IsAny<OutboxEvent>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Transaction t, OutboxEvent _, CancellationToken __) => t);
+
+        var result = await _svc.CreateAsync(Guid.NewGuid(), dto);
+
+        Assert.NotNull(result.Location);
+        Assert.Equal(40.7128, result.Location!.Latitude);
+        Assert.Equal("NYC Shop", result.Location.MerchantName);
+    }
+
+    [Fact]
+    public async Task GetByIdAsync_DelegatesToRepo()
+    {
+        var userId = Guid.NewGuid();
+        var txnId = Guid.NewGuid();
+        var txn = new Transaction { Id = txnId, UserId = userId, Amount = new Money(10, "USD"), Category = "Food" };
+
+        _repoMock.Setup(r => r.GetByIdAsync(userId, txnId, It.IsAny<CancellationToken>())).ReturnsAsync(txn);
+
+        var result = await _svc.GetByIdAsync(userId, txnId);
+
+        Assert.NotNull(result);
+        Assert.Equal(txnId, result!.Id);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_UpdatesFields()
+    {
+        var userId = Guid.NewGuid();
+        var txnId = Guid.NewGuid();
+        var existing = new Transaction
+        {
+            Id = txnId, UserId = userId,
+            Type = TransactionType.Expense,
+            Amount = new Money(50, "USD"),
+            Category = "Food",
+            Date = DateTime.UtcNow
+        };
+
+        _repoMock.Setup(r => r.GetByIdAsync(userId, txnId, It.IsAny<CancellationToken>())).ReturnsAsync(existing);
+        _repoMock.Setup(r => r.UpdateAsync(It.IsAny<Transaction>(), It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
+
+        var dto = new UpdateTransactionDto { Amount = 75m, Category = "Dining" };
+        var result = await _svc.UpdateAsync(userId, txnId, dto);
+
+        Assert.Equal(75m, result.Amount.Amount);
+        Assert.Equal("USD", result.Amount.CurrencyCode);
+        Assert.Equal("Dining", result.Category);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_ThrowsKeyNotFound_WhenMissing()
+    {
+        _repoMock.Setup(r => r.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Transaction?)null);
+
+        await Assert.ThrowsAsync<KeyNotFoundException>(
+            () => _svc.UpdateAsync(Guid.NewGuid(), Guid.NewGuid(), new UpdateTransactionDto()));
+    }
+
+    [Fact]
+    public async Task DeleteAsync_CallsDeleteWithOutbox()
+    {
+        var userId = Guid.NewGuid();
+        var txnId = Guid.NewGuid();
+        var existing = new Transaction
+        {
+            Id = txnId, UserId = userId, Type = TransactionType.Expense,
+            Amount = new Money(50, "USD"), Category = "Food", Date = DateTime.UtcNow
+        };
+
+        _repoMock.Setup(r => r.GetByIdAsync(userId, txnId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(existing);
+        _repoMock.Setup(r => r.DeleteWithOutboxAsync(userId, txnId, It.IsAny<OutboxEvent>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        await _svc.DeleteAsync(userId, txnId);
+
+        _repoMock.Verify(r => r.DeleteWithOutboxAsync(
+            userId, txnId,
+            It.Is<OutboxEvent>(e => e.EventType == OutboxEventType.TransactionDeleted
+                && e.Payload.Contains("Food") && e.Payload.Contains("50")),
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task UpdateRegretLevelAsync_DelegatesToRepo()
+    {
+        var userId = Guid.NewGuid();
+        var txnId = Guid.NewGuid();
+
+        _repoMock.Setup(r => r.UpdateRegretLevelAsync(userId, txnId, RegretLevel.Regret, It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        await _svc.UpdateRegretLevelAsync(userId, txnId, RegretLevel.Regret);
+
+        _repoMock.Verify(r => r.UpdateRegretLevelAsync(userId, txnId, RegretLevel.Regret, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task ListAsync_ReturnsPagedResult()
+    {
+        var userId = Guid.NewGuid();
+        var items = new List<Transaction>
+        {
+            new() { Id = Guid.NewGuid(), UserId = userId, Amount = new Money(10, "USD"), Category = "Food" },
+            new() { Id = Guid.NewGuid(), UserId = userId, Amount = new Money(20, "USD"), Category = "Food" }
+        };
+
+        _repoMock.Setup(r => r.QueryByUserAsync(userId, null, null, null, 10, null, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((items.AsReadOnly(), (string?)null));
+
+        var result = await _svc.ListAsync(userId, 1, 10);
+
+        Assert.Equal(2, result.Items.Count);
+        Assert.Equal(1, result.Page);
+        Assert.Equal(10, result.PageSize);
+    }
+}

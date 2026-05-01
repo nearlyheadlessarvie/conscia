@@ -1,0 +1,17 @@
+---
+interface Props {
+  size?: string;
+  class?: string;
+}
+
+const { size = '40', class: className = '' } = Astro.props;
+---
+
+<img
+  src="/images/app_icon.svg"
+  alt="Conscia logo"
+  width={size}
+  height={size}
+  class:list={[className]}
+  loading="eager"
+/>
