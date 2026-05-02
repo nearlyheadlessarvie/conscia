@@ -37,9 +37,5 @@ public class UserProfileUpdateValidator : AbstractValidator<UserProfileUpdateDto
         RuleFor(x => x.Locale)
             .MaximumLength(10)
             .When(x => x.Locale is not null);
-
-        RuleFor(x => x)
-            .Must(x => x.PreferredCurrency is null)
-            .WithMessage("Preferred currency is required");
     }
 }

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import 'package:conscia_app/core/constants/currencies.dart';
 import 'package:conscia_app/providers/user_provider.dart';
 import 'package:conscia_app/widgets/currency_picker_sheet.dart';
 
@@ -52,6 +53,12 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
     return _locale;
   }
 
+  String _currencyForLocale(String locale) {
+    final parts = locale.split('_');
+    final countryCode = parts.length > 1 ? parts[1].toUpperCase() : 'US';
+    return Currencies.fromCountry(countryCode);
+  }
+
   void _openCurrencyPicker() {
     CurrencyPickerSheet.show(
       context,
@@ -81,7 +88,10 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
                         color: Theme.of(context).colorScheme.primary)
                     : null,
                 onTap: () {
-                  setState(() => _locale = locale.$1);
+                  setState(() {
+                    _locale = locale.$1;
+                    _currencyCode = _currencyForLocale(locale.$1);
+                  });
                   Navigator.pop(context);
                 },
               ),
@@ -165,13 +175,15 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
                     try {
                       final userService = ref.read(userServiceProvider);
                       await userService.updateProfile(
-                        currencyCode: _currencyCode,
+                        preferredCurrency: _currencyCode,
                         locale: _locale,
                       );
+                      ref.invalidate(currentUserProvider);
                     } catch (_) {
                       // Best-effort save; user can update later in Settings
                     }
-                    if (mounted) context.go('/');
+                    if (!mounted) return;
+                    GoRouter.of(this.context).go('/');
                   },
                   child: const Text("Let's Go!"),
                 ),

@@ -6,6 +6,7 @@ import '../../core/constants/tier_limits.dart';
 import '../../providers/ai_provider.dart';
 import '../../providers/subscription_provider.dart';
 import '../../providers/usage_provider.dart';
+import '../../providers/user_provider.dart';
 import '../../services/ai_service.dart';
 import '../../widgets/amount_input_field.dart';
 import '../../widgets/premium_upgrade_dialog.dart';
@@ -34,6 +35,7 @@ class _PrePurchaseScreenState extends ConsumerState<PrePurchaseScreen>
   final _descriptionController = TextEditingController();
   final _amountController = TextEditingController();
   String _currencyCode = 'USD';
+  bool _currencyManuallyChanged = false;
   String? _selectedCategory;
 
   // Animations for response bubbles
@@ -44,6 +46,7 @@ class _PrePurchaseScreenState extends ConsumerState<PrePurchaseScreen>
   @override
   void initState() {
     super.initState();
+    _currencyCode = ref.read(userPreferencesProvider).currency;
     _devilAnim = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 400),
@@ -153,6 +156,8 @@ class _PrePurchaseScreenState extends ConsumerState<PrePurchaseScreen>
     _descriptionController.clear();
     _amountController.clear();
     setState(() {
+      _currencyManuallyChanged = false;
+      _currencyCode = ref.read(userPreferencesProvider).currency;
       _selectedCategory = null;
       _aiResponse = null;
       _errorMessage = null;
@@ -162,6 +167,15 @@ class _PrePurchaseScreenState extends ConsumerState<PrePurchaseScreen>
 
   @override
   Widget build(BuildContext context) {
+    final preferredCurrency = ref.watch(userPreferencesProvider).currency;
+
+    if (!_currencyManuallyChanged && _currencyCode != preferredCurrency) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted || _currencyManuallyChanged) return;
+        setState(() => _currencyCode = preferredCurrency);
+      });
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Pre-Purchase Assistant'),
@@ -178,8 +192,9 @@ class _PrePurchaseScreenState extends ConsumerState<PrePurchaseScreen>
   // ── Input Form ──────────────────────────────────────────────────────
 
   Widget _buildInputForm() {
-    final colors = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
+    final isPremium =
+        ref.watch(subscriptionProvider).valueOrNull?.isPremium ?? false;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
@@ -243,7 +258,12 @@ class _PrePurchaseScreenState extends ConsumerState<PrePurchaseScreen>
             controller: _amountController,
             isExpense: true,
             currencyCode: _currencyCode,
-            onCurrencyChanged: (code) => setState(() => _currencyCode = code),
+            isPremium: isPremium,
+            onChanged: (_) => setState(() {}),
+            onCurrencyChanged: (code) => setState(() {
+              _currencyManuallyChanged = true;
+              _currencyCode = code;
+            }),
           ),
           const SizedBox(height: 16),
 
@@ -275,7 +295,7 @@ class _PrePurchaseScreenState extends ConsumerState<PrePurchaseScreen>
             child: FilledButton.icon(
               onPressed: _formValid ? _submit : null,
               icon: const Icon(Icons.auto_awesome),
-              label: const Text('Ask My Conscience'),
+              label: const Text('Ask Conscia'),
             ),
           ),
           const SizedBox(height: 32),

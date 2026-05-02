@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../providers/subscription_provider.dart';
 import '../../providers/transaction_providers.dart';
+import '../../providers/user_provider.dart';
 import '../../services/transaction_service.dart';
 import '../../widgets/amount_input_field.dart';
 import 'widgets/category_picker.dart';
@@ -23,6 +25,7 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
   bool _isExpense = true;
   final _amountController = TextEditingController();
   String _currencyCode = 'USD';
+  bool _currencyManuallyChanged = false;
   String? _selectedCategory;
   final _merchantController = TextEditingController();
   DateTime _selectedDate = DateTime.now();
@@ -34,6 +37,7 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
   @override
   void initState() {
     super.initState();
+    _currencyCode = ref.read(userPreferencesProvider).currency;
     if (_isEditing) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _loadEditData();
@@ -51,6 +55,7 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
         _isExpense = tx.type != 'income';
         _amountController.text = tx.amount.toStringAsFixed(2);
         _currencyCode = tx.currencyCode;
+        _currencyManuallyChanged = true;
         _selectedCategory = tx.category;
         _merchantController.text = tx.description;
         _selectedDate = tx.date;
@@ -97,8 +102,8 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
       context.pop();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-              _isEditing ? 'Transaction updated' : 'Transaction added!'),
+          content:
+              Text(_isEditing ? 'Transaction updated' : 'Transaction added!'),
         ),
       );
     } catch (e) {
@@ -128,6 +133,16 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
+    final preferredCurrency = ref.watch(userPreferencesProvider).currency;
+
+    if (!_isEditing &&
+        !_currencyManuallyChanged &&
+        _currencyCode != preferredCurrency) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted || _currencyManuallyChanged) return;
+        setState(() => _currencyCode = preferredCurrency);
+      });
+    }
 
     if (_isEditing && !_prefilled) {
       return Scaffold(
@@ -140,6 +155,9 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
   }
 
   Widget _buildForm(ColorScheme colors, TextTheme textTheme) {
+    final isPremium =
+        ref.watch(subscriptionProvider).valueOrNull?.isPremium ?? false;
+
     return Scaffold(
       appBar: AppBar(
         title: Text(_isEditing ? 'Edit Transaction' : 'Add Transaction'),
@@ -181,30 +199,26 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
                 ),
               ],
               selected: {_isExpense},
-              onSelectionChanged: (v) =>
-                  setState(() => _isExpense = v.first),
+              onSelectionChanged: (v) => setState(() => _isExpense = v.first),
             ),
-
             const SizedBox(height: 16),
-
             AmountInputField(
               controller: _amountController,
               isExpense: _isExpense,
               currencyCode: _currencyCode,
-              onCurrencyChanged: (code) =>
-                  setState(() => _currencyCode = code),
+              isPremium: isPremium,
+              onChanged: (_) => setState(() {}),
+              onCurrencyChanged: (code) => setState(() {
+                _currencyManuallyChanged = true;
+                _currencyCode = code;
+              }),
             ),
-
             const SizedBox(height: 16),
-
             CategoryPicker(
               selected: _selectedCategory,
-              onSelected: (cat) =>
-                  setState(() => _selectedCategory = cat),
+              onSelected: (cat) => setState(() => _selectedCategory = cat),
             ),
-
             const SizedBox(height: 16),
-
             TextField(
               controller: _merchantController,
               textCapitalization: TextCapitalization.words,
@@ -212,9 +226,7 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
                 labelText: 'Merchant (optional)',
               ),
             ),
-
             const SizedBox(height: 16),
-
             ListTile(
               leading: const Icon(Icons.calendar_today),
               title: Text(_formatDate(_selectedDate)),
@@ -225,9 +237,7 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
                 side: BorderSide(color: colors.outline),
               ),
             ),
-
             const SizedBox(height: 16),
-
             SwitchListTile(
               title: Text('Include Location', style: textTheme.titleSmall),
               subtitle: Text(
@@ -243,9 +253,7 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
                 side: BorderSide(color: colors.outline),
               ),
             ),
-
             const SizedBox(height: 16),
-
             TextField(
               controller: _notesController,
               maxLines: 3,
@@ -254,9 +262,7 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
                 labelText: 'Notes (optional)',
               ),
             ),
-
             const SizedBox(height: 24),
-
             FilledButton(
               onPressed: _isValid && !_submitting ? _submit : null,
               child: _submitting
@@ -272,7 +278,6 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
                       _isEditing ? 'Update Transaction' : 'Save Transaction',
                     ),
             ),
-
             const SizedBox(height: 16),
           ],
         ),
@@ -282,8 +287,18 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
 
   String _formatDate(DateTime d) {
     const months = [
-      'January', 'February', 'March', 'April', 'May', 'June',
-      'July', 'August', 'September', 'October', 'November', 'December',
+      'January',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November',
+      'December',
     ];
     return '${months[d.month - 1]} ${d.day}, ${d.year}';
   }
