@@ -23,22 +23,31 @@ public class CognitoAuthService : IAuthService
 
     public Task<AuthResult> RegisterAsync(string email, string password, CancellationToken ct = default)
     {
-        // Will be implemented when CDK provisions the Cognito User Pool
-        _logger.LogWarning("CognitoAuthService.RegisterAsync not yet implemented — use MockAuthService for development");
-        throw new NotImplementedException("Cognito registration requires User Pool provisioned via CDK");
+        _logger.LogError("CognitoAuthService.RegisterAsync called but Cognito User Pool is not provisioned");
+        return Task.FromResult(new AuthResult { Success = false, Error = "Authentication service not configured. Cognito User Pool required." });
     }
 
     public Task<AuthResult> LoginAsync(string email, string password, CancellationToken ct = default)
     {
-        _logger.LogWarning("CognitoAuthService.LoginAsync not yet implemented — use MockAuthService for development");
-        throw new NotImplementedException("Cognito login requires User Pool provisioned via CDK");
+        _logger.LogError("CognitoAuthService.LoginAsync called but Cognito User Pool is not provisioned");
+        return Task.FromResult(new AuthResult { Success = false, Error = "Authentication service not configured. Cognito User Pool required." });
+    }
+
+    public Task<AuthResult> LoginWithGoogleAsync(string idToken, CancellationToken ct = default)
+    {
+        _logger.LogError("CognitoAuthService.LoginWithGoogleAsync called but Cognito Identity Pool is not provisioned");
+        return Task.FromResult(new AuthResult { Success = false, Error = "Google sign-in not configured. Cognito Identity Pool required." });
+    }
+
+    public Task<AuthResult> LoginWithAppleAsync(string identityToken, string? authorizationCode, CancellationToken ct = default)
+    {
+        _logger.LogError("CognitoAuthService.LoginWithAppleAsync called but Cognito Identity Pool is not provisioned");
+        return Task.FromResult(new AuthResult { Success = false, Error = "Apple sign-in not configured. Cognito Identity Pool required." });
     }
 
     public Task<ClaimsPrincipal?> ValidateTokenAsync(string token, CancellationToken ct = default)
     {
-        // In production, ASP.NET JWT Bearer middleware handles validation against Cognito JWKS endpoint.
-        // This method exists for explicit validation in non-middleware contexts.
-        _logger.LogWarning("CognitoAuthService.ValidateTokenAsync — use JWT Bearer middleware for standard flows");
-        throw new NotImplementedException("Cognito token validation requires JWKS endpoint from CDK");
+        _logger.LogError("CognitoAuthService.ValidateTokenAsync called but JWKS endpoint is not configured");
+        return Task.FromResult<ClaimsPrincipal?>(null);
     }
 }

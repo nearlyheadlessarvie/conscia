@@ -8,8 +8,8 @@ class Budget {
   final double monthlyLimit;
   final double spent;
   final String currencyCode;
-  final DateTime periodStart;
-  final DateTime periodEnd;
+  final double percentage;
+  final bool isOverBudget;
 
   const Budget({
     required this.id,
@@ -17,27 +17,21 @@ class Budget {
     required this.monthlyLimit,
     required this.spent,
     required this.currencyCode,
-    required this.periodStart,
-    required this.periodEnd,
+    required this.percentage,
+    required this.isOverBudget,
   });
 
-  double get percentage => monthlyLimit > 0 ? spent / monthlyLimit : 0;
-  bool get isOverBudget => spent > monthlyLimit;
-
-  int get daysUntilReset {
-    final now = DateTime.now();
-    return periodEnd.difference(now).inDays;
-  }
-
   factory Budget.fromJson(Map<String, dynamic> json) {
+    final limit = (json['monthlyLimit'] as num).toDouble();
+    final spend = (json['currentSpend'] as num?)?.toDouble() ?? 0;
     return Budget(
       id: json['id'] as String,
       category: json['category'] as String,
-      monthlyLimit: (json['monthlyLimit'] as num).toDouble(),
-      spent: (json['spent'] as num).toDouble(),
+      monthlyLimit: limit,
+      spent: spend,
       currencyCode: json['currencyCode'] as String? ?? 'USD',
-      periodStart: DateTime.parse(json['periodStart'] as String),
-      periodEnd: DateTime.parse(json['periodEnd'] as String),
+      percentage: (json['percentUsed'] as num?)?.toDouble() ?? (limit > 0 ? spend / limit : 0),
+      isOverBudget: json['isOverBudget'] as bool? ?? spend > limit,
     );
   }
 }

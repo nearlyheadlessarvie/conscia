@@ -16,10 +16,6 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
             .IsRequired()
             .HasMaxLength(256);
 
-        builder.Property(u => u.CognitoSub)
-            .IsRequired()
-            .HasMaxLength(128);
-
         builder.Property(u => u.PreferredCurrency)
             .IsRequired()
             .HasMaxLength(3);
@@ -29,6 +25,5 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
             .HasMaxLength(10);
 
         builder.HasIndex(u => u.Email).IsUnique();
-        builder.HasIndex(u => u.CognitoSub).IsUnique();
     }
 }

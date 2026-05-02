@@ -1,9 +1,10 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../core/network/dio_client.dart';
 import '../services/transaction_service.dart';
 
 final transactionServiceProvider = Provider<TransactionService>((ref) {
-  throw UnimplementedError('Override with Dio instance');
+  return TransactionService(ref.watch(dioProvider));
 });
 
 final categoryFilterProvider = StateProvider<String?>((_) => null);

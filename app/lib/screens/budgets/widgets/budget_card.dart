@@ -5,6 +5,12 @@ import '../../../core/theme/app_colors.dart';
 import '../../../services/budget_service.dart';
 import '../../../widgets/budget_progress_bar.dart';
 
+int _daysUntilReset() {
+  final now = DateTime.now();
+  final endOfMonth = DateTime(now.year, now.month + 1, 1);
+  return endOfMonth.difference(now).inDays;
+}
+
 class BudgetCard extends StatelessWidget {
   final Budget budget;
   final VoidCallback? onEdit;
@@ -116,7 +122,7 @@ class BudgetCard extends StatelessWidget {
                 ),
                 const Spacer(),
                 Text(
-                  'Resets in ${budget.daysUntilReset} days',
+                  'Resets in ${_daysUntilReset()} days',
                   style: textTheme.bodySmall?.copyWith(
                     color: theme.colorScheme.onSurfaceVariant,
                   ),

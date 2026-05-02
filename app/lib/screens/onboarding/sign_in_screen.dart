@@ -1,7 +1,11 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:local_auth/local_auth.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../core/routing/app_router.dart';
 import '../../providers/auth_provider.dart';
 
 class SignInScreen extends ConsumerStatefulWidget {
@@ -15,10 +19,74 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _localAuth = LocalAuthentication();
 
   bool _obscurePassword = true;
   bool _isLoading = false;
   String? _errorMessage;
+  bool _biometricsAvailable = false;
+  String? _lastEmail;
+
+  @override
+  void initState() {
+    super.initState();
+    _initBiometrics();
+  }
+
+  Future<void> _initBiometrics() async {
+    final email = await getLastEmail();
+    if (email != null && email.isNotEmpty) {
+      _lastEmail = email;
+      if (mounted) setState(() => _emailController.text = email);
+    }
+    try {
+      final canCheck = await _localAuth.canCheckBiometrics;
+      final isSupported = await _localAuth.isDeviceSupported();
+      final prefs = await SharedPreferences.getInstance();
+      final biometricEnabled = prefs.getBool('biometric_enabled') ?? false;
+      if (mounted) {
+        setState(() => _biometricsAvailable = canCheck && isSupported && _lastEmail != null && biometricEnabled);
+      }
+      if (_biometricsAvailable) {
+        _authenticateWithBiometrics();
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _authenticateWithBiometrics() async {
+    if (_lastEmail == null) return;
+    try {
+      final authenticated = await _localAuth.authenticate(
+        localizedReason: 'Sign in to Conscia',
+        options: const AuthenticationOptions(
+          stickyAuth: true,
+          biometricOnly: true,
+        ),
+      );
+      if (!authenticated || !mounted) return;
+
+      setState(() {
+        _isLoading = true;
+        _errorMessage = null;
+      });
+
+      final token = await ref.read(secureStorageProvider).read(key: 'access_token');
+      if (token != null && token.split('.').length == 3) {
+        await ref.read(authProvider.notifier).loginWithStoredToken();
+      } else {
+        setState(() {
+          _isLoading = false;
+          _errorMessage = 'Session expired. Please sign in with your password.';
+        });
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+        _errorMessage = null;
+      });
+    }
+  }
 
   @override
   void dispose() {
@@ -163,6 +231,102 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
                       : const Text('Sign In'),
+                ),
+              ),
+              if (_biometricsAvailable) ...[
+                const SizedBox(height: 12),
+                SizedBox(
+                  height: 48,
+                  child: OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(24),
+                      ),
+                    ),
+                    icon: const Icon(Icons.fingerprint, size: 24),
+                    label: const Text('Sign in with Biometrics'),
+                    onPressed: _isLoading ? null : _authenticateWithBiometrics,
+                  ),
+                ),
+              ],
+              const SizedBox(height: 24),
+              Row(
+                children: [
+                  const Expanded(child: Divider()),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Text(
+                      'or',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: colors.onSurfaceVariant,
+                          ),
+                    ),
+                  ),
+                  const Expanded(child: Divider()),
+                ],
+              ),
+              const SizedBox(height: 24),
+              if (defaultTargetPlatform == TargetPlatform.iOS) ...[
+                SizedBox(
+                  height: 48,
+                  child: OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(
+                      backgroundColor: Colors.black,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(24),
+                      ),
+                    ),
+                    icon: const Icon(Icons.apple, size: 24),
+                    label: const Text('Sign in with Apple'),
+                    onPressed: _isLoading
+                        ? null
+                        : () async {
+                            setState(() {
+                              _isLoading = true;
+                              _errorMessage = null;
+                            });
+                            try {
+                              await ref.read(authProvider.notifier).signInWithApple();
+                            } catch (e) {
+                              if (!mounted) return;
+                              setState(() => _errorMessage = e.toString());
+                            } finally {
+                              if (mounted) setState(() => _isLoading = false);
+                            }
+                          },
+                  ),
+                ),
+                const SizedBox(height: 12),
+              ],
+              SizedBox(
+                height: 48,
+                child: OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(24),
+                    ),
+                  ),
+                  icon: const Text('G',
+                      style: TextStyle(
+                          fontSize: 20, fontWeight: FontWeight.bold)),
+                  label: const Text('Sign in with Google'),
+                  onPressed: _isLoading
+                      ? null
+                      : () async {
+                          setState(() {
+                            _isLoading = true;
+                            _errorMessage = null;
+                          });
+                          try {
+                            await ref.read(authProvider.notifier).signInWithGoogle();
+                          } catch (e) {
+                            if (!mounted) return;
+                            setState(() => _errorMessage = e.toString());
+                          } finally {
+                            if (mounted) setState(() => _isLoading = false);
+                          }
+                        },
                 ),
               ),
               const SizedBox(height: 16),

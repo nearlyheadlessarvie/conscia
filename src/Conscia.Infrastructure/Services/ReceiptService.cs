@@ -17,9 +17,43 @@ public class ReceiptService : IReceiptService
             LineItems: new List<ReceiptLineItem>()));
     }
 
-    public Task<object> ConfirmAsync(Guid userId, Guid receiptId, CancellationToken ct = default)
+    public Task<object?> GetByIdAsync(Guid userId, Guid receiptId, CancellationToken ct = default)
+    {
+        // MVP stub — real implementation fetches from storage
+        return Task.FromResult<object?>(new
+        {
+            id = receiptId,
+            status = "PendingReview",
+            ocrConfidence = 0.85,
+            needsReview = true,
+            extractedData = new
+            {
+                merchant = "Sample Merchant",
+                total = 29.99m,
+                currencyCode = "USD",
+                category = "Food",
+                date = DateTime.UtcNow,
+                items = new[]
+                {
+                    new { name = "Item 1", amount = 15.00m },
+                    new { name = "Item 2", amount = 14.99m }
+                }
+            }
+        });
+    }
+
+    public Task<object> ConfirmAsync(Guid userId, Guid receiptId, ConfirmReceiptRequest request, CancellationToken ct = default)
     {
         // MVP stub — real implementation creates a transaction from receipt data
-        return Task.FromResult<object>(new { message = "Receipt confirmed", transactionId = Guid.NewGuid() });
+        return Task.FromResult<object>(new
+        {
+            message = "Receipt confirmed",
+            transactionId = Guid.NewGuid(),
+            merchant = request.Merchant,
+            amount = request.Amount,
+            currencyCode = request.CurrencyCode,
+            category = request.Category,
+            date = request.Date
+        });
     }
 }

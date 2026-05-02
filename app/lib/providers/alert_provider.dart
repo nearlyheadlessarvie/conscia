@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/constants/api_constants.dart';
+import '../core/network/dio_client.dart';
 
 class AppAlert {
   final String id;
@@ -33,7 +34,7 @@ class AppAlert {
 }
 
 final alertsDioProvider = Provider<Dio>((ref) {
-  throw UnimplementedError('Override with Dio instance');
+  return ref.watch(dioProvider);
 });
 
 final alertsProvider = FutureProvider<List<AppAlert>>((ref) async {

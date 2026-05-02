@@ -41,6 +41,12 @@ public class StorageStack : Stack
                             TransitionAfter = Duration.Days(90)
                         }
                     ]
+                },
+                new LifecycleRule
+                {
+                    Id = "DeleteReceiptImages",
+                    Prefix = "receipts/",
+                    Expiration = Duration.Days(1)
                 }
             ]
         });

@@ -6,6 +6,8 @@ public interface IAuthService
 {
     Task<AuthResult> RegisterAsync(string email, string password, CancellationToken ct = default);
     Task<AuthResult> LoginAsync(string email, string password, CancellationToken ct = default);
+    Task<AuthResult> LoginWithGoogleAsync(string idToken, CancellationToken ct = default);
+    Task<AuthResult> LoginWithAppleAsync(string identityToken, string? authorizationCode, CancellationToken ct = default);
     Task<ClaimsPrincipal?> ValidateTokenAsync(string token, CancellationToken ct = default);
 }
 

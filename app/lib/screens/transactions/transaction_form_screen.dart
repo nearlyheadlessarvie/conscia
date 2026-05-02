@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../providers/transaction_providers.dart';
+import '../../services/transaction_service.dart';
 import '../../widgets/amount_input_field.dart';
 import 'widgets/category_picker.dart';
 
@@ -18,7 +20,6 @@ class TransactionFormScreen extends ConsumerStatefulWidget {
 class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
   bool get _isEditing => widget.transactionId != null;
 
-  // Form state
   bool _isExpense = true;
   final _amountController = TextEditingController();
   String _currencyCode = 'USD';
@@ -28,16 +29,33 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
   bool _includeLocation = false;
   final _notesController = TextEditingController();
   bool _submitting = false;
+  bool _prefilled = false;
 
   @override
   void initState() {
     super.initState();
     if (_isEditing) {
-      // TODO: prefill from transactionDetailProvider
-      _amountController.text = '45.20';
-      _selectedCategory = 'Groceries';
-      _merchantController.text = 'Walmart';
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _loadEditData();
+      });
     }
+  }
+
+  Future<void> _loadEditData() async {
+    try {
+      final service = ref.read(transactionServiceProvider);
+      final tx = await service.getById(widget.transactionId!);
+      if (!mounted) return;
+      setState(() {
+        _prefilled = true;
+        _isExpense = tx.type != 'income';
+        _amountController.text = tx.amount.toStringAsFixed(2);
+        _currencyCode = tx.currencyCode;
+        _selectedCategory = tx.category;
+        _merchantController.text = tx.description;
+        _selectedDate = tx.date;
+      });
+    } catch (_) {}
   }
 
   @override
@@ -57,17 +75,39 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
     if (!_isValid || _submitting) return;
     setState(() => _submitting = true);
 
-    // TODO: wire to POST or PUT API
-    await Future<void>.delayed(const Duration(milliseconds: 500));
-
-    if (!mounted) return;
-    setState(() => _submitting = false);
-    context.pop();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(_isEditing ? 'Transaction updated' : 'Transaction added!'),
-      ),
+    final dto = CreateTransactionDto(
+      amount: double.parse(_amountController.text),
+      currencyCode: _currencyCode,
+      category: _selectedCategory!,
+      merchant: _merchantController.text,
+      type: _isExpense ? 'expense' : 'income',
+      date: _selectedDate,
     );
+
+    try {
+      final service = ref.read(transactionServiceProvider);
+      if (_isEditing) {
+        await service.update(widget.transactionId!, dto);
+      } else {
+        await service.create(dto);
+      }
+
+      if (!mounted) return;
+      ref.invalidate(transactionListProvider);
+      context.pop();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+              _isEditing ? 'Transaction updated' : 'Transaction added!'),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _submitting = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed: $e')),
+      );
+    }
   }
 
   Future<void> _pickDate() async {
@@ -75,7 +115,9 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
       context: context,
       initialDate: _selectedDate,
       firstDate: DateTime.now().subtract(const Duration(days: 365)),
-      lastDate: _isExpense ? DateTime.now() : DateTime.now().add(const Duration(days: 365)),
+      lastDate: _isExpense
+          ? DateTime.now()
+          : DateTime.now().add(const Duration(days: 365)),
     );
     if (picked != null) {
       setState(() => _selectedDate = picked);
@@ -87,6 +129,17 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
     final colors = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
 
+    if (_isEditing && !_prefilled) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Edit Transaction')),
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    return _buildForm(colors, textTheme);
+  }
+
+  Widget _buildForm(ColorScheme colors, TextTheme textTheme) {
     return Scaffold(
       appBar: AppBar(
         title: Text(_isEditing ? 'Edit Transaction' : 'Add Transaction'),
@@ -100,7 +153,6 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Type toggle
             SegmentedButton<bool>(
               segments: [
                 ButtonSegment(
@@ -135,7 +187,6 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
 
             const SizedBox(height: 16),
 
-            // Amount
             AmountInputField(
               controller: _amountController,
               isExpense: _isExpense,
@@ -146,7 +197,6 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
 
             const SizedBox(height: 16),
 
-            // Category
             CategoryPicker(
               selected: _selectedCategory,
               onSelected: (cat) =>
@@ -155,7 +205,6 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
 
             const SizedBox(height: 16),
 
-            // Merchant
             TextField(
               controller: _merchantController,
               textCapitalization: TextCapitalization.words,
@@ -166,7 +215,6 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
 
             const SizedBox(height: 16),
 
-            // Date
             ListTile(
               leading: const Icon(Icons.calendar_today),
               title: Text(_formatDate(_selectedDate)),
@@ -180,7 +228,6 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
 
             const SizedBox(height: 16),
 
-            // Location toggle
             SwitchListTile(
               title: Text('Include Location', style: textTheme.titleSmall),
               subtitle: Text(
@@ -199,7 +246,6 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
 
             const SizedBox(height: 16),
 
-            // Notes
             TextField(
               controller: _notesController,
               maxLines: 3,
@@ -211,7 +257,6 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
 
             const SizedBox(height: 24),
 
-            // Submit
             FilledButton(
               onPressed: _isValid && !_submitting ? _submit : null,
               child: _submitting

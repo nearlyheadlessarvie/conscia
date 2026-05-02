@@ -1,5 +1,6 @@
 using Conscia.Application.Interfaces;
 using Conscia.Domain.Entities;
+using Conscia.Domain.Enums;
 
 namespace Conscia.Application.Services;
 
@@ -12,8 +13,8 @@ public class UserService : IUserService
     public Task<User?> GetByIdAsync(Guid id, CancellationToken ct = default) =>
         _repo.GetByIdAsync(id, ct);
 
-    public Task<User?> GetByCognitoSubAsync(string cognitoSub, CancellationToken ct = default) =>
-        _repo.GetByCognitoSubAsync(cognitoSub, ct);
+    public Task<User?> GetByProviderAsync(AuthProvider provider, string providerSub, CancellationToken ct = default) =>
+        _repo.GetByProviderAsync(provider, providerSub, ct);
 
     public async Task<User> UpdateProfileAsync(Guid id, string? preferredCurrency, string? locale, CancellationToken ct = default)
     {
@@ -26,5 +27,10 @@ public class UserService : IUserService
             user.Locale = locale;
 
         return await _repo.UpdateAsync(user, ct);
+    }
+
+    public async Task DeleteAccountAsync(Guid id, CancellationToken ct = default)
+    {
+        await _repo.DeleteAsync(id, ct);
     }
 }

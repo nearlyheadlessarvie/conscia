@@ -50,6 +50,39 @@ public static class UserEndpoints
             });
         }).WithName("UpdateCurrentUser");
 
+        group.MapGet("/me/export", async (
+            HttpContext ctx,
+            IUserService svc,
+            ITransactionService txnSvc,
+            IBudgetService budgetSvc) =>
+        {
+            var userId = ctx.User.GetUserId();
+            var ct = ctx.RequestAborted;
+
+            var user = await svc.GetByIdAsync(userId, ct);
+            if (user is null) return Results.NotFound();
+
+            var transactions = await txnSvc.ListAsync(userId, 1, 10000, null, ct);
+            var budgets = await budgetSvc.ListByUserAsync(userId, ct);
+
+            return Results.Ok(new
+            {
+                ExportedAt = DateTime.UtcNow,
+                Profile = new { user.Id, user.Email, user.PreferredCurrency, user.Locale, user.CreatedAt },
+                Transactions = transactions.Items,
+                Budgets = budgets
+            });
+        }).WithName("ExportUserData");
+
+        group.MapDelete("/me", async (
+            HttpContext ctx,
+            IUserService svc) =>
+        {
+            var userId = ctx.User.GetUserId();
+            await svc.DeleteAccountAsync(userId, ctx.RequestAborted);
+            return Results.NoContent();
+        }).WithName("DeleteCurrentUser");
+
         return group;
     }
 }

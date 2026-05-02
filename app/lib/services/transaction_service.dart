@@ -29,35 +29,42 @@ class Transaction {
       amount: (json['amount'] as num).toDouble(),
       currencyCode: json['currencyCode'] as String? ?? 'USD',
       category: json['category'] as String,
-      description: json['description'] as String? ?? '',
-      type: json['type'] as String,
+      description: json['merchant'] as String? ?? json['description'] as String? ?? '',
+      type: (json['type'] as String).toLowerCase(),
       date: DateTime.parse(json['date'] as String),
-      regretLevel: json['regretLevel'] as int?,
+      regretLevel: _parseRegretLevel(json['regretLevel']),
     );
+  }
+
+  static int? _parseRegretLevel(dynamic value) {
+    if (value == null) return null;
+    if (value is int) return value;
+    const map = {'WorthIt': 0, 'NotSure': 1, 'Regret': 2};
+    return map[value as String];
   }
 }
 
 class PaginatedTransactions {
   final List<Transaction> items;
-  final int total;
+  final int totalCount;
   final int page;
   final int pageSize;
+  final bool hasMore;
 
   const PaginatedTransactions({
     required this.items,
-    required this.total,
+    required this.totalCount,
     required this.page,
     required this.pageSize,
+    required this.hasMore,
   });
-
-  bool get hasMore => page * pageSize < total;
 }
 
 class CreateTransactionDto {
   final double amount;
   final String currencyCode;
   final String category;
-  final String description;
+  final String merchant;
   final String type;
   final DateTime date;
 
@@ -65,7 +72,7 @@ class CreateTransactionDto {
     required this.amount,
     required this.currencyCode,
     required this.category,
-    required this.description,
+    required this.merchant,
     required this.type,
     required this.date,
   });
@@ -74,10 +81,13 @@ class CreateTransactionDto {
         'amount': amount,
         'currencyCode': currencyCode,
         'category': category,
-        'description': description,
-        'type': type,
+        'merchant': merchant,
+        'type': _capitalizeType(type),
         'date': date.toIso8601String(),
       };
+
+  static String _capitalizeType(String t) =>
+      t.isEmpty ? t : '${t[0].toUpperCase()}${t.substring(1).toLowerCase()}';
 }
 
 class TransactionService {
@@ -105,9 +115,10 @@ class TransactionService {
           .toList();
       return PaginatedTransactions(
         items: items,
-        total: data['total'] as int? ?? items.length,
+        totalCount: data['totalCount'] as int? ?? items.length,
         page: page,
         pageSize: pageSize,
+        hasMore: data['hasMore'] as bool? ?? false,
       );
     } on DioException {
       rethrow;
@@ -155,13 +166,12 @@ class TransactionService {
     }
   }
 
-  Future<Transaction> updateRegret(String id, int level) async {
+  Future<void> updateRegret(String id, int level) async {
     try {
-      final response = await _dio.post(
+      await _dio.post(
         '${ApiConstants.transaction(id)}/regret',
         data: {'level': level},
       );
-      return Transaction.fromJson(response.data as Map<String, dynamic>);
     } on DioException {
       rethrow;
     }

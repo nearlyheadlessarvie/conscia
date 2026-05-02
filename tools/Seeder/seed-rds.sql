@@ -3,20 +3,39 @@
 
 -- Users
 INSERT INTO users (
-    "Id", "Email", "CognitoSub", "PreferredCurrency", "Locale", "CreatedAt"
+    "Id", "Email", "PreferredCurrency", "Locale", "CreatedAt"
 ) VALUES
-    ('a1b2c3d4-0001-4000-8000-000000000001', 'alice@example.com', 'cognito_alice_001', 'USD', 'en-US', '2026-01-15T10:00:00Z'),
-    ('a1b2c3d4-0002-4000-8000-000000000002', 'bob@example.com',   'cognito_bob_002',   'EUR', 'es-ES', '2026-02-01T09:30:00Z'),
-    ('a1b2c3d4-0003-4000-8000-000000000003', 'carol@example.com', 'cognito_carol_003', 'MXN', 'es-MX', '2026-03-10T14:00:00Z')
+    ('a1b2c3d4-0001-4000-8000-000000000001', 'alice@example.com', 'USD', 'en-US', '2026-01-15T10:00:00Z'),
+    ('a1b2c3d4-0002-4000-8000-000000000002', 'bob@example.com',   'EUR', 'es-ES', '2026-02-01T09:30:00Z'),
+    ('a1b2c3d4-0003-4000-8000-000000000003', 'carol@example.com', 'MXN', 'es-MX', '2026-03-10T14:00:00Z')
+ON CONFLICT DO NOTHING;
+
+-- User Identities
+CREATE TABLE IF NOT EXISTS user_identities (
+    "Id" UUID PRIMARY KEY,
+    "UserId" UUID NOT NULL REFERENCES users("Id"),
+    "Provider" VARCHAR(20) NOT NULL,
+    "ProviderSub" VARCHAR(256) NOT NULL,
+    "CreatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE ("Provider", "ProviderSub")
+);
+CREATE INDEX IF NOT EXISTS ix_user_identities_user_id ON user_identities ("UserId");
+
+INSERT INTO user_identities (
+    "Id", "UserId", "Provider", "ProviderSub", "CreatedAt"
+) VALUES
+    ('f1b2c3d4-0001-4000-8000-000000000001', 'a1b2c3d4-0001-4000-8000-000000000001', 'Email', 'cognito_alice_001', '2026-01-15T10:00:00Z'),
+    ('f1b2c3d4-0002-4000-8000-000000000002', 'a1b2c3d4-0002-4000-8000-000000000002', 'Email', 'cognito_bob_002',   '2026-02-01T09:30:00Z'),
+    ('f1b2c3d4-0003-4000-8000-000000000003', 'a1b2c3d4-0003-4000-8000-000000000003', 'Email', 'cognito_carol_003', '2026-03-10T14:00:00Z')
 ON CONFLICT DO NOTHING;
 
 -- User Subscriptions
 INSERT INTO user_subscriptions (
-    "Id", "UserId", "Tier", "Platform", "ExpiresAt", "OriginalTransactionId", "CreatedAt"
+    "Id", "UserId", "Tier", "Platform", "ExpiresAt", "OriginalTransactionId"
 ) VALUES
-    ('b1b2c3d4-0001-4000-8000-000000000001', 'a1b2c3d4-0001-4000-8000-000000000001', 'Premium', 'iOS',     '2027-01-15T10:00:00Z', 'apple_txn_001', '2026-01-15T10:00:00Z'),
-    ('b1b2c3d4-0002-4000-8000-000000000002', 'a1b2c3d4-0002-4000-8000-000000000002', 'Free',    'Android', NULL,                    NULL,            '2026-02-01T09:30:00Z'),
-    ('b1b2c3d4-0003-4000-8000-000000000003', 'a1b2c3d4-0003-4000-8000-000000000003', 'Premium', 'Android', '2027-03-10T14:00:00Z', 'google_txn_001', '2026-03-10T14:00:00Z')
+    ('b1b2c3d4-0001-4000-8000-000000000001', 'a1b2c3d4-0001-4000-8000-000000000001', 'Premium', 'iOS',     '2027-01-15T10:00:00Z', 'apple_txn_001'),
+    ('b1b2c3d4-0002-4000-8000-000000000002', 'a1b2c3d4-0002-4000-8000-000000000002', 'Free',    'Android', NULL,                    NULL),
+    ('b1b2c3d4-0003-4000-8000-000000000003', 'a1b2c3d4-0003-4000-8000-000000000003', 'Premium', 'Android', '2027-03-10T14:00:00Z', 'google_txn_001')
 ON CONFLICT DO NOTHING;
 
 -- Budgets (5 total across users)

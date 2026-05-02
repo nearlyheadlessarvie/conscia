@@ -78,6 +78,37 @@ public class AIInteractionRepository : IAIInteractionRepository
         return response.Items.Select(FromItem).ToList();
     }
 
+    public async Task<int> CountByUserAsync(Guid userId, DateTime since, string? interactionType = null, CancellationToken ct = default)
+    {
+        var attrValues = new Dictionary<string, AttributeValue>
+        {
+            [":uid"] = new(userId.ToString()),
+            [":since"] = new(since.ToString("yyyy-MM-dd"))
+        };
+
+        var request = new QueryRequest
+        {
+            TableName = TableName,
+            IndexName = "GSI1-UserId-Date",
+            KeyConditionExpression = "UserId = :uid AND #date >= :since",
+            ExpressionAttributeValues = attrValues,
+            ExpressionAttributeNames = new Dictionary<string, string>
+            {
+                ["#date"] = "Date"
+            },
+            Select = Select.COUNT
+        };
+
+        if (interactionType is not null)
+        {
+            request.FilterExpression = "InteractionType = :itype";
+            attrValues[":itype"] = new(interactionType);
+        }
+
+        var response = await _dynamo.QueryAsync(request, ct);
+        return response.Count ?? 0;
+    }
+
     private static Dictionary<string, AttributeValue> ToItem(AIInteraction i)
     {
         return new Dictionary<string, AttributeValue>
@@ -92,7 +123,8 @@ public class AIInteractionRepository : IAIInteractionRepository
             ["AngelMsg"] = new(i.AngelMsg),
             ["NeutralMsg"] = new(i.NeutralMsg),
             ["CreatedAt"] = new(i.CreatedAt.ToString("O")),
-            ["TTL"] = new() { N = new DateTimeOffset(i.CreatedAt.AddDays(90)).ToUnixTimeSeconds().ToString() }
+            ["TTL"] = new() { N = new DateTimeOffset(i.CreatedAt.AddDays(90)).ToUnixTimeSeconds().ToString() },
+            ["InteractionType"] = new(i.InteractionType ?? "Unknown")
         };
     }
 
@@ -104,6 +136,7 @@ public class AIInteractionRepository : IAIInteractionRepository
         DevilMsg = item["DevilMsg"].S,
         AngelMsg = item["AngelMsg"].S,
         NeutralMsg = item["NeutralMsg"].S,
+        InteractionType = item.TryGetValue("InteractionType", out var itype) ? itype.S : null,
         CreatedAt = DateTime.Parse(item["CreatedAt"].S)
     };
 }

@@ -1,14 +1,7 @@
 import 'package:flutter/material.dart';
 
-class LocalePickerSheet extends StatefulWidget {
-  final String selectedLocale;
-  final ValueChanged<String> onSelected;
-
-  const LocalePickerSheet({
-    super.key,
-    required this.selectedLocale,
-    required this.onSelected,
-  });
+class LocalePickerSheet {
+  LocalePickerSheet._();
 
   static Future<void> show(
     BuildContext context, {
@@ -32,14 +25,6 @@ class LocalePickerSheet extends StatefulWidget {
       ),
     );
   }
-
-  @override
-  State<LocalePickerSheet> createState() => _LocalePickerSheetState();
-}
-
-class _LocalePickerSheetState extends State<LocalePickerSheet> {
-  @override
-  Widget build(BuildContext context) => const SizedBox.shrink();
 }
 
 class _LocalePickerBody extends StatelessWidget {

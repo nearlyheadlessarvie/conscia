@@ -7,4 +7,5 @@ public interface IAIInteractionRepository
     Task<AIInteraction> AddAsync(AIInteraction interaction, CancellationToken ct = default);
     Task<AIInteraction?> GetByTransactionIdAsync(Guid transactionId, CancellationToken ct = default);
     Task<IReadOnlyList<AIInteraction>> ListByUserAsync(Guid userId, DateTime? from, DateTime? to, int limit = 20, CancellationToken ct = default);
+    Task<int> CountByUserAsync(Guid userId, DateTime since, string? interactionType = null, CancellationToken ct = default);
 }

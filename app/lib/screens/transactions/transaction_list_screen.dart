@@ -1,44 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../providers/transaction_providers.dart';
+import '../../services/transaction_service.dart';
 import '../../widgets/empty_state.dart';
 import 'widgets/date_section_header.dart';
 import 'widgets/transaction_tile.dart';
-
-// ── Mock data for UI development ────────────────────────────────────────
-
-final _mockTransactions = [
-  _MockTx('1', false, 45.20, 'USD', 'Groceries', 'Walmart',
-      DateTime.now(), 1),
-  _MockTx('2', false, 6.50, 'USD', 'Coffee', 'Starbucks',
-      DateTime.now(), null),
-  _MockTx('3', true, 3500.00, 'USD', 'Salary', 'Acme Corp',
-      DateTime.now().subtract(const Duration(days: 1)), null),
-  _MockTx('4', false, 12.99, 'USD', 'Entertainment', 'Netflix',
-      DateTime.now().subtract(const Duration(days: 1)), 2),
-  _MockTx('5', false, 89.00, 'USD', 'Shopping', 'Amazon',
-      DateTime.now().subtract(const Duration(days: 2)), 3),
-  _MockTx('6', false, 32.50, 'USD', 'Dining', 'Chipotle',
-      DateTime.now().subtract(const Duration(days: 3)), 1),
-  _MockTx('7', false, 150.00, 'USD', 'Bills', 'Electric Co',
-      DateTime.now().subtract(const Duration(days: 4)), null),
-  _MockTx('8', true, 250.00, 'USD', 'Freelance', 'Client X',
-      DateTime.now().subtract(const Duration(days: 5)), null),
-];
-
-class _MockTx {
-  final String id, currencyCode, category;
-  final String? merchant;
-  final bool isIncome;
-  final double amount;
-  final DateTime date;
-  final int? regretLevel;
-
-  _MockTx(this.id, this.isIncome, this.amount, this.currencyCode,
-      this.category, this.merchant, this.date, this.regretLevel);
-}
-
-// ── Screen ──────────────────────────────────────────────────────────────
 
 class TransactionListScreen extends ConsumerStatefulWidget {
   const TransactionListScreen({super.key});
@@ -50,21 +17,6 @@ class TransactionListScreen extends ConsumerStatefulWidget {
 
 class _TransactionListScreenState extends ConsumerState<TransactionListScreen> {
   final _scrollController = ScrollController();
-  String? _selectedCategory;
-  bool _loadingMore = false;
-
-  List<String> get _categories {
-    final cats = _mockTransactions.map((t) => t.category).toSet().toList();
-    cats.sort();
-    return cats;
-  }
-
-  List<_MockTx> get _filtered {
-    if (_selectedCategory == null) return _mockTransactions;
-    return _mockTransactions
-        .where((t) => t.category == _selectedCategory)
-        .toList();
-  }
 
   @override
   void initState() {
@@ -82,81 +34,108 @@ class _TransactionListScreenState extends ConsumerState<TransactionListScreen> {
 
   void _onScroll() {
     if (_scrollController.position.pixels >=
-            _scrollController.position.maxScrollExtent - 200 &&
-        !_loadingMore) {
-      // TODO: wire to transactionListProvider.loadMore()
+            _scrollController.position.maxScrollExtent - 200) {
+      ref.read(transactionListProvider.notifier).loadMore();
     }
   }
 
   Future<void> _onRefresh() async {
-    // TODO: wire to transactionListProvider.refresh()
-    await Future<void>.delayed(const Duration(milliseconds: 500));
-    if (mounted) setState(() {});
+    await ref.read(transactionListProvider.notifier).refresh();
   }
 
   @override
   Widget build(BuildContext context) {
-    final filtered = _filtered;
+    final state = ref.watch(transactionListProvider);
+    final selectedCategory = ref.watch(categoryFilterProvider);
+
+    final categories = state.transactions
+        .map((t) => t.category)
+        .toSet()
+        .toList()
+      ..sort();
 
     return Scaffold(
       appBar: AppBar(title: const Text('Transactions')),
-      body: filtered.isEmpty
-          ? _buildEmpty()
-          : RefreshIndicator(
-              onRefresh: _onRefresh,
-              child: CustomScrollView(
-                controller: _scrollController,
-                slivers: [
-                  _buildFilterBar(),
-                  ..._buildGroupedList(filtered),
-                  if (_loadingMore)
-                    const SliverToBoxAdapter(
-                      child: Padding(
-                        padding: EdgeInsets.all(16),
-                        child: Center(
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-            ),
+      body: _buildBody(state, selectedCategory, categories),
     );
   }
 
-  Widget _buildEmpty() {
-    if (_selectedCategory != null) {
-      return Column(
-        children: [
-          SizedBox(
-            height: 52,
-            child: _buildFilterChips(),
+  Widget _buildBody(
+    TransactionListState state,
+    String? selectedCategory,
+    List<String> categories,
+  ) {
+    if (state.isLoading && state.transactions.isEmpty) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (state.error != null && state.transactions.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.error_outline,
+                  size: 64, color: Theme.of(context).colorScheme.error),
+              const SizedBox(height: 16),
+              Text(state.error!,
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.bodyMedium),
+              const SizedBox(height: 24),
+              FilledButton.icon(
+                onPressed: _onRefresh,
+                icon: const Icon(Icons.refresh),
+                label: const Text('Retry'),
+              ),
+            ],
           ),
-          Expanded(
-            child: EmptyState(
-              icon: Icons.filter_list_off,
-              title: 'No $_selectedCategory transactions',
-              subtitle: 'Try a different filter',
-            ),
-          ),
-        ],
+        ),
       );
     }
-    return const EmptyState(
-      icon: Icons.receipt_long_outlined,
-      title: 'No transactions yet',
-      subtitle: 'Tap + to add your first',
+
+    if (state.transactions.isEmpty) {
+      return const EmptyState(
+        icon: Icons.receipt_long_outlined,
+        title: 'No transactions yet',
+        subtitle: 'Tap + to add your first',
+      );
+    }
+
+    return RefreshIndicator(
+      onRefresh: _onRefresh,
+      child: CustomScrollView(
+        controller: _scrollController,
+        slivers: [
+          _buildFilterBar(selectedCategory, categories),
+          ..._buildGroupedList(state.transactions),
+          if (state.isLoading)
+            const SliverToBoxAdapter(
+              child: Padding(
+                padding: EdgeInsets.all(16),
+                child: Center(
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+              ),
+            ),
+        ],
+      ),
     );
   }
 
-  SliverPersistentHeader _buildFilterBar() {
+  SliverPersistentHeader _buildFilterBar(
+    String? selectedCategory,
+    List<String> categories,
+  ) {
     return SliverPersistentHeader(
       pinned: true,
-      delegate: _FilterBarDelegate(child: _buildFilterChips()),
+      delegate: _FilterBarDelegate(
+        child: _buildFilterChips(selectedCategory, categories),
+      ),
     );
   }
 
-  Widget _buildFilterChips() {
+  Widget _buildFilterChips(String? selectedCategory, List<String> categories) {
     return Container(
       color: Theme.of(context).scaffoldBackgroundColor,
       height: 52,
@@ -168,18 +147,19 @@ class _TransactionListScreenState extends ConsumerState<TransactionListScreen> {
             padding: const EdgeInsets.only(right: 8),
             child: FilterChip(
               label: const Text('All'),
-              selected: _selectedCategory == null,
-              onSelected: (_) => setState(() => _selectedCategory = null),
+              selected: selectedCategory == null,
+              onSelected: (_) =>
+                  ref.read(categoryFilterProvider.notifier).state = null,
             ),
           ),
-          for (final cat in _categories)
+          for (final cat in categories)
             Padding(
               padding: const EdgeInsets.only(right: 8),
               child: FilterChip(
                 label: Text(cat),
-                selected: _selectedCategory == cat,
+                selected: selectedCategory == cat,
                 onSelected: (_) =>
-                    setState(() => _selectedCategory = cat),
+                    ref.read(categoryFilterProvider.notifier).state = cat,
               ),
             ),
         ],
@@ -187,8 +167,8 @@ class _TransactionListScreenState extends ConsumerState<TransactionListScreen> {
     );
   }
 
-  List<Widget> _buildGroupedList(List<_MockTx> transactions) {
-    final groups = <String, List<_MockTx>>{};
+  List<Widget> _buildGroupedList(List<Transaction> transactions) {
+    final groups = <String, List<Transaction>>{};
     for (final tx in transactions) {
       final key =
           '${tx.date.year}-${tx.date.month.toString().padLeft(2, '0')}-${tx.date.day.toString().padLeft(2, '0')}';
@@ -214,11 +194,11 @@ class _TransactionListScreenState extends ConsumerState<TransactionListScreen> {
             children: [
               TransactionTile(
                 id: tx.id,
-                isIncome: tx.isIncome,
+                isIncome: tx.type == 'income',
                 amount: tx.amount,
                 currencyCode: tx.currencyCode,
                 category: tx.category,
-                merchant: tx.merchant,
+                merchant: tx.description,
                 date: tx.date,
                 regretLevel: tx.regretLevel,
               ),
@@ -252,5 +232,6 @@ class _FilterBarDelegate extends SliverPersistentHeaderDelegate {
   }
 
   @override
-  bool shouldRebuild(covariant _FilterBarDelegate oldDelegate) => true;
+  bool shouldRebuild(covariant _FilterBarDelegate oldDelegate) =>
+      oldDelegate.child != child;
 }
