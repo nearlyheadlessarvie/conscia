@@ -29,12 +29,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   bool _bannerDismissed = false;
   final Set<String> _dismissedPrompts = {};
 
-  void _recordReflection(Transaction tx, String feeling) {
+  Future<void> _recordReflection(Transaction tx, String feeling) async {
     final isPremium =
         ref.read(subscriptionProvider).valueOrNull?.isPremium ?? false;
     final usage = ref.read(monthlyUsageProvider);
-    if (!isPremium &&
-        usage.reflections >= TierLimits.freeReflectionsPerMonth) {
+    if (!isPremium && usage.reflections >= TierLimits.freeReflectionsPerMonth) {
       PremiumUpgradeDialog.show(
         context,
         feature:
@@ -52,13 +51,18 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     };
 
     final service = ref.read(transactionServiceProvider);
-    service.updateRegret(tx.id, level).catchError((_) {});
+    try {
+      await service.updateRegret(tx.id, level);
+      ref.invalidate(transactionListProvider);
+      ref.invalidate(transactionDetailProvider(tx.id));
+    } catch (_) {}
 
     final label = switch (feeling) {
       'worth_it' => 'Marked as worth it!',
       'regret' => 'Marked as regret',
       _ => 'Reflection recorded',
     };
+    if (!mounted) return;
     setState(() => _dismissedPrompts.add(tx.id));
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text('${tx.description}: $label')),
@@ -83,8 +87,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         .take(3)
         .toList();
 
-    final overBudgetCount =
-        budgets.where((b) => b.percentage >= 0.8).length;
+    final overBudgetCount = budgets.where((b) => b.percentage >= 0.8).length;
 
     return CustomScrollView(
       slivers: [
@@ -105,7 +108,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             ),
           ],
         ),
-
         if (overBudgetCount > 0 && !_bannerDismissed)
           SliverToBoxAdapter(
             child: BudgetWarningBanner(
@@ -113,7 +115,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               onDismiss: () => setState(() => _bannerDismissed = true),
             ),
           ),
-
         SliverToBoxAdapter(
           child: _buildSectionHeader(context, 'Budgets'),
         ),
@@ -156,7 +157,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               ),
             ),
           ),
-
         if (regretPrompts.isNotEmpty) ...[
           SliverToBoxAdapter(
             child: _buildSectionHeader(context, 'Reflect'),
@@ -186,7 +186,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             ),
           ),
         ],
-
         SliverToBoxAdapter(
           child: _buildSectionHeader(context, 'Recent Transactions'),
         ),
@@ -225,7 +224,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               );
             },
           ),
-
         const SliverPadding(padding: EdgeInsets.only(bottom: 80)),
       ],
     );

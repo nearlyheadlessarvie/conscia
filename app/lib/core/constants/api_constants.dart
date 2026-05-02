@@ -49,13 +49,12 @@ class ApiConstants {
   static const String verifyReceipt = 'subscriptions/verify';
 
   // Health (root-level, not under /api/v1)
-  static String get health => '${_hostUrl}/health';
-  static String get healthLive => '${_hostUrl}/health/live';
-  static String get healthReady => '${_hostUrl}/health/ready';
+  static String get health => '$_hostUrl/health';
+  static String get healthLive => '$_hostUrl/health/live';
+  static String get healthReady => '$_hostUrl/health/ready';
 
   static String get _hostUrl {
-    final base = baseUrl;
-    final uri = Uri.parse(base);
+    final uri = Uri.parse(baseUrl);
     return '${uri.scheme}://${uri.host}:${uri.port}';
   }
 

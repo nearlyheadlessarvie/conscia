@@ -5,6 +5,7 @@ import '../../../core/constants/category_icons.dart';
 import '../../../providers/budget_providers.dart';
 import '../../../services/budget_service.dart';
 import '../../../widgets/currency_badge.dart';
+import '../../../providers/user_provider.dart';
 
 class BudgetFormSheet extends ConsumerStatefulWidget {
   final Budget? existing;
@@ -27,6 +28,7 @@ class BudgetFormSheet extends ConsumerStatefulWidget {
 class _BudgetFormSheetState extends ConsumerState<BudgetFormSheet> {
   late final TextEditingController _amountController;
   String? _selectedCategory;
+  bool _submitting = false;
   bool get _isEditing => widget.existing != null;
 
   @override
@@ -44,14 +46,24 @@ class _BudgetFormSheetState extends ConsumerState<BudgetFormSheet> {
     super.dispose();
   }
 
+  bool get _isValid {
+    final amount = double.tryParse(_amountController.text);
+    return amount != null && amount > 0 && _selectedCategory != null;
+  }
+
   Future<void> _submit() async {
+    if (!_isValid || _submitting) return;
+    setState(() => _submitting = true);
+
     final amount = double.tryParse(_amountController.text);
     if (_selectedCategory == null || amount == null || amount <= 0) return;
-
+    final user = ref.read(currentUserProvider);
+    final currency =
+        widget.existing?.currencyCode ?? user.value?.currencyCode ?? 'USD';
     final dto = CreateBudgetDto(
       category: _selectedCategory!,
       monthlyLimit: amount,
-      currencyCode: widget.existing?.currencyCode ?? 'USD',
+      currencyCode: currency,
     );
 
     final notifier = ref.read(budgetListProvider.notifier);
@@ -61,6 +73,7 @@ class _BudgetFormSheetState extends ConsumerState<BudgetFormSheet> {
       await notifier.create(dto);
     }
 
+    setState(() => _submitting = false);
     if (mounted) Navigator.of(context).pop();
   }
 
@@ -96,7 +109,9 @@ class _BudgetFormSheetState extends ConsumerState<BudgetFormSheet> {
     final theme = Theme.of(context);
     final textTheme = theme.textTheme;
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
-
+    final user = ref.read(currentUserProvider);
+    final currency =
+        widget.existing?.currencyCode ?? user.value?.currencyCode ?? 'USD';
     return Padding(
       padding: EdgeInsets.only(bottom: bottomInset),
       child: SizedBox(
@@ -141,34 +156,50 @@ class _BudgetFormSheetState extends ConsumerState<BudgetFormSheet> {
                           ),
                         ))
                     .toList(),
-                onChanged: _isEditing ? null : (v) => setState(() => _selectedCategory = v),
+                onChanged: _isEditing
+                    ? null
+                    : (v) => setState(() => _selectedCategory = v),
               ),
               const SizedBox(height: 16),
               TextField(
                 controller: _amountController,
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true),
+                onChanged: (_) => setState(() {}),
                 decoration: InputDecoration(
                   labelText: 'Monthly Limit',
                   border: const OutlineInputBorder(),
                   prefixIcon: Padding(
                     padding: const EdgeInsets.only(left: 12, right: 8),
                     child: CurrencyBadge(
-                      currencyCode: widget.existing?.currencyCode ?? 'USD',
+                      currencyCode: currency,
                     ),
                   ),
-                  prefixIconConstraints: const BoxConstraints(minWidth: 0, minHeight: 0),
+                  prefixIconConstraints:
+                      const BoxConstraints(minWidth: 0, minHeight: 0),
                 ),
               ),
               const Spacer(),
               FilledButton(
-                onPressed: _submit,
+                onPressed: _isValid && !_submitting ? _submit : null,
                 style: FilledButton.styleFrom(
                   minimumSize: const Size.fromHeight(48),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(24),
                   ),
                 ),
-                child: Text(_isEditing ? 'Save Changes' : 'Create Budget'),
+                child: _submitting
+                    ? const SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : Text(
+                        _isEditing ? 'Save Changes' : 'Create Budget',
+                      ),
               ),
               if (_isEditing) ...[
                 const SizedBox(height: 8),

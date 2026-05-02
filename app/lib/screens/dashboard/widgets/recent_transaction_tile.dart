@@ -28,8 +28,8 @@ class RecentTransactionTile extends StatelessWidget {
 
   Color get _regretColor {
     if (regretLevel == null) return Colors.transparent;
-    if (regretLevel! <= 1) return const Color(0xFF4CAF50);
-    if (regretLevel! == 2) return const Color(0xFFFFC107);
+    if (regretLevel! == 0) return const Color(0xFF4CAF50);
+    if (regretLevel! == 1) return const Color(0xFFFFC107);
     return const Color(0xFFE53935);
   }
 
@@ -44,9 +44,8 @@ class RecentTransactionTile extends StatelessWidget {
       decimalDigits: 2,
     );
 
-    final amountColor = isIncome
-        ? const Color(0xFF4CAF50)
-        : const Color(0xFFE53935);
+    final amountColor =
+        isIncome ? const Color(0xFF4CAF50) : const Color(0xFFE53935);
     final prefix = isIncome ? '+' : '-';
 
     return ListTile(

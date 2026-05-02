@@ -36,7 +36,26 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(_appLifecycleObserver);
     _loadBiometricState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      ref.invalidate(subscriptionProvider);
+    });
+  }
+
+  late final WidgetsBindingObserver _appLifecycleObserver =
+      _SettingsLifecycleObserver(
+    onResume: () {
+      if (!mounted) return;
+      ref.invalidate(subscriptionProvider);
+    },
+  );
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(_appLifecycleObserver);
+    super.dispose();
   }
 
   Future<void> _loadBiometricState() async {
@@ -157,7 +176,18 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 onManage: () => SubscriptionSheet.show(context),
               ),
               loading: () => const Center(child: CircularProgressIndicator()),
-              error: (_, __) => const Text('Unable to load subscription'),
+              error: (_, __) => Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Unable to load subscription'),
+                  const SizedBox(height: 8),
+                  OutlinedButton.icon(
+                    onPressed: () => ref.invalidate(subscriptionProvider),
+                    icon: const Icon(Icons.refresh),
+                    label: const Text('Retry'),
+                  ),
+                ],
+              ),
             ),
           ),
           if (ApiConstants.useMockAuth) _DevUpgradeTile(),
@@ -561,5 +591,18 @@ class _ServiceStatusTile extends ConsumerWidget {
       ),
       onTap: () => context.push(AppRoutes.serviceStatus),
     );
+  }
+}
+
+class _SettingsLifecycleObserver extends WidgetsBindingObserver {
+  final VoidCallback onResume;
+
+  _SettingsLifecycleObserver({required this.onResume});
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      onResume();
+    }
   }
 }

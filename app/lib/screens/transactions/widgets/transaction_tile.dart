@@ -2,23 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
-const _categoryIcons = <String, IconData>{
-  'Groceries': Icons.shopping_cart,
-  'Dining': Icons.restaurant,
-  'Transport': Icons.directions_car,
-  'Entertainment': Icons.movie,
-  'Shopping': Icons.shopping_bag,
-  'Health': Icons.favorite,
-  'Bills': Icons.receipt,
-  'Education': Icons.school,
-  'Travel': Icons.flight,
-  'Coffee': Icons.coffee,
-  'Subscriptions': Icons.autorenew,
-  'Salary': Icons.account_balance,
-  'Freelance': Icons.work,
-  'Gift': Icons.card_giftcard,
-  'Other': Icons.more_horiz,
-};
+import '../../../core/constants/category_icons.dart';
 
 class TransactionTile extends StatelessWidget {
   final String id;
@@ -43,7 +27,7 @@ class TransactionTile extends StatelessWidget {
   });
 
   static IconData iconFor(String category) =>
-      _categoryIcons[category] ?? Icons.more_horiz;
+      CategoryIcons.forCategory(category);
 
   Color _amountColor(ColorScheme colors) {
     if (!isIncome) {
@@ -58,15 +42,15 @@ class TransactionTile extends StatelessWidget {
 
   Color? _regretDotColor() {
     if (regretLevel == null) return null;
-    if (regretLevel! <= 1) return const Color(0xFF4CAF50);
-    if (regretLevel! == 2) return const Color(0xFFFFC107);
+    if (regretLevel! == 0) return const Color(0xFF4CAF50);
+    if (regretLevel! == 1) return const Color(0xFFFFC107);
     return const Color(0xFFE53935);
   }
 
   String? _regretLabel() {
     if (regretLevel == null) return null;
-    if (regretLevel! <= 1) return 'Worth It';
-    if (regretLevel! == 2) return 'Not Sure';
+    if (regretLevel! == 0) return 'Worth It';
+    if (regretLevel! == 1) return 'Not Sure';
     return 'Regret';
   }
 
