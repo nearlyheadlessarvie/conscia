@@ -1,0 +1,123 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Footer from '../components/Footer.astro';
+import Logo from '../components/icons/Logo.astro';
+---
+
+<Layout title="Privacy Policy — Conscia" description="How Conscia handles your data. We respect your privacy and are transparent about what we collect.">
+  <!-- Header -->
+  <header class="bg-primary py-6">
+    <div class="mx-auto flex max-w-7xl items-center gap-3 px-6">
+      <a href="/" class="flex items-center gap-3 transition hover:opacity-80">
+        <Logo size="32" />
+        <span class="font-heading text-xl font-bold text-white">Conscia</span>
+      </a>
+    </div>
+  </header>
+
+  <main class="mx-auto max-w-3xl px-6 py-16">
+    <h1 class="font-heading text-4xl font-bold text-primary">Privacy Policy</h1>
+    <p class="mt-2 text-sm text-gray-500">Last updated: May 1, 2026</p>
+
+    <div class="mt-10 space-y-10 text-gray-700 leading-relaxed">
+      <!-- 1 -->
+      <section>
+        <h2 class="font-heading text-xl font-semibold text-gray-900">1. What We Collect</h2>
+        <p class="mt-3">We collect only what's necessary to provide the Conscia experience:</p>
+        <ul class="mt-3 list-disc space-y-2 pl-6">
+          <li><strong>Account information</strong> — email address and authentication provider (Email, Google, or Apple Sign-In).</li>
+          <li><strong>Financial data you enter</strong> — transactions, budgets, and categories you create manually.</li>
+          <li><strong>Receipt images</strong> — only when you use the receipt scanner (Premium). Images are processed and deleted within 24 hours.</li>
+          <li><strong>AI interaction logs</strong> — your queries to the pre-purchase advisor and reflections, used to provide personalized responses.</li>
+          <li><strong>Device & usage metadata</strong> — anonymized analytics (app version, OS, crash reports) to improve reliability.</li>
+        </ul>
+      </section>
+
+      <!-- 2 -->
+      <section>
+        <h2 class="font-heading text-xl font-semibold text-gray-900">2. What We Don't Collect</h2>
+        <ul class="mt-3 list-disc space-y-2 pl-6">
+          <li>We <strong>never</strong> connect to your bank accounts or payment processors.</li>
+          <li>We <strong>never</strong> sell, rent, or share your personal data with third parties for advertising.</li>
+          <li>We <strong>never</strong> use your financial data to train AI models for other purposes.</li>
+          <li>We <strong>never</strong> store your Apple or Google authentication passwords.</li>
+        </ul>
+      </section>
+
+      <!-- 3 -->
+      <section>
+        <h2 class="font-heading text-xl font-semibold text-gray-900">3. How We Use Your Data</h2>
+        <ul class="mt-3 list-disc space-y-2 pl-6">
+          <li><strong>To provide the service</strong> — storing your transactions, budgets, and generating AI advice based on your spending context.</li>
+          <li><strong>To improve the product</strong> — aggregated, anonymized usage patterns help us prioritize features.</li>
+          <li><strong>To enforce freemium limits</strong> — we track monthly usage counts (AI assists, reflections) to apply tier limits.</li>
+        </ul>
+      </section>
+
+      <!-- 4 -->
+      <section>
+        <h2 class="font-heading text-xl font-semibold text-gray-900">4. AI & Your Data</h2>
+        <p class="mt-3">When you use the AI pre-purchase advisor or reflections:</p>
+        <ul class="mt-3 list-disc space-y-2 pl-6">
+          <li>Your query and recent spending context are sent to an AI model to generate advice.</li>
+          <li>We use <strong>Amazon Bedrock</strong> (Claude) in production, which does not retain or train on your data.</li>
+          <li>AI interaction logs are stored in your account and can be deleted at any time.</li>
+          <li>Prompt sanitization is applied to prevent injection attacks.</li>
+        </ul>
+      </section>
+
+      <!-- 5 -->
+      <section>
+        <h2 class="font-heading text-xl font-semibold text-gray-900">5. Data Storage & Security</h2>
+        <ul class="mt-3 list-disc space-y-2 pl-6">
+          <li>Data is stored in <strong>AWS</strong> infrastructure with encryption at rest and in transit.</li>
+          <li>Authentication is managed by <strong>AWS Cognito</strong> with industry-standard OAuth 2.0 / OIDC.</li>
+          <li>Receipt images are stored temporarily in encrypted S3 buckets and automatically purged.</li>
+          <li>Access to production systems follows the principle of least privilege with scoped IAM policies.</li>
+        </ul>
+      </section>
+
+      <!-- 6 -->
+      <section>
+        <h2 class="font-heading text-xl font-semibold text-gray-900">6. Your Rights</h2>
+        <p class="mt-3">You have the right to:</p>
+        <ul class="mt-3 list-disc space-y-2 pl-6">
+          <li><strong>Export</strong> your data at any time from Settings.</li>
+          <li><strong>Delete</strong> your account and all associated data permanently.</li>
+          <li><strong>Opt out</strong> of anonymized analytics.</li>
+          <li><strong>Request</strong> a copy of all data we hold about you.</li>
+        </ul>
+      </section>
+
+      <!-- 7 -->
+      <section>
+        <h2 class="font-heading text-xl font-semibold text-gray-900">7. Third-Party Services</h2>
+        <ul class="mt-3 list-disc space-y-2 pl-6">
+          <li><strong>Apple App Store / Google Play</strong> — subscription billing is handled entirely by the platform. We only receive a transaction ID confirming your subscription status.</li>
+          <li><strong>Google Sign-In / Apple Sign-In</strong> — used for authentication only. We receive your email and a unique identifier, nothing more.</li>
+          <li><strong>Amazon Web Services</strong> — our cloud infrastructure provider, bound by their data processing agreements.</li>
+        </ul>
+      </section>
+
+      <!-- 8 -->
+      <section>
+        <h2 class="font-heading text-xl font-semibold text-gray-900">8. Children's Privacy</h2>
+        <p class="mt-3">Conscia is not intended for children under 13. We do not knowingly collect personal information from children.</p>
+      </section>
+
+      <!-- 9 -->
+      <section>
+        <h2 class="font-heading text-xl font-semibold text-gray-900">9. Changes to This Policy</h2>
+        <p class="mt-3">We may update this policy from time to time. Material changes will be communicated through the app and published here with an updated date.</p>
+      </section>
+
+      <!-- 10 -->
+      <section>
+        <h2 class="font-heading text-xl font-semibold text-gray-900">10. Contact</h2>
+        <p class="mt-3">Questions about this privacy policy? Reach us at <a href="mailto:privacy@getconscia.com" class="font-semibold text-primary underline hover:text-primary-dark">privacy@getconscia.com</a>.</p>
+      </section>
+    </div>
+  </main>
+
+  <Footer />
+</Layout>

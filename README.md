@@ -218,6 +218,8 @@ Swagger UI is available at `http://localhost:5000/swagger` in development mode.
 
 ## Environment Variables
 
+### Backend (.NET API)
+
 All configuration is managed via `appsettings.json` / `appsettings.Development.json`. In production, these map to environment variables or AWS Parameter Store.
 
 | Variable | Default (Dev) | Description |
@@ -238,6 +240,83 @@ All configuration is managed via `appsettings.json` / `appsettings.Development.j
 | `Auth__MockSigningKey` | `super-secret-dev-key-...` | Signing key for mock JWTs |
 | `Auth__Cognito__UserPoolId` | — | Cognito user pool (prod only) |
 | `Auth__Cognito__ClientId` | — | Cognito client (prod only) |
+
+### Flutter App
+
+Compile-time constants passed via `--dart-define`:
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `MOCK_AUTH` | `true` | Use mock authentication (bypasses Cognito, creates local JWT) |
+| `API_BASE_URL` | `http://localhost:5248/api/v1` | Backend API base URL |
+
+```bash
+# Run with defaults (local dev)
+flutter run
+
+# Run against a deployed API with real auth
+flutter run --dart-define=MOCK_AUTH=false --dart-define=API_BASE_URL=https://api.getconscia.com/api/v1
+```
+
+### Google Sign-In Setup
+
+Google Sign-In requires OAuth 2.0 credentials from the [Google Cloud Console](https://console.cloud.google.com/):
+
+#### 1. Create a Google Cloud Project
+
+1. Go to [Google Cloud Console](https://console.cloud.google.com/) → create a new project (e.g., "Conscia")
+2. Enable the **Google Identity** API (search for "Google Identity" in APIs & Services)
+
+#### 2. Create OAuth 2.0 Credentials
+
+**For iOS:**
+1. Go to **APIs & Services → Credentials → Create Credentials → OAuth Client ID**
+2. Application type: **iOS**
+3. Bundle ID: `com.conscia.app` (must match your `ios/Runner.xcodeproj` bundle ID)
+4. Download `GoogleService-Info.plist` → place in `app/ios/Runner/`
+5. Add the reversed client ID as a URL scheme in `ios/Runner/Info.plist`:
+   ```xml
+   <key>CFBundleURLTypes</key>
+   <array>
+     <dict>
+       <key>CFBundleURLSchemes</key>
+       <array>
+         <string>com.googleusercontent.apps.YOUR_CLIENT_ID</string>
+       </array>
+     </dict>
+   </array>
+   ```
+
+**For Android:**
+1. Go to **APIs & Services → Credentials → Create Credentials → OAuth Client ID**
+2. Application type: **Android**
+3. Package name: `com.conscia.app`
+4. SHA-1 fingerprint (debug key):
+   ```bash
+   keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey -storepass android
+   ```
+5. Download `google-services.json` → place in `app/android/app/`
+6. Add Google Services plugin to `android/build.gradle`:
+   ```gradle
+   classpath 'com.google.gms:google-services:4.4.0'
+   ```
+7. Apply the plugin in `android/app/build.gradle`:
+   ```gradle
+   apply plugin: 'com.google.gms.google-services'
+   ```
+
+**For Web (OAuth consent screen):**
+1. Configure the **OAuth consent screen** (required for all platforms)
+2. Add test users during development
+3. Set authorized redirect URIs for your backend callback
+
+#### 3. Apple Sign-In Setup
+
+1. In Xcode: select target → **Signing & Capabilities** → add **Sign in with Apple**
+2. Ensure the capability is enabled in your [Apple Developer portal](https://developer.apple.com/) under your App ID
+3. For Android: Apple Sign-In uses a web-based redirect — configure a **Service ID** in the Apple Developer portal with a redirect URI pointing to your backend
+
+> For detailed platform-specific instructions, see [`app/PLATFORM_SETUP.md`](app/PLATFORM_SETUP.md).
 
 ---
 
@@ -276,8 +355,10 @@ All endpoints (except Auth and health) require a Bearer JWT in the `Authorizatio
 
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
-| `POST` | `/api/v1/auth/register` | No | Register a new account |
-| `POST` | `/api/v1/auth/login` | No | Authenticate and receive JWT tokens |
+| `POST` | `/api/v1/auth/register` | No | Register with email/password |
+| `POST` | `/api/v1/auth/login` | No | Authenticate with email/password |
+| `POST` | `/api/v1/auth/google` | No | Sign in with Google (ID token) |
+| `POST` | `/api/v1/auth/apple` | No | Sign in with Apple (identity token) |
 
 ### Users
 
@@ -321,6 +402,13 @@ All endpoints (except Auth and health) require a Bearer JWT in the `Authorizatio
 |--------|------|------|-------------|
 | `POST` | `/api/v1/ai/pre-purchase` | Yes | Get Impulse/Reason advice before buying |
 | `POST` | `/api/v1/ai/reflection` | Yes | Get post-purchase reflection on a transaction |
+
+### Receipts (Premium)
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| `POST` | `/api/v1/receipts/scan` | Yes | Upload and scan a receipt image |
+| `POST` | `/api/v1/receipts/{id}/confirm` | Yes | Confirm extracted data and create transaction |
 
 ### Alerts
 

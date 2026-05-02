@@ -1,39 +1,21 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_fonts/google_fonts.dart';
 
+import '../../core/constants/tier_limits.dart';
+import '../../providers/ai_provider.dart';
+import '../../providers/subscription_provider.dart';
+import '../../providers/usage_provider.dart';
+import '../../services/ai_service.dart';
 import '../../widgets/amount_input_field.dart';
+import '../../widgets/premium_upgrade_dialog.dart';
 import '../../screens/transactions/widgets/category_picker.dart';
 import '../../screens/transactions/widgets/transaction_tile.dart';
 import 'widgets/ai_message_bubble.dart';
 import 'widgets/budget_context_card.dart';
 import 'widgets/typing_indicator.dart';
 
-enum _ScreenState { input, loading, response }
-
-// Mock AI response
-class _MockAiResponse {
-  final String devil;
-  final String angel;
-  final String neutral;
-  final bool hasBudget;
-
-  const _MockAiResponse({
-    required this.devil,
-    required this.angel,
-    required this.neutral,
-    this.hasBudget = true,
-  });
-}
-
-const _mockResponse = _MockAiResponse(
-  devil:
-      "Life's too short to overthink every purchase! If it makes you happy and you can technically afford it, just go for it. You deserve it!",
-  angel:
-      "Let's pause and think. This would use a significant chunk of your entertainment budget. Could you wait until next month, or find a more affordable alternative?",
-  neutral:
-      "Consider this: will this purchase matter to you in 30 days? If yes, it might be worth it. If you're unsure, sleeping on it rarely hurts.",
-);
+enum _ScreenState { input, loading, response, error }
 
 class PrePurchaseScreen extends ConsumerStatefulWidget {
   const PrePurchaseScreen({super.key});
@@ -45,6 +27,8 @@ class PrePurchaseScreen extends ConsumerStatefulWidget {
 class _PrePurchaseScreenState extends ConsumerState<PrePurchaseScreen>
     with TickerProviderStateMixin {
   _ScreenState _state = _ScreenState.input;
+  AIResponse? _aiResponse;
+  String? _errorMessage;
 
   // Form
   final _descriptionController = TextEditingController();
@@ -94,14 +78,61 @@ class _PrePurchaseScreenState extends ConsumerState<PrePurchaseScreen>
 
   Future<void> _submit() async {
     if (!_formValid) return;
-    setState(() => _state = _ScreenState.loading);
 
-    // TODO: wire to POST /api/v1/ai/pre-purchase
-    await Future<void>.delayed(const Duration(seconds: 2));
+    final isPremium =
+        ref.read(subscriptionProvider).valueOrNull?.isPremium ?? false;
+    final usage = ref.read(monthlyUsageProvider);
+    if (!isPremium && usage.aiAssists >= TierLimits.freeAiAssistsPerMonth) {
+      PremiumUpgradeDialog.show(
+        context,
+        feature:
+            'You\'ve used all ${TierLimits.freeAiAssistsPerMonth} free AI assists this month.',
+      );
+      return;
+    }
 
-    if (!mounted) return;
-    setState(() => _state = _ScreenState.response);
-    _playEntrance();
+    setState(() {
+      _state = _ScreenState.loading;
+      _errorMessage = null;
+    });
+
+    try {
+      final aiService = ref.read(aiServiceProvider);
+      final response = await aiService.prePurchase(
+        description: _descriptionController.text,
+        amount: double.parse(_amountController.text),
+        currencyCode: _currencyCode,
+        category: _selectedCategory!,
+      );
+
+      if (!mounted) return;
+      ref.read(monthlyUsageProvider.notifier).recordAiAssist();
+      _aiResponse = response;
+      setState(() => _state = _ScreenState.response);
+      _playEntrance();
+    } on DioException catch (e) {
+      if (!mounted) return;
+      if (e.response?.statusCode == 403) {
+        setState(() => _state = _ScreenState.input);
+        final data = e.response?.data as Map<String, dynamic>?;
+        PremiumUpgradeDialog.show(
+          context,
+          feature: data?['error'] as String? ??
+              'You\'ve reached the free tier limit for AI assists.',
+        );
+        return;
+      }
+      setState(() {
+        _state = _ScreenState.error;
+        _errorMessage = e.response?.data?['error'] as String? ?? e.toString();
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _state = _ScreenState.error;
+        _errorMessage = e.toString();
+      });
+    }
   }
 
   Future<void> _playEntrance() async {
@@ -123,6 +154,8 @@ class _PrePurchaseScreenState extends ConsumerState<PrePurchaseScreen>
     _amountController.clear();
     setState(() {
       _selectedCategory = null;
+      _aiResponse = null;
+      _errorMessage = null;
       _state = _ScreenState.input;
     });
   }
@@ -137,6 +170,7 @@ class _PrePurchaseScreenState extends ConsumerState<PrePurchaseScreen>
         _ScreenState.input => _buildInputForm(),
         _ScreenState.loading => _buildLoading(),
         _ScreenState.response => _buildResponse(),
+        _ScreenState.error => _buildError(),
       },
     );
   }
@@ -196,7 +230,7 @@ class _PrePurchaseScreenState extends ConsumerState<PrePurchaseScreen>
           // Description
           TextField(
             controller: _descriptionController,
-            maxLines: 2,
+            maxLines: 1,
             decoration: const InputDecoration(
               labelText: 'What are you thinking of buying?',
             ),
@@ -209,8 +243,7 @@ class _PrePurchaseScreenState extends ConsumerState<PrePurchaseScreen>
             controller: _amountController,
             isExpense: true,
             currencyCode: _currencyCode,
-            onCurrencyChanged: (code) =>
-                setState(() => _currencyCode = code),
+            onCurrencyChanged: (code) => setState(() => _currencyCode = code),
           ),
           const SizedBox(height: 16),
 
@@ -278,6 +311,7 @@ class _PrePurchaseScreenState extends ConsumerState<PrePurchaseScreen>
 
   Widget _buildResponse() {
     final amount = double.tryParse(_amountController.text) ?? 0;
+    final response = _aiResponse!;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -285,8 +319,6 @@ class _PrePurchaseScreenState extends ConsumerState<PrePurchaseScreen>
         children: [
           _buildSummaryCard(),
           const SizedBox(height: 16),
-
-          // Devil bubble — slides from left
           SlideTransition(
             position: Tween<Offset>(
               begin: const Offset(-1, 0),
@@ -297,15 +329,13 @@ class _PrePurchaseScreenState extends ConsumerState<PrePurchaseScreen>
             )),
             child: FadeTransition(
               opacity: _devilAnim,
-              child: const AiMessageBubble(
+              child: AiMessageBubble(
                 type: BubbleType.devil,
-                message: _mockResponse.devil,
+                message: response.impulse,
               ),
             ),
           ),
           const SizedBox(height: 12),
-
-          // Angel bubble — slides from right
           SlideTransition(
             position: Tween<Offset>(
               begin: const Offset(1, 0),
@@ -316,36 +346,30 @@ class _PrePurchaseScreenState extends ConsumerState<PrePurchaseScreen>
             )),
             child: FadeTransition(
               opacity: _angelAnim,
-              child: const AiMessageBubble(
+              child: AiMessageBubble(
                 type: BubbleType.angel,
-                message: _mockResponse.angel,
+                message: response.reason,
               ),
             ),
           ),
           const SizedBox(height: 12),
-
-          // Neutral bubble — fades in
           FadeTransition(
             opacity: _neutralAnim,
-            child: const AiMessageBubble(
+            child: AiMessageBubble(
               type: BubbleType.neutral,
-              message: _mockResponse.neutral,
+              message: response.neutral,
             ),
           ),
           const SizedBox(height: 16),
-
-          // Budget context card (mock)
-          if (_mockResponse.hasBudget && _selectedCategory != null)
+          if (_selectedCategory != null && response.budget != null)
             BudgetContextCard(
               category: _selectedCategory!,
-              spent: 340,
-              limit: 500,
+              spent: response.budget!.currentSpend,
+              limit: response.budget!.monthlyLimit,
               currencyCode: _currencyCode,
               projectedAmount: amount,
             ),
-
           const SizedBox(height: 24),
-
           SizedBox(
             width: double.infinity,
             child: OutlinedButton(
@@ -359,14 +383,53 @@ class _PrePurchaseScreenState extends ConsumerState<PrePurchaseScreen>
     );
   }
 
+  Widget _buildError() {
+    final colors = Theme.of(context).colorScheme;
+
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.error_outline, size: 64, color: colors.error),
+            const SizedBox(height: 16),
+            Text(
+              'Something went wrong',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              _errorMessage ?? 'Please try again.',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: colors.onSurfaceVariant,
+                  ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 24),
+            FilledButton.icon(
+              onPressed: _submit,
+              icon: const Icon(Icons.refresh),
+              label: const Text('Retry'),
+            ),
+            const SizedBox(height: 8),
+            OutlinedButton(
+              onPressed: _reset,
+              child: const Text('Start Over'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   // ── Summary Card ────────────────────────────────────────────────────
 
   Widget _buildSummaryCard() {
     final colors = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
-    final amountText = _amountController.text.isEmpty
-        ? '0.00'
-        : _amountController.text;
+    final amountText =
+        _amountController.text.isEmpty ? '0.00' : _amountController.text;
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),

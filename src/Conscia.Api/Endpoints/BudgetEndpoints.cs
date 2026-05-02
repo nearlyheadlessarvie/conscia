@@ -1,4 +1,5 @@
 using Conscia.Api.Extensions;
+using Conscia.Application.Constants;
 using Conscia.Application.DTOs;
 using Conscia.Application.Interfaces;
 using FluentValidation;
@@ -17,6 +18,7 @@ public static class BudgetEndpoints
             HttpContext ctx,
             CreateBudgetDto dto,
             IBudgetService svc,
+            ISubscriptionService subSvc,
             IValidator<CreateBudgetDto> validator) =>
         {
             var validation = await validator.ValidateAsync(dto, ctx.RequestAborted);
@@ -24,6 +26,17 @@ public static class BudgetEndpoints
                 return Results.ValidationProblem(validation.ToDictionary());
 
             var userId = ctx.User.GetUserId();
+
+            var isPremium = await subSvc.IsPremiumAsync(userId, ctx.RequestAborted);
+            if (!isPremium)
+            {
+                var existing = await svc.ListByUserAsync(userId, ctx.RequestAborted);
+                if (existing.Count >= FreemiumLimits.FreeBudgetCategories)
+                    return Results.Json(
+                        new { error = $"Free tier limit: {FreemiumLimits.FreeBudgetCategories} budget categories", upgradeRequired = true },
+                        statusCode: 403);
+            }
+
             var budget = await svc.CreateAsync(userId, dto.Category, dto.MonthlyLimit, dto.CurrencyCode, ctx.RequestAborted);
             return Results.Created($"/api/v1/budgets/{budget.Id}", new
             {

@@ -36,8 +36,7 @@ class SubscriptionCard extends StatelessWidget {
         Text('Free Plan', style: textTheme.titleMedium),
         const SizedBox(height: 8),
         Text(
-          '${status.transactionCount}/${status.transactionLimit} transactions • '
-          '${status.budgetCount}/${status.budgetLimit} budgets',
+          '3 budget categories • 5 AI assists/mo • 10 reflections/mo',
           style: textTheme.bodySmall?.copyWith(
             color: theme.colorScheme.onSurfaceVariant,
           ),

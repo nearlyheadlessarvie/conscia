@@ -12,6 +12,7 @@ const allCategories = [
   CategoryData('Dining', Icons.restaurant),
   CategoryData('Transport', Icons.directions_car),
   CategoryData('Entertainment', Icons.movie),
+  CategoryData('Games & Recreations', Icons.stadia_controller),
   CategoryData('Shopping', Icons.shopping_bag),
   CategoryData('Health', Icons.favorite),
   CategoryData('Bills', Icons.receipt),

@@ -17,11 +17,11 @@ services:
 
   dynamodb-local:
     image: amazon/dynamodb-local:latest
-    command: "-jar DynamoDBLocal.jar -sharedDb -dbPath /data"
+    command: "-jar DynamoDBLocal.jar -sharedDb -inMemory"
     ports:
       - "8000:8000"
-    volumes:
-      - dynamodb_data:/data
+    user: root
+    working_dir: /home/dynamodblocal
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://localhost:8000/shell/ || exit 1"]
       interval: 5s
@@ -71,12 +71,12 @@ services:
       - "8081:80"
     environment:
       ACCEPT_EULA: "Y"
+      SEQ_FIRSTRUN_ADMINPASSWORDHASH: ""
     volumes:
       - seq_data:/data
 
 volumes:
   postgres_data:
-  dynamodb_data:
   minio_data:
   ollama_data:
   seq_data:

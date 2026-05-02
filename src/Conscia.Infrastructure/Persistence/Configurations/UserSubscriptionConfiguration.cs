@@ -25,6 +25,10 @@ public class UserSubscriptionConfiguration : IEntityTypeConfiguration<UserSubscr
         builder.Property(s => s.OriginalTransactionId)
             .HasMaxLength(512);
 
+        builder.HasIndex(s => s.OriginalTransactionId)
+            .IsUnique()
+            .HasFilter("\"OriginalTransactionId\" IS NOT NULL");
+
         builder.HasIndex(s => s.UserId);
     }
 }

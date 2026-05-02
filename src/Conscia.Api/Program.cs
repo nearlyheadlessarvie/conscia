@@ -1,7 +1,11 @@
 using System.Text;
+using System.Text.Json;
+using System.Text.Json.Serialization;
+using Amazon;
 using Amazon.BedrockRuntime;
 using Amazon.DynamoDBv2;
 using Amazon.Lambda;
+using Amazon.Runtime;
 using Amazon.S3;
 using Amazon.SQS;
 using Conscia.AI.Services;
@@ -10,6 +14,7 @@ using Conscia.Api.Health;
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.RateLimiting;
 using Conscia.Api.Middleware;
+using Conscia.Application.Configuration;
 using Conscia.Application.Interfaces;
 using Conscia.Application.Services;
 using Conscia.Application.Validators;
@@ -77,24 +82,26 @@ builder.Services.AddOpenTelemetry()
 // --- AWS SDK clients ---
 if (builder.Environment.IsDevelopment())
 {
+    var credentials = new BasicAWSCredentials("local", "local");
+
     var dynamoConfig = new AmazonDynamoDBConfig
     {
         ServiceURL = builder.Configuration["AWS:DynamoDB:ServiceURL"]
     };
-    builder.Services.AddSingleton<IAmazonDynamoDB>(new AmazonDynamoDBClient(dynamoConfig));
+    builder.Services.AddSingleton<IAmazonDynamoDB>(new AmazonDynamoDBClient(credentials, dynamoConfig));
 
     var s3Config = new AmazonS3Config
     {
         ServiceURL = builder.Configuration["AWS:S3:ServiceURL"],
         ForcePathStyle = builder.Configuration.GetValue<bool>("AWS:S3:ForcePathStyle")
     };
-    builder.Services.AddSingleton<IAmazonS3>(new AmazonS3Client(s3Config));
+    builder.Services.AddSingleton<IAmazonS3>(new AmazonS3Client(credentials, s3Config));
 
     var sqsConfig = new AmazonSQSConfig
     {
         ServiceURL = builder.Configuration["AWS:SQS:ServiceURL"]
     };
-    builder.Services.AddSingleton<IAmazonSQS>(new AmazonSQSClient(sqsConfig));
+    builder.Services.AddSingleton<IAmazonSQS>(new AmazonSQSClient(credentials, sqsConfig));
 }
 else
 {
@@ -132,6 +139,12 @@ builder.Services.AddScoped<IBehaviorProfileRepository, BehaviorProfileRepository
 builder.Services.AddScoped<IInAppAlertRepository, InAppAlertRepository>();
 builder.Services.AddScoped<ISessionCacheRepository, SessionCacheRepository>();
 
+// --- Store Validation ---
+builder.Services.Configure<AppleStoreOptions>(builder.Configuration.GetSection(AppleStoreOptions.SectionName));
+builder.Services.Configure<GooglePlayOptions>(builder.Configuration.GetSection(GooglePlayOptions.SectionName));
+builder.Services.AddHttpClient<IAppleReceiptValidator, AppleReceiptValidator>();
+builder.Services.AddHttpClient<IGooglePlayValidator, GooglePlayValidator>();
+
 // --- Services ---
 builder.Services.AddSingleton<IS3StorageService, S3StorageService>();
 builder.Services.AddSingleton<ISqsQueueService, SqsQueueService>();
@@ -140,6 +153,7 @@ builder.Services.AddScoped<IBudgetService, BudgetService>();
 builder.Services.AddScoped<ITransactionService, TransactionService>();
 builder.Services.AddScoped<ISubscriptionService, SubscriptionService>();
 builder.Services.AddScoped<IReceiptService, ReceiptService>();
+builder.Services.AddScoped<IOcrService, StubOcrService>();
 
 // --- AI Service ---
 if (builder.Environment.IsDevelopment())
@@ -160,6 +174,18 @@ else
 // --- Validators ---
 builder.Services.AddValidatorsFromAssemblyContaining<CreateTransactionValidator>();
 
+// --- CORS ---
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("DevelopmentPolicy", corsPolicyBuilder =>
+    {
+        corsPolicyBuilder
+            .AllowAnyOrigin()
+            .AllowAnyMethod()
+            .AllowAnyHeader();
+    });
+});
+
 // --- Background Services ---
 builder.Services.AddHostedService<OutboxProcessor>();
 
@@ -168,11 +194,7 @@ var useMockAuth = builder.Configuration.GetValue<bool>("Auth:UseMock");
 
 if (useMockAuth)
 {
-    var mockAuth = new MockAuthService(builder.Configuration);
-    mockAuth.SeedUser("a1b2c3d4-0001-4000-8000-000000000001", "alice@example.com", "password123", "Premium");
-    mockAuth.SeedUser("a1b2c3d4-0002-4000-8000-000000000002", "bob@example.com", "password123", "Free");
-    mockAuth.SeedUser("a1b2c3d4-0003-4000-8000-000000000003", "carol@example.com", "password123", "Premium");
-    builder.Services.AddSingleton<IAuthService>(mockAuth);
+    builder.Services.AddScoped<IAuthService, MockAuthService>();
 
     var signingKey = builder.Configuration["Auth:MockSigningKey"]!;
     builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -230,10 +252,32 @@ builder.Services.AddRateLimiter(options =>
         opt.Window = TimeSpan.FromMinutes(1);
         opt.QueueLimit = 0;
     });
+
+    options.AddFixedWindowLimiter("iap-verify", opt =>
+    {
+        opt.PermitLimit = 5;
+        opt.Window = TimeSpan.FromMinutes(5);
+        opt.QueueLimit = 0;
+    });
+
+    options.AddFixedWindowLimiter("auth", opt =>
+    {
+        opt.PermitLimit = 5;
+        opt.Window = TimeSpan.FromMinutes(1);
+        opt.QueueLimit = 0;
+    });
 });
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+
+// --- JSON Serialization ---
+builder.Services.ConfigureHttpJsonOptions(options =>
+{
+    options.SerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
+    options.SerializerOptions.WriteIndented = false;
+    options.SerializerOptions.Converters.Add(new JsonStringEnumConverter(JsonNamingPolicy.CamelCase));
+});
 
 // --- Health Checks ---
 builder.Services.AddHttpClient();
@@ -263,6 +307,12 @@ app.UseSerilogRequestLogging();
 app.UseExceptionHandler();
 app.UseHttpsRedirection();
 app.UseMiddleware<ColdStartMiddleware>();
+
+if (app.Environment.IsDevelopment())
+{
+    app.UseCors("DevelopmentPolicy");
+}
+
 app.UseAuthentication();
 app.UseAuthorization();
 app.UseRateLimiter();
@@ -272,18 +322,18 @@ app.MapHealthChecks("/health/live", new HealthCheckOptions
 {
     Predicate = check => check.Tags.Contains("live"),
     ResponseWriter = HealthResponseWriter.WriteAsync
-});
+}).AllowAnonymous();
 
 app.MapHealthChecks("/health/ready", new HealthCheckOptions
 {
     Predicate = check => check.Tags.Contains("ready"),
     ResponseWriter = HealthResponseWriter.WriteAsync
-});
+}).AllowAnonymous();
 
 app.MapHealthChecks("/health", new HealthCheckOptions
 {
     ResponseWriter = HealthResponseWriter.WriteAsync
-});
+}).AllowAnonymous();
 
 app.MapGet("/api/v1", () => Results.Ok(new { version = "1.0", service = "Conscia API" }))
     .WithName("ApiRoot")

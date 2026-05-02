@@ -1,24 +1,22 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:riverpod_annotation/riverpod_annotation.dart';
 
+import '../../providers/auth_provider.dart';
 import '../constants/api_constants.dart';
-import 'api_exception.dart';
-
-part 'dio_client.g.dart';
 
 const _tokenKey = 'access_token';
+const _refreshTokenKey = 'refresh_token';
+const _userIdKey = 'user_id';
 
-@riverpod
-Dio dio(Ref ref) {
+final dioProvider = Provider<Dio>((ref) {
   final dio = Dio(
     BaseOptions(
       baseUrl: ApiConstants.baseUrl,
       connectTimeout: ApiConstants.connectTimeout,
       receiveTimeout: ApiConstants.receiveTimeout,
+      contentType: Headers.jsonContentType,
       headers: {
-        'Content-Type': 'application/json',
         'Accept': 'application/json',
       },
     ),
@@ -38,7 +36,9 @@ Dio dio(Ref ref) {
       onError: (error, handler) async {
         if (error.response?.statusCode == 401) {
           await storage.delete(key: _tokenKey);
-          // The auth state listener will handle redirect to login
+          await storage.delete(key: _refreshTokenKey);
+          await storage.delete(key: _userIdKey);
+          ref.read(authProvider.notifier).logout();
         }
         return handler.next(error);
       },
@@ -46,9 +46,4 @@ Dio dio(Ref ref) {
   );
 
   return dio;
-}
-
-@riverpod
-FlutterSecureStorage secureStorage(Ref ref) {
-  return const FlutterSecureStorage();
-}
+});

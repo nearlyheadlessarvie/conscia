@@ -1,0 +1,183 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Footer from '../components/Footer.astro';
+import Logo from '../components/icons/Logo.astro';
+---
+
+<Layout title="Terms of Service — Conscia" description="Terms and conditions for using the Conscia app and services.">
+  <!-- Header -->
+  <header class="bg-primary py-6">
+    <div class="mx-auto flex max-w-7xl items-center gap-3 px-6">
+      <a href="/" class="flex items-center gap-3 transition hover:opacity-80">
+        <Logo size="32" />
+        <span class="font-heading text-xl font-bold text-white">Conscia</span>
+      </a>
+    </div>
+  </header>
+
+  <main class="mx-auto max-w-3xl px-6 py-16">
+    <h1 class="font-heading text-4xl font-bold text-primary">Terms of Service</h1>
+    <p class="mt-2 text-sm text-gray-500">Last updated: May 1, 2026</p>
+
+    <div class="mt-10 space-y-10 text-gray-700 leading-relaxed">
+      <!-- 1 -->
+      <section>
+        <h2 class="font-heading text-xl font-semibold text-gray-900">1. Acceptance of Terms</h2>
+        <p class="mt-3">By downloading, installing, or using Conscia ("the App"), you agree to be bound by these Terms of Service ("Terms"). If you do not agree, do not use the App.</p>
+      </section>
+
+      <!-- 2 -->
+      <section>
+        <h2 class="font-heading text-xl font-semibold text-gray-900">2. Description of Service</h2>
+        <p class="mt-3">Conscia is a personal finance tracking application with AI-powered spending advice. The App provides:</p>
+        <ul class="mt-3 list-disc space-y-2 pl-6">
+          <li>Manual transaction and budget tracking</li>
+          <li>AI pre-purchase advice via dual-personality advisors (Impulse and Reason)</li>
+          <li>Purchase reflection prompts</li>
+          <li>Receipt scanning with AI extraction (Premium)</li>
+          <li>Multi-currency support (Premium)</li>
+        </ul>
+        <p class="mt-3"><strong>Conscia is not a financial advisor.</strong> The AI-generated advice is for informational and entertainment purposes only. You should not rely on it as professional financial, investment, or legal guidance.</p>
+      </section>
+
+      <!-- 3 -->
+      <section>
+        <h2 class="font-heading text-xl font-semibold text-gray-900">3. Accounts & Registration</h2>
+        <ul class="mt-3 list-disc space-y-2 pl-6">
+          <li>You must be at least 13 years old to create an account.</li>
+          <li>You may register using email/password, Google Sign-In, or Apple Sign-In.</li>
+          <li>You are responsible for maintaining the security of your account credentials.</li>
+          <li>You agree to provide accurate information and to update it if it changes.</li>
+          <li>One person may not maintain more than one account.</li>
+        </ul>
+      </section>
+
+      <!-- 4 -->
+      <section>
+        <h2 class="font-heading text-xl font-semibold text-gray-900">4. Free & Premium Plans</h2>
+        <p class="mt-3">Conscia offers two tiers:</p>
+        <div class="mt-4 overflow-hidden rounded-lg border border-gray-200">
+          <table class="w-full text-sm">
+            <thead class="bg-gray-50">
+              <tr>
+                <th class="px-4 py-3 text-left font-semibold text-gray-900">Feature</th>
+                <th class="px-4 py-3 text-center font-semibold text-gray-900">Free</th>
+                <th class="px-4 py-3 text-center font-semibold text-gray-900">Premium</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100">
+              <tr><td class="px-4 py-2">Manual tracking</td><td class="px-4 py-2 text-center">Unlimited</td><td class="px-4 py-2 text-center">Unlimited</td></tr>
+              <tr><td class="px-4 py-2">Budget categories</td><td class="px-4 py-2 text-center">3</td><td class="px-4 py-2 text-center">Unlimited</td></tr>
+              <tr><td class="px-4 py-2">AI assists / month</td><td class="px-4 py-2 text-center">5</td><td class="px-4 py-2 text-center">Unlimited</td></tr>
+              <tr><td class="px-4 py-2">Reflections / month</td><td class="px-4 py-2 text-center">10</td><td class="px-4 py-2 text-center">Unlimited</td></tr>
+              <tr><td class="px-4 py-2">Currencies</td><td class="px-4 py-2 text-center">1</td><td class="px-4 py-2 text-center">Unlimited</td></tr>
+              <tr><td class="px-4 py-2">Receipt scanning</td><td class="px-4 py-2 text-center">—</td><td class="px-4 py-2 text-center">Included</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 5 -->
+      <section>
+        <h2 class="font-heading text-xl font-semibold text-gray-900">5. Subscriptions & Billing</h2>
+        <ul class="mt-3 list-disc space-y-2 pl-6">
+          <li>Premium subscriptions are billed monthly at <strong>$4.99/month</strong> through the Apple App Store or Google Play Store.</li>
+          <li>Payment is charged to your App Store or Play Store account at confirmation of purchase.</li>
+          <li>Subscriptions auto-renew unless cancelled at least 24 hours before the end of the current billing period.</li>
+          <li>You can manage and cancel your subscription through your device's App Store or Play Store settings.</li>
+          <li>Refunds are handled by Apple or Google according to their respective refund policies.</li>
+          <li>We reserve the right to change pricing with at least 30 days' notice. Existing subscribers will be notified before any price change takes effect.</li>
+        </ul>
+      </section>
+
+      <!-- 6 -->
+      <section>
+        <h2 class="font-heading text-xl font-semibold text-gray-900">6. Acceptable Use</h2>
+        <p class="mt-3">You agree not to:</p>
+        <ul class="mt-3 list-disc space-y-2 pl-6">
+          <li>Attempt to bypass freemium limits through API manipulation, account creation, or any other means.</li>
+          <li>Use the App for any illegal purpose or in violation of applicable laws.</li>
+          <li>Attempt to reverse engineer, decompile, or disassemble the App.</li>
+          <li>Use automated systems (bots, scrapers) to access the App or its APIs.</li>
+          <li>Submit malicious content, including prompt injection attempts against the AI system.</li>
+          <li>Share your account credentials or allow others to access your account.</li>
+        </ul>
+      </section>
+
+      <!-- 7 -->
+      <section>
+        <h2 class="font-heading text-xl font-semibold text-gray-900">7. Your Data & Content</h2>
+        <ul class="mt-3 list-disc space-y-2 pl-6">
+          <li>You retain ownership of all financial data you enter into Conscia.</li>
+          <li>You grant us a limited license to process your data solely to provide the service.</li>
+          <li>You can export or delete your data at any time from the Settings screen.</li>
+          <li>Upon account deletion, all your data will be permanently removed within 30 days.</li>
+        </ul>
+      </section>
+
+      <!-- 8 -->
+      <section>
+        <h2 class="font-heading text-xl font-semibold text-gray-900">8. AI-Generated Content</h2>
+        <ul class="mt-3 list-disc space-y-2 pl-6">
+          <li>AI responses (from Impulse, Reason, and neutral advisors) are generated by machine learning models and may be inaccurate, incomplete, or inappropriate.</li>
+          <li>AI advice does not constitute financial, legal, or professional advice of any kind.</li>
+          <li>We do not guarantee the accuracy, reliability, or suitability of any AI-generated content.</li>
+          <li>You are solely responsible for any financial decisions you make.</li>
+        </ul>
+      </section>
+
+      <!-- 9 -->
+      <section>
+        <h2 class="font-heading text-xl font-semibold text-gray-900">9. Limitation of Liability</h2>
+        <p class="mt-3">To the maximum extent permitted by law:</p>
+        <ul class="mt-3 list-disc space-y-2 pl-6">
+          <li>Conscia is provided "as is" and "as available" without warranties of any kind.</li>
+          <li>We are not liable for any direct, indirect, incidental, or consequential damages arising from your use of the App.</li>
+          <li>We are not liable for any financial losses resulting from reliance on AI-generated advice.</li>
+          <li>Our total liability shall not exceed the amount you paid for Premium in the 12 months preceding the claim.</li>
+        </ul>
+      </section>
+
+      <!-- 10 -->
+      <section>
+        <h2 class="font-heading text-xl font-semibold text-gray-900">10. Service Availability</h2>
+        <ul class="mt-3 list-disc space-y-2 pl-6">
+          <li>We strive for high availability but do not guarantee uninterrupted service.</li>
+          <li>We may perform maintenance that temporarily affects availability, with notice when possible.</li>
+          <li>We reserve the right to modify, suspend, or discontinue any feature with reasonable notice.</li>
+        </ul>
+      </section>
+
+      <!-- 11 -->
+      <section>
+        <h2 class="font-heading text-xl font-semibold text-gray-900">11. Termination</h2>
+        <ul class="mt-3 list-disc space-y-2 pl-6">
+          <li>You may terminate your account at any time by deleting it from Settings.</li>
+          <li>We may suspend or terminate accounts that violate these Terms.</li>
+          <li>Upon termination, your right to use the App ceases immediately.</li>
+          <li>Sections 7–9 survive termination.</li>
+        </ul>
+      </section>
+
+      <!-- 12 -->
+      <section>
+        <h2 class="font-heading text-xl font-semibold text-gray-900">12. Changes to These Terms</h2>
+        <p class="mt-3">We may update these Terms from time to time. Material changes will be communicated through the App at least 30 days before taking effect. Continued use after changes constitutes acceptance.</p>
+      </section>
+
+      <!-- 13 -->
+      <section>
+        <h2 class="font-heading text-xl font-semibold text-gray-900">13. Governing Law</h2>
+        <p class="mt-3">These Terms are governed by applicable law. Any disputes will be resolved through binding arbitration, except where prohibited by law.</p>
+      </section>
+
+      <!-- 14 -->
+      <section>
+        <h2 class="font-heading text-xl font-semibold text-gray-900">14. Contact</h2>
+        <p class="mt-3">Questions about these Terms? Reach us at <a href="mailto:legal@getconscia.com" class="font-semibold text-primary underline hover:text-primary-dark">legal@getconscia.com</a>.</p>
+      </section>
+    </div>
+  </main>
+
+  <Footer />
+</Layout>

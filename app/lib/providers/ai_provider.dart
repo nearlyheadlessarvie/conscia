@@ -1,9 +1,10 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../core/network/dio_client.dart';
 import '../services/ai_service.dart';
 
 final aiServiceProvider = Provider<AIService>((ref) {
-  throw UnimplementedError('Override with Dio instance');
+  return AIService(ref.watch(dioProvider));
 });
 
 class PrePurchaseFormState {

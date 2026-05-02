@@ -66,4 +66,58 @@ public class AuthEndpointTests : IClassFixture<TestWebAppFactory>
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
+
+    [Fact]
+    public async Task GoogleLogin_ValidToken_Returns200()
+    {
+        var response = await _client.PostAsJsonAsync("/api/v1/auth/google", new
+        {
+            idToken = "mock-google-id-token"
+        });
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<Dictionary<string, object>>();
+        Assert.NotNull(body);
+        Assert.True(body!.ContainsKey("accessToken"));
+        Assert.True(body.ContainsKey("refreshToken"));
+        Assert.True(body.ContainsKey("userId"));
+    }
+
+    [Fact]
+    public async Task GoogleLogin_EmptyToken_Returns400()
+    {
+        var response = await _client.PostAsJsonAsync("/api/v1/auth/google", new
+        {
+            idToken = ""
+        });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task AppleLogin_ValidToken_Returns200()
+    {
+        var response = await _client.PostAsJsonAsync("/api/v1/auth/apple", new
+        {
+            identityToken = "mock-apple-identity-token",
+            authorizationCode = "mock-auth-code"
+        });
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<Dictionary<string, object>>();
+        Assert.NotNull(body);
+        Assert.True(body!.ContainsKey("accessToken"));
+    }
+
+    [Fact]
+    public async Task AppleLogin_EmptyToken_Returns400()
+    {
+        var response = await _client.PostAsJsonAsync("/api/v1/auth/apple", new
+        {
+            identityToken = "",
+            authorizationCode = (string?)null
+        });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
 }

@@ -21,10 +21,25 @@ public static class ReceiptEndpoints
         .WithName("ScanReceipt")
         .WithMetadata(new RequirePremiumAttribute());
 
-        group.MapPost("/{id}/confirm", async (string id, HttpContext ctx, IReceiptService receiptService) =>
+        group.MapGet("/{id}", async (string id, HttpContext ctx, IReceiptService receiptService) =>
         {
+            if (!Guid.TryParse(id, out var receiptId))
+                return Results.BadRequest(new { error = "Invalid receipt ID" });
+
             var userId = ctx.User.GetUserId();
-            var transaction = await receiptService.ConfirmAsync(userId, Guid.Parse(id), ctx.RequestAborted);
+            var result = await receiptService.GetByIdAsync(userId, receiptId, ctx.RequestAborted);
+            return result is null ? Results.NotFound(new { error = "Receipt not found" }) : Results.Ok(result);
+        })
+        .WithName("GetReceipt")
+        .WithMetadata(new RequirePremiumAttribute());
+
+        group.MapPost("/{id}/confirm", async (string id, ConfirmReceiptRequest req, HttpContext ctx, IReceiptService receiptService) =>
+        {
+            if (!Guid.TryParse(id, out var receiptId))
+                return Results.BadRequest(new { error = "Invalid receipt ID" });
+
+            var userId = ctx.User.GetUserId();
+            var transaction = await receiptService.ConfirmAsync(userId, receiptId, req, ctx.RequestAborted);
             return Results.Ok(transaction);
         })
         .WithName("ConfirmReceipt")

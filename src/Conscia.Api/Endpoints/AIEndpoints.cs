@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using Conscia.Api.Extensions;
 using Conscia.Api.Telemetry;
+using Conscia.Application.Constants;
 using Conscia.Application.DTOs;
 using Conscia.Application.Interfaces;
 using Conscia.Application.Models;
@@ -25,6 +26,7 @@ public static class AIEndpoints
             IBudgetService budgetService,
             ITransactionService transactionService,
             IAIInteractionRepository aiRepo,
+            ISubscriptionService subSvc,
             IValidator<PrePurchaseRequestDto> validator) =>
         {
             using var activity = ConsciaActivitySources.AI.StartActivity("PrePurchaseAdvice");
@@ -39,6 +41,17 @@ public static class AIEndpoints
             activity?.SetTag("ai.request.currency", dto.CurrencyCode);
 
             var userId = ctx.User.GetUserId();
+
+            var isPremium = await subSvc.IsPremiumAsync(userId, ctx.RequestAborted);
+            if (!isPremium)
+            {
+                var monthStart = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1);
+                var count = await aiRepo.CountByUserAsync(userId, monthStart, "PrePurchase", ctx.RequestAborted);
+                if (count >= FreemiumLimits.FreeAiAssistsPerMonth)
+                    return Results.Json(
+                        new { error = $"Free tier limit: {FreemiumLimits.FreeAiAssistsPerMonth} AI assists per month", upgradeRequired = true },
+                        statusCode: 403);
+            }
 
             decimal? budgetPercent = null;
             var budgets = await budgetService.ListByUserAsync(userId, ctx.RequestAborted);
@@ -76,6 +89,7 @@ public static class AIEndpoints
                 DevilMsg = response.DevilMessage,
                 AngelMsg = response.AngelMessage,
                 NeutralMsg = response.NeutralMessage,
+                InteractionType = "PrePurchase",
                 CreatedAt = DateTime.UtcNow
             }, ctx.RequestAborted);
 
@@ -101,12 +115,24 @@ public static class AIEndpoints
             IAIService aiService,
             IBudgetService budgetService,
             ITransactionService transactionService,
-            IAIInteractionRepository aiRepo) =>
+            IAIInteractionRepository aiRepo,
+            ISubscriptionService subSvc) =>
         {
             using var activity = ConsciaActivitySources.AI.StartActivity("ReflectionAdvice");
             var sw = Stopwatch.StartNew();
 
             var userId = ctx.User.GetUserId();
+
+            var isPremium = await subSvc.IsPremiumAsync(userId, ctx.RequestAborted);
+            if (!isPremium)
+            {
+                var monthStart = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1);
+                var count = await aiRepo.CountByUserAsync(userId, monthStart, "Reflection", ctx.RequestAborted);
+                if (count >= FreemiumLimits.FreeReflectionsPerMonth)
+                    return Results.Json(
+                        new { error = $"Free tier limit: {FreemiumLimits.FreeReflectionsPerMonth} reflections per month", upgradeRequired = true },
+                        statusCode: 403);
+            }
 
             var transaction = await transactionService.GetByIdAsync(userId, dto.TransactionId, ctx.RequestAborted);
             if (transaction is null)
@@ -148,6 +174,7 @@ public static class AIEndpoints
                 DevilMsg = response.DevilMessage,
                 AngelMsg = response.AngelMessage,
                 NeutralMsg = response.NeutralMessage,
+                InteractionType = "Reflection",
                 CreatedAt = DateTime.UtcNow
             }, ctx.RequestAborted);
 

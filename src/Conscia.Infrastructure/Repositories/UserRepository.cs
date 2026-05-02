@@ -1,5 +1,6 @@
 using Conscia.Application.Interfaces;
 using Conscia.Domain.Entities;
+using Conscia.Domain.Enums;
 using Conscia.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
@@ -14,8 +15,10 @@ public class UserRepository : IUserRepository
     public async Task<User?> GetByIdAsync(Guid id, CancellationToken ct = default) =>
         await _db.Users.FindAsync([id], ct);
 
-    public async Task<User?> GetByCognitoSubAsync(string cognitoSub, CancellationToken ct = default) =>
-        await _db.Users.FirstOrDefaultAsync(u => u.CognitoSub == cognitoSub, ct);
+    public async Task<User?> GetByProviderAsync(AuthProvider provider, string providerSub, CancellationToken ct = default) =>
+        await _db.Users.FirstOrDefaultAsync(
+            u => _db.UserIdentities.Any(i => i.UserId == u.Id && i.Provider == provider && i.ProviderSub == providerSub),
+            ct);
 
     public async Task<User?> GetByEmailAsync(string email, CancellationToken ct = default) =>
         await _db.Users.FirstOrDefaultAsync(u => u.Email == email, ct);
@@ -42,5 +45,12 @@ public class UserRepository : IUserRepository
             _db.Users.Remove(user);
             await _db.SaveChangesAsync(ct);
         }
+    }
+
+    public async Task<UserIdentity> AddIdentityAsync(UserIdentity identity, CancellationToken ct = default)
+    {
+        _db.UserIdentities.Add(identity);
+        await _db.SaveChangesAsync(ct);
+        return identity;
     }
 }

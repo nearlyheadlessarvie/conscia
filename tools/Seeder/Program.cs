@@ -1,4 +1,4 @@
-﻿using System.Text;
+using System.Text;
 using System.Text.Json;
 using Amazon;
 using Amazon.DynamoDBv2;
@@ -25,7 +25,7 @@ var s3Config = new AmazonS3Config
 var s3 = new AmazonS3Client(new BasicAWSCredentials("minioadmin", "minioadmin"), s3Config);
 
 var dbOptions = new DbContextOptionsBuilder<ConsciaDbContext>()
-    .UseNpgsql("Host=localhost;Port=5432;Database=conscia;Username=conscia;Password=conscia_local")
+    .UseNpgsql("Host=localhost;Port=5432;Database=conscia;Username=conscia;Password=conscia_dev")
     .Options;
 using var db = new ConsciaDbContext(dbOptions);
 
@@ -55,7 +55,11 @@ async Task SeedRds()
     if (File.Exists(sqlPath))
     {
         var sql = await File.ReadAllTextAsync(sqlPath);
-        await db.Database.ExecuteSqlRawAsync(sql);
+        var conn = db.Database.GetDbConnection();
+        await conn.OpenAsync();
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = sql;
+        await cmd.ExecuteNonQueryAsync();
         Console.WriteLine("[RDS] Seeded 3 users, 3 subscriptions, 5 budgets, 10 receipts.");
     }
     else

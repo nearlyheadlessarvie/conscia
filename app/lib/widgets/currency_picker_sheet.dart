@@ -1,19 +1,16 @@
 import 'package:flutter/material.dart';
 
-class CurrencyPickerSheet extends StatefulWidget {
-  final String selectedCode;
-  final ValueChanged<String> onSelected;
+import '../core/constants/currencies.dart';
+import '../screens/settings/widgets/subscription_sheet.dart';
 
-  const CurrencyPickerSheet({
-    super.key,
-    required this.selectedCode,
-    required this.onSelected,
-  });
+class CurrencyPickerSheet {
+  CurrencyPickerSheet._();
 
   static Future<void> show(
     BuildContext context, {
     required String selectedCode,
     required ValueChanged<String> onSelected,
+    bool isPremium = false,
   }) {
     return showModalBottomSheet(
       context: context,
@@ -24,45 +21,28 @@ class CurrencyPickerSheet extends StatefulWidget {
         minChildSize: 0.4,
         maxChildSize: 0.9,
         expand: false,
-        builder: (_, controller) => CurrencyPickerSheet._internal(
+        builder: (_, controller) => _CurrencyPickerBody(
           selectedCode: selectedCode,
           onSelected: onSelected,
           scrollController: controller,
+          isPremium: isPremium,
         ),
       ),
     );
   }
-
-  static Widget _internal({
-    required String selectedCode,
-    required ValueChanged<String> onSelected,
-    required ScrollController scrollController,
-  }) {
-    return _CurrencyPickerBody(
-      selectedCode: selectedCode,
-      onSelected: onSelected,
-      scrollController: scrollController,
-    );
-  }
-
-  @override
-  State<CurrencyPickerSheet> createState() => _CurrencyPickerSheetState();
-}
-
-class _CurrencyPickerSheetState extends State<CurrencyPickerSheet> {
-  @override
-  Widget build(BuildContext context) => const SizedBox.shrink();
 }
 
 class _CurrencyPickerBody extends StatefulWidget {
   final String selectedCode;
   final ValueChanged<String> onSelected;
   final ScrollController scrollController;
+  final bool isPremium;
 
   const _CurrencyPickerBody({
     required this.selectedCode,
     required this.onSelected,
     required this.scrollController,
+    this.isPremium = true,
   });
 
   @override
@@ -72,39 +52,13 @@ class _CurrencyPickerBody extends StatefulWidget {
 class _CurrencyPickerBodyState extends State<_CurrencyPickerBody> {
   String _query = '';
 
-  static const _currencies = [
-    ('USD', '\$', '🇺🇸', 'US Dollar'),
-    ('EUR', '€', '🇪🇺', 'Euro'),
-    ('GBP', '£', '🇬🇧', 'British Pound'),
-    ('JPY', '¥', '🇯🇵', 'Japanese Yen'),
-    ('MXN', '\$', '🇲🇽', 'Mexican Peso'),
-    ('CAD', '\$', '🇨🇦', 'Canadian Dollar'),
-    ('AUD', '\$', '🇦🇺', 'Australian Dollar'),
-    ('CHF', 'Fr', '🇨🇭', 'Swiss Franc'),
-    ('CNY', '¥', '🇨🇳', 'Chinese Yuan'),
-    ('INR', '₹', '🇮🇳', 'Indian Rupee'),
-    ('BRL', 'R\$', '🇧🇷', 'Brazilian Real'),
-    ('KRW', '₩', '🇰🇷', 'South Korean Won'),
-    ('SGD', '\$', '🇸🇬', 'Singapore Dollar'),
-    ('HKD', '\$', '🇭🇰', 'Hong Kong Dollar'),
-    ('SEK', 'kr', '🇸🇪', 'Swedish Krona'),
-    ('NOK', 'kr', '🇳🇴', 'Norwegian Krone'),
-    ('DKK', 'kr', '🇩🇰', 'Danish Krone'),
-    ('NZD', '\$', '🇳🇿', 'New Zealand Dollar'),
-    ('ZAR', 'R', '🇿🇦', 'South African Rand'),
-    ('COP', '\$', '🇨🇴', 'Colombian Peso'),
-    ('ARS', '\$', '🇦🇷', 'Argentine Peso'),
-    ('CLP', '\$', '🇨🇱', 'Chilean Peso'),
-    ('PEN', 'S/', '🇵🇪', 'Peruvian Sol'),
-  ];
-
-  List<(String, String, String, String)> get _filtered {
-    if (_query.isEmpty) return _currencies;
+  List<CurrencyInfo> get _filtered {
+    if (_query.isEmpty) return Currencies.all;
     final q = _query.toLowerCase();
-    return _currencies
+    return Currencies.all
         .where((c) =>
-            c.$1.toLowerCase().contains(q) ||
-            c.$4.toLowerCase().contains(q))
+            c.code.toLowerCase().contains(q) ||
+            c.name.toLowerCase().contains(q))
         .toList();
   }
 
@@ -140,25 +94,59 @@ class _CurrencyPickerBodyState extends State<_CurrencyPickerBody> {
           ),
         ),
         const SizedBox(height: 8),
+        if (!widget.isPremium)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            child: Row(
+              children: [
+                Icon(Icons.workspace_premium,
+                    size: 16, color: colors.secondary),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    'Free tier: 1 currency. Upgrade to Premium for multi-currency support.',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: colors.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                    SubscriptionSheet.show(context);
+                  },
+                  child: const Text('Upgrade'),
+                ),
+              ],
+            ),
+          ),
         Expanded(
           child: ListView.builder(
             controller: widget.scrollController,
             itemCount: _filtered.length,
             itemBuilder: (context, index) {
               final currency = _filtered[index];
-              final isSelected = currency.$1 == widget.selectedCode;
+              final isSelected = currency.code == widget.selectedCode;
+              final isLocked = !widget.isPremium && !isSelected;
 
               return ListTile(
-                leading: Text(currency.$3, style: const TextStyle(fontSize: 24)),
-                title: Text(currency.$1),
-                subtitle: Text(currency.$4),
+                leading: Text(currency.flag, style: const TextStyle(fontSize: 24)),
+                title: Text(currency.code),
+                subtitle: Text(currency.name),
                 trailing: isSelected
                     ? Icon(Icons.check, color: colors.primary)
-                    : null,
-                onTap: () {
-                  widget.onSelected(currency.$1);
-                  Navigator.of(context).pop();
-                },
+                    : isLocked
+                        ? Icon(Icons.lock_outline,
+                            size: 18, color: colors.outline)
+                        : null,
+                enabled: !isLocked,
+                onTap: isLocked
+                    ? null
+                    : () {
+                        widget.onSelected(currency.code);
+                        Navigator.of(context).pop();
+                      },
               );
             },
           ),

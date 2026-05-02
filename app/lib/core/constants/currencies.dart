@@ -38,6 +38,13 @@ class Currencies {
     CurrencyInfo(code: 'TRY', name: 'Turkish Lira', symbol: '₺', flag: '🇹🇷'),
     CurrencyInfo(code: 'PLN', name: 'Polish Zloty', symbol: 'zł', flag: '🇵🇱'),
     CurrencyInfo(code: 'THB', name: 'Thai Baht', symbol: '฿', flag: '🇹🇭'),
+    CurrencyInfo(code: 'PHP', name: 'Philippine Peso', symbol: '₱', flag: '🇵🇭'),
+    CurrencyInfo(code: 'IDR', name: 'Indonesian Rupiah', symbol: 'Rp', flag: '🇮🇩'),
+    CurrencyInfo(code: 'MYR', name: 'Malaysian Ringgit', symbol: 'RM', flag: '🇲🇾'),
+    CurrencyInfo(code: 'CZK', name: 'Czech Koruna', symbol: 'Kč', flag: '🇨🇿'),
+    CurrencyInfo(code: 'HUF', name: 'Hungarian Forint', symbol: 'Ft', flag: '🇭🇺'),
+    CurrencyInfo(code: 'RON', name: 'Romanian Leu', symbol: 'lei', flag: '🇷🇴'),
+    CurrencyInfo(code: 'ILS', name: 'Israeli Shekel', symbol: '₪', flag: '🇮🇱'),
     CurrencyInfo(code: 'AED', name: 'UAE Dirham', symbol: 'د.إ', flag: '🇦🇪'),
     CurrencyInfo(code: 'SAR', name: 'Saudi Riyal', symbol: '﷼', flag: '🇸🇦'),
     CurrencyInfo(code: 'COP', name: 'Colombian Peso', symbol: 'CO\$', flag: '🇨🇴'),
@@ -53,4 +60,27 @@ class Currencies {
       return null;
     }
   }
+
+  /// Maps ISO 3166-1 country codes to their primary currency.
+  /// Single source of truth — used by device-default inference and onboarding.
+  static const Map<String, String> countryToCurrency = {
+    'US': 'USD', 'GB': 'GBP', 'MX': 'MXN', 'ES': 'EUR',
+    'FR': 'EUR', 'DE': 'EUR', 'IT': 'EUR', 'NL': 'EUR',
+    'BE': 'EUR', 'AT': 'EUR', 'IE': 'EUR', 'PT': 'EUR',
+    'FI': 'EUR', 'GR': 'EUR', 'SK': 'EUR', 'SI': 'EUR',
+    'LT': 'EUR', 'LV': 'EUR', 'EE': 'EUR', 'MT': 'EUR',
+    'CY': 'EUR', 'LU': 'EUR',
+    'JP': 'JPY', 'CN': 'CNY', 'BR': 'BRL', 'CA': 'CAD',
+    'AU': 'AUD', 'IN': 'INR', 'KR': 'KRW', 'PH': 'PHP',
+    'SG': 'SGD', 'TH': 'THB', 'ID': 'IDR', 'MY': 'MYR',
+    'NZ': 'NZD', 'CH': 'CHF', 'SE': 'SEK', 'NO': 'NOK',
+    'DK': 'DKK', 'PL': 'PLN', 'CZ': 'CZK', 'HU': 'HUF',
+    'RO': 'RON', 'ZA': 'ZAR', 'AE': 'AED', 'SA': 'SAR',
+    'IL': 'ILS', 'TR': 'TRY', 'HK': 'HKD',
+    'CL': 'CLP', 'CO': 'COP', 'AR': 'ARS', 'PE': 'PEN',
+  };
+
+  /// Infer currency code from ISO country code, defaults to USD.
+  static String fromCountry(String countryCode) =>
+      countryToCurrency[countryCode] ?? 'USD';
 }

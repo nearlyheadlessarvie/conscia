@@ -1,9 +1,10 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../core/network/dio_client.dart';
 import '../services/budget_service.dart';
 
 final budgetServiceProvider = Provider<BudgetService>((ref) {
-  throw UnimplementedError('Override with Dio instance');
+  return BudgetService(ref.watch(dioProvider));
 });
 
 class BudgetListState {

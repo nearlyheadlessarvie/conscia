@@ -1,9 +1,9 @@
-﻿using Amazon.DynamoDBv2;
+using Amazon.DynamoDBv2;
 using Amazon.DynamoDBv2.Model;
 
 var serviceUrl = args.Length > 0 ? args[0] : "http://localhost:8000";
 var config = new AmazonDynamoDBConfig { ServiceURL = serviceUrl };
-using var client = new AmazonDynamoDBClient(config);
+using var client = new AmazonDynamoDBClient("local", "local", config);
 
 Console.WriteLine($"Creating DynamoDB tables at {serviceUrl}...");
 

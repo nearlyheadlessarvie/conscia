@@ -1,7 +1,15 @@
-import 'package:flutter/material.dart';
+import 'dart:async';
 
-class SubscriptionSheet extends StatefulWidget {
-  const SubscriptionSheet({super.key});
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../../core/constants/api_constants.dart';
+import '../../../providers/iap_provider.dart';
+import '../../../providers/subscription_provider.dart';
+import '../../../services/iap_service.dart';
+
+class SubscriptionSheet {
+  SubscriptionSheet._();
 
   static Future<void> show(BuildContext context) {
     return showModalBottomSheet(
@@ -18,32 +26,87 @@ class SubscriptionSheet extends StatefulWidget {
       ),
     );
   }
-
-  @override
-  State<SubscriptionSheet> createState() => _SubscriptionSheetState();
 }
 
-class _SubscriptionSheetState extends State<SubscriptionSheet> {
-  @override
-  Widget build(BuildContext context) => const SizedBox.shrink();
-}
-
-class _SubscriptionSheetBody extends StatefulWidget {
+class _SubscriptionSheetBody extends ConsumerStatefulWidget {
   final ScrollController scrollController;
 
   const _SubscriptionSheetBody({required this.scrollController});
 
   @override
-  State<_SubscriptionSheetBody> createState() => _SubscriptionSheetBodyState();
+  ConsumerState<_SubscriptionSheetBody> createState() =>
+      _SubscriptionSheetBodyState();
 }
 
-class _SubscriptionSheetBodyState extends State<_SubscriptionSheetBody> {
-  bool _isLoading = false;
+class _SubscriptionSheetBodyState
+    extends ConsumerState<_SubscriptionSheetBody> {
+  StreamSubscription<IAPStatus>? _iapSub;
+  bool _waitingForPurchase = false;
+  bool _isRestore = false;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    final service = ref.read(iapServiceProvider);
+    _iapSub = service.statusStream.listen(_onIAPStatus);
+  }
+
+  @override
+  void dispose() {
+    _iapSub?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _onIAPStatus(IAPStatus status) async {
+    if (!mounted || !_waitingForPurchase) return;
+
+    switch (status.state) {
+      case IAPState.available:
+        setState(() {
+          _waitingForPurchase = false;
+          _error = null;
+        });
+        ref.invalidate(subscriptionProvider);
+        final sub = await ref.read(subscriptionProvider.future);
+        if (!mounted) return;
+
+        if (sub.isPremium) {
+          final messenger = ScaffoldMessenger.of(context);
+          Navigator.of(context).pop();
+          messenger.showSnackBar(
+            const SnackBar(content: Text('Welcome to Conscia Premium!')),
+          );
+        } else if (_isRestore) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('No previous purchases found.')),
+          );
+        }
+        _isRestore = false;
+
+      case IAPState.error:
+        setState(() {
+          _waitingForPurchase = false;
+          _isRestore = false;
+          _error = status.errorMessage;
+        });
+
+      case IAPState.purchasing:
+      case IAPState.uninitialized:
+      case IAPState.unavailable:
+        break;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final textTheme = theme.textTheme;
+
+    final iapAsync = ref.watch(iapStatusProvider);
+    final priceLabel = iapAsync.whenOrNull(
+      data: (status) => status.product?.price,
+    );
 
     return ListView(
       controller: widget.scrollController,
@@ -62,20 +125,51 @@ class _SubscriptionSheetBodyState extends State<_SubscriptionSheetBody> {
         const SizedBox(height: 24),
         Text(
           'Unlock Conscia Premium',
-          style: textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
+          style:
+              textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: 32),
         _buildComparisonTable(theme, textTheme),
         const SizedBox(height: 32),
         Text(
-          '\$4.99 / month',
-          style: textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold),
+          priceLabel != null ? '$priceLabel / month' : '\$4.99 / month',
+          style:
+              textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold),
           textAlign: TextAlign.center,
         ),
+        if (priceLabel == null && !ApiConstants.useMockAuth)
+          Padding(
+            padding: const EdgeInsets.only(top: 4),
+            child: Text(
+              'Price loading from store...',
+              style: textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ),
         const SizedBox(height: 24),
+        if (_error != null)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 16),
+            child: Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.errorContainer,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                _error!,
+                style: textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onErrorContainer,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ),
+          ),
         FilledButton(
-          onPressed: _isLoading ? null : _subscribe,
+          onPressed: _waitingForPurchase ? null : _subscribe,
           style: FilledButton.styleFrom(
             minimumSize: const Size.fromHeight(48),
             backgroundColor: theme.colorScheme.secondary,
@@ -84,7 +178,7 @@ class _SubscriptionSheetBodyState extends State<_SubscriptionSheetBody> {
               borderRadius: BorderRadius.circular(24),
             ),
           ),
-          child: _isLoading
+          child: _waitingForPurchase
               ? const SizedBox(
                   width: 20,
                   height: 20,
@@ -95,7 +189,7 @@ class _SubscriptionSheetBodyState extends State<_SubscriptionSheetBody> {
         const SizedBox(height: 12),
         Center(
           child: TextButton(
-            onPressed: _restorePurchases,
+            onPressed: _waitingForPurchase ? null : _restorePurchases,
             child: const Text('Restore Purchases'),
           ),
         ),
@@ -105,11 +199,12 @@ class _SubscriptionSheetBodyState extends State<_SubscriptionSheetBody> {
 
   Widget _buildComparisonTable(ThemeData theme, TextTheme textTheme) {
     final features = [
-      ('Transactions', '50/month', 'Unlimited'),
+      ('Transactions', 'Unlimited', 'Unlimited'),
       ('Budgets', '3', 'Unlimited'),
-      ('AI Advisor', 'Basic', 'Advanced'),
+      ('AI Assists', '5/month', 'Unlimited'),
+      ('Reflections', '10/month', 'Unlimited'),
       ('Receipt Scanner', '—', 'Included'),
-      ('Export Data', '—', 'CSV & PDF'),
+      ('Multi-Currency', '1', 'Unlimited'),
     ];
 
     return Table(
@@ -124,11 +219,15 @@ class _SubscriptionSheetBodyState extends State<_SubscriptionSheetBody> {
             const SizedBox.shrink(),
             Padding(
               padding: const EdgeInsets.only(bottom: 8),
-              child: Text('Free', style: textTheme.labelLarge, textAlign: TextAlign.center),
+              child: Text('Free',
+                  style: textTheme.labelLarge,
+                  textAlign: TextAlign.center),
             ),
             Padding(
               padding: const EdgeInsets.only(bottom: 8),
-              child: Text('Premium', style: textTheme.labelLarge, textAlign: TextAlign.center),
+              child: Text('Premium',
+                  style: textTheme.labelLarge,
+                  textAlign: TextAlign.center),
             ),
           ],
         ),
@@ -166,13 +265,71 @@ class _SubscriptionSheetBodyState extends State<_SubscriptionSheetBody> {
   }
 
   Future<void> _subscribe() async {
-    setState(() => _isLoading = true);
-    // TODO: integrate with in-app purchase flow
-    await Future.delayed(const Duration(seconds: 2));
-    if (mounted) setState(() => _isLoading = false);
+    if (ApiConstants.useMockAuth) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+              'IAP not available in development mode. Deploy to a device with store access to test.'),
+        ),
+      );
+      return;
+    }
+
+    setState(() {
+      _waitingForPurchase = true;
+      _error = null;
+    });
+
+    try {
+      final iapService = ref.read(iapServiceProvider);
+      final started = await iapService.purchaseSubscription();
+
+      if (!started) {
+        if (!mounted) return;
+        setState(() {
+          _waitingForPurchase = false;
+          _error = iapService.status.product == null
+              ? 'Product not configured in store yet. Set up "$kPremiumMonthlyId" in App Store Connect / Play Console.'
+              : 'Could not start purchase flow.';
+        });
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _waitingForPurchase = false;
+        _error = 'Purchase failed: $e';
+      });
+    }
   }
 
   Future<void> _restorePurchases() async {
-    // TODO: integrate with in-app purchase restore
+    if (ApiConstants.useMockAuth) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+              'IAP not available in development mode. Deploy to a device with store access to test.'),
+        ),
+      );
+      return;
+    }
+
+    setState(() {
+      _waitingForPurchase = true;
+      _isRestore = true;
+      _error = null;
+    });
+
+    try {
+      final iapService = ref.read(iapServiceProvider);
+      await iapService.restorePurchases();
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _waitingForPurchase = false;
+        _error = 'Restore failed: $e';
+      });
+    }
   }
 }

@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/constants/tier_limits.dart';
 import '../../providers/budget_providers.dart';
+import '../../providers/subscription_provider.dart';
 import '../../widgets/empty_state.dart';
+import '../../widgets/premium_upgrade_dialog.dart';
 import 'widgets/budget_card.dart';
 import 'widgets/budget_form_sheet.dart';
 
@@ -19,7 +22,7 @@ class BudgetsScreen extends ConsumerWidget {
         actions: [
           IconButton(
             icon: const Icon(Icons.add),
-            onPressed: () => BudgetFormSheet.show(context),
+            onPressed: () => _onAddBudget(context, ref),
           ),
         ],
       ),
@@ -42,7 +45,7 @@ class BudgetsScreen extends ConsumerWidget {
         title: 'No budgets yet',
         subtitle: 'Create a budget to track your spending by category.',
         actionLabel: 'Create Budget',
-        onAction: () => BudgetFormSheet.show(context),
+        onAction: () => _onAddBudget(context, ref),
       );
     }
 
@@ -61,6 +64,23 @@ class BudgetsScreen extends ConsumerWidget {
         },
       ),
     );
+  }
+
+  void _onAddBudget(BuildContext context, WidgetRef ref) {
+    final budgetState = ref.read(budgetListProvider);
+    final subAsync = ref.read(subscriptionProvider);
+    final isPremium = subAsync.valueOrNull?.isPremium ?? false;
+
+    if (!isPremium &&
+        budgetState.budgets.length >= TierLimits.freeBudgetCategories) {
+      PremiumUpgradeDialog.show(
+        context,
+        feature:
+            'You\'ve reached the free tier limit of ${TierLimits.freeBudgetCategories} budget categories.',
+      );
+      return;
+    }
+    BudgetFormSheet.show(context);
   }
 
   void _confirmDelete(BuildContext context, WidgetRef ref, String id) {

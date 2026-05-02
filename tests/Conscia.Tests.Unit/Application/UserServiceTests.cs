@@ -1,6 +1,7 @@
 using Conscia.Application.Interfaces;
 using Conscia.Application.Services;
 using Conscia.Domain.Entities;
+using Conscia.Domain.Enums;
 using Moq;
 
 namespace Conscia.Tests.Unit.Application;
@@ -37,16 +38,16 @@ public class UserServiceTests
     }
 
     [Fact]
-    public async Task GetByCognitoSubAsync_DelegatesToRepo()
+    public async Task GetByProviderAsync_DelegatesToRepo()
     {
-        var sub = "cognito-sub-123";
-        var user = new User { Id = Guid.NewGuid(), CognitoSub = sub };
-        _repoMock.Setup(r => r.GetByCognitoSubAsync(sub, It.IsAny<CancellationToken>())).ReturnsAsync(user);
+        var user = new User { Id = Guid.NewGuid(), Email = "provider@test.com" };
+        _repoMock.Setup(r => r.GetByProviderAsync(AuthProvider.Google, "google_123", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(user);
 
-        var result = await _svc.GetByCognitoSubAsync(sub);
+        var result = await _svc.GetByProviderAsync(AuthProvider.Google, "google_123");
 
         Assert.NotNull(result);
-        Assert.Equal(sub, result!.CognitoSub);
+        Assert.Equal(user.Id, result!.Id);
     }
 
     [Fact]

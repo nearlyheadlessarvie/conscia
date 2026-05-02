@@ -1,16 +1,23 @@
-import 'dart:async';
-
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../providers/auth_provider.dart';
+import '../../screens/assistant/pre_purchase_screen.dart';
+import '../../screens/budgets/budgets_screen.dart';
 import '../../screens/dashboard/dashboard_screen.dart';
 import '../../screens/onboarding/onboarding_screen.dart';
 import '../../screens/onboarding/setup_screen.dart';
 import '../../screens/onboarding/sign_in_screen.dart';
 import '../../screens/onboarding/sign_up_screen.dart';
+import '../../screens/receipts/receipt_review_screen.dart';
+import '../../screens/receipts/receipt_scanner_screen.dart';
 import '../../screens/settings/service_status_screen.dart';
+import '../../screens/settings/settings_screen.dart';
+import '../../screens/transactions/transaction_detail_screen.dart';
+import '../../screens/transactions/transaction_form_screen.dart';
 import '../../screens/transactions/transaction_list_screen.dart';
 import '../../widgets/main_shell.dart';
 
@@ -36,40 +43,57 @@ abstract class AppRoutes {
   static String reviewReceipt(String id) => '/receipts/$id/review';
 }
 
-class GoRouterRefreshStream extends ChangeNotifier {
-  GoRouterRefreshStream(Stream<dynamic> stream) {
-    _subscription = stream.listen((_) => notifyListeners());
-  }
+const _hasOnboardedKey = 'has_completed_onboarding';
+const _lastEmailKey = 'last_login_email';
 
-  late final StreamSubscription<dynamic> _subscription;
+Future<bool> hasCompletedOnboarding() async {
+  final prefs = await SharedPreferences.getInstance();
+  return prefs.getBool(_hasOnboardedKey) ?? false;
+}
 
-  @override
-  void dispose() {
-    _subscription.cancel();
-    super.dispose();
+Future<void> markOnboardingComplete() async {
+  final prefs = await SharedPreferences.getInstance();
+  await prefs.setBool(_hasOnboardedKey, true);
+}
+
+Future<void> saveLastEmail(String email) async {
+  final prefs = await SharedPreferences.getInstance();
+  await prefs.setString(_lastEmailKey, email);
+}
+
+Future<String?> getLastEmail() async {
+  final prefs = await SharedPreferences.getInstance();
+  return prefs.getString(_lastEmailKey);
+}
+
+class _AuthNotifierListenable extends ChangeNotifier {
+  _AuthNotifierListenable(Ref ref) {
+    ref.listen<AuthState>(authProvider, (_, __) => notifyListeners());
   }
 }
 
+final hasOnboardedProvider = FutureProvider<bool>((ref) => hasCompletedOnboarding());
+
 final appRouterProvider = Provider<GoRouter>((ref) {
-  final authState = ref.watch(authProvider);
-  final notifier = ref.read(authProvider.notifier);
+  final listenable = _AuthNotifierListenable(ref);
+  final hasOnboarded = ref.watch(hasOnboardedProvider).valueOrNull ?? false;
 
   return GoRouter(
     initialLocation: AppRoutes.home,
-    debugLogDiagnostics: true,
-    refreshListenable: GoRouterRefreshStream(notifier.stream),
+    debugLogDiagnostics: kDebugMode,
+    refreshListenable: listenable,
     redirect: (context, state) {
-      final isAuthenticated = authState.isAuthenticated;
+      final isAuthenticated = ref.read(authProvider).isAuthenticated;
       final isOnboarding = state.uri.path.startsWith('/onboarding');
       final isHealthCheck = state.uri.path.startsWith('/health');
 
       if (isHealthCheck) return null;
 
       if (!isAuthenticated && !isOnboarding) {
-        return AppRoutes.onboarding;
+        return hasOnboarded ? AppRoutes.signIn : AppRoutes.onboarding;
       }
 
-      if (isAuthenticated && isOnboarding) {
+      if (isAuthenticated && isOnboarding && state.uri.path != AppRoutes.setup) {
         return AppRoutes.home;
       }
 
@@ -115,13 +139,13 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: AppRoutes.assistant,
             pageBuilder: (context, state) => const NoTransitionPage(
-              child: _Placeholder('Assistant'),
+              child: PrePurchaseScreen(),
             ),
           ),
           GoRoute(
             path: AppRoutes.settings,
             pageBuilder: (context, state) => const NoTransitionPage(
-              child: _Placeholder('Settings'),
+              child: SettingsScreen(),
             ),
           ),
         ],
@@ -130,20 +154,20 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       // ── Full-screen routes ─────────────────────────────────────────
       GoRoute(
         path: '/transactions/add',
-        builder: (context, state) => const _Placeholder('Add Transaction'),
+        builder: (context, state) => const TransactionFormScreen(),
       ),
       GoRoute(
         path: '/transactions/:id',
         builder: (context, state) {
           final id = state.pathParameters['id']!;
-          return _Placeholder('Transaction $id');
+          return TransactionDetailScreen(transactionId: id);
         },
         routes: [
           GoRoute(
             path: 'edit',
             builder: (context, state) {
               final id = state.pathParameters['id']!;
-              return _Placeholder('Edit Transaction $id');
+              return TransactionFormScreen(transactionId: id);
             },
           ),
         ],
@@ -154,38 +178,19 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/settings/budgets',
-        builder: (context, state) => const _Placeholder('Budgets'),
+        builder: (context, state) => const BudgetsScreen(),
       ),
       GoRoute(
         path: '/scan',
-        builder: (context, state) => const _Placeholder('Scan Receipt'),
+        builder: (context, state) => const ReceiptScannerScreen(),
       ),
       GoRoute(
         path: '/receipts/:id/review',
         builder: (context, state) {
           final id = state.pathParameters['id']!;
-          return _Placeholder('Review Receipt $id');
+          return ReceiptReviewScreen(receiptId: id);
         },
       ),
     ],
   );
-}
-
-/// Temporary placeholder for screens not yet built.
-class _Placeholder extends StatelessWidget {
-  const _Placeholder(this.title);
-  final String title;
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text(title)),
-      body: Center(
-        child: Text(
-          title,
-          style: Theme.of(context).textTheme.headlineMedium,
-        ),
-      ),
-    );
-  }
-}
+});

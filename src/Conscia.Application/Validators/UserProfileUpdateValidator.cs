@@ -5,8 +5,23 @@ namespace Conscia.Application.Validators;
 
 public class UserProfileUpdateValidator : AbstractValidator<UserProfileUpdateDto>
 {
-    private static readonly HashSet<string> SupportedCurrencies =
-        ["USD", "EUR", "GBP", "MXN", "CAD", "JPY", "AUD", "BRL", "INR"];
+    // Mapping of country codes to their primary currency codes for validation purposes
+    // see currencies.dart for the full list of supported currencies in the app
+    private readonly Dictionary<string, string> _countryToCurrency = new()
+    {
+        { "US" , "USD" }, { "GB", "GBP" }, { "MX", "MXN" }, { "ES", "EUR" },
+        { "FR", "EUR" }, { "DE", "EUR" }, { "IT", "EUR" }, { "NL", "EUR" },
+        { "BE", "EUR" }, { "AT", "EUR" }, { "IE", "EUR" }, { "PT", "EUR" },
+        { "FI", "EUR" }, { "GR", "EUR" }, { "SK", "EUR" }, { "SI", "EUR" },
+        { "LT", "EUR" }, { "LV", "EUR" }, { "EE", "EUR" }, { "MT", "EUR" },
+        { "CY", "EUR" }, { "LU", "EUR" },
+        { "JP", "JPY" }, { "CN", "CNY" }, { "BR", "BRL" }, { "CA", "CAD" },
+        { "AU", "AUD" }, { "IN", "INR" }, { "KR", "KRW" }, { "PH", "PHP" },
+        { "SG", "SGD" }, { "TH", "THB" }, { "ID", "IDR" }, { "MY", "MYR" },
+        { "NZ", "NZD" }, { "CH", "CHF" }, { "SE", "SEK" }, { "NO", "NOK" },
+        { "DK", "DKK" }, { "PL", "PLN" }, { "CZ", "CZK" }, { "HU", "HUF" },
+        { "RO", "RON" }, { "ZA", "ZAR" }, { "AE", "AED" }, { "SA", "SAR" },
+    };
 
     public UserProfileUpdateValidator()
     {
@@ -16,7 +31,7 @@ public class UserProfileUpdateValidator : AbstractValidator<UserProfileUpdateDto
             .WithMessage("Currency code must be a 3-letter ISO code");
 
         RuleFor(x => x.PreferredCurrency)
-            .Must(c => c is null || SupportedCurrencies.Contains(c.ToUpperInvariant()))
+            .Must(c => c is null || _countryToCurrency.ContainsValue(c.ToUpperInvariant()))
             .WithMessage("Unsupported currency code");
 
         RuleFor(x => x.Locale)
@@ -24,7 +39,7 @@ public class UserProfileUpdateValidator : AbstractValidator<UserProfileUpdateDto
             .When(x => x.Locale is not null);
 
         RuleFor(x => x)
-            .Must(x => x.PreferredCurrency is not null || x.Locale is not null)
-            .WithMessage("At least one field must be provided");
+            .Must(x => x.PreferredCurrency is null)
+            .WithMessage("Preferred currency is required");
     }
 }

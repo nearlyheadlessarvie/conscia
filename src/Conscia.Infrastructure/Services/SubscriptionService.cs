@@ -3,20 +3,65 @@ using Conscia.Domain.Entities;
 using Conscia.Domain.Enums;
 using Conscia.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace Conscia.Infrastructure.Services;
 
 public class SubscriptionService : ISubscriptionService
 {
     private readonly ConsciaDbContext _db;
+    private readonly ILogger<SubscriptionService> _logger;
+    private readonly IAppleReceiptValidator _appleValidator;
+    private readonly IGooglePlayValidator _googleValidator;
 
-    public SubscriptionService(ConsciaDbContext db) => _db = db;
+    private const string DefaultSubscriptionId = "conscia_premium_monthly";
+
+    public SubscriptionService(
+        ConsciaDbContext db,
+        ILogger<SubscriptionService> logger,
+        IAppleReceiptValidator appleValidator,
+        IGooglePlayValidator googleValidator)
+    {
+        _db = db;
+        _logger = logger;
+        _appleValidator = appleValidator;
+        _googleValidator = googleValidator;
+    }
 
     public async Task<UserSubscription> VerifyiOSReceiptAsync(Guid userId, string receiptData, CancellationToken ct = default)
     {
         var existing = await _db.UserSubscriptions
             .FirstOrDefaultAsync(s => s.OriginalTransactionId == receiptData, ct);
-        if (existing is not null) return existing;
+        if (existing is not null)
+        {
+            await TryRefreshAppleExpiry(existing, receiptData, ct);
+            return existing;
+        }
+
+        DateTime expiresAt;
+
+        if (_appleValidator.IsConfigured)
+        {
+            var txnInfo = await _appleValidator.ValidateAsync(receiptData, ct);
+            if (txnInfo is null)
+                throw new InvalidOperationException("Apple receipt validation failed — receipt rejected.");
+
+            if (txnInfo.IsRevoked)
+                throw new InvalidOperationException("This subscription has been revoked.");
+
+            expiresAt = txnInfo.ExpiresDate;
+            _logger.LogInformation(
+                "iOS receipt validated via App Store Server API for user {UserId}, product {ProductId}, expires {ExpiresAt}",
+                userId, txnInfo.ProductId, expiresAt);
+        }
+        else
+        {
+            _logger.LogWarning(
+                "iOS receipt accepted without server-to-server validation for user {UserId}. " +
+                "Configure Apple:KeyId, Apple:IssuerId, Apple:BundleId, Apple:PrivateKey to enable validation.",
+                userId);
+            expiresAt = DateTime.UtcNow.AddMonths(1);
+        }
 
         var sub = new UserSubscription
         {
@@ -25,7 +70,7 @@ public class SubscriptionService : ISubscriptionService
             Tier = SubscriptionTier.Premium,
             Platform = Platform.iOS,
             OriginalTransactionId = receiptData,
-            ExpiresAt = DateTime.UtcNow.AddYears(1)
+            ExpiresAt = expiresAt
         };
 
         _db.UserSubscriptions.Add(sub);
@@ -37,7 +82,36 @@ public class SubscriptionService : ISubscriptionService
     {
         var existing = await _db.UserSubscriptions
             .FirstOrDefaultAsync(s => s.OriginalTransactionId == purchaseToken, ct);
-        if (existing is not null) return existing;
+        if (existing is not null)
+        {
+            await TryRefreshGoogleExpiry(existing, purchaseToken, ct);
+            return existing;
+        }
+
+        DateTime expiresAt;
+
+        if (_googleValidator.IsConfigured)
+        {
+            var subInfo = await _googleValidator.ValidateAsync(purchaseToken, DefaultSubscriptionId, ct);
+            if (subInfo is null)
+                throw new InvalidOperationException("Google Play purchase validation failed — token rejected.");
+
+            if (subInfo.IsCanceled)
+                throw new InvalidOperationException("This subscription has been canceled.");
+
+            expiresAt = subInfo.ExpiryTime;
+            _logger.LogInformation(
+                "Android token validated via Google Play Developer API for user {UserId}, order {OrderId}, expires {ExpiresAt}",
+                userId, subInfo.OrderId, expiresAt);
+        }
+        else
+        {
+            _logger.LogWarning(
+                "Android purchase token accepted without server-to-server validation for user {UserId}. " +
+                "Configure GooglePlay:PackageName and GooglePlay:ServiceAccountJson to enable validation.",
+                userId);
+            expiresAt = DateTime.UtcNow.AddMonths(1);
+        }
 
         var sub = new UserSubscription
         {
@@ -46,7 +120,7 @@ public class SubscriptionService : ISubscriptionService
             Tier = SubscriptionTier.Premium,
             Platform = Platform.Android,
             OriginalTransactionId = purchaseToken,
-            ExpiresAt = DateTime.UtcNow.AddYears(1)
+            ExpiresAt = expiresAt
         };
 
         _db.UserSubscriptions.Add(sub);
@@ -64,5 +138,45 @@ public class SubscriptionService : ISubscriptionService
     {
         var sub = await GetStatusAsync(userId, ct);
         return sub?.IsActive ?? false;
+    }
+
+    private async Task TryRefreshAppleExpiry(UserSubscription existing, string transactionId, CancellationToken ct)
+    {
+        if (!_appleValidator.IsConfigured) return;
+
+        try
+        {
+            var txnInfo = await _appleValidator.ValidateAsync(transactionId, ct);
+            if (txnInfo is not null && txnInfo.ExpiresDate > (existing.ExpiresAt ?? DateTime.MinValue))
+            {
+                existing.ExpiresAt = txnInfo.ExpiresDate;
+                existing.Tier = txnInfo.IsRevoked ? SubscriptionTier.Free : SubscriptionTier.Premium;
+                await _db.SaveChangesAsync(ct);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to refresh Apple expiry for subscription {SubId}", existing.Id);
+        }
+    }
+
+    private async Task TryRefreshGoogleExpiry(UserSubscription existing, string purchaseToken, CancellationToken ct)
+    {
+        if (!_googleValidator.IsConfigured) return;
+
+        try
+        {
+            var subInfo = await _googleValidator.ValidateAsync(purchaseToken, DefaultSubscriptionId, ct);
+            if (subInfo is not null && subInfo.ExpiryTime > (existing.ExpiresAt ?? DateTime.MinValue))
+            {
+                existing.ExpiresAt = subInfo.ExpiryTime;
+                existing.Tier = subInfo.IsCanceled ? SubscriptionTier.Free : SubscriptionTier.Premium;
+                await _db.SaveChangesAsync(ct);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to refresh Google expiry for subscription {SubId}", existing.Id);
+        }
     }
 }

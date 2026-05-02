@@ -1,6 +1,7 @@
 using Amazon.Lambda;
 using Conscia.Application.Interfaces;
 using Conscia.Domain.Entities;
+using Conscia.Domain.Enums;
 
 namespace Conscia.Infrastructure.Db.LambdaProxy;
 
@@ -12,8 +13,8 @@ public class LambdaProxyUserRepository : LambdaProxyRepository, IUserRepository
     public Task<User?> GetByIdAsync(Guid id, CancellationToken ct = default) =>
         InvokeAsync<User?>("User.GetById", new { Id = id }, ct);
 
-    public Task<User?> GetByCognitoSubAsync(string cognitoSub, CancellationToken ct = default) =>
-        InvokeAsync<User?>("User.GetByCognitoSub", new { CognitoSub = cognitoSub }, ct);
+    public Task<User?> GetByProviderAsync(AuthProvider provider, string providerSub, CancellationToken ct = default) =>
+        InvokeAsync<User?>("User.GetByProvider", new { Provider = provider.ToString(), ProviderSub = providerSub }, ct);
 
     public Task<User?> GetByEmailAsync(string email, CancellationToken ct = default) =>
         InvokeAsync<User?>("User.GetByEmail", new { Email = email }, ct);
@@ -26,4 +27,7 @@ public class LambdaProxyUserRepository : LambdaProxyRepository, IUserRepository
 
     public async Task DeleteAsync(Guid id, CancellationToken ct = default) =>
         await InvokeAsync<object>("User.Delete", new { Id = id }, ct);
+
+    public Task<UserIdentity> AddIdentityAsync(UserIdentity identity, CancellationToken ct = default) =>
+        InvokeAsync<UserIdentity>("UserIdentity.Add", identity, ct);
 }
