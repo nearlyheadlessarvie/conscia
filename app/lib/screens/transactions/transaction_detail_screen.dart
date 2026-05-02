@@ -30,6 +30,7 @@ class TransactionDetailScreen extends ConsumerStatefulWidget {
 class _TransactionDetailScreenState
     extends ConsumerState<TransactionDetailScreen> {
   int? _regretLevel;
+  bool _regretLevelInitialized = false;
   bool _loadingReflection = false;
   bool _deleting = false;
 
@@ -92,6 +93,8 @@ class _TransactionDetailScreenState
     try {
       final service = ref.read(transactionServiceProvider);
       await service.updateRegret(widget.transactionId, level);
+      ref.invalidate(transactionDetailProvider(widget.transactionId));
+      ref.invalidate(transactionListProvider);
     } catch (_) {
       // Optimistic update — ignore errors silently
     }
@@ -103,6 +106,8 @@ class _TransactionDetailScreenState
     final service = ref.read(transactionServiceProvider);
     try {
       await service.updateRegret(widget.transactionId, _regretLevel ?? 1);
+      ref.invalidate(transactionDetailProvider(widget.transactionId));
+      ref.invalidate(transactionListProvider);
     } catch (_) {
       // Best-effort
     }
@@ -132,7 +137,8 @@ class _TransactionDetailScreenState
 
   @override
   Widget build(BuildContext context) {
-    final detailAsync = ref.watch(transactionDetailProvider(widget.transactionId));
+    final detailAsync =
+        ref.watch(transactionDetailProvider(widget.transactionId));
 
     return Scaffold(
       appBar: AppBar(
@@ -176,7 +182,7 @@ class _TransactionDetailScreenState
             ),
           ),
         ),
-        data: (tx) => _buildContent(tx),
+        data: _buildContent,
       ),
     );
   }
@@ -188,14 +194,16 @@ class _TransactionDetailScreenState
     final prefix = isIncome ? '+' : '-';
     final formatter = NumberFormat.currency(symbol: '\$', decimalDigits: 2);
 
-    _regretLevel ??= tx.regretLevel;
+    if (!_regretLevelInitialized) {
+      _regretLevel = tx.regretLevel;
+      _regretLevelInitialized = true;
+    }
 
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Column(
         children: [
           const SizedBox(height: 16),
-
           Card(
             child: Padding(
               padding: const EdgeInsets.all(24),
@@ -244,13 +252,9 @@ class _TransactionDetailScreenState
               ),
             ),
           ),
-
           const SizedBox(height: 24),
-
           _buildRegretSection(colors, textTheme),
-
           const SizedBox(height: 24),
-
           SizedBox(
             width: double.infinity,
             child: FilledButton.tonal(
@@ -271,12 +275,10 @@ class _TransactionDetailScreenState
                     ),
             ),
           ),
-
           if (_deleting) ...[
             const SizedBox(height: 16),
             const CircularProgressIndicator(),
           ],
-
           const SizedBox(height: 32),
         ],
       ),
@@ -285,7 +287,7 @@ class _TransactionDetailScreenState
 
   Widget _buildRegretSection(ColorScheme colors, TextTheme textTheme) {
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Text('How did this purchase feel?', style: textTheme.titleMedium),
         const SizedBox(height: 12),
@@ -299,18 +301,20 @@ class _TransactionDetailScreenState
 
   Widget _buildRegretChip(ColorScheme colors) {
     final (icon, label, color) = _regretData(_regretLevel!);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
       children: [
         Chip(
           avatar: Icon(icon, color: color, size: 18),
           label: Text(label),
-          backgroundColor: color.withOpacity(0.15),
+          backgroundColor: color.withValues(alpha: 0.15),
           side: BorderSide.none,
         ),
-        TextButton(
+        const SizedBox(width: 8),
+        IconButton(
+          tooltip: 'Change feeling',
           onPressed: () => setState(() => _regretLevel = null),
-          child: const Text('Change'),
+          icon: const Icon(Icons.refresh),
         ),
       ],
     );
@@ -327,7 +331,7 @@ class _TransactionDetailScreenState
           child: FilledButton.tonal(
             onPressed: () => _updateRegret(0),
             style: FilledButton.styleFrom(
-              backgroundColor: greenColor.withOpacity(0.15),
+              backgroundColor: greenColor.withValues(alpha: 0.15),
               foregroundColor: greenColor,
             ),
             child: const Row(
@@ -345,7 +349,7 @@ class _TransactionDetailScreenState
           child: FilledButton.tonal(
             onPressed: () => _updateRegret(1),
             style: FilledButton.styleFrom(
-              backgroundColor: amberColor.withOpacity(0.15),
+              backgroundColor: amberColor.withValues(alpha: 0.15),
               foregroundColor: amberColor,
             ),
             child: const Row(
@@ -363,7 +367,7 @@ class _TransactionDetailScreenState
           child: FilledButton.tonal(
             onPressed: () => _updateRegret(2),
             style: FilledButton.styleFrom(
-              backgroundColor: redColor.withOpacity(0.15),
+              backgroundColor: redColor.withValues(alpha: 0.15),
               foregroundColor: redColor,
             ),
             child: const Row(
@@ -382,7 +386,11 @@ class _TransactionDetailScreenState
 
   (IconData, String, Color) _regretData(int level) {
     if (level == 0) {
-      return (Icons.sentiment_satisfied_alt, 'Worth It', const Color(0xFF4CAF50));
+      return (
+        Icons.sentiment_satisfied_alt,
+        'Worth It',
+        const Color(0xFF4CAF50)
+      );
     }
     if (level == 1) {
       return (Icons.sentiment_neutral, 'Not Sure', const Color(0xFFFFC107));
@@ -440,7 +448,8 @@ class _ReflectionSheetState extends ConsumerState<_ReflectionSheet> {
       }
       setState(() {
         _loading = false;
-        _error = e.response?.data?['error'] as String? ?? 'Failed to load reflection';
+        _error = e.response?.data?['error'] as String? ??
+            'Failed to load reflection';
       });
     } catch (e) {
       if (!mounted) return;
@@ -476,7 +485,8 @@ class _ReflectionSheetState extends ConsumerState<_ReflectionSheet> {
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.error_outline, size: 48, color: colors.error),
+                            Icon(Icons.error_outline,
+                                size: 48, color: colors.error),
                             const SizedBox(height: 16),
                             Text(_error!, textAlign: TextAlign.center),
                             const SizedBox(height: 16),

@@ -12,6 +12,7 @@ class HealthState {
   final HealthStatus? status;
   final bool isLoading;
   final String? error;
+  final bool isOffline;
   final DateTime? lastChecked;
   final List<bool> checkHistory;
 
@@ -19,6 +20,7 @@ class HealthState {
     this.status,
     this.isLoading = false,
     this.error,
+    this.isOffline = false,
     this.lastChecked,
     this.checkHistory = const [],
   });
@@ -27,6 +29,7 @@ class HealthState {
     HealthStatus? status,
     bool? isLoading,
     String? error,
+    bool? isOffline,
     DateTime? lastChecked,
     List<bool>? checkHistory,
   }) {
@@ -34,6 +37,7 @@ class HealthState {
       status: status ?? this.status,
       isLoading: isLoading ?? this.isLoading,
       error: error,
+      isOffline: isOffline ?? this.isOffline,
       lastChecked: lastChecked ?? this.lastChecked,
       checkHistory: checkHistory ?? this.checkHistory,
     );
@@ -55,11 +59,12 @@ class HealthState {
 class HealthStatusNotifier extends StateNotifier<HealthState> {
   final HealthService _service;
   Timer? _autoRefreshTimer;
+  static const autoRetryInterval = Duration(seconds: 10);
 
   HealthStatusNotifier(this._service) : super(const HealthState()) {
     refresh();
     _autoRefreshTimer = Timer.periodic(
-      const Duration(seconds: 30),
+      autoRetryInterval,
       (_) => refresh(),
     );
   }
@@ -79,6 +84,7 @@ class HealthStatusNotifier extends StateNotifier<HealthState> {
       state = state.copyWith(
         status: result,
         isLoading: false,
+        isOffline: false,
         lastChecked: DateTime.now(),
         checkHistory: history,
       );
@@ -91,6 +97,7 @@ class HealthStatusNotifier extends StateNotifier<HealthState> {
       state = state.copyWith(
         isLoading: false,
         error: apiError.message,
+        isOffline: _isOfflineError(e),
         lastChecked: DateTime.now(),
         checkHistory: history,
       );
@@ -102,10 +109,23 @@ class HealthStatusNotifier extends StateNotifier<HealthState> {
       state = state.copyWith(
         isLoading: false,
         error: e.toString(),
+        isOffline: false,
         lastChecked: DateTime.now(),
         checkHistory: history,
       );
     }
+  }
+
+  bool _isOfflineError(DioException error) {
+    return switch (error.type) {
+      DioExceptionType.connectionTimeout ||
+      DioExceptionType.sendTimeout ||
+      DioExceptionType.receiveTimeout ||
+      DioExceptionType.connectionError =>
+        true,
+      DioExceptionType.unknown => error.response == null,
+      _ => false,
+    };
   }
 
   @override
