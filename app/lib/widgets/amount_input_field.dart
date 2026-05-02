@@ -8,6 +8,8 @@ class AmountInputField extends StatelessWidget {
   final TextEditingController controller;
   final bool isExpense;
   final String currencyCode;
+  final bool isPremium;
+  final ValueChanged<String>? onChanged;
   final ValueChanged<String> onCurrencyChanged;
 
   const AmountInputField({
@@ -15,6 +17,8 @@ class AmountInputField extends StatelessWidget {
     required this.controller,
     required this.isExpense,
     required this.currencyCode,
+    this.isPremium = false,
+    this.onChanged,
     required this.onCurrencyChanged,
   });
 
@@ -32,6 +36,7 @@ class AmountInputField extends StatelessWidget {
 
     return TextField(
       controller: controller,
+      onChanged: onChanged,
       keyboardType: const TextInputType.numberWithOptions(decimal: true),
       textAlign: TextAlign.center,
       style: GoogleFonts.poppins(
@@ -65,6 +70,7 @@ class AmountInputField extends StatelessWidget {
             onTap: () => CurrencyPickerSheet.show(
               context,
               selectedCode: currencyCode,
+              isPremium: isPremium,
               onSelected: onCurrencyChanged,
             ),
           ),

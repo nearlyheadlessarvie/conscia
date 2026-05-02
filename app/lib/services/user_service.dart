@@ -21,9 +21,13 @@ class UserProfile {
     return UserProfile(
       id: json['id'] as String,
       email: json['email'] as String,
-      currencyCode: json['currencyCode'] as String? ?? 'USD',
+      currencyCode:
+          (json['currencyCode'] ?? json['preferredCurrency']) as String? ??
+              'USD',
       locale: json['locale'] as String? ?? 'en_US',
-      createdAt: DateTime.parse(json['createdAt'] as String),
+      createdAt: json['createdAt'] != null
+          ? DateTime.parse(json['createdAt'] as String)
+          : DateTime.now(),
     );
   }
 }
@@ -43,14 +47,14 @@ class UserService {
   }
 
   Future<UserProfile> updateProfile({
-    String? currencyCode,
+    String? preferredCurrency,
     String? locale,
   }) async {
     try {
       final response = await _dio.put(
         ApiConstants.profile,
         data: {
-          if (currencyCode != null) 'currencyCode': currencyCode,
+          if (preferredCurrency != null) 'preferredCurrency': preferredCurrency,
           if (locale != null) 'locale': locale,
         },
       );

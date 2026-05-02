@@ -69,7 +69,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
       final defaults = deviceDefaults();
       try {
         await ref.read(userServiceProvider).updateProfile(
-              currencyCode: defaults.currency,
+              preferredCurrency: defaults.currency,
               locale: defaults.locale,
             );
       } catch (_) {}
@@ -243,7 +243,9 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                               _errorMessage = null;
                             });
                             try {
-                              await ref.read(authProvider.notifier).signInWithApple();
+                              await ref
+                                  .read(authProvider.notifier)
+                                  .signInWithApple();
                             } catch (e) {
                               if (!mounted) return;
                               setState(() => _errorMessage = e.toString());
@@ -264,8 +266,8 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                     ),
                   ),
                   icon: const Text('G',
-                      style: TextStyle(
-                          fontSize: 20, fontWeight: FontWeight.bold)),
+                      style:
+                          TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
                   label: const Text('Sign up with Google'),
                   onPressed: _isLoading
                       ? null
@@ -275,7 +277,9 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                             _errorMessage = null;
                           });
                           try {
-                            await ref.read(authProvider.notifier).signInWithGoogle();
+                            await ref
+                                .read(authProvider.notifier)
+                                .signInWithGoogle();
                           } catch (e) {
                             if (!mounted) return;
                             setState(() => _errorMessage = e.toString());

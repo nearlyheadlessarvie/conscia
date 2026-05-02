@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/network/dio_client.dart';
+import '../../providers/subscription_provider.dart';
+import '../../providers/user_provider.dart';
 import '../../widgets/amount_input_field.dart';
 import '../transactions/widgets/category_picker.dart';
 
@@ -64,17 +66,15 @@ class _ReceiptReviewScreenState extends ConsumerState<ReceiptReviewScreen> {
 
       setState(() {
         _loading = false;
-        _merchantController.text =
-            extracted?['merchant'] as String? ?? '';
+        _merchantController.text = extracted?['merchant'] as String? ?? '';
         final total = (extracted?['total'] as num?)?.toDouble();
         _amountController.text = total?.toStringAsFixed(2) ?? '';
-        _currencyCode =
-            extracted?['currencyCode'] as String? ?? 'USD';
+        _currencyCode = extracted?['currencyCode'] as String? ??
+            ref.read(userPreferencesProvider).currency;
         _selectedCategory = extracted?['category'] as String?;
         final dateStr = extracted?['date'] as String?;
         if (dateStr != null) _date = DateTime.tryParse(dateStr) ?? _date;
-        _confidence =
-            (data['ocrConfidence'] as num?)?.toDouble() ?? 0.0;
+        _confidence = (data['ocrConfidence'] as num?)?.toDouble() ?? 0.0;
         _needsReview = data['needsReview'] as bool? ?? true;
         _lineItems.clear();
         _lineItems.addAll(items);
@@ -83,8 +83,8 @@ class _ReceiptReviewScreenState extends ConsumerState<ReceiptReviewScreen> {
       if (!mounted) return;
       setState(() {
         _loading = false;
-        _error = e.response?.data?['error'] as String? ??
-            'Failed to load receipt';
+        _error =
+            e.response?.data?['error'] as String? ?? 'Failed to load receipt';
       });
     }
   }
@@ -199,12 +199,13 @@ class _ReceiptReviewScreenState extends ConsumerState<ReceiptReviewScreen> {
           children: [
             Icon(Icons.error_outline, size: 64, color: colors.error),
             const SizedBox(height: 16),
-            Text('Could not load receipt',
-                style: textTheme.titleMedium),
+            Text('Could not load receipt', style: textTheme.titleMedium),
             const SizedBox(height: 8),
-            Text(_error!, style: textTheme.bodyMedium?.copyWith(
-              color: colors.onSurfaceVariant,
-            ), textAlign: TextAlign.center),
+            Text(_error!,
+                style: textTheme.bodyMedium?.copyWith(
+                  color: colors.onSurfaceVariant,
+                ),
+                textAlign: TextAlign.center),
             const SizedBox(height: 24),
             FilledButton.icon(
               onPressed: () {
@@ -224,6 +225,9 @@ class _ReceiptReviewScreenState extends ConsumerState<ReceiptReviewScreen> {
   }
 
   Widget _buildContent(ColorScheme colors, TextTheme textTheme) {
+    final isPremium =
+        ref.watch(subscriptionProvider).valueOrNull?.isPremium ?? false;
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -242,8 +246,10 @@ class _ReceiptReviewScreenState extends ConsumerState<ReceiptReviewScreen> {
                   children: [
                     Icon(Icons.error_outline, size: 18, color: colors.error),
                     const SizedBox(width: 8),
-                    Expanded(child: Text(_error!,
-                        style: textTheme.bodySmall?.copyWith(color: colors.error))),
+                    Expanded(
+                        child: Text(_error!,
+                            style: textTheme.bodySmall
+                                ?.copyWith(color: colors.error))),
                   ],
                 ),
               ),
@@ -277,8 +283,8 @@ class _ReceiptReviewScreenState extends ConsumerState<ReceiptReviewScreen> {
             controller: _amountController,
             isExpense: true,
             currencyCode: _currencyCode,
-            onCurrencyChanged: (code) =>
-                setState(() => _currencyCode = code),
+            isPremium: isPremium,
+            onCurrencyChanged: (code) => setState(() => _currencyCode = code),
           ),
           const SizedBox(height: 16),
 
@@ -365,7 +371,8 @@ class _ReceiptReviewScreenState extends ConsumerState<ReceiptReviewScreen> {
           FilledButton.icon(
             onPressed: _isValid && !_submitting ? _confirm : null,
             icon: const Icon(Icons.check),
-            label: Text(_submitting ? 'Saving...' : 'Confirm & Save Transaction'),
+            label:
+                Text(_submitting ? 'Saving...' : 'Confirm & Save Transaction'),
           ),
 
           const SizedBox(height: 8),
@@ -468,8 +475,18 @@ class _ReceiptReviewScreenState extends ConsumerState<ReceiptReviewScreen> {
 
   String _formatDate(DateTime d) {
     const months = [
-      'January', 'February', 'March', 'April', 'May', 'June',
-      'July', 'August', 'September', 'October', 'November', 'December',
+      'January',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November',
+      'December',
     ];
     return '${months[d.month - 1]} ${d.day}, ${d.year}';
   }

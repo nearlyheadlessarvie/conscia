@@ -232,7 +232,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       isPremium: isPremium,
       onSelected: (code) async {
         try {
-          await ref.read(userServiceProvider).updateProfile(currencyCode: code);
+          await ref
+              .read(userServiceProvider)
+              .updateProfile(preferredCurrency: code);
           ref.invalidate(currentUserProvider);
         } catch (_) {}
       },
