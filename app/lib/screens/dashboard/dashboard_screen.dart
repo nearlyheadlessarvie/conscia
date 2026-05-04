@@ -174,10 +174,16 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           child: _buildSectionHeader(context, 'Budgets'),
         ),
         if (budgetState.isLoading && budgets.isEmpty)
-          const SliverToBoxAdapter(
+          SliverToBoxAdapter(
             child: SizedBox(
               height: 160,
-              child: Center(child: CircularProgressIndicator()),
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                itemCount: 3,
+                separatorBuilder: (_, __) => const SizedBox(width: 12),
+                itemBuilder: (_, __) => const BudgetSummarySkeletonCard(),
+              ),
             ),
           )
         else if (budgets.isEmpty)
@@ -245,11 +251,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           child: _buildSectionHeader(context, 'Recent Transactions'),
         ),
         if (txState.isLoading && transactions.isEmpty)
-          const SliverToBoxAdapter(
-            child: SizedBox(
-              height: 200,
-              child: Center(child: CircularProgressIndicator()),
-            ),
+          SliverList.builder(
+            itemCount: 5,
+            itemBuilder: (_, __) => const SkeletonListTile(),
           )
         else if (transactions.isEmpty)
           SliverToBoxAdapter(
