@@ -24,6 +24,7 @@ class Transaction with _$Transaction {
     @Default(0) int regretLevel,
     String? notes,
     required DateTime createdAt,
+    double? exchangeRateToBase,
   }) = _Transaction;
 
   factory Transaction.fromJson(Map<String, dynamic> json) =>
