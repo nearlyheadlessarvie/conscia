@@ -21,23 +21,16 @@ public class BehavioralInsightsServiceTests
     }
 
     [Fact]
-    public async Task GetBehavioralInsightsAsync_ReturnsDefault_WhenNoInsights()
+    public async Task GetBehavioralInsightsAsync_ReturnsNull_WhenNoInsights()
     {
-        // Arrange
         var userId = Guid.NewGuid();
         _insightsRepositoryMock
             .Setup(x => x.GetLatestByUserIdAsync(userId, It.IsAny<CancellationToken>()))
             .ReturnsAsync((WeeklyInsights?)null);
 
-        // Act
         var result = await _service.GetBehavioralInsightsAsync(userId);
 
-        // Assert
-        Assert.Equal(FinancialMood.Balanced, result.Mood);
-        Assert.Equal(50.0, result.WorthItPercentage);
-        Assert.Equal(0, result.WorthItCount);
-        Assert.Equal(0, result.PreviousMonthWorthItCount);
-        Assert.Empty(result.ImpulseeTrends);
+        Assert.Null(result);
     }
 
     [Fact]
