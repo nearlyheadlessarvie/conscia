@@ -359,6 +359,7 @@ app.MapAlertEndpoints().RequireRateLimiting("standard");
 app.MapReceiptEndpoints().RequireRateLimiting("standard");
 app.MapAIEndpoints().RequireRateLimiting("ai");
 app.MapInsightsEndpoints().RequireRateLimiting("standard");
+app.MapExchangeRateEndpoints().RequireRateLimiting("standard");
 
 app.Run();
 
