@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../core/constants/tier_limits.dart';
+import '../../core/constants/generated/app_constants.g.dart';
 import '../../providers/budget_providers.dart';
 import '../../providers/subscription_provider.dart';
 import '../../widgets/empty_state.dart';
@@ -77,11 +77,11 @@ class BudgetsScreen extends ConsumerWidget {
     final isPremium = subAsync.valueOrNull?.isPremium ?? false;
 
     if (!isPremium &&
-        budgetState.budgets.length >= TierLimits.freeBudgetCategories) {
+        budgetState.budgets.length >= FreemiumLimits.freeBudgetCategories) {
       PremiumUpgradeDialog.show(
         context,
         feature:
-            'You\'ve reached the free tier limit of ${TierLimits.freeBudgetCategories} budget categories.',
+            'You\'ve reached the free tier limit of ${FreemiumLimits.freeBudgetCategories} budget categories.',
       );
       return;
     }

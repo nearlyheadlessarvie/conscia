@@ -1,39 +1,14 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/constants/category_icons.dart';
+import '../../../core/constants/generated/app_constants.g.dart';
+
 class CategoryData {
   final String name;
   final IconData icon;
 
   const CategoryData(this.name, this.icon);
 }
-
-const expenseCategories = [
-  CategoryData('Groceries', Icons.shopping_cart),
-  CategoryData('Dining', Icons.restaurant),
-  CategoryData('Transport', Icons.directions_car),
-  CategoryData('Entertainment', Icons.movie),
-  CategoryData('Games & Recreations', Icons.videogame_asset),
-  CategoryData('Shopping', Icons.shopping_bag),
-  CategoryData('Health', Icons.favorite),
-  CategoryData('Bills', Icons.receipt),
-  CategoryData('Education', Icons.school),
-  CategoryData('Travel', Icons.flight),
-  CategoryData('Coffee', Icons.coffee),
-  CategoryData('Subscriptions', Icons.autorenew),
-  CategoryData('Gift', Icons.card_giftcard),
-  CategoryData('Other', Icons.more_horiz),
-];
-
-const incomeCategories = [
-  CategoryData('Salary', Icons.account_balance),
-  CategoryData('Freelance', Icons.work),
-  CategoryData('Business', Icons.storefront),
-  CategoryData('Investment', Icons.trending_up),
-  CategoryData('Rental Income', Icons.home),
-  CategoryData('Bonus', Icons.star),
-  CategoryData('Gift', Icons.card_giftcard),
-  CategoryData('Other', Icons.more_horiz),
-];
 
 class CategoryPicker extends StatefulWidget {
   final String? selected;
@@ -56,10 +31,15 @@ class CategoryPicker extends StatefulWidget {
 class _CategoryPickerState extends State<CategoryPicker> {
   bool _expanded = false;
 
+  List<CategoryData> get _categories {
+    final names = widget.isExpense ? expenseCategories : incomeCategories;
+    return names.map((n) => CategoryData(n, CategoryIcons.forCategory(n))).toList();
+  }
+
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
-    final categories = widget.isExpense ? expenseCategories : incomeCategories;
+    final categories = _categories;
     final visible = _expanded
         ? categories
         : categories.take(widget.maxVisible).toList();

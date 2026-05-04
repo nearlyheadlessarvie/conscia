@@ -2,7 +2,6 @@ import 'dart:ui' as ui;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../core/constants/currencies.dart';
 import '../core/network/dio_client.dart';
 import '../services/user_service.dart';
 
@@ -19,9 +18,29 @@ final currentUserProvider = FutureProvider<UserProfile>((ref) async {
   final deviceLocale = _bestDeviceLocale();
   final country = _resolveCountryCode(deviceLocale);
   return (
-    currency: Currencies.fromCountry(country),
+    currency: _currencyFromCountry(country),
     locale: '${deviceLocale.languageCode}_$country',
   );
+}
+
+String _currencyFromCountry(String countryCode) {
+  const countryToCurrency = {
+    'US': 'USD', 'GB': 'GBP', 'MX': 'MXN', 'ES': 'EUR',
+    'FR': 'EUR', 'DE': 'EUR', 'IT': 'EUR', 'NL': 'EUR',
+    'BE': 'EUR', 'AT': 'EUR', 'IE': 'EUR', 'PT': 'EUR',
+    'FI': 'EUR', 'GR': 'EUR', 'SK': 'EUR', 'SI': 'EUR',
+    'LT': 'EUR', 'LV': 'EUR', 'EE': 'EUR', 'MT': 'EUR',
+    'CY': 'EUR', 'LU': 'EUR',
+    'JP': 'JPY', 'CN': 'CNY', 'BR': 'BRL', 'CA': 'CAD',
+    'AU': 'AUD', 'IN': 'INR', 'KR': 'KRW', 'PH': 'PHP',
+    'SG': 'SGD', 'TH': 'THB', 'ID': 'IDR', 'MY': 'MYR',
+    'NZ': 'NZD', 'CH': 'CHF', 'SE': 'SEK', 'NO': 'NOK',
+    'DK': 'DKK', 'PL': 'PLN', 'CZ': 'CZK', 'HU': 'HUF',
+    'RO': 'RON', 'ZA': 'ZAR', 'AE': 'AED', 'SA': 'SAR',
+    'IL': 'ILS', 'TR': 'TRY', 'HK': 'HKD',
+    'CL': 'CLP', 'CO': 'COP', 'AR': 'ARS', 'PE': 'PEN',
+  };
+  return countryToCurrency[countryCode] ?? 'USD';
 }
 
 ui.Locale _bestDeviceLocale() {

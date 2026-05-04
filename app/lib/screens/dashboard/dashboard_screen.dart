@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import 'package:conscia_app/core/constants/tier_limits.dart';
+import 'package:conscia_app/core/constants/generated/app_constants.g.dart';
 import 'package:conscia_app/core/routing/app_router.dart';
 import 'package:conscia_app/providers/behavioral_insights_provider.dart';
 import 'package:conscia_app/providers/budget_providers.dart';
@@ -38,11 +38,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     final isPremium =
         ref.read(subscriptionProvider).valueOrNull?.isPremium ?? false;
     final usage = ref.read(monthlyUsageProvider);
-    if (!isPremium && usage.reflections >= TierLimits.freeReflectionsPerMonth) {
+    if (!isPremium && usage.reflections >= FreemiumLimits.freeReflectionsPerMonth) {
       PremiumUpgradeDialog.show(
         context,
         feature:
-            'You\'ve used all ${TierLimits.freeReflectionsPerMonth} free reflections this month.',
+            'You\'ve used all ${FreemiumLimits.freeReflectionsPerMonth} free reflections this month.',
       );
       return;
     }
