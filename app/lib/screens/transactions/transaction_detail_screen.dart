@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 
+import '../../core/utils/currency_formatter.dart';
 import '../../providers/ai_provider.dart';
 import '../../providers/transaction_providers.dart';
 import '../../providers/usage_provider.dart';
@@ -12,6 +13,7 @@ import '../../services/ai_service.dart';
 import '../../services/transaction_service.dart';
 import '../../screens/assistant/widgets/ai_message_bubble.dart';
 import '../../widgets/premium_upgrade_dialog.dart';
+import '../../widgets/skeleton_loader.dart';
 import 'widgets/transaction_tile.dart';
 
 class TransactionDetailScreen extends ConsumerStatefulWidget {
@@ -160,7 +162,18 @@ class _TransactionDetailScreenState
         ],
       ),
       body: detailAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => ListView(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+          children: const [
+            SkeletonLoader(height: 40, width: 200),
+            SizedBox(height: 24),
+            SkeletonCard(),
+            SizedBox(height: 16),
+            SkeletonCard(),
+            SizedBox(height: 16),
+            SkeletonCard(),
+          ],
+        ),
         error: (error, _) => Center(
           child: Padding(
             padding: const EdgeInsets.all(32),
@@ -192,7 +205,6 @@ class _TransactionDetailScreenState
     final textTheme = Theme.of(context).textTheme;
     final isIncome = tx.type == 'income';
     final prefix = isIncome ? '+' : '-';
-    final formatter = NumberFormat.currency(symbol: '\$', decimalDigits: 2);
 
     if (!_regretLevelInitialized) {
       _regretLevel = tx.regretLevel;
@@ -226,7 +238,7 @@ class _TransactionDetailScreenState
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    '$prefix${formatter.format(tx.amount)} ${tx.currencyCode}',
+                    '$prefix${CurrencyFormatter.format(tx.amount.abs(), currencyCode: tx.currencyCode)}',
                     style: GoogleFonts.poppins(
                       fontSize: 28,
                       fontWeight: FontWeight.w700,
@@ -339,7 +351,7 @@ class _TransactionDetailScreenState
               children: [
                 Icon(Icons.sentiment_satisfied_alt, size: 18),
                 SizedBox(width: 4),
-                Text('Worth It'),
+                // Text('Worth It'),
               ],
             ),
           ),
@@ -357,7 +369,7 @@ class _TransactionDetailScreenState
               children: [
                 Icon(Icons.sentiment_neutral, size: 18),
                 SizedBox(width: 4),
-                Text('Not Sure'),
+                // Text('Not Sure'),
               ],
             ),
           ),
@@ -375,7 +387,7 @@ class _TransactionDetailScreenState
               children: [
                 Icon(Icons.sentiment_dissatisfied, size: 18),
                 SizedBox(width: 4),
-                Text('Regret'),
+                // Text('Regret'),
               ],
             ),
           ),

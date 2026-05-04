@@ -12,9 +12,10 @@ namespace Conscia.Tests.Unit.Application;
 public class TransactionServiceTests
 {
     private readonly Mock<ITransactionRepository> _repoMock = new();
+    private readonly Mock<IExchangeRateService> _fxMock = new();
     private readonly TransactionService _svc;
 
-    public TransactionServiceTests() => _svc = new TransactionService(_repoMock.Object, NullLogger<TransactionService>.Instance);
+    public TransactionServiceTests() => _svc = new TransactionService(_repoMock.Object, _fxMock.Object, NullLogger<TransactionService>.Instance);
 
     [Fact]
     public async Task CreateAsync_CreatesTransactionWithOutbox()
@@ -73,9 +74,9 @@ public class TransactionServiceTests
         var txnId = Guid.NewGuid();
         var txn = new Transaction { Id = txnId, UserId = userId, Amount = new Money(10, "USD"), Category = "Food" };
 
-        _repoMock.Setup(r => r.GetByIdAsync(userId, txnId, It.IsAny<CancellationToken>())).ReturnsAsync(txn);
+        _repoMock.Setup(r => r.GetByIdAsync(txnId, It.IsAny<CancellationToken>())).ReturnsAsync(txn);
 
-        var result = await _svc.GetByIdAsync(userId, txnId);
+        var result = await _svc.GetByIdAsync(txnId);
 
         Assert.NotNull(result);
         Assert.Equal(txnId, result!.Id);
@@ -95,11 +96,11 @@ public class TransactionServiceTests
             Date = DateTime.UtcNow
         };
 
-        _repoMock.Setup(r => r.GetByIdAsync(userId, txnId, It.IsAny<CancellationToken>())).ReturnsAsync(existing);
+        _repoMock.Setup(r => r.GetByIdAsync(txnId, It.IsAny<CancellationToken>())).ReturnsAsync(existing);
         _repoMock.Setup(r => r.UpdateAsync(It.IsAny<Transaction>(), It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
 
         var dto = new UpdateTransactionDto { Amount = 75m, Category = "Dining" };
-        var result = await _svc.UpdateAsync(userId, txnId, dto);
+        var result = await _svc.UpdateAsync(txnId, dto);
 
         Assert.Equal(75m, result.Amount.Amount);
         Assert.Equal("USD", result.Amount.CurrencyCode);
@@ -109,11 +110,11 @@ public class TransactionServiceTests
     [Fact]
     public async Task UpdateAsync_ThrowsKeyNotFound_WhenMissing()
     {
-        _repoMock.Setup(r => r.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+        _repoMock.Setup(r => r.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((Transaction?)null);
 
         await Assert.ThrowsAsync<KeyNotFoundException>(
-            () => _svc.UpdateAsync(Guid.NewGuid(), Guid.NewGuid(), new UpdateTransactionDto()));
+            () => _svc.UpdateAsync(Guid.NewGuid(), new UpdateTransactionDto()));
     }
 
     [Fact]
@@ -127,15 +128,15 @@ public class TransactionServiceTests
             Amount = new Money(50, "USD"), Category = "Food", Date = DateTime.UtcNow
         };
 
-        _repoMock.Setup(r => r.GetByIdAsync(userId, txnId, It.IsAny<CancellationToken>()))
+        _repoMock.Setup(r => r.GetByIdAsync(txnId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(existing);
-        _repoMock.Setup(r => r.DeleteWithOutboxAsync(userId, txnId, It.IsAny<OutboxEvent>(), It.IsAny<CancellationToken>()))
+        _repoMock.Setup(r => r.DeleteWithOutboxAsync(txnId, It.IsAny<OutboxEvent>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 
-        await _svc.DeleteAsync(userId, txnId);
+        await _svc.DeleteAsync(txnId);
 
         _repoMock.Verify(r => r.DeleteWithOutboxAsync(
-            userId, txnId,
+            txnId,
             It.Is<OutboxEvent>(e => e.EventType == OutboxEventType.TransactionDeleted
                 && e.Payload.Contains("Food") && e.Payload.Contains("50")),
             It.IsAny<CancellationToken>()), Times.Once);
@@ -144,15 +145,14 @@ public class TransactionServiceTests
     [Fact]
     public async Task UpdateRegretLevelAsync_DelegatesToRepo()
     {
-        var userId = Guid.NewGuid();
         var txnId = Guid.NewGuid();
 
-        _repoMock.Setup(r => r.UpdateRegretLevelAsync(userId, txnId, RegretLevel.Regret, It.IsAny<CancellationToken>()))
+        _repoMock.Setup(r => r.UpdateRegretLevelAsync(txnId, RegretLevel.Regret, It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 
-        await _svc.UpdateRegretLevelAsync(userId, txnId, RegretLevel.Regret);
+        await _svc.UpdateRegretLevelAsync(txnId, RegretLevel.Regret);
 
-        _repoMock.Verify(r => r.UpdateRegretLevelAsync(userId, txnId, RegretLevel.Regret, It.IsAny<CancellationToken>()), Times.Once);
+        _repoMock.Verify(r => r.UpdateRegretLevelAsync(txnId, RegretLevel.Regret, It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -173,5 +173,54 @@ public class TransactionServiceTests
         Assert.Equal(2, result.Items.Count);
         Assert.Equal(1, result.Page);
         Assert.Equal(10, result.PageSize);
+    }
+
+    [Fact]
+    public async Task CreateAsync_FetchesExchangeRate_WhenCurrencyDiffersFromBase()
+    {
+        var userId = Guid.NewGuid();
+        var dto = new CreateTransactionDto
+        {
+            Type = TransactionType.Expense,
+            Amount = 100m,
+            CurrencyCode = "EUR",
+            BaseCurrencyCode = "USD",
+            Category = "Travel",
+            Date = DateTime.UtcNow
+        };
+
+        _fxMock.Setup(f => f.GetRateAsync("EUR", "USD", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(1.08m);
+        _repoMock.Setup(r => r.AddWithOutboxAsync(It.IsAny<Transaction>(), It.IsAny<OutboxEvent>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Transaction t, OutboxEvent _, CancellationToken __) => t);
+
+        var result = await _svc.CreateAsync(userId, dto);
+
+        Assert.Equal(1.08m, result.Amount.ExchangeRateToBase);
+        _fxMock.Verify(f => f.GetRateAsync("EUR", "USD", It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task CreateAsync_UsesOverride_WhenExchangeRateOverrideProvided()
+    {
+        var userId = Guid.NewGuid();
+        var dto = new CreateTransactionDto
+        {
+            Type = TransactionType.Expense,
+            Amount = 100m,
+            CurrencyCode = "EUR",
+            BaseCurrencyCode = "USD",
+            ExchangeRateOverride = 0.92m,
+            Category = "Travel",
+            Date = DateTime.UtcNow
+        };
+
+        _repoMock.Setup(r => r.AddWithOutboxAsync(It.IsAny<Transaction>(), It.IsAny<OutboxEvent>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Transaction t, OutboxEvent _, CancellationToken __) => t);
+
+        var result = await _svc.CreateAsync(userId, dto);
+
+        Assert.Equal(0.92m, result.Amount.ExchangeRateToBase);
+        _fxMock.Verify(f => f.GetRateAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 }

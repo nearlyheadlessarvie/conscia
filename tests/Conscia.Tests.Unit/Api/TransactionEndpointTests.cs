@@ -75,7 +75,7 @@ public class TransactionEndpointTests : IClassFixture<TestWebAppFactory>
     public async Task GetTransaction_NotFound_Returns404()
     {
         _factory.TransactionServiceMock
-            .Setup(s => s.GetByIdAsync(UserId, It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .Setup(s => s.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((Transaction?)null);
 
         var response = await _client.GetAsync($"/api/v1/transactions/{Guid.NewGuid()}");
@@ -87,7 +87,7 @@ public class TransactionEndpointTests : IClassFixture<TestWebAppFactory>
     public async Task DeleteTransaction_Success_Returns204()
     {
         _factory.TransactionServiceMock
-            .Setup(s => s.DeleteAsync(UserId, It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .Setup(s => s.DeleteAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 
         var response = await _client.DeleteAsync($"/api/v1/transactions/{Guid.NewGuid()}");

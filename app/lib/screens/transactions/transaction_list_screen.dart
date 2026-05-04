@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers/transaction_providers.dart';
 import '../../services/transaction_service.dart';
 import '../../widgets/empty_state.dart';
+import '../../widgets/skeleton_loader.dart';
 import 'widgets/date_section_header.dart';
 import 'widgets/transaction_tile.dart';
 
@@ -66,7 +67,10 @@ class _TransactionListScreenState extends ConsumerState<TransactionListScreen> {
     List<String> categories,
   ) {
     if (state.isLoading && state.transactions.isEmpty) {
-      return const Center(child: CircularProgressIndicator());
+      return ListView.builder(
+        itemCount: 8,
+        itemBuilder: (_, __) => const SkeletonListTile(),
+      );
     }
 
     if (state.error != null && state.transactions.isEmpty) {

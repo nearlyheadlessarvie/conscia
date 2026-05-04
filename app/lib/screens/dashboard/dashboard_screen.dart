@@ -3,20 +3,25 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import 'package:conscia_app/core/constants/tier_limits.dart';
+import 'package:conscia_app/core/constants/generated/app_constants.g.dart';
 import 'package:conscia_app/core/routing/app_router.dart';
+import 'package:conscia_app/providers/behavioral_insights_provider.dart';
 import 'package:conscia_app/providers/budget_providers.dart';
 import 'package:conscia_app/providers/subscription_provider.dart';
 import 'package:conscia_app/providers/transaction_providers.dart';
 import 'package:conscia_app/providers/usage_provider.dart';
 import 'package:conscia_app/screens/dashboard/widgets/budget_summary_card.dart';
 import 'package:conscia_app/screens/dashboard/widgets/budget_warning_banner.dart';
+import 'package:conscia_app/screens/dashboard/widgets/financial_mood_card.dart';
+import 'package:conscia_app/screens/dashboard/widgets/impulse_trends_card.dart';
 import 'package:conscia_app/screens/dashboard/widgets/recent_transaction_tile.dart';
 import 'package:conscia_app/screens/dashboard/widgets/regret_prompt_card.dart';
+import 'package:conscia_app/screens/dashboard/widgets/worth_it_counter_card.dart';
 import 'package:conscia_app/screens/transactions/widgets/transaction_tile.dart';
 import 'package:conscia_app/services/transaction_service.dart';
 import 'package:conscia_app/widgets/empty_state.dart';
 import 'package:conscia_app/widgets/premium_upgrade_dialog.dart';
+import 'package:conscia_app/widgets/skeleton_loader.dart';
 
 class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
@@ -33,11 +38,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     final isPremium =
         ref.read(subscriptionProvider).valueOrNull?.isPremium ?? false;
     final usage = ref.read(monthlyUsageProvider);
-    if (!isPremium && usage.reflections >= TierLimits.freeReflectionsPerMonth) {
+    if (!isPremium && usage.reflections >= FreemiumLimits.freeReflectionsPerMonth) {
       PremiumUpgradeDialog.show(
         context,
         feature:
-            'You\'ve used all ${TierLimits.freeReflectionsPerMonth} free reflections this month.',
+            'You\'ve used all ${FreemiumLimits.freeReflectionsPerMonth} free reflections this month.',
       );
       return;
     }
@@ -75,6 +80,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     final textTheme = Theme.of(context).textTheme;
     final budgetState = ref.watch(budgetListProvider);
     final txState = ref.watch(transactionListProvider);
+    final insightsState = ref.watch(behavioralInsightsProvider);
 
     final budgets = budgetState.budgets;
     final transactions = txState.transactions;
@@ -115,14 +121,69 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               onDismiss: () => setState(() => _bannerDismissed = true),
             ),
           ),
+        // Behavioral Insights Section — only rendered when data is available
+        ...insightsState.when<List<Widget>>(
+          loading: () => [
+            SliverToBoxAdapter(
+              child: _buildSectionHeader(context, 'Your Insights'),
+            ),
+            const SliverPadding(
+              padding: EdgeInsets.symmetric(horizontal: 16),
+              sliver: SliverToBoxAdapter(
+                child: InsightSkeletonSection(),
+              ),
+            ),
+          ],
+          data: (insights) {
+            if (insights == null) return <Widget>[];
+            return [
+              SliverToBoxAdapter(
+                child: _buildSectionHeader(context, 'Your Insights'),
+              ),
+              SliverPadding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                sliver: SliverList(
+                  delegate: SliverChildListDelegate([
+                    FinancialMoodCard(
+                      mood: insights.mood,
+                      worthItPercentage: insights.worthItPercentage,
+                      previousMonthPercentage:
+                          insights.previousMonthWorthItCount > 0
+                              ? (insights.previousMonthWorthItCount /
+                                  (insights.previousMonthWorthItCount + 10) *
+                                  100)
+                              : 50,
+                    ),
+                    const SizedBox(height: 12),
+                    WorthItCounterCard(
+                      thisMonthCount: insights.worthItCount,
+                      previousMonthCount: insights.previousMonthWorthItCount,
+                    ),
+                    const SizedBox(height: 12),
+                    if (insights.impulseeTrends.isNotEmpty)
+                      ImpulseTrendsCard(trends: insights.impulseeTrends),
+                    const SizedBox(height: 12),
+                  ]),
+                ),
+              ),
+            ];
+          },
+          error: (_, __) => <Widget>[],
+        ),
         SliverToBoxAdapter(
           child: _buildSectionHeader(context, 'Budgets'),
         ),
         if (budgetState.isLoading && budgets.isEmpty)
-          const SliverToBoxAdapter(
+          SliverToBoxAdapter(
             child: SizedBox(
               height: 160,
-              child: Center(child: CircularProgressIndicator()),
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                itemCount: 3,
+                separatorBuilder: (_, __) => const SizedBox(width: 12),
+                itemBuilder: (_, __) => const BudgetSummarySkeletonCard(),
+              ),
             ),
           )
         else if (budgets.isEmpty)
@@ -190,11 +251,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           child: _buildSectionHeader(context, 'Recent Transactions'),
         ),
         if (txState.isLoading && transactions.isEmpty)
-          const SliverToBoxAdapter(
-            child: SizedBox(
-              height: 200,
-              child: Center(child: CircularProgressIndicator()),
-            ),
+          SliverList.builder(
+            itemCount: 5,
+            itemBuilder: (_, __) => const SkeletonListTile(),
           )
         else if (transactions.isEmpty)
           SliverToBoxAdapter(

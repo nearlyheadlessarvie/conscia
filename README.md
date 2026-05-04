@@ -258,65 +258,131 @@ flutter run
 flutter run --dart-define=MOCK_AUTH=false --dart-define=API_BASE_URL=https://api.getconscia.com/api/v1
 ```
 
-### Google Sign-In Setup
+## Social Authentication Setup
 
-Google Sign-In requires OAuth 2.0 credentials from the [Google Cloud Console](https://console.cloud.google.com/):
+The app supports Sign in with Google and Sign in with Apple. The Flutter UI and service code are already in place. Follow these steps to wire up the credentials and backend endpoints.
 
-#### 1. Create a Google Cloud Project
+> **Mock auth is on by default.** During local development, `MOCK_AUTH=true` bypasses real OAuth entirely. You only need to follow these steps when you're ready to test real sign-in flows. See [Disabling Mock Auth](#disabling-mock-auth) at the end of this section.
 
-1. Go to [Google Cloud Console](https://console.cloud.google.com/) → create a new project (e.g., "Conscia")
-2. Enable the **Google Identity** API (search for "Google Identity" in APIs & Services)
+---
 
-#### 2. Create OAuth 2.0 Credentials
+### Sign in with Google
 
-**For iOS:**
-1. Go to **APIs & Services → Credentials → Create Credentials → OAuth Client ID**
-2. Application type: **iOS**
-3. Bundle ID: `com.conscia.app` (must match your `ios/Runner.xcodeproj` bundle ID)
-4. Download `GoogleService-Info.plist` → place in `app/ios/Runner/`
-5. Add the reversed client ID as a URL scheme in `ios/Runner/Info.plist`:
+#### Step 1 — Create a Google Cloud Project
+
+1. Go to [Google Cloud Console](https://console.cloud.google.com/) and create a new project (e.g., "Conscia").
+2. In **APIs & Services → Library**, search for "Google Identity" and enable the **Google Identity** API.
+
+#### Step 2 — Create OAuth 2.0 Client IDs
+
+You need one client ID per platform. Go to **APIs & Services → Credentials → Create Credentials → OAuth Client ID** for each:
+
+**iOS client ID**
+1. Application type: **iOS**
+2. Bundle ID: `com.conscia.app` (must match your `ios/Runner.xcodeproj` bundle ID)
+3. Download `GoogleService-Info.plist` → place it at `app/ios/Runner/GoogleService-Info.plist`
+4. Open `app/ios/Runner/Info.plist` and add a URL scheme so the app can receive the OAuth redirect:
    ```xml
    <key>CFBundleURLTypes</key>
    <array>
      <dict>
        <key>CFBundleURLSchemes</key>
        <array>
-         <string>com.googleusercontent.apps.YOUR_CLIENT_ID</string>
+         <string>com.googleusercontent.apps.YOUR_IOS_CLIENT_ID</string>
        </array>
      </dict>
    </array>
    ```
+   Replace `YOUR_IOS_CLIENT_ID` with the value from `GoogleService-Info.plist` → `REVERSED_CLIENT_ID`.
 
-**For Android:**
-1. Go to **APIs & Services → Credentials → Create Credentials → OAuth Client ID**
-2. Application type: **Android**
-3. Package name: `com.conscia.app`
-4. SHA-1 fingerprint (debug key):
+**Android client ID**
+1. Application type: **Android**
+2. Package name: `com.conscia.app`
+3. SHA-1 fingerprint — run this to get your debug key fingerprint:
    ```bash
    keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey -storepass android
    ```
-5. Download `google-services.json` → place in `app/android/app/`
-6. Add Google Services plugin to `android/build.gradle`:
+   Copy the `SHA1:` line from the output.
+4. Download `google-services.json` → place it at `app/android/app/google-services.json`
+5. In `app/android/build.gradle` add the Google Services plugin to the `buildscript` classpath:
    ```gradle
    classpath 'com.google.gms:google-services:4.4.0'
    ```
-7. Apply the plugin in `android/app/build.gradle`:
+6. In `app/android/app/build.gradle` apply the plugin at the top:
    ```gradle
    apply plugin: 'com.google.gms.google-services'
    ```
 
-**For Web (OAuth consent screen):**
-1. Configure the **OAuth consent screen** (required for all platforms)
-2. Add test users during development
-3. Set authorized redirect URIs for your backend callback
+**Web client ID** (needed for `serverClientId` — required even if you don't have a web app)
+1. Application type: **Web application**
+2. No redirect URI is needed for the mobile-only flow; this client ID is used to request an `idToken` on device.
 
-#### 3. Apple Sign-In Setup
+#### Step 3 — Configure the OAuth Consent Screen
 
-1. In Xcode: select target → **Signing & Capabilities** → add **Sign in with Apple**
-2. Ensure the capability is enabled in your [Apple Developer portal](https://developer.apple.com/) under your App ID
-3. For Android: Apple Sign-In uses a web-based redirect — configure a **Service ID** in the Apple Developer portal with a redirect URI pointing to your backend
+1. In **APIs & Services → OAuth consent screen**, fill in your app name, support email, and developer contact.
+2. Add any test user emails during development so they can sign in before the app is verified.
+3. Scopes: `email` and `profile` are sufficient for Conscia.
 
-> For detailed platform-specific instructions, see [`app/PLATFORM_SETUP.md`](app/PLATFORM_SETUP.md).
+#### Step 4 — Pass the Web Client ID to the Flutter App
+
+Open `app/lib/services/auth_service.dart` and pass the Web client ID to `GoogleSignIn`:
+
+```dart
+final googleUser = await GoogleSignIn(
+  serverClientId: 'YOUR_WEB_CLIENT_ID.apps.googleusercontent.com',
+).signIn();
+```
+
+#### Step 5 — Implement the Backend Endpoint
+
+Add `POST /api/v1/auth/google` to your .NET backend:
+
+- **Request body:** `{ "idToken": "<Google ID token from device>" }`
+- **What the backend does:**
+  1. Verify the `idToken` using Google's tokeninfo endpoint or the `google-auth-library`
+  2. Look up the user by Google subject ID (`sub` claim); create the account on first sign-in
+  3. Issue your own JWT access and refresh tokens
+- **Response:** `{ "accessToken": "...", "refreshToken": "...", "userId": "..." }`
+
+---
+
+### Sign in with Apple
+
+> Apple sign-in is iOS-only. The button is conditionally rendered and will not appear on Android.
+
+#### Step 1 — Enable the Capability in Apple Developer Portal
+
+1. Log in to [Apple Developer Portal](https://developer.apple.com/) → **Certificates, Identifiers & Profiles → Identifiers**.
+2. Select your App ID (`com.conscia.app`) → enable **Sign in with Apple** → save.
+
+#### Step 2 — Add the Capability in Xcode
+
+1. Open `app/ios/Runner.xcworkspace` in Xcode.
+2. Select the **Runner** target → **Signing & Capabilities** tab → click `+` → add **Sign in with Apple**.
+3. Xcode adds the entitlement automatically; no extra Flutter config is needed — the `sign_in_with_apple` package handles the rest.
+
+#### Step 3 — Implement the Backend Endpoint
+
+Add `POST /api/v1/auth/apple` to your .NET backend:
+
+- **Request body:** `{ "identityToken": "<Apple identity token>", "authorizationCode": "<code>" }`
+- **What the backend does:**
+  1. Fetch Apple's public keys from `https://appleid.apple.com/auth/keys` and verify the `identityToken` JWT
+  2. Look up the user by Apple subject ID; create the account on first sign-in
+  3. Issue your own JWT access and refresh tokens
+- **Response:** `{ "accessToken": "...", "refreshToken": "...", "userId": "..." }`
+
+> **Important:** Apple only sends the user's name and email during the **first** sign-in. Store them immediately when you create the account — subsequent sign-ins will not include them.
+
+---
+
+### Disabling Mock Auth
+
+`MOCK_AUTH=true` is the compile-time default (see `ApiConstants`). It lets you run the app locally without real credentials. To switch to real OAuth, pass the flag at run time:
+
+```bash
+cd app && flutter run --dart-define=MOCK_AUTH=false --dart-define=API_BASE_URL=https://your-api-host/api/v1/
+```
 
 ---
 

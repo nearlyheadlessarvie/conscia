@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/constants/category_icons.dart';
+import '../../../core/utils/currency_formatter.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../services/budget_service.dart';
 import '../../../widgets/budget_progress_bar.dart';
@@ -96,7 +97,7 @@ class BudgetCard extends StatelessWidget {
               children: [
                 Expanded(
                   child: Text(
-                    '\$${budget.spent.toStringAsFixed(2)} / \$${budget.monthlyLimit.toStringAsFixed(2)}',
+                    '${CurrencyFormatter.format(budget.spent, currencyCode: budget.currencyCode)} / ${CurrencyFormatter.format(budget.monthlyLimit, currencyCode: budget.currencyCode)}',
                     style: textTheme.bodyLarge,
                   ),
                 ),

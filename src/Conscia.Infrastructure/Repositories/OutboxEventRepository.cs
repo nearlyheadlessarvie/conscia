@@ -6,16 +6,16 @@ using Conscia.Domain.Enums;
 
 namespace Conscia.Infrastructure.Repositories;
 
-public class OutboxEventRepository : IOutboxEventRepository
+public class OutboxEventRepository : DynamoRepository, IOutboxEventRepository
 {
-    private const string TableName = "OutboxEvents";
-    private readonly IAmazonDynamoDB _dynamo;
+    private const string TableName = "OutboxEvents";    
 
-    public OutboxEventRepository(IAmazonDynamoDB dynamo) => _dynamo = dynamo;
+    public OutboxEventRepository(IAmazonDynamoDB dynamo) : base(dynamo)
+    {}
 
     public async Task<OutboxEvent> AddAsync(OutboxEvent outboxEvent, CancellationToken ct = default)
     {
-        await _dynamo.PutItemAsync(new PutItemRequest
+        await Dynamo.PutItemAsync(new PutItemRequest
         {
             TableName = TableName,
             Item = ToItem(outboxEvent)
@@ -26,10 +26,10 @@ public class OutboxEventRepository : IOutboxEventRepository
 
     public async Task<IReadOnlyList<OutboxEvent>> GetPendingAsync(int limit = 50, CancellationToken ct = default)
     {
-        var response = await _dynamo.QueryAsync(new QueryRequest
+        var response = await Dynamo.QueryAsync(new QueryRequest
         {
             TableName = TableName,
-            IndexName = "GSI1-Status",
+            IndexName = "GSI-Status-CreatedAt",
             KeyConditionExpression = "#s = :pending",
             ExpressionAttributeNames = new Dictionary<string, string> { ["#s"] = "Status" },
             ExpressionAttributeValues = new Dictionary<string, AttributeValue>
@@ -42,36 +42,18 @@ public class OutboxEventRepository : IOutboxEventRepository
         return response.Items.Select(FromItem).ToList();
     }
 
-    public async Task MarkProcessedAsync(Guid id, CancellationToken ct = default)
-    {
-        // Interface contract uses Guid id, but we need the full entity
-        // to reconstruct the composite DynamoDB key (PK/SK).
-        // Callers (OutboxProcessor) always process from GetPendingAsync results,
-        // so we use the overload below for efficiency. This method exists
-        // for the interface contract and does a targeted GSI lookup.
-        var pending = await GetPendingAsync(200, ct);
-        var target = pending.FirstOrDefault(e => e.Id == id)
-            ?? throw new InvalidOperationException($"OutboxEvent {id} not found or already processed");
-
-        await MarkProcessedInternalAsync(target.AggregateId, target.CreatedAt, ct);
-    }
-
     public Task MarkProcessedAsync(OutboxEvent outboxEvent, CancellationToken ct = default) =>
         MarkProcessedInternalAsync(outboxEvent.AggregateId, outboxEvent.CreatedAt, ct);
 
-    internal async Task MarkProcessedInternalAsync(Guid aggregateId, DateTime createdAt, CancellationToken ct = default)
+    internal async Task MarkProcessedInternalAsync(Guid id, DateTime createdAt, CancellationToken ct = default)
     {
-        await _dynamo.UpdateItemAsync(new UpdateItemRequest
+        await Dynamo.UpdateItemAsync(new UpdateItemRequest
         {
             TableName = TableName,
-            Key = new Dictionary<string, AttributeValue>
-            {
-                ["PK"] = new($"AGG#{aggregateId}"),
-                ["SK"] = new($"EVENT#{createdAt:O}")
-            },
+            Key = Key(DynamoKeys.Event(id), createdAt.ToString("O")),
             UpdateExpression = "SET ProcessedAt = :now REMOVE #s",
-            ExpressionAttributeNames = new Dictionary<string, string> { ["#s"] = "Status" },
-            ExpressionAttributeValues = new Dictionary<string, AttributeValue>
+            ExpressionAttributeNames = new() { ["#s"] = "Status" },
+            ExpressionAttributeValues = new()
             {
                 [":now"] = new(DateTime.UtcNow.ToString("O"))
             }
@@ -82,8 +64,8 @@ public class OutboxEventRepository : IOutboxEventRepository
     {
         var item = new Dictionary<string, AttributeValue>
         {
-            ["PK"] = new($"AGG#{e.AggregateId}"),
-            ["SK"] = new($"EVENT#{e.CreatedAt:O}"),
+            ["PK"] = new(DynamoKeys.Outbox(e.AggregateId)),
+            ["SK"] = new(DynamoKeys.EventCreatedAt(e.CreatedAt)),
             ["Id"] = new(e.Id.ToString()),
             ["AggregateId"] = new(e.AggregateId.ToString()),
             ["EventType"] = new(e.EventType.ToString()),

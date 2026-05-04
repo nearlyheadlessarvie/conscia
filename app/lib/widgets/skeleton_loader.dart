@@ -81,3 +81,126 @@ class SkeletonListTile extends StatelessWidget {
     );
   }
 }
+
+class InsightSkeletonCard extends StatelessWidget {
+  const InsightSkeletonCard({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return const Card(
+      child: Padding(
+        padding: EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SkeletonLoader(height: 12, width: 140),
+            SizedBox(height: 12),
+            SkeletonLoader(height: 24, width: 180),
+            SizedBox(height: 12),
+            SkeletonLoader(height: 12),
+            SizedBox(height: 8),
+            SkeletonLoader(height: 12, width: 200),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class InsightSkeletonSection extends StatelessWidget {
+  const InsightSkeletonSection({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return const Column(
+      children: [
+        InsightSkeletonCard(),
+        SizedBox(height: 12),
+        InsightSkeletonCard(),
+        SizedBox(height: 12),
+        InsightSkeletonCard(),
+        SizedBox(height: 12),
+      ],
+    );
+  }
+}
+
+class BudgetSummarySkeletonCard extends StatelessWidget {
+  const BudgetSummarySkeletonCard({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return const SizedBox(
+      width: 180,
+      child: Card(
+        child: Padding(
+          padding: EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  SkeletonLoader(width: 32, height: 32, borderRadius: 16),
+                  SizedBox(width: 10),
+                  SkeletonLoader(height: 14, width: 80),
+                ],
+              ),
+              SizedBox(height: 16),
+              SkeletonLoader(height: 8, borderRadius: 4),
+              SizedBox(height: 8),
+              SkeletonLoader(height: 12, width: 120),
+              SizedBox(height: 6),
+              SkeletonLoader(height: 12, width: 90),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class BudgetListSkeletonCard extends StatelessWidget {
+  const BudgetListSkeletonCard({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return const Card(
+      margin: EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      child: Padding(
+        padding: EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                SkeletonLoader(width: 32, height: 32, borderRadius: 16),
+                SizedBox(width: 12),
+                Expanded(child: SkeletonLoader(height: 16)),
+                SizedBox(width: 12),
+                SkeletonLoader(width: 24, height: 24, borderRadius: 4),
+              ],
+            ),
+            SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(child: SkeletonLoader(height: 14)),
+                SizedBox(width: 16),
+                SkeletonLoader(width: 36, height: 14),
+              ],
+            ),
+            SizedBox(height: 8),
+            SkeletonLoader(height: 8, borderRadius: 4),
+            SizedBox(height: 8),
+            Row(
+              children: [
+                const SkeletonLoader(width: 40, height: 12),
+                const Spacer(),
+                const SkeletonLoader(width: 100, height: 12),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}

@@ -6,10 +6,11 @@ namespace Conscia.Application.Interfaces;
 public interface ITransactionRepository
 {
     Task<Transaction> AddWithOutboxAsync(Transaction transaction, OutboxEvent outboxEvent, CancellationToken ct = default);
-    Task<Transaction?> GetByIdAsync(Guid userId, Guid id, CancellationToken ct = default);
+    Task<Transaction?> GetByIdAsync(Guid id, CancellationToken ct = default);
     Task<(IReadOnlyList<Transaction> Items, string? NextToken)> QueryByUserAsync(Guid userId, DateTime? from, DateTime? to, string? category, int limit, string? paginationToken, CancellationToken ct = default);
+    Task<IReadOnlyList<Transaction>> GetByUserIdAndDateRangeAsync(Guid userId, DateTime from, DateTime to, CancellationToken ct = default);
     Task UpdateAsync(Transaction transaction, CancellationToken ct = default);
-    Task DeleteWithOutboxAsync(Guid userId, Guid id, OutboxEvent outboxEvent, CancellationToken ct = default);
-    Task UpdateRegretLevelAsync(Guid userId, Guid id, RegretLevel level, CancellationToken ct = default);
-    Task<IReadOnlyList<Transaction>> GetPendingRegretPromptsAsync(Guid userId, DateTime from, DateTime to, CancellationToken ct = default);
+    Task DeleteWithOutboxAsync(Guid id, OutboxEvent outboxEvent, CancellationToken ct = default);
+    Task UpdateRegretLevelAsync(Guid id, RegretLevel level, CancellationToken ct = default);
+    Task<IReadOnlyList<Transaction>> GetUserPendingRegretPromptsAsync(Guid userId, DateTime from, DateTime to, CancellationToken ct = default);
 }

@@ -49,6 +49,7 @@ sealed class Program
             SessionCacheTable = database.SessionCacheTable,
             OutboxEventsTable = database.OutboxEventsTable,
             InAppAlertsTable = database.InAppAlertsTable,
+            WeeklyInsightsTable = database.WeeklyInsightsTable,
             AiQueue = ai.AiQueue,
             DbAccessLambda = dbAccess.DbAccessLambda
         });

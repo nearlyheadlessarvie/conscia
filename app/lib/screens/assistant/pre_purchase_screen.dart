@@ -2,7 +2,8 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../core/constants/tier_limits.dart';
+import '../../core/constants/generated/app_constants.g.dart';
+import '../../core/constants/category_icons.dart';
 import '../../providers/ai_provider.dart';
 import '../../providers/subscription_provider.dart';
 import '../../providers/usage_provider.dart';
@@ -85,11 +86,11 @@ class _PrePurchaseScreenState extends ConsumerState<PrePurchaseScreen>
     final isPremium =
         ref.read(subscriptionProvider).valueOrNull?.isPremium ?? false;
     final usage = ref.read(monthlyUsageProvider);
-    if (!isPremium && usage.aiAssists >= TierLimits.freeAiAssistsPerMonth) {
+    if (!isPremium && usage.aiAssists >= FreemiumLimits.freeAiAssistsPerMonth) {
       PremiumUpgradeDialog.show(
         context,
         feature:
-            'You\'ve used all ${TierLimits.freeAiAssistsPerMonth} free AI assists this month.',
+            'You\'ve used all ${FreemiumLimits.freeAiAssistsPerMonth} free AI assists this month.',
       );
       return;
     }
@@ -273,14 +274,14 @@ class _PrePurchaseScreenState extends ConsumerState<PrePurchaseScreen>
             decoration: const InputDecoration(
               labelText: 'Category',
             ),
-            items: allCategories
-                .map((c) => DropdownMenuItem(
-                      value: c.name,
+            items: expenseCategories
+                .map((name) => DropdownMenuItem(
+                      value: name,
                       child: Row(
                         children: [
-                          Icon(c.icon, size: 20),
+                          Icon(CategoryIcons.forCategory(name), size: 20),
                           const SizedBox(width: 8),
-                          Text(c.name),
+                          Text(name),
                         ],
                       ),
                     ))

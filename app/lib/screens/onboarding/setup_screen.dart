@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
-import 'package:conscia_app/core/constants/currencies.dart';
 import 'package:conscia_app/providers/user_provider.dart';
 import 'package:conscia_app/widgets/currency_picker_sheet.dart';
 
@@ -54,9 +53,25 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
   }
 
   String _currencyForLocale(String locale) {
+    const countryToCurrency = {
+      'US': 'USD', 'GB': 'GBP', 'MX': 'MXN', 'ES': 'EUR',
+      'FR': 'EUR', 'DE': 'EUR', 'IT': 'EUR', 'NL': 'EUR',
+      'BE': 'EUR', 'AT': 'EUR', 'IE': 'EUR', 'PT': 'EUR',
+      'FI': 'EUR', 'GR': 'EUR', 'SK': 'EUR', 'SI': 'EUR',
+      'LT': 'EUR', 'LV': 'EUR', 'EE': 'EUR', 'MT': 'EUR',
+      'CY': 'EUR', 'LU': 'EUR',
+      'JP': 'JPY', 'CN': 'CNY', 'BR': 'BRL', 'CA': 'CAD',
+      'AU': 'AUD', 'IN': 'INR', 'KR': 'KRW', 'PH': 'PHP',
+      'SG': 'SGD', 'TH': 'THB', 'ID': 'IDR', 'MY': 'MYR',
+      'NZ': 'NZD', 'CH': 'CHF', 'SE': 'SEK', 'NO': 'NOK',
+      'DK': 'DKK', 'PL': 'PLN', 'CZ': 'CZK', 'HU': 'HUF',
+      'RO': 'RON', 'ZA': 'ZAR', 'AE': 'AED', 'SA': 'SAR',
+      'IL': 'ILS', 'TR': 'TRY', 'HK': 'HKD',
+      'CL': 'CLP', 'CO': 'COP', 'AR': 'ARS', 'PE': 'PEN',
+    };
     final parts = locale.split('_');
     final countryCode = parts.length > 1 ? parts[1].toUpperCase() : 'US';
-    return Currencies.fromCountry(countryCode);
+    return countryToCurrency[countryCode] ?? 'USD';
   }
 
   void _openCurrencyPicker() {

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../core/constants/currencies.dart';
+import '../core/constants/generated/app_constants.g.dart';
 import '../screens/settings/widgets/subscription_sheet.dart';
 
 class CurrencyPickerSheet {
@@ -53,9 +53,9 @@ class _CurrencyPickerBodyState extends State<_CurrencyPickerBody> {
   String _query = '';
 
   List<CurrencyInfo> get _filtered {
-    if (_query.isEmpty) return Currencies.all;
+    if (_query.isEmpty) return supportedCurrencies;
     final q = _query.toLowerCase();
-    return Currencies.all
+    return supportedCurrencies
         .where((c) =>
             c.code.toLowerCase().contains(q) ||
             c.name.toLowerCase().contains(q))

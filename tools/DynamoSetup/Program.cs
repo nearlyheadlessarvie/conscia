@@ -9,6 +9,7 @@ Console.WriteLine($"Creating DynamoDB tables at {serviceUrl}...");
 
 var tables = new (string Name, CreateTableRequest Request)[]
 {
+    // ---------------- TRANSACTIONS ----------------
     ("Transactions", new CreateTableRequest
     {
         TableName = "Transactions",
@@ -19,111 +20,30 @@ var tables = new (string Name, CreateTableRequest Request)[]
         ],
         AttributeDefinitions =
         [
-            new AttributeDefinition("PK", ScalarAttributeType.S),
-            new AttributeDefinition("SK", ScalarAttributeType.S),
-            new AttributeDefinition("Category", ScalarAttributeType.S),
-            new AttributeDefinition("Date", ScalarAttributeType.S)
+            new("PK", ScalarAttributeType.S),
+            new("SK", ScalarAttributeType.S),
+            new("UserId", ScalarAttributeType.S),
+            new("GSI1SK", ScalarAttributeType.S),
+            new("Id", ScalarAttributeType.S)
         ],
         GlobalSecondaryIndexes =
         [
             new GlobalSecondaryIndex
             {
-                IndexName = "GSI1-Category-Date",
+                IndexName = "GSI-UserId-Category-Date",
                 KeySchema =
                 [
-                    new KeySchemaElement("Category", KeyType.HASH),
-                    new KeySchemaElement("Date", KeyType.RANGE)
+                    new("UserId", KeyType.HASH),
+                    new("GSI1SK", KeyType.RANGE)
                 ],
                 Projection = new Projection { ProjectionType = ProjectionType.ALL }
-            }
-        ],
-        BillingMode = BillingMode.PAY_PER_REQUEST
-    }),
-
-    ("AIInteractions", new CreateTableRequest
-    {
-        TableName = "AIInteractions",
-        KeySchema =
-        [
-            new KeySchemaElement("PK", KeyType.HASH),
-            new KeySchemaElement("SK", KeyType.RANGE)
-        ],
-        AttributeDefinitions =
-        [
-            new AttributeDefinition("PK", ScalarAttributeType.S),
-            new AttributeDefinition("SK", ScalarAttributeType.S),
-            new AttributeDefinition("UserId", ScalarAttributeType.S),
-            new AttributeDefinition("Date", ScalarAttributeType.S)
-        ],
-        GlobalSecondaryIndexes =
-        [
+            },
             new GlobalSecondaryIndex
             {
-                IndexName = "GSI1-UserId-Date",
+                IndexName = "GSI-TransactionId",
                 KeySchema =
                 [
-                    new KeySchemaElement("UserId", KeyType.HASH),
-                    new KeySchemaElement("Date", KeyType.RANGE)
-                ],
-                Projection = new Projection { ProjectionType = ProjectionType.ALL }
-            }
-        ],
-        BillingMode = BillingMode.PAY_PER_REQUEST
-    }),
-
-    ("BehaviorProfiles", new CreateTableRequest
-    {
-        TableName = "BehaviorProfiles",
-        KeySchema =
-        [
-            new KeySchemaElement("PK", KeyType.HASH),
-            new KeySchemaElement("SK", KeyType.RANGE)
-        ],
-        AttributeDefinitions =
-        [
-            new AttributeDefinition("PK", ScalarAttributeType.S),
-            new AttributeDefinition("SK", ScalarAttributeType.S)
-        ],
-        BillingMode = BillingMode.PAY_PER_REQUEST
-    }),
-
-    ("SessionCache", new CreateTableRequest
-    {
-        TableName = "SessionCache",
-        KeySchema =
-        [
-            new KeySchemaElement("PK", KeyType.HASH)
-        ],
-        AttributeDefinitions =
-        [
-            new AttributeDefinition("PK", ScalarAttributeType.S)
-        ],
-        BillingMode = BillingMode.PAY_PER_REQUEST
-    }),
-
-    ("OutboxEvents", new CreateTableRequest
-    {
-        TableName = "OutboxEvents",
-        KeySchema =
-        [
-            new KeySchemaElement("PK", KeyType.HASH),
-            new KeySchemaElement("SK", KeyType.RANGE)
-        ],
-        AttributeDefinitions =
-        [
-            new AttributeDefinition("PK", ScalarAttributeType.S),
-            new AttributeDefinition("SK", ScalarAttributeType.S),
-            new AttributeDefinition("Status", ScalarAttributeType.S)
-        ],
-        GlobalSecondaryIndexes =
-        [
-            new GlobalSecondaryIndex
-            {
-                IndexName = "GSI1-Status",
-                KeySchema =
-                [
-                    new KeySchemaElement("Status", KeyType.HASH),
-                    new KeySchemaElement("SK", KeyType.RANGE)
+                    new("Id", KeyType.HASH)
                 ],
                 Projection = new Projection { ProjectionType = ProjectionType.ALL }
             }
@@ -132,25 +52,152 @@ var tables = new (string Name, CreateTableRequest Request)[]
         StreamSpecification = new StreamSpecification
         {
             StreamEnabled = true,
-            StreamViewType = StreamViewType.NEW_IMAGE
+            StreamViewType = StreamViewType.NEW_AND_OLD_IMAGES
         }
     }),
 
+    // ---------------- AI INTERACTIONS ----------------
+    ("AIInteractions", new CreateTableRequest
+    {
+        TableName = "AIInteractions",
+        KeySchema =
+        [
+            new("PK", KeyType.HASH),
+            new("SK", KeyType.RANGE)
+        ],
+        AttributeDefinitions =
+        [
+            new("PK", ScalarAttributeType.S),
+            new("SK", ScalarAttributeType.S),
+            new("TransactionId", ScalarAttributeType.S),
+            new("CreatedAt", ScalarAttributeType.S)
+        ],
+        GlobalSecondaryIndexes =
+        [
+            new GlobalSecondaryIndex
+            {
+                IndexName = "GSI-TransactionId-Date",
+                KeySchema =
+                [
+                    new("TransactionId", KeyType.HASH),
+                    new("CreatedAt", KeyType.RANGE)
+                ],
+                Projection = new Projection { ProjectionType = ProjectionType.ALL }
+            },
+        ],
+        BillingMode = BillingMode.PAY_PER_REQUEST
+    }),
+
+    // ---------------- BEHAVIOR PROFILE ----------------
+    ("BehaviorProfiles", new CreateTableRequest
+    {
+        TableName = "BehaviorProfiles",
+        KeySchema =
+        [
+            new("PK", KeyType.HASH)
+        ],
+        AttributeDefinitions =
+        [
+            new("PK", ScalarAttributeType.S)
+        ],
+        BillingMode = BillingMode.PAY_PER_REQUEST
+    }),
+
+    // ---------------- OUTBOX ----------------
+    ("OutboxEvents", new CreateTableRequest
+    {
+        TableName = "OutboxEvents",
+        KeySchema =
+        [
+            new("PK", KeyType.HASH),
+            new("SK", KeyType.RANGE)
+        ],
+        AttributeDefinitions =
+        [
+            new("PK", ScalarAttributeType.S),
+            new("SK", ScalarAttributeType.S),
+            new("Status", ScalarAttributeType.S),
+            new("CreatedAt", ScalarAttributeType.S)
+        ],
+        GlobalSecondaryIndexes =
+        [
+            new GlobalSecondaryIndex
+            {
+                IndexName = "GSI-Status-CreatedAt",
+                KeySchema =
+                [
+                    new("Status", KeyType.HASH),
+                    new("CreatedAt", KeyType.RANGE)
+                ],
+                Projection = new Projection { ProjectionType = ProjectionType.ALL }
+            }
+        ],
+        BillingMode = BillingMode.PAY_PER_REQUEST
+    }),
+
+    // ---------------- WEEKLY INSIGHTS ----------------
+    ("WeeklyInsights", new CreateTableRequest
+    {
+        TableName = "WeeklyInsights",
+        KeySchema =
+        [
+            new("PK", KeyType.HASH),
+            new("SK", KeyType.RANGE)
+        ],
+        AttributeDefinitions =
+        [
+            new("PK", ScalarAttributeType.S),
+            new("SK", ScalarAttributeType.S)
+        ],
+        BillingMode = BillingMode.PAY_PER_REQUEST
+    }),
+
+    // ---------------- IN-APP ALERTS ----------------
     ("InAppAlerts", new CreateTableRequest
     {
         TableName = "InAppAlerts",
         KeySchema =
         [
-            new KeySchemaElement("PK", KeyType.HASH),
-            new KeySchemaElement("SK", KeyType.RANGE)
+            new("PK", KeyType.HASH),
+            new("SK", KeyType.RANGE)
         ],
         AttributeDefinitions =
         [
-            new AttributeDefinition("PK", ScalarAttributeType.S),
-            new AttributeDefinition("SK", ScalarAttributeType.S)
+            new("PK", ScalarAttributeType.S),
+            new("SK", ScalarAttributeType.S),
+            new("TriggerName", ScalarAttributeType.S),
+            new("CreatedAt", ScalarAttributeType.S)
+        ],
+        GlobalSecondaryIndexes =
+        [
+            new GlobalSecondaryIndex
+            {
+                IndexName = "GSI-Trigger-Date",
+                KeySchema =
+                [
+                    new("TriggerName", KeyType.HASH),
+                    new("CreatedAt", KeyType.RANGE)
+                ],
+                Projection = new Projection { ProjectionType = ProjectionType.ALL }
+            }
         ],
         BillingMode = BillingMode.PAY_PER_REQUEST
-    })
+    }),
+
+    // ---------------- SESSION CACHE ----------------
+    ("SessionCache", new CreateTableRequest
+    {
+        TableName = "SessionCache",
+        KeySchema =
+        [
+            new("PK", KeyType.HASH)
+        ],
+        AttributeDefinitions =
+        [
+            new("PK", ScalarAttributeType.S)
+        ],
+        BillingMode = BillingMode.PAY_PER_REQUEST
+    }),
 };
 
 var existingTables = await client.ListTablesAsync();

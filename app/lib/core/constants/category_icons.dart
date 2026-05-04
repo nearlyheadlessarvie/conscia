@@ -18,6 +18,10 @@ class CategoryIcons {
     'Subscriptions': Icons.autorenew,
     'Salary': Icons.account_balance,
     'Freelance': Icons.work,
+    'Business': Icons.storefront,
+    'Investment': Icons.trending_up,
+    'Rental Income': Icons.home,
+    'Bonus': Icons.star,
     'Gift': Icons.card_giftcard,
     'Other': Icons.more_horiz,
   };

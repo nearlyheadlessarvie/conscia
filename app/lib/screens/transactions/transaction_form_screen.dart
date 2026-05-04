@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../providers/exchange_rate_provider.dart';
 import '../../providers/subscription_provider.dart';
 import '../../providers/transaction_providers.dart';
 import '../../providers/user_provider.dart';
 import '../../services/transaction_service.dart';
 import '../../widgets/amount_input_field.dart';
+import '../../widgets/skeleton_loader.dart';
 import 'widgets/category_picker.dart';
 
 class TransactionFormScreen extends ConsumerStatefulWidget {
@@ -24,6 +26,7 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
 
   bool _isExpense = true;
   final _amountController = TextEditingController();
+  final _exchangeRateController = TextEditingController();
   String _currencyCode = 'USD';
   bool _currencyManuallyChanged = false;
   String? _selectedCategory;
@@ -66,6 +69,7 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
   @override
   void dispose() {
     _amountController.dispose();
+    _exchangeRateController.dispose();
     _merchantController.dispose();
     _notesController.dispose();
     super.dispose();
@@ -80,6 +84,9 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
     if (!_isValid || _submitting) return;
     setState(() => _submitting = true);
 
+    final userCurrency = ref.read(userPreferencesProvider).currency;
+    final rateOverride = double.tryParse(_exchangeRateController.text);
+
     final dto = CreateTransactionDto(
       amount: double.parse(_amountController.text),
       currencyCode: _currencyCode,
@@ -87,6 +94,8 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
       merchant: _merchantController.text,
       type: _isExpense ? 'expense' : 'income',
       date: _selectedDate,
+      baseCurrencyCode: userCurrency,
+      exchangeRateOverride: rateOverride,
     );
 
     try {
@@ -147,7 +156,20 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
     if (_isEditing && !_prefilled) {
       return Scaffold(
         appBar: AppBar(title: const Text('Edit Transaction')),
-        body: const Center(child: CircularProgressIndicator()),
+        body: ListView(
+          padding: const EdgeInsets.all(16),
+          children: const [
+            SkeletonLoader(height: 48),
+            SizedBox(height: 16),
+            SkeletonLoader(height: 48),
+            SizedBox(height: 16),
+            SkeletonLoader(height: 48),
+            SizedBox(height: 16),
+            SkeletonLoader(height: 48),
+            SizedBox(height: 16),
+            SkeletonLoader(height: 48),
+          ],
+        ),
       );
     }
 
@@ -199,7 +221,10 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
                 ),
               ],
               selected: {_isExpense},
-              onSelectionChanged: (v) => setState(() => _isExpense = v.first),
+              onSelectionChanged: (v) => setState(() {
+                _isExpense = v.first;
+                _selectedCategory = null;
+              }),
             ),
             const SizedBox(height: 16),
             AmountInputField(
@@ -214,9 +239,41 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
               }),
             ),
             const SizedBox(height: 16),
+            Consumer(
+              builder: (context, ref, _) {
+                final userCurrency = ref.watch(userPreferencesProvider).currency;
+                if (_currencyCode == userCurrency) return const SizedBox.shrink();
+
+                final rateAsync = ref.watch(
+                  exchangeRateProvider((_currencyCode, userCurrency)),
+                );
+
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 16),
+                  child: rateAsync.when(
+                    loading: () => const LinearProgressIndicator(),
+                    error: (_, __) => const SizedBox.shrink(),
+                    data: (liveRate) => TextField(
+                      controller: _exchangeRateController,
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      decoration: InputDecoration(
+                        labelText: 'Exchange rate (optional)',
+                        hintText: liveRate != null
+                            ? liveRate.toStringAsFixed(4)
+                            : 'Enter rate manually',
+                        helperText: liveRate != null
+                            ? 'Leave blank to use live rate (1 $_currencyCode = ${liveRate.toStringAsFixed(4)} $userCurrency)'
+                            : 'Live rate unavailable — enter manually or leave blank',
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
             CategoryPicker(
               selected: _selectedCategory,
               onSelected: (cat) => setState(() => _selectedCategory = cat),
+              isExpense: _isExpense,
             ),
             const SizedBox(height: 16),
             TextField(

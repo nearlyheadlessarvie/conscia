@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/constants/category_icons.dart';
+import '../../../core/utils/currency_formatter.dart';
 
 class TransactionTile extends StatelessWidget {
   final String id;
@@ -58,9 +59,9 @@ class TransactionTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
-    final prefix = isIncome ? '+' : '-';
-    final formatter = NumberFormat.currency(symbol: '', decimalDigits: 2);
-    final amountText = '$prefix\$${formatter.format(amount.abs())}';
+    final amountText = isIncome
+        ? '+${CurrencyFormatter.format(amount.abs(), currencyCode: currencyCode)}'
+        : '-${CurrencyFormatter.format(amount.abs(), currencyCode: currencyCode)}';
     final dateStr = DateFormat.MMMd().format(date);
 
     return InkWell(

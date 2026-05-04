@@ -17,6 +17,7 @@ import '../../providers/health_provider.dart';
 import '../../providers/subscription_provider.dart';
 import '../../providers/user_provider.dart';
 import '../../widgets/currency_picker_sheet.dart';
+import '../../widgets/skeleton_loader.dart';
 import 'widgets/subscription_card.dart';
 import 'widgets/subscription_sheet.dart';
 
@@ -175,7 +176,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 onUpgrade: () => SubscriptionSheet.show(context),
                 onManage: () => SubscriptionSheet.show(context),
               ),
-              loading: () => const Center(child: CircularProgressIndicator()),
+              loading: () => const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: SkeletonCard(),
+              ),
               error: (_, __) => Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -280,7 +284,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         const SnackBar(content: Text('Preparing your data export...')),
       );
       final dio = ref.read(dioProvider);
-      final response = await dio.get('users/me/export');
+      final response = await dio.get(ApiConstants.profileExport);
 
       final exportJson = const JsonEncoder.withIndent('  ').convert(
         _normalizeExportPayload(response.data),

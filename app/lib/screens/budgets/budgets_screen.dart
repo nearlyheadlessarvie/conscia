@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../core/constants/tier_limits.dart';
+import '../../core/constants/generated/app_constants.g.dart';
 import '../../providers/budget_providers.dart';
 import '../../providers/subscription_provider.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/premium_upgrade_dialog.dart';
+import '../../widgets/skeleton_loader.dart';
 import 'widgets/budget_card.dart';
 import 'widgets/budget_form_sheet.dart';
 
@@ -36,7 +37,11 @@ class BudgetsScreen extends ConsumerWidget {
     BudgetListState state,
   ) {
     if (state.isLoading && state.budgets.isEmpty) {
-      return const Center(child: CircularProgressIndicator());
+      return ListView.builder(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        itemCount: 3,
+        itemBuilder: (_, __) => const BudgetListSkeletonCard(),
+      );
     }
 
     if (state.budgets.isEmpty) {
@@ -72,11 +77,11 @@ class BudgetsScreen extends ConsumerWidget {
     final isPremium = subAsync.valueOrNull?.isPremium ?? false;
 
     if (!isPremium &&
-        budgetState.budgets.length >= TierLimits.freeBudgetCategories) {
+        budgetState.budgets.length >= FreemiumLimits.freeBudgetCategories) {
       PremiumUpgradeDialog.show(
         context,
         feature:
-            'You\'ve reached the free tier limit of ${TierLimits.freeBudgetCategories} budget categories.',
+            'You\'ve reached the free tier limit of ${FreemiumLimits.freeBudgetCategories} budget categories.',
       );
       return;
     }

@@ -24,6 +24,7 @@ public class DatabaseStack : Stack
     public ITable SessionCacheTable { get; }
     public ITable OutboxEventsTable { get; }
     public ITable InAppAlertsTable { get; }
+    public ITable WeeklyInsightsTable { get; }
 
     public DatabaseStack(Construct scope, string id, DatabaseStackProps props)
         : base(scope, id, props)
@@ -62,86 +63,129 @@ public class DatabaseStack : Stack
             RemovalPolicy = RemovalPolicy.DESTROY
         });
 
-        TransactionsTable = CreateDynamoTable("Transactions", "PK", "SK",
-            [
+        TransactionsTable = CreateTable(
+            "Transactions",
+            "PK",
+            "SK",
+            new[]
+            {
                 new GlobalSecondaryIndexProps
                 {
-                    IndexName = "GSI1",
-                    PartitionKey = new Attribute { Name = "GSI1PK", Type = AttributeType.STRING },
+                    IndexName = "GSI-UserId-Category-Date",
+                    PartitionKey = new Attribute { Name = "UserId", Type = AttributeType.STRING },
                     SortKey = new Attribute { Name = "GSI1SK", Type = AttributeType.STRING },
                     ProjectionType = ProjectionType.ALL
-                }
-            ],
-            streamSpecification: StreamViewType.NEW_AND_OLD_IMAGES);
-
-        AiInteractionsTable = CreateDynamoTable("AIInteractions", "PK", "SK",
-            [
+                },
                 new GlobalSecondaryIndexProps
                 {
-                    IndexName = "GSI1",
-                    PartitionKey = new Attribute { Name = "GSI1PK", Type = AttributeType.STRING },
-                    SortKey = new Attribute { Name = "GSI1SK", Type = AttributeType.STRING },
+                    IndexName = "GSI-TransactionId",
+                    PartitionKey = new Attribute { Name = "Id", Type = AttributeType.STRING },
                     ProjectionType = ProjectionType.ALL
                 }
-            ]);
+            },
+            stream: StreamViewType.NEW_AND_OLD_IMAGES
+        );
 
-        BehaviorProfilesTable = CreateDynamoTable("BehaviorProfiles", "PK", null);
-
-        SessionCacheTable = CreateDynamoTable("SessionCache", "PK", "SK", timeToLiveAttribute: "TTL");
-
-        OutboxEventsTable = CreateDynamoTable("OutboxEvents", "PK", "SK",
-            [
+        AiInteractionsTable = CreateTable(
+            "AIInteractions",
+            "PK",
+            "SK",
+            new[]
+            {
                 new GlobalSecondaryIndexProps
                 {
-                    IndexName = "GSI1",
+                    IndexName = "GSI-TransactionId-Date",
+                    PartitionKey = new Attribute { Name = "TransactionId", Type = AttributeType.STRING },
+                    SortKey = new Attribute { Name = "CreatedAt", Type = AttributeType.STRING },
+                    ProjectionType = ProjectionType.ALL
+                }
+            }
+        );
+
+        BehaviorProfilesTable = CreateTable(
+            "BehaviorProfiles",
+            "PK"
+        );
+
+        SessionCacheTable = CreateTable(
+            "SessionCache",
+            "PK",
+            ttl: "TTL"
+        );
+
+        OutboxEventsTable = CreateTable(
+            "OutboxEvents",
+            "PK",
+            "SK",
+            new[]
+            {
+                new GlobalSecondaryIndexProps
+                {
+                    IndexName = "GSI-Status-CreatedAt",
                     PartitionKey = new Attribute { Name = "Status", Type = AttributeType.STRING },
                     SortKey = new Attribute { Name = "CreatedAt", Type = AttributeType.STRING },
                     ProjectionType = ProjectionType.ALL
                 }
-            ]);
+            },
+            ttl: "TTL"
+        );
 
-        InAppAlertsTable = CreateDynamoTable("InAppAlerts", "PK", "SK",
-            [
+        InAppAlertsTable = CreateTable(
+            "InAppAlerts",
+            "PK",
+            "SK",
+            new[]
+            {
                 new GlobalSecondaryIndexProps
                 {
-                    IndexName = "GSI1",
-                    PartitionKey = new Attribute { Name = "GSI1PK", Type = AttributeType.STRING },
-                    SortKey = new Attribute { Name = "GSI1SK", Type = AttributeType.STRING },
+                    IndexName = "GSI-Trigger-Date",
+                    PartitionKey = new Attribute { Name = "TriggerName", Type = AttributeType.STRING },
+                    SortKey = new Attribute { Name = "CreatedAt", Type = AttributeType.STRING },
                     ProjectionType = ProjectionType.ALL
                 }
-            ],
-            timeToLiveAttribute: "TTL");
+            },
+            ttl: "TTL"
+        );
+
+        WeeklyInsightsTable = CreateTable(
+            "WeeklyInsights",
+            "PK",
+            "SK"
+        );
     }
 
-    private Table CreateDynamoTable(
+    private Table CreateTable(
         string name,
         string pk,
-        string? sk,
+        string? sk = null,
         GlobalSecondaryIndexProps[]? gsis = null,
-        string? timeToLiveAttribute = null,
-        StreamViewType? streamSpecification = null)
+        string? ttl = null,
+        StreamViewType? stream = null)
     {
-        var tableProps = new TableProps
+        var props = new TableProps
         {
             TableName = $"Conscia-{name}",
             PartitionKey = new Attribute { Name = pk, Type = AttributeType.STRING },
             BillingMode = BillingMode.PAY_PER_REQUEST,
             RemovalPolicy = RemovalPolicy.DESTROY,
-            PointInTimeRecoverySpecification = new PointInTimeRecoverySpecification { PointInTimeRecoveryEnabled = true }
+            PointInTimeRecoverySpecification = new PointInTimeRecoverySpecification
+            {
+                PointInTimeRecoveryEnabled = true
+            }
         };
 
-        if (sk is not null)
-            tableProps.SortKey = new Attribute { Name = sk, Type = AttributeType.STRING };
+        if (sk != null)
+            props.SortKey = new Attribute { Name = sk, Type = AttributeType.STRING };
 
-        if (timeToLiveAttribute is not null)
-            tableProps.TimeToLiveAttribute = timeToLiveAttribute;
+        if (ttl != null)
+            props.TimeToLiveAttribute = ttl;
 
-        if (streamSpecification is not null)
-            tableProps.Stream = streamSpecification;
+        if (stream != null)
+            props.Stream = stream;
 
-        var table = new Table(this, name, tableProps);
+        var table = new Table(this, name, props);
 
-        if (gsis is not null)
+        if (gsis != null)
         {
             foreach (var gsi in gsis)
                 table.AddGlobalSecondaryIndex(gsi);

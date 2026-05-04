@@ -19,8 +19,7 @@ public class BehaviorProfileRepository : IBehaviorProfileRepository
             TableName = TableName,
             Key = new Dictionary<string, AttributeValue>
             {
-                ["PK"] = new($"USER#{userId}"),
-                ["SK"] = new("PROFILE")
+                ["PK"] = new($"USER#{userId}")
             }
         }, ct);
 
@@ -39,7 +38,7 @@ public class BehaviorProfileRepository : IBehaviorProfileRepository
     private static Dictionary<string, AttributeValue> ToItem(BehaviorProfile p) => new()
     {
         ["PK"] = new($"USER#{p.UserId}"),
-        ["SK"] = new("PROFILE"),
+
         ["UserId"] = new(p.UserId.ToString()),
         ["PreventedPurchases"] = new() { N = p.PreventedPurchases.ToString() },
         ["Overrides"] = new() { N = p.Overrides.ToString() },

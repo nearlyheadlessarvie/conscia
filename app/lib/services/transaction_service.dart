@@ -67,6 +67,8 @@ class CreateTransactionDto {
   final String merchant;
   final String type;
   final DateTime date;
+  final String? baseCurrencyCode;
+  final double? exchangeRateOverride;
 
   const CreateTransactionDto({
     required this.amount,
@@ -75,16 +77,23 @@ class CreateTransactionDto {
     required this.merchant,
     required this.type,
     required this.date,
+    this.baseCurrencyCode,
+    this.exchangeRateOverride,
   });
 
-  Map<String, dynamic> toJson() => {
-        'amount': amount,
-        'currencyCode': currencyCode,
-        'category': category,
-        'merchant': merchant,
-        'type': _capitalizeType(type),
-        'date': date.toIso8601String(),
-      };
+  Map<String, dynamic> toJson() {
+    final json = <String, dynamic>{
+      'amount': amount,
+      'currencyCode': currencyCode,
+      'category': category,
+      'merchant': merchant,
+      'type': _capitalizeType(type),
+      'date': date.toIso8601String(),
+    };
+    if (baseCurrencyCode != null) json['baseCurrencyCode'] = baseCurrencyCode;
+    if (exchangeRateOverride != null) json['exchangeRateOverride'] = exchangeRateOverride;
+    return json;
+  }
 
   static String _capitalizeType(String t) =>
       t.isEmpty ? t : '${t[0].toUpperCase()}${t.substring(1).toLowerCase()}';

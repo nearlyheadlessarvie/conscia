@@ -5,16 +5,16 @@ using Conscia.Application.Models;
 
 namespace Conscia.Infrastructure.Repositories;
 
-public class InAppAlertRepository : IInAppAlertRepository
+public class InAppAlertRepository : DynamoRepository, IInAppAlertRepository
 {
     private const string TableName = "InAppAlerts";
-    private readonly IAmazonDynamoDB _dynamo;
 
-    public InAppAlertRepository(IAmazonDynamoDB dynamo) => _dynamo = dynamo;
+    public InAppAlertRepository(IAmazonDynamoDB dynamo) : base(dynamo)
+    {}
 
     public async Task AddAsync(InAppAlert alert, CancellationToken ct = default)
     {
-        await _dynamo.PutItemAsync(new PutItemRequest
+        await Dynamo.PutItemAsync(new PutItemRequest
         {
             TableName = TableName,
             Item = ToItem(alert)
@@ -23,13 +23,13 @@ public class InAppAlertRepository : IInAppAlertRepository
 
     public async Task<IReadOnlyList<InAppAlert>> GetByUserAsync(Guid userId, CancellationToken ct = default)
     {
-        var response = await _dynamo.QueryAsync(new QueryRequest
+        var response = await Dynamo.QueryAsync(new QueryRequest
         {
             TableName = TableName,
             KeyConditionExpression = "PK = :pk",
             ExpressionAttributeValues = new Dictionary<string, AttributeValue>
             {
-                [":pk"] = new($"USER#{userId}")
+                [":pk"] = new(DynamoKeys.User(userId))
             },
             ScanIndexForward = false
         }, ct);
@@ -39,8 +39,8 @@ public class InAppAlertRepository : IInAppAlertRepository
 
     private static Dictionary<string, AttributeValue> ToItem(InAppAlert a) => new()
     {
-        ["PK"] = new($"USER#{a.UserId}"),
-        ["SK"] = new($"ALERT#{a.CreatedAt:O}"),
+        ["PK"] = new(DynamoKeys.User(a.UserId)),
+        ["SK"] = new(DynamoKeys.Alert(a.CreatedAt)),
         ["Id"] = new(a.Id.ToString()),
         ["UserId"] = new(a.UserId.ToString()),
         ["TriggerName"] = new(a.TriggerName),

@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/constants/category_icons.dart';
+import '../../../core/constants/generated/app_constants.g.dart';
+
 class CategoryData {
   final String name;
   final IconData icon;
@@ -7,34 +10,17 @@ class CategoryData {
   const CategoryData(this.name, this.icon);
 }
 
-const allCategories = [
-  CategoryData('Groceries', Icons.shopping_cart),
-  CategoryData('Dining', Icons.restaurant),
-  CategoryData('Transport', Icons.directions_car),
-  CategoryData('Entertainment', Icons.movie),
-  CategoryData('Games & Recreations', Icons.videogame_asset),
-  CategoryData('Shopping', Icons.shopping_bag),
-  CategoryData('Health', Icons.favorite),
-  CategoryData('Bills', Icons.receipt),
-  CategoryData('Education', Icons.school),
-  CategoryData('Travel', Icons.flight),
-  CategoryData('Coffee', Icons.coffee),
-  CategoryData('Subscriptions', Icons.autorenew),
-  CategoryData('Salary', Icons.account_balance),
-  CategoryData('Freelance', Icons.work),
-  CategoryData('Gift', Icons.card_giftcard),
-  CategoryData('Other', Icons.more_horiz),
-];
-
 class CategoryPicker extends StatefulWidget {
   final String? selected;
   final ValueChanged<String> onSelected;
+  final bool isExpense;
   final int maxVisible;
 
   const CategoryPicker({
     super.key,
     this.selected,
     required this.onSelected,
+    this.isExpense = true,
     this.maxVisible = 9,
   });
 
@@ -45,13 +31,19 @@ class CategoryPicker extends StatefulWidget {
 class _CategoryPickerState extends State<CategoryPicker> {
   bool _expanded = false;
 
+  List<CategoryData> get _categories {
+    final names = widget.isExpense ? expenseCategories : incomeCategories;
+    return names.map((n) => CategoryData(n, CategoryIcons.forCategory(n))).toList();
+  }
+
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
+    final categories = _categories;
     final visible = _expanded
-        ? allCategories
-        : allCategories.take(widget.maxVisible).toList();
-    final hasMore = allCategories.length > widget.maxVisible && !_expanded;
+        ? categories
+        : categories.take(widget.maxVisible).toList();
+    final hasMore = categories.length > widget.maxVisible && !_expanded;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
