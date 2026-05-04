@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 
+import '../../core/utils/currency_formatter.dart';
 import '../../providers/ai_provider.dart';
 import '../../providers/transaction_providers.dart';
 import '../../providers/usage_provider.dart';
@@ -204,7 +205,6 @@ class _TransactionDetailScreenState
     final textTheme = Theme.of(context).textTheme;
     final isIncome = tx.type == 'income';
     final prefix = isIncome ? '+' : '-';
-    final formatter = NumberFormat.currency(symbol: '\$', decimalDigits: 2);
 
     if (!_regretLevelInitialized) {
       _regretLevel = tx.regretLevel;
@@ -238,7 +238,7 @@ class _TransactionDetailScreenState
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    '$prefix${formatter.format(tx.amount)} ${tx.currencyCode}',
+                    '$prefix${CurrencyFormatter.format(tx.amount.abs(), currencyCode: tx.currencyCode)}',
                     style: GoogleFonts.poppins(
                       fontSize: 28,
                       fontWeight: FontWeight.w700,

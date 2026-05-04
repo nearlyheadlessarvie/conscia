@@ -273,7 +273,7 @@ class _PrePurchaseScreenState extends ConsumerState<PrePurchaseScreen>
             decoration: const InputDecoration(
               labelText: 'Category',
             ),
-            items: allCategories
+            items: expenseCategories
                 .map((c) => DropdownMenuItem(
                       value: c.name,
                       child: Row(

@@ -213,7 +213,10 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
                 ),
               ],
               selected: {_isExpense},
-              onSelectionChanged: (v) => setState(() => _isExpense = v.first),
+              onSelectionChanged: (v) => setState(() {
+                _isExpense = v.first;
+                _selectedCategory = null;
+              }),
             ),
             const SizedBox(height: 16),
             AmountInputField(
@@ -231,6 +234,7 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
             CategoryPicker(
               selected: _selectedCategory,
               onSelected: (cat) => setState(() => _selectedCategory = cat),
+              isExpense: _isExpense,
             ),
             const SizedBox(height: 16),
             TextField(

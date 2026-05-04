@@ -7,7 +7,7 @@ class CategoryData {
   const CategoryData(this.name, this.icon);
 }
 
-const allCategories = [
+const expenseCategories = [
   CategoryData('Groceries', Icons.shopping_cart),
   CategoryData('Dining', Icons.restaurant),
   CategoryData('Transport', Icons.directions_car),
@@ -20,8 +20,17 @@ const allCategories = [
   CategoryData('Travel', Icons.flight),
   CategoryData('Coffee', Icons.coffee),
   CategoryData('Subscriptions', Icons.autorenew),
+  CategoryData('Gift', Icons.card_giftcard),
+  CategoryData('Other', Icons.more_horiz),
+];
+
+const incomeCategories = [
   CategoryData('Salary', Icons.account_balance),
   CategoryData('Freelance', Icons.work),
+  CategoryData('Business', Icons.storefront),
+  CategoryData('Investment', Icons.trending_up),
+  CategoryData('Rental Income', Icons.home),
+  CategoryData('Bonus', Icons.star),
   CategoryData('Gift', Icons.card_giftcard),
   CategoryData('Other', Icons.more_horiz),
 ];
@@ -29,12 +38,14 @@ const allCategories = [
 class CategoryPicker extends StatefulWidget {
   final String? selected;
   final ValueChanged<String> onSelected;
+  final bool isExpense;
   final int maxVisible;
 
   const CategoryPicker({
     super.key,
     this.selected,
     required this.onSelected,
+    this.isExpense = true,
     this.maxVisible = 9,
   });
 
@@ -48,10 +59,11 @@ class _CategoryPickerState extends State<CategoryPicker> {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
+    final categories = widget.isExpense ? expenseCategories : incomeCategories;
     final visible = _expanded
-        ? allCategories
-        : allCategories.take(widget.maxVisible).toList();
-    final hasMore = allCategories.length > widget.maxVisible && !_expanded;
+        ? categories
+        : categories.take(widget.maxVisible).toList();
+    final hasMore = categories.length > widget.maxVisible && !_expanded;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
