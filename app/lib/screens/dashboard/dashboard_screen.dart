@@ -21,6 +21,7 @@ import 'package:conscia_app/screens/transactions/widgets/transaction_tile.dart';
 import 'package:conscia_app/services/transaction_service.dart';
 import 'package:conscia_app/widgets/empty_state.dart';
 import 'package:conscia_app/widgets/premium_upgrade_dialog.dart';
+import 'package:conscia_app/widgets/skeleton_loader.dart';
 
 class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
@@ -120,52 +121,54 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               onDismiss: () => setState(() => _bannerDismissed = true),
             ),
           ),
-        // Behavioral Insights Section
-        SliverToBoxAdapter(
-          child: _buildSectionHeader(context, 'Your Insights'),
-        ),
-        insightsState.when(
-          data: (insights) => SliverPadding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            sliver: SliverList(
-              delegate: SliverChildListDelegate([
-                FinancialMoodCard(
-                  mood: insights.mood,
-                  worthItPercentage: insights.worthItPercentage,
-                  previousMonthPercentage:
-                      insights.previousMonthWorthItCount > 0
-                          ? (insights.previousMonthWorthItCount /
-                              (insights.previousMonthWorthItCount + 10) *
-                              100)
-                          : 50,
-                ),
-                const SizedBox(height: 12),
-                WorthItCounterCard(
-                  thisMonthCount: insights.worthItCount,
-                  previousMonthCount: insights.previousMonthWorthItCount,
-                ),
-                const SizedBox(height: 12),
-                if (insights.impulseeTrends.isNotEmpty)
-                  ImpulseTrendsCard(trends: insights.impulseeTrends),
-                const SizedBox(height: 12),
-              ]),
+        // Behavioral Insights Section — only rendered when data is available
+        ...insightsState.when<List<Widget>>(
+          loading: () => [
+            SliverToBoxAdapter(
+              child: _buildSectionHeader(context, 'Your Insights'),
             ),
-          ),
-          loading: () => const SliverToBoxAdapter(
-            child: SizedBox(
-              height: 160,
-              child: Center(child: CircularProgressIndicator()),
-            ),
-          ),
-          error: (_, __) => SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.all(10),
-              child: Text(
-                'Unable to load insights',
-                style: textTheme.bodySmall,
+            const SliverPadding(
+              padding: EdgeInsets.symmetric(horizontal: 16),
+              sliver: SliverToBoxAdapter(
+                child: InsightSkeletonSection(),
               ),
             ),
-          ),
+          ],
+          data: (insights) {
+            if (insights == null) return <Widget>[];
+            return [
+              SliverToBoxAdapter(
+                child: _buildSectionHeader(context, 'Your Insights'),
+              ),
+              SliverPadding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                sliver: SliverList(
+                  delegate: SliverChildListDelegate([
+                    FinancialMoodCard(
+                      mood: insights.mood,
+                      worthItPercentage: insights.worthItPercentage,
+                      previousMonthPercentage:
+                          insights.previousMonthWorthItCount > 0
+                              ? (insights.previousMonthWorthItCount /
+                                  (insights.previousMonthWorthItCount + 10) *
+                                  100)
+                              : 50,
+                    ),
+                    const SizedBox(height: 12),
+                    WorthItCounterCard(
+                      thisMonthCount: insights.worthItCount,
+                      previousMonthCount: insights.previousMonthWorthItCount,
+                    ),
+                    const SizedBox(height: 12),
+                    if (insights.impulseeTrends.isNotEmpty)
+                      ImpulseTrendsCard(trends: insights.impulseeTrends),
+                    const SizedBox(height: 12),
+                  ]),
+                ),
+              ),
+            ];
+          },
+          error: (_, __) => <Widget>[],
         ),
         SliverToBoxAdapter(
           child: _buildSectionHeader(context, 'Budgets'),
