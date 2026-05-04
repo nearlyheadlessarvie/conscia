@@ -6,6 +6,7 @@ import '../../providers/budget_providers.dart';
 import '../../providers/subscription_provider.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/premium_upgrade_dialog.dart';
+import '../../widgets/skeleton_loader.dart';
 import 'widgets/budget_card.dart';
 import 'widgets/budget_form_sheet.dart';
 
@@ -36,7 +37,11 @@ class BudgetsScreen extends ConsumerWidget {
     BudgetListState state,
   ) {
     if (state.isLoading && state.budgets.isEmpty) {
-      return const Center(child: CircularProgressIndicator());
+      return ListView.builder(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        itemCount: 3,
+        itemBuilder: (_, __) => const BudgetListSkeletonCard(),
+      );
     }
 
     if (state.budgets.isEmpty) {
