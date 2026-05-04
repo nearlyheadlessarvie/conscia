@@ -339,7 +339,7 @@ class _TransactionDetailScreenState
               children: [
                 Icon(Icons.sentiment_satisfied_alt, size: 18),
                 SizedBox(width: 4),
-                Text('Worth It'),
+                // Text('Worth It'),
               ],
             ),
           ),
@@ -357,7 +357,7 @@ class _TransactionDetailScreenState
               children: [
                 Icon(Icons.sentiment_neutral, size: 18),
                 SizedBox(width: 4),
-                Text('Not Sure'),
+                // Text('Not Sure'),
               ],
             ),
           ),
@@ -375,7 +375,7 @@ class _TransactionDetailScreenState
               children: [
                 Icon(Icons.sentiment_dissatisfied, size: 18),
                 SizedBox(width: 4),
-                Text('Regret'),
+                // Text('Regret'),
               ],
             ),
           ),

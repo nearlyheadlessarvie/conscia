@@ -79,9 +79,8 @@ public static class TransactionEndpoints
         }).WithName("ListTransactions");
 
         group.MapGet("/{id:guid}", async (HttpContext ctx, Guid id, ITransactionService svc) =>
-        {
-            var userId = ctx.User.GetUserId();
-            var txn = await svc.GetByIdAsync(userId, id, ctx.RequestAborted);
+        {            
+            var txn = await svc.GetByIdAsync(id, ctx.RequestAborted);
             if (txn is null) return Results.NotFound();
 
             return Results.Ok(new
@@ -114,9 +113,8 @@ public static class TransactionEndpoints
             var validation = await validator.ValidateAsync(dto, ctx.RequestAborted);
             if (!validation.IsValid)
                 return Results.ValidationProblem(validation.ToDictionary());
-
-            var userId = ctx.User.GetUserId();
-            var txn = await svc.UpdateAsync(userId, id, dto, ctx.RequestAborted);
+            
+            var txn = await svc.UpdateAsync(id, dto, ctx.RequestAborted);
             return Results.Ok(new
             {
                 txn.Id,
@@ -131,8 +129,7 @@ public static class TransactionEndpoints
 
         group.MapDelete("/{id:guid}", async (HttpContext ctx, Guid id, ITransactionService svc) =>
         {
-            var userId = ctx.User.GetUserId();
-            await svc.DeleteAsync(userId, id, ctx.RequestAborted);
+            await svc.DeleteAsync(id, ctx.RequestAborted);
             return Results.NoContent();
         }).WithName("DeleteTransaction");
 
@@ -145,8 +142,7 @@ public static class TransactionEndpoints
             if (!Enum.IsDefined(dto.Level))
                 return Results.BadRequest(new { error = "Invalid regret level" });
 
-            var userId = ctx.User.GetUserId();
-            await svc.UpdateRegretLevelAsync(userId, id, dto.Level, ctx.RequestAborted);
+            await svc.UpdateRegretLevelAsync(id, dto.Level, ctx.RequestAborted);
             ConsciaMetrics.RegretFeedbackSubmitted.Add(1);
             return Results.NoContent();
         }).WithName("UpdateRegretLevel");

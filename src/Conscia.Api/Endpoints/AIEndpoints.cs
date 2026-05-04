@@ -134,7 +134,7 @@ public static class AIEndpoints
                         statusCode: 403);
             }
 
-            var transaction = await transactionService.GetByIdAsync(userId, dto.TransactionId, ctx.RequestAborted);
+            var transaction = await transactionService.GetByIdAsync(dto.TransactionId, ctx.RequestAborted);
             if (transaction is null)
                 return Results.NotFound(new { error = "Transaction not found" });
 

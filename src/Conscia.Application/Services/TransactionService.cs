@@ -66,8 +66,8 @@ public class TransactionService : ITransactionService
         return result;
     }
 
-    public Task<Transaction?> GetByIdAsync(Guid userId, Guid id, CancellationToken ct = default) =>
-        _repo.GetByIdAsync(userId, id, ct);
+    public Task<Transaction?> GetByIdAsync(Guid id, CancellationToken ct = default) =>
+        _repo.GetByIdAsync(id, ct);
 
     public async Task<PagedResult<Transaction>> ListAsync(
         Guid userId, int page, int pageSize, string? category = null, CancellationToken ct = default)
@@ -84,12 +84,12 @@ public class TransactionService : ITransactionService
         };
     }
 
-    public async Task<Transaction> UpdateAsync(Guid userId, Guid id, UpdateTransactionDto dto, CancellationToken ct = default)
+    public async Task<Transaction> UpdateAsync(Guid id, UpdateTransactionDto dto, CancellationToken ct = default)
     {
-        var existing = await _repo.GetByIdAsync(userId, id, ct);
+        var existing = await _repo.GetByIdAsync(id, ct);
         if (existing is null)
         {
-            _logger.LogWarning("Transaction {TransactionId} not found for user {UserId}", id, userId);
+            _logger.LogWarning("Transaction {TransactionId} not found", id);
             throw new KeyNotFoundException($"Transaction {id} not found");
         }
 
@@ -106,12 +106,12 @@ public class TransactionService : ITransactionService
         return existing;
     }
 
-    public async Task DeleteAsync(Guid userId, Guid id, CancellationToken ct = default)
+    public async Task DeleteAsync(Guid id, CancellationToken ct = default)
     {
-        var existing = await _repo.GetByIdAsync(userId, id, ct);
+        var existing = await _repo.GetByIdAsync(id, ct);
         if (existing is null)
         {
-            _logger.LogWarning("Transaction {TransactionId} not found for user {UserId}", id, userId);
+            _logger.LogWarning("Transaction {TransactionId} not found", id);
             throw new KeyNotFoundException($"Transaction {id} not found");
         }
 
@@ -123,7 +123,7 @@ public class TransactionService : ITransactionService
             Payload = JsonSerializer.Serialize(new
             {
                 TransactionId = id,
-                UserId = userId,
+                UserId = existing.UserId,
                 Amount = existing.Amount.Amount,
                 CurrencyCode = existing.Amount.CurrencyCode,
                 Category = existing.Category
@@ -131,10 +131,10 @@ public class TransactionService : ITransactionService
             CreatedAt = DateTime.UtcNow
         };
 
-        await _repo.DeleteWithOutboxAsync(userId, id, outboxEvent, ct);
-        _logger.LogInformation("Deleting transaction {TransactionId} for user {UserId}", id, userId);
+        await _repo.DeleteWithOutboxAsync(id, outboxEvent, ct);
+        _logger.LogInformation("Deleting transaction {TransactionId} for user {UserId}", id, existing.UserId);
     }
 
-    public Task UpdateRegretLevelAsync(Guid userId, Guid id, RegretLevel level, CancellationToken ct = default) =>
-        _repo.UpdateRegretLevelAsync(userId, id, level, ct);
+    public Task UpdateRegretLevelAsync(Guid id, RegretLevel level, CancellationToken ct = default) =>
+        _repo.UpdateRegretLevelAsync(id, level, ct);
 }

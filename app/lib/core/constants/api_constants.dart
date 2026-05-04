@@ -22,12 +22,16 @@ class ApiConstants {
   // User
   static const String profile = 'users/me';
   static const String preferences = 'users/me/preferences';
+  static const String profileExport = 'users/me/export';
 
   // Transactions
   static const String transactions = 'transactions';
   static String transaction(String id) => 'transactions/$id';
   static const String transactionsSummary = 'transactions/summary';
   static const String scanReceipt = 'transactions/scan';
+
+  // Insights
+  static const String behavioralInsights = 'insights/behavioral';
 
   // Budgets
   static const String budgets = 'budgets';

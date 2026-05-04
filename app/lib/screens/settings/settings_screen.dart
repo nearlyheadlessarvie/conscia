@@ -280,7 +280,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         const SnackBar(content: Text('Preparing your data export...')),
       );
       final dio = ref.read(dioProvider);
-      final response = await dio.get('users/me/export');
+      final response = await dio.get(ApiConstants.profileExport);
 
       final exportJson = const JsonEncoder.withIndent('  ').convert(
         _normalizeExportPayload(response.data),

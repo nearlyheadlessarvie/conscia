@@ -136,6 +136,7 @@ builder.Services.AddScoped<ITransactionRepository, TransactionRepository>();
 builder.Services.AddScoped<IOutboxEventRepository, OutboxEventRepository>();
 builder.Services.AddScoped<IAIInteractionRepository, AIInteractionRepository>();
 builder.Services.AddScoped<IBehaviorProfileRepository, BehaviorProfileRepository>();
+builder.Services.AddScoped<IWeeklyInsightsRepository, WeeklyInsightsRepository>();
 builder.Services.AddScoped<IInAppAlertRepository, InAppAlertRepository>();
 builder.Services.AddScoped<ISessionCacheRepository, SessionCacheRepository>();
 
@@ -153,6 +154,7 @@ builder.Services.AddScoped<IBudgetService, BudgetService>();
 builder.Services.AddScoped<ITransactionService, TransactionService>();
 builder.Services.AddScoped<ISubscriptionService, SubscriptionService>();
 builder.Services.AddScoped<IReceiptService, ReceiptService>();
+builder.Services.AddScoped<IBehavioralInsightsService, BehavioralInsightsService>();
 builder.Services.AddScoped<IOcrService, StubOcrService>();
 
 // --- AI Service ---
@@ -348,6 +350,7 @@ app.MapSubscriptionEndpoints().RequireRateLimiting("standard");
 app.MapAlertEndpoints().RequireRateLimiting("standard");
 app.MapReceiptEndpoints().RequireRateLimiting("standard");
 app.MapAIEndpoints().RequireRateLimiting("ai");
+app.MapInsightsEndpoints().RequireRateLimiting("standard");
 
 app.Run();
 

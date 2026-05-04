@@ -5,14 +5,18 @@ import 'package:google_fonts/google_fonts.dart';
 
 import 'package:conscia_app/core/constants/tier_limits.dart';
 import 'package:conscia_app/core/routing/app_router.dart';
+import 'package:conscia_app/providers/behavioral_insights_provider.dart';
 import 'package:conscia_app/providers/budget_providers.dart';
 import 'package:conscia_app/providers/subscription_provider.dart';
 import 'package:conscia_app/providers/transaction_providers.dart';
 import 'package:conscia_app/providers/usage_provider.dart';
 import 'package:conscia_app/screens/dashboard/widgets/budget_summary_card.dart';
 import 'package:conscia_app/screens/dashboard/widgets/budget_warning_banner.dart';
+import 'package:conscia_app/screens/dashboard/widgets/financial_mood_card.dart';
+import 'package:conscia_app/screens/dashboard/widgets/impulse_trends_card.dart';
 import 'package:conscia_app/screens/dashboard/widgets/recent_transaction_tile.dart';
 import 'package:conscia_app/screens/dashboard/widgets/regret_prompt_card.dart';
+import 'package:conscia_app/screens/dashboard/widgets/worth_it_counter_card.dart';
 import 'package:conscia_app/screens/transactions/widgets/transaction_tile.dart';
 import 'package:conscia_app/services/transaction_service.dart';
 import 'package:conscia_app/widgets/empty_state.dart';
@@ -75,6 +79,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     final textTheme = Theme.of(context).textTheme;
     final budgetState = ref.watch(budgetListProvider);
     final txState = ref.watch(transactionListProvider);
+    final insightsState = ref.watch(behavioralInsightsProvider);
 
     final budgets = budgetState.budgets;
     final transactions = txState.transactions;
@@ -115,6 +120,53 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               onDismiss: () => setState(() => _bannerDismissed = true),
             ),
           ),
+        // Behavioral Insights Section
+        SliverToBoxAdapter(
+          child: _buildSectionHeader(context, 'Your Insights'),
+        ),
+        insightsState.when(
+          data: (insights) => SliverPadding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            sliver: SliverList(
+              delegate: SliverChildListDelegate([
+                FinancialMoodCard(
+                  mood: insights.mood,
+                  worthItPercentage: insights.worthItPercentage,
+                  previousMonthPercentage:
+                      insights.previousMonthWorthItCount > 0
+                          ? (insights.previousMonthWorthItCount /
+                              (insights.previousMonthWorthItCount + 10) *
+                              100)
+                          : 50,
+                ),
+                const SizedBox(height: 12),
+                WorthItCounterCard(
+                  thisMonthCount: insights.worthItCount,
+                  previousMonthCount: insights.previousMonthWorthItCount,
+                ),
+                const SizedBox(height: 12),
+                if (insights.impulseeTrends.isNotEmpty)
+                  ImpulseTrendsCard(trends: insights.impulseeTrends),
+                const SizedBox(height: 12),
+              ]),
+            ),
+          ),
+          loading: () => const SliverToBoxAdapter(
+            child: SizedBox(
+              height: 160,
+              child: Center(child: CircularProgressIndicator()),
+            ),
+          ),
+          error: (_, __) => SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.all(10),
+              child: Text(
+                'Unable to load insights',
+                style: textTheme.bodySmall,
+              ),
+            ),
+          ),
+        ),
         SliverToBoxAdapter(
           child: _buildSectionHeader(context, 'Budgets'),
         ),

@@ -21,6 +21,7 @@ public class ComputeStackProps : StackProps
     public required ITable SessionCacheTable { get; set; }
     public required ITable OutboxEventsTable { get; set; }
     public required ITable InAppAlertsTable { get; set; }
+    public required ITable WeeklyInsightsTable { get; set; }
     public required IQueue AiQueue { get; set; }
     public required IFunction DbAccessLambda { get; set; }
 }
@@ -104,6 +105,7 @@ public class ComputeStack : Stack
         props.SessionCacheTable.GrantReadWriteData(ApiLambda);
         props.OutboxEventsTable.GrantReadWriteData(ApiLambda);
         props.InAppAlertsTable.GrantReadWriteData(ApiLambda);
+        props.WeeklyInsightsTable.GrantReadWriteData(ApiLambda);
         props.ReceiptBucket.GrantReadWrite(ApiLambda);
         props.AiQueue.GrantSendMessages(ApiLambda);
         props.DbAccessLambda.GrantInvoke(ApiLambda);
