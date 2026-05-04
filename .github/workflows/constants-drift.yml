@@ -1,0 +1,33 @@
+name: Constants drift check
+
+on:
+  pull_request:
+    paths:
+      - 'src/Conscia.Domain/**'
+      - 'tools/ConstantsGen/**'
+
+jobs:
+  drift:
+    name: Verify app_constants.g.dart is up to date
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.x'
+
+      - name: Regenerate constants
+        run: dotnet run --project tools/ConstantsGen
+
+      - name: Fail on drift
+        run: |
+          if ! git diff --exit-code app/lib/core/constants/generated/app_constants.g.dart; then
+            echo ""
+            echo "❌ app_constants.g.dart is out of sync with Conscia.Domain."
+            echo "   Run locally: dotnet run --project tools/ConstantsGen"
+            echo "   Then commit the updated app_constants.g.dart."
+            exit 1
+          fi
+          echo "✅ app_constants.g.dart is up to date."
