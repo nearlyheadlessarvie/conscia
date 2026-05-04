@@ -15,14 +15,21 @@ class BehavioralInsightsService {
 
   BehavioralInsightsService(this._dio);
 
-  Future<BehavioralInsights> getBehavioralInsights() async {
-    final response = await _dio.get(ApiConstants.behavioralInsights);
-    return BehavioralInsights.fromJson(response.data);
+  Future<BehavioralInsights?> getBehavioralInsights() async {
+    try {
+      final response = await _dio.get(ApiConstants.behavioralInsights);
+      if (response.statusCode == 204) return null;
+      return BehavioralInsights.fromJson(response.data as Map<String, dynamic>);
+    } on DioException {
+      return null;
+    } catch (_) {
+      return null;
+    }
   }
 }
 
 final behavioralInsightsProvider =
-    FutureProvider<BehavioralInsights>((ref) async {
+    FutureProvider<BehavioralInsights?>((ref) async {
   final service = ref.watch(behavioralInsightsServiceProvider);
   return service.getBehavioralInsights();
 });
