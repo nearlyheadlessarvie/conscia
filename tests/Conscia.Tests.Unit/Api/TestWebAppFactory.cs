@@ -25,6 +25,7 @@ public class TestWebAppFactory : WebApplicationFactory<Program>
     public Mock<IAIService> AIServiceMock { get; } = new();
     public Mock<IInAppAlertRepository> AlertRepoMock { get; } = new();
     public Mock<IAIInteractionRepository> AIInteractionRepoMock { get; } = new();
+    public Mock<IExchangeRateService> ExchangeRateServiceMock { get; } = new();
 
     private const string SigningKey = "this-is-a-test-signing-key-at-least-32-chars!!";
 
@@ -47,6 +48,7 @@ public class TestWebAppFactory : WebApplicationFactory<Program>
             ReplaceService<IAIService>(services, AIServiceMock.Object);
             ReplaceService<IInAppAlertRepository>(services, AlertRepoMock.Object);
             ReplaceService<IAIInteractionRepository>(services, AIInteractionRepoMock.Object);
+            ReplaceService<IExchangeRateService>(services, ExchangeRateServiceMock.Object);
         });
 
         builder.UseSetting("Auth:UseMock", "true");

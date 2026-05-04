@@ -12,22 +12,33 @@ namespace Conscia.Application.Services;
 public class TransactionService : ITransactionService
 {
     private readonly ITransactionRepository _repo;
+    private readonly IExchangeRateService _exchangeRateService;
     private readonly ILogger<TransactionService> _logger;
 
-    public TransactionService(ITransactionRepository repo, ILogger<TransactionService> logger)
+    public TransactionService(ITransactionRepository repo, IExchangeRateService exchangeRateService, ILogger<TransactionService> logger)
     {
         _repo = repo;
+        _exchangeRateService = exchangeRateService;
         _logger = logger;
     }
 
     public async Task<Transaction> CreateAsync(Guid userId, CreateTransactionDto dto, CancellationToken ct = default)
     {
+        decimal? exchangeRate = dto.ExchangeRateOverride;
+
+        if (exchangeRate is null
+            && dto.BaseCurrencyCode is not null
+            && !string.Equals(dto.CurrencyCode, dto.BaseCurrencyCode, StringComparison.OrdinalIgnoreCase))
+        {
+            exchangeRate = await _exchangeRateService.GetRateAsync(dto.CurrencyCode, dto.BaseCurrencyCode, ct);
+        }
+
         var transaction = new Transaction
         {
             Id = Guid.NewGuid(),
             UserId = userId,
             Type = dto.Type,
-            Amount = new Money(dto.Amount, dto.CurrencyCode, dto.ExchangeRateToBase),
+            Amount = new Money(dto.Amount, dto.CurrencyCode, exchangeRate),
             Category = dto.Category,
             Merchant = dto.Merchant,
             Date = dto.Date,
