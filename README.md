@@ -471,3 +471,67 @@ Key cost drivers: RDS `db.t4g.micro`, Bedrock per-token billing, DynamoDB on-dem
 ## License
 
 MIT
+
+## Social Authentication Setup
+
+The app supports Sign in with Google and Sign in with Apple. The UI and service code are in place; the steps below wire up the credentials and backend endpoints needed to make them work.
+
+### Sign in with Google
+
+**Frontend (Flutter)**
+
+1. Go to [Google Cloud Console](https://console.cloud.google.com/) → APIs & Services → Credentials.
+2. Create an **OAuth 2.0 Client ID** for each platform:
+   - Android: package name `com.conscia.app`, SHA-1 fingerprint from your keystore
+   - iOS: bundle ID `com.conscia.app`
+   - Web: needed for the `serverClientId` used to get an `idToken`
+3. Download `google-services.json` (Android) → place at `app/android/app/google-services.json`
+4. Download `GoogleService-Info.plist` (iOS) → place at `app/ios/Runner/GoogleService-Info.plist`
+5. In `app/android/app/build.gradle`, confirm `apply plugin: 'com.google.gms.google-services'` is present.
+6. Pass the web client ID to `GoogleSignIn` in `app/lib/services/auth_service.dart`:
+   ```dart
+   final googleUser = await GoogleSignIn(
+     serverClientId: 'YOUR_WEB_CLIENT_ID.apps.googleusercontent.com',
+   ).signIn();
+   ```
+
+**Backend**
+
+Implement `POST /api/v1/auth/google`:
+- Request body: `{ "idToken": "<Google ID token>" }`
+- Verify the token with Google's tokeninfo endpoint or the `google-auth-library`
+- Look up or create the user, issue JWT access/refresh tokens
+- Response: `{ "accessToken": "...", "refreshToken": "...", "userId": "..." }`
+
+---
+
+### Sign in with Apple
+
+> Apple sign-in is iOS-only. The button is conditionally rendered and will not appear on Android.
+
+**Frontend (Flutter)**
+
+1. In the [Apple Developer Portal](https://developer.apple.com/), navigate to your App ID → Capabilities and enable **Sign in with Apple**.
+2. In Xcode: open `app/ios/Runner.xcworkspace` → Runner target → Signing & Capabilities → `+ Capability` → **Sign in with Apple**.
+3. No additional Flutter package config is needed (`sign_in_with_apple` handles entitlements automatically once the capability is enabled).
+
+**Backend**
+
+Implement `POST /api/v1/auth/apple`:
+- Request body: `{ "identityToken": "<Apple identity token>", "authorizationCode": "<code>" }`
+- Verify the identity token using Apple's public keys (`https://appleid.apple.com/auth/keys`)
+- Look up or create the user, issue JWT access/refresh tokens
+- Response: `{ "accessToken": "...", "refreshToken": "...", "userId": "..." }`
+
+Note: Apple only returns the user's name and email on the **first** sign-in. Store them immediately on first token exchange.
+
+---
+
+### Disabling Mock Auth
+
+During development `MOCK_AUTH=true` is the default (set in `ApiConstants`). To test real OAuth:
+
+```bash
+# Flutter run with mock auth disabled
+cd app && flutter run --dart-define=MOCK_AUTH=false --dart-define=API_BASE_URL=https://your-api-host/api/v1/
+```
