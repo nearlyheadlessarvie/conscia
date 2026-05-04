@@ -38,7 +38,7 @@ public class WeeklyInsightsRepository : IWeeklyInsightsRepository
             Key = new Dictionary<string, AttributeValue>
             {
                 ["PK"] = new(DynamoKeys.User(userId)),
-                ["SK"] = new(DynamoKeys.WeekStartDate(weekStartDate))
+                ["SK"] = new(DynamoKeys.Week(weekStartDate))
             }
         }, ct);
 
@@ -74,7 +74,7 @@ public class WeeklyInsightsRepository : IWeeklyInsightsRepository
     private static Dictionary<string, AttributeValue> ToItem(WeeklyInsights insights) => new()
     {
         ["PK"] = new(DynamoKeys.User(insights.UserId)),
-        ["SK"] = new(DynamoKeys.WeekStartDate(insights.WeekStartDate)),
+        ["SK"] = new(DynamoKeys.Week(insights.WeekStartDate)),
         ["UserId"] = new(insights.UserId.ToString()),
         ["WeekStartDate"] = new(insights.WeekStartDate.ToString("O")),
         ["Mood"] = new(insights.Mood.ToString()),

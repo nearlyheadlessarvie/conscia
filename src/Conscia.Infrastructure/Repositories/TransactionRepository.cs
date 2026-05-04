@@ -92,7 +92,7 @@ public class TransactionRepository : DynamoRepository, ITransactionRepository
     // ---------------- READ ----------------
     public async Task<Transaction?> GetByIdAsync(Guid id, CancellationToken ct = default)
     {
-        var response = await _dynamo.QueryAsync(new QueryRequest
+        var response = await Dynamo.QueryAsync(new QueryRequest
         {
             TableName = TableName,
             IndexName = "GSI-TransactionId",
