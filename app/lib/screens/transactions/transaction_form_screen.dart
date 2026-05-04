@@ -7,6 +7,7 @@ import '../../providers/transaction_providers.dart';
 import '../../providers/user_provider.dart';
 import '../../services/transaction_service.dart';
 import '../../widgets/amount_input_field.dart';
+import '../../widgets/skeleton_loader.dart';
 import 'widgets/category_picker.dart';
 
 class TransactionFormScreen extends ConsumerStatefulWidget {
@@ -147,7 +148,20 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
     if (_isEditing && !_prefilled) {
       return Scaffold(
         appBar: AppBar(title: const Text('Edit Transaction')),
-        body: const Center(child: CircularProgressIndicator()),
+        body: ListView(
+          padding: const EdgeInsets.all(16),
+          children: const [
+            SkeletonLoader(height: 48),
+            SizedBox(height: 16),
+            SkeletonLoader(height: 48),
+            SizedBox(height: 16),
+            SkeletonLoader(height: 48),
+            SizedBox(height: 16),
+            SkeletonLoader(height: 48),
+            SizedBox(height: 16),
+            SkeletonLoader(height: 48),
+          ],
+        ),
       );
     }
 

@@ -12,6 +12,7 @@ import '../../services/ai_service.dart';
 import '../../services/transaction_service.dart';
 import '../../screens/assistant/widgets/ai_message_bubble.dart';
 import '../../widgets/premium_upgrade_dialog.dart';
+import '../../widgets/skeleton_loader.dart';
 import 'widgets/transaction_tile.dart';
 
 class TransactionDetailScreen extends ConsumerStatefulWidget {
@@ -160,7 +161,18 @@ class _TransactionDetailScreenState
         ],
       ),
       body: detailAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => ListView(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+          children: const [
+            SkeletonLoader(height: 40, width: 200),
+            SizedBox(height: 24),
+            SkeletonCard(),
+            SizedBox(height: 16),
+            SkeletonCard(),
+            SizedBox(height: 16),
+            SkeletonCard(),
+          ],
+        ),
         error: (error, _) => Center(
           child: Padding(
             padding: const EdgeInsets.all(32),
