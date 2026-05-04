@@ -155,6 +155,14 @@ builder.Services.AddScoped<ITransactionService, TransactionService>();
 builder.Services.AddScoped<ISubscriptionService, SubscriptionService>();
 builder.Services.AddScoped<IReceiptService, ReceiptService>();
 builder.Services.AddScoped<IBehavioralInsightsService, BehavioralInsightsService>();
+
+// --- Exchange Rates ---
+builder.Services.AddMemoryCache();
+builder.Services.AddHttpClient<IExchangeRateService, ExchangeRateService>(client =>
+{
+    client.BaseAddress = new Uri("https://open.er-api.com");
+    client.Timeout = TimeSpan.FromSeconds(10);
+});
 builder.Services.AddScoped<IOcrService, StubOcrService>();
 
 // --- AI Service ---
