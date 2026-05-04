@@ -9,6 +9,8 @@ build/
 # Generated
 *.g.dart
 *.freezed.dart
+# Exception: the constants generator output is committed intentionally
+!lib/core/constants/generated/app_constants.g.dart
 *.gr.dart
 *.mocks.dart
 
