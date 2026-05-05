@@ -30,11 +30,8 @@ public static class UtteranceEndpoints
         .WithName("ParseUtterance")
         .Produces<UtteranceParseResult>(StatusCodes.Status200OK)
         .Produces(StatusCodes.Status403Forbidden)
-        .Produces(StatusCodes.Status400BadRequest)
-        .Produces(StatusCodes.Status500InternalServerError);
+        .Produces(StatusCodes.Status400BadRequest);
 
         return group;
     }
 }
-
-public record ParseUtteranceRequest(string Transcript);

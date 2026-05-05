@@ -87,8 +87,13 @@ public abstract class BaseAIService : IAIService
                 new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
             return parsed ?? new UtteranceParseResult(transcript, null, null);
         }
-        catch
+        catch (OperationCanceledException)
         {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "Failed to parse utterance response; returning fallback");
             return new UtteranceParseResult(transcript, null, null);
         }
     }

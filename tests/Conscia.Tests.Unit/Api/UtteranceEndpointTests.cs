@@ -64,4 +64,19 @@ public class UtteranceEndpointTests : IClassFixture<TestWebAppFactory>
 
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
+
+    [Fact]
+    public async Task ParseUtterance_Returns400_WhenTranscriptIsEmpty()
+    {
+        var client = _factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue("Bearer", _factory.GenerateTestToken(tier: "Premium"));
+
+        var response = await client.PostAsJsonAsync("/api/v1/transactions/parse-utterance", new
+        {
+            transcript = "   "
+        });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
 }
