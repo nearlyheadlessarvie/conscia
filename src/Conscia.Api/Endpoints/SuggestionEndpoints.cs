@@ -1,0 +1,32 @@
+using Conscia.Api.Extensions;
+using Conscia.Application.DTOs;
+using Conscia.Application.Interfaces;
+
+namespace Conscia.Api.Endpoints;
+
+public static class SuggestionEndpoints
+{
+    public static RouteGroupBuilder MapSuggestionEndpoints(this IEndpointRouteBuilder app)
+    {
+        var group = app.MapGroup("/api/v1/suggestions")
+            .RequireAuthorization()
+            .WithTags("Suggestions");
+
+        group.MapGet("/purchases", GetPurchaseSuggestions)
+            .WithName("GetPurchaseSuggestions")
+            .WithDescription("Get purchase suggestions for the user")
+            .Produces<IReadOnlyList<PurchaseSuggestionDto>>(StatusCodes.Status200OK);
+
+        return group;
+    }
+
+    private static async Task<IResult> GetPurchaseSuggestions(
+        HttpContext ctx,
+        IPurchaseSuggestionService svc,
+        CancellationToken ct)
+    {
+        var userId = ctx.User.GetUserId();
+        var suggestions = await svc.GetSuggestionsAsync(userId, ct);
+        return Results.Ok(suggestions);
+    }
+}

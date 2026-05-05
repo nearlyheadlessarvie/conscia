@@ -155,6 +155,7 @@ builder.Services.AddScoped<ITransactionService, TransactionService>();
 builder.Services.AddScoped<ISubscriptionService, SubscriptionService>();
 builder.Services.AddScoped<IReceiptService, ReceiptService>();
 builder.Services.AddScoped<IBehavioralInsightsService, BehavioralInsightsService>();
+builder.Services.AddScoped<IPurchaseSuggestionService, PurchaseSuggestionService>();
 
 // --- Exchange Rates ---
 builder.Services.AddMemoryCache();
@@ -359,6 +360,7 @@ app.MapAlertEndpoints().RequireRateLimiting("standard");
 app.MapReceiptEndpoints().RequireRateLimiting("standard");
 app.MapAIEndpoints().RequireRateLimiting("ai");
 app.MapInsightsEndpoints().RequireRateLimiting("standard");
+app.MapSuggestionEndpoints().RequireRateLimiting("standard");
 app.MapExchangeRateEndpoints().RequireRateLimiting("standard");
 
 app.Run();
