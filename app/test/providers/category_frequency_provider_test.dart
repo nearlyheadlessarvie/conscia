@@ -30,11 +30,13 @@ void main() {
         transactionListProvider
             .overrideWith((ref) => TransactionListNotifier.fromList(txs)),
       ]);
+      addTearDown(container.dispose);
 
       final chips = container.read(categoryFrequencyProvider);
 
       expect(chips.first, 'Coffee');
       expect(chips[1], 'Dining');
+      expect(chips[2], 'Shopping');
       expect(chips.length, 5);
     });
 
@@ -45,6 +47,7 @@ void main() {
         transactionListProvider
             .overrideWith((ref) => TransactionListNotifier.fromList(txs)),
       ]);
+      addTearDown(container.dispose);
 
       final chips = container.read(categoryFrequencyProvider);
 

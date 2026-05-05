@@ -16,7 +16,7 @@ final categoryFrequencyProvider = Provider<List<String>>((ref) {
   final distinct = counts.keys.toList();
   if (distinct.length < 5) return _staticFallback;
 
-  final sorted = distinct.toList()
+  final sorted = distinct
     ..sort((a, b) => counts[b]!.compareTo(counts[a]!));
 
   return sorted.take(5).toList();

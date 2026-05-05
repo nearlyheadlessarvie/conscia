@@ -1,4 +1,3 @@
-import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/network/dio_client.dart';
@@ -43,7 +42,7 @@ class TransactionListState {
 }
 
 class TransactionListNotifier extends StateNotifier<TransactionListState> {
-  final TransactionService _service;
+  final TransactionService? _service;
   final String? _categoryFilter;
 
   TransactionListNotifier(this._service, this._categoryFilter)
@@ -52,7 +51,7 @@ class TransactionListNotifier extends StateNotifier<TransactionListState> {
   }
 
   TransactionListNotifier.fromList(List<Transaction> txs)
-      : _service = TransactionService(Dio()),
+      : _service = null,
         _categoryFilter = null,
         super(TransactionListState(
           transactions: txs,
@@ -62,12 +61,13 @@ class TransactionListNotifier extends StateNotifier<TransactionListState> {
         ));
 
   Future<void> loadMore() async {
-    if (state.isLoading || !state.hasMore) return;
+    final service = _service;
+    if (service == null || state.isLoading || !state.hasMore) return;
     state = state.copyWith(isLoading: true, error: null);
 
     try {
       final nextPage = state.currentPage + 1;
-      final result = await _service.list(
+      final result = await service.list(
         page: nextPage,
         category: _categoryFilter,
       );
