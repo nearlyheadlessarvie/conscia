@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Text.Json;
 using Conscia.AI.Prompts;
 using Conscia.Application.Interfaces;
 using Conscia.Application.Models;
@@ -57,6 +58,39 @@ public abstract class BaseAIService : IAIService
             NeutralMessage = PromptTemplates.BuildNeutralSummary(
                 context.Amount, context.CurrencyCode, context.Category, context.BudgetPercentUsed)
         };
+    }
+
+    public async Task<UtteranceParseResult> ParseUtteranceAsync(string transcript, CancellationToken ct = default)
+    {
+        const string systemPrompt = """
+            You extract purchase details from spoken utterances.
+            Return ONLY valid JSON with exactly these keys:
+            { "description": string|null, "amount": number|null, "category": string|null }
+            Valid categories: Coffee, Dining, Shopping, Gaming, Travel, Transport, Entertainment, Health, Utilities, Other.
+            If a field cannot be determined, use null.
+            """;
+
+        var response = await CallLlmAsync(systemPrompt, transcript, 0.1f, ct);
+
+        try
+        {
+            // Strip markdown code fences if model wraps response
+            var json = response.Trim();
+            if (json.StartsWith("```"))
+            {
+                json = string.Join('\n', json.Split('\n').Skip(1));
+                json = json[..json.LastIndexOf("```")].Trim();
+            }
+
+            var parsed = JsonSerializer.Deserialize<UtteranceParseResult>(
+                json,
+                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            return parsed ?? new UtteranceParseResult(transcript, null, null);
+        }
+        catch
+        {
+            return new UtteranceParseResult(transcript, null, null);
+        }
     }
 
     private async Task<string> TracedLlmCallAsync(string persona, string systemPrompt, string userPrompt, float temperature, CancellationToken ct)
