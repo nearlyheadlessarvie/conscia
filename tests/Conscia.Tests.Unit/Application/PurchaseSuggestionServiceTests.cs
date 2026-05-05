@@ -125,6 +125,6 @@ public class PurchaseSuggestionServiceTests
 
         var result = await _service.GetSuggestionsAsync(userId);
 
-        Assert.True(result.Count <= 5);
+        Assert.Equal(5, result.Count);
     }
 }

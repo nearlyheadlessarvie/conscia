@@ -15,14 +15,13 @@ public class PurchaseSuggestionService : IPurchaseSuggestionService
     public async Task<IReadOnlyList<PurchaseSuggestionDto>> GetSuggestionsAsync(
         Guid userId, CancellationToken ct = default)
     {
-        var cutoff = DateTime.UtcNow.AddDays(-90);
+        var now = DateTime.UtcNow;
+        var cutoff = now.AddDays(-90);
         var transactions = await _repo.GetByUserIdAndDateRangeAsync(
-            userId, cutoff, DateTime.UtcNow, ct);
+            userId, cutoff, now, ct);
 
         if (transactions.Count < 10)
             return Array.Empty<PurchaseSuggestionDto>();
-
-        var now = DateTime.UtcNow;
 
         return transactions
             .Where(t => !string.IsNullOrWhiteSpace(t.Merchant))
@@ -42,9 +41,11 @@ public class PurchaseSuggestionService : IPurchaseSuggestionService
                     : amounts[amounts.Count / 2];
 
                 var withinWeek = items.Any(t => (now - t.Date).TotalDays <= 7);
+                var weekCount = items.Count(t => (now - t.Date).TotalDays <= 7);
+                var monthCount = items.Count(t => (now - t.Date).TotalDays <= 30);
                 var label = withinWeek
-                    ? $"{items.Count}× this week"
-                    : $"{items.Count}× this month";
+                    ? $"{weekCount}× this week"
+                    : $"{monthCount}× this month";
 
                 var topCategory = items
                     .GroupBy(t => t.Category)
