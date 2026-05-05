@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/network/dio_client.dart';
@@ -49,6 +50,16 @@ class TransactionListNotifier extends StateNotifier<TransactionListState> {
       : super(const TransactionListState()) {
     loadMore();
   }
+
+  TransactionListNotifier.fromList(List<Transaction> txs)
+      : _service = TransactionService(Dio()),
+        _categoryFilter = null,
+        super(TransactionListState(
+          transactions: txs,
+          isLoading: false,
+          hasMore: false,
+          currentPage: 1,
+        ));
 
   Future<void> loadMore() async {
     if (state.isLoading || !state.hasMore) return;
