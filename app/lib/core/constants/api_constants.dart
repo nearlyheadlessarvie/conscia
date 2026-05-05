@@ -33,6 +33,12 @@ class ApiConstants {
   // Insights
   static const String behavioralInsights = 'insights/behavioral';
 
+  // Suggestions
+  static const String purchaseSuggestions = 'suggestions/purchases';
+
+  // Utterance parse (premium)
+  static const String parseUtterance = 'transactions/parse-utterance';
+
   // Budgets
   static const String budgets = 'budgets';
   static String budget(String id) => 'budgets/$id';
