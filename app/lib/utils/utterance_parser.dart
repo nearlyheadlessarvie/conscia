@@ -57,8 +57,8 @@ class UtteranceParser {
       amount = double.tryParse(numericMatch.group(1)!);
       // Find which token index contains this match
       for (int i = 0; i < tokens.length; i++) {
-        final cleaned = tokens[i].replaceAll(r'$', '');
-        if (cleaned == numericMatch.group(1) || tokens[i] == '\$${numericMatch.group(1)}') {
+        final cleaned = tokens[i].replaceAll(RegExp(r'[^\d.]'), '');
+        if (cleaned == numericMatch.group(1)) {
           usedIndices.add(i);
           break;
         }
