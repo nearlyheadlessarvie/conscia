@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Headers;
+using System.Net.Http.Json;
 using Conscia.Application.DTOs;
 using Conscia.Application.Interfaces;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -38,10 +39,15 @@ public class SuggestionEndpointTests : IClassFixture<TestWebAppFactory>
         var response = await client.GetAsync("/api/v1/suggestions/purchases");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<List<PurchaseSuggestionDto>>();
+        Assert.NotNull(body);
+        Assert.Single(body);
+        Assert.Equal("Starbucks", body[0].Description);
+        Assert.Equal(6.50m, body[0].Amount);
     }
 
     [Fact]
-    public async Task GetPurchaseSuggestions_Returns200Empty_WhenBelowThreshold()
+    public async Task GetPurchaseSuggestions_Returns200_WithEmptyList()
     {
         var mock = new Mock<IPurchaseSuggestionService>();
         mock.Setup(s => s.GetSuggestionsAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
@@ -57,6 +63,9 @@ public class SuggestionEndpointTests : IClassFixture<TestWebAppFactory>
         var response = await client.GetAsync("/api/v1/suggestions/purchases");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<List<PurchaseSuggestionDto>>();
+        Assert.NotNull(body);
+        Assert.Empty(body);
     }
 
     [Fact]

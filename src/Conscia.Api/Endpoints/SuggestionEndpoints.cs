@@ -15,7 +15,8 @@ public static class SuggestionEndpoints
         group.MapGet("/purchases", GetPurchaseSuggestions)
             .WithName("GetPurchaseSuggestions")
             .WithDescription("Get purchase suggestions for the user")
-            .Produces<IReadOnlyList<PurchaseSuggestionDto>>(StatusCodes.Status200OK);
+            .Produces<IReadOnlyList<PurchaseSuggestionDto>>(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status500InternalServerError);
 
         return group;
     }
