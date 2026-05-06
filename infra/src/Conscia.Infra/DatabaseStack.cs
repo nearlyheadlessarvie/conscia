@@ -25,6 +25,7 @@ public class DatabaseStack : Stack
     public ITable OutboxEventsTable { get; }
     public ITable InAppAlertsTable { get; }
     public ITable WeeklyInsightsTable { get; }
+    public ITable PurchasePatternsTable { get; }
 
     public DatabaseStack(Construct scope, string id, DatabaseStackProps props)
         : base(scope, id, props)
@@ -143,6 +144,12 @@ public class DatabaseStack : Stack
 
         WeeklyInsightsTable = CreateTable(
             "WeeklyInsights",
+            "PK",
+            "SK"
+        );
+
+        PurchasePatternsTable = CreateTable(
+            "PurchasePatterns",
             "PK",
             "SK"
         );
