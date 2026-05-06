@@ -1,5 +1,4 @@
 using Conscia.Api.Extensions;
-using Conscia.Application.DTOs;
 using Conscia.Application.Interfaces;
 
 namespace Conscia.Api.Endpoints;
