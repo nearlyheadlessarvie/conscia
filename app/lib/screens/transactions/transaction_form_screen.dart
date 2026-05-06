@@ -7,9 +7,13 @@ import '../../providers/subscription_provider.dart';
 import '../../providers/transaction_providers.dart';
 import '../../providers/user_provider.dart';
 import '../../services/transaction_service.dart';
+import '../../utils/utterance_parser.dart';
 import '../../widgets/amount_input_field.dart';
 import '../../widgets/skeleton_loader.dart';
 import 'widgets/category_picker.dart';
+import 'widgets/quick_preset_chips.dart';
+import 'widgets/voice_input_button.dart';
+import 'widgets/purchase_suggestion_chips.dart';
 
 class TransactionFormScreen extends ConsumerStatefulWidget {
   final String? transactionId;
@@ -78,6 +82,21 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
   bool get _isValid {
     final amount = double.tryParse(_amountController.text);
     return amount != null && amount > 0 && _selectedCategory != null;
+  }
+
+  void _onTranscriptReady(String transcript) {
+    final result = UtteranceParser.parse(transcript);
+    setState(() {
+      if (result.description.isNotEmpty) {
+        _merchantController.text = result.description;
+      }
+      if (result.amount != null) {
+        _amountController.text = result.amount!.toStringAsFixed(2);
+      }
+      if (result.category != null) {
+        _selectedCategory = result.category;
+      }
+    });
   }
 
   Future<void> _submit() async {
@@ -270,6 +289,32 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
                 );
               },
             ),
+            if (!_isEditing) ...[
+              PurchaseSuggestionChips(
+                onSuggestionSelected: (desc, amount, cat) {
+                  setState(() {
+                    _merchantController.text = desc;
+                    _amountController.text = amount.toStringAsFixed(2);
+                    _selectedCategory = cat;
+                  });
+                },
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Quick add',
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+              ),
+              const SizedBox(height: 6),
+              QuickPresetChips(
+                selectedCategory: _selectedCategory,
+                onCategorySelected: (cat) {
+                  setState(() => _selectedCategory = cat);
+                },
+              ),
+              const SizedBox(height: 16),
+            ],
             CategoryPicker(
               selected: _selectedCategory,
               onSelected: (cat) => setState(() => _selectedCategory = cat),
@@ -279,8 +324,12 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
             TextField(
               controller: _merchantController,
               textCapitalization: TextCapitalization.words,
-              decoration: const InputDecoration(
+              onChanged: (_) => setState(() {}),
+              decoration: InputDecoration(
                 labelText: 'Merchant (optional)',
+                suffixIcon: VoiceInputButton(
+                  onTranscriptReady: _onTranscriptReady,
+                ),
               ),
             ),
             const SizedBox(height: 16),

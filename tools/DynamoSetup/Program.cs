@@ -23,27 +23,17 @@ var tables = new (string Name, CreateTableRequest Request)[]
             new("PK", ScalarAttributeType.S),
             new("SK", ScalarAttributeType.S),
             new("UserId", ScalarAttributeType.S),
-            new("GSI1SK", ScalarAttributeType.S),
-            new("Id", ScalarAttributeType.S)
+            new("Date", ScalarAttributeType.S)
         ],
         GlobalSecondaryIndexes =
         [
             new GlobalSecondaryIndex
             {
-                IndexName = "GSI-UserId-Category-Date",
+                IndexName = "GSI-Date",
                 KeySchema =
                 [
                     new("UserId", KeyType.HASH),
-                    new("GSI1SK", KeyType.RANGE)
-                ],
-                Projection = new Projection { ProjectionType = ProjectionType.ALL }
-            },
-            new GlobalSecondaryIndex
-            {
-                IndexName = "GSI-TransactionId",
-                KeySchema =
-                [
-                    new("Id", KeyType.HASH)
+                    new("Date", KeyType.RANGE)
                 ],
                 Projection = new Projection { ProjectionType = ProjectionType.ALL }
             }

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'speed_dial_fab.dart';
+
 class MainShell extends ConsumerWidget {
   final Widget child;
 
@@ -37,17 +39,7 @@ class MainShell extends ConsumerWidget {
               selectedIndex: currentIndex,
               onDestinationSelected: (i) => context.go(_tabs[i].path),
               labelType: NavigationRailLabelType.all,
-              leading: _showFab(currentIndex)
-                  ? FloatingActionButton(
-                      onPressed: () => context.push('/transactions/add'),
-                      backgroundColor:
-                          Theme.of(context).colorScheme.secondary,
-                      child: Icon(
-                        Icons.add,
-                        color: Theme.of(context).colorScheme.onSecondary,
-                      ),
-                    )
-                  : null,
+              leading: _showFab(currentIndex) ? const SpeedDialFab() : null,
               destinations: _tabs
                   .map((t) => NavigationRailDestination(
                         icon: Icon(t.icon),
@@ -65,16 +57,7 @@ class MainShell extends ConsumerWidget {
 
     return Scaffold(
       body: child,
-      floatingActionButton: _showFab(currentIndex)
-          ? FloatingActionButton(
-              onPressed: () => context.push('/transactions/add'),
-              backgroundColor: Theme.of(context).colorScheme.secondary,
-              child: Icon(
-                Icons.add,
-                color: Theme.of(context).colorScheme.onSecondary,
-              ),
-            )
-          : null,
+      floatingActionButton: _showFab(currentIndex) ? const SpeedDialFab() : null,
       bottomNavigationBar: NavigationBar(
         height: 80,
         selectedIndex: currentIndex,
