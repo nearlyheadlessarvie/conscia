@@ -71,6 +71,7 @@ void main() {
     ));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Starbucks'));
+    await tester.pump();
 
     expect(desc, 'Starbucks');
     expect(amt, 6.50);
