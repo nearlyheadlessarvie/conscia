@@ -133,21 +133,32 @@ public class PatternAggregatorService
     private async Task<List<Transaction>> GetTransactionsForUserAsync(
         Guid userId, DateTime from, DateTime to, CancellationToken ct)
     {
-        var response = await _dynamo.QueryAsync(new QueryRequest
-        {
-            TableName = "Transactions",
-            IndexName = "GSI-Date",
-            KeyConditionExpression = "UserId = :uid AND #d BETWEEN :from AND :to",
-            ExpressionAttributeNames = new Dictionary<string, string> { ["#d"] = "Date" },
-            ExpressionAttributeValues = new Dictionary<string, AttributeValue>
-            {
-                [":uid"] = new(userId.ToString()),
-                [":from"] = new(from.ToString("yyyy-MM-dd")),
-                [":to"] = new(to.ToString("yyyy-MM-dd"))
-            }
-        }, ct);
+        var allItems = new List<Transaction>();
+        Dictionary<string, AttributeValue>? lastKey = null;
 
-        return response.Items.Select(FromItem).ToList();
+        do
+        {
+            var request = new QueryRequest
+            {
+                TableName = "Transactions",
+                IndexName = "GSI-Date",
+                KeyConditionExpression = "UserId = :uid AND #d BETWEEN :from AND :to",
+                ExpressionAttributeNames = new Dictionary<string, string> { ["#d"] = "Date" },
+                ExpressionAttributeValues = new Dictionary<string, AttributeValue>
+                {
+                    [":uid"] = new(userId.ToString()),
+                    [":from"] = new(from.ToString("yyyy-MM-dd")),
+                    [":to"] = new(to.ToString("yyyy-MM-dd"))
+                },
+                ExclusiveStartKey = lastKey
+            };
+
+            var response = await _dynamo.QueryAsync(request, ct);
+            allItems.AddRange(response.Items.Select(FromItem));
+            lastKey = response.LastEvaluatedKey?.Count > 0 ? response.LastEvaluatedKey : null;
+        } while (lastKey is not null);
+
+        return allItems;
     }
 
     private async Task<List<Guid>> GetActiveUserIdsAsync(CancellationToken ct)
