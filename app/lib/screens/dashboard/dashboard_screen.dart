@@ -14,6 +14,7 @@ import 'package:conscia_app/screens/dashboard/widgets/budget_summary_card.dart';
 import 'package:conscia_app/screens/dashboard/widgets/budget_warning_banner.dart';
 import 'package:conscia_app/screens/dashboard/widgets/financial_mood_card.dart';
 import 'package:conscia_app/screens/dashboard/widgets/impulse_trends_card.dart';
+import 'package:conscia_app/screens/dashboard/widgets/regret_summary_card.dart';
 import 'package:conscia_app/screens/dashboard/widgets/recent_transaction_tile.dart';
 import 'package:conscia_app/screens/dashboard/widgets/regret_prompt_card.dart';
 import 'package:conscia_app/screens/dashboard/widgets/worth_it_counter_card.dart';
@@ -164,6 +165,12 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                       ImpulseTrendsCard(trends: insights.impulseeTrends),
                     const SizedBox(height: 12),
                   ]),
+                ),
+              ),
+              const SliverPadding(
+                padding: EdgeInsets.symmetric(horizontal: 16),
+                sliver: SliverToBoxAdapter(
+                  child: RegretSummaryCard(),
                 ),
               ),
             ];
