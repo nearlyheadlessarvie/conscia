@@ -71,17 +71,11 @@ public class DatabaseStack : Stack
             {
                 new GlobalSecondaryIndexProps
                 {
-                    IndexName = "GSI-UserId-Category-Date",
+                    IndexName = "GSI-Date",
                     PartitionKey = new Attribute { Name = "UserId", Type = AttributeType.STRING },
-                    SortKey = new Attribute { Name = "GSI1SK", Type = AttributeType.STRING },
+                    SortKey = new Attribute { Name = "Date", Type = AttributeType.STRING },
                     ProjectionType = ProjectionType.ALL
                 },
-                new GlobalSecondaryIndexProps
-                {
-                    IndexName = "GSI-TransactionId",
-                    PartitionKey = new Attribute { Name = "Id", Type = AttributeType.STRING },
-                    ProjectionType = ProjectionType.ALL
-                }
             },
             stream: StreamViewType.NEW_AND_OLD_IMAGES
         );

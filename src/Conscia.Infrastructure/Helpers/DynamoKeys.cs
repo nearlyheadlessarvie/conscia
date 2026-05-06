@@ -46,13 +46,12 @@ public static class DynamoKeys
         => $"EVENT#{date:O}";
 
     /// <summary>
-    /// <c>DATE#{date:O}#TX#{id}</c> - Sort key for transaction-centric data
+    /// <c>TX#{id}</c> - Sort key for transaction-centric data (immutable)
     /// </summary>
-    /// <param name="date"></param>
     /// <param name="id"></param>
     /// <returns></returns>
-    public static string Transaction(DateTime date, Guid id)
-        => $"DATE#{date:O}#TX#{id}";
+    public static string Transaction(Guid id)
+        => $"TX#{id}";
 
     /// <summary>
     /// <c>DATE#{date:O}</c> - Sort key for date-centric data (e.g. events, sessions)

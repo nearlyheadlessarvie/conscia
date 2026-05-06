@@ -49,50 +49,17 @@ public class TransactionRepository : DynamoRepository, ITransactionRepository
         return transaction;
     }
 
-    public async Task UpdateAsync(Transaction transaction, DateTime originalDate, CancellationToken ct = default)
+    public async Task UpdateAsync(Transaction transaction, CancellationToken ct = default)
     {
-        if (originalDate.Date == transaction.Date.Date)
+        await Dynamo.PutItemAsync(new PutItemRequest
         {
-            // SK unchanged — simple overwrite
-            await Dynamo.PutItemAsync(new PutItemRequest
-            {
-                TableName = TableName,
-                Item = ToItem(transaction)
-            }, ct);
-        }
-        else
-        {
-            // Date changed → SK changed. Atomically delete old item and put new one.
-            await Dynamo.TransactWriteItemsAsync(new TransactWriteItemsRequest
-            {
-                TransactItems =
-                [
-                    new TransactWriteItem
-                    {
-                        Delete = new Delete
-                        {
-                            TableName = TableName,
-                            Key = Key(DynamoKeys.User(transaction.UserId), DynamoKeys.Transaction(originalDate, transaction.Id))
-                        }
-                    },
-                    new TransactWriteItem
-                    {
-                        Put = new Put
-                        {
-                            TableName = TableName,
-                            Item = ToItem(transaction)
-                        }
-                    }
-                ]
-            }, ct);
-        }
+            TableName = TableName,
+            Item = ToItem(transaction)
+        }, ct);
     }
 
-    public async Task DeleteWithOutboxAsync(Guid id, OutboxEvent outboxEvent, CancellationToken ct = default)
+    public async Task DeleteWithOutboxAsync(Guid userId, Guid id, OutboxEvent outboxEvent, CancellationToken ct = default)
     {
-        var existing = await GetByIdAsync(id, ct)
-            ?? throw new InvalidOperationException($"Transaction {id} not found");
-
         var transactItems = new List<TransactWriteItem>
         {
             new()
@@ -100,7 +67,7 @@ public class TransactionRepository : DynamoRepository, ITransactionRepository
                 Delete = new Delete
                 {
                     TableName = TableName,
-                    Key = Key(DynamoKeys.User(existing.UserId), DynamoKeys.Transaction(existing.Date, id))
+                    Key = Key(DynamoKeys.User(userId), DynamoKeys.Transaction(id))
                 }
             },
             new()
@@ -120,26 +87,17 @@ public class TransactionRepository : DynamoRepository, ITransactionRepository
     }
 
     // ---------------- READ ----------------
-    public async Task<Transaction?> GetByIdAsync(Guid id, CancellationToken ct = default)
+    public async Task<Transaction?> GetByIdAsync(Guid userId, Guid id, CancellationToken ct = default)
     {
-        var response = await Dynamo.QueryAsync(new QueryRequest
+        var response = await Dynamo.GetItemAsync(new GetItemRequest
         {
             TableName = TableName,
-            IndexName = "GSI-TransactionId",
-            KeyConditionExpression = "Id = :id",
-            ExpressionAttributeValues = new Dictionary<string, AttributeValue>
-            {
-                [":id"] = new(id.ToString())
-            },
-            Limit = 1
+            Key = Key(DynamoKeys.User(userId), DynamoKeys.Transaction(id))
         }, ct);
 
-        return response.Items.Count > 0
-            ? FromItem(response.Items[0])
-            : null;
+        return response.IsItemSet ? FromItem(response.Item) : null;
     }
 
-    // Primary timeline query (FAST)
     public async Task<(IReadOnlyList<Transaction> Items, string? NextToken)> QueryByUserAsync(
         Guid userId,
         DateTime? from,
@@ -149,27 +107,33 @@ public class TransactionRepository : DynamoRepository, ITransactionRepository
         string? paginationToken,
         CancellationToken ct = default)
     {
-        var keyCondition = "PK = :pk";
+        var keyCondition = "UserId = :uid";
         var attrValues = new Dictionary<string, AttributeValue>
         {
-            [":pk"] = new(DynamoKeys.User(userId))
+            [":uid"] = new(userId.ToString())
         };
+        Dictionary<string, string>? attrNames = null;
 
         if (from.HasValue && to.HasValue)
         {
-            keyCondition += " AND SK BETWEEN :skFrom AND :skTo";
-            attrValues[":skFrom"] = new(DynamoKeys.DateRangeStart(from.Value));
-            attrValues[":skTo"]   = new(DynamoKeys.DateRangeEnd(to.Value));
+            keyCondition += " AND #d BETWEEN :from AND :to";
+            attrNames = new Dictionary<string, string> { ["#d"] = "Date" };
+            attrValues[":from"] = new(from.Value.ToString("yyyy-MM-dd"));
+            attrValues[":to"]   = new(to.Value.ToString("yyyy-MM-dd"));
         }
 
         var request = new QueryRequest
         {
             TableName = TableName,
+            IndexName = "GSI-Date",
             KeyConditionExpression = keyCondition,
             ExpressionAttributeValues = attrValues,
             Limit = limit,
             ScanIndexForward = false
         };
+
+        if (attrNames is not null)
+            request.ExpressionAttributeNames = attrNames;
 
         if (!string.IsNullOrEmpty(paginationToken))
         {
@@ -182,7 +146,6 @@ public class TransactionRepository : DynamoRepository, ITransactionRepository
 
         var items = response.Items.Select(FromItem);
 
-        // small-set filter only (UI case)
         if (!string.IsNullOrEmpty(category))
             items = items.Where(t => t.Category == category);
 
@@ -198,31 +161,6 @@ public class TransactionRepository : DynamoRepository, ITransactionRepository
         return (list, nextToken);
     }
 
-    // GSI-backed category query (scalable)
-    public async Task<IReadOnlyList<Transaction>> QueryByUserAndCategoryAsync(
-        Guid userId,
-        string category,
-        DateTime from,
-        DateTime to,
-        CancellationToken ct = default)
-    {
-        var response = await Dynamo.QueryAsync(new QueryRequest
-        {
-            TableName = TableName,
-            IndexName = "GSI-UserId-Category-Date",
-            KeyConditionExpression = "UserId = :uid AND GSI1SK BETWEEN :from AND :to",
-            ExpressionAttributeValues = new Dictionary<string, AttributeValue>
-            {
-                [":uid"] = new(userId.ToString()),
-                [":from"] = new(DynamoKeys.TransactionSortKey(category, from)),
-                [":to"]   = new($"{DynamoKeys.TransactionSortKey(category, to)}~")
-            },
-            ScanIndexForward = false
-        }, ct);
-
-        return response.Items.Select(FromItem).ToList();
-    }
-
     public async Task<IReadOnlyList<Transaction>> GetByUserIdAndDateRangeAsync(
         Guid userId,
         DateTime from,
@@ -232,12 +170,14 @@ public class TransactionRepository : DynamoRepository, ITransactionRepository
         var response = await Dynamo.QueryAsync(new QueryRequest
         {
             TableName = TableName,
-            KeyConditionExpression = "PK = :pk AND SK BETWEEN :skFrom AND :skTo",
+            IndexName = "GSI-Date",
+            KeyConditionExpression = "UserId = :uid AND #d BETWEEN :from AND :to",
+            ExpressionAttributeNames = new Dictionary<string, string> { ["#d"] = "Date" },
             ExpressionAttributeValues = new Dictionary<string, AttributeValue>
             {
-                [":pk"] = new(DynamoKeys.User(userId)),
-                [":skFrom"] = new(DynamoKeys.DateRangeStart(from)),
-                [":skTo"]   = new(DynamoKeys.DateRangeEnd(to))
+                [":uid"] = new(userId.ToString()),
+                [":from"] = new(from.ToString("yyyy-MM-dd")),
+                [":to"]   = new(to.ToString("yyyy-MM-dd"))
             },
             ScanIndexForward = false
         }, ct);
@@ -245,13 +185,13 @@ public class TransactionRepository : DynamoRepository, ITransactionRepository
         return response.Items.Select(FromItem).ToList();
     }
 
-    public async Task UpdateRegretLevelAsync(Guid id, RegretLevel level, CancellationToken ct = default)
+    public async Task UpdateRegretLevelAsync(Guid userId, Guid id, RegretLevel level, CancellationToken ct = default)
     {
-        var existing = await GetByIdAsync(id, ct)
+        var existing = await GetByIdAsync(userId, id, ct)
             ?? throw new InvalidOperationException($"Transaction {id} not found");
 
         existing.RegretLevel = level;
-        await UpdateAsync(existing, existing.Date, ct);
+        await UpdateAsync(existing, ct);
     }
 
     public async Task<IReadOnlyList<Transaction>> GetUserPendingRegretPromptsAsync(
@@ -271,7 +211,7 @@ public class TransactionRepository : DynamoRepository, ITransactionRepository
         var item = new Dictionary<string, AttributeValue>
         {
             ["PK"] = new(DynamoKeys.User(t.UserId)),
-            ["SK"] = new(DynamoKeys.Transaction(t.Date, t.Id)),
+            ["SK"] = new(DynamoKeys.Transaction(t.Id)),
 
             ["Id"] = new(t.Id.ToString()),
             ["UserId"] = new(t.UserId.ToString()),
@@ -280,10 +220,7 @@ public class TransactionRepository : DynamoRepository, ITransactionRepository
             ["CurrencyCode"] = new(t.Amount.CurrencyCode),
             ["Category"] = new(t.Category),
             ["Date"] = new(t.Date.ToString("yyyy-MM-dd")),
-            ["CreatedAt"] = new(t.CreatedAt.ToString("O")),
-
-            // GSI SUPPORT
-            ["GSI1SK"] = new(DynamoKeys.TransactionSortKey(t.Category, t.Date))
+            ["CreatedAt"] = new(t.CreatedAt.ToString("O"))
         };
 
         if (t.Merchant is not null)

@@ -77,8 +77,8 @@ public class TransactionService : ITransactionService
         return result;
     }
 
-    public Task<Transaction?> GetByIdAsync(Guid id, CancellationToken ct = default) =>
-        _repo.GetByIdAsync(id, ct);
+    public Task<Transaction?> GetByIdAsync(Guid userId, Guid id, CancellationToken ct = default) =>
+        _repo.GetByIdAsync(userId, id, ct);
 
     public async Task<PagedResult<Transaction>> ListAsync(
         Guid userId, int page, int pageSize, string? category = null, CancellationToken ct = default)
@@ -95,16 +95,14 @@ public class TransactionService : ITransactionService
         };
     }
 
-    public async Task<Transaction> UpdateAsync(Guid id, UpdateTransactionDto dto, CancellationToken ct = default)
+    public async Task<Transaction> UpdateAsync(Guid userId, Guid id, UpdateTransactionDto dto, CancellationToken ct = default)
     {
-        var existing = await _repo.GetByIdAsync(id, ct);
+        var existing = await _repo.GetByIdAsync(userId, id, ct);
         if (existing is null)
         {
             _logger.LogWarning("Transaction {TransactionId} not found", id);
             throw new KeyNotFoundException($"Transaction {id} not found");
         }
-
-        var originalDate = existing.Date;
 
         if (dto.Type.HasValue) existing.Type = dto.Type.Value;
         if (dto.Amount.HasValue && dto.CurrencyCode is not null)
@@ -115,13 +113,13 @@ public class TransactionService : ITransactionService
         if (dto.Merchant is not null) existing.Merchant = dto.Merchant;
         if (dto.Date.HasValue) existing.Date = dto.Date.Value;
 
-        await _repo.UpdateAsync(existing, originalDate, ct);
+        await _repo.UpdateAsync(existing, ct);
         return existing;
     }
 
-    public async Task DeleteAsync(Guid id, CancellationToken ct = default)
+    public async Task DeleteAsync(Guid userId, Guid id, CancellationToken ct = default)
     {
-        var existing = await _repo.GetByIdAsync(id, ct);
+        var existing = await _repo.GetByIdAsync(userId, id, ct);
         if (existing is null)
         {
             _logger.LogWarning("Transaction {TransactionId} not found", id);
@@ -136,7 +134,7 @@ public class TransactionService : ITransactionService
             Payload = JsonSerializer.Serialize(new
             {
                 TransactionId = id,
-                UserId = existing.UserId,
+                UserId = userId,
                 Amount = existing.Amount.Amount,
                 CurrencyCode = existing.Amount.CurrencyCode,
                 Category = existing.Category
@@ -144,10 +142,10 @@ public class TransactionService : ITransactionService
             CreatedAt = DateTime.UtcNow
         };
 
-        await _repo.DeleteWithOutboxAsync(id, outboxEvent, ct);
-        _logger.LogInformation("Deleting transaction {TransactionId} for user {UserId}", id, existing.UserId);
+        await _repo.DeleteWithOutboxAsync(userId, id, outboxEvent, ct);
+        _logger.LogInformation("Deleting transaction {TransactionId} for user {UserId}", id, userId);
     }
 
-    public Task UpdateRegretLevelAsync(Guid id, RegretLevel level, CancellationToken ct = default) =>
-        _repo.UpdateRegretLevelAsync(id, level, ct);
+    public Task UpdateRegretLevelAsync(Guid userId, Guid id, RegretLevel level, CancellationToken ct = default) =>
+        _repo.UpdateRegretLevelAsync(userId, id, level, ct);
 }
