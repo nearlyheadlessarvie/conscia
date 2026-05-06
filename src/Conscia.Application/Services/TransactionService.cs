@@ -104,6 +104,8 @@ public class TransactionService : ITransactionService
             throw new KeyNotFoundException($"Transaction {id} not found");
         }
 
+        var originalDate = existing.Date;
+
         if (dto.Type.HasValue) existing.Type = dto.Type.Value;
         if (dto.Amount.HasValue && dto.CurrencyCode is not null)
             existing.Amount = new Money(dto.Amount.Value, dto.CurrencyCode);
@@ -113,7 +115,7 @@ public class TransactionService : ITransactionService
         if (dto.Merchant is not null) existing.Merchant = dto.Merchant;
         if (dto.Date.HasValue) existing.Date = dto.Date.Value;
 
-        await _repo.UpdateAsync(existing, ct);
+        await _repo.UpdateAsync(existing, originalDate, ct);
         return existing;
     }
 

@@ -97,7 +97,7 @@ public class TransactionServiceTests
         };
 
         _repoMock.Setup(r => r.GetByIdAsync(txnId, It.IsAny<CancellationToken>())).ReturnsAsync(existing);
-        _repoMock.Setup(r => r.UpdateAsync(It.IsAny<Transaction>(), It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
+        _repoMock.Setup(r => r.UpdateAsync(It.IsAny<Transaction>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
 
         var dto = new UpdateTransactionDto { Amount = 75m, Category = "Dining" };
         var result = await _svc.UpdateAsync(txnId, dto);

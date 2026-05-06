@@ -49,13 +49,43 @@ public class TransactionRepository : DynamoRepository, ITransactionRepository
         return transaction;
     }
 
-    public async Task UpdateAsync(Transaction transaction, CancellationToken ct = default)
+    public async Task UpdateAsync(Transaction transaction, DateTime originalDate, CancellationToken ct = default)
     {
-        await Dynamo.PutItemAsync(new PutItemRequest
+        if (originalDate.Date == transaction.Date.Date)
         {
-            TableName = TableName,
-            Item = ToItem(transaction)
-        }, ct);
+            // SK unchanged — simple overwrite
+            await Dynamo.PutItemAsync(new PutItemRequest
+            {
+                TableName = TableName,
+                Item = ToItem(transaction)
+            }, ct);
+        }
+        else
+        {
+            // Date changed → SK changed. Atomically delete old item and put new one.
+            await Dynamo.TransactWriteItemsAsync(new TransactWriteItemsRequest
+            {
+                TransactItems =
+                [
+                    new TransactWriteItem
+                    {
+                        Delete = new Delete
+                        {
+                            TableName = TableName,
+                            Key = Key(DynamoKeys.User(transaction.UserId), DynamoKeys.Transaction(originalDate, transaction.Id))
+                        }
+                    },
+                    new TransactWriteItem
+                    {
+                        Put = new Put
+                        {
+                            TableName = TableName,
+                            Item = ToItem(transaction)
+                        }
+                    }
+                ]
+            }, ct);
+        }
     }
 
     public async Task DeleteWithOutboxAsync(Guid id, OutboxEvent outboxEvent, CancellationToken ct = default)
@@ -221,7 +251,7 @@ public class TransactionRepository : DynamoRepository, ITransactionRepository
             ?? throw new InvalidOperationException($"Transaction {id} not found");
 
         existing.RegretLevel = level;
-        await UpdateAsync(existing, ct);
+        await UpdateAsync(existing, existing.Date, ct);
     }
 
     public async Task<IReadOnlyList<Transaction>> GetUserPendingRegretPromptsAsync(
