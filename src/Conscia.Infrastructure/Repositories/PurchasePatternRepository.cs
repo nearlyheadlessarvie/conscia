@@ -69,7 +69,7 @@ public class PurchasePatternRepository : IPurchasePatternRepository
         allItems.AddRange(categories.Select(CategoryToItem));
         allItems.AddRange(merchants.Select(MerchantToItem));
 
-        // DynamoDB BatchWrite limit is 25 per call; batch in chunks of 25 (safe limit)
+        // BatchWriteItem hard limit is 25 items per request
         foreach (var chunk in allItems.Chunk(25))
         {
             var requests = chunk.Select(item => new WriteRequest
@@ -88,6 +88,9 @@ public class PurchasePatternRepository : IPurchasePatternRepository
     }
 
     // ---- Key helpers ----
+
+    private static Guid ExtractUserId(Dictionary<string, AttributeValue> item)
+        => Guid.Parse(item["PK"].S.Replace("USER#", ""));
 
     private static Dictionary<string, AttributeValue> Key(Guid userId, string sk) =>
         new()
@@ -111,7 +114,7 @@ public class PurchasePatternRepository : IPurchasePatternRepository
 
     private static PurchasePatternSummary SummaryFromItem(Dictionary<string, AttributeValue> item) => new()
     {
-        UserId = Guid.Parse(item["PK"].S.Replace("USER#", "")),
+        UserId = ExtractUserId(item),
         RegrettedAmount = decimal.Parse(item["RegrettedAmount"].N),
         RegrettedCategory = item["RegrettedCategory"].S,
         AvgRegretRate = double.Parse(item["AvgRegretRate"].N),
@@ -134,7 +137,7 @@ public class PurchasePatternRepository : IPurchasePatternRepository
 
     private static CategoryPattern CategoryFromItem(Dictionary<string, AttributeValue> item) => new()
     {
-        UserId = Guid.Parse(item["PK"].S.Replace("USER#", "")),
+        UserId = ExtractUserId(item),
         Category = item["Category"].S,
         TotalSpend = decimal.Parse(item["TotalSpend"].N),
         RegrettedSpend = decimal.Parse(item["RegrettedSpend"].N),
@@ -158,7 +161,7 @@ public class PurchasePatternRepository : IPurchasePatternRepository
 
     private static MerchantPattern MerchantFromItem(Dictionary<string, AttributeValue> item) => new()
     {
-        UserId = Guid.Parse(item["PK"].S.Replace("USER#", "")),
+        UserId = ExtractUserId(item),
         Merchant = item["Merchant"].S,
         VisitCount = int.Parse(item["VisitCount"].N),
         RegretCount = int.Parse(item["RegretCount"].N),
