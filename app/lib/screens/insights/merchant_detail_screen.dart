@@ -52,6 +52,11 @@ class _StatsHeader extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
     final colors = Theme.of(context).colorScheme;
     final rate = (stats.regretRate * 100).toStringAsFixed(0);
+    final rateColor = stats.regretRate >= 0.6
+        ? colors.error
+        : stats.regretRate >= 0.4
+            ? colors.tertiary
+            : colors.primary;
 
     return Card(
       child: Padding(
@@ -64,11 +69,11 @@ class _StatsHeader extends StatelessWidget {
               Text('visits', style: textTheme.labelSmall?.copyWith(color: colors.onSurfaceVariant)),
             ]),
             Column(children: [
-              Text('${stats.regretCount}', style: textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold, color: colors.error)),
+              Text('${stats.regretCount}', style: textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold, color: rateColor)),
               Text('regrets', style: textTheme.labelSmall?.copyWith(color: colors.onSurfaceVariant)),
             ]),
             Column(children: [
-              Text('$rate%', style: textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold, color: colors.error)),
+              Text('$rate%', style: textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold, color: rateColor)),
               Text('rate', style: textTheme.labelSmall?.copyWith(color: colors.onSurfaceVariant)),
             ]),
           ],
@@ -104,7 +109,7 @@ class _TransactionRow extends StatelessWidget {
             child: Text(tx.category,
                 style: textTheme.bodyMedium),
           ),
-          Text('£${tx.amount.toStringAsFixed(2)}',
+          Text('${tx.currencyCode} ${tx.amount.toStringAsFixed(2)}',
               style: textTheme.bodyMedium?.copyWith(color: colors.onSurfaceVariant)),
         ],
       ),

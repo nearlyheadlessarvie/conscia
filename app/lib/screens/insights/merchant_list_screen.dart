@@ -58,7 +58,7 @@ class _MerchantTile extends StatelessWidget {
           Text('regret', style: TextStyle(color: colors.onSurfaceVariant, fontSize: 11)),
         ],
       ),
-      onTap: () => context.push('/insights/merchants/${merchant.merchant}'),
+      onTap: () => context.push('/insights/merchants/${Uri.encodeComponent(merchant.merchant)}'),
     );
   }
 }
