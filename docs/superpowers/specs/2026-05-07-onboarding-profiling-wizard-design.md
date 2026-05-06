@@ -2,7 +2,7 @@
 
 **Date:** 2026-05-07
 **Status:** Draft
-**Scope:** `app/lib/screens/onboarding/`, `app/lib/screens/transactions/widgets/quick_preset_chips.dart`, `app/lib/widgets/main_shell.dart`, `app/lib/widgets/speed_dial_fab.dart`, `app/lib/core/constants/category_icons.dart`, `src/Conscia.Domain/`, `src/Conscia.Application/`, `src/Conscia.Infrastructure/`, `src/Conscia.Api/`
+**Scope:** `app/lib/screens/onboarding/`, `app/lib/screens/transactions/`, `app/lib/screens/settings/`, `app/lib/widgets/main_shell.dart`, `app/lib/widgets/speed_dial_fab.dart`, `app/lib/core/constants/`, `src/Conscia.Domain/`, `src/Conscia.Application/`, `src/Conscia.Infrastructure/`, `src/Conscia.Api/`
 
 ---
 
@@ -10,10 +10,12 @@
 
 After sign-up and currency/locale setup, users see a 3-screen profiling wizard that personalises their budget setup. All screens are skippable. The collected data seeds the user's first budgets and is persisted so insights can use it later.
 
-This spec also covers five cleanup/improvement tasks that travel with this feature:
+This spec also covers seven cleanup/improvement tasks that travel with this feature:
 - Platform-adaptive icon system: Cupertino icons on iOS, Material icons on Android/web
-- Move Scan Receipt from the speed dial FAB to a prominent centre button in the main shell bottom nav
+- Move Scan Receipt to a visually prominent centre nav item; replace speed dial with a plain Add Expense FAB
+- Redesign the transaction form: consolidated category picker, collapsed secondary fields
 - Migrate Quick Add preset chips from emoji strings to adaptive `IconData` (consistency)
+- Settings > Profile screen: editable view of all four profile fields post-onboarding
 - Delete dead code: `BehaviorProfile` and `SessionCache` entities, repos, DI registrations, and DynamoDB table entries
 - Integrate the existing `apple_button.dart` and `google_button.dart` files into the sign-in/sign-up screens
 
@@ -104,34 +106,67 @@ All existing call sites (`CategoryIcons.forCategory(name)`) remain unchanged —
 
 ---
 
-## Main Shell — Scan Centre Button
+## Main Shell — Scan Centre Button + Add Expense FAB
 
 ### Layout change (`app/lib/widgets/main_shell.dart`)
 
-Replace the current `NavigationBar` + `SpeedDialFab` with a `BottomAppBar` that has a notch and a centred `FloatingActionButton` for Scan:
-
-**Mobile layout:**
+**Mobile layout — 5-destination `NavigationBar`:**
 
 ```
-╔══════════════════════════════════════════╗
-║  [Home]  [Transactions]  ○  [AI] [⚙️]   ║
-╚══════════════╤═══════════╧══════════════╝
-               │ ⬛ Scan (FAB, pops above)
+╔════════════════════════════════════════════════╗
+║  [Home]  [Trans]  [● Scan]  [AI]  [Settings]  ║
+╚════════════════════════════════════════════════╝
+                                          ⊕ (FAB)
 ```
 
-- `FloatingActionButton` at `FloatingActionButtonLocation.centerDocked` with `BottomAppBar(shape: CircularNotchedRectangle(), notchMargin: 8)`
-- FAB uses `AppIcons.scan` icon, primary colour background, slightly larger than standard (size 56)
-- 4 nav items split 2 left / 2 right of the notch, using `AppIcons` getters
-- Selected state: colour change (primary) + active icon, no label change
-- Tapping FAB navigates to `/scan` (existing route)
+- Keep `NavigationBar` (Material 3). Add Scan as the middle (index 2) `NavigationDestination`.
+- The Scan destination uses a custom icon widget — a filled circle with the scan icon — so it visually pops against the other items without using the `floatingActionButton` slot:
 
-**Wide (> 840 px) layout:** Keep the existing `NavigationRail`. Add Scan as a rail destination between Transactions and Assistant, using a standard icon (no special emphasis — the notch effect only works on mobile). Remove the `SpeedDialFab` leading widget.
+```dart
+NavigationDestination(
+  icon: Container(
+    padding: const EdgeInsets.all(10),
+    decoration: BoxDecoration(
+      color: colorScheme.primaryContainer,
+      shape: BoxShape.circle,
+    ),
+    child: Icon(AppIcons.scan, size: 22, color: colorScheme.onPrimaryContainer),
+  ),
+  selectedIcon: Container(
+    padding: const EdgeInsets.all(10),
+    decoration: BoxDecoration(
+      color: colorScheme.primary,
+      shape: BoxShape.circle,
+    ),
+    child: Icon(AppIcons.scan, size: 22, color: colorScheme.onPrimary),
+  ),
+  label: 'Scan',
+),
+```
 
-### `SpeedDialFab` update (`app/lib/widgets/speed_dial_fab.dart`)
+- Tapping Scan navigates to `/scan` (existing route).
+- The 5 nav items are: Home (0), Transactions (1), Scan (2), Assistant (3), Settings (4).
+- `_selectedIndex` logic updates accordingly; Scan is never "selected" in the nav sense (navigating to `/scan` is a full-screen push, not a shell tab).
 
-Remove the "Scan Receipt" `SpeedDialChild`. Remaining children: "Ask Conscia" and "Add Expense". The FAB is no longer shown in `MainShell` (it was conditionally shown on Home and Transactions); those tabs now only need the `BottomAppBar` notch layout. The `SpeedDialFab` widget is retained for the speed dial actions only, rendered as the `floatingActionButton` slot is now occupied by the Scan FAB — so the speed dial moves to a secondary FAB or is removed entirely.
+**Shell `floatingActionButton`:** Replace `SpeedDialFab` with a plain `FloatingActionButton`:
 
-> **Decision:** Since the notch FAB occupies `centerDocked`, there's no standard slot for a second FAB. Remove `SpeedDialFab` entirely. "Add Expense" and "Ask Conscia" are reachable via the bottom nav tabs directly. If a quick-add shortcut is needed in a future iteration, it can be a `+` button in the `AppBar` of the Transactions screen.
+```dart
+floatingActionButton: FloatingActionButton(
+  onPressed: () => context.push(AppRoutes.addTransaction),
+  child: Icon(AppIcons.add),
+),
+```
+
+Show the FAB on all tabs (always visible). This is the primary quick-add action. The app is an expense tracker — `+` always means Add Expense.
+
+**Wide (> 840 px) layout:** Keep `NavigationRail`. Add Scan as a standard rail destination (index 2) between Transactions and Assistant, no special styling. Remove the `SpeedDialFab` leading widget; instead, add a regular `FloatingActionButton` as the `leading` widget that navigates to Add Transaction.
+
+### `SpeedDialFab` deletion (`app/lib/widgets/speed_dial_fab.dart`)
+
+Delete the file entirely. No replacement — the speed dial is removed. The three actions it contained are now covered by:
+- **Scan Receipt** → Scan nav item (centre button)
+- **Ask Conscia** → Assistant nav item
+- **Add Expense** → shell FAB (`+`)
 
 ---
 
@@ -336,7 +371,106 @@ Use `avatar:` (not inside `label`) so the icon renders at the correct size and d
 
 ---
 
-## Dead Code Deletion
+## Transaction Form Redesign (`transaction_form_screen.dart`)
+
+The current form has two problems: the category picker appears twice (quick chips + full grid inline), and secondary fields (Location, Notes) take up as much space as primary ones. The redesign consolidates category into one interaction and collapses the optional fields.
+
+### New layout order
+
+```
+AppBar: [✕]  Add Transaction / Edit Transaction
+─────────────────────────────────────────────
+[Expense ●] [Income  ] ← compact segmented toggle (same as now)
+
+[Amount input — large, prominent]              (same as now)
+[Exchange rate field, if foreign currency]     (same as now)
+
+───── Category ─────────────────────────────
+[AI suggestions row — PurchaseSuggestionChips]  (new add-only, moved up)
+[Quick chips — recently used categories]        (icon + label, adaptive icon)
+[● Selected: Groceries  ×]  ← shown when category selected, replaces chips
+[+ More categories]  ← opens CategoryPicker bottom sheet
+
+───── Details ──────────────────────────────
+[🏪 Merchant (optional) ____  🎤]
+[📅 Today  ›]   ← compact date row (tap to change)
+
+[▸ More options]  ← ExpansionTile, collapsed by default
+    [📍 Include Location  toggle]
+    [Notes (optional) — single line, expands on tap]
+
+─────────────────────────────────────────────
+[       Save Transaction        ]   ← FilledButton
+```
+
+### Key changes from current
+
+**1. Consolidated category selection**
+
+Remove the inline `CategoryPicker` grid entirely from the form body. Replace with:
+- `QuickPresetChips` as the only always-visible category selector (shows recently-used)
+- When a category is selected, show a single chip: `[Icon] Groceries ×` (tapping `×` clears it)
+- A `TextButton('+ More categories', onPressed: ...)` that opens `CategoryPicker` in a `showModalBottomSheet`
+- `PurchaseSuggestionChips` moves above the quick chips (AI suggestions — more prominent placement)
+
+This removes the redundant full-grid that was always shown below the chips.
+
+**2. Date — compact row instead of ListTile**
+
+Replace the `ListTile` with a lighter `InkWell`-wrapped row:
+
+```dart
+InkWell(
+  onTap: _pickDate,
+  borderRadius: BorderRadius.circular(12),
+  child: Padding(
+    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+    child: Row(children: [
+      Icon(AppIcons.calendar, size: 18, color: colors.onSurfaceVariant),
+      const SizedBox(width: 8),
+      Text(_relativeDateLabel(_selectedDate), style: textTheme.bodyMedium),
+      const Spacer(),
+      Icon(AppIcons.chevronRight, size: 16, color: colors.outline),
+    ]),
+  ),
+)
+```
+
+`_relativeDateLabel` returns "Today", "Yesterday", or the full date.
+
+**3. Collapsed optional fields**
+
+Wrap Location and Notes in an `ExpansionTile` labelled "More options" (collapsed by default). When editing a transaction that already has notes, auto-expand the tile.
+
+**4. `CategoryPicker` as bottom sheet (not inline)**
+
+`CategoryPicker` is unchanged internally. Wrap the call in `showModalBottomSheet` from a `TextButton`:
+
+```dart
+TextButton.icon(
+  icon: Icon(AppIcons.add, size: 16),
+  label: const Text('More categories'),
+  onPressed: () => showModalBottomSheet(
+    context: context,
+    isScrollControlled: true,
+    builder: (_) => DraggableScrollableSheet(
+      expand: false,
+      builder: (_, ctrl) => CategoryPicker(
+        selected: _selectedCategory,
+        onSelected: (cat) {
+          setState(() => _selectedCategory = cat);
+          Navigator.pop(context);
+        },
+        isExpense: _isExpense,
+      ),
+    ),
+  ),
+),
+```
+
+---
+
+
 
 ### Files to delete
 
@@ -358,6 +492,73 @@ Remove the `builder.Services.AddScoped<IBehaviorProfileRepository, BehaviorProfi
 ### Why SessionCache is safe to delete
 
 Session timeout is handled entirely by the Dio interceptor in `dio_client.dart`: on a 401 response, all tokens are cleared from `FlutterSecureStorage` and the auth state is set to logged-out. The refresh token endpoint exists (`auth/refresh`) but is not currently called — when refresh is implemented in the future, it will live in the Dio interceptor, not SessionCache.
+
+---
+
+## Settings — Profile Screen
+
+The current Settings > Profile section shows only email and "Member since [date]". Extend it to expose the four new profile fields so users can review and update them after onboarding.
+
+### New screen: `app/lib/screens/settings/profile_screen.dart`
+
+Accessible via a new `ListTile` in `SettingsScreen` under the Profile section:
+
+```dart
+ListTile(
+  leading: Icon(AppIcons.person),
+  title: const Text('My Profile'),
+  subtitle: const Text('Spending style, income, household'),
+  trailing: Icon(AppIcons.chevronRight),
+  onTap: () => context.push('/settings/profile'),
+),
+```
+
+New route in `app_router.dart`: `/settings/profile` → `ProfileScreen`.
+
+### `ProfileScreen` layout
+
+Loads `currentUserProvider` to pre-populate. Mirrors the wizard screens' UX (same chip selectors, same labels, same values). Has a "Save" button that calls `PATCH /api/users/profile`.
+
+```
+AppBar: [←]  My Profile
+
+Email: nearlyheadlessarvie@gmail.com   (read-only, greyed out)
+Member since: May 2026                 (read-only)
+
+─── Spending Style ──────────────────────
+[Saver]  [● Balanced]  [Free spender]   (same 3-card row as wizard)
+
+─── Monthly Income ──────────────────────
+[ ] Under X                             (same selectable list as wizard)
+[●] X – Y
+[ ] Y – Z
+[ ] Over Z
+[ ] Prefer not to say
+
+─── Occupation ──────────────────────────
+[Employed ●]  [Self-employed]  [Student]  [Retired]  [Other]
+
+─── Household ───────────────────────────
+[Just me]  [Couple ●]  [Family]  [Shared]
+
+─────────────────────────────────────────
+[       Save Changes       ]
+```
+
+Fields default to whatever is stored on `UserProfile`. If a field is null (user skipped it during onboarding), show it unselected. Saving calls `PATCH /api/users/profile` with only the changed fields, then calls `ref.invalidate(currentUserProvider)` and shows a success `SnackBar`.
+
+### `UserProfile` model extension
+
+The Dart `UserProfile` class (returned by `UserService.getProfile()`) must include the four new fields:
+
+```dart
+final String? spendingPersonality;
+final String? incomeRange;
+final String? occupationType;
+final String? householdSize;
+```
+
+These are already returned by the API after the backend change; add them to the Dart model and `fromJson` parsing.
 
 ---
 
