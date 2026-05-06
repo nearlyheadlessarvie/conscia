@@ -16,6 +16,11 @@ import '../../screens/receipts/receipt_review_screen.dart';
 import '../../screens/receipts/receipt_scanner_screen.dart';
 import '../../screens/settings/service_status_screen.dart';
 import '../../screens/settings/settings_screen.dart';
+import '../../screens/insights/category_detail_screen.dart';
+import '../../screens/insights/category_list_screen.dart';
+import '../../screens/insights/insights_screen.dart';
+import '../../screens/insights/merchant_detail_screen.dart';
+import '../../screens/insights/merchant_list_screen.dart';
 import '../../screens/transactions/transaction_detail_screen.dart';
 import '../../screens/transactions/transaction_form_screen.dart';
 import '../../screens/transactions/transaction_list_screen.dart';
@@ -190,6 +195,28 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           final id = state.pathParameters['id']!;
           return ReceiptReviewScreen(receiptId: id);
         },
+      ),
+      GoRoute(
+        path: '/insights',
+        builder: (context, state) => const InsightsScreen(),
+      ),
+      GoRoute(
+        path: '/insights/merchants',
+        builder: (context, state) => const MerchantListScreen(),
+      ),
+      GoRoute(
+        path: '/insights/merchants/:merchant',
+        builder: (context, state) =>
+            MerchantDetailScreen(merchant: state.pathParameters['merchant']!),
+      ),
+      GoRoute(
+        path: '/insights/categories',
+        builder: (context, state) => const CategoryListScreen(),
+      ),
+      GoRoute(
+        path: '/insights/categories/:category',
+        builder: (context, state) =>
+            CategoryDetailScreen(category: state.pathParameters['category']!),
       ),
     ],
   );
