@@ -50,7 +50,7 @@ class RegretPromptCard extends StatelessWidget {
         alignment: Alignment.centerLeft,
         padding: const EdgeInsets.only(left: 24),
         decoration: BoxDecoration(
-          color: const Color(0xFF4CAF50).withOpacity(0.15),
+          color: const Color(0xFF4CAF50).withValues(alpha: 0.15),
           borderRadius: BorderRadius.circular(16),
         ),
         child: const Icon(Icons.check, color: Color(0xFF4CAF50)),
@@ -153,7 +153,7 @@ class _ActionButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: color.withOpacity(0.12),
+      color: color.withValues(alpha: 0.12),
       borderRadius: BorderRadius.circular(12),
       child: InkWell(
         onTap: onTap,

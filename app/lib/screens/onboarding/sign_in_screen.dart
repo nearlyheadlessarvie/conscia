@@ -1,13 +1,14 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/routing/app_router.dart';
 import '../../providers/auth_provider.dart';
+import 'apple_button.dart';
+import 'google_button.dart';
 
 class SignInScreen extends ConsumerStatefulWidget {
   const SignInScreen({super.key});
@@ -46,7 +47,8 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
       final prefs = await SharedPreferences.getInstance();
       final biometricEnabled = prefs.getBool('biometric_enabled') ?? false;
       if (mounted) {
-        setState(() => _biometricsAvailable = canCheck && isSupported && _lastEmail != null && biometricEnabled);
+        setState(() => _biometricsAvailable =
+            canCheck && isSupported && _lastEmail != null && biometricEnabled);
       }
       if (_biometricsAvailable) {
         _authenticateWithBiometrics();
@@ -71,7 +73,8 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
         _errorMessage = null;
       });
 
-      final token = await ref.read(secureStorageProvider).read(key: 'access_token');
+      final token =
+          await ref.read(secureStorageProvider).read(key: 'access_token');
       if (token != null && token.split('.').length == 3) {
         await ref.read(authProvider.notifier).loginWithStoredToken();
       } else {
@@ -268,42 +271,29 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
               ),
               const SizedBox(height: 24),
               if (defaultTargetPlatform == TargetPlatform.iOS) ...[
-                SizedBox(
-                  height: 48,
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.black,
-                      foregroundColor: Colors.white,
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(24),
-                      ),
-                    ),
-                    icon: const Icon(Icons.apple, size: 24),
-                    label: const Text('Sign in with Apple'),
-                    onPressed: _isLoading
-                        ? null
-                        : () async {
-                            setState(() {
-                              _isLoading = true;
-                              _errorMessage = null;
-                            });
-                            try {
-                              await ref.read(authProvider.notifier).signInWithApple();
-                            } catch (e) {
-                              if (!mounted) return;
-                              setState(() => _errorMessage = e.toString());
-                            } finally {
-                              if (mounted) setState(() => _isLoading = false);
-                            }
-                          },
-                  ),
+                AppleButton(
+                  isLoading: _isLoading,
+                  onPressed: () async {
+                    setState(() {
+                      _isLoading = true;
+                      _errorMessage = null;
+                    });
+                    try {
+                      await ref.read(authProvider.notifier).signInWithApple();
+                    } catch (e) {
+                      if (!mounted) return;
+                      setState(() => _errorMessage = e.toString());
+                    } finally {
+                      if (mounted) setState(() => _isLoading = false);
+                    }
+                  },
+                  buttonText: 'Sign in with Apple',
                 ),
                 const SizedBox(height: 12),
               ],
-              _GoogleSignInButton(
+              GoogleButton(
                 isLoading: _isLoading,
+                buttonText: 'Sign in with Google',
                 onPressed: () async {
                   setState(() {
                     _isLoading = true;
@@ -328,44 +318,6 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
               ),
             ],
           ),
-        ),
-      ),
-    );
-  }
-}
-
-class _GoogleSignInButton extends StatelessWidget {
-  final bool isLoading;
-  final VoidCallback? onPressed;
-
-  const _GoogleSignInButton({required this.isLoading, required this.onPressed});
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      height: 48,
-      width: double.infinity,
-      child: OutlinedButton(
-        style: OutlinedButton.styleFrom(
-          backgroundColor: Colors.white,
-          foregroundColor: const Color(0xFF1F1F1F),
-          side: const BorderSide(color: Color(0xFFDDDDDD)),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(24),
-          ),
-        ),
-        onPressed: isLoading ? null : onPressed,
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            SvgPicture.asset(
-              'assets/images/google_logo.svg',
-              width: 20,
-              height: 20,
-            ),
-            const SizedBox(width: 12),
-            const Text('Sign in with Google'),
-          ],
         ),
       ),
     );

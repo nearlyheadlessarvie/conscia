@@ -5,7 +5,7 @@ public static class TransactionCategories
     public static readonly IReadOnlyList<string> Expense = new[]
     {
         "Groceries", "Dining", "Transport", "Entertainment",
-        "Games & Recreations", "Shopping", "Health", "Bills",
+        "Gaming", "Shopping", "Health", "Bills",
         "Education", "Travel", "Coffee", "Subscriptions", "Gift", "Other"
     };
 

@@ -29,22 +29,24 @@ class _NoTransactionsPainter extends CustomPainter {
     final receiptWidth = unit * 4.5;
     final receiptHeight = unit * 6.0;
     final receiptRect = RRect.fromRectAndRadius(
-      Rect.fromCenter(center: center, width: receiptWidth, height: receiptHeight),
+      Rect.fromCenter(
+          center: center, width: receiptWidth, height: receiptHeight),
       Radius.circular(unit * 0.3),
     );
-    final receiptPaint = Paint()..color = const Color(0xFF1A237E).withOpacity(0.08);
+    final receiptPaint = Paint()
+      ..color = const Color(0xFF1A237E).withValues(alpha: 0.08);
     canvas.drawRRect(receiptRect, receiptPaint);
 
     // Receipt border
     final borderPaint = Paint()
-      ..color = const Color(0xFF1A237E).withOpacity(0.2)
+      ..color = const Color(0xFF1A237E).withValues(alpha: 0.2)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.5;
     canvas.drawRRect(receiptRect, borderPaint);
 
     // Receipt lines
     final linePaint = Paint()
-      ..color = const Color(0xFF1A237E).withOpacity(0.15)
+      ..color = const Color(0xFF1A237E).withValues(alpha: 0.15)
       ..strokeCap = StrokeCap.round
       ..strokeWidth = unit * 0.2;
     for (var i = 0; i < 4; i++) {
@@ -110,7 +112,7 @@ class _NoBudgetsPainter extends CustomPainter {
 
     // Outer circle (dotted)
     final dashPaint = Paint()
-      ..color = const Color(0xFF1A237E).withOpacity(0.25)
+      ..color = const Color(0xFF1A237E).withValues(alpha: 0.25)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2.0;
 
@@ -135,9 +137,9 @@ class _NoBudgetsPainter extends CustomPainter {
       ..strokeCap = StrokeCap.round;
 
     final segments = [
-      (0.0, 2.2, const Color(0xFFE65100).withOpacity(0.4)),
-      (2.2, 1.8, const Color(0xFF00BCD4).withOpacity(0.4)),
-      (4.0, 2.28, const Color(0xFF1A237E).withOpacity(0.3)),
+      (0.0, 2.2, const Color(0xFFE65100).withValues(alpha: 0.4)),
+      (2.2, 1.8, const Color(0xFF00BCD4).withValues(alpha: 0.4)),
+      (4.0, 2.28, const Color(0xFF1A237E).withValues(alpha: 0.3)),
     ];
 
     for (final (start, sweep, color) in segments) {
@@ -153,7 +155,7 @@ class _NoBudgetsPainter extends CustomPainter {
 
     // Divider lines from center
     final dividerPaint = Paint()
-      ..color = const Color(0xFF1A237E).withOpacity(0.12)
+      ..color = const Color(0xFF1A237E).withValues(alpha: 0.12)
       ..strokeWidth = 1.0;
     for (final angle in [0.0, 2.2, 4.0]) {
       canvas.drawLine(
@@ -202,12 +204,13 @@ class _NoMessagesPainter extends CustomPainter {
       Rect.fromCenter(center: center, width: bubbleWidth, height: bubbleHeight),
       Radius.circular(unit * 0.8),
     );
-    final bubblePaint = Paint()..color = const Color(0xFF1A237E).withOpacity(0.08);
+    final bubblePaint = Paint()
+      ..color = const Color(0xFF1A237E).withValues(alpha: 0.08);
     canvas.drawRRect(bubbleRect, bubblePaint);
 
     // Bubble border
     final borderPaint = Paint()
-      ..color = const Color(0xFF1A237E).withOpacity(0.2)
+      ..color = const Color(0xFF1A237E).withValues(alpha: 0.2)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.5;
     canvas.drawRRect(bubbleRect, borderPaint);
@@ -215,20 +218,22 @@ class _NoMessagesPainter extends CustomPainter {
     // Bubble tail
     final tailPath = Path()
       ..moveTo(center.dx - unit * 0.8, center.dy + bubbleHeight / 2 - 1)
-      ..lineTo(center.dx - unit * 1.2, center.dy + bubbleHeight / 2 + unit * 1.0)
+      ..lineTo(
+          center.dx - unit * 1.2, center.dy + bubbleHeight / 2 + unit * 1.0)
       ..lineTo(center.dx - unit * 0.1, center.dy + bubbleHeight / 2 - 1)
       ..close();
     canvas.drawPath(tailPath, bubblePaint);
     canvas.drawPath(
       tailPath,
       Paint()
-        ..color = const Color(0xFF1A237E).withOpacity(0.2)
+        ..color = const Color(0xFF1A237E).withValues(alpha: 0.2)
         ..style = PaintingStyle.stroke
         ..strokeWidth = 1.5,
     );
 
     // Three dots "..."
-    final dotPaint = Paint()..color = const Color(0xFF1A237E).withOpacity(0.3);
+    final dotPaint = Paint()
+      ..color = const Color(0xFF1A237E).withValues(alpha: 0.3);
     final dotRadius = unit * 0.35;
     final dotSpacing = unit * 1.2;
     for (var i = -1; i <= 1; i++) {

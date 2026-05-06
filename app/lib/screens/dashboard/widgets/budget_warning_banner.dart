@@ -19,10 +19,10 @@ class BudgetWarningBanner extends StatelessWidget {
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFFFF9800).withOpacity(0.15),
+        color: const Color(0xFFFF9800).withValues(alpha: 0.15),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: const Color(0xFFFF9800).withOpacity(0.3),
+          color: const Color(0xFFFF9800).withValues(alpha: 0.3),
         ),
       ),
       child: Row(

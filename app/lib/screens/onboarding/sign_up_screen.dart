@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -206,90 +205,6 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                 ),
               ),
               const SizedBox(height: 24),
-              Row(
-                children: [
-                  const Expanded(child: Divider()),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: Text(
-                      'or',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: colors.onSurfaceVariant,
-                          ),
-                    ),
-                  ),
-                  const Expanded(child: Divider()),
-                ],
-              ),
-              const SizedBox(height: 24),
-              if (defaultTargetPlatform == TargetPlatform.iOS) ...[
-                SizedBox(
-                  height: 48,
-                  child: OutlinedButton.icon(
-                    style: OutlinedButton.styleFrom(
-                      backgroundColor: Colors.black,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(24),
-                      ),
-                    ),
-                    icon: const Icon(Icons.apple, size: 24),
-                    label: const Text('Sign up with Apple'),
-                    onPressed: _isLoading
-                        ? null
-                        : () async {
-                            setState(() {
-                              _isLoading = true;
-                              _errorMessage = null;
-                            });
-                            try {
-                              await ref
-                                  .read(authProvider.notifier)
-                                  .signInWithApple();
-                            } catch (e) {
-                              if (!mounted) return;
-                              setState(() => _errorMessage = e.toString());
-                            } finally {
-                              if (mounted) setState(() => _isLoading = false);
-                            }
-                          },
-                  ),
-                ),
-                const SizedBox(height: 12),
-              ],
-              SizedBox(
-                height: 48,
-                child: OutlinedButton.icon(
-                  style: OutlinedButton.styleFrom(
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(24),
-                    ),
-                  ),
-                  icon: const Text('G',
-                      style:
-                          TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                  label: const Text('Sign up with Google'),
-                  onPressed: _isLoading
-                      ? null
-                      : () async {
-                          setState(() {
-                            _isLoading = true;
-                            _errorMessage = null;
-                          });
-                          try {
-                            await ref
-                                .read(authProvider.notifier)
-                                .signInWithGoogle();
-                          } catch (e) {
-                            if (!mounted) return;
-                            setState(() => _errorMessage = e.toString());
-                          } finally {
-                            if (mounted) setState(() => _isLoading = false);
-                          }
-                        },
-                ),
-              ),
-              const SizedBox(height: 16),
               Center(
                 child: TextButton(
                   onPressed: () => context.go('/onboarding/sign-in'),

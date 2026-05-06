@@ -86,12 +86,12 @@ class FinancialMoodCard extends StatelessWidget {
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
-              moodColor.withOpacity(0.1),
-              moodColor.withOpacity(0.05),
+              moodColor.withValues(alpha: 0.1),
+              moodColor.withValues(alpha: 0.05),
             ],
           ),
           border: Border.all(
-            color: moodColor.withOpacity(0.3),
+            color: moodColor.withValues(alpha: 0.3),
             width: 1,
           ),
         ),
@@ -141,7 +141,7 @@ class FinancialMoodCard extends StatelessWidget {
                     vertical: 8,
                   ),
                   decoration: BoxDecoration(
-                    color: moodColor.withOpacity(0.2),
+                    color: moodColor.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(

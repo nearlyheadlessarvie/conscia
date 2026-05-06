@@ -116,7 +116,7 @@ public static class TransactionCategories
 {
     public static readonly IReadOnlyList<string> Expense = new[]
     {
-        "Groceries", "Dining", "Transport", "Entertainment", "Games & Recreations",
+        "Groceries", "Dining", "Transport", "Entertainment", "Gaming",
         "Shopping", "Health", "Bills", "Education", "Travel", "Coffee",
         "Subscriptions", "Gift", "Other"
     };
@@ -212,7 +212,7 @@ enum SubscriptionTier { free, premium }
 
 // ── Categories ───────────────────────────────────────────────────
 const List<String> expenseCategories = [
-  'Groceries', 'Dining', 'Transport', 'Entertainment', 'Games & Recreations',
+  'Groceries', 'Dining', 'Transport', 'Entertainment', 'Gaming',
   'Shopping', 'Health', 'Bills', 'Education', 'Travel', 'Coffee',
   'Subscriptions', 'Gift', 'Other',
 ];

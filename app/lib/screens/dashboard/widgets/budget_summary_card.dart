@@ -46,10 +46,11 @@ class BudgetSummaryCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: colors.surface,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: colors.outlineVariant.withOpacity(0.5)),
+          border:
+              Border.all(color: colors.outlineVariant.withValues(alpha: 0.5)),
           boxShadow: [
             BoxShadow(
-              color: colors.shadow.withOpacity(0.05),
+              color: colors.shadow.withValues(alpha: 0.05),
               blurRadius: 8,
               offset: const Offset(0, 2),
             ),

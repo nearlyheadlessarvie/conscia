@@ -49,7 +49,7 @@ class AmountInputField extends StatelessWidget {
         hintStyle: GoogleFonts.poppins(
           fontSize: 32,
           fontWeight: FontWeight.w700,
-          color: colors.onSurfaceVariant.withOpacity(0.4),
+          color: colors.onSurfaceVariant.withValues(alpha: 0.4),
         ),
         prefixIcon: Padding(
           padding: const EdgeInsets.only(left: 16),
