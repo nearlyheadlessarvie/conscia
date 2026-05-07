@@ -106,10 +106,11 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
 
     try {
       final service = ref.read(transactionServiceProvider);
+      late final Transaction savedTransaction;
       if (_isEditing) {
-        await service.update(widget.transactionId!, dto);
+        savedTransaction = await service.update(widget.transactionId!, dto);
       } else {
-        await service.create(dto);
+        savedTransaction = await service.create(dto);
       }
 
       if (!mounted) return;
@@ -117,7 +118,7 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
       if (_isEditing) {
         ref.invalidate(transactionDetailProvider(widget.transactionId!));
       }
-      context.pop();
+      context.pop(savedTransaction);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content:

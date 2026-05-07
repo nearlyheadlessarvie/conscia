@@ -35,6 +35,7 @@ class _TransactionDetailScreenState
   bool _regretLevelInitialized = false;
   bool _loadingReflection = false;
   bool _deleting = false;
+  Transaction? _editedTransactionOverride;
 
   Color _amountColor(ColorScheme colors, bool isIncome) {
     if (!isIncome) {
@@ -149,7 +150,7 @@ class _TransactionDetailScreenState
           PopupMenuButton<String>(
             onSelected: (value) {
               if (value == 'edit') {
-                context.push('/transactions/${widget.transactionId}/edit');
+                _openEditScreen();
               } else if (value == 'delete') {
                 _confirmDelete();
               }
@@ -195,9 +196,23 @@ class _TransactionDetailScreenState
             ),
           ),
         ),
-        data: _buildContent,
+        data: (tx) => _buildContent(_editedTransactionOverride ?? tx),
       ),
     );
+  }
+
+  Future<void> _openEditScreen() async {
+    final updatedTransaction = await context.push<Transaction>(
+      '/transactions/${widget.transactionId}/edit',
+    );
+
+    if (!mounted || updatedTransaction == null) return;
+
+    setState(() {
+      _editedTransactionOverride = updatedTransaction;
+      _regretLevel = updatedTransaction.regretLevel;
+      _regretLevelInitialized = updatedTransaction.regretLevel != null;
+    });
   }
 
   Widget _buildContent(Transaction tx) {
