@@ -6,7 +6,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'auth_provider.dart';
 import '../core/network/dio_client.dart';
 import '../services/user_service.dart';
-export 'usage_provider.dart' show sharedPreferencesProvider;
 
 final userServiceProvider = Provider<UserService>((ref) {
   return UserService(ref.watch(dioProvider));

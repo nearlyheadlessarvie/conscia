@@ -2,7 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../services/location_assistance_service.dart';
-import 'user_provider.dart';
+import 'usage_provider.dart';
 
 class LocationAssistanceState {
   final bool isEnabled;

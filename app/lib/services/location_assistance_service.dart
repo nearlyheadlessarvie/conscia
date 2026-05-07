@@ -1,15 +1,21 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-class LocationAssistanceService {
-  Future<bool> requestPermission() async {
+abstract class LocationAssistanceService {
+  Future<bool> requestPermission();
+}
+
+class _UnsupportedLocationAssistanceService
+    implements LocationAssistanceService {
+  @override
+  Future<bool> requestPermission() {
     throw UnimplementedError(
-      'LocationAssistanceService.requestPermission must be overridden '
-      'with a platform-specific implementation.',
+      'LocationAssistanceService.requestPermission must be provided by '
+      'the app shell or a test override.',
     );
   }
 }
 
 final locationAssistanceServiceProvider =
     Provider<LocationAssistanceService>((ref) {
-  return LocationAssistanceService();
+  return _UnsupportedLocationAssistanceService();
 });
