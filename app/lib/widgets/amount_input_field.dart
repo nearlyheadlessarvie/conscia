@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import 'currency_badge.dart';
@@ -28,44 +29,70 @@ class AmountInputField extends StatelessWidget {
     final prefix = isExpense ? '-' : '+';
     final prefixColor = isExpense
         ? (colors.brightness == Brightness.light
-            ? const Color(0xFFE53935)
-            : const Color(0xFFEF9A9A))
+            ? const Color(0xFFD4483B)
+            : const Color(0xFFFFB4AB))
         : (colors.brightness == Brightness.light
-            ? const Color(0xFF4CAF50)
-            : const Color(0xFF81C784));
+            ? const Color(0xFF3C9C57)
+            : const Color(0xFFA4D8A7));
 
-    return TextField(
-      controller: controller,
-      onChanged: onChanged,
-      keyboardType: const TextInputType.numberWithOptions(decimal: true),
-      textAlign: TextAlign.center,
-      style: GoogleFonts.poppins(
-        fontSize: 32,
-        fontWeight: FontWeight.w700,
-        color: colors.onSurface,
-      ),
-      decoration: InputDecoration(
-        hintText: '0.00',
-        hintStyle: GoogleFonts.poppins(
-          fontSize: 32,
-          fontWeight: FontWeight.w700,
-          color: colors.onSurfaceVariant.withValues(alpha: 0.4),
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      decoration: BoxDecoration(
+        color: colors.surface,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(
+          color: colors.outlineVariant.withValues(alpha: 0.9),
         ),
-        prefixIcon: Padding(
-          padding: const EdgeInsets.only(left: 16),
-          child: Text(
+        boxShadow: [
+          BoxShadow(
+            color: colors.shadow.withValues(alpha: 0.04),
+            blurRadius: 18,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Text(
             prefix,
             style: GoogleFonts.poppins(
-              fontSize: 32,
+              fontSize: 28,
               fontWeight: FontWeight.w700,
               color: prefixColor,
             ),
           ),
-        ),
-        prefixIconConstraints: const BoxConstraints(minWidth: 0, minHeight: 0),
-        suffixIcon: Padding(
-          padding: const EdgeInsets.only(right: 16),
-          child: CurrencyBadge(
+          const SizedBox(width: 12),
+          Expanded(
+            child: TextField(
+              controller: controller,
+              onChanged: onChanged,
+              keyboardType:
+                  const TextInputType.numberWithOptions(decimal: true),
+              textAlign: TextAlign.center,
+              inputFormatters: [
+                FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
+              ],
+              style: GoogleFonts.poppins(
+                fontSize: 34,
+                fontWeight: FontWeight.w700,
+                letterSpacing: -1.2,
+                color: colors.onSurface,
+              ),
+              decoration: InputDecoration(
+                border: InputBorder.none,
+                isCollapsed: true,
+                hintText: '0.00',
+                hintStyle: GoogleFonts.poppins(
+                  fontSize: 34,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: -1.2,
+                  color: colors.onSurfaceVariant.withValues(alpha: 0.42),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          CurrencyBadge(
             currencyCode: currencyCode,
             onTap: () => CurrencyPickerSheet.show(
               context,
@@ -74,23 +101,7 @@ class AmountInputField extends StatelessWidget {
               onSelected: onCurrencyChanged,
             ),
           ),
-        ),
-        suffixIconConstraints: const BoxConstraints(minWidth: 0, minHeight: 0),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: colors.outline),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: colors.primary, width: 2),
-        ),
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 16,
-          vertical: 20,
-        ),
+        ],
       ),
     );
   }

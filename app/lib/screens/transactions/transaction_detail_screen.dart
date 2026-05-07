@@ -13,6 +13,7 @@ import '../../providers/usage_provider.dart';
 import '../../services/ai_service.dart';
 import '../../services/transaction_service.dart';
 import '../../screens/assistant/widgets/ai_message_bubble.dart';
+import '../../widgets/conscience_mark.dart';
 import '../../widgets/premium_upgrade_dialog.dart';
 import '../../widgets/skeleton_loader.dart';
 import 'widgets/transaction_tile.dart';
@@ -302,13 +303,12 @@ class _TransactionDetailScreenState
           const SizedBox(height: 24),
           SizedBox(
             width: double.infinity,
-            child: FilledButton.tonal(
+              child: FilledButton.tonal(
               onPressed: _loadingReflection ? null : _askAiReflection,
               child: _loadingReflection
                   ? const SizedBox(
-                      width: 24,
-                      height: 24,
-                      child: CircularProgressIndicator(strokeWidth: 2),
+                      height: 28,
+                      child: ConscienceLoader(size: 28),
                     )
                   : const Row(
                       mainAxisSize: MainAxisSize.min,
@@ -522,7 +522,12 @@ class _ReflectionSheetState extends ConsumerState<_ReflectionSheet> {
         ),
         Expanded(
           child: _loading
-              ? const Center(child: CircularProgressIndicator())
+              ? const Center(
+                  child: ConscienceLoader(
+                    size: 90,
+                    label: 'Reflection is making sense of the moment...',
+                  ),
+                )
               : _error != null
                   ? Center(
                       child: Padding(
