@@ -23,6 +23,11 @@ class LocationAssistancePromptSheet extends StatelessWidget {
               'Get nearby merchant and category suggestions while you add a transaction. Suggestions only help fill the form faster. You can still edit everything yourself.',
               style: textTheme.bodyMedium,
             ),
+            const SizedBox(height: 12),
+            Text(
+              'You can change this later in Settings.',
+              style: textTheme.bodyMedium,
+            ),
             const SizedBox(height: 24),
             Row(
               children: [

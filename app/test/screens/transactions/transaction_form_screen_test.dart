@@ -114,6 +114,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Turn on smart location help?'), findsOneWidget);
+    expect(find.text('You can change this later in Settings.'), findsOneWidget);
     expect(find.text('Not now'), findsOneWidget);
     expect(find.text('Turn on'), findsOneWidget);
   });
