@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/constants/app_icons.dart';
 import '../../core/constants/category_icons.dart';
+import '../../providers/alert_provider.dart';
+import '../../providers/budget_providers.dart';
 import '../../providers/exchange_rate_provider.dart';
 import '../../providers/location_assistance_provider.dart';
 import '../../providers/subscription_provider.dart';
@@ -138,6 +140,13 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
       } else {
         savedTransaction = await service.create(dto);
       }
+      final hasMatchingBudget =
+          ref.read(hasBudgetForCategoryProvider(_selectedCategory!));
+      if (_isExpense && !hasMatchingBudget) {
+        ref
+            .read(localAlertsProvider.notifier)
+            .addBudgetNudge(category: _selectedCategory!);
+      }
 
       if (!mounted) return;
       ref.invalidate(transactionListProvider);
@@ -147,8 +156,13 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
       context.pop(savedTransaction);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content:
-              Text(_isEditing ? 'Transaction updated' : 'Transaction added!'),
+          content: Text(
+            _isExpense && !hasMatchingBudget
+                ? '${_isEditing ? 'Transaction updated' : 'Transaction added!'} Budget nudge saved for ${_selectedCategory!}.'
+                : _isEditing
+                    ? 'Transaction updated'
+                    : 'Transaction added!',
+          ),
         ),
       );
     } catch (e) {

@@ -131,3 +131,13 @@ final budgetFormProvider =
     StateNotifierProvider<BudgetFormNotifier, BudgetFormState>(
   (_) => BudgetFormNotifier(),
 );
+
+final hasBudgetForCategoryProvider = Provider.family<bool, String>((ref, category) {
+  final normalizedCategory = category.trim().toLowerCase();
+  if (normalizedCategory.isEmpty) return false;
+
+  final budgets = ref.watch(budgetListProvider).budgets;
+  return budgets.any(
+    (budget) => budget.category.trim().toLowerCase() == normalizedCategory,
+  );
+});

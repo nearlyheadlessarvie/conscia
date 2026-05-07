@@ -1,12 +1,18 @@
 import 'package:conscia_app/providers/category_frequency_provider.dart';
+import 'package:conscia_app/providers/alert_provider.dart';
+import 'package:conscia_app/providers/budget_providers.dart';
 import 'package:conscia_app/providers/subscription_provider.dart';
+import 'package:conscia_app/providers/transaction_providers.dart';
 import 'package:conscia_app/providers/usage_provider.dart';
 import 'package:conscia_app/providers/user_provider.dart';
 import 'package:conscia_app/screens/transactions/transaction_form_screen.dart';
 import 'package:conscia_app/screens/transactions/widgets/quick_preset_chips.dart';
+import 'package:conscia_app/services/budget_service.dart';
 import 'package:conscia_app/services/location_assistance_service.dart';
 import 'package:conscia_app/services/subscription_service.dart';
+import 'package:conscia_app/services/transaction_service.dart';
 import 'package:conscia_app/services/user_service.dart';
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -33,10 +39,41 @@ class _FakeLocationAssistanceService extends LocationAssistanceService {
   getTransactionSuggestions() => suggestions;
 }
 
-Future<void> _pumpTransactionForm(
+class _RecordingTransactionService extends TransactionService {
+  _RecordingTransactionService() : super(Dio());
+
+  CreateTransactionDto? lastCreated;
+
+  @override
+  Future<Transaction> create(CreateTransactionDto dto) async {
+    lastCreated = dto;
+    return Transaction(
+      id: 'tx-1',
+      amount: dto.amount,
+      currencyCode: dto.currencyCode,
+      category: dto.category,
+      description: dto.merchant,
+      type: dto.type,
+      date: dto.date,
+    );
+  }
+}
+
+class _StaticBudgetService extends BudgetService {
+  _StaticBudgetService(this.budgets) : super(Dio());
+
+  final List<Budget> budgets;
+
+  @override
+  Future<List<Budget>> list() async => budgets;
+}
+
+Future<ProviderContainer> _pumpTransactionForm(
   WidgetTester tester, {
   SharedPreferences? prefs,
   LocationAssistanceService? locationService,
+  TransactionService? transactionService,
+  List<Budget> budgets = const [],
 }) async {
   final resolvedPrefs = prefs ??
       await () async {
@@ -47,39 +84,49 @@ Future<void> _pumpTransactionForm(
         return SharedPreferences.getInstance();
       }();
 
+  final container = ProviderContainer(
+    overrides: [
+      categoryFrequencyProvider.overrideWithValue(
+        ['Coffee', 'Dining', 'Shopping', 'Gaming', 'Travel'],
+      ),
+      subscriptionProvider.overrideWith(
+        (ref) async => const SubscriptionStatus(
+          tier: 'free',
+          isPremium: false,
+        ),
+      ),
+      currentUserProvider.overrideWith(
+        (ref) async => UserProfile(
+          id: 'user-1',
+          email: 'tx@example.com',
+          currencyCode: 'USD',
+          locale: 'en_US',
+          createdAt: DateTime(2026),
+          hasCompletedOnboarding: true,
+        ),
+      ),
+      sharedPreferencesProvider.overrideWithValue(resolvedPrefs),
+      locationAssistanceServiceProvider.overrideWithValue(
+        locationService ?? _FakeLocationAssistanceService(permissionGranted: true),
+      ),
+      transactionServiceProvider.overrideWithValue(
+        transactionService ?? _RecordingTransactionService(),
+      ),
+      budgetServiceProvider.overrideWithValue(_StaticBudgetService(budgets)),
+    ],
+  );
+  addTearDown(container.dispose);
+
   await tester.pumpWidget(
-    ProviderScope(
-      overrides: [
-        categoryFrequencyProvider.overrideWithValue(
-          ['Coffee', 'Dining', 'Shopping', 'Gaming', 'Travel'],
-        ),
-        subscriptionProvider.overrideWith(
-          (ref) async => const SubscriptionStatus(
-            tier: 'free',
-            isPremium: false,
-          ),
-        ),
-        currentUserProvider.overrideWith(
-          (ref) async => UserProfile(
-            id: 'user-1',
-            email: 'tx@example.com',
-            currencyCode: 'USD',
-            locale: 'en_US',
-            createdAt: DateTime(2026),
-            hasCompletedOnboarding: true,
-          ),
-        ),
-        sharedPreferencesProvider.overrideWithValue(resolvedPrefs),
-        locationAssistanceServiceProvider.overrideWithValue(
-          locationService ??
-              _FakeLocationAssistanceService(permissionGranted: true),
-        ),
-      ],
+    UncontrolledProviderScope(
+      container: container,
       child: const MaterialApp(
         home: TransactionFormScreen(),
       ),
     ),
   );
+
+  return container;
 }
 
 void main() {
@@ -302,5 +349,41 @@ void main() {
     expect(find.text('Nearby merchants'), findsOneWidget);
     expect(find.text('Corner Bakery'), findsOneWidget);
     expect(find.text('Likely categories'), findsNothing);
+  });
+
+  testWidgets('saving an unbudgeted expense creates a local budget alert', (
+    tester,
+  ) async {
+    final transactionService = _RecordingTransactionService();
+
+    final container = await _pumpTransactionForm(
+      tester,
+      transactionService: transactionService,
+      budgets: const [
+        Budget(
+          id: 'budget-1',
+          category: 'Groceries',
+          monthlyLimit: 300,
+          spent: 25,
+          currencyCode: 'USD',
+          percentage: 0.08,
+          isOverBudget: false,
+        ),
+      ],
+    );
+
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextField).first, '12.50');
+    await tester.tap(find.text('Coffee'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Save Transaction'));
+    await tester.pumpAndSettle();
+
+    expect(transactionService.lastCreated, isNotNull);
+    final alerts = container.read(localAlertsProvider);
+    expect(alerts, hasLength(1));
+    expect(alerts.first.type, 'budget_nudge');
+    expect(alerts.first.title, 'No budget for Coffee yet');
   });
 }

@@ -15,6 +15,7 @@ import '../../core/routing/app_router.dart';
 import '../../core/theme/app_colors.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/health_provider.dart';
+import '../../providers/location_assistance_provider.dart';
 import '../../providers/subscription_provider.dart';
 import '../../providers/user_provider.dart';
 import '../../widgets/currency_picker_sheet.dart';
@@ -96,6 +97,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final textTheme = theme.textTheme;
     final userAsync = ref.watch(currentUserProvider);
     final subAsync = ref.watch(subscriptionProvider);
+    final locationAssistance = ref.watch(locationAssistanceProvider);
 
     return Scaffold(
       appBar: AppBar(title: const Text('Settings')),
@@ -162,6 +164,27 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               value: _biometricEnabled,
               onChanged: _toggleBiometric,
             ),
+          SwitchListTile(
+            secondary: const Icon(Icons.location_searching_outlined),
+            title: const Text('Smart location suggestions'),
+            subtitle: Text(
+              [
+                'Currently ${locationAssistance.isEnabled ? 'on' : 'off'} for nearby merchant and category suggestions.',
+                if (!locationAssistance.isEnabled &&
+                    locationAssistance.permissionDenied)
+                  'System location permission may also need to be enabled.',
+              ].join(' '),
+            ),
+            value: locationAssistance.isEnabled,
+            onChanged: (value) async {
+              final notifier = ref.read(locationAssistanceProvider.notifier);
+              if (value) {
+                await notifier.enableFromPrompt();
+              } else {
+                await notifier.declinePrompt();
+              }
+            },
+          ),
           const Divider(),
 
           // ── Budgets ──────────────────────────────────────────

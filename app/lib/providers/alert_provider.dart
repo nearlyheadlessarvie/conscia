@@ -49,3 +49,45 @@ final alertsProvider = FutureProvider<List<AppAlert>>((ref) async {
     rethrow;
   }
 });
+
+class LocalAlertsNotifier extends StateNotifier<List<AppAlert>> {
+  LocalAlertsNotifier() : super(const []);
+
+  void addBudgetNudge({required String category}) {
+    final now = DateTime.now();
+    state = [
+      AppAlert(
+        id: 'budget-nudge-${category.toLowerCase()}-${now.microsecondsSinceEpoch}',
+        type: 'budget_nudge',
+        title: 'No budget for $category yet',
+        message:
+            'You logged an expense in $category without a matching budget. Add one in Settings whenever you are ready.',
+        isDismissed: false,
+        createdAt: now,
+      ),
+      ...state,
+    ];
+  }
+
+  void dismiss(String id) {
+    state = [
+      for (final alert in state)
+        if (alert.id == id)
+          AppAlert(
+            id: alert.id,
+            type: alert.type,
+            title: alert.title,
+            message: alert.message,
+            isDismissed: true,
+            createdAt: alert.createdAt,
+          )
+        else
+          alert,
+    ];
+  }
+}
+
+final localAlertsProvider =
+    StateNotifierProvider<LocalAlertsNotifier, List<AppAlert>>(
+  (_) => LocalAlertsNotifier(),
+);
