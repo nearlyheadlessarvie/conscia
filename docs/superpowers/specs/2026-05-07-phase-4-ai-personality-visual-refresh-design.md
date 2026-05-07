@@ -499,5 +499,110 @@ The intensity setting should be stored like other user-facing preferences so it 
 - subtle reflection loader refresh
 - shared amount input redesign
 - simplified premium conscience motif family
+- full first-pass custom category icon family
 - app icon direction update brief
 - marketing-aligned visual language starter
+
+## Category Icon Family Expansion
+
+This phase should also define the first full custom Conscia category icon family in one pass.
+
+### Why
+
+Right now, category surfaces rely mostly on platform-native iconography. That is fast and functional, but it makes the app feel more generic than the refreshed AI and brand direction.
+
+Since Conscia is moving toward a stronger, more memorable visual identity, category icons should become part of that identity too.
+
+The category system is one of the most repeated visual languages in the product:
+
+- transaction chips
+- category pickers
+- budget cards
+- dashboard summaries
+- assistant category selection
+- marketing/site storytelling later
+
+Because it appears so often, a custom family here will have outsized impact.
+
+### Scope
+
+Do all supported transaction categories in one pass.
+
+Do not stop at only the top few categories.
+
+The result should be a complete first-pass icon family covering the app’s existing category taxonomy, so users do not see a mix of polished custom icons for some categories and fallback generic icons for the rest.
+
+### Style
+
+The category family should use:
+
+- slightly more illustrative mini-icons
+- stronger personality than plain glyphs
+- disciplined silhouettes
+- premium, compact readability at mobile sizes
+
+These are not mascot illustrations or detailed sticker art.
+
+They should feel:
+
+- more expressive than Material/Cupertino defaults
+- simpler than marketing illustrations
+- crisp in chips, cards, and lists
+
+### Platform Strategy
+
+The icon family should adapt to platform context as much as practical while preserving the same conceptual metaphor.
+
+Recommended rule:
+
+- same core concept per category on both platforms
+- Android rendering can be slightly bolder / more Material-friendly
+- iOS rendering can be slightly cleaner / lighter / more Cupertino-friendly
+
+This should not become two unrelated icon sets.
+
+It should feel like:
+
+- one shared Conscia family
+- with platform-tuned execution
+
+### What Stays Platform-Native
+
+Keep platform-native icons for utility/system actions, including examples like:
+
+- back
+- close
+- calendar
+- chevrons
+- overflow
+- settings
+- share
+- edit
+
+### What Becomes Conscia-Owned
+
+Use the custom Conscia system for:
+
+- category icons
+- the conscience motif family
+- app icon
+- AI loaders / clash states
+- other brand-defining AI surfaces
+
+### Quality Bar
+
+Each category icon should:
+
+- read instantly at small sizes
+- work on both light and dark-adjacent surfaces if needed
+- feel related to the rest of the family
+- avoid becoming visually noisy when shown in repeated rows
+
+### Design Output
+
+The visual refresh should include a category-icon sheet showing:
+
+- all categories
+- platform-tuned examples where relevant
+- color/shape consistency rules
+- example usage in chips, cards, and list rows
