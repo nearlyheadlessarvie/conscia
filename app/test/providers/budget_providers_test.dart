@@ -19,6 +19,21 @@ class _StaticBudgetService extends BudgetService {
 }
 
 void main() {
+  test('budget json percentUsed is normalized from percent to ratio', () {
+    final budget = Budget.fromJson({
+      'id': 'budget-1',
+      'category': 'Shopping',
+      'monthlyLimit': 10654.65,
+      'currentSpend': 1000.0,
+      'currencyCode': 'PHP',
+      'percentUsed': 9.38,
+      'isOverBudget': false,
+    });
+
+    expect(budget.percentage, closeTo(0.0938, 0.00001));
+    expect(budget.isOverBudget, isFalse);
+  });
+
   ProviderContainer buildContainer(_StaticBudgetService service) {
     return ProviderContainer(
       overrides: [
