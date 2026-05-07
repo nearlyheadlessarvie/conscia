@@ -95,16 +95,15 @@ class _AboutYouScreenState extends ConsumerState<AboutYouScreen> {
                 spacing: 8,
                 runSpacing: 8,
                 children: [
-                  _chip('employed', 'Employed', AppIcons.employed, true),
+                  _chip('employed', 'Employed', true),
                   _chip(
                     'self_employed',
                     'Self-employed',
-                    AppIcons.selfEmployed,
                     true,
                   ),
-                  _chip('student', 'Student', AppIcons.student, true),
-                  _chip('retired', 'Retired', AppIcons.retired, true),
-                  _chip('other', 'Other', AppIcons.other, true),
+                  _chip('student', 'Student', true),
+                  _chip('retired', 'Retired', true),
+                  _chip('other', 'Other', true),
                 ],
               ),
               const SizedBox(height: 28),
@@ -119,10 +118,10 @@ class _AboutYouScreenState extends ConsumerState<AboutYouScreen> {
                 spacing: 8,
                 runSpacing: 8,
                 children: [
-                  _chip('solo', 'Just me', AppIcons.person, false),
-                  _chip('couple', 'Couple', AppIcons.couple, false),
-                  _chip('family', 'Family', AppIcons.family, false),
-                  _chip('shared', 'Shared', AppIcons.sharedHome, false),
+                  _chip('solo', 'Just me', false),
+                  _chip('couple', 'Couple', false),
+                  _chip('family', 'Family', false),
+                  _chip('shared', 'Shared', false),
                 ],
               ),
               const SizedBox(height: 32),
@@ -146,10 +145,10 @@ class _AboutYouScreenState extends ConsumerState<AboutYouScreen> {
     );
   }
 
-  Widget _chip(String value, String label, IconData icon, bool isOccupation) {
+  Widget _chip(String value, String label, bool isOccupation) {
     final selected = isOccupation ? _occupation == value : _household == value;
     return ChoiceChip(
-      avatar: Icon(icon, size: 16),
+      avatar: AppIcons.profileBadge(value, selected: selected),
       label: Text(label),
       selected: selected,
       onSelected: (_) {

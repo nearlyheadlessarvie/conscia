@@ -323,4 +323,37 @@ void main() {
     expect(find.text('home-screen'), findsOneWidget);
     expect(userService.updates.single['hasCompletedOnboarding'], true);
   });
+
+  testWidgets('about you uses branded chip avatars instead of raw icons', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          currentUserProvider.overrideWith(
+            (ref) async => UserProfile(
+              id: 'user-1',
+              email: 'user@example.com',
+              currencyCode: 'USD',
+              locale: 'en_US',
+              createdAt: DateTime(2026),
+              hasCompletedOnboarding: false,
+            ),
+          ),
+          userServiceProvider.overrideWithValue(_RecordingUserService()),
+        ],
+        child: const MaterialApp(
+          home: AboutYouScreen(),
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    final chips = tester.widgetList<ChoiceChip>(find.byType(ChoiceChip)).toList();
+
+    expect(chips, isNotEmpty);
+    expect(chips.first.avatar, isNotNull);
+    expect(chips.first.avatar, isNot(isA<Icon>()));
+  });
 }

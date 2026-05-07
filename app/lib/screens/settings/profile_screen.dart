@@ -101,7 +101,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       textTheme,
                       'saver',
                       'Saver',
-                      AppIcons.saver,
                     ),
                     const SizedBox(width: 8),
                     _personalityCard(
@@ -109,7 +108,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       textTheme,
                       'balanced',
                       'Balanced',
-                      AppIcons.balanced,
                     ),
                     const SizedBox(width: 8),
                     _personalityCard(
@@ -117,7 +115,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       textTheme,
                       'free_spender',
                       'Free spender',
-                      AppIcons.freeSpender,
                     ),
                   ],
                 ),
@@ -135,16 +132,15 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   spacing: 8,
                   runSpacing: 8,
                   children: [
-                    _choiceChip('employed', 'Employed', AppIcons.employed, true),
+                    _choiceChip('employed', 'Employed', true),
                     _choiceChip(
                       'self_employed',
                       'Self-employed',
-                      AppIcons.selfEmployed,
                       true,
                     ),
-                    _choiceChip('student', 'Student', AppIcons.student, true),
-                    _choiceChip('retired', 'Retired', AppIcons.retired, true),
-                    _choiceChip('other', 'Other', AppIcons.other, true),
+                    _choiceChip('student', 'Student', true),
+                    _choiceChip('retired', 'Retired', true),
+                    _choiceChip('other', 'Other', true),
                   ],
                 ),
                 const SizedBox(height: 24),
@@ -154,10 +150,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   spacing: 8,
                   runSpacing: 8,
                   children: [
-                    _choiceChip('solo', 'Just me', AppIcons.person, false),
-                    _choiceChip('couple', 'Couple', AppIcons.couple, false),
-                    _choiceChip('family', 'Family', AppIcons.family, false),
-                    _choiceChip('shared', 'Shared', AppIcons.sharedHome, false),
+                    _choiceChip('solo', 'Just me', false),
+                    _choiceChip('couple', 'Couple', false),
+                    _choiceChip('family', 'Family', false),
+                    _choiceChip('shared', 'Shared', false),
                   ],
                 ),
                 const SizedBox(height: 32),
@@ -202,7 +198,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     TextTheme textTheme,
     String value,
     String label,
-    IconData icon,
   ) {
     final selected = _personality == value;
     return Expanded(
@@ -222,7 +217,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           ),
           child: Column(
             children: [
-              Icon(icon),
+              AppIcons.spendingStyleBadge(
+                value,
+                size: 24,
+                selected: selected,
+              ),
               const SizedBox(height: 6),
               Text(
                 label,
@@ -275,12 +274,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   Widget _choiceChip(
     String value,
     String label,
-    IconData icon,
     bool isOccupation,
   ) {
     final selected = isOccupation ? _occupation == value : _household == value;
     return ChoiceChip(
-      avatar: Icon(icon, size: 16),
+      avatar: AppIcons.profileBadge(value, selected: selected),
       label: Text(label),
       selected: selected,
       onSelected: (_) {

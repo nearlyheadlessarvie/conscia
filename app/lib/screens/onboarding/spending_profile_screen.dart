@@ -120,21 +120,18 @@ class _SpendingProfileScreenState extends ConsumerState<SpendingProfileScreen> {
                     context,
                     value: 'saver',
                     label: 'Saver',
-                    icon: AppIcons.saver,
                   ),
                   const SizedBox(width: 8),
                   _personalityCard(
                     context,
                     value: 'balanced',
                     label: 'Balanced',
-                    icon: AppIcons.balanced,
                   ),
                   const SizedBox(width: 8),
                   _personalityCard(
                     context,
                     value: 'free_spender',
                     label: 'Free spender',
-                    icon: AppIcons.freeSpender,
                   ),
                 ],
               ),
@@ -211,7 +208,6 @@ class _SpendingProfileScreenState extends ConsumerState<SpendingProfileScreen> {
     BuildContext context, {
     required String value,
     required String label,
-    required IconData icon,
   }) {
     final colors = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
@@ -232,7 +228,11 @@ class _SpendingProfileScreenState extends ConsumerState<SpendingProfileScreen> {
           ),
           child: Column(
             children: [
-              Icon(icon),
+              AppIcons.spendingStyleBadge(
+                value,
+                size: 24,
+                selected: selected,
+              ),
               const SizedBox(height: 6),
               Text(
                 label,
