@@ -135,10 +135,8 @@ else
 builder.Services.AddScoped<ITransactionRepository, TransactionRepository>();
 builder.Services.AddScoped<IOutboxEventRepository, OutboxEventRepository>();
 builder.Services.AddScoped<IAIInteractionRepository, AIInteractionRepository>();
-builder.Services.AddScoped<IBehaviorProfileRepository, BehaviorProfileRepository>();
 builder.Services.AddScoped<IWeeklyInsightsRepository, WeeklyInsightsRepository>();
 builder.Services.AddScoped<IInAppAlertRepository, InAppAlertRepository>();
-builder.Services.AddScoped<ISessionCacheRepository, SessionCacheRepository>();
 
 // --- Store Validation ---
 builder.Services.Configure<AppleStoreOptions>(builder.Configuration.GetSection(AppleStoreOptions.SectionName));

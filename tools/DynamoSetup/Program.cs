@@ -88,21 +88,6 @@ var tables = new (string Name, CreateTableRequest Request)[]
         BillingMode = BillingMode.PAY_PER_REQUEST
     }),
 
-    // ---------------- BEHAVIOR PROFILE ----------------
-    ("BehaviorProfiles", new CreateTableRequest
-    {
-        TableName = "BehaviorProfiles",
-        KeySchema =
-        [
-            new("PK", KeyType.HASH)
-        ],
-        AttributeDefinitions =
-        [
-            new("PK", ScalarAttributeType.S)
-        ],
-        BillingMode = BillingMode.PAY_PER_REQUEST
-    }),
-
     // ---------------- OUTBOX ----------------
     ("OutboxEvents", new CreateTableRequest
     {
@@ -184,20 +169,6 @@ var tables = new (string Name, CreateTableRequest Request)[]
         BillingMode = BillingMode.PAY_PER_REQUEST
     }),
 
-    // ---------------- SESSION CACHE ----------------
-    ("SessionCache", new CreateTableRequest
-    {
-        TableName = "SessionCache",
-        KeySchema =
-        [
-            new("PK", KeyType.HASH)
-        ],
-        AttributeDefinitions =
-        [
-            new("PK", ScalarAttributeType.S)
-        ],
-        BillingMode = BillingMode.PAY_PER_REQUEST
-    }),
 };
 
 var existingTables = await client.ListTablesAsync();
@@ -215,7 +186,7 @@ foreach (var (name, request) in tables)
         await client.CreateTableAsync(request);
         Console.WriteLine($"  Created table '{name}'");
 
-        if (name is "SessionCache" or "InAppAlerts" or "OutboxEvents")
+        if (name is "InAppAlerts" or "OutboxEvents")
         {
             await client.UpdateTimeToLiveAsync(new UpdateTimeToLiveRequest
             {

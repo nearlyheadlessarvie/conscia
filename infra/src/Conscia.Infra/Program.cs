@@ -45,8 +45,6 @@ sealed class Program
             UserPoolClient = auth.UserPoolClient,
             TransactionsTable = database.TransactionsTable,
             AiInteractionsTable = database.AiInteractionsTable,
-            BehaviorProfilesTable = database.BehaviorProfilesTable,
-            SessionCacheTable = database.SessionCacheTable,
             OutboxEventsTable = database.OutboxEventsTable,
             InAppAlertsTable = database.InAppAlertsTable,
             WeeklyInsightsTable = database.WeeklyInsightsTable,
