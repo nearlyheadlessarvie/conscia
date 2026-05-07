@@ -25,7 +25,11 @@ public static class UserEndpoints
                     user.Email,
                     user.PreferredCurrency,
                     user.Locale,
-                    user.CreatedAt
+                    user.CreatedAt,
+                    user.SpendingPersonality,
+                    user.IncomeRange,
+                    user.OccupationType,
+                    user.HouseholdSize,
                 });
         }).WithName("GetCurrentUser");
 
@@ -40,13 +44,18 @@ public static class UserEndpoints
                 return Results.ValidationProblem(validation.ToDictionary());
 
             var userId = ctx.User.GetUserId();
-            var user = await svc.UpdateProfileAsync(userId, dto.PreferredCurrency, dto.Locale, ctx.RequestAborted);
+            var user = await svc.UpdateProfileAsync(userId, dto, ctx.RequestAborted);
             return Results.Ok(new
             {
                 user.Id,
                 user.Email,
                 user.PreferredCurrency,
-                user.Locale
+                user.Locale,
+                user.CreatedAt,
+                user.SpendingPersonality,
+                user.IncomeRange,
+                user.OccupationType,
+                user.HouseholdSize,
             });
         }).WithName("UpdateCurrentUser");
 
