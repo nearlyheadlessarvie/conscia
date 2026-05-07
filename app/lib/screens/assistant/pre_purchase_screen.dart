@@ -76,12 +76,7 @@ class _PrePurchaseScreenState extends ConsumerState<PrePurchaseScreen>
     final state = ref.read(locationAssistanceProvider);
     if (!state.shouldPromptOnFeatureOpen) return;
 
-    final accepted = await showModalBottomSheet<bool>(
-      context: context,
-      isDismissible: false,
-      enableDrag: false,
-      builder: (context) => const LocationAssistancePromptSheet(),
-    );
+    final accepted = await LocationAssistancePromptSheet.show(context);
 
     if (!mounted) return;
 
@@ -310,7 +305,8 @@ class _PrePurchaseScreenState extends ConsumerState<PrePurchaseScreen>
 
           // Category dropdown
           DropdownButtonFormField<String>(
-            initialValue: _selectedCategory,
+            // ignore: deprecated_member_use
+            value: _selectedCategory,
             decoration: const InputDecoration(
               labelText: 'Category',
             ),

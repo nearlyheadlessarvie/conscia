@@ -127,6 +127,12 @@ void main() {
 
     expect(find.text('Turn on smart location help?'), findsOneWidget);
     expect(find.text('You can change this later in Settings.'), findsOneWidget);
+    expect(
+      find.text(
+        'Get nearby merchant and category suggestions wherever you need a little guidance. Suggestions only help fill things faster. You can still edit everything yourself.',
+      ),
+      findsOneWidget,
+    );
     expect(find.text('Not now'), findsOneWidget);
     expect(find.text('Turn on'), findsOneWidget);
   });

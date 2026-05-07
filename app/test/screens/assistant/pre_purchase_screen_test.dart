@@ -93,6 +93,12 @@ void main() {
 
     expect(find.text('Turn on smart location help?'), findsOneWidget);
     expect(find.text('You can change this later in Settings.'), findsOneWidget);
+    expect(
+      find.text(
+        'Get nearby merchant and category suggestions wherever you need a little guidance. Suggestions only help fill things faster. You can still edit everything yourself.',
+      ),
+      findsOneWidget,
+    );
     await tester.tap(find.text('Not now'));
     await tester.pumpAndSettle();
 
@@ -149,6 +155,14 @@ void main() {
     await tester.ensureVisible(find.widgetWithText(ActionChip, 'Groceries'));
     await tester.tap(find.widgetWithText(ActionChip, 'Groceries'));
     await tester.pumpAndSettle();
+
+    final dropdownButton = tester.widget<DropdownButton<String>>(
+      find.descendant(
+        of: find.byType(DropdownButtonFormField<String>),
+        matching: find.byType(DropdownButton<String>),
+      ),
+    );
+    expect(dropdownButton.value, 'Groceries');
 
     expect(
       find.descendant(

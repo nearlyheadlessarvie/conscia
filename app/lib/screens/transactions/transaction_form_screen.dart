@@ -67,12 +67,7 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
     final state = ref.read(locationAssistanceProvider);
     if (!state.shouldPromptOnFeatureOpen) return;
 
-    final accepted = await showModalBottomSheet<bool>(
-      context: context,
-      isDismissible: false,
-      enableDrag: false,
-      builder: (context) => const LocationAssistancePromptSheet(),
-    );
+    final accepted = await LocationAssistancePromptSheet.show(context);
 
     if (!mounted) return;
 

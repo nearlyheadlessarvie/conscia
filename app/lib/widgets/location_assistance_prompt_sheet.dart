@@ -3,6 +3,15 @@ import 'package:flutter/material.dart';
 class LocationAssistancePromptSheet extends StatelessWidget {
   const LocationAssistancePromptSheet({super.key});
 
+  static Future<bool?> show(BuildContext context) {
+    return showModalBottomSheet<bool>(
+      context: context,
+      isDismissible: false,
+      enableDrag: false,
+      builder: (context) => const LocationAssistancePromptSheet(),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
@@ -20,7 +29,7 @@ class LocationAssistancePromptSheet extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             Text(
-              'Get nearby merchant and category suggestions while you add a transaction. Suggestions only help fill the form faster. You can still edit everything yourself.',
+              'Get nearby merchant and category suggestions wherever you need a little guidance. Suggestions only help fill things faster. You can still edit everything yourself.',
               style: textTheme.bodyMedium,
             ),
             const SizedBox(height: 12),
