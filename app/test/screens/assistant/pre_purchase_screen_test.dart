@@ -126,6 +126,25 @@ void main() {
     expect(find.text('Salary'), findsNothing);
     expect(find.text('More categories'), findsOneWidget);
     expect(find.text('Health'), findsWidgets);
+
+    await tester.tap(find.text('More categories'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(BottomSheet), findsOneWidget);
+    expect(find.text('Groceries'), findsWidgets);
+
+    await tester.tap(find.widgetWithText(ChoiceChip, 'Groceries').last);
+    await tester.pumpAndSettle();
+
+    expect(find.byType(BottomSheet), findsNothing);
+    expect(
+      find.descendant(
+        of: find.byType(InputChip),
+        matching: find.text('Groceries'),
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('Health'), findsNothing);
   });
 
   testWidgets('pre-purchase shows first-use location prompt only when needed',

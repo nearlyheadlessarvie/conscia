@@ -15,8 +15,7 @@ import '../../services/transaction_service.dart';
 import '../../widgets/amount_input_field.dart';
 import '../../widgets/location_assistance_prompt_sheet.dart';
 import '../../widgets/skeleton_loader.dart';
-import 'widgets/category_picker.dart';
-import 'widgets/quick_preset_chips.dart';
+import 'widgets/transaction_style_category_selector.dart';
 
 class TransactionFormScreen extends ConsumerStatefulWidget {
   final String? transactionId;
@@ -204,29 +203,6 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
     }
   }
 
-  Future<void> _showCategoryPickerSheet() async {
-    await showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      builder: (context) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-          child: SingleChildScrollView(
-            child: CategoryPicker(
-              selected: _selectedCategory,
-              isExpense: _isExpense,
-              maxVisible: 100,
-              onSelected: (cat) {
-                setState(() => _selectedCategory = cat);
-                Navigator.of(context).pop();
-              },
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
@@ -367,44 +343,13 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
                 );
               },
             ),
-            Row(
-              children: [
-                Text(
-                  'Category',
-                  style: textTheme.titleSmall?.copyWith(
-                    color: colors.onSurfaceVariant,
-                  ),
-                ),
-                const Spacer(),
-                TextButton.icon(
-                  onPressed: _showCategoryPickerSheet,
-                  icon: Icon(AppIcons.add, size: 16),
-                  label: const Text('More categories'),
-                ),
-              ],
+            TransactionStyleCategorySelector(
+              selectedCategory: _selectedCategory,
+              isExpense: _isExpense,
+              onCategorySelected: (category) {
+                setState(() => _selectedCategory = category);
+              },
             ),
-            if (_selectedCategory != null) ...[
-              const SizedBox(height: 8),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: InputChip(
-                  avatar: Icon(
-                    CategoryIcons.forCategory(_selectedCategory!),
-                    size: 18,
-                  ),
-                  label: Text(_selectedCategory!),
-                  onDeleted: () => setState(() => _selectedCategory = null),
-                ),
-              ),
-            ] else ...[
-              QuickPresetChips(
-                selectedCategory: _selectedCategory,
-                isExpense: _isExpense,
-                onCategorySelected: (cat) {
-                  setState(() => _selectedCategory = cat);
-                },
-              ),
-            ],
             const SizedBox(height: 16),
             TextField(
               controller: _merchantController,

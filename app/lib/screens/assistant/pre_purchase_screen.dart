@@ -14,8 +14,7 @@ import '../../widgets/amount_input_field.dart';
 import '../../widgets/location_assistance_prompt_sheet.dart';
 import '../../widgets/premium_upgrade_dialog.dart';
 import '../../screens/transactions/widgets/transaction_tile.dart';
-import '../transactions/widgets/category_picker.dart';
-import '../transactions/widgets/quick_preset_chips.dart';
+import '../transactions/widgets/transaction_style_category_selector.dart';
 import 'widgets/ai_message_bubble.dart';
 import 'widgets/budget_context_card.dart';
 import 'widgets/typing_indicator.dart';
@@ -178,28 +177,6 @@ class _PrePurchaseScreenState extends ConsumerState<PrePurchaseScreen>
     _neutralAnim.forward();
   }
 
-  Future<void> _showCategoryPickerSheet() async {
-    await showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      builder: (context) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-          child: SingleChildScrollView(
-            child: CategoryPicker(
-              selected: _selectedCategory,
-              maxVisible: 100,
-              onSelected: (category) {
-                setState(() => _selectedCategory = category);
-                Navigator.of(context).pop();
-              },
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
   void _reset() {
     _devilAnim.reset();
     _angelAnim.reset();
@@ -327,39 +304,13 @@ class _PrePurchaseScreenState extends ConsumerState<PrePurchaseScreen>
           ),
           const SizedBox(height: 16),
 
-          Row(
-            children: [
-              Text('Category', style: textTheme.titleSmall),
-              const Spacer(),
-              TextButton.icon(
-                onPressed: _showCategoryPickerSheet,
-                icon: const Icon(Icons.add, size: 16),
-                label: const Text('More categories'),
-              ),
-            ],
+          TransactionStyleCategorySelector(
+            selectedCategory: _selectedCategory,
+            isExpense: true,
+            onCategorySelected: (category) {
+              setState(() => _selectedCategory = category);
+            },
           ),
-          if (_selectedCategory != null) ...[
-            const SizedBox(height: 8),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: InputChip(
-                avatar: Icon(
-                  CategoryIcons.forCategory(_selectedCategory!),
-                  size: 18,
-                ),
-                label: Text(_selectedCategory!),
-                onDeleted: () => setState(() => _selectedCategory = null),
-              ),
-            ),
-          ] else ...[
-            QuickPresetChips(
-              selectedCategory: _selectedCategory,
-              isExpense: true,
-              onCategorySelected: (category) {
-                setState(() => _selectedCategory = category);
-              },
-            ),
-          ],
           if (locationAssistance.isEnabled && hasSuggestions) ...[
             const SizedBox(height: 16),
             _buildLocationSuggestionCard(colors, textTheme, suggestions),
