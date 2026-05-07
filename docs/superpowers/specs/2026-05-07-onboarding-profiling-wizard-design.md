@@ -188,6 +188,8 @@ OnboardingScreen (slides)
 
 The source of truth for onboarding state is `User.HasCompletedOnboarding` on the backend. The client still keeps a local onboarding flag as a convenience cache, but authenticated routing must prefer the server-backed field once the current user profile has loaded.
 
+While the authenticated profile is still loading, the router should avoid making a premature onboarding redirect from cached local state alone. This prevents returning users from being bounced into setup during the brief window before `/api/v1/users/me` resolves.
+
 This avoids two failure modes:
 - Returning users on a new device should not be sent through onboarding again just because local storage is empty.
 - Optional profile fields should remain optional and must not be used to infer whether onboarding is complete.

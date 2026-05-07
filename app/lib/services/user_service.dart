@@ -12,6 +12,7 @@ class UserProfile {
   final String? incomeRange;
   final String? occupationType;
   final String? householdSize;
+  final bool hasCompletedOnboarding;
 
   const UserProfile({
     required this.id,
@@ -19,6 +20,7 @@ class UserProfile {
     required this.currencyCode,
     required this.locale,
     required this.createdAt,
+    required this.hasCompletedOnboarding,
     this.spendingPersonality,
     this.incomeRange,
     this.occupationType,
@@ -36,6 +38,8 @@ class UserProfile {
       createdAt: json['createdAt'] != null
           ? DateTime.parse(json['createdAt'] as String)
           : DateTime.now(),
+      hasCompletedOnboarding:
+          json['hasCompletedOnboarding'] as bool? ?? false,
       spendingPersonality: json['spendingPersonality'] as String?,
       incomeRange: json['incomeRange'] as String?,
       occupationType: json['occupationType'] as String?,
@@ -65,6 +69,7 @@ class UserService {
     String? incomeRange,
     String? occupationType,
     String? householdSize,
+    bool? hasCompletedOnboarding,
   }) async {
     try {
       final response = await _dio.put(
@@ -77,6 +82,8 @@ class UserService {
           if (incomeRange != null) 'incomeRange': incomeRange,
           if (occupationType != null) 'occupationType': occupationType,
           if (householdSize != null) 'householdSize': householdSize,
+          if (hasCompletedOnboarding != null)
+            'hasCompletedOnboarding': hasCompletedOnboarding,
         },
       );
       return UserProfile.fromJson(response.data as Map<String, dynamic>);

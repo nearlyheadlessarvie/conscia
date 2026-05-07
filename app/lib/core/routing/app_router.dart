@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../providers/auth_provider.dart';
+import '../../providers/user_provider.dart';
 import '../../screens/assistant/pre_purchase_screen.dart';
 import '../../screens/budgets/budgets_screen.dart';
 import '../../screens/dashboard/dashboard_screen.dart';
@@ -83,7 +84,12 @@ final hasOnboardedProvider = FutureProvider<bool>((ref) => hasCompletedOnboardin
 
 final appRouterProvider = Provider<GoRouter>((ref) {
   final listenable = _AuthNotifierListenable(ref);
-  final hasOnboarded = ref.watch(hasOnboardedProvider).valueOrNull ?? false;
+  final localHasOnboarded = ref.watch(hasOnboardedProvider).valueOrNull ?? false;
+  final authState = ref.watch(authProvider);
+  final currentUserAsync =
+      authState.isAuthenticated ? ref.watch(currentUserProvider) : null;
+  final userProfile = currentUserAsync?.valueOrNull;
+  final hasOnboarded = userProfile?.hasCompletedOnboarding ?? localHasOnboarded;
 
   return GoRouter(
     initialLocation: AppRoutes.home,
@@ -98,6 +104,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
 
       if (!isAuthenticated && !isOnboarding) {
         return hasOnboarded ? AppRoutes.signIn : AppRoutes.onboarding;
+      }
+
+      if (isAuthenticated && (currentUserAsync?.isLoading ?? false)) {
+        return null;
       }
 
       if (isAuthenticated && isOnboarding) {

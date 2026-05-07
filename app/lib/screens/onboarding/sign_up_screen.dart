@@ -1,12 +1,9 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../providers/auth_provider.dart';
 import '../../providers/user_provider.dart';
-import 'apple_button.dart';
-import 'google_button.dart';
 
 class SignUpScreen extends ConsumerStatefulWidget {
   const SignUpScreen({super.key});
@@ -211,62 +208,6 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                         )
                       : const Text('Create Account'),
                 ),
-              ),
-              const SizedBox(height: 24),
-              Row(
-                children: [
-                  const Expanded(child: Divider()),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: Text(
-                      'or',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: colors.onSurfaceVariant,
-                          ),
-                    ),
-                  ),
-                  const Expanded(child: Divider()),
-                ],
-              ),
-              const SizedBox(height: 24),
-              if (defaultTargetPlatform == TargetPlatform.iOS) ...[
-                AppleButton(
-                  isLoading: _isLoading,
-                  buttonText: 'Sign up with Apple',
-                  onPressed: () async {
-                    setState(() {
-                      _isLoading = true;
-                      _errorMessage = null;
-                    });
-                    try {
-                      await ref.read(authProvider.notifier).signInWithApple();
-                    } catch (e) {
-                      if (!mounted) return;
-                      setState(() => _errorMessage = e.toString());
-                    } finally {
-                      if (mounted) setState(() => _isLoading = false);
-                    }
-                  },
-                ),
-                const SizedBox(height: 12),
-              ],
-              GoogleButton(
-                isLoading: _isLoading,
-                buttonText: 'Sign up with Google',
-                onPressed: () async {
-                  setState(() {
-                    _isLoading = true;
-                    _errorMessage = null;
-                  });
-                  try {
-                    await ref.read(authProvider.notifier).signInWithGoogle();
-                  } catch (e) {
-                    if (!mounted) return;
-                    setState(() => _errorMessage = e.toString());
-                  } finally {
-                    if (mounted) setState(() => _isLoading = false);
-                  }
-                },
               ),
               const SizedBox(height: 16),
               Center(

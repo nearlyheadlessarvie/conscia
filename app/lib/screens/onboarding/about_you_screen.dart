@@ -24,6 +24,7 @@ class _AboutYouScreenState extends ConsumerState<AboutYouScreen> {
       await ref.read(userServiceProvider).updateProfile(
             occupationType: _occupation,
             householdSize: _household,
+            hasCompletedOnboarding: true,
           );
       ref.invalidate(currentUserProvider);
     } catch (_) {}
@@ -34,6 +35,12 @@ class _AboutYouScreenState extends ConsumerState<AboutYouScreen> {
   }
 
   Future<void> _skip() async {
+    try {
+      await ref.read(userServiceProvider).updateProfile(
+            hasCompletedOnboarding: true,
+          );
+      ref.invalidate(currentUserProvider);
+    } catch (_) {}
     await markOnboardingComplete();
     if (!mounted) return;
     context.go(AppRoutes.home);
