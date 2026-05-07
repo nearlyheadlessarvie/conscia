@@ -360,6 +360,14 @@ void main() {
     );
   });
 
+  testWidgets('transaction form shows only one category heading', (tester) async {
+    await tester.pumpWidget(await buildTransactionFormApp(tester));
+
+    await tester.pumpAndSettle();
+
+    expect(find.text('Category'), findsOneWidget);
+  });
+
   testWidgets('transaction form prompts for location assistance on first open',
       (
     tester,

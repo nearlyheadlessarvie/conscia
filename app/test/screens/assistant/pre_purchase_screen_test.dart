@@ -313,6 +313,14 @@ void main() {
     expect(find.text('Dining'), findsNothing);
   });
 
+  testWidgets('pre-purchase assistant shows only one category heading',
+      (tester) async {
+    await tester.pumpWidget(await buildPrePurchaseApp(tester));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Category'), findsOneWidget);
+  });
+
   testWidgets('pre-purchase hides upgrade-only categories for free users',
       (tester) async {
     await tester.pumpWidget(await buildPrePurchaseAppForTier(

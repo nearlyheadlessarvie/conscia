@@ -323,10 +323,6 @@ class _PrePurchaseScreenState extends ConsumerState<PrePurchaseScreen>
             ),
             textAlign: TextAlign.center,
           ),
-          const SizedBox(height: 14),
-          VoiceInputButton(
-            onTranscriptReady: _applyVoiceTranscript,
-          ),
           const SizedBox(height: 28),
 
           // Description
@@ -346,6 +342,10 @@ class _PrePurchaseScreenState extends ConsumerState<PrePurchaseScreen>
             isExpense: true,
             currencyCode: _currencyCode,
             isPremium: isPremium,
+            inlineAction: VoiceInputButton(
+              onTranscriptReady: _applyVoiceTranscript,
+              compact: true,
+            ),
             onChanged: (_) => setState(() {}),
             onCurrencyChanged: (code) => setState(() {
               _currencyManuallyChanged = true;
@@ -363,6 +363,7 @@ class _PrePurchaseScreenState extends ConsumerState<PrePurchaseScreen>
               selectedCategory: _selectedCategory,
               isExpense: true,
               isPremium: isPremium,
+              showHeader: false,
               onCategorySelected: (category) {
                 setState(() => _selectedCategory = category);
                 if (category != null) {

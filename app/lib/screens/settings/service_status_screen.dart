@@ -87,6 +87,8 @@ class _ServiceStatusScreenState extends ConsumerState<ServiceStatusScreen> {
       return _buildErrorScaffold(context, theme, state.error!);
     }
 
+    final checks = state.status?.checks ?? const <HealthCheck>[];
+
     return HeroScreenScaffold(
       appBar: AppBar(
         title: const Text('Service Status'),
@@ -105,52 +107,50 @@ class _ServiceStatusScreenState extends ConsumerState<ServiceStatusScreen> {
           ),
         ],
       ),
-      child: RefreshIndicator(
-        onRefresh: () => ref.read(healthStatusProvider.notifier).refresh(),
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 20, 16, 28),
-          children: [
-            ScreenSection(
-              title: 'Overview',
-              subtitle: 'Live health across API, AI, and storage services.',
-              compact: true,
-              child: _OverallStatusBanner(
-                state: state,
-                secondsAgo: _secondsSinceCheck,
-              ),
+      child: Column(
+        children: [
+          ScreenSection(
+            title: 'Overview',
+            subtitle: 'Live health across API, AI, and storage services.',
+            compact: true,
+            child: _OverallStatusBanner(
+              state: state,
+              secondsAgo: _secondsSinceCheck,
             ),
-            ScreenSection(
-              title: 'Services',
-              subtitle: 'Response time and current health for each dependency.',
-              compact: true,
-              child: Column(
-                children: [
-                  if (state.status != null)
-                    ...state.status!.checks.map(
-                      (check) => Padding(
-                        padding: const EdgeInsets.only(bottom: 12),
-                        child: _ServiceCard(check: check),
-                      ),
+          ),
+          ScreenSection(
+            title: 'Services',
+            subtitle: 'Response time and current health for each dependency.',
+            compact: true,
+            child: Column(
+              children: [
+                if (checks.isNotEmpty)
+                  ...checks.map(
+                    (check) => Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: _ServiceCard(check: check),
                     ),
-                  if (state.status != null && state.status!.checks.isEmpty)
-                    ..._buildPlaceholderCards(),
-                ],
-              ),
+                  )
+                else if (state.isLoading)
+                  ..._buildPlaceholderCards(loading: true)
+                else
+                  ..._buildPlaceholderCards(),
+              ],
             ),
-            if (state.checkHistory.isNotEmpty)
-              ScreenSection(
-                title: 'Recent uptime',
-                subtitle: 'A quick look at the last health checks.',
-                compact: true,
-                child: _UptimeHistory(history: state.checkHistory),
-              ),
-          ],
-        ),
+          ),
+          if (state.checkHistory.isNotEmpty)
+            ScreenSection(
+              title: 'Recent uptime',
+              subtitle: 'A quick look at the last health checks.',
+              compact: true,
+              child: _UptimeHistory(history: state.checkHistory),
+            ),
+        ],
       ),
     );
   }
 
-  List<Widget> _buildPlaceholderCards() {
+  List<Widget> _buildPlaceholderCards({bool loading = false}) {
     return _serviceMetadata.entries
         .map(
           (e) => Padding(
@@ -158,8 +158,8 @@ class _ServiceStatusScreenState extends ConsumerState<ServiceStatusScreen> {
             child: _ServiceCard(
               check: HealthCheck(
                 name: e.key,
-                status: 'Unknown',
-                duration: '-',
+                status: loading ? 'Checking' : 'Unknown',
+                duration: loading ? 'Checking…' : '-',
               ),
             ),
           ),
@@ -322,6 +322,7 @@ class _ServiceCard extends StatelessWidget {
 
     final statusColor = _statusColorForCheck(check.status, colors);
     final isUnhealthy = check.status == 'Unhealthy';
+    final isChecking = check.status == 'Checking';
 
     return FeedCard(
       child: Row(
@@ -353,20 +354,31 @@ class _ServiceCard extends StatelessWidget {
               ],
             ),
           ),
-          Container(
-            width: 10,
-            height: 10,
-            decoration: BoxDecoration(
-              color: statusColor,
-              shape: BoxShape.circle,
+          if (isChecking)
+            SizedBox(
+              width: 18,
+              height: 18,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: statusColor,
+              ),
+            )
+          else ...[
+            Container(
+              width: 10,
+              height: 10,
+              decoration: BoxDecoration(
+                color: statusColor,
+                shape: BoxShape.circle,
+              ),
             ),
-          ),
-          const SizedBox(width: 6),
-          Icon(
-            isUnhealthy ? Icons.arrow_downward : Icons.arrow_upward,
-            size: 16,
-            color: statusColor,
-          ),
+            const SizedBox(width: 6),
+            Icon(
+              isUnhealthy ? Icons.arrow_downward : Icons.arrow_upward,
+              size: 16,
+              color: statusColor,
+            ),
+          ],
         ],
       ),
     );

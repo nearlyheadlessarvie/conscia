@@ -13,6 +13,7 @@ class TransactionStyleCategorySelector extends StatelessWidget {
     required this.onCategorySelected,
     this.labelStyle,
     this.moreCategoriesIcon = Icons.add,
+    this.showHeader = true,
   });
 
   final String? selectedCategory;
@@ -21,6 +22,7 @@ class TransactionStyleCategorySelector extends StatelessWidget {
   final ValueChanged<String?> onCategorySelected;
   final TextStyle? labelStyle;
   final IconData moreCategoriesIcon;
+  final bool showHeader;
 
   Future<void> _showCategoryPickerSheet(BuildContext context) async {
     await showModalBottomSheet<void>(
@@ -51,18 +53,28 @@ class TransactionStyleCategorySelector extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Row(
-          children: [
-            Text('Category',
-                style: labelStyle ?? Theme.of(context).textTheme.titleSmall),
-            const Spacer(),
-            TextButton.icon(
+        if (showHeader)
+          Row(
+            children: [
+              Text('Category',
+                  style: labelStyle ?? Theme.of(context).textTheme.titleSmall),
+              const Spacer(),
+              TextButton.icon(
+                onPressed: () => _showCategoryPickerSheet(context),
+                icon: Icon(moreCategoriesIcon, size: 16),
+                label: const Text('All categories'),
+              ),
+            ],
+          )
+        else
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton.icon(
               onPressed: () => _showCategoryPickerSheet(context),
               icon: Icon(moreCategoriesIcon, size: 16),
               label: const Text('All categories'),
             ),
-          ],
-        ),
+          ),
         if (selectedCategory != null) ...[
           const SizedBox(height: 8),
           Align(

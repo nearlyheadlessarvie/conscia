@@ -385,19 +385,16 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
               _selectedCategory = null;
             }),
           ),
-          const SizedBox(height: 12),
-          Align(
-            alignment: Alignment.centerLeft,
-            child: VoiceInputButton(
-              onTranscriptReady: _applyVoiceTranscript,
-            ),
-          ),
           const SizedBox(height: 18),
           AmountInputField(
             controller: _amountController,
             isExpense: _isExpense,
             currencyCode: _currencyCode,
             isPremium: isPremium,
+            inlineAction: VoiceInputButton(
+              onTranscriptReady: _applyVoiceTranscript,
+              compact: true,
+            ),
             onChanged: (_) => setState(() {}),
             onCurrencyChanged: (code) => setState(() {
               _currencyManuallyChanged = true;
@@ -450,6 +447,7 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
               selectedCategory: _selectedCategory,
               isExpense: _isExpense,
               isPremium: isPremium,
+              showHeader: false,
               labelStyle: textTheme.titleSmall?.copyWith(
                 color: colors.onSurfaceVariant,
               ),
