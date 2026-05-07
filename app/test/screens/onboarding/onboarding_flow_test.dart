@@ -51,6 +51,8 @@ class _RecordingUserService extends UserService {
 }
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   setUp(() {
     SharedPreferences.setMockInitialValues({});
   });
@@ -110,6 +112,55 @@ void main() {
     expect(find.text('Upgrade'), findsNothing);
     expect(find.textContaining('Free tier:'), findsNothing);
   });
+
+  testWidgets(
+    'setup screen defaults to the device currency and shows it first in the picker',
+    (tester) async {
+      tester.binding.platformDispatcher.localeTestValue = const Locale(
+        'en',
+        'PH',
+      );
+      tester.binding.platformDispatcher.localesTestValue = const [
+        Locale('en', 'PH'),
+      ];
+      addTearDown(tester.binding.platformDispatcher.clearLocaleTestValue);
+      addTearDown(tester.binding.platformDispatcher.clearLocalesTestValue);
+
+      final userService = _RecordingUserService();
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            userServiceProvider.overrideWithValue(userService),
+          ],
+          child: const MaterialApp(
+            home: SetupScreen(),
+          ),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+
+      final currencyTile = tester.widget<ListTile>(
+        find.widgetWithText(ListTile, 'Currency'),
+      );
+      final currencySubtitle = currencyTile.subtitle! as Text;
+
+      expect(currencySubtitle.data, 'PHP');
+
+      await tester.tap(find.text('Currency'));
+      await tester.pumpAndSettle();
+
+      final currencyTiles = tester
+          .widgetList<ListTile>(find.byType(ListTile))
+          .where((tile) => tile.leading is Text)
+          .toList();
+      final firstCurrencyTile = currencyTiles.first;
+      final firstCurrencyTitle = firstCurrencyTile.title! as Text;
+
+      expect(firstCurrencyTitle.data, 'PHP');
+    },
+  );
 
   testWidgets(
     'spending profile next persists prefer-not-to-say and routes to budgets',

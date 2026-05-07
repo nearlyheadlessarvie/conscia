@@ -184,6 +184,8 @@ OnboardingScreen (slides)
 
 `SetupScreen` currently calls `context.go('/')` on save. Change it to `context.go('/onboarding/profile')` instead. After any wizard screen navigates to `/` (skip or finish), `markOnboardingComplete()` is called as normal.
 
+The onboarding currency chooser should default to the device's regional currency on first render. When the currency picker opens from Setup, that device currency should be pinned as the first option in the list so the most likely local choice is immediately visible.
+
 ### Onboarding state source of truth
 
 The source of truth for onboarding state is `User.HasCompletedOnboarding` on the backend. The client still keeps a local onboarding flag as a convenience cache, but authenticated routing must prefer the server-backed field once the current user profile has loaded.

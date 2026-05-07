@@ -1,5 +1,6 @@
 import 'dart:ui' as ui;
 
+import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'auth_provider.dart';
@@ -50,7 +51,7 @@ String _currencyFromCountry(String countryCode) {
 }
 
 ui.Locale _bestDeviceLocale() {
-  final dispatcher = ui.PlatformDispatcher.instance;
+  final dispatcher = WidgetsBinding.instance.platformDispatcher;
   return dispatcher.locales.isNotEmpty
       ? dispatcher.locales.first
       : dispatcher.locale;
