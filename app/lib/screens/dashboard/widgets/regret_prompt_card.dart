@@ -3,7 +3,7 @@ import 'package:intl/intl.dart';
 
 class RegretPromptCard extends StatelessWidget {
   final IconData categoryIcon;
-  final String merchant;
+  final String counterparty;
   final double amount;
   final String currencyCode;
   final DateTime date;
@@ -15,7 +15,7 @@ class RegretPromptCard extends StatelessWidget {
   const RegretPromptCard({
     super.key,
     required this.categoryIcon,
-    required this.merchant,
+    required this.counterparty,
     required this.amount,
     required this.currencyCode,
     required this.date,
@@ -43,14 +43,14 @@ class RegretPromptCard extends StatelessWidget {
     );
 
     return Dismissible(
-      key: ValueKey('regret_${merchant}_${date.millisecondsSinceEpoch}'),
+      key: ValueKey('regret_${counterparty}_${date.millisecondsSinceEpoch}'),
       direction: DismissDirection.startToEnd,
       onDismissed: (_) => onDismiss?.call(),
       background: Container(
         alignment: Alignment.centerLeft,
         padding: const EdgeInsets.only(left: 24),
         decoration: BoxDecoration(
-          color: const Color(0xFF4CAF50).withOpacity(0.15),
+          color: const Color(0xFF4CAF50).withValues(alpha: 0.15),
           borderRadius: BorderRadius.circular(16),
         ),
         child: const Icon(Icons.check, color: Color(0xFF4CAF50)),
@@ -73,7 +73,7 @@ class RegretPromptCard extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(merchant, style: textTheme.titleSmall),
+                        Text(counterparty, style: textTheme.titleSmall),
                         Text(
                           _relativeDate(),
                           style: textTheme.bodySmall?.copyWith(
@@ -153,7 +153,7 @@ class _ActionButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: color.withOpacity(0.12),
+      color: color.withValues(alpha: 0.12),
       borderRadius: BorderRadius.circular(12),
       child: InkWell(
         onTap: onTap,

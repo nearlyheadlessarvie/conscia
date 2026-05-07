@@ -11,7 +11,7 @@ class TransactionTile extends StatelessWidget {
   final double amount;
   final String currencyCode;
   final String category;
-  final String? merchant;
+  final String? counterparty;
   final DateTime date;
   final int? regretLevel;
 
@@ -22,7 +22,7 @@ class TransactionTile extends StatelessWidget {
     required this.amount,
     required this.currencyCode,
     required this.category,
-    this.merchant,
+    this.counterparty,
     required this.date,
     this.regretLevel,
   });
@@ -60,7 +60,9 @@ class TransactionTile extends StatelessWidget {
     final colors = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
     final displayCounterparty =
-        merchant != null && merchant!.trim().isNotEmpty ? merchant! : 'Unknown';
+        counterparty != null && counterparty!.trim().isNotEmpty
+            ? counterparty!
+            : 'Unknown';
     final amountText = isIncome
         ? '+${CurrencyFormatter.format(amount.abs(), currencyCode: currencyCode)}'
         : '-${CurrencyFormatter.format(amount.abs(), currencyCode: currencyCode)}';

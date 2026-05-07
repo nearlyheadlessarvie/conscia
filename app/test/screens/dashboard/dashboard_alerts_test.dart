@@ -3,6 +3,8 @@ import 'package:conscia_app/providers/behavioral_insights_provider.dart';
 import 'package:conscia_app/providers/budget_providers.dart';
 import 'package:conscia_app/providers/transaction_providers.dart';
 import 'package:conscia_app/screens/dashboard/dashboard_screen.dart';
+import 'package:conscia_app/screens/dashboard/widgets/recent_transaction_tile.dart';
+import 'package:conscia_app/screens/dashboard/widgets/regret_prompt_card.dart';
 import 'package:conscia_app/services/budget_service.dart';
 import 'package:conscia_app/services/transaction_service.dart';
 import 'package:dio/dio.dart';
@@ -70,6 +72,45 @@ Widget _buildApp(ProviderContainer container) {
 }
 
 void main() {
+  testWidgets('recent transaction tile displays counterparty text', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: RecentTransactionTile(
+            id: 'tx-1',
+            categoryIcon: Icons.restaurant,
+            counterparty: 'Corner Bakery',
+            category: 'Dining',
+            date: DateTime(2026, 5, 7),
+            amount: 12.5,
+            isIncome: false,
+            currencyCode: 'USD',
+          ),
+        ),
+      ),
+    );
+
+    expect(find.text('Corner Bakery'), findsOneWidget);
+  });
+
+  testWidgets('regret prompt card displays counterparty text', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: RegretPromptCard(
+            categoryIcon: Icons.restaurant,
+            counterparty: 'Corner Bakery',
+            amount: 12.5,
+            currencyCode: 'USD',
+            date: DateTime(2026, 5, 7),
+          ),
+        ),
+      ),
+    );
+
+    expect(find.text('Corner Bakery'), findsOneWidget);
+  });
+
   testWidgets('dashboard header stays visible while scrolling', (tester) async {
     final transactions = List.generate(
       12,

@@ -36,7 +36,7 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
   String _currencyCode = 'USD';
   bool _currencyManuallyChanged = false;
   String? _selectedCategory;
-  final _merchantController = TextEditingController();
+  final _counterpartyController = TextEditingController();
   DateTime _selectedDate = DateTime.now();
   final _notesController = TextEditingController();
   bool _submitting = false;
@@ -93,7 +93,7 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
         _currencyCode = tx.currencyCode;
         _currencyManuallyChanged = true;
         _selectedCategory = tx.category;
-        _merchantController.text = tx.description;
+        _counterpartyController.text = tx.description;
         _selectedDate = tx.date;
         _moreOptionsExpanded = _notesController.text.isNotEmpty;
       });
@@ -104,7 +104,7 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
   void dispose() {
     _amountController.dispose();
     _exchangeRateController.dispose();
-    _merchantController.dispose();
+    _counterpartyController.dispose();
     _notesController.dispose();
     super.dispose();
   }
@@ -125,7 +125,7 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
       amount: double.parse(_amountController.text),
       currencyCode: _currencyCode,
       category: _selectedCategory!,
-      counterparty: _merchantController.text,
+      counterparty: _counterpartyController.text,
       type: _isExpense ? 'expense' : 'income',
       date: _selectedDate,
       baseCurrencyCode: userCurrency,
@@ -356,7 +356,7 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
             ),
             const SizedBox(height: 16),
             TextField(
-              controller: _merchantController,
+              controller: _counterpartyController,
               textCapitalization: TextCapitalization.words,
               onChanged: (_) => setState(() {}),
               decoration: InputDecoration(
@@ -487,11 +487,12 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
               runSpacing: 8,
               children: suggestions.nearbyMerchants
                   .map(
-                    (merchant) => ActionChip(
-                      label: Text(merchant),
+                    (counterpartySuggestion) => ActionChip(
+                      label: Text(counterpartySuggestion),
                       onPressed: () {
                         setState(() {
-                          _merchantController.text = merchant;
+                          _counterpartyController.text =
+                              counterpartySuggestion;
                         });
                       },
                     ),

@@ -202,7 +202,7 @@ class _TransactionListScreenState extends ConsumerState<TransactionListScreen> {
                 amount: tx.amount,
                 currencyCode: tx.currencyCode,
                 category: tx.category,
-                merchant: tx.description,
+                counterparty: tx.description,
                 date: tx.date,
                 regretLevel: tx.regretLevel,
               ),

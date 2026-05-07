@@ -257,7 +257,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   padding: const EdgeInsets.only(bottom: 8),
                   child: RegretPromptCard(
                     categoryIcon: TransactionTile.iconFor(tx.category),
-                    merchant: displayCounterparty,
+                    counterparty: displayCounterparty,
                     amount: tx.amount,
                     currencyCode: tx.currencyCode,
                     date: tx.date,
@@ -300,7 +300,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               return RecentTransactionTile(
                 id: t.id,
                 categoryIcon: TransactionTile.iconFor(t.category),
-                merchant: displayCounterparty,
+                counterparty: displayCounterparty,
                 category: t.category,
                 date: t.date,
                 amount: t.amount,
