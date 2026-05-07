@@ -196,6 +196,8 @@ The client-side current-user fetch should also be scoped to the authenticated se
 
 The router instance itself should stay stable across auth loading and error transitions. Auth, local onboarding cache, and current-profile changes should refresh redirect evaluation without recreating `GoRouter`, so a failed sign-in remains on the sign-in screen instead of jumping back to the onboarding landing page.
 
+Wizard route extras should be parsed defensively from generic map payloads rather than cast to a specific `Map<String, String?>` runtime type. This keeps the onboarding handoff working on Flutter web, where the router may deserialize extras into a generic JSON-backed map implementation.
+
 This avoids two failure modes:
 - Returning users on a new device should not be sent through onboarding again just because local storage is empty.
 - Optional profile fields should remain optional and must not be used to infer whether onboarding is complete.

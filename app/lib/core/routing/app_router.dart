@@ -75,6 +75,17 @@ Future<String?> getLastEmail() async {
   return prefs.getString(_lastEmailKey);
 }
 
+Map<String, String?>? _routeStringExtras(Object? extra) {
+  if (extra is! Map) return null;
+
+  return extra.map(
+    (key, value) => MapEntry(
+      key.toString(),
+      value?.toString(),
+    ),
+  );
+}
+
 class _RouterRefreshListenable extends ChangeNotifier {
   void refresh() => notifyListeners();
 }
@@ -156,7 +167,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: 'profile',
             builder: (context, state) {
-              final extra = state.extra as Map<String, String?>?;
+              final extra = _routeStringExtras(state.extra);
               return SpendingProfileScreen(
                 initialCurrencyCode: extra?['currencyCode'],
                 initialLocale: extra?['locale'],
@@ -166,7 +177,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: 'budgets',
             builder: (context, state) {
-              final extra = state.extra as Map<String, String?>?;
+              final extra = _routeStringExtras(state.extra);
               return SuggestedBudgetsScreen(
                 spendingPersonality: extra?['spendingPersonality'] ?? 'balanced',
                 incomeRange: extra?['incomeRange'] ?? 'mid',
