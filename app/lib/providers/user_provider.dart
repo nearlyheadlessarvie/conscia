@@ -2,6 +2,7 @@ import 'dart:ui' as ui;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'auth_provider.dart';
 import '../core/network/dio_client.dart';
 import '../services/user_service.dart';
 
@@ -10,6 +11,11 @@ final userServiceProvider = Provider<UserService>((ref) {
 });
 
 final currentUserProvider = FutureProvider<UserProfile>((ref) async {
+  final authState = ref.watch(authProvider);
+  if (!authState.isAuthenticated || authState.userId == null) {
+    throw StateError('Cannot load current user without an authenticated session.');
+  }
+
   final service = ref.watch(userServiceProvider);
   return service.getProfile();
 });

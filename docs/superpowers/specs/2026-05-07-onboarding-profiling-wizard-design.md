@@ -190,6 +190,8 @@ The source of truth for onboarding state is `User.HasCompletedOnboarding` on the
 
 While the authenticated profile is still loading, the router should avoid making a premature onboarding redirect from cached local state alone. This prevents returning users from being bounced into setup during the brief window before `/api/v1/users/me` resolves.
 
+The client-side current-user fetch should also be scoped to the authenticated session rather than treated as a global cache. When the authenticated `userId` changes, the profile provider must re-fetch `/api/v1/users/me` so onboarding decisions and profile-driven UI always reflect the newly signed-in account.
+
 This avoids two failure modes:
 - Returning users on a new device should not be sent through onboarding again just because local storage is empty.
 - Optional profile fields should remain optional and must not be used to infer whether onboarding is complete.
