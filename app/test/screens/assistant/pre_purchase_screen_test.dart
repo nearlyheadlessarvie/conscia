@@ -478,6 +478,12 @@ void main() {
           impulse: 'Treat yourself.',
           reason: 'Check your budget.',
           neutral: 'You can decide.',
+          budget: AIBudgetContext(
+            monthlyLimit: 16706.49,
+            currentSpend: 0,
+            percentUsed: 0,
+            isOverBudget: false,
+          ),
         ),
       ),
       locationService: _FakeLocationAssistanceService(
@@ -516,9 +522,22 @@ void main() {
       currencyCode: 'PHP',
       locale: 'en_PH',
     );
+    final spentFormatted = CurrencyFormatter.format(
+      0,
+      currencyCode: 'PHP',
+      locale: 'en_PH',
+    );
+    final limitFormatted = CurrencyFormatter.format(
+      16706.49,
+      currencyCode: 'PHP',
+      locale: 'en_PH',
+    );
 
     expect(find.textContaining('\$600 PHP'), findsNothing);
     expect(find.text(formatted), findsOneWidget);
+    expect(find.textContaining('\$0.00 / \$16706.49'), findsNothing);
+    expect(find.text(spentFormatted), findsOneWidget);
+    expect(find.text(' / $limitFormatted'), findsOneWidget);
   });
 
   testWidgets(

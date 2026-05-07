@@ -473,6 +473,7 @@ class _PrePurchaseScreenState extends ConsumerState<PrePurchaseScreen>
   Widget _buildResponse() {
     final amount = double.tryParse(_amountController.text) ?? 0;
     final response = _aiResponse!;
+    final locale = ref.watch(userPreferencesProvider).locale;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -528,6 +529,7 @@ class _PrePurchaseScreenState extends ConsumerState<PrePurchaseScreen>
               spent: response.budget!.currentSpend,
               limit: response.budget!.monthlyLimit,
               currencyCode: _currencyCode,
+              locale: locale,
               projectedAmount: amount,
             ),
           const SizedBox(height: 24),
