@@ -97,34 +97,39 @@ class MainShell extends ConsumerWidget {
         child: Icon(AppIcons.add),
       ),
       bottomNavigationBar: SizedBox(
-        height: 100,
+        height: 96,
         child: Stack(
           clipBehavior: Clip.none,
           alignment: Alignment.topCenter,
           children: [
             Positioned.fill(
-              top: 20,
+              top: 10,
               child: NavigationBar(
                 height: 80,
-                selectedIndex: currentIndex == _mobileScanIndex ? 0 : currentIndex,
+                selectedIndex: currentIndex,
                 onDestinationSelected: (i) {
-                  final mappedIndex = i >= _mobileScanIndex ? i + 1 : i;
-                  _onDestinationSelected(context, mappedIndex);
+                  if (i == _mobileScanIndex) return;
+                  _onDestinationSelected(context, i);
                 },
                 destinations: _tabs
-                    .where((t) => t.label != 'Scan')
                     .map(
-                      (t) => NavigationDestination(
-                        icon: Icon(t.icon),
-                        selectedIcon: Icon(t.activeIcon),
-                        label: t.label,
-                      ),
+                      (t) => t.label == 'Scan'
+                          ? const NavigationDestination(
+                              icon: SizedBox.shrink(),
+                              selectedIcon: SizedBox.shrink(),
+                              label: '',
+                            )
+                          : NavigationDestination(
+                              icon: Icon(t.icon),
+                              selectedIcon: Icon(t.activeIcon),
+                              label: t.label,
+                            ),
                     )
                     .toList(),
               ),
             ),
             Positioned(
-              top: 0,
+              top: -4,
               child: _RaisedScanButton(
                 key: const ValueKey('main-shell-scan-button'),
                 isSelected: currentIndex == _mobileScanIndex,
@@ -166,7 +171,7 @@ class _RaisedScanButton extends StatelessWidget {
         borderRadius: BorderRadius.circular(36),
         onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.only(top: 2),
+          padding: const EdgeInsets.only(top: 4),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -199,7 +204,7 @@ class _RaisedScanButton extends StatelessWidget {
                       : colorScheme.onPrimaryContainer,
                 ),
               ),
-              const SizedBox(height: 4),
+              const SizedBox(height: 1),
               Text(
                 'Scan',
                 style: Theme.of(context).textTheme.labelSmall?.copyWith(

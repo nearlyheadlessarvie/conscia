@@ -42,12 +42,15 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    final raisedScanButton = find.byKey(const ValueKey('main-shell-scan-button'));
+    final raisedScanButton =
+        find.byKey(const ValueKey('main-shell-scan-button'));
     expect(raisedScanButton, findsOneWidget);
 
     final scanPosition = tester.getTopLeft(raisedScanButton);
     final navigationBarPosition = tester.getTopLeft(find.byType(NavigationBar));
+    final scanBottom = tester.getBottomLeft(raisedScanButton);
 
     expect(scanPosition.dy, lessThan(navigationBarPosition.dy));
+    expect(scanBottom.dy, greaterThan(navigationBarPosition.dy));
   });
 }
