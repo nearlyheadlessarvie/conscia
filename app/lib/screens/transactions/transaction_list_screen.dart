@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/theme/app_colors.dart';
 import '../../providers/transaction_providers.dart';
 import '../../services/transaction_service.dart';
 import '../../widgets/empty_state.dart';
+import '../../widgets/feed_card.dart';
+import '../../widgets/screen_section.dart';
+import '../../widgets/selection_chip_group.dart';
 import '../../widgets/skeleton_loader.dart';
-import 'widgets/date_section_header.dart';
 import 'widgets/transaction_tile.dart';
 
 class TransactionListScreen extends ConsumerStatefulWidget {
@@ -35,7 +38,7 @@ class _TransactionListScreenState extends ConsumerState<TransactionListScreen> {
 
   void _onScroll() {
     if (_scrollController.position.pixels >=
-            _scrollController.position.maxScrollExtent - 200) {
+        _scrollController.position.maxScrollExtent - 200) {
       ref.read(transactionListProvider.notifier).loadMore();
     }
   }
@@ -57,7 +60,19 @@ class _TransactionListScreenState extends ConsumerState<TransactionListScreen> {
 
     return Scaffold(
       appBar: AppBar(title: const Text('Transactions')),
-      body: _buildBody(state, selectedCategory, categories),
+      body: DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              Theme.of(context).appColors.pageTop,
+              Theme.of(context).appColors.pageBottom,
+            ],
+          ),
+        ),
+        child: _buildBody(state, selectedCategory, categories),
+      ),
     );
   }
 
@@ -68,8 +83,12 @@ class _TransactionListScreenState extends ConsumerState<TransactionListScreen> {
   ) {
     if (state.isLoading && state.transactions.isEmpty) {
       return ListView.builder(
+        padding: const EdgeInsets.fromLTRB(16, 20, 16, 28),
         itemCount: 8,
-        itemBuilder: (_, __) => const SkeletonListTile(),
+        itemBuilder: (_, __) => const Padding(
+          padding: EdgeInsets.only(bottom: 12),
+          child: SkeletonListTile(),
+        ),
       );
     }
 
@@ -77,22 +96,29 @@ class _TransactionListScreenState extends ConsumerState<TransactionListScreen> {
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(32),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.error_outline,
-                  size: 64, color: Theme.of(context).colorScheme.error),
-              const SizedBox(height: 16),
-              Text(state.error!,
+          child: FeedCard(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.error_outline,
+                  size: 64,
+                  color: Theme.of(context).colorScheme.error,
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  state.error!,
                   textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.bodyMedium),
-              const SizedBox(height: 24),
-              FilledButton.icon(
-                onPressed: _onRefresh,
-                icon: const Icon(Icons.refresh),
-                label: const Text('Retry'),
-              ),
-            ],
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+                const SizedBox(height: 24),
+                FilledButton.icon(
+                  onPressed: _onRefresh,
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('Retry'),
+                ),
+              ],
+            ),
           ),
         ),
       );
@@ -110,16 +136,34 @@ class _TransactionListScreenState extends ConsumerState<TransactionListScreen> {
       onRefresh: _onRefresh,
       child: CustomScrollView(
         controller: _scrollController,
+        physics: const AlwaysScrollableScrollPhysics(),
         slivers: [
-          _buildFilterBar(selectedCategory, categories),
-          ..._buildGroupedList(state.transactions),
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(16, 20, 16, 28),
+            sliver: SliverList(
+              delegate: SliverChildListDelegate.fixed([
+                ScreenSection(
+                  title: 'Filters',
+                  subtitle: 'Jump between your most recent spending categories.',
+                  compact: true,
+                  child: SelectionChipGroup(
+                    options: ['All', ...categories],
+                    value: selectedCategory ?? 'All',
+                    onSelected: (value) {
+                      ref.read(categoryFilterProvider.notifier).state =
+                          value == 'All' ? null : value;
+                    },
+                  ),
+                ),
+              ]),
+            ),
+          ),
+          ..._buildGroupedSections(state.transactions),
           if (state.isLoading)
             const SliverToBoxAdapter(
               child: Padding(
-                padding: EdgeInsets.all(16),
-                child: Center(
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                ),
+                padding: EdgeInsets.fromLTRB(16, 0, 16, 28),
+                child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
               ),
             ),
         ],
@@ -127,51 +171,7 @@ class _TransactionListScreenState extends ConsumerState<TransactionListScreen> {
     );
   }
 
-  SliverPersistentHeader _buildFilterBar(
-    String? selectedCategory,
-    List<String> categories,
-  ) {
-    return SliverPersistentHeader(
-      pinned: true,
-      delegate: _FilterBarDelegate(
-        child: _buildFilterChips(selectedCategory, categories),
-      ),
-    );
-  }
-
-  Widget _buildFilterChips(String? selectedCategory, List<String> categories) {
-    return Container(
-      color: Theme.of(context).scaffoldBackgroundColor,
-      height: 52,
-      child: ListView(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        children: [
-          Padding(
-            padding: const EdgeInsets.only(right: 8),
-            child: FilterChip(
-              label: const Text('All'),
-              selected: selectedCategory == null,
-              onSelected: (_) =>
-                  ref.read(categoryFilterProvider.notifier).state = null,
-            ),
-          ),
-          for (final cat in categories)
-            Padding(
-              padding: const EdgeInsets.only(right: 8),
-              child: FilterChip(
-                label: Text(cat),
-                selected: selectedCategory == cat,
-                onSelected: (_) =>
-                    ref.read(categoryFilterProvider.notifier).state = cat,
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-
-  List<Widget> _buildGroupedList(List<Transaction> transactions) {
+  List<Widget> _buildGroupedSections(List<Transaction> transactions) {
     final groups = <String, List<Transaction>>{};
     for (final tx in transactions) {
       final key =
@@ -180,62 +180,64 @@ class _TransactionListScreenState extends ConsumerState<TransactionListScreen> {
     }
 
     final sortedKeys = groups.keys.toList()..sort((a, b) => b.compareTo(a));
-    final slivers = <Widget>[];
-
-    for (final key in sortedKeys) {
-      final txs = groups[key]!;
-      final date = txs.first.date;
-
-      slivers.add(SliverToBoxAdapter(
-        child: DateSectionHeader(date: date),
-      ));
-
-      slivers.add(SliverList.builder(
-        itemCount: txs.length,
-        itemBuilder: (context, index) {
-          final tx = txs[index];
-          return Column(
-            children: [
-              TransactionTile(
-                id: tx.id,
-                isIncome: tx.type == 'income',
-                amount: tx.amount,
-                currencyCode: tx.currencyCode,
-                category: tx.category,
-                counterparty: tx.description,
-                date: tx.date,
-                regretLevel: tx.regretLevel,
+    return [
+      for (final key in sortedKeys)
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 22),
+            child: ScreenSection(
+              title: _formatDateLabel(groups[key]!.first.date),
+              compact: true,
+              child: FeedCard(
+                padding: EdgeInsets.zero,
+                child: Column(
+                  children: [
+                    for (var index = 0; index < groups[key]!.length; index++) ...[
+                      TransactionTile(
+                        id: groups[key]![index].id,
+                        isIncome: groups[key]![index].type == 'income',
+                        amount: groups[key]![index].amount,
+                        currencyCode: groups[key]![index].currencyCode,
+                        category: groups[key]![index].category,
+                        counterparty: groups[key]![index].description,
+                        date: groups[key]![index].date,
+                        regretLevel: groups[key]![index].regretLevel,
+                      ),
+                      if (index < groups[key]!.length - 1)
+                        const Divider(indent: 72, height: 1),
+                    ],
+                  ],
+                ),
               ),
-              if (index < txs.length - 1)
-                const Divider(indent: 72, height: 1),
-            ],
-          );
-        },
-      ));
-    }
-
-    return slivers;
-  }
-}
-
-class _FilterBarDelegate extends SliverPersistentHeaderDelegate {
-  final Widget child;
-
-  _FilterBarDelegate({required this.child});
-
-  @override
-  double get minExtent => 52;
-
-  @override
-  double get maxExtent => 52;
-
-  @override
-  Widget build(
-      BuildContext context, double shrinkOffset, bool overlapsContent) {
-    return child;
+            ),
+          ),
+        ),
+    ];
   }
 
-  @override
-  bool shouldRebuild(covariant _FilterBarDelegate oldDelegate) =>
-      oldDelegate.child != child;
+  String _formatDateLabel(DateTime date) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final dateOnly = DateTime(date.year, date.month, date.day);
+    final diff = today.difference(dateOnly).inDays;
+
+    if (diff == 0) return 'Today';
+    if (diff == 1) return 'Yesterday';
+    const weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    const months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
+    return '${weekdays[date.weekday - 1]}, ${months[date.month - 1]} ${date.day}';
+  }
 }

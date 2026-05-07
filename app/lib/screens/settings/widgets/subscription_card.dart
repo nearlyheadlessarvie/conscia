@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../services/subscription_service.dart';
+import '../../../widgets/feed_card.dart';
 
 class SubscriptionCard extends StatelessWidget {
   final SubscriptionStatus status;
@@ -19,12 +20,7 @@ class SubscriptionCard extends StatelessWidget {
     final theme = Theme.of(context);
     final textTheme = theme.textTheme;
 
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(16),
-      ),
+    return FeedCard(
       child: status.isPremium ? _buildPremium(textTheme, theme) : _buildFree(textTheme, theme),
     );
   }
