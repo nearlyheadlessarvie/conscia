@@ -4,6 +4,16 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../services/location_assistance_service.dart';
 import 'usage_provider.dart';
 
+class LocationAssistanceSuggestions {
+  final List<String> nearbyMerchants;
+  final List<String> likelyCategories;
+
+  const LocationAssistanceSuggestions({
+    required this.nearbyMerchants,
+    required this.likelyCategories,
+  });
+}
+
 class LocationAssistanceState {
   final bool isEnabled;
   final bool hasPrompted;
@@ -70,9 +80,20 @@ final locationAssistanceProvider =
   },
 );
 
-final locationAssistanceSuggestionsProvider = Provider<LocationSuggestionSet>((
-  ref,
-) {
+final locationAssistanceSuggestionsProvider =
+    Provider<LocationAssistanceSuggestions>((ref) {
+  final locationAssistance = ref.watch(locationAssistanceProvider);
+  if (!locationAssistance.isEnabled) {
+    return const LocationAssistanceSuggestions(
+      nearbyMerchants: [],
+      likelyCategories: [],
+    );
+  }
+
   final service = ref.watch(locationAssistanceServiceProvider);
-  return service.getTransactionSuggestions();
+  final suggestions = service.getTransactionSuggestions();
+  return LocationAssistanceSuggestions(
+    nearbyMerchants: suggestions.nearbyMerchants,
+    likelyCategories: suggestions.likelyCategories,
+  );
 });

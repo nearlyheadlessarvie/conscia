@@ -8,20 +8,22 @@ import 'package:shared_preferences/shared_preferences.dart';
 class _FakeLocationAssistanceService extends LocationAssistanceService {
   _FakeLocationAssistanceService({
     required this.permissionGranted,
-    this.suggestions = const LocationSuggestionSet(
+    this.suggestions = const (
       nearbyMerchants: ['Blue Bottle Coffee'],
       likelyCategories: ['Coffee'],
     ),
   });
 
   final bool permissionGranted;
-  final LocationSuggestionSet suggestions;
+  final ({List<String> nearbyMerchants, List<String> likelyCategories})
+      suggestions;
 
   @override
   Future<bool> requestPermission() async => permissionGranted;
 
   @override
-  LocationSuggestionSet getTransactionSuggestions() => suggestions;
+  ({List<String> nearbyMerchants, List<String> likelyCategories})
+  getTransactionSuggestions() => suggestions;
 }
 
 void main() {
@@ -120,14 +122,17 @@ void main() {
   });
 
   test('shared suggestion provider exposes service suggestions', () async {
-    SharedPreferences.setMockInitialValues({});
+    SharedPreferences.setMockInitialValues({
+      'location_suggestions_enabled': true,
+      'location_suggestions_prompted': true,
+    });
     final prefs = await SharedPreferences.getInstance();
 
     final container = buildContainer(
       prefs,
       service: _FakeLocationAssistanceService(
         permissionGranted: true,
-        suggestions: const LocationSuggestionSet(
+        suggestions: const (
           nearbyMerchants: ['Corner Bakery'],
           likelyCategories: ['Groceries'],
         ),
@@ -139,5 +144,28 @@ void main() {
 
     expect(suggestions.nearbyMerchants, ['Corner Bakery']);
     expect(suggestions.likelyCategories, ['Groceries']);
+  });
+
+  test('shared suggestion provider hides suggestions when assistance disabled',
+      () async {
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+
+    final container = buildContainer(
+      prefs,
+      service: _FakeLocationAssistanceService(
+        permissionGranted: true,
+        suggestions: const (
+          nearbyMerchants: ['Corner Bakery'],
+          likelyCategories: ['Groceries'],
+        ),
+      ),
+    );
+    addTearDown(container.dispose);
+
+    final suggestions = container.read(locationAssistanceSuggestionsProvider);
+
+    expect(suggestions.nearbyMerchants, isEmpty);
+    expect(suggestions.likelyCategories, isEmpty);
   });
 }

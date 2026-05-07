@@ -1,19 +1,10 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-class LocationSuggestionSet {
-  final List<String> nearbyMerchants;
-  final List<String> likelyCategories;
-
-  const LocationSuggestionSet({
-    required this.nearbyMerchants,
-    required this.likelyCategories,
-  });
-}
-
 abstract class LocationAssistanceService {
   Future<bool> requestPermission();
 
-  LocationSuggestionSet getTransactionSuggestions();
+  ({List<String> nearbyMerchants, List<String> likelyCategories})
+  getTransactionSuggestions();
 }
 
 class _UnsupportedLocationAssistanceService
@@ -27,18 +18,11 @@ class _UnsupportedLocationAssistanceService
   }
 
   @override
-  LocationSuggestionSet getTransactionSuggestions() {
-    return const LocationSuggestionSet(
-      nearbyMerchants: [
-        'Blue Bottle Coffee',
-        'Whole Foods Market',
-        'Shell Station',
-      ],
-      likelyCategories: [
-        'Coffee',
-        'Dining',
-        'Groceries',
-      ],
+  ({List<String> nearbyMerchants, List<String> likelyCategories})
+  getTransactionSuggestions() {
+    return const (
+      nearbyMerchants: <String>[],
+      likelyCategories: <String>[],
     );
   }
 }

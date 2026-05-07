@@ -15,20 +15,22 @@ import 'package:shared_preferences/shared_preferences.dart';
 class _FakeLocationAssistanceService extends LocationAssistanceService {
   _FakeLocationAssistanceService({
     required this.permissionGranted,
-    this.suggestions = const LocationSuggestionSet(
+    this.suggestions = const (
       nearbyMerchants: ['Blue Bottle Coffee'],
       likelyCategories: ['Coffee'],
     ),
   });
 
   final bool permissionGranted;
-  final LocationSuggestionSet suggestions;
+  final ({List<String> nearbyMerchants, List<String> likelyCategories})
+      suggestions;
 
   @override
   Future<bool> requestPermission() async => permissionGranted;
 
   @override
-  LocationSuggestionSet getTransactionSuggestions() => suggestions;
+  ({List<String> nearbyMerchants, List<String> likelyCategories})
+  getTransactionSuggestions() => suggestions;
 }
 
 Future<void> _pumpTransactionForm(
@@ -143,7 +145,7 @@ void main() {
       prefs: prefs,
       locationService: _FakeLocationAssistanceService(
         permissionGranted: true,
-        suggestions: const LocationSuggestionSet(
+        suggestions: const (
           nearbyMerchants: ['Corner Bakery', 'Local Grocer'],
           likelyCategories: ['Groceries', 'Dining'],
         ),
@@ -161,12 +163,49 @@ void main() {
     expect(find.text('Blue Bottle Coffee'), findsNothing);
   });
 
-  test('fake suggestion setup sanity check', () {
-    const suggestions = LocationSuggestionSet(
-      nearbyMerchants: ['Corner Bakery'],
-      likelyCategories: ['Groceries'],
+  testWidgets('tapping suggestion chips fills the form fields', (tester) async {
+    SharedPreferences.setMockInitialValues({
+      'location_suggestions_enabled': true,
+      'location_suggestions_prompted': true,
+    });
+    final prefs = await SharedPreferences.getInstance();
+
+    await _pumpTransactionForm(
+      tester,
+      prefs: prefs,
+      locationService: _FakeLocationAssistanceService(
+        permissionGranted: true,
+        suggestions: const (
+          nearbyMerchants: ['Corner Bakery'],
+          likelyCategories: ['Groceries'],
+        ),
+      ),
     );
-    expect(suggestions.nearbyMerchants, ['Corner Bakery']);
-    expect(suggestions.likelyCategories, ['Groceries']);
+
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Corner Bakery'));
+    await tester.pumpAndSettle();
+
+    final merchantField = tester.widget<TextField>(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is TextField &&
+            widget.decoration?.labelText == 'Merchant (optional)',
+      ),
+    );
+    expect(merchantField.controller?.text, 'Corner Bakery');
+
+    await tester.ensureVisible(find.widgetWithText(ActionChip, 'Groceries'));
+    await tester.tap(find.widgetWithText(ActionChip, 'Groceries'));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.descendant(
+        of: find.byType(InputChip),
+        matching: find.text('Groceries'),
+      ),
+      findsOneWidget,
+    );
   });
 }

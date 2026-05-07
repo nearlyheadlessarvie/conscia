@@ -9,7 +9,6 @@ import '../../providers/location_assistance_provider.dart';
 import '../../providers/subscription_provider.dart';
 import '../../providers/transaction_providers.dart';
 import '../../providers/user_provider.dart';
-import '../../services/location_assistance_service.dart';
 import '../../services/transaction_service.dart';
 import '../../widgets/amount_input_field.dart';
 import '../../widgets/location_assistance_prompt_sheet.dart';
@@ -481,7 +480,7 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
   Widget _buildLocationSuggestionCard(
     ColorScheme colors,
     TextTheme textTheme,
-    LocationSuggestionSet suggestions,
+    LocationAssistanceSuggestions suggestions,
   ) {
     return Container(
       padding: const EdgeInsets.all(16),
