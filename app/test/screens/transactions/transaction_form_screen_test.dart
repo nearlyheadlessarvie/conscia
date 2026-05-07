@@ -146,16 +146,62 @@ Future<ProviderContainer> _pumpTransactionForm(
   );
   addTearDown(container.dispose);
 
-  await tester.pumpWidget(
-    UncontrolledProviderScope(
-      container: container,
-      child: const MaterialApp(
-        home: TransactionFormScreen(),
-      ),
-    ),
-  );
+  await tester.pumpWidget(_buildTransactionFormApp(container));
 
   return container;
+}
+
+Widget _buildTransactionFormApp(ProviderContainer container) {
+  return UncontrolledProviderScope(
+    container: container,
+    child: const MaterialApp(
+      home: TransactionFormScreen(),
+    ),
+  );
+}
+
+Future<Widget> buildTransactionFormApp(WidgetTester tester) async {
+  final resolvedPrefs = await () async {
+    SharedPreferences.setMockInitialValues({
+      'location_suggestions_enabled': false,
+      'location_suggestions_prompted': true,
+    });
+    return SharedPreferences.getInstance();
+  }();
+
+  final container = ProviderContainer(
+    overrides: [
+      categoryFrequencyProvider.overrideWithValue(
+        ['Coffee', 'Dining', 'Shopping', 'Gaming', 'Travel'],
+      ),
+      subscriptionProvider.overrideWith(
+        (ref) async => const SubscriptionStatus(
+          tier: 'free',
+          isPremium: false,
+        ),
+      ),
+      currentUserProvider.overrideWith(
+        (ref) async => UserProfile(
+          id: 'user-1',
+          email: 'tx@example.com',
+          currencyCode: 'USD',
+          locale: 'en_US',
+          createdAt: DateTime(2026),
+          hasCompletedOnboarding: true,
+        ),
+      ),
+      sharedPreferencesProvider.overrideWithValue(resolvedPrefs),
+      locationAssistanceServiceProvider.overrideWithValue(
+        _FakeLocationAssistanceService(permissionGranted: true),
+      ),
+      transactionServiceProvider.overrideWithValue(_RecordingTransactionService()),
+      budgetServiceProvider.overrideWithValue(_StaticBudgetService(const [])),
+      budgetReconciliationEnabledProvider.overrideWithValue(false),
+    ],
+  );
+  addTearDown(container.dispose);
+
+  return _buildTransactionFormApp(container);
 }
 
 void main() {
@@ -185,6 +231,18 @@ void main() {
 
     expect(find.text('Salary'), findsOneWidget);
     expect(find.text('Coffee'), findsNothing);
+  });
+
+  testWidgets('income transactions label counterparty field as Source', (
+    tester,
+  ) async {
+    await tester.pumpWidget(await buildTransactionFormApp(tester));
+
+    await tester.tap(find.text('Income'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Source (optional)'), findsOneWidget);
+    expect(find.text('Merchant (optional)'), findsNothing);
   });
 
   testWidgets('transaction form prompts for location assistance on first open', (

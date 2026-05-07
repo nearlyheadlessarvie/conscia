@@ -1,3 +1,4 @@
+import 'package:conscia_app/providers/category_frequency_provider.dart';
 import 'package:conscia_app/providers/subscription_provider.dart';
 import 'package:conscia_app/providers/usage_provider.dart';
 import 'package:conscia_app/providers/user_provider.dart';
@@ -77,7 +78,56 @@ Future<void> _pumpPrePurchaseScreen(
   );
 }
 
+Future<Widget> buildPrePurchaseApp(WidgetTester tester) async {
+  SharedPreferences.setMockInitialValues({
+    'location_suggestions_enabled': false,
+    'location_suggestions_prompted': true,
+  });
+  final prefs = await SharedPreferences.getInstance();
+
+  return ProviderScope(
+    overrides: [
+      categoryFrequencyProvider.overrideWithValue(
+        ['Health', 'Dining', 'Shopping', 'Travel', 'Education'],
+      ),
+      subscriptionProvider.overrideWith(
+        (ref) async => const SubscriptionStatus(
+          tier: 'free',
+          isPremium: false,
+        ),
+      ),
+      currentUserProvider.overrideWith(
+        (ref) async => UserProfile(
+          id: 'user-1',
+          email: 'prepurchase@example.com',
+          currencyCode: 'USD',
+          locale: 'en_US',
+          createdAt: DateTime(2026),
+          hasCompletedOnboarding: true,
+        ),
+      ),
+      sharedPreferencesProvider.overrideWithValue(prefs),
+      locationAssistanceServiceProvider.overrideWithValue(
+        _FakeLocationAssistanceService(permissionGranted: true),
+      ),
+    ],
+    child: const MaterialApp(
+      home: PrePurchaseScreen(),
+    ),
+  );
+}
+
 void main() {
+  testWidgets(
+      'pre-purchase assistant shows quick category chips and more categories entrypoint',
+      (tester) async {
+    await tester.pumpWidget(await buildPrePurchaseApp(tester));
+
+    expect(find.text('Salary'), findsNothing);
+    expect(find.text('More categories'), findsOneWidget);
+    expect(find.text('Health'), findsWidgets);
+  });
+
   testWidgets('pre-purchase shows first-use location prompt only when needed',
       (tester) async {
     SharedPreferences.setMockInitialValues({});
@@ -188,17 +238,9 @@ void main() {
     await tester.tap(find.widgetWithText(ActionChip, 'Groceries'));
     await tester.pumpAndSettle();
 
-    final dropdownButton = tester.widget<DropdownButton<String>>(
-      find.descendant(
-        of: find.byType(DropdownButtonFormField<String>),
-        matching: find.byType(DropdownButton<String>),
-      ),
-    );
-    expect(dropdownButton.value, 'Groceries');
-
     expect(
       find.descendant(
-        of: find.byType(DropdownButtonFormField<String>),
+        of: find.byType(InputChip),
         matching: find.text('Groceries'),
       ),
       findsOneWidget,

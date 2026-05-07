@@ -410,8 +410,10 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
               controller: _merchantController,
               textCapitalization: TextCapitalization.words,
               onChanged: (_) => setState(() {}),
-              decoration: const InputDecoration(
-                labelText: 'Merchant (optional)',
+              decoration: InputDecoration(
+                labelText: _isExpense
+                    ? 'Merchant (optional)'
+                    : 'Source (optional)',
               ),
             ),
             if (!_isEditing && locationAssistance.isEnabled && hasSuggestions) ...[
