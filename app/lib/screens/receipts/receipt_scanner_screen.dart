@@ -78,7 +78,8 @@ class _ReceiptScannerScreenState extends ConsumerState<ReceiptScannerScreen> {
               description:
                   'Automatically extract transaction details from receipts '
                   'using AI. Available with Conscia Premium.',
-              onMaybeLater: () => context.go(AppRoutes.addTransaction),
+              onMaybeLater: () =>
+                  context.pushReplacement(AppRoutes.addTransaction),
             );
           }
           return _buildPremiumContent(context);

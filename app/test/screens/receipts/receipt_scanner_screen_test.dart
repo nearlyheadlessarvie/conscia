@@ -40,9 +40,77 @@ Future<void> _pumpReceiptRouterApp(WidgetTester tester) async {
   });
   final prefs = await SharedPreferences.getInstance();
 
-  final router = GoRouter(
+  late final GoRouter router;
+  router = GoRouter(
     initialLocation: '/scan',
     routes: [
+      GoRoute(
+        path: '/scan',
+        builder: (_, __) => const ReceiptScannerScreen(),
+      ),
+      GoRoute(
+        path: '/transactions/add',
+        builder: (_, __) => const TransactionFormScreen(),
+      ),
+    ],
+  );
+
+  await tester.pumpWidget(
+    ProviderScope(
+      overrides: [
+        subscriptionProvider.overrideWith(
+          (ref) async => const SubscriptionStatus(
+            tier: 'free',
+            isPremium: false,
+          ),
+        ),
+        currentUserProvider.overrideWith(
+          (ref) async => UserProfile(
+            id: 'user-1',
+            email: 'receipt@example.com',
+            currencyCode: 'USD',
+            locale: 'en_US',
+            createdAt: DateTime(2026),
+            hasCompletedOnboarding: true,
+          ),
+        ),
+        sharedPreferencesProvider.overrideWithValue(prefs),
+        categoryFrequencyProvider.overrideWithValue(
+          ['Coffee', 'Dining', 'Shopping', 'Gaming', 'Travel'],
+        ),
+        locationAssistanceServiceProvider.overrideWithValue(
+          _FakeLocationAssistanceService(),
+        ),
+        budgetServiceProvider.overrideWithValue(_StaticBudgetService()),
+        budgetReconciliationEnabledProvider.overrideWithValue(false),
+      ],
+      child: MaterialApp.router(routerConfig: router),
+    ),
+  );
+}
+
+Future<void> _pumpReceiptRouterAppWithPreviousRoute(WidgetTester tester) async {
+  SharedPreferences.setMockInitialValues({
+    'location_suggestions_enabled': false,
+    'location_suggestions_prompted': true,
+  });
+  final prefs = await SharedPreferences.getInstance();
+
+  late final GoRouter router;
+  router = GoRouter(
+    initialLocation: '/',
+    routes: [
+      GoRoute(
+        path: '/',
+        builder: (_, __) => Scaffold(
+          body: Center(
+            child: ElevatedButton(
+              onPressed: () => router.push('/scan'),
+              child: const Text('Open Scan'),
+            ),
+          ),
+        ),
+      ),
       GoRoute(
         path: '/scan',
         builder: (_, __) => const ReceiptScannerScreen(),
@@ -102,5 +170,27 @@ void main() {
 
     expect(find.text('Add Transaction'), findsOneWidget);
     expect(find.text('Expense'), findsOneWidget);
+  });
+
+  testWidgets('receipt maybe later add expense form can close back to previous screen',
+      (tester) async {
+    await _pumpReceiptRouterAppWithPreviousRoute(tester);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Open Scan'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Receipt Scanner'), findsOneWidget);
+
+    await tester.tap(find.text('Maybe Later'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Add Transaction'), findsOneWidget);
+
+    await tester.tap(find.byIcon(Icons.close));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Open Scan'), findsOneWidget);
+    expect(find.text('Add Transaction'), findsNothing);
   });
 }
