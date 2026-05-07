@@ -90,4 +90,43 @@ void main() {
 
     expect(userService.lastUpdate?['spendingPersonality'], isNull);
   });
+
+  testWidgets('profile uses branded avatars for profile choice chips', (
+    tester,
+  ) async {
+    final userService = _RecordingUserService();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          currentUserProvider.overrideWith(
+            (ref) async => UserProfile(
+              id: 'user-1',
+              email: 'profile@example.com',
+              currencyCode: 'USD',
+              locale: 'en_US',
+              createdAt: DateTime(2026),
+              hasCompletedOnboarding: true,
+              spendingPersonality: 'balanced',
+              incomeRange: 'high',
+              occupationType: 'employed',
+              householdSize: 'family',
+            ),
+          ),
+          userServiceProvider.overrideWithValue(userService),
+        ],
+        child: const MaterialApp(
+          home: ProfileScreen(),
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    final chips = tester.widgetList<ChoiceChip>(find.byType(ChoiceChip)).toList();
+
+    expect(chips, isNotEmpty);
+    expect(chips.first.avatar, isNotNull);
+    expect(chips.first.avatar, isNot(isA<Icon>()));
+  });
 }
