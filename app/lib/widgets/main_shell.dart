@@ -129,7 +129,7 @@ class MainShell extends ConsumerWidget {
               ),
             ),
             Positioned(
-              top: -4,
+              top: -8,
               child: _RaisedScanButton(
                 key: const ValueKey('main-shell-scan-button'),
                 isSelected: currentIndex == _mobileScanIndex,
