@@ -13,6 +13,7 @@ class FreemiumLimits {
 
 // ── Enums ────────────────────────────────────────────────────────
 enum RegretLevel { worthIt, notSure, regret }
+
 enum SubscriptionTier { free, premium }
 
 // ── Categories ───────────────────────────────────────────────────
@@ -21,7 +22,7 @@ const List<String> expenseCategories = [
   'Dining',
   'Transport',
   'Entertainment',
-  'Games & Recreations',
+  'Gaming',
   'Shopping',
   'Health',
   'Bills',

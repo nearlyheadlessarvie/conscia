@@ -9,7 +9,7 @@ class CategoryIcons {
     'Groceries': Icons.shopping_cart,
     'Dining': Icons.restaurant,
     'Transport': Icons.directions_car,
-    'Games & Recreations': Icons.videogame_asset,
+    'Gaming': Icons.videogame_asset,
     'Entertainment': Icons.movie,
     'Shopping': Icons.shopping_bag,
     'Health': Icons.favorite,
