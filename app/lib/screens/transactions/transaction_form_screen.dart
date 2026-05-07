@@ -303,24 +303,6 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
                 );
               },
             ),
-            if (!_isEditing) ...[
-              Text(
-                'Quick add',
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
-              ),
-              const SizedBox(height: 6),
-              QuickPresetChips(
-                selectedCategory: _selectedCategory,
-                onCategorySelected: (cat) {
-                  setState(() => _selectedCategory = cat);
-                },
-              ),
-              const SizedBox(height: 8),
-              const Divider(),
-              const SizedBox(height: 8),
-            ],
             Row(
               children: [
                 Text(
