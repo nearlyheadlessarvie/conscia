@@ -96,10 +96,11 @@ public class TransactionRepository : DynamoRepository, ITransactionRepository
         var response = await Dynamo.QueryAsync(new QueryRequest
         {
             TableName = TableName,
-            IndexName = "GSI-TransactionId",
-            KeyConditionExpression = "Id = :id",
+            KeyConditionExpression = "PK = :pk",
+            FilterExpression = "Id = :id",
             ExpressionAttributeValues = new Dictionary<string, AttributeValue>
             {
+                [":pk"] = new(DynamoKeys.User(userId)),
                 [":id"] = new(id.ToString())
             },
             Limit = 1
@@ -108,8 +109,7 @@ public class TransactionRepository : DynamoRepository, ITransactionRepository
         if (response.Items.Count == 0)
             return null;
 
-        var transaction = FromItem(response.Items[0]);
-        return transaction.UserId == userId ? transaction : null;
+        return FromItem(response.Items[0]);
     }
 
     // Primary timeline query (FAST)
