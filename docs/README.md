@@ -21,31 +21,31 @@ All documentation for the Conscia enhancement initiative is organized into 6 com
 ### Quick Start by Role
 
 **👨‍💻 For Developers**
-1. Start: [QUICK_REFERENCE.md](QUICK_REFERENCE.md) (15 min read)
-2. Then: [phase-1-progress.md](phase-1-progress.md) (10 min read)
-3. Details: [implementation-plan.md](implementation-plan.md) (30 min read)
+1. Start: [implementation-tasks.md](implementation-tasks.md) for the remaining roadmap
+2. Then: [implementation-plan.md](implementation-plan.md) for the long-term vision
+3. Then: `docs/superpowers/specs/` and `docs/superpowers/plans/` for the most recently delivered branch work
 
 **🎨 For Product/Design Team**
-1. Start: [implementation-plan.md](implementation-plan.md) - Sections 1-3 (20 min read)
-2. Then: [QUICK_REFERENCE.md](QUICK_REFERENCE.md) - Dashboard Transformation (10 min read)
-3. Strategy: [SESSION_SUMMARY.md](SESSION_SUMMARY.md) - Impact Analysis (10 min read)
+1. Start: [implementation-plan.md](implementation-plan.md) - Sections 1-3 and 7-10
+2. Then: [implementation-tasks.md](implementation-tasks.md) - Phases 4-8
+3. Use `docs/superpowers/specs/` for current feature-level decisions and polish notes
 
 **🧪 For QA/Testing**
-1. Start: [QUICK_REFERENCE.md](QUICK_REFERENCE.md) - Testing Strategy (15 min read)
-2. Then: [implementation-tasks.md](implementation-tasks.md) - Phase 1 Tasks (20 min read)
-3. Details: [phase-1-progress.md](phase-1-progress.md) - Acceptance Criteria (10 min read)
+1. Start: [implementation-tasks.md](implementation-tasks.md) for planned coverage by phase
+2. Then: `docs/superpowers/specs/` for current branch behavior changes
+3. Use the older snapshot docs below only as historical context
 
 **📊 For Project Management**
-1. Start: [SESSION_SUMMARY.md](SESSION_SUMMARY.md) (20 min read)
-2. Then: [implementation-plan.md](implementation-plan.md) - Section 9 (Timeline) (5 min read)
-3. Details: [implementation-tasks.md](implementation-tasks.md) - Overview sections (15 min read)
+1. Start: [README.md](README.md) - roadmap and current product snapshot
+2. Then: [implementation-tasks.md](implementation-tasks.md) - remaining roadmap phases
+3. Then: [implementation-plan.md](implementation-plan.md) - original 8-phase vision
 
 ---
 
 ## 📖 Document Directory
 
-### 1. [implementation-plan.md](implementation-plan.md) ⭐ START HERE FOR VISION
-**Length**: 3,500+ lines | **Read Time**: 45 min | **Updated**: 2026-05-03
+### 1. [implementation-plan.md](implementation-plan.md) ⭐ CURRENT LONG-TERM VISION
+**Length**: 3,500+ lines | **Read Time**: 45 min | **Updated**: historical baseline from 2026-05-03
 
 **What It Contains**:
 - Comprehensive vision for all 8 phases
@@ -74,8 +74,8 @@ All documentation for the Conscia enhancement initiative is organized into 6 com
 
 ---
 
-### 2. [implementation-tasks.md](implementation-tasks.md) ⭐ START HERE FOR EXECUTION
-**Length**: 2,500+ lines | **Read Time**: 60 min | **Updated**: 2026-05-03
+### 2. [implementation-tasks.md](implementation-tasks.md) ⭐ CURRENT ROADMAP CHECKLIST
+**Length**: 2,500+ lines | **Read Time**: 60 min | **Updated**: 2026-05-07
 
 **What It Contains**:
 - Detailed task breakdown for all 8 phases
@@ -118,8 +118,8 @@ General Tasks (Throughout All Phases)
 
 ---
 
-### 3. [phase-1-progress.md](phase-1-progress.md) ⭐ CURRENT STATUS
-**Length**: 1,500 lines | **Read Time**: 20 min | **Updated**: 2026-05-03
+### 3. [phase-1-progress.md](phase-1-progress.md) ⭐ HISTORICAL SNAPSHOT
+**Length**: 1,500 lines | **Read Time**: 20 min | **Updated**: historical snapshot from 2026-05-03
 
 **What It Contains**:
 - Current implementation status
@@ -130,17 +130,16 @@ General Tasks (Throughout All Phases)
 - Architecture notes
 - File structure
 
-**Best For**: Understanding current state, identifying next steps, onboarding new developers
+**Best For**: Understanding the original Phase 1 checkpoint before later roadmap work landed
 
-**Current Status**:
-- ✅ Frontend: 100% complete
-- ⏳ Backend: 0% complete (6-8 hour estimate)
-- ⏳ Testing: Pending
+**Important Note**:
+- This file is no longer the source of truth for current branch status.
+- Use [README.md](README.md), [implementation-tasks.md](implementation-tasks.md), and `docs/superpowers/` for the latest feature state.
 
 ---
 
-### 4. [QUICK_REFERENCE.md](QUICK_REFERENCE.md) ⭐ DEVELOPER GUIDE
-**Length**: 1,200 lines | **Read Time**: 20 min | **Updated**: 2026-05-03
+### 4. [QUICK_REFERENCE.md](QUICK_REFERENCE.md) ⭐ HISTORICAL DEVELOPER SNAPSHOT
+**Length**: 1,200 lines | **Read Time**: 20 min | **Updated**: historical snapshot from 2026-05-03
 
 **What It Contains**:
 - Quick overview of implementation
@@ -164,8 +163,8 @@ General Tasks (Throughout All Phases)
 
 ---
 
-### 5. [SESSION_SUMMARY.md](SESSION_SUMMARY.md) ⭐ COMPREHENSIVE SUMMARY
-**Length**: 2,000 lines | **Read Time**: 30 min | **Updated**: 2026-05-03
+### 5. [SESSION_SUMMARY.md](SESSION_SUMMARY.md) ⭐ HISTORICAL SESSION SUMMARY
+**Length**: 2,000 lines | **Read Time**: 30 min | **Updated**: historical snapshot from 2026-05-03
 
 **What It Contains**:
 - Complete session summary
@@ -192,7 +191,7 @@ General Tasks (Throughout All Phases)
 ---
 
 ### 6. [This File - MASTER INDEX](README.md)
-**Length**: 500 lines | **Read Time**: 10 min | **Updated**: 2026-05-03
+**Length**: 500 lines | **Read Time**: 10 min | **Updated**: 2026-05-07
 
 **What It Contains**:
 - Navigation guide for all documentation
@@ -272,10 +271,10 @@ General Tasks (Throughout All Phases)
 
 ### "Where do I start?"
 **Answer**: Depends on your role:
-- **Developer**: QUICK_REFERENCE.md → phase-1-progress.md → implementation-tasks.md
-- **Product Manager**: implementation-plan.md (read Sections 1-3, 7-10)
-- **QA/Testing**: QUICK_REFERENCE.md (Testing Strategy) → implementation-tasks.md
-- **Project Manager**: SESSION_SUMMARY.md → implementation-plan.md (Section 9)
+- **Developer**: implementation-tasks.md → implementation-plan.md → `docs/superpowers/`
+- **Product Manager**: implementation-plan.md (Sections 1-3, 7-10) → implementation-tasks.md
+- **QA/Testing**: implementation-tasks.md → `docs/superpowers/specs/`
+- **Project Manager**: README.md → implementation-tasks.md → implementation-plan.md
 
 ### "What's been completed?"
 **Answer**: The current branch has Phases 1-3 substantially implemented, with later phases still planned. See:
@@ -321,10 +320,10 @@ General Tasks (Throughout All Phases)
 - [QUICK_REFERENCE.md](QUICK_REFERENCE.md) - "FinancialMood Colors" and "Trend Arrows" sections
 - [implementation-plan.md](implementation-plan.md) - Section 1.1-1.3 (feature details)
 
-### "When does Phase 2 start?"
-**Answer**: After Phase 1 backend is complete (~1-2 weeks). See:
+### "When does Phase 4 start?"
+**Answer**: Phases 1-3 are already implemented on the current branch. The next roadmap milestone is Phase 4: AI Personality. See:
+- [implementation-tasks.md](implementation-tasks.md) - Phase 4 section
 - [implementation-plan.md](implementation-plan.md) - Section 9 (Timeline)
-- [implementation-tasks.md](implementation-tasks.md) - Phase 2 section
 
 ---
 
@@ -345,16 +344,15 @@ General Tasks (Throughout All Phases)
 ## 🔄 Document Maintenance
 
 ### How to Keep These Updated
-1. **After Each Phase**: Update phase-X-progress.md with completion status
-2. **Weekly**: Update implementation-tasks.md checklist status
-3. **When Plans Change**: Update implementation-plan.md with new info
-4. **New Discoveries**: Add to QUICK_REFERENCE.md tips sections
-5. **Session End**: Add summary to SESSION_SUMMARY.md
+1. **Current roadmap state**: Update [README.md](README.md) and [implementation-tasks.md](implementation-tasks.md)
+2. **Feature-level decisions**: Add or revise docs in `docs/superpowers/specs/`
+3. **Execution details**: Add or revise docs in `docs/superpowers/plans/`
+4. **Historical docs**: Only refresh `phase-1-progress.md`, `QUICK_REFERENCE.md`, or `SESSION_SUMMARY.md` if you are intentionally preserving or correcting the older snapshot
 
 ### Versioning
 - All documents are living documents (constantly updated)
-- Last updated: 2026-05-03
-- Next update: After Phase 1 backend completion
+- Last updated: 2026-05-07
+- Next update: After the next roadmap phase begins or the documented roadmap changes materially
 
 ---
 
@@ -367,7 +365,7 @@ General Tasks (Throughout All Phases)
 → Use [implementation-tasks.md](implementation-tasks.md) as checklist
 
 ### For Current Status
-→ Check [phase-1-progress.md](phase-1-progress.md)
+→ Check [README.md](README.md), [implementation-tasks.md](implementation-tasks.md), and `docs/superpowers/`
 
 ### For Quick Answers
 → See FAQ section above
@@ -379,10 +377,11 @@ General Tasks (Throughout All Phases)
 
 ## 🚀 Quick Navigation Links
 
-**Phase 1 Documents**:
-- Status: [phase-1-progress.md](phase-1-progress.md)
-- Details: [implementation-plan.md §1](implementation-plan.md#1-enhanced-home-screen-with-behavioral-insights)
-- Tasks: [implementation-tasks.md §1](implementation-tasks.md#phase-1-dashboard-behavioral-insights-2-3-weeks)
+**Current Branch Work**:
+- Roadmap status: [implementation-tasks.md](implementation-tasks.md)
+- Long-term vision: [implementation-plan.md](implementation-plan.md)
+- Recent feature specs: `docs/superpowers/specs/`
+- Recent implementation plans: `docs/superpowers/plans/`
 
 **All Phases Overview**:
 - Timeline: [implementation-plan.md §9](implementation-plan.md#9-implementation-phases--timeline)

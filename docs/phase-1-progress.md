@@ -1,6 +1,8 @@
 # Phase 1 Implementation Progress
 
-**Status**: Frontend complete, Backend pending
+> Historical snapshot: this document captures the original May 3, 2026 Phase 1 checkpoint. It is no longer the source of truth for the current branch. For current status, use [README.md](README.md), [implementation-tasks.md](implementation-tasks.md), and `docs/superpowers/`.
+
+**Status at Snapshot Time**: Frontend complete, Backend pending
 
 ## What's Been Implemented ✅
 
