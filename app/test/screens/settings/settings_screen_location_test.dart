@@ -39,6 +39,7 @@ class _RecordingUserService extends UserService {
 
   String? lastLocale;
   bool? lastLocationSuggestionsEnabled;
+  String? lastAiPersonalityIntensity;
 
   @override
   Future<UserProfile> updateProfile({
@@ -50,9 +51,11 @@ class _RecordingUserService extends UserService {
     String? householdSize,
     bool? hasCompletedOnboarding,
     bool? locationSuggestionsEnabled,
+    String? aiPersonalityIntensity,
   }) async {
     lastLocale = locale;
     lastLocationSuggestionsEnabled = locationSuggestionsEnabled;
+    lastAiPersonalityIntensity = aiPersonalityIntensity;
     return UserProfile(
       id: 'user-1',
       email: 'settings@example.com',
@@ -62,6 +65,7 @@ class _RecordingUserService extends UserService {
       hasCompletedOnboarding: true,
       locationSuggestionsEnabled:
           locationSuggestionsEnabled ?? false,
+      aiPersonalityIntensity: aiPersonalityIntensity ?? 'balanced',
     );
   }
 }
@@ -82,6 +86,7 @@ Future<ProviderContainer> _pumpSettingsScreen(
           locale: 'en_US',
           createdAt: DateTime(2026),
           hasCompletedOnboarding: true,
+          aiPersonalityIntensity: 'balanced',
         ),
       ),
       subscriptionProvider.overrideWith(
@@ -189,5 +194,31 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(userService.lastLocale, 'en_GB');
+  });
+
+  testWidgets('settings can change ai personality intensity', (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+    final locationService =
+        _RecordingLocationAssistanceService(permissionGranted: true);
+    final userService = _RecordingUserService();
+
+    await _pumpSettingsScreen(
+      tester,
+      prefs: prefs,
+      locationService: locationService,
+      userService: userService,
+    );
+
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('AI Personality Intensity'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Balanced'), findsWidgets);
+    await tester.tap(find.text('Intense').last);
+    await tester.pumpAndSettle();
+
+    expect(userService.lastAiPersonalityIntensity, 'intense');
   });
 }

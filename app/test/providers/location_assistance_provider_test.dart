@@ -44,6 +44,7 @@ class _FakeUserService extends UserService {
     String? householdSize,
     bool? hasCompletedOnboarding,
     bool? locationSuggestionsEnabled,
+    String? aiPersonalityIntensity,
   }) async {
     lastLocationSuggestionsEnabled = locationSuggestionsEnabled;
     return UserProfile(
@@ -54,6 +55,7 @@ class _FakeUserService extends UserService {
       createdAt: DateTime(2026),
       hasCompletedOnboarding: true,
       locationSuggestionsEnabled: locationSuggestionsEnabled ?? false,
+      aiPersonalityIntensity: aiPersonalityIntensity ?? 'balanced',
     );
   }
 }
