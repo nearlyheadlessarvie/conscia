@@ -561,6 +561,8 @@ Member since: May 2026                 (read-only)
 
 Fields default to whatever is stored on `UserProfile`. If a field is null (user skipped it during onboarding), show it unselected. Saving calls `PATCH /api/users/profile` with only the changed fields, then calls `ref.invalidate(currentUserProvider)` and shows a success `SnackBar`.
 
+For spending style specifically, the Settings profile screen must not silently coerce a skipped value to `balanced`. A null backend value should remain visually unselected until the user explicitly chooses an option.
+
 ### `UserProfile` model extension
 
 The Dart `UserProfile` class (returned by `UserService.getProfile()`) must include the four new fields:

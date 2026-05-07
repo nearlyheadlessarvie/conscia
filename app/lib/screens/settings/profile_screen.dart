@@ -14,7 +14,7 @@ class ProfileScreen extends ConsumerStatefulWidget {
 }
 
 class _ProfileScreenState extends ConsumerState<ProfileScreen> {
-  String _personality = 'balanced';
+  String? _personality;
   String? _incomeRange;
   String? _occupation;
   String? _household;
@@ -23,7 +23,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
   void _loadFromProfile(UserProfile profile) {
     if (_loaded) return;
-    _personality = profile.spendingPersonality ?? 'balanced';
+    _personality = profile.spendingPersonality;
     _incomeRange = profile.incomeRange;
     _occupation = profile.occupationType;
     _household = profile.householdSize;
@@ -207,7 +207,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     final selected = _personality == value;
     return Expanded(
       child: GestureDetector(
-        onTap: () => setState(() => _personality = value),
+        onTap: () => setState(() {
+          _personality = selected ? null : value;
+        }),
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
           decoration: BoxDecoration(
