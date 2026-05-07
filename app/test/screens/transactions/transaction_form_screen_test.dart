@@ -141,6 +141,7 @@ Future<ProviderContainer> _pumpTransactionForm(
         transactionService ?? _RecordingTransactionService(),
       ),
       budgetServiceProvider.overrideWithValue(_StaticBudgetService(budgets)),
+      budgetReconciliationEnabledProvider.overrideWithValue(false),
     ],
   );
   addTearDown(container.dispose);
@@ -415,6 +416,41 @@ void main() {
     expect(alerts.first.title, 'No budget for Coffee yet');
   });
 
+  testWidgets('saving a budgeted expense updates budget usage immediately', (
+    tester,
+  ) async {
+    final transactionService = _RecordingTransactionService();
+
+    final container = await _pumpTransactionForm(
+      tester,
+      transactionService: transactionService,
+      budgets: const [
+        Budget(
+          id: 'budget-1',
+          category: 'Coffee',
+          monthlyLimit: 100,
+          spent: 20,
+          currencyCode: 'USD',
+          percentage: 0.2,
+          isOverBudget: false,
+        ),
+      ],
+    );
+
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextField).first, '12.50');
+    await tester.tap(find.text('Coffee'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Save Transaction'));
+    await tester.pumpAndSettle();
+
+    final updatedBudget = container.read(budgetListProvider).budgets.single;
+    expect(updatedBudget.spent, 32.5);
+    expect(updatedBudget.percentage, 0.325);
+    expect(container.read(localAlertsProvider), isEmpty);
+  });
+
   testWidgets('budget nudges are deduplicated per category', (tester) async {
     final container = await _pumpTransactionForm(tester);
 
@@ -466,6 +502,7 @@ void main() {
         ),
         transactionServiceProvider.overrideWithValue(transactionService),
         budgetServiceProvider.overrideWithValue(_StaticBudgetService(const [])),
+        budgetReconciliationEnabledProvider.overrideWithValue(false),
       ],
     );
     addTearDown(container.dispose);

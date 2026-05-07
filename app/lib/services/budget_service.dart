@@ -34,6 +34,29 @@ class Budget {
       isOverBudget: json['isOverBudget'] as bool? ?? spend > limit,
     );
   }
+
+  Budget copyWith({
+    String? id,
+    String? category,
+    double? monthlyLimit,
+    double? spent,
+    String? currencyCode,
+    double? percentage,
+    bool? isOverBudget,
+  }) {
+    final nextLimit = monthlyLimit ?? this.monthlyLimit;
+    final nextSpent = spent ?? this.spent;
+    return Budget(
+      id: id ?? this.id,
+      category: category ?? this.category,
+      monthlyLimit: nextLimit,
+      spent: nextSpent,
+      currencyCode: currencyCode ?? this.currencyCode,
+      percentage:
+          percentage ?? (nextLimit > 0 ? nextSpent / nextLimit : 0),
+      isOverBudget: isOverBudget ?? nextSpent > nextLimit,
+    );
+  }
 }
 
 class CreateBudgetDto {

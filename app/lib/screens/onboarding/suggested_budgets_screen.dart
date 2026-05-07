@@ -151,12 +151,12 @@ class _SuggestedBudgetsScreenState
   Future<void> _createBudgets() async {
     if (_saving) return;
     setState(() => _saving = true);
-    final service = ref.read(budgetServiceProvider);
     final currencyCode = ref.read(userPreferencesProvider).currency;
+    final notifier = ref.read(budgetListProvider.notifier);
 
     try {
       for (final draft in _drafts.where((draft) => draft.amount > 0)) {
-        await service.create(
+        await notifier.create(
           CreateBudgetDto(
             category: draft.categoryName,
             monthlyLimit: draft.amount,
@@ -164,7 +164,6 @@ class _SuggestedBudgetsScreenState
           ),
         );
       }
-      ref.invalidate(budgetListProvider);
       if (!mounted) return;
       context.go(AppRoutes.aboutYou);
     } catch (e) {

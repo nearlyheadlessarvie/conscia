@@ -1,11 +1,16 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/network/dio_client.dart';
 import '../services/budget_service.dart';
+import '../services/transaction_service.dart';
 
 final budgetServiceProvider = Provider<BudgetService>((ref) {
   return BudgetService(ref.watch(dioProvider));
 });
+
+final budgetReconciliationEnabledProvider = Provider<bool>((_) => true);
 
 class BudgetListState {
   final List<Budget> budgets;
@@ -33,6 +38,7 @@ class BudgetListState {
 
 class BudgetListNotifier extends StateNotifier<BudgetListState> {
   final BudgetService _service;
+  Timer? _pendingRefresh;
 
   BudgetListNotifier(this._service) : super(const BudgetListState()) {
     load();
@@ -77,6 +83,54 @@ class BudgetListNotifier extends StateNotifier<BudgetListState> {
     } catch (e) {
       state = state.copyWith(error: e.toString());
     }
+  }
+
+  bool applyOptimisticTransaction(Transaction transaction) {
+    if (transaction.type != 'expense') return false;
+
+    final normalizedCategory = transaction.category.trim().toLowerCase();
+    if (normalizedCategory.isEmpty) return false;
+
+    var didUpdate = false;
+    final updatedBudgets = state.budgets.map((budget) {
+      if (budget.category.trim().toLowerCase() != normalizedCategory) {
+        return budget;
+      }
+
+      didUpdate = true;
+      return budget.copyWith(
+        spent: budget.spent + transaction.amount,
+      );
+    }).toList(growable: false);
+
+    if (!didUpdate) return false;
+
+    state = state.copyWith(budgets: updatedBudgets);
+    return true;
+  }
+
+  Future<void> refreshInBackground() async {
+    try {
+      final budgets = await _service.list();
+      state = state.copyWith(budgets: budgets, error: null);
+    } catch (e) {
+      state = state.copyWith(error: e.toString());
+    }
+  }
+
+  void scheduleRefreshInBackground({
+    Duration delay = const Duration(seconds: 6),
+  }) {
+    _pendingRefresh?.cancel();
+    _pendingRefresh = Timer(delay, () {
+      unawaited(refreshInBackground());
+    });
+  }
+
+  @override
+  void dispose() {
+    _pendingRefresh?.cancel();
+    super.dispose();
   }
 }
 

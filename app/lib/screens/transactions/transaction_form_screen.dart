@@ -49,6 +49,7 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
   void initState() {
     super.initState();
     _currencyCode = ref.read(userPreferencesProvider).currency;
+    ref.read(budgetListProvider);
     if (_isEditing) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _loadEditData();
@@ -148,6 +149,19 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
         ref
             .read(localAlertsProvider.notifier)
             .addBudgetNudge(category: _selectedCategory!);
+      }
+
+      if (!_isEditing) {
+        final updatedBudget = ref
+            .read(budgetListProvider.notifier)
+            .applyOptimisticTransaction(
+              savedTransaction,
+            );
+        if (updatedBudget) {
+          if (ref.read(budgetReconciliationEnabledProvider)) {
+            ref.read(budgetListProvider.notifier).scheduleRefreshInBackground();
+          }
+        }
       }
 
       if (!mounted) return;
