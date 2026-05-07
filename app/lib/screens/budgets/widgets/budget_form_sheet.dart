@@ -7,7 +7,10 @@ import '../../../core/constants/generated/app_constants.g.dart';
 import '../../../providers/budget_providers.dart';
 import '../../../providers/subscription_provider.dart';
 import '../../../services/budget_service.dart';
+import '../../../widgets/feed_card.dart';
 import '../../../widgets/currency_badge.dart';
+import '../../../widgets/screen_section.dart';
+import '../../../widgets/selection_chip_group.dart';
 import '../../../providers/user_provider.dart';
 
 class BudgetFormSheet extends ConsumerStatefulWidget {
@@ -124,7 +127,7 @@ class _BudgetFormSheetState extends ConsumerState<BudgetFormSheet> {
     return Padding(
       padding: EdgeInsets.only(bottom: bottomInset),
       child: SizedBox(
-        height: 350,
+        height: 460,
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Column(
@@ -146,49 +149,56 @@ class _BudgetFormSheetState extends ConsumerState<BudgetFormSheet> {
                 style: textTheme.titleLarge,
                 textAlign: TextAlign.center,
               ),
-              const SizedBox(height: 24),
-              DropdownButtonFormField<String>(
-                initialValue: _selectedCategory,
-                decoration: const InputDecoration(
-                  labelText: 'Category',
-                  border: OutlineInputBorder(),
-                ),
-                items: visibleCategories
-                    .map((cat) => DropdownMenuItem(
-                          value: cat,
-                          child: Row(
-                            children: [
-                              CategoryIcons.badge(cat, size: 16),
-                              const SizedBox(width: 8),
-                              Text(cat),
-                            ],
+              const SizedBox(height: 20),
+              Expanded(
+                child: ListView(
+                  children: [
+                    ScreenSection(
+                      title: 'Category',
+                      subtitle: _isEditing
+                          ? 'Category cannot be changed once the budget exists.'
+                          : 'Choose which spending category this budget should watch.',
+                      compact: true,
+                      child: FeedCard(
+                        child: SelectionChipGroup(
+                          options: visibleCategories,
+                          value: _selectedCategory,
+                          onSelected: _isEditing
+                              ? (_) {}
+                              : (v) => setState(() => _selectedCategory = v),
+                          labelBuilder: (option) => option,
+                          avatarBuilder: (option, selected) =>
+                              CategoryIcons.badge(option, size: 16),
+                        ),
+                      ),
+                    ),
+                    ScreenSection(
+                      title: 'Monthly cap',
+                      subtitle: 'Set the spending ceiling you want Conscia to track.',
+                      compact: true,
+                      child: TextField(
+                        controller: _amountController,
+                        keyboardType:
+                            const TextInputType.numberWithOptions(decimal: true),
+                        onChanged: (_) => setState(() {}),
+                        decoration: InputDecoration(
+                          labelText: 'Monthly Limit',
+                          border: const OutlineInputBorder(),
+                          prefixIcon: Padding(
+                            padding: const EdgeInsets.only(left: 12, right: 8),
+                            child: CurrencyBadge(
+                              currencyCode: currency,
+                            ),
                           ),
-                        ))
-                    .toList(),
-                onChanged: _isEditing
-                    ? null
-                    : (v) => setState(() => _selectedCategory = v),
+                          prefixIconConstraints:
+                              const BoxConstraints(minWidth: 0, minHeight: 0),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
               const SizedBox(height: 16),
-              TextField(
-                controller: _amountController,
-                keyboardType:
-                    const TextInputType.numberWithOptions(decimal: true),
-                onChanged: (_) => setState(() {}),
-                decoration: InputDecoration(
-                  labelText: 'Monthly Limit',
-                  border: const OutlineInputBorder(),
-                  prefixIcon: Padding(
-                    padding: const EdgeInsets.only(left: 12, right: 8),
-                    child: CurrencyBadge(
-                      currencyCode: currency,
-                    ),
-                  ),
-                  prefixIconConstraints:
-                      const BoxConstraints(minWidth: 0, minHeight: 0),
-                ),
-              ),
-              const Spacer(),
               FilledButton(
                 onPressed: _isValid && !_submitting ? _submit : null,
                 style: FilledButton.styleFrom(

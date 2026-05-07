@@ -58,12 +58,9 @@ void main() {
       (tester) async {
     await _pumpBudgetFormSheet(tester, isPremium: false);
 
-    await tester.tap(find.byType(DropdownButtonFormField<String>));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Groceries'), findsWidgets);
-    expect(find.text('Dining'), findsWidgets);
-    expect(find.text('Transport'), findsWidgets);
+    expect(find.text('Groceries'), findsOneWidget);
+    expect(find.text('Dining'), findsOneWidget);
+    expect(find.text('Transport'), findsOneWidget);
     expect(find.text('Travel'), findsNothing);
     expect(find.text('Salary'), findsNothing);
   });
@@ -72,10 +69,7 @@ void main() {
       (tester) async {
     await _pumpBudgetFormSheet(tester, isPremium: true);
 
-    await tester.tap(find.byType(DropdownButtonFormField<String>));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Travel'), findsWidgets);
+    expect(find.text('Travel'), findsOneWidget);
     expect(find.text('Salary'), findsNothing);
   });
 }

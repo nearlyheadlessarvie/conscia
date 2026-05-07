@@ -103,7 +103,7 @@ class _ReceiptScannerScreenState extends ConsumerState<ReceiptScannerScreen> {
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         ScreenSection(
-          title: 'Scan a receipt',
+          title: 'Scan the receipt, then sanity-check the details',
           subtitle:
               'Extract merchant, total, and category suggestions from a photo in a few seconds.',
           child: FeedCard(
@@ -165,13 +165,13 @@ class _ReceiptScannerScreenState extends ConsumerState<ReceiptScannerScreen> {
                   FilledButton.icon(
                     onPressed: () => _pickAndScan(ImageSource.camera),
                     icon: const Icon(Icons.camera_alt),
-                    label: const Text('Take Photo'),
+                    label: const Text('Take photo'),
                   ),
                   const SizedBox(height: 12),
                   OutlinedButton.icon(
                     onPressed: () => _pickAndScan(ImageSource.gallery),
                     icon: const Icon(Icons.photo_library),
-                    label: const Text('Pick from Gallery'),
+                    label: const Text('Choose from gallery'),
                   ),
                 ],
               ],

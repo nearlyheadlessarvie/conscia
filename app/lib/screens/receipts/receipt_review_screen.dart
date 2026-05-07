@@ -1,12 +1,15 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
 import '../../core/network/dio_client.dart';
+import '../../core/utils/currency_formatter.dart';
 import '../../providers/subscription_provider.dart';
 import '../../providers/user_provider.dart';
 import '../../widgets/amount_input_field.dart';
+import '../../widgets/feed_card.dart';
+import '../../widgets/hero_screen_scaffold.dart';
+import '../../widgets/screen_section.dart';
 import '../transactions/widgets/category_picker.dart';
 
 class ReceiptReviewScreen extends ConsumerStatefulWidget {
@@ -57,10 +60,12 @@ class _ReceiptReviewScreenState extends ConsumerState<ReceiptReviewScreen> {
 
       final extracted = data['extractedData'] as Map<String, dynamic>?;
       final items = (extracted?['items'] as List?)
-              ?.map((e) => _LineItem(
-                    e['name'] as String? ?? '',
-                    (e['amount'] as num?)?.toDouble() ?? 0,
-                  ))
+              ?.map(
+                (e) => _LineItem(
+                  e['name'] as String? ?? '',
+                  (e['amount'] as num?)?.toDouble() ?? 0,
+                ),
+              )
               .toList() ??
           [];
 
@@ -76,8 +81,9 @@ class _ReceiptReviewScreenState extends ConsumerState<ReceiptReviewScreen> {
         if (dateStr != null) _date = DateTime.tryParse(dateStr) ?? _date;
         _confidence = (data['ocrConfidence'] as num?)?.toDouble() ?? 0.0;
         _needsReview = data['needsReview'] as bool? ?? true;
-        _lineItems.clear();
-        _lineItems.addAll(items);
+        _lineItems
+          ..clear()
+          ..addAll(items);
       });
     } on DioException catch (e) {
       if (!mounted) return;
@@ -118,10 +124,11 @@ class _ReceiptReviewScreenState extends ConsumerState<ReceiptReviewScreen> {
       );
 
       if (!mounted) return;
-      context.pop();
+      Navigator.of(context).maybePop();
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-            content: Text('Receipt confirmed and transaction saved!')),
+          content: Text('Receipt confirmed and transaction saved!'),
+        ),
       );
     } on DioException catch (e) {
       if (!mounted) return;
@@ -148,28 +155,15 @@ class _ReceiptReviewScreenState extends ConsumerState<ReceiptReviewScreen> {
     final colors = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
 
-    return Scaffold(
+    return HeroScreenScaffold(
       appBar: AppBar(
         title: const Text('Review Receipt'),
         leading: IconButton(
           icon: const Icon(Icons.close),
-          onPressed: () => context.pop(),
+          onPressed: () => Navigator.of(context).maybePop(),
         ),
-        actions: [
-          if (!_loading)
-            TextButton(
-              onPressed: _isValid && !_submitting ? _confirm : null,
-              child: _submitting
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Text('Confirm'),
-            ),
-        ],
       ),
-      body: _loading
+      child: _loading
           ? _buildLoading()
           : _error != null && _merchantController.text.isEmpty
               ? _buildError(colors, textTheme)
@@ -194,31 +188,35 @@ class _ReceiptReviewScreenState extends ConsumerState<ReceiptReviewScreen> {
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.error_outline, size: 64, color: colors.error),
-            const SizedBox(height: 16),
-            Text('Could not load receipt', style: textTheme.titleMedium),
-            const SizedBox(height: 8),
-            Text(_error!,
+        child: FeedCard(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.error_outline, size: 64, color: colors.error),
+              const SizedBox(height: 16),
+              Text('Could not load receipt', style: textTheme.titleMedium),
+              const SizedBox(height: 8),
+              Text(
+                _error!,
                 style: textTheme.bodyMedium?.copyWith(
                   color: colors.onSurfaceVariant,
                 ),
-                textAlign: TextAlign.center),
-            const SizedBox(height: 24),
-            FilledButton.icon(
-              onPressed: () {
-                setState(() {
-                  _loading = true;
-                  _error = null;
-                });
-                _loadReceiptData();
-              },
-              icon: const Icon(Icons.refresh),
-              label: const Text('Retry'),
-            ),
-          ],
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 24),
+              FilledButton.icon(
+                onPressed: () {
+                  setState(() {
+                    _loading = true;
+                    _error = null;
+                  });
+                  _loadReceiptData();
+                },
+                icon: const Icon(Icons.refresh),
+                label: const Text('Retry'),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -228,171 +226,164 @@ class _ReceiptReviewScreenState extends ConsumerState<ReceiptReviewScreen> {
     final isPremium =
         ref.watch(subscriptionProvider).valueOrNull?.isPremium ?? false;
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          if (_error != null)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: colors.error.withAlpha(25),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.error_outline, size: 18, color: colors.error),
-                    const SizedBox(width: 8),
-                    Expanded(
-                        child: Text(_error!,
-                            style: textTheme.bodySmall
-                                ?.copyWith(color: colors.error))),
-                  ],
-                ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (_error != null)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: colors.error.withAlpha(25),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.error_outline, size: 18, color: colors.error),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      _error!,
+                      style: textTheme.bodySmall?.copyWith(color: colors.error),
+                    ),
+                  ),
+                ],
               ),
             ),
-
-          // Confidence indicator
-          _buildConfidenceBanner(colors, textTheme),
-          const SizedBox(height: 20),
-
-          // Merchant
-          TextField(
-            controller: _merchantController,
-            textCapitalization: TextCapitalization.words,
-            decoration: InputDecoration(
-              labelText: 'Merchant',
-              prefixIcon: const Icon(Icons.store),
-              suffixIcon: _needsReview
-                  ? Tooltip(
-                      message: 'AI-extracted — please verify',
-                      child: Icon(Icons.auto_fix_high,
-                          size: 18, color: colors.secondary),
-                    )
-                  : null,
-            ),
-            onChanged: (_) => setState(() {}),
           ),
-          const SizedBox(height: 16),
-
-          // Amount
-          AmountInputField(
-            controller: _amountController,
-            isExpense: true,
-            currencyCode: _currencyCode,
-            isPremium: isPremium,
-            onCurrencyChanged: (code) => setState(() => _currencyCode = code),
-          ),
-          const SizedBox(height: 16),
-
-          // Category
-          CategoryPicker(
-            selected: _selectedCategory,
-            onSelected: (cat) => setState(() => _selectedCategory = cat),
-          ),
-          const SizedBox(height: 16),
-
-          // Date
-          ListTile(
-            leading: const Icon(Icons.calendar_today),
-            title: Text(_formatDate(_date)),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: _pickDate,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-              side: BorderSide(color: colors.outline),
-            ),
-          ),
-          const SizedBox(height: 24),
-
-          // Line items
-          if (_lineItems.isNotEmpty) ...[
-            Row(
+        ScreenSection(
+          title: 'AI read quality',
+          subtitle:
+              'Check how confident the scan was before you save the transaction.',
+          compact: true,
+          child: _buildConfidenceBanner(colors, textTheme),
+        ),
+        ScreenSection(
+          title: 'Transaction details',
+          subtitle: 'Sanity-check the extracted merchant, amount, and category.',
+          compact: true,
+          child: FeedCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Icon(Icons.receipt_long,
-                    size: 20, color: colors.onSurfaceVariant),
-                const SizedBox(width: 8),
-                Text('Extracted Items',
-                    style: textTheme.titleSmall?.copyWith(
-                      color: colors.onSurfaceVariant,
-                    )),
-                const Spacer(),
-                Text('${_lineItems.length} items',
-                    style: textTheme.bodySmall?.copyWith(
-                      color: colors.outline,
-                    )),
+                TextField(
+                  controller: _merchantController,
+                  textCapitalization: TextCapitalization.words,
+                  decoration: InputDecoration(
+                    labelText: 'Merchant',
+                    prefixIcon: const Icon(Icons.store),
+                    suffixIcon: _needsReview
+                        ? Tooltip(
+                            message: 'AI-extracted — please verify',
+                            child: Icon(
+                              Icons.auto_fix_high,
+                              size: 18,
+                              color: colors.secondary,
+                            ),
+                          )
+                        : null,
+                  ),
+                  onChanged: (_) => setState(() {}),
+                ),
+                const SizedBox(height: 16),
+                AmountInputField(
+                  controller: _amountController,
+                  isExpense: true,
+                  currencyCode: _currencyCode,
+                  isPremium: isPremium,
+                  onCurrencyChanged: (code) =>
+                      setState(() => _currencyCode = code),
+                ),
+                const SizedBox(height: 16),
+                CategoryPicker(
+                  selected: _selectedCategory,
+                  onSelected: (cat) => setState(() => _selectedCategory = cat),
+                ),
+                const SizedBox(height: 16),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(Icons.calendar_today),
+                  title: Text(_formatDate(_date)),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: _pickDate,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    side: BorderSide(color: colors.outline),
+                  ),
+                ),
               ],
             ),
-            const SizedBox(height: 8),
-            Card(
+          ),
+        ),
+        if (_lineItems.isNotEmpty)
+          ScreenSection(
+            title: 'Extracted items',
+            subtitle: 'Review the line items the scan picked up from the receipt.',
+            compact: true,
+            trailing: Text(
+              '${_lineItems.length} items',
+              style: textTheme.bodySmall?.copyWith(color: colors.outline),
+            ),
+            child: FeedCard(
               child: Column(
                 children: [
                   for (var i = 0; i < _lineItems.length; i++) ...[
                     _buildLineItemTile(i, colors, textTheme),
                     if (i < _lineItems.length - 1)
                       Divider(
-                          height: 1,
-                          indent: 16,
-                          endIndent: 16,
-                          color: colors.outlineVariant),
+                        height: 1,
+                        indent: 16,
+                        endIndent: 16,
+                        color: colors.outlineVariant,
+                      ),
                   ],
-                ],
-              ),
-            ),
-            const SizedBox(height: 12),
-
-            // Total row
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 4),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text('Total',
-                      style: textTheme.titleSmall
-                          ?.copyWith(fontWeight: FontWeight.w600)),
-                  Text(
-                    '\$${_amountController.text} $_currencyCode',
-                    style: textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w700,
-                      color: colors.error,
-                    ),
+                  const SizedBox(height: 12),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Total',
+                        style: textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      Text(
+                        CurrencyFormatter.format(
+                          double.tryParse(_amountController.text) ?? 0,
+                          currencyCode: _currencyCode,
+                        ),
+                        style: textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w700,
+                          color: colors.error,
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
             ),
-          ],
-
-          const SizedBox(height: 32),
-
-          // Confirm button
-          FilledButton.icon(
-            onPressed: _isValid && !_submitting ? _confirm : null,
-            icon: const Icon(Icons.check),
-            label:
-                Text(_submitting ? 'Saving...' : 'Confirm & Save Transaction'),
           ),
-
-          const SizedBox(height: 8),
-
-          // Discard button
-          OutlinedButton(
-            onPressed: _submitting
-                ? null
-                : () {
-                    context.pop();
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Receipt discarded')),
-                    );
-                  },
-            child: const Text('Discard'),
-          ),
-
-          const SizedBox(height: 16),
-        ],
-      ),
+        const SizedBox(height: 8),
+        FilledButton.icon(
+          onPressed: _isValid && !_submitting ? _confirm : null,
+          icon: const Icon(Icons.check),
+          label: Text(_submitting ? 'Saving...' : 'Confirm and save'),
+        ),
+        const SizedBox(height: 8),
+        OutlinedButton(
+          onPressed: _submitting
+              ? null
+              : () {
+                  Navigator.of(context).maybePop();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Receipt discarded')),
+                  );
+                },
+          child: const Text('Discard'),
+        ),
+        const SizedBox(height: 16),
+      ],
     );
   }
 
@@ -423,36 +414,46 @@ class _ReceiptReviewScreenState extends ConsumerState<ReceiptReviewScreen> {
       label = 'Low confidence ($percentage%) — manual review needed';
     }
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        color: bannerColor,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        children: [
-          Icon(icon, size: 20, color: textColor),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(label,
-                    style: textTheme.labelLarge?.copyWith(color: textColor)),
-                if (_needsReview)
-                  Text('Fields highlighted with ✨ may need correction',
-                      style: textTheme.bodySmall
-                          ?.copyWith(color: textColor.withAlpha(180))),
-              ],
+    return FeedCard(
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: bannerColor,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, size: 20, color: textColor),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    style: textTheme.labelLarge?.copyWith(color: textColor),
+                  ),
+                  if (_needsReview)
+                    Text(
+                      'Fields highlighted with ✨ may need correction',
+                      style: textTheme.bodySmall?.copyWith(
+                        color: textColor.withAlpha(180),
+                      ),
+                    ),
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildLineItemTile(
-      int index, ColorScheme colors, TextTheme textTheme) {
+    int index,
+    ColorScheme colors,
+    TextTheme textTheme,
+  ) {
     final item = _lineItems[index];
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
@@ -462,7 +463,7 @@ class _ReceiptReviewScreenState extends ConsumerState<ReceiptReviewScreen> {
             child: Text(item.name, style: textTheme.bodyMedium),
           ),
           Text(
-            '\$${item.amount.toStringAsFixed(2)}',
+            CurrencyFormatter.format(item.amount, currencyCode: _currencyCode),
             style: textTheme.bodyMedium?.copyWith(
               fontWeight: FontWeight.w600,
               color: colors.onSurface,

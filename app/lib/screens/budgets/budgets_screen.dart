@@ -39,10 +39,14 @@ class BudgetsScreen extends ConsumerWidget {
     BudgetListState state,
   ) {
     if (state.isLoading && state.budgets.isEmpty) {
-      return ListView.builder(
-        padding: const EdgeInsets.only(bottom: 16),
-        itemCount: 3,
-        itemBuilder: (_, __) => const BudgetListSkeletonCard(),
+      return Column(
+        children: List.generate(
+          3,
+          (_) => const Padding(
+            padding: EdgeInsets.only(bottom: 12),
+            child: BudgetListSkeletonCard(),
+          ),
+        ),
       );
     }
 
@@ -50,36 +54,38 @@ class BudgetsScreen extends ConsumerWidget {
       return Center(
         child: EmptyState(
           icon: Icons.pie_chart_outline,
-          title: 'No budgets yet',
-          subtitle: 'Create a budget to track your spending by category.',
-          actionLabel: 'Create Budget',
+          title: 'Budgets that match how you actually spend',
+          subtitle:
+              'Create flexible monthly limits for the categories you care about most.',
+          actionLabel: 'Create your first budget',
           onAction: () => _onAddBudget(context, ref),
         ),
       );
     }
 
-    return RefreshIndicator(
-      onRefresh: () => ref.read(budgetListProvider.notifier).load(),
-      child: ListView(
-        padding: const EdgeInsets.only(bottom: 16),
-        children: [
-          ScreenSection(
-            title: 'Active budgets',
-            subtitle: 'Track how each category is pacing this month.',
-            compact: true,
-            child: Column(
-              children: [
-                for (final budget in state.budgets)
-                  BudgetCard(
-                    budget: budget,
-                    onEdit: () => BudgetFormSheet.show(context, existing: budget),
-                    onDelete: () => _confirmDelete(context, ref, budget.id),
-                  ),
-              ],
-            ),
+    return Column(
+      children: [
+        ScreenSection(
+          title: 'Active budgets',
+          subtitle: 'Track how each category is pacing this month.',
+          compact: true,
+          trailing: IconButton(
+            tooltip: 'Refresh budgets',
+            onPressed: () => ref.read(budgetListProvider.notifier).load(),
+            icon: const Icon(Icons.refresh),
           ),
-        ],
-      ),
+          child: Column(
+            children: [
+              for (final budget in state.budgets)
+                BudgetCard(
+                  budget: budget,
+                  onEdit: () => BudgetFormSheet.show(context, existing: budget),
+                  onDelete: () => _confirmDelete(context, ref, budget.id),
+                ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 

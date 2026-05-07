@@ -90,14 +90,63 @@ class BudgetCard extends StatelessWidget {
               Row(
                 children: [
                   Expanded(
-                    child: Text(
-                      '${CurrencyFormatter.format(budget.spent, currencyCode: budget.currencyCode)} / ${CurrencyFormatter.format(budget.monthlyLimit, currencyCode: budget.currencyCode)}',
-                      style: textTheme.bodyLarge,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Spent so far',
+                          style: textTheme.labelSmall?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          CurrencyFormatter.format(
+                            budget.spent,
+                            currencyCode: budget.currencyCode,
+                          ),
+                          style: textTheme.bodyLarge,
+                        ),
+                      ],
                     ),
                   ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(
+                        'Monthly cap',
+                        style: textTheme.labelSmall?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        CurrencyFormatter.format(
+                          budget.monthlyLimit,
+                          currencyCode: budget.currencyCode,
+                        ),
+                        style: textTheme.bodyLarge,
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
                   Text(
                     '${(pct * 100).toInt()}%',
                     style: textTheme.bodyLarge?.copyWith(
+                      color: healthColor,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const Spacer(),
+                  Text(
+                    budget.isOverBudget ? 'Over pace' : 'On pace',
+                    style: textTheme.labelMedium?.copyWith(
                       color: healthColor,
                       fontWeight: FontWeight.w600,
                     ),
