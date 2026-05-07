@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
+
+import '../../widgets/conscience_mark.dart';
 
 class OnboardingIllustration1 extends StatelessWidget {
   final double size;
@@ -12,11 +13,38 @@ class OnboardingIllustration1 extends StatelessWidget {
     return SizedBox(
       width: size,
       height: size,
-      child: SvgPicture.asset(
-        'assets/images/app_icon.svg',
-        width: size,
-        height: size,
-        fit: BoxFit.contain,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          Container(
+            width: size * 0.92,
+            height: size * 0.92,
+            decoration: const BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: RadialGradient(
+                colors: <Color>[
+                  Color(0x1F79E2DF),
+                  Color(0x00FFFFFF),
+                ],
+              ),
+            ),
+          ),
+          Container(
+            width: size * 0.74,
+            height: size * 0.74,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF091A38).withValues(alpha: 0.1),
+                  blurRadius: size * 0.08,
+                  offset: Offset(0, size * 0.025),
+                ),
+              ],
+            ),
+            child: ConscienceMark(size: size * 0.74),
+          ),
+        ],
       ),
     );
   }
@@ -134,8 +162,8 @@ class _AiInsightsPainter extends CustomPainter {
     // Brain outline
     final brainRadius = unit * 2.5;
     final brainGradient = Paint()
-      ..shader = RadialGradient(
-        colors: const [Color(0xFF7C4DFF), Color(0xFF1A237E)],
+      ..shader = const RadialGradient(
+        colors: [Color(0xFF7C4DFF), Color(0xFF1A237E)],
       ).createShader(Rect.fromCircle(center: center, radius: brainRadius));
     canvas.drawCircle(center, brainRadius, brainGradient);
 
