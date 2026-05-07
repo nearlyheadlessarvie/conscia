@@ -54,10 +54,16 @@ class LocalAlertsNotifier extends StateNotifier<List<AppAlert>> {
   LocalAlertsNotifier() : super(const []);
 
   void addBudgetNudge({required String category}) {
+    final normalizedCategory = category.trim().toLowerCase();
+    final alertId = 'budget-nudge-$normalizedCategory';
+    if (state.any((alert) => alert.id == alertId)) {
+      return;
+    }
+
     final now = DateTime.now();
     state = [
       AppAlert(
-        id: 'budget-nudge-${category.toLowerCase()}-${now.microsecondsSinceEpoch}',
+        id: alertId,
         type: 'budget_nudge',
         title: 'No budget for $category yet',
         message:
@@ -91,3 +97,8 @@ final localAlertsProvider =
     StateNotifierProvider<LocalAlertsNotifier, List<AppAlert>>(
   (_) => LocalAlertsNotifier(),
 );
+
+final activeLocalAlertsProvider = Provider<List<AppAlert>>((ref) {
+  final alerts = ref.watch(localAlertsProvider);
+  return alerts.where((alert) => !alert.isDismissed).toList(growable: false);
+});

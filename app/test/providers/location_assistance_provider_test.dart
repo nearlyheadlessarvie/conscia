@@ -121,6 +121,35 @@ void main() {
     expect(state.shouldPromptOnFeatureOpen, isFalse);
   });
 
+  test('disable from settings keeps prompt handled and clears denied state',
+      () async {
+    SharedPreferences.setMockInitialValues({
+      'location_suggestions_enabled': true,
+      'location_suggestions_prompted': true,
+      'location_suggestions_permission_denied': true,
+    });
+    final prefs = await SharedPreferences.getInstance();
+
+    final container = buildContainer(
+      prefs,
+      service: _FakeLocationAssistanceService(permissionGranted: true),
+    );
+    addTearDown(container.dispose);
+
+    await container
+        .read(locationAssistanceProvider.notifier)
+        .disableFromSettings();
+
+    final rehydratedContainer = buildContainer(prefs);
+    addTearDown(rehydratedContainer.dispose);
+    final state = rehydratedContainer.read(locationAssistanceProvider);
+
+    expect(state.hasPrompted, isTrue);
+    expect(state.isEnabled, isFalse);
+    expect(state.permissionDenied, isFalse);
+    expect(state.shouldPromptOnFeatureOpen, isFalse);
+  });
+
   test('shared suggestion provider exposes service suggestions', () async {
     SharedPreferences.setMockInitialValues({
       'location_suggestions_enabled': true,

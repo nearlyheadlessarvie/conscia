@@ -43,12 +43,40 @@ class _RecordingTransactionService extends TransactionService {
   _RecordingTransactionService() : super(Dio());
 
   CreateTransactionDto? lastCreated;
+  CreateTransactionDto? lastUpdated;
 
   @override
   Future<Transaction> create(CreateTransactionDto dto) async {
     lastCreated = dto;
     return Transaction(
       id: 'tx-1',
+      amount: dto.amount,
+      currencyCode: dto.currencyCode,
+      category: dto.category,
+      description: dto.merchant,
+      type: dto.type,
+      date: dto.date,
+    );
+  }
+
+  @override
+  Future<Transaction> getById(String id) async {
+    return Transaction(
+      id: id,
+      amount: 14.75,
+      currencyCode: 'USD',
+      category: 'Coffee',
+      description: '',
+      type: 'expense',
+      date: DateTime(2026, 5, 7, 12, 30),
+    );
+  }
+
+  @override
+  Future<Transaction> update(String id, CreateTransactionDto dto) async {
+    lastUpdated = dto;
+    return Transaction(
+      id: id,
       amount: dto.amount,
       currencyCode: dto.currencyCode,
       category: dto.category,
@@ -385,5 +413,103 @@ void main() {
     expect(alerts, hasLength(1));
     expect(alerts.first.type, 'budget_nudge');
     expect(alerts.first.title, 'No budget for Coffee yet');
+  });
+
+  testWidgets('budget nudges are deduplicated per category', (tester) async {
+    final container = await _pumpTransactionForm(tester);
+
+    await tester.pumpAndSettle();
+
+    final notifier = container.read(localAlertsProvider.notifier);
+    notifier.addBudgetNudge(category: 'Coffee');
+    notifier.addBudgetNudge(category: 'Coffee');
+
+    final alerts = container.read(localAlertsProvider);
+    expect(alerts, hasLength(1));
+    expect(alerts.first.id, 'budget-nudge-coffee');
+  });
+
+  testWidgets('editing an unbudgeted expense does not create a fresh nudge', (
+    tester,
+  ) async {
+    final transactionService = _RecordingTransactionService();
+    SharedPreferences.setMockInitialValues({
+      'location_suggestions_enabled': false,
+      'location_suggestions_prompted': true,
+    });
+    final prefs = await SharedPreferences.getInstance();
+
+    final container = ProviderContainer(
+      overrides: [
+        categoryFrequencyProvider.overrideWithValue(
+          ['Coffee', 'Dining', 'Shopping', 'Gaming', 'Travel'],
+        ),
+        subscriptionProvider.overrideWith(
+          (ref) async => const SubscriptionStatus(
+            tier: 'free',
+            isPremium: false,
+          ),
+        ),
+        currentUserProvider.overrideWith(
+          (ref) async => UserProfile(
+            id: 'user-1',
+            email: 'tx@example.com',
+            currencyCode: 'USD',
+            locale: 'en_US',
+            createdAt: DateTime(2026),
+            hasCompletedOnboarding: true,
+          ),
+        ),
+        sharedPreferencesProvider.overrideWithValue(prefs),
+        locationAssistanceServiceProvider.overrideWithValue(
+          _FakeLocationAssistanceService(permissionGranted: true),
+        ),
+        transactionServiceProvider.overrideWithValue(transactionService),
+        budgetServiceProvider.overrideWithValue(_StaticBudgetService(const [])),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: MaterialApp(
+          home: Scaffold(
+            body: Builder(
+              builder: (context) => TextButton(
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) =>
+                          const TransactionFormScreen(transactionId: 'tx-1'),
+                    ),
+                  );
+                },
+                child: const Text('Open edit'),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Open edit'));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextField).first, '18.25');
+    await tester.enterText(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is TextField &&
+            widget.decoration?.labelText == 'Merchant (optional)',
+      ),
+      'Morning Brew',
+    );
+    await tester.tap(find.text('Update Transaction'));
+    await tester.pumpAndSettle();
+
+    expect(transactionService.lastUpdated, isNotNull);
+    expect(container.read(localAlertsProvider), isEmpty);
+    expect(find.textContaining('Budget nudge saved'), findsNothing);
   });
 }

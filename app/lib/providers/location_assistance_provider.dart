@@ -48,10 +48,7 @@ class LocationAssistanceNotifier extends StateNotifier<LocationAssistanceState> 
   }
 
   Future<void> declinePrompt() async {
-    await _prefs.setBool(_enabledKey, false);
-    await _prefs.setBool(_promptedKey, true);
-    await _prefs.setBool(_deniedKey, false);
-    state = const LocationAssistanceState(
+    await _persistState(
       isEnabled: false,
       hasPrompted: true,
       permissionDenied: false,
@@ -60,13 +57,35 @@ class LocationAssistanceNotifier extends StateNotifier<LocationAssistanceState> 
 
   Future<void> enableFromPrompt() async {
     final granted = await _service.requestPermission();
-    await _prefs.setBool(_enabledKey, granted);
-    await _prefs.setBool(_promptedKey, true);
-    await _prefs.setBool(_deniedKey, !granted);
-    state = LocationAssistanceState(
+    await _persistState(
       isEnabled: granted,
       hasPrompted: true,
       permissionDenied: !granted,
+    );
+  }
+
+  Future<void> enableFromSettings() => enableFromPrompt();
+
+  Future<void> disableFromSettings() async {
+    await _persistState(
+      isEnabled: false,
+      hasPrompted: true,
+      permissionDenied: false,
+    );
+  }
+
+  Future<void> _persistState({
+    required bool isEnabled,
+    required bool hasPrompted,
+    required bool permissionDenied,
+  }) async {
+    await _prefs.setBool(_enabledKey, isEnabled);
+    await _prefs.setBool(_promptedKey, hasPrompted);
+    await _prefs.setBool(_deniedKey, permissionDenied);
+    state = LocationAssistanceState(
+      isEnabled: isEnabled,
+      hasPrompted: hasPrompted,
+      permissionDenied: permissionDenied,
     );
   }
 }

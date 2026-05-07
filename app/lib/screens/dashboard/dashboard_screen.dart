@@ -5,12 +5,14 @@ import 'package:google_fonts/google_fonts.dart';
 
 import 'package:conscia_app/core/constants/generated/app_constants.g.dart';
 import 'package:conscia_app/core/routing/app_router.dart';
+import 'package:conscia_app/providers/alert_provider.dart';
 import 'package:conscia_app/providers/behavioral_insights_provider.dart';
 import 'package:conscia_app/providers/budget_providers.dart';
 import 'package:conscia_app/providers/subscription_provider.dart';
 import 'package:conscia_app/providers/transaction_providers.dart';
 import 'package:conscia_app/providers/usage_provider.dart';
 import 'package:conscia_app/screens/dashboard/widgets/budget_summary_card.dart';
+import 'package:conscia_app/screens/dashboard/widgets/in_app_alert_banner.dart';
 import 'package:conscia_app/screens/dashboard/widgets/budget_warning_banner.dart';
 import 'package:conscia_app/screens/dashboard/widgets/financial_mood_card.dart';
 import 'package:conscia_app/screens/dashboard/widgets/impulse_trends_card.dart';
@@ -81,10 +83,12 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     final budgetState = ref.watch(budgetListProvider);
     final txState = ref.watch(transactionListProvider);
     final insightsState = ref.watch(behavioralInsightsProvider);
+    final localAlerts = ref.watch(activeLocalAlertsProvider);
 
     final budgets = budgetState.budgets;
     final transactions = txState.transactions;
     final recentTransactions = transactions.take(5).toList();
+    final highlightedAlert = localAlerts.isNotEmpty ? localAlerts.first : null;
     final regretPrompts = transactions
         .where((t) =>
             t.regretLevel == null &&
@@ -119,6 +123,22 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             child: BudgetWarningBanner(
               overBudgetCount: overBudgetCount,
               onDismiss: () => setState(() => _bannerDismissed = true),
+            ),
+          ),
+        if (highlightedAlert != null)
+          SliverToBoxAdapter(
+            child: InAppAlertBanner(
+              title: highlightedAlert.title,
+              message: highlightedAlert.message,
+              actionLabel: highlightedAlert.type == 'budget_nudge'
+                  ? 'Add budget'
+                  : null,
+              onAction: highlightedAlert.type == 'budget_nudge'
+                  ? () => context.push(AppRoutes.budgets)
+                  : null,
+              onDismiss: () => ref
+                  .read(localAlertsProvider.notifier)
+                  .dismiss(highlightedAlert.id),
             ),
           ),
         // Behavioral Insights Section — only rendered when data is available

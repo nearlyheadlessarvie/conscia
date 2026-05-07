@@ -179,9 +179,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             onChanged: (value) async {
               final notifier = ref.read(locationAssistanceProvider.notifier);
               if (value) {
-                await notifier.enableFromPrompt();
+                await notifier.enableFromSettings();
               } else {
-                await notifier.declinePrompt();
+                await notifier.disableFromSettings();
               }
             },
           ),

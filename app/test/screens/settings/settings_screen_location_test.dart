@@ -109,5 +109,19 @@ void main() {
       isTrue,
     );
     expect(find.textContaining('Currently on'), findsOneWidget);
+
+    await tester.tap(find.byType(Switch).last);
+    await tester.pumpAndSettle();
+
+    expect(locationService.permissionRequests, 1);
+    expect(
+      container.read(locationAssistanceProvider).isEnabled,
+      isFalse,
+    );
+    expect(find.textContaining('Currently off'), findsOneWidget);
+    expect(
+      find.textContaining('System location permission may also need to be enabled'),
+      findsNothing,
+    );
   });
 }

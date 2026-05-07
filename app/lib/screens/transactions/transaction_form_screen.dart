@@ -142,7 +142,9 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
       }
       final hasMatchingBudget =
           ref.read(hasBudgetForCategoryProvider(_selectedCategory!));
-      if (_isExpense && !hasMatchingBudget) {
+      final shouldAddBudgetNudge =
+          !_isEditing && _isExpense && !hasMatchingBudget;
+      if (shouldAddBudgetNudge) {
         ref
             .read(localAlertsProvider.notifier)
             .addBudgetNudge(category: _selectedCategory!);
@@ -157,7 +159,7 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            _isExpense && !hasMatchingBudget
+            shouldAddBudgetNudge
                 ? '${_isEditing ? 'Transaction updated' : 'Transaction added!'} Budget nudge saved for ${_selectedCategory!}.'
                 : _isEditing
                     ? 'Transaction updated'
