@@ -10,11 +10,15 @@ class TransactionStyleCategorySelector extends StatelessWidget {
     required this.selectedCategory,
     required this.isExpense,
     required this.onCategorySelected,
+    this.labelStyle,
+    this.moreCategoriesIcon = Icons.add,
   });
 
   final String? selectedCategory;
   final bool isExpense;
   final ValueChanged<String?> onCategorySelected;
+  final TextStyle? labelStyle;
+  final IconData moreCategoriesIcon;
 
   Future<void> _showCategoryPickerSheet(BuildContext context) async {
     await showModalBottomSheet<void>(
@@ -41,18 +45,16 @@ class TransactionStyleCategorySelector extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Row(
           children: [
-            Text('Category', style: textTheme.titleSmall),
+            Text('Category', style: labelStyle ?? Theme.of(context).textTheme.titleSmall),
             const Spacer(),
             TextButton.icon(
               onPressed: () => _showCategoryPickerSheet(context),
-              icon: const Icon(Icons.add, size: 16),
+              icon: Icon(moreCategoriesIcon, size: 16),
               label: const Text('More categories'),
             ),
           ],

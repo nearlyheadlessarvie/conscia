@@ -346,6 +346,10 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
             TransactionStyleCategorySelector(
               selectedCategory: _selectedCategory,
               isExpense: _isExpense,
+              labelStyle: textTheme.titleSmall?.copyWith(
+                color: colors.onSurfaceVariant,
+              ),
+              moreCategoriesIcon: AppIcons.add,
               onCategorySelected: (category) {
                 setState(() => _selectedCategory = category);
               },

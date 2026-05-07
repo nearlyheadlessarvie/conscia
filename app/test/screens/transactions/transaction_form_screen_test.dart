@@ -245,6 +245,32 @@ void main() {
     expect(find.text('Merchant (optional)'), findsNothing);
   });
 
+  testWidgets(
+      'transaction form selects a category from more categories bottom sheet',
+      (tester) async {
+    await tester.pumpWidget(await buildTransactionFormApp(tester));
+
+    expect(find.text('Groceries'), findsNothing);
+
+    await tester.tap(find.text('More categories'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(BottomSheet), findsOneWidget);
+    expect(find.text('Groceries'), findsWidgets);
+
+    await tester.tap(find.widgetWithText(ChoiceChip, 'Groceries').last);
+    await tester.pumpAndSettle();
+
+    expect(find.byType(BottomSheet), findsNothing);
+    expect(
+      find.descendant(
+        of: find.byType(InputChip),
+        matching: find.text('Groceries'),
+      ),
+      findsOneWidget,
+    );
+  });
+
   testWidgets('transaction form prompts for location assistance on first open', (
     tester,
   ) async {
