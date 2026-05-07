@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -6,8 +7,29 @@ import 'package:go_router/go_router.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../core/network/api_exception.dart';
 import '../../core/routing/app_router.dart';
 import '../../providers/auth_provider.dart';
+
+String friendlySignInErrorMessage(
+  Object error, {
+  bool isPasswordSignIn = false,
+}) {
+  final apiError = switch (error) {
+    ApiException apiException => apiException,
+    DioException dioException => ApiException.fromDioException(dioException),
+    _ => null,
+  };
+
+  if (apiError != null) {
+    if (isPasswordSignIn && apiError.isUnauthorized) {
+      return 'Invalid username or password.';
+    }
+    return apiError.message;
+  }
+
+  return 'Something went wrong. Please try again.';
+}
 
 class SignInScreen extends ConsumerStatefulWidget {
   const SignInScreen({super.key});
@@ -46,7 +68,8 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
       final prefs = await SharedPreferences.getInstance();
       final biometricEnabled = prefs.getBool('biometric_enabled') ?? false;
       if (mounted) {
-        setState(() => _biometricsAvailable = canCheck && isSupported && _lastEmail != null && biometricEnabled);
+        setState(() => _biometricsAvailable =
+            canCheck && isSupported && _lastEmail != null && biometricEnabled);
       }
       if (_biometricsAvailable) {
         _authenticateWithBiometrics();
@@ -71,7 +94,8 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
         _errorMessage = null;
       });
 
-      final token = await ref.read(secureStorageProvider).read(key: 'access_token');
+      final token =
+          await ref.read(secureStorageProvider).read(key: 'access_token');
       if (token != null && token.split('.').length == 3) {
         await ref.read(authProvider.notifier).loginWithStoredToken();
       } else {
@@ -125,7 +149,10 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
       if (!mounted) return;
       setState(() {
         _isLoading = false;
-        _errorMessage = e.toString();
+        _errorMessage = friendlySignInErrorMessage(
+          e,
+          isPasswordSignIn: true,
+        );
       });
       return;
     }
@@ -290,10 +317,14 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                               _errorMessage = null;
                             });
                             try {
-                              await ref.read(authProvider.notifier).signInWithApple();
+                              await ref
+                                  .read(authProvider.notifier)
+                                  .signInWithApple();
                             } catch (e) {
                               if (!mounted) return;
-                              setState(() => _errorMessage = e.toString());
+                              setState(() {
+                                _errorMessage = friendlySignInErrorMessage(e);
+                              });
                             } finally {
                               if (mounted) setState(() => _isLoading = false);
                             }
@@ -313,7 +344,9 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                     await ref.read(authProvider.notifier).signInWithGoogle();
                   } catch (e) {
                     if (!mounted) return;
-                    setState(() => _errorMessage = e.toString());
+                    setState(() {
+                      _errorMessage = friendlySignInErrorMessage(e);
+                    });
                   } finally {
                     if (mounted) setState(() => _isLoading = false);
                   }
