@@ -17,6 +17,7 @@ using Conscia.Api.Middleware;
 using Conscia.Application.Configuration;
 using Conscia.Application.Interfaces;
 using Conscia.Application.Services;
+using Conscia.Application.Triggers;
 using Conscia.Application.Validators;
 using Conscia.Infrastructure.Db.LambdaProxy;
 using Conscia.Infrastructure.Persistence;
@@ -156,6 +157,13 @@ builder.Services.AddScoped<IReceiptService, ReceiptService>();
 builder.Services.AddScoped<IBehavioralInsightsService, BehavioralInsightsService>();
 builder.Services.AddScoped<IPurchaseSuggestionService, PurchaseSuggestionService>();
 builder.Services.AddScoped<IPurchasePatternService, PurchasePatternService>();
+builder.Services.AddScoped<IAlertService, AlertService>();
+builder.Services.AddScoped<ITriggerEvaluator, BudgetWarningEvaluator>();
+builder.Services.AddScoped<ITriggerEvaluator, CoolingOffSuggestionEvaluator>();
+builder.Services.AddScoped<ITriggerEvaluator, RepeatedRegretCounterpartyEvaluator>();
+builder.Services.AddScoped<ITriggerEvaluator, RepeatedRegretCategoryEvaluator>();
+builder.Services.AddScoped<ITriggerEvaluator, NotSureStreakEvaluator>();
+builder.Services.AddScoped<ITriggerEvaluator, ReflectionFollowUpEvaluator>();
 
 // --- Exchange Rates ---
 builder.Services.AddMemoryCache();

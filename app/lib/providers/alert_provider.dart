@@ -10,6 +10,12 @@ class AppAlert {
   final String type;
   final String title;
   final String message;
+  final int priority;
+  final String? actionLabel;
+  final String? actionRoute;
+  final String? transactionId;
+  final String? category;
+  final String? counterparty;
   final bool isDismissed;
   final DateTime createdAt;
 
@@ -18,6 +24,12 @@ class AppAlert {
     required this.type,
     required this.title,
     required this.message,
+    this.priority = 0,
+    this.actionLabel,
+    this.actionRoute,
+    this.transactionId,
+    this.category,
+    this.counterparty,
     required this.isDismissed,
     required this.createdAt,
   });
@@ -28,6 +40,12 @@ class AppAlert {
       type: json['type'] as String,
       title: json['title'] as String,
       message: json['message'] as String,
+      priority: (json['priority'] as num?)?.toInt() ?? 0,
+      actionLabel: json['actionLabel'] as String?,
+      actionRoute: json['actionRoute'] as String?,
+      transactionId: json['transactionId'] as String?,
+      category: json['category'] as String?,
+      counterparty: json['counterparty'] as String?,
       isDismissed: json['isDismissed'] as bool? ?? false,
       createdAt: DateTime.parse(json['createdAt'] as String),
     );
@@ -47,7 +65,7 @@ final alertsProvider = FutureProvider<List<AppAlert>>((ref) async {
         .map((e) => AppAlert.fromJson(e as Map<String, dynamic>))
         .toList();
   } on DioException {
-    rethrow;
+    return const [];
   }
 });
 
@@ -69,6 +87,10 @@ class LocalAlertsNotifier extends StateNotifier<List<AppAlert>> {
         title: 'No budget for $category yet',
         message:
             'You logged an expense in $category without a matching budget. Add one in Settings whenever you are ready.',
+        priority: 20,
+        actionLabel: 'Add budget',
+        actionRoute: '/settings/budgets',
+        category: category,
         isDismissed: false,
         createdAt: now,
       ),
@@ -85,6 +107,12 @@ class LocalAlertsNotifier extends StateNotifier<List<AppAlert>> {
             type: alert.type,
             title: alert.title,
             message: alert.message,
+            priority: alert.priority,
+            actionLabel: alert.actionLabel,
+            actionRoute: alert.actionRoute,
+            transactionId: alert.transactionId,
+            category: alert.category,
+            counterparty: alert.counterparty,
             isDismissed: true,
             createdAt: alert.createdAt,
           )
@@ -99,16 +127,32 @@ final localAlertsProvider =
   (_) => LocalAlertsNotifier(),
 );
 
-final activeLocalAlertsProvider = Provider<List<AppAlert>>((ref) {
-  final alerts = ref.watch(localAlertsProvider);
+class DismissedAlertIdsNotifier extends StateNotifier<Set<String>> {
+  DismissedAlertIdsNotifier() : super(const {});
+
+  void dismiss(String id) {
+    state = {...state, id};
+  }
+}
+
+final dismissedAlertIdsProvider =
+    StateNotifierProvider<DismissedAlertIdsNotifier, Set<String>>(
+  (_) => DismissedAlertIdsNotifier(),
+);
+
+final activeAlertsProvider = Provider<List<AppAlert>>((ref) {
+  final remoteAlerts = ref.watch(alertsProvider).valueOrNull ?? const [];
+  final localAlerts = ref.watch(localAlertsProvider);
+  final dismissedIds = ref.watch(dismissedAlertIdsProvider);
   final budgetCategories = ref
       .watch(budgetListProvider)
       .budgets
       .map((budget) => budget.category.trim().toLowerCase())
       .toSet();
 
-  return alerts.where((alert) {
-    if (alert.isDismissed) return false;
+  final alerts = [...remoteAlerts, ...localAlerts];
+  final visibleAlerts = alerts.where((alert) {
+    if (alert.isDismissed || dismissedIds.contains(alert.id)) return false;
     if (alert.type != 'budget_nudge') return true;
 
     final normalizedCategory = alert.id.startsWith('budget-nudge-')
@@ -116,4 +160,12 @@ final activeLocalAlertsProvider = Provider<List<AppAlert>>((ref) {
         : '';
     return !budgetCategories.contains(normalizedCategory);
   }).toList(growable: false);
+
+  visibleAlerts.sort((a, b) {
+    final priorityCompare = b.priority.compareTo(a.priority);
+    if (priorityCompare != 0) return priorityCompare;
+    return b.createdAt.compareTo(a.createdAt);
+  });
+
+  return visibleAlerts;
 });

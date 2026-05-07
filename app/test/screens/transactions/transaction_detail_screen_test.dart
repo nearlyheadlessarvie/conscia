@@ -1,5 +1,6 @@
 import 'package:conscia_app/providers/transaction_providers.dart';
 import 'package:conscia_app/providers/budget_providers.dart';
+import 'package:conscia_app/providers/alert_provider.dart';
 import 'package:conscia_app/screens/transactions/transaction_detail_screen.dart';
 import 'package:conscia_app/services/budget_service.dart';
 import 'package:conscia_app/services/transaction_service.dart';
@@ -194,5 +195,48 @@ void main() {
     expect(updatedBudget.spent, 20);
     expect(updatedBudget.percentage, 0.2);
     expect(transactionService.deletedId, 'tx-1');
+  });
+
+  testWidgets('detail screen shows contextual regret alert for matching transaction',
+      (tester) async {
+    final transaction = Transaction(
+      id: 'tx-9',
+      amount: 1500,
+      currencyCode: 'PHP',
+      category: 'Dining',
+      description: 'Late Night Delivery',
+      type: 'expense',
+      date: DateTime(2026, 5, 7, 21, 0),
+      regretLevel: 2,
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          alertsProvider.overrideWith((ref) async => [
+                AppAlert(
+                  id: 'reflection-follow-up-tx-9',
+                  type: 'ReflectionFollowUp',
+                  title: 'This purchase still deserves a second look',
+                  message: 'A reflection can help you spot the pattern.',
+                  priority: 40,
+                  actionLabel: 'Reflect now',
+                  transactionId: 'tx-9',
+                  isDismissed: false,
+                  createdAt: DateTime.utc(2026, 5, 8),
+                ),
+              ]),
+          transactionDetailProvider.overrideWith((ref, id) async => transaction),
+        ],
+        child: const MaterialApp(
+          home: TransactionDetailScreen(transactionId: 'tx-9'),
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    expect(find.text('This purchase still deserves a second look'), findsOneWidget);
+    expect(find.text('Reflect now'), findsOneWidget);
   });
 }

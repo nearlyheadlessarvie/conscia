@@ -11,16 +11,22 @@ public static class AlertEndpoints
             .RequireAuthorization()
             .WithTags("Alerts");
 
-        group.MapGet("/", async (HttpContext ctx, IInAppAlertRepository repo) =>
+        group.MapGet("/", async (HttpContext ctx, IAlertService alerts) =>
         {
             var userId = ctx.User.GetUserId();
-            var alerts = await repo.GetByUserAsync(userId, ct: ctx.RequestAborted);
-            return Results.Ok(alerts.Select(a => new
+            var items = await alerts.ListAlertsAsync(userId, ctx.RequestAborted);
+            return Results.Ok(items.Select(a => new
             {
-                a.Id,
-                a.TriggerName,
+                id = string.IsNullOrWhiteSpace(a.AlertKey) ? a.Id.ToString() : a.AlertKey,
+                type = a.TriggerName,
                 a.Title,
                 a.Message,
+                a.Priority,
+                a.ActionLabel,
+                a.ActionRoute,
+                transactionId = a.TransactionId,
+                a.Category,
+                a.Counterparty,
                 a.CreatedAt
             }));
         }).WithName("ListAlerts");

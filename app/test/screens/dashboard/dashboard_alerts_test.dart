@@ -224,7 +224,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('No budget for Dining yet'), findsNothing);
-    expect(container.read(activeLocalAlertsProvider), isEmpty);
+    expect(container.read(activeAlertsProvider), isEmpty);
   });
 
   testWidgets('dashboard hides a budget nudge once a matching budget exists',
@@ -270,6 +270,53 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('No budget for Gaming yet'), findsNothing);
-    expect(container.read(activeLocalAlertsProvider), isEmpty);
+    expect(container.read(activeAlertsProvider), isEmpty);
+  });
+
+  testWidgets('dashboard prioritizes remote regret alerts above local nudges',
+      (tester) async {
+    final container = ProviderContainer(
+      overrides: [
+        budgetServiceProvider.overrideWithValue(_StaticBudgetService(const [])),
+        transactionServiceProvider
+            .overrideWithValue(_StaticTransactionService()),
+        behavioralInsightsProvider.overrideWith((ref) async => null),
+        alertsProvider.overrideWith((ref) async => [
+              AppAlert(
+                id: 'repeated-regret-category-dining',
+                type: 'RepeatedRegretCategory',
+                title: 'Dining keeps turning into regret',
+                message: 'You have marked recent Dining purchases as regret.',
+                priority: 70,
+                actionLabel: 'See category trend',
+                actionRoute: '/insights/categories/Dining',
+                isDismissed: false,
+                createdAt: DateTime.utc(2026, 5, 8),
+              ),
+            ]),
+        localAlertsProvider.overrideWith(
+          (ref) => _LocalAlertsTestNotifier(
+            [
+              AppAlert(
+                id: 'budget-nudge-dining',
+                type: 'budget_nudge',
+                title: 'No budget for Dining yet',
+                message: 'You logged an expense in Dining without a budget.',
+                priority: 20,
+                isDismissed: false,
+                createdAt: DateTime(2026, 5, 7),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    await tester.pumpWidget(_buildApp(container));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Dining keeps turning into regret'), findsOneWidget);
+    expect(find.text('No budget for Dining yet'), findsNothing);
   });
 }

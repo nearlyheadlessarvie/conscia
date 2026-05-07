@@ -6,6 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 
 import '../../core/utils/currency_formatter.dart';
+import '../../providers/alert_provider.dart';
 import '../../providers/ai_provider.dart';
 import '../../providers/budget_providers.dart';
 import '../../providers/transaction_providers.dart';
@@ -14,6 +15,7 @@ import '../../services/ai_service.dart';
 import '../../services/transaction_service.dart';
 import '../../core/constants/category_icons.dart';
 import '../../screens/assistant/widgets/ai_message_bubble.dart';
+import '../../screens/dashboard/widgets/in_app_alert_banner.dart';
 import '../../widgets/conscience_mark.dart';
 import '../../widgets/premium_upgrade_dialog.dart';
 import '../../widgets/skeleton_loader.dart';
@@ -159,6 +161,7 @@ class _TransactionDetailScreenState
         ref.watch(transactionDetailProvider(widget.transactionId));
     final currentTransaction =
         _editedTransactionOverride ?? detailAsync.valueOrNull;
+    final alerts = ref.watch(activeAlertsProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -213,7 +216,7 @@ class _TransactionDetailScreenState
             ),
           ),
         ),
-        data: (tx) => _buildContent(_editedTransactionOverride ?? tx),
+        data: (tx) => _buildContent(_editedTransactionOverride ?? tx, alerts),
       ),
     );
   }
@@ -232,13 +235,26 @@ class _TransactionDetailScreenState
     });
   }
 
-  Widget _buildContent(Transaction tx) {
+  Widget _buildContent(Transaction tx, List<AppAlert> alerts) {
     final colors = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
     final isIncome = tx.type == 'income';
     final prefix = isIncome ? '+' : '-';
     final displayCounterparty =
         tx.description.isNotEmpty ? tx.description : 'Unknown';
+    AppAlert? contextualAlert;
+    for (final alert in alerts) {
+      final matchesTransaction = alert.transactionId == tx.id;
+      final matchesCategory = alert.category != null &&
+          alert.category!.toLowerCase() == tx.category.toLowerCase();
+      final matchesCounterparty = alert.counterparty != null &&
+          alert.counterparty!.toLowerCase() ==
+              displayCounterparty.toLowerCase();
+      if (matchesTransaction || matchesCategory || matchesCounterparty) {
+        contextualAlert = alert;
+        break;
+      }
+    }
 
     if (!_regretLevelInitialized) {
       _regretLevel = tx.regretLevel;
@@ -299,6 +315,29 @@ class _TransactionDetailScreenState
             ),
           ),
           const SizedBox(height: 24),
+          if (contextualAlert != null) ...[
+            InAppAlertBanner(
+              title: contextualAlert.title,
+              message: contextualAlert.message,
+              actionLabel: contextualAlert.actionLabel,
+              onAction: () {
+                final alert = contextualAlert!;
+                if (alert.transactionId == widget.transactionId &&
+                    alert.type == 'ReflectionFollowUp') {
+                  _askAiReflection();
+                  return;
+                }
+                final route = alert.actionRoute;
+                if (route != null) {
+                  context.push(route);
+                }
+              },
+              onDismiss: () => ref
+                  .read(dismissedAlertIdsProvider.notifier)
+                  .dismiss(contextualAlert!.id),
+            ),
+            const SizedBox(height: 16),
+          ],
           _buildRegretSection(colors, textTheme),
           const SizedBox(height: 24),
           SizedBox(
