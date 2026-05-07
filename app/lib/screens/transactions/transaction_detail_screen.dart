@@ -12,11 +12,11 @@ import '../../providers/transaction_providers.dart';
 import '../../providers/usage_provider.dart';
 import '../../services/ai_service.dart';
 import '../../services/transaction_service.dart';
+import '../../core/constants/category_icons.dart';
 import '../../screens/assistant/widgets/ai_message_bubble.dart';
 import '../../widgets/conscience_mark.dart';
 import '../../widgets/premium_upgrade_dialog.dart';
 import '../../widgets/skeleton_loader.dart';
-import 'widgets/transaction_tile.dart';
 
 class TransactionDetailScreen extends ConsumerStatefulWidget {
   final String transactionId;
@@ -258,10 +258,10 @@ class _TransactionDetailScreenState
                   CircleAvatar(
                     radius: 32,
                     backgroundColor: colors.primaryContainer,
-                    child: Icon(
-                      TransactionTile.iconFor(tx.category),
-                      size: 32,
-                      color: colors.onPrimaryContainer,
+                    child: CategoryIcons.badge(
+                      tx.category,
+                      size: 28,
+                      filled: false,
                     ),
                   ),
                   const SizedBox(height: 12),
@@ -303,7 +303,7 @@ class _TransactionDetailScreenState
           const SizedBox(height: 24),
           SizedBox(
             width: double.infinity,
-              child: FilledButton.tonal(
+            child: FilledButton.tonal(
               onPressed: _loadingReflection ? null : _askAiReflection,
               child: _loadingReflection
                   ? const SizedBox(

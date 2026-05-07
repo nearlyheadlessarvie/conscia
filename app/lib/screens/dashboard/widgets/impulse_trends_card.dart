@@ -74,10 +74,10 @@ class ImpulseTrendsCard extends StatelessWidget {
                     Expanded(
                       child: Row(
                         children: [
-                          Icon(
-                            TransactionTile.iconFor(trend.category),
-                            size: 20,
-                            color: colors.primary,
+                          TransactionTile.badgeFor(
+                            trend.category,
+                            size: 16,
+                            filled: false,
                           ),
                           const SizedBox(width: 8),
                           Text(
@@ -109,7 +109,7 @@ class ImpulseTrendsCard extends StatelessWidget {
                   ],
                 ),
               );
-            }).toList(),
+            }),
           ],
         ),
       ),

@@ -4,7 +4,7 @@ import 'package:intl/intl.dart';
 
 class RecentTransactionTile extends StatelessWidget {
   final String id;
-  final IconData categoryIcon;
+  final Widget categoryBadge;
   final String counterparty;
   final String category;
   final DateTime date;
@@ -16,7 +16,7 @@ class RecentTransactionTile extends StatelessWidget {
   const RecentTransactionTile({
     super.key,
     required this.id,
-    required this.categoryIcon,
+    required this.categoryBadge,
     required this.counterparty,
     required this.category,
     required this.date,
@@ -52,7 +52,7 @@ class RecentTransactionTile extends StatelessWidget {
       onTap: () => context.push('/transactions/$id'),
       leading: CircleAvatar(
         backgroundColor: colors.primaryContainer,
-        child: Icon(categoryIcon, color: colors.primary, size: 20),
+        child: categoryBadge,
       ),
       title: Text(counterparty, style: textTheme.titleSmall),
       subtitle: Text(

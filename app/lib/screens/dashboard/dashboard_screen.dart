@@ -41,7 +41,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     final isPremium =
         ref.read(subscriptionProvider).valueOrNull?.isPremium ?? false;
     final usage = ref.read(monthlyUsageProvider);
-    if (!isPremium && usage.reflections >= FreemiumLimits.freeReflectionsPerMonth) {
+    if (!isPremium &&
+        usage.reflections >= FreemiumLimits.freeReflectionsPerMonth) {
       PremiumUpgradeDialog.show(
         context,
         feature:
@@ -134,9 +135,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             child: InAppAlertBanner(
               title: highlightedAlert.title,
               message: highlightedAlert.message,
-              actionLabel: highlightedAlert.type == 'budget_nudge'
-                  ? 'Add budget'
-                  : null,
+              actionLabel:
+                  highlightedAlert.type == 'budget_nudge' ? 'Add budget' : null,
               onAction: highlightedAlert.type == 'budget_nudge'
                   ? () => context.push(AppRoutes.budgets)
                   : null,
@@ -238,7 +238,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 itemBuilder: (context, index) {
                   final b = budgets[index];
                   return BudgetSummaryCard(
-                    categoryIcon: TransactionTile.iconFor(b.category),
+                    categoryBadge: TransactionTile.badgeFor(
+                      b.category,
+                      size: 16,
+                      filled: false,
+                    ),
                     categoryName: b.category,
                     spent: b.spent,
                     limit: b.monthlyLimit,
@@ -263,7 +267,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 8),
                   child: RegretPromptCard(
-                    categoryIcon: TransactionTile.iconFor(tx.category),
+                    categoryBadge: TransactionTile.badgeFor(
+                      tx.category,
+                      size: 16,
+                      filled: false,
+                    ),
                     counterparty: displayCounterparty,
                     amount: tx.amount,
                     currencyCode: tx.currencyCode,
@@ -306,7 +314,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   t.description.isNotEmpty ? t.description : 'Unknown';
               return RecentTransactionTile(
                 id: t.id,
-                categoryIcon: TransactionTile.iconFor(t.category),
+                categoryBadge: TransactionTile.badgeFor(
+                  t.category,
+                  size: 16,
+                  filled: false,
+                ),
                 counterparty: displayCounterparty,
                 category: t.category,
                 date: t.date,

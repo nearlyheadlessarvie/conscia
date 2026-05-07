@@ -6,7 +6,7 @@ import 'package:conscia_app/widgets/budget_progress_bar.dart';
 import 'package:conscia_app/widgets/currency_badge.dart';
 
 class BudgetSummaryCard extends StatelessWidget {
-  final IconData categoryIcon;
+  final Widget categoryBadge;
   final String categoryName;
   final double spent;
   final double limit;
@@ -15,7 +15,7 @@ class BudgetSummaryCard extends StatelessWidget {
 
   const BudgetSummaryCard({
     super.key,
-    required this.categoryIcon,
+    required this.categoryBadge,
     required this.categoryName,
     required this.spent,
     required this.limit,
@@ -62,7 +62,7 @@ class BudgetSummaryCard extends StatelessWidget {
           children: [
             Row(
               children: [
-                Icon(categoryIcon, size: 20, color: colors.primary),
+                categoryBadge,
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
