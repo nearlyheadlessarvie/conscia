@@ -123,7 +123,6 @@ class AuthNotifier extends StateNotifier<AuthState> {
     try {
       final tokens = await _authService.register(email, password);
       await _persistTokens(tokens);
-      markOnboardingComplete();
       saveLastEmail(email);
       state = state.copyWith(
         status: AuthStatus.authenticated,
@@ -144,7 +143,6 @@ class AuthNotifier extends StateNotifier<AuthState> {
       if (ApiConstants.useMockAuth) {
         final tokens = await _authService.login('google_user@gmail.com', 'mock');
         await _persistTokens(tokens);
-        markOnboardingComplete();
         state = state.copyWith(
           status: AuthStatus.authenticated,
           accessToken: tokens.accessToken,
@@ -156,7 +154,6 @@ class AuthNotifier extends StateNotifier<AuthState> {
       }
       final tokens = await _authService.signInWithGoogle();
       await _persistTokens(tokens);
-      markOnboardingComplete();
       state = state.copyWith(
         status: AuthStatus.authenticated,
         accessToken: tokens.accessToken,
@@ -176,7 +173,6 @@ class AuthNotifier extends StateNotifier<AuthState> {
       if (ApiConstants.useMockAuth) {
         final tokens = await _authService.login('apple_user@privaterelay.appleid.com', 'mock');
         await _persistTokens(tokens);
-        markOnboardingComplete();
         state = state.copyWith(
           status: AuthStatus.authenticated,
           accessToken: tokens.accessToken,
@@ -188,7 +184,6 @@ class AuthNotifier extends StateNotifier<AuthState> {
       }
       final tokens = await _authService.signInWithApple();
       await _persistTokens(tokens);
-      markOnboardingComplete();
       state = state.copyWith(
         status: AuthStatus.authenticated,
         accessToken: tokens.accessToken,

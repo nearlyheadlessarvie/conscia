@@ -9,6 +9,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/constants/api_constants.dart';
+import '../../core/constants/app_icons.dart';
 import '../../core/network/dio_client.dart';
 import '../../core/routing/app_router.dart';
 import '../../core/theme/app_colors.dart';
@@ -121,6 +122,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               leading: CircleAvatar(child: Icon(Icons.person)),
               title: Text('Unable to load profile'),
             ),
+          ),
+          ListTile(
+            leading: Icon(AppIcons.person),
+            title: const Text('My Profile'),
+            subtitle: const Text('Spending style, income, household'),
+            trailing: Icon(AppIcons.chevronRight),
+            onTap: () => context.push(AppRoutes.settingsProfile),
           ),
           const Divider(),
 

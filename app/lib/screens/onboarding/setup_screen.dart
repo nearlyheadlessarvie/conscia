@@ -198,7 +198,7 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
                       // Best-effort save; user can update later in Settings
                     }
                     if (!mounted) return;
-                    GoRouter.of(this.context).go('/');
+                    GoRouter.of(this.context).go('/onboarding/profile');
                   },
                   child: const Text("Let's Go!"),
                 ),

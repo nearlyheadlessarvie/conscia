@@ -5,6 +5,8 @@ import 'package:go_router/go_router.dart';
 
 import '../../providers/auth_provider.dart';
 import '../../providers/user_provider.dart';
+import 'apple_button.dart';
+import 'google_button.dart';
 
 class SignUpScreen extends ConsumerStatefulWidget {
   const SignUpScreen({super.key});
@@ -65,7 +67,6 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
             _emailController.text.trim(),
             _passwordController.text,
           );
-      // Set device locale/currency on the new profile (best-effort)
       final defaults = deviceDefaults();
       try {
         await ref.read(userServiceProvider).updateProfile(
@@ -155,11 +156,14 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                         prefixIcon: const Icon(Icons.lock_outlined),
                         border: const OutlineInputBorder(),
                         suffixIcon: IconButton(
-                          icon: Icon(_obscurePassword
-                              ? Icons.visibility_outlined
-                              : Icons.visibility_off_outlined),
+                          icon: Icon(
+                            _obscurePassword
+                                ? Icons.visibility_outlined
+                                : Icons.visibility_off_outlined,
+                          ),
                           onPressed: () => setState(
-                              () => _obscurePassword = !_obscurePassword),
+                            () => _obscurePassword = !_obscurePassword,
+                          ),
                         ),
                       ),
                     ),
@@ -175,11 +179,14 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                         prefixIcon: const Icon(Icons.lock_outlined),
                         border: const OutlineInputBorder(),
                         suffixIcon: IconButton(
-                          icon: Icon(_obscureConfirm
-                              ? Icons.visibility_outlined
-                              : Icons.visibility_off_outlined),
+                          icon: Icon(
+                            _obscureConfirm
+                                ? Icons.visibility_outlined
+                                : Icons.visibility_off_outlined,
+                          ),
                           onPressed: () => setState(
-                              () => _obscureConfirm = !_obscureConfirm),
+                            () => _obscureConfirm = !_obscureConfirm,
+                          ),
                         ),
                       ),
                     ),
@@ -223,71 +230,43 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
               ),
               const SizedBox(height: 24),
               if (defaultTargetPlatform == TargetPlatform.iOS) ...[
-                SizedBox(
-                  height: 48,
-                  child: OutlinedButton.icon(
-                    style: OutlinedButton.styleFrom(
-                      backgroundColor: Colors.black,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(24),
-                      ),
-                    ),
-                    icon: const Icon(Icons.apple, size: 24),
-                    label: const Text('Sign up with Apple'),
-                    onPressed: _isLoading
-                        ? null
-                        : () async {
-                            setState(() {
-                              _isLoading = true;
-                              _errorMessage = null;
-                            });
-                            try {
-                              await ref
-                                  .read(authProvider.notifier)
-                                  .signInWithApple();
-                            } catch (e) {
-                              if (!mounted) return;
-                              setState(() => _errorMessage = e.toString());
-                            } finally {
-                              if (mounted) setState(() => _isLoading = false);
-                            }
-                          },
-                  ),
+                AppleButton(
+                  isLoading: _isLoading,
+                  buttonText: 'Sign up with Apple',
+                  onPressed: () async {
+                    setState(() {
+                      _isLoading = true;
+                      _errorMessage = null;
+                    });
+                    try {
+                      await ref.read(authProvider.notifier).signInWithApple();
+                    } catch (e) {
+                      if (!mounted) return;
+                      setState(() => _errorMessage = e.toString());
+                    } finally {
+                      if (mounted) setState(() => _isLoading = false);
+                    }
+                  },
                 ),
                 const SizedBox(height: 12),
               ],
-              SizedBox(
-                height: 48,
-                child: OutlinedButton.icon(
-                  style: OutlinedButton.styleFrom(
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(24),
-                    ),
-                  ),
-                  icon: const Text('G',
-                      style:
-                          TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                  label: const Text('Sign up with Google'),
-                  onPressed: _isLoading
-                      ? null
-                      : () async {
-                          setState(() {
-                            _isLoading = true;
-                            _errorMessage = null;
-                          });
-                          try {
-                            await ref
-                                .read(authProvider.notifier)
-                                .signInWithGoogle();
-                          } catch (e) {
-                            if (!mounted) return;
-                            setState(() => _errorMessage = e.toString());
-                          } finally {
-                            if (mounted) setState(() => _isLoading = false);
-                          }
-                        },
-                ),
+              GoogleButton(
+                isLoading: _isLoading,
+                buttonText: 'Sign up with Google',
+                onPressed: () async {
+                  setState(() {
+                    _isLoading = true;
+                    _errorMessage = null;
+                  });
+                  try {
+                    await ref.read(authProvider.notifier).signInWithGoogle();
+                  } catch (e) {
+                    if (!mounted) return;
+                    setState(() => _errorMessage = e.toString());
+                  } finally {
+                    if (mounted) setState(() => _isLoading = false);
+                  }
+                },
               ),
               const SizedBox(height: 16),
               Center(

@@ -145,23 +145,6 @@ async Task SeedDynamo()
     }
     Console.WriteLine($"[DynamoDB] Seeded {aiCount} AI interactions.");
 
-    Console.WriteLine("[DynamoDB] Seeding behavior profiles...");
-    foreach (var (userId, idx) in userIds.Select((u, i) => (u, i)))
-    {
-        var item = new Dictionary<string, AttributeValue>
-        {
-            ["PK"] = new($"USER#{userId}"),
-            ["SK"] = new("PROFILE"),
-            ["UserId"] = new(userId),
-            ["PreventedPurchases"] = new() { N = (rand.Next(1, 20) + idx * 5).ToString() },
-            ["Overrides"] = new() { N = (rand.Next(0, 10) + idx * 2).ToString() },
-            ["Regrets"] = new() { N = (rand.Next(0, 5) + idx).ToString() }
-        };
-
-        await dynamo.PutItemAsync(new PutItemRequest { TableName = "BehaviorProfiles", Item = item });
-    }
-    Console.WriteLine("[DynamoDB] Seeded 3 behavior profiles.");
-
     Console.WriteLine("[DynamoDB] Seeding outbox events...");
     for (int i = 0; i < 5; i++)
     {

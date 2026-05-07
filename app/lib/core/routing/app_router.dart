@@ -1,5 +1,4 @@
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -9,12 +8,16 @@ import '../../screens/assistant/pre_purchase_screen.dart';
 import '../../screens/budgets/budgets_screen.dart';
 import '../../screens/dashboard/dashboard_screen.dart';
 import '../../screens/onboarding/onboarding_screen.dart';
+import '../../screens/onboarding/about_you_screen.dart';
+import '../../screens/onboarding/spending_profile_screen.dart';
+import '../../screens/onboarding/suggested_budgets_screen.dart';
 import '../../screens/onboarding/setup_screen.dart';
 import '../../screens/onboarding/sign_in_screen.dart';
 import '../../screens/onboarding/sign_up_screen.dart';
 import '../../screens/receipts/receipt_review_screen.dart';
 import '../../screens/receipts/receipt_scanner_screen.dart';
 import '../../screens/settings/service_status_screen.dart';
+import '../../screens/settings/profile_screen.dart';
 import '../../screens/settings/settings_screen.dart';
 import '../../screens/transactions/transaction_detail_screen.dart';
 import '../../screens/transactions/transaction_form_screen.dart';
@@ -26,6 +29,9 @@ abstract class AppRoutes {
   static const signIn = '/onboarding/sign-in';
   static const signUp = '/onboarding/sign-up';
   static const setup = '/onboarding/setup';
+  static const spendingProfile = '/onboarding/profile';
+  static const suggestedBudgets = '/onboarding/budgets';
+  static const aboutYou = '/onboarding/about';
 
   static const home = '/';
   static const transactions = '/transactions';
@@ -36,6 +42,7 @@ abstract class AppRoutes {
   static const assistant = '/assistant';
 
   static const settings = '/settings';
+  static const settingsProfile = '/settings/profile';
   static const serviceStatus = '/settings/status';
   static const budgets = '/settings/budgets';
 
@@ -93,8 +100,22 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         return hasOnboarded ? AppRoutes.signIn : AppRoutes.onboarding;
       }
 
-      if (isAuthenticated && isOnboarding && state.uri.path != AppRoutes.setup) {
-        return AppRoutes.home;
+      if (isAuthenticated && isOnboarding) {
+        const allowedOnboardingRoutes = {
+          AppRoutes.setup,
+          AppRoutes.spendingProfile,
+          AppRoutes.suggestedBudgets,
+          AppRoutes.aboutYou,
+        };
+
+        if (hasOnboarded) return AppRoutes.home;
+        if (!allowedOnboardingRoutes.contains(state.uri.path)) {
+          return AppRoutes.setup;
+        }
+      }
+
+      if (isAuthenticated && !hasOnboarded && !isOnboarding) {
+        return AppRoutes.setup;
       }
 
       return null;
@@ -116,6 +137,24 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: 'setup',
             builder: (context, state) => const SetupScreen(),
+          ),
+          GoRoute(
+            path: 'profile',
+            builder: (context, state) => const SpendingProfileScreen(),
+          ),
+          GoRoute(
+            path: 'budgets',
+            builder: (context, state) {
+              final extra = state.extra as Map<String, String?>?;
+              return SuggestedBudgetsScreen(
+                spendingPersonality: extra?['spendingPersonality'] ?? 'balanced',
+                incomeRange: extra?['incomeRange'] ?? 'mid',
+              );
+            },
+          ),
+          GoRoute(
+            path: 'about',
+            builder: (context, state) => const AboutYouScreen(),
           ),
         ],
       ),
@@ -171,6 +210,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             },
           ),
         ],
+      ),
+      GoRoute(
+        path: '/settings/profile',
+        builder: (context, state) => const ProfileScreen(),
       ),
       GoRoute(
         path: '/settings/status',

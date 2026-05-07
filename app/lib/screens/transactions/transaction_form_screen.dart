@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/constants/app_icons.dart';
+import '../../core/constants/category_icons.dart';
 import '../../providers/exchange_rate_provider.dart';
 import '../../providers/subscription_provider.dart';
 import '../../providers/transaction_providers.dart';
@@ -10,6 +12,7 @@ import '../../services/transaction_service.dart';
 import '../../widgets/amount_input_field.dart';
 import '../../widgets/skeleton_loader.dart';
 import 'widgets/category_picker.dart';
+import 'widgets/quick_preset_chips.dart';
 
 class TransactionFormScreen extends ConsumerStatefulWidget {
   final String? transactionId;
@@ -36,6 +39,7 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
   final _notesController = TextEditingController();
   bool _submitting = false;
   bool _prefilled = false;
+  bool _moreOptionsExpanded = false;
 
   @override
   void initState() {
@@ -62,6 +66,8 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
         _selectedCategory = tx.category;
         _merchantController.text = tx.description;
         _selectedDate = tx.date;
+        _moreOptionsExpanded =
+            _notesController.text.isNotEmpty || _includeLocation;
       });
     } catch (_) {}
   }
@@ -138,6 +144,29 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
     }
   }
 
+  Future<void> _showCategoryPickerSheet() async {
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+          child: SingleChildScrollView(
+            child: CategoryPicker(
+              selected: _selectedCategory,
+              isExpense: _isExpense,
+              maxVisible: 100,
+              onSelected: (cat) {
+                setState(() => _selectedCategory = cat);
+                Navigator.of(context).pop();
+              },
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
@@ -184,7 +213,7 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
       appBar: AppBar(
         title: Text(_isEditing ? 'Edit Transaction' : 'Add Transaction'),
         leading: IconButton(
-          icon: const Icon(Icons.close),
+          icon: Icon(AppIcons.close),
           onPressed: () => context.pop(),
         ),
       ),
@@ -242,7 +271,9 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
             Consumer(
               builder: (context, ref, _) {
                 final userCurrency = ref.watch(userPreferencesProvider).currency;
-                if (_currencyCode == userCurrency) return const SizedBox.shrink();
+                if (_currencyCode == userCurrency) {
+                  return const SizedBox.shrink();
+                }
 
                 final rateAsync = ref.watch(
                   exchangeRateProvider((_currencyCode, userCurrency)),
@@ -255,7 +286,9 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
                     error: (_, __) => const SizedBox.shrink(),
                     data: (liveRate) => TextField(
                       controller: _exchangeRateController,
-                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
                       decoration: InputDecoration(
                         labelText: 'Exchange rate (optional)',
                         hintText: liveRate != null
@@ -270,53 +303,132 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
                 );
               },
             ),
-            CategoryPicker(
-              selected: _selectedCategory,
-              onSelected: (cat) => setState(() => _selectedCategory = cat),
-              isExpense: _isExpense,
+            if (!_isEditing) ...[
+              Text(
+                'Quick add',
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+              ),
+              const SizedBox(height: 6),
+              QuickPresetChips(
+                selectedCategory: _selectedCategory,
+                onCategorySelected: (cat) {
+                  setState(() => _selectedCategory = cat);
+                },
+              ),
+              const SizedBox(height: 8),
+              const Divider(),
+              const SizedBox(height: 8),
+            ],
+            Row(
+              children: [
+                Text(
+                  'Category',
+                  style: textTheme.titleSmall?.copyWith(
+                    color: colors.onSurfaceVariant,
+                  ),
+                ),
+                const Spacer(),
+                TextButton.icon(
+                  onPressed: _showCategoryPickerSheet,
+                  icon: Icon(AppIcons.add, size: 16),
+                  label: const Text('More categories'),
+                ),
+              ],
             ),
+            if (_selectedCategory != null) ...[
+              const SizedBox(height: 8),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: InputChip(
+                  avatar: Icon(
+                    CategoryIcons.forCategory(_selectedCategory!),
+                    size: 18,
+                  ),
+                  label: Text(_selectedCategory!),
+                  onDeleted: () => setState(() => _selectedCategory = null),
+                ),
+              ),
+            ] else ...[
+              QuickPresetChips(
+                selectedCategory: _selectedCategory,
+                onCategorySelected: (cat) {
+                  setState(() => _selectedCategory = cat);
+                },
+              ),
+            ],
             const SizedBox(height: 16),
             TextField(
               controller: _merchantController,
               textCapitalization: TextCapitalization.words,
+              onChanged: (_) => setState(() {}),
               decoration: const InputDecoration(
                 labelText: 'Merchant (optional)',
               ),
             ),
             const SizedBox(height: 16),
-            ListTile(
-              leading: const Icon(Icons.calendar_today),
-              title: Text(_formatDate(_selectedDate)),
-              trailing: const Icon(Icons.chevron_right),
+            InkWell(
               onTap: _pickDate,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-                side: BorderSide(color: colors.outline),
-              ),
-            ),
-            const SizedBox(height: 16),
-            SwitchListTile(
-              title: Text('Include Location', style: textTheme.titleSmall),
-              subtitle: Text(
-                'Attach GPS coordinates',
-                style: textTheme.bodySmall?.copyWith(
-                  color: colors.onSurfaceVariant,
+              borderRadius: BorderRadius.circular(12),
+              child: Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                child: Row(
+                  children: [
+                    Icon(
+                      AppIcons.calendar,
+                      size: 18,
+                      color: colors.onSurfaceVariant,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      _relativeDateLabel(_selectedDate),
+                      style: textTheme.bodyMedium,
+                    ),
+                    const Spacer(),
+                    Icon(
+                      AppIcons.chevronRight,
+                      size: 16,
+                      color: colors.outline,
+                    ),
+                  ],
                 ),
               ),
-              value: _includeLocation,
-              onChanged: (v) => setState(() => _includeLocation = v),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-                side: BorderSide(color: colors.outline),
-              ),
             ),
             const SizedBox(height: 16),
-            TextField(
-              controller: _notesController,
-              maxLines: 3,
-              minLines: 1,
-              decoration: const InputDecoration(
-                labelText: 'Notes (optional)',
+            Theme(
+              data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+              child: ExpansionTile(
+                tilePadding: EdgeInsets.zero,
+                childrenPadding: EdgeInsets.zero,
+                title: const Text('More options'),
+                initiallyExpanded: _moreOptionsExpanded,
+                onExpansionChanged: (expanded) {
+                  setState(() => _moreOptionsExpanded = expanded);
+                },
+                children: [
+                  SwitchListTile(
+                    title: Text('Include Location', style: textTheme.titleSmall),
+                    subtitle: Text(
+                      'Attach GPS coordinates',
+                      style: textTheme.bodySmall?.copyWith(
+                        color: colors.onSurfaceVariant,
+                      ),
+                    ),
+                    value: _includeLocation,
+                    onChanged: (v) => setState(() => _includeLocation = v),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: _notesController,
+                    maxLines: 3,
+                    minLines: 1,
+                    decoration: const InputDecoration(
+                      labelText: 'Notes (optional)',
+                    ),
+                  ),
+                ],
               ),
             ),
             const SizedBox(height: 24),
@@ -358,5 +470,16 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
       'December',
     ];
     return '${months[d.month - 1]} ${d.day}, ${d.year}';
+  }
+
+  String _relativeDateLabel(DateTime date) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final selected = DateTime(date.year, date.month, date.day);
+    if (selected == today) return 'Today';
+    if (selected == today.subtract(const Duration(days: 1))) {
+      return 'Yesterday';
+    }
+    return _formatDate(date);
   }
 }
