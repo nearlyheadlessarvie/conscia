@@ -17,7 +17,7 @@ public class BudgetWarningEvaluator : ITriggerEvaluator
 
     public async Task<IReadOnlyList<InAppAlert>> EvaluateAsync(Guid userId, CancellationToken ct = default)
     {
-        var budgets = await _budgetService.ListByUserAsync(userId, ct);
+        var budgets = await _budgetService.ListStatusesByUserAsync(userId, ct: ct);
         var alerts = new List<InAppAlert>();
 
         foreach (var budget in budgets)

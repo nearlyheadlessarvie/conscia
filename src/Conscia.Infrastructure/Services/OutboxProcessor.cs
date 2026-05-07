@@ -8,10 +8,8 @@ using Microsoft.Extensions.Logging;
 namespace Conscia.Infrastructure.Services;
 
 /// <summary>
-/// Polls OutboxEvents table for pending events and dispatches side-effects:
-/// - TransactionCreated → increment budget spend
-/// - TransactionDeleted → decrement budget spend
-/// Processing runs on a configurable interval with batch-based polling.
+/// Polls OutboxEvents table for pending events and acknowledges them after
+/// dispatching any side-effects that still exist for the event type.
 /// </summary>
 public class OutboxProcessor : BackgroundService
 {
@@ -50,7 +48,6 @@ public class OutboxProcessor : BackgroundService
     {
         using var scope = _scopeFactory.CreateScope();
         var outboxRepo = scope.ServiceProvider.GetRequiredService<IOutboxEventRepository>();
-        var budgetRepo = scope.ServiceProvider.GetRequiredService<IBudgetRepository>();
 
         var pending = await outboxRepo.GetPendingAsync(50, ct);
         if (pending.Count == 0) return;
@@ -70,7 +67,7 @@ public class OutboxProcessor : BackgroundService
                 }
 
                 _logger.LogInformation("Processing outbox event {EventId}: {EventType}", evt.Id, evt.EventType);
-                await DispatchEventAsync(evt.EventType, evt.Payload, budgetRepo, ct);
+                await DispatchEventAsync(evt.EventType, evt.Payload, ct);
                 await outboxRepo.MarkProcessedAsync(evt, ct);
             }
             catch (Exception ex)
@@ -93,48 +90,33 @@ public class OutboxProcessor : BackgroundService
         }
     }
 
-    private async Task DispatchEventAsync(
+    private Task DispatchEventAsync(
         OutboxEventType eventType, string payload,
-        IBudgetRepository budgetRepo, CancellationToken ct)
+        CancellationToken ct)
     {
         using var doc = JsonDocument.Parse(payload);
-        var root = doc.RootElement;
+        _ = doc.RootElement;
 
         switch (eventType)
         {
             case OutboxEventType.TransactionCreated:
-            {
-                var category = root.GetProperty("Category").GetString()!;
-                var userId = Guid.Parse(root.GetProperty("UserId").GetString()!);
-                var amount = root.GetProperty("Amount").GetDecimal();
-
-                var budgets = await budgetRepo.ListByUserAsync(userId, ct);
-                var matched = budgets.FirstOrDefault(b =>
-                    b.Category.Equals(category, StringComparison.OrdinalIgnoreCase));
-
-                if (matched is not null)
-                {
-                    await budgetRepo.IncrementCurrentSpendAsync(matched.Id, amount, ct);
-                    _logger.LogInformation(
-                        "Budget {BudgetId} incremented by {Amount} for category {Category}",
-                        matched.Id, amount, category);
-                }
-
+                _logger.LogInformation("TransactionCreated event acknowledged (budget usage is computed on read)");
                 break;
-            }
             case OutboxEventType.TransactionDeleted:
             {
-                _logger.LogInformation("TransactionDeleted event processed (no budget rollback in MVP)");
+                _logger.LogInformation("TransactionDeleted event acknowledged (budget usage is computed on read)");
                 break;
             }
             case OutboxEventType.TransactionUpdated:
             {
-                _logger.LogInformation("TransactionUpdated event processed (no-op in MVP)");
+                _logger.LogInformation("TransactionUpdated event acknowledged (budget usage is computed on read)");
                 break;
             }
             default:
                 _logger.LogWarning("Unknown outbox event type: {EventType}", eventType);
                 break;
         }
+
+        return Task.CompletedTask;
     }
 }

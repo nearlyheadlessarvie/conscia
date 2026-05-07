@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using Conscia.Application.Interfaces;
+using Conscia.Application.Models;
 using Conscia.Domain.Entities;
 using Moq;
 
@@ -35,6 +36,17 @@ public class BudgetEndpointTests : IClassFixture<TestWebAppFactory>
                 Id = Guid.NewGuid(), UserId = UserId, Category = "Food",
                 MonthlyLimit = 500m, CurrencyCode = "USD"
             });
+        _factory.BudgetServiceMock
+            .Setup(s => s.GetStatusByIdAsync(UserId, It.IsAny<Guid>(), null, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Guid requestUserId, Guid budgetId, DateTime? now, CancellationToken cancellationToken) => new BudgetStatus
+            {
+                Id = budgetId,
+                UserId = requestUserId,
+                Category = "Food",
+                MonthlyLimit = 500m,
+                CurrentSpend = 0m,
+                CurrencyCode = "USD"
+            });
 
         var response = await _client.PostAsJsonAsync("/api/v1/budgets", new
         {
@@ -50,8 +62,8 @@ public class BudgetEndpointTests : IClassFixture<TestWebAppFactory>
     public async Task ListBudgets_ReturnsArray()
     {
         _factory.BudgetServiceMock
-            .Setup(s => s.ListByUserAsync(UserId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<Budget>
+            .Setup(s => s.ListStatusesByUserAsync(UserId, null, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<BudgetStatus>
             {
                 new() { Id = Guid.NewGuid(), Category = "Food", MonthlyLimit = 500, CurrentSpend = 200, CurrencyCode = "USD" }
             });
@@ -65,8 +77,8 @@ public class BudgetEndpointTests : IClassFixture<TestWebAppFactory>
     public async Task GetBudget_NotFound_Returns404()
     {
         _factory.BudgetServiceMock
-            .Setup(s => s.GetByIdAsync(UserId, It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((Budget?)null);
+            .Setup(s => s.GetStatusByIdAsync(UserId, It.IsAny<Guid>(), null, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((BudgetStatus?)null);
 
         var response = await _client.GetAsync($"/api/v1/budgets/{Guid.NewGuid()}");
 
@@ -129,6 +141,17 @@ public class BudgetEndpointTests : IClassFixture<TestWebAppFactory>
                 UserId = UserId,
                 Category = "Shopping",
                 MonthlyLimit = 98m,
+                CurrencyCode = "USD"
+            });
+        _factory.BudgetServiceMock
+            .Setup(s => s.GetStatusByIdAsync(UserId, It.IsAny<Guid>(), null, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Guid requestUserId, Guid budgetId, DateTime? now, CancellationToken cancellationToken) => new BudgetStatus
+            {
+                Id = budgetId,
+                UserId = requestUserId,
+                Category = "Shopping",
+                MonthlyLimit = 98m,
+                CurrentSpend = 0m,
                 CurrencyCode = "USD"
             });
 

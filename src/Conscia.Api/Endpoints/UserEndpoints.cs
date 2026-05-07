@@ -74,7 +74,7 @@ public static class UserEndpoints
             if (user is null) return Results.NotFound();
 
             var transactions = await txnSvc.ListAsync(userId, 1, 10000, null, ct);
-            var budgets = await budgetSvc.ListByUserAsync(userId, ct);
+            var budgets = await budgetSvc.ListStatusesByUserAsync(userId, ct: ct);
 
             return Results.Ok(new
             {

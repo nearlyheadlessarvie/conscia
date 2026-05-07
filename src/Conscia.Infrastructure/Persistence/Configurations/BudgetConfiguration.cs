@@ -19,9 +19,6 @@ public class BudgetConfiguration : IEntityTypeConfiguration<Budget>
         builder.Property(b => b.MonthlyLimit)
             .HasPrecision(18, 2);
 
-        builder.Property(b => b.CurrentSpend)
-            .HasPrecision(18, 2);
-
         builder.Property(b => b.CurrencyCode)
             .IsRequired()
             .HasMaxLength(3);

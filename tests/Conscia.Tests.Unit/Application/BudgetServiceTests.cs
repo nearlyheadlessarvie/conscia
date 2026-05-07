@@ -1,4 +1,6 @@
 using Conscia.Application.Interfaces;
+using Conscia.Domain.Enums;
+using Conscia.Domain.ValueObjects;
 using Conscia.Application.Services;
 using Conscia.Domain.Entities;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -9,9 +11,13 @@ namespace Conscia.Tests.Unit.Application;
 public class BudgetServiceTests
 {
     private readonly Mock<IBudgetRepository> _repoMock = new();
+    private readonly Mock<ITransactionRepository> _transactionRepoMock = new();
     private readonly BudgetService _svc;
 
-    public BudgetServiceTests() => _svc = new BudgetService(_repoMock.Object, NullLogger<BudgetService>.Instance);
+    public BudgetServiceTests() => _svc = new BudgetService(
+        _repoMock.Object,
+        _transactionRepoMock.Object,
+        NullLogger<BudgetService>.Instance);
 
     [Fact]
     public async Task CreateAsync_ReturnsBudgetWithCorrectFields()
@@ -139,5 +145,65 @@ public class BudgetServiceTests
         var result = await _svc.ListByUserAsync(userId);
 
         Assert.Equal(2, result.Count);
+    }
+
+    [Fact]
+    public async Task ListStatusesByUserAsync_ComputesCurrentMonthSpendByCategory()
+    {
+        var userId = Guid.NewGuid();
+        var now = new DateTime(2026, 5, 7, 12, 0, 0, DateTimeKind.Utc);
+        var budgets = new List<Budget>
+        {
+            new() { Id = Guid.NewGuid(), UserId = userId, Category = "Dining", MonthlyLimit = 500m, CurrencyCode = "USD" },
+            new() { Id = Guid.NewGuid(), UserId = userId, Category = "Groceries", MonthlyLimit = 300m, CurrencyCode = "USD" }
+        };
+
+        _repoMock.Setup(r => r.ListByUserAsync(userId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(budgets);
+        _transactionRepoMock
+            .Setup(r => r.GetByUserIdAndDateRangeAsync(
+                userId,
+                It.IsAny<DateTime>(),
+                It.IsAny<DateTime>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<Transaction>
+            {
+                new()
+                {
+                    Id = Guid.NewGuid(),
+                    UserId = userId,
+                    Category = "Dining",
+                    Type = TransactionType.Expense,
+                    Amount = new Money(120m, "USD"),
+                    Date = now.AddDays(-1),
+                },
+                new()
+                {
+                    Id = Guid.NewGuid(),
+                    UserId = userId,
+                    Category = "Dining",
+                    Type = TransactionType.Income,
+                    Amount = new Money(900m, "USD"),
+                    Date = now.AddDays(-1),
+                },
+                new()
+                {
+                    Id = Guid.NewGuid(),
+                    UserId = userId,
+                    Category = "Groceries",
+                    Type = TransactionType.Expense,
+                    Amount = new Money(80m, "USD"),
+                    Date = now.AddMonths(-1),
+                }
+            });
+
+        var result = await _svc.ListStatusesByUserAsync(userId, now);
+
+        var dining = Assert.Single(result.Where(b => b.Category == "Dining"));
+        var groceries = Assert.Single(result.Where(b => b.Category == "Groceries"));
+
+        Assert.Equal(120m, dining.CurrentSpend);
+        Assert.Equal(24m, dining.PercentUsed);
+        Assert.Equal(0m, groceries.CurrentSpend);
     }
 }

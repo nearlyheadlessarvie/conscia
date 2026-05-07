@@ -27,8 +27,8 @@ public class AIEndpointTests : IClassFixture<TestWebAppFactory>
     public async Task PrePurchase_ValidRequest_Returns200()
     {
         _factory.BudgetServiceMock
-            .Setup(s => s.ListByUserAsync(UserId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<Budget>
+            .Setup(s => s.ListStatusesByUserAsync(UserId, null, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<BudgetStatus>
             {
                 new() { Category = "Electronics", MonthlyLimit = 500, CurrentSpend = 200, CurrencyCode = "USD" }
             });

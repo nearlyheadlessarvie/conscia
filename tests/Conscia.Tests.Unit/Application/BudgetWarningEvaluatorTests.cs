@@ -1,6 +1,6 @@
 using Conscia.Application.Interfaces;
+using Conscia.Application.Models;
 using Conscia.Application.Triggers;
-using Conscia.Domain.Entities;
 using Moq;
 
 namespace Conscia.Tests.Unit.Application;
@@ -25,8 +25,8 @@ public class BudgetWarningEvaluatorTests
     public async Task Evaluate_At80Percent_ReturnsSingleAlert()
     {
         var userId = Guid.NewGuid();
-        _budgetServiceMock.Setup(x => x.ListByUserAsync(userId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<Budget>
+        _budgetServiceMock.Setup(x => x.ListStatusesByUserAsync(userId, null, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<BudgetStatus>
             {
                 new() { Category = "Food", MonthlyLimit = 100m, CurrentSpend = 80m, CurrencyCode = "USD" }
             });
@@ -43,8 +43,8 @@ public class BudgetWarningEvaluatorTests
     public async Task Evaluate_Above80Percent_ReturnsAlert()
     {
         var userId = Guid.NewGuid();
-        _budgetServiceMock.Setup(x => x.ListByUserAsync(userId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<Budget>
+        _budgetServiceMock.Setup(x => x.ListStatusesByUserAsync(userId, null, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<BudgetStatus>
             {
                 new() { Category = "Entertainment", MonthlyLimit = 200m, CurrentSpend = 190m, CurrencyCode = "EUR" }
             });
@@ -59,8 +59,8 @@ public class BudgetWarningEvaluatorTests
     public async Task Evaluate_Below80Percent_ReturnsEmpty()
     {
         var userId = Guid.NewGuid();
-        _budgetServiceMock.Setup(x => x.ListByUserAsync(userId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<Budget>
+        _budgetServiceMock.Setup(x => x.ListStatusesByUserAsync(userId, null, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<BudgetStatus>
             {
                 new() { Category = "Food", MonthlyLimit = 100m, CurrentSpend = 50m, CurrencyCode = "USD" }
             });
@@ -74,8 +74,8 @@ public class BudgetWarningEvaluatorTests
     public async Task Evaluate_ZeroLimit_ReturnsEmpty()
     {
         var userId = Guid.NewGuid();
-        _budgetServiceMock.Setup(x => x.ListByUserAsync(userId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<Budget>
+        _budgetServiceMock.Setup(x => x.ListStatusesByUserAsync(userId, null, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<BudgetStatus>
             {
                 new() { Category = "Food", MonthlyLimit = 0m, CurrentSpend = 50m, CurrencyCode = "USD" }
             });
@@ -89,8 +89,8 @@ public class BudgetWarningEvaluatorTests
     public async Task Evaluate_NoBudgets_ReturnsEmpty()
     {
         var userId = Guid.NewGuid();
-        _budgetServiceMock.Setup(x => x.ListByUserAsync(userId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<Budget>());
+        _budgetServiceMock.Setup(x => x.ListStatusesByUserAsync(userId, null, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<BudgetStatus>());
 
         var alerts = await _evaluator.EvaluateAsync(userId);
 
@@ -101,8 +101,8 @@ public class BudgetWarningEvaluatorTests
     public async Task Evaluate_MultipleBudgetsTriggered_ReturnsAll()
     {
         var userId = Guid.NewGuid();
-        _budgetServiceMock.Setup(x => x.ListByUserAsync(userId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<Budget>
+        _budgetServiceMock.Setup(x => x.ListStatusesByUserAsync(userId, null, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<BudgetStatus>
             {
                 new() { Category = "Food", MonthlyLimit = 100m, CurrentSpend = 90m, CurrencyCode = "USD" },
                 new() { Category = "Transport", MonthlyLimit = 50m, CurrentSpend = 45m, CurrencyCode = "USD" }
@@ -119,8 +119,8 @@ public class BudgetWarningEvaluatorTests
     public async Task Evaluate_MixedBudgets_ReturnsOnlyTriggered()
     {
         var userId = Guid.NewGuid();
-        _budgetServiceMock.Setup(x => x.ListByUserAsync(userId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<Budget>
+        _budgetServiceMock.Setup(x => x.ListStatusesByUserAsync(userId, null, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<BudgetStatus>
             {
                 new() { Category = "Food", MonthlyLimit = 100m, CurrentSpend = 50m, CurrencyCode = "USD" },
                 new() { Category = "Transport", MonthlyLimit = 50m, CurrentSpend = 45m, CurrencyCode = "USD" }
