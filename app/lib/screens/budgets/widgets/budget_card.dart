@@ -57,16 +57,11 @@ class BudgetCard extends StatelessWidget {
           children: [
             Row(
               children: [
-                CircleAvatar(
-                  radius: 16,
-                  backgroundColor: theme.colorScheme.primaryContainer,
-                  child: Icon(
-                    CategoryIcons.forCategory(budget.category),
-                    size: 16,
-                    color: theme.colorScheme.onPrimaryContainer,
-                  ),
+                CategoryIcons.badge(
+                  budget.category,
+                  size: 18,
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 10),
                 Expanded(
                   child: Text(
                     budget.category,

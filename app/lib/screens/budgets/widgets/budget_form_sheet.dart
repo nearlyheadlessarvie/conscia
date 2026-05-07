@@ -158,7 +158,7 @@ class _BudgetFormSheetState extends ConsumerState<BudgetFormSheet> {
                           value: cat,
                           child: Row(
                             children: [
-                              Icon(CategoryIcons.forCategory(cat), size: 20),
+                              CategoryIcons.badge(cat, size: 16),
                               const SizedBox(width: 8),
                               Text(cat),
                             ],

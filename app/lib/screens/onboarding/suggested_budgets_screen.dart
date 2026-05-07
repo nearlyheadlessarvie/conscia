@@ -100,7 +100,8 @@ class _SuggestedBudgetsScreenState
             TextField(
               controller: controller,
               autofocus: true,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              keyboardType:
+                  const TextInputType.numberWithOptions(decimal: true),
               decoration: const InputDecoration(labelText: 'Monthly limit'),
             ),
             const SizedBox(height: 12),
@@ -108,7 +109,8 @@ class _SuggestedBudgetsScreenState
               onPressed: () {
                 final value = double.tryParse(controller.text.trim());
                 if (value != null) {
-                  setState(() => _drafts[index] = draft.copyWith(amount: value));
+                  setState(
+                      () => _drafts[index] = draft.copyWith(amount: value));
                 }
                 Navigator.of(context).pop();
               },
@@ -236,7 +238,8 @@ class _SuggestedBudgetsScreenState
   void _initialiseDraftsIfNeeded(double rate) {
     if (_budgetsInitialised) return;
     final midpoint = _midpoints[widget.incomeRange] ?? _midpoints['mid']!;
-    final factor = _factors[widget.spendingPersonality] ?? _factors['balanced']!;
+    final factor =
+        _factors[widget.spendingPersonality] ?? _factors['balanced']!;
     final weights =
         _weights[widget.spendingPersonality] ?? _weights['balanced']!;
     final spendable = midpoint * rate * factor;
@@ -310,10 +313,14 @@ class _SuggestedBudgetsScreenState
                 return Card(
                   margin: const EdgeInsets.only(bottom: 10),
                   child: ListTile(
-                    leading: Icon(CategoryIcons.forCategory(draft.categoryName)),
+                    leading: CategoryIcons.badge(
+                      draft.categoryName,
+                      size: 18,
+                    ),
                     title: Text(draft.categoryName),
                     trailing: TextButton(
-                      onPressed: ratesAvailable ? () => _editAmount(index) : null,
+                      onPressed:
+                          ratesAvailable ? () => _editAmount(index) : null,
                       child: Text(
                         ratesAvailable ? formatter.format(draft.amount) : '—',
                       ),

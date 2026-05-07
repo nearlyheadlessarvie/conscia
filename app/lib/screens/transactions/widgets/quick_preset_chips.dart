@@ -34,11 +34,14 @@ class QuickPresetChips extends ConsumerWidget {
       scrollDirection: Axis.horizontal,
       child: Row(
         children: categories.map((cat) {
-          final icon = CategoryIcons.forCategory(cat);
           return Padding(
             padding: const EdgeInsets.only(right: 8),
             child: FilterChip(
-              avatar: Icon(icon, size: 16),
+              avatar: CategoryIcons.badge(
+                cat,
+                size: 14,
+                selected: selectedCategory == cat,
+              ),
               label: Text(cat),
               selected: selectedCategory == cat,
               onSelected: (_) => onCategorySelected(cat),

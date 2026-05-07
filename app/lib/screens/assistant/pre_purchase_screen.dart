@@ -19,7 +19,6 @@ import '../../widgets/amount_input_field.dart';
 import '../../widgets/conscience_mark.dart';
 import '../../widgets/location_assistance_prompt_sheet.dart';
 import '../../widgets/premium_upgrade_dialog.dart';
-import '../../screens/transactions/widgets/transaction_tile.dart';
 import '../transactions/widgets/transaction_style_category_selector.dart';
 import 'widgets/ai_message_bubble.dart';
 import 'widgets/budget_context_card.dart';
@@ -397,16 +396,18 @@ class _PrePurchaseScreenState extends ConsumerState<PrePurchaseScreen>
               children: visibleCategories
                   .map(
                     (category) => ActionChip(
-                      avatar: Icon(
-                        CategoryIcons.forCategory(category),
-                        size: 18,
+                      avatar: CategoryIcons.badge(
+                        category,
+                        size: 14,
                       ),
                       label: Text(category),
                       onPressed: () {
                         setState(() {
                           _selectedCategory = category;
                         });
-                        ref.read(recentCategoryProvider.notifier).record(category);
+                        ref
+                            .read(recentCategoryProvider.notifier)
+                            .record(category);
                       },
                     ),
                   )
@@ -618,10 +619,10 @@ class _PrePurchaseScreenState extends ConsumerState<PrePurchaseScreen>
                   ),
                 ),
                 const SizedBox(width: 8),
-                Icon(
-                  TransactionTile.iconFor(_selectedCategory!),
-                  size: 18,
-                  color: colors.onSurfaceVariant,
+                CategoryIcons.badge(
+                  _selectedCategory!,
+                  size: 14,
+                  filled: false,
                 ),
               ],
             ],

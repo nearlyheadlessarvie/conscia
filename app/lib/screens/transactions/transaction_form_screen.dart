@@ -75,8 +75,7 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
   }
 
   void _applyInitialPrefill() {
-    if (widget.initialAmount case final amount?
-        when amount.trim().isNotEmpty) {
+    if (widget.initialAmount case final amount? when amount.trim().isNotEmpty) {
       _amountController.text = amount;
     }
     if (widget.initialCurrencyCode case final currencyCode?
@@ -551,16 +550,18 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
               children: suggestions.likelyCategories
                   .map(
                     (category) => ActionChip(
-                      avatar: Icon(
-                        CategoryIcons.forCategory(category),
-                        size: 18,
+                      avatar: CategoryIcons.badge(
+                        category,
+                        size: 14,
                       ),
                       label: Text(category),
                       onPressed: () {
                         setState(() {
                           _selectedCategory = category;
                         });
-                        ref.read(recentCategoryProvider.notifier).record(category);
+                        ref
+                            .read(recentCategoryProvider.notifier)
+                            .record(category);
                       },
                     ),
                   )
