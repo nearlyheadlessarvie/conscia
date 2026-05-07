@@ -5,7 +5,9 @@ import '../../core/constants/generated/app_constants.g.dart';
 import '../../providers/budget_providers.dart';
 import '../../providers/subscription_provider.dart';
 import '../../widgets/empty_state.dart';
+import '../../widgets/hero_screen_scaffold.dart';
 import '../../widgets/premium_upgrade_dialog.dart';
+import '../../widgets/screen_section.dart';
 import '../../widgets/skeleton_loader.dart';
 import 'widgets/budget_card.dart';
 import 'widgets/budget_form_sheet.dart';
@@ -17,7 +19,7 @@ class BudgetsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final budgetState = ref.watch(budgetListProvider);
 
-    return Scaffold(
+    return HeroScreenScaffold(
       appBar: AppBar(
         title: const Text('Budgets'),
         actions: [
@@ -27,7 +29,7 @@ class BudgetsScreen extends ConsumerWidget {
           ),
         ],
       ),
-      body: _buildBody(context, ref, budgetState),
+      child: _buildBody(context, ref, budgetState),
     );
   }
 
@@ -38,35 +40,45 @@ class BudgetsScreen extends ConsumerWidget {
   ) {
     if (state.isLoading && state.budgets.isEmpty) {
       return ListView.builder(
-        padding: const EdgeInsets.symmetric(vertical: 8),
+        padding: const EdgeInsets.only(bottom: 16),
         itemCount: 3,
         itemBuilder: (_, __) => const BudgetListSkeletonCard(),
       );
     }
 
     if (state.budgets.isEmpty) {
-      return EmptyState(
-        icon: Icons.pie_chart_outline,
-        title: 'No budgets yet',
-        subtitle: 'Create a budget to track your spending by category.',
-        actionLabel: 'Create Budget',
-        onAction: () => _onAddBudget(context, ref),
+      return Center(
+        child: EmptyState(
+          icon: Icons.pie_chart_outline,
+          title: 'No budgets yet',
+          subtitle: 'Create a budget to track your spending by category.',
+          actionLabel: 'Create Budget',
+          onAction: () => _onAddBudget(context, ref),
+        ),
       );
     }
 
     return RefreshIndicator(
       onRefresh: () => ref.read(budgetListProvider.notifier).load(),
-      child: ListView.builder(
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        itemCount: state.budgets.length,
-        itemBuilder: (context, index) {
-          final budget = state.budgets[index];
-          return BudgetCard(
-            budget: budget,
-            onEdit: () => BudgetFormSheet.show(context, existing: budget),
-            onDelete: () => _confirmDelete(context, ref, budget.id),
-          );
-        },
+      child: ListView(
+        padding: const EdgeInsets.only(bottom: 16),
+        children: [
+          ScreenSection(
+            title: 'Active budgets',
+            subtitle: 'Track how each category is pacing this month.',
+            compact: true,
+            child: Column(
+              children: [
+                for (final budget in state.budgets)
+                  BudgetCard(
+                    budget: budget,
+                    onEdit: () => BudgetFormSheet.show(context, existing: budget),
+                    onDelete: () => _confirmDelete(context, ref, budget.id),
+                  ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

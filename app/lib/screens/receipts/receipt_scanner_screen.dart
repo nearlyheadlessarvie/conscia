@@ -7,6 +7,9 @@ import 'package:image_picker/image_picker.dart';
 import '../../core/routing/app_router.dart';
 import '../../core/network/dio_client.dart';
 import '../../providers/subscription_provider.dart';
+import '../../widgets/feed_card.dart';
+import '../../widgets/hero_screen_scaffold.dart';
+import '../../widgets/screen_section.dart';
 import 'widgets/premium_gate.dart';
 
 class ReceiptScannerScreen extends ConsumerStatefulWidget {
@@ -67,9 +70,9 @@ class _ReceiptScannerScreenState extends ConsumerState<ReceiptScannerScreen> {
   Widget build(BuildContext context) {
     final subAsync = ref.watch(subscriptionProvider);
 
-    return Scaffold(
+    return HeroScreenScaffold(
       appBar: AppBar(title: const Text('Scan Receipt')),
-      body: subAsync.when(
+      child: subAsync.when(
         data: (status) {
           if (!status.isPremium) {
             return PremiumGate(
@@ -96,66 +99,86 @@ class _ReceiptScannerScreenState extends ConsumerState<ReceiptScannerScreen> {
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
 
-    return Padding(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          if (_uploading) ...[
-            const CircularProgressIndicator(),
-            const SizedBox(height: 16),
-            Text('Scanning receipt...', style: theme.textTheme.bodyLarge),
-          ] else ...[
-            Icon(Icons.receipt_long, size: 80, color: colors.primary),
-            const SizedBox(height: 24),
-            Text(
-              'Scan a Receipt',
-              style: theme.textTheme.headlineSmall,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Take a photo or pick from your gallery to extract transaction details automatically.',
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: colors.onSurfaceVariant,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            if (_error != null) ...[
-              const SizedBox(height: 16),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: colors.error.withAlpha(25),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.error_outline, size: 18, color: colors.error),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(_error!,
-                          style: theme.textTheme.bodySmall
-                              ?.copyWith(color: colors.error)),
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        ScreenSection(
+          title: 'Scan a receipt',
+          subtitle:
+              'Extract merchant, total, and category suggestions from a photo in a few seconds.',
+          child: FeedCard(
+            child: Column(
+              children: [
+                if (_uploading) ...[
+                  const CircularProgressIndicator(),
+                  const SizedBox(height: 16),
+                  Text('Scanning receipt...', style: theme.textTheme.bodyLarge),
+                ] else ...[
+                  CircleAvatar(
+                    radius: 38,
+                    backgroundColor: colors.primary.withValues(alpha: 0.12),
+                    child: Icon(
+                      Icons.receipt_long,
+                      size: 38,
+                      color: colors.primary,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  Text(
+                    'Turn a receipt into a ready-to-review expense.',
+                    style: theme.textTheme.titleMedium,
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Take a photo or pick from your gallery and Conscia will prefill the details for you.',
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: colors.onSurfaceVariant,
+                      height: 1.5,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  if (_error != null) ...[
+                    const SizedBox(height: 16),
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: colors.error.withAlpha(25),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.error_outline, size: 18, color: colors.error),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              _error!,
+                              style: theme.textTheme.bodySmall
+                                  ?.copyWith(color: colors.error),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ],
-                ),
-              ),
-            ],
-            const SizedBox(height: 32),
-            FilledButton.icon(
-              onPressed: () => _pickAndScan(ImageSource.camera),
-              icon: const Icon(Icons.camera_alt),
-              label: const Text('Take Photo'),
+                  const SizedBox(height: 28),
+                  FilledButton.icon(
+                    onPressed: () => _pickAndScan(ImageSource.camera),
+                    icon: const Icon(Icons.camera_alt),
+                    label: const Text('Take Photo'),
+                  ),
+                  const SizedBox(height: 12),
+                  OutlinedButton.icon(
+                    onPressed: () => _pickAndScan(ImageSource.gallery),
+                    icon: const Icon(Icons.photo_library),
+                    label: const Text('Pick from Gallery'),
+                  ),
+                ],
+              ],
             ),
-            const SizedBox(height: 12),
-            OutlinedButton.icon(
-              onPressed: () => _pickAndScan(ImageSource.gallery),
-              icon: const Icon(Icons.photo_library),
-              label: const Text('Pick from Gallery'),
-            ),
-          ],
-        ],
-      ),
+          ),
+        ),
+      ],
     );
   }
 }
