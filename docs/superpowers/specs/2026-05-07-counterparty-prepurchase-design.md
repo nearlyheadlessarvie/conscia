@@ -38,11 +38,39 @@ Affected layers:
 - API request/response contracts
 - application DTOs and validators
 - domain `Transaction` entity
+- domain `Location` model
 - persistence mapping and repository serialization
 - database column name
 - tests and fixtures
 
 The rename is semantic, not behavioral. Existing transaction values continue to mean “the other party involved in the transaction,” but the name now fits both expenses and income.
+
+### 1a. Location Model Alignment
+
+The location model should be cleaned up at the same time:
+
+- `Location.MerchantName` becomes `Location.PlaceName`
+
+This is intentionally different from `Counterparty`.
+
+- `Counterparty` answers: who was the transaction with?
+- `PlaceName` answers: where did it happen?
+
+`PlaceName` is venue/place-oriented even when it differs from the counterparty.
+
+Examples:
+
+- expense at Starbucks:
+  - `Counterparty = Starbucks`
+  - `PlaceName = Starbucks BGC`
+- salary received at home:
+  - `Counterparty = ACME Corp`
+  - `PlaceName = Home`
+- freelance payment while at a coworking space:
+  - `Counterparty = Client ABC`
+  - `PlaceName = WeWork Makati`
+
+This distinction keeps the model useful for location suggestions, recall, and future insights.
 
 ### 2. UI Wording
 
@@ -86,6 +114,7 @@ To reduce ambiguity:
 
 - app-side `description` usage that currently mirrors `merchant` should be updated to reflect `counterparty`
 - API payload keys should move to `counterparty`
+- location payload keys and mappings should move from `merchantName` to `placeName`
 - UI copy should remain contextual (`Merchant` / `Source`) and should not expose the raw `Counterparty` term to end users
 
 ### 6. Error Handling and Migration Safety
