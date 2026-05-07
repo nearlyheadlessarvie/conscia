@@ -134,18 +134,24 @@ Implementation should include focused regression coverage for:
 - income form showing `Source`
 - expense form showing `Merchant`
 - pre-purchase category selection using the shared category interaction
-- transaction deletion immediately reconciling budget usage in dashboard and budgets/settings surfaces
+- transaction create/update/delete immediately reconciling budget usage in dashboard and budgets/settings surfaces
 - free-tier category UI only surfacing allowed categories unless the user is eligible for more
 
-### 7. Budget Reconciliation on Delete
+### 7. Budget Reconciliation on Transaction Mutation
 
-Deleting a transaction should update budget usage consistently in app surfaces that show budgets, including:
+Creating, updating, and deleting a transaction should update budget usage consistently in app surfaces that show budgets, including:
 
 - dashboard budget summary
 - budgets screen
 - settings-linked budget management flows
 
-This should be treated as part of the same implementation track because the `counterparty` rename will already touch transaction data plumbing. The expected behavior is that deleting a budgeted expense removes its contribution from the local budget state immediately, then reconciles with server truth afterward.
+This should be treated as part of the same implementation track because the `counterparty` rename will already touch transaction data plumbing.
+
+Expected behavior:
+
+- creating a budgeted expense adds its contribution to local budget state immediately, then reconciles with server truth afterward
+- updating a transaction adjusts budget usage correctly for amount, category, and type changes
+- deleting a budgeted expense removes its contribution from local budget state immediately, then reconciles with server truth afterward
 
 ### 8. Freemium Category Visibility
 
@@ -163,7 +169,7 @@ This applies at minimum to category flows where the user would otherwise choose 
 - Flutter widget tests for transaction form label switching
 - Flutter widget tests for pre-purchase category interaction
 - Flutter service/model tests for `counterparty` payload mapping
-- Flutter/provider tests for optimistic budget decrement after transaction delete
+- Flutter/provider tests for optimistic budget adjustment after transaction create, update, and delete
 - Flutter widget/provider tests for free-tier category visibility rules
 - backend unit/integration tests for transaction DTO/entity/repository mapping
 - migration/build verification for renamed transaction column
