@@ -42,7 +42,10 @@ class MainShell extends ConsumerWidget {
     ),
   ];
 
+  static const _mobileScanIndex = 2;
+
   int _selectedIndex(String location) {
+    if (location.startsWith('/scan')) return _mobileScanIndex;
     if (location.startsWith('/settings')) return 4;
     if (location.startsWith('/assistant')) return 3;
     if (location.startsWith('/transactions')) return 1;
@@ -54,7 +57,6 @@ class MainShell extends ConsumerWidget {
     final location = GoRouterState.of(context).uri.toString();
     final currentIndex = _selectedIndex(location);
     final isWide = MediaQuery.sizeOf(context).width > 840;
-    final colorScheme = Theme.of(context).colorScheme;
 
     if (isWide) {
       return Scaffold(
@@ -94,47 +96,43 @@ class MainShell extends ConsumerWidget {
         onPressed: () => context.push('/transactions/add'),
         child: Icon(AppIcons.add),
       ),
-      bottomNavigationBar: NavigationBar(
-        height: 80,
-        selectedIndex: currentIndex,
-        onDestinationSelected: (i) => _onDestinationSelected(context, i),
-        destinations: _tabs
-            .map(
-              (t) => t.label == 'Scan'
-                  ? NavigationDestination(
-                      icon: Container(
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: colorScheme.primaryContainer,
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(
-                          t.icon,
-                          size: 22,
-                          color: colorScheme.onPrimaryContainer,
-                        ),
+      bottomNavigationBar: SizedBox(
+        height: 100,
+        child: Stack(
+          clipBehavior: Clip.none,
+          alignment: Alignment.topCenter,
+          children: [
+            Positioned.fill(
+              top: 20,
+              child: NavigationBar(
+                height: 80,
+                selectedIndex: currentIndex == _mobileScanIndex ? 0 : currentIndex,
+                onDestinationSelected: (i) {
+                  final mappedIndex = i >= _mobileScanIndex ? i + 1 : i;
+                  _onDestinationSelected(context, mappedIndex);
+                },
+                destinations: _tabs
+                    .where((t) => t.label != 'Scan')
+                    .map(
+                      (t) => NavigationDestination(
+                        icon: Icon(t.icon),
+                        selectedIcon: Icon(t.activeIcon),
+                        label: t.label,
                       ),
-                      selectedIcon: Container(
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: colorScheme.primary,
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(
-                          t.activeIcon,
-                          size: 22,
-                          color: colorScheme.onPrimary,
-                        ),
-                      ),
-                      label: t.label,
                     )
-                  : NavigationDestination(
-                      icon: Icon(t.icon),
-                      selectedIcon: Icon(t.activeIcon),
-                      label: t.label,
-                    ),
-            )
-            .toList(),
+                    .toList(),
+              ),
+            ),
+            Positioned(
+              top: 0,
+              child: _RaisedScanButton(
+                key: const ValueKey('main-shell-scan-button'),
+                isSelected: currentIndex == _mobileScanIndex,
+                onTap: () => _onDestinationSelected(context, _mobileScanIndex),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -145,5 +143,73 @@ class MainShell extends ConsumerWidget {
       return;
     }
     context.go(_tabs[index].path);
+  }
+}
+
+class _RaisedScanButton extends StatelessWidget {
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  const _RaisedScanButton({
+    super.key,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(36),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.only(top: 2),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 180),
+                width: 64,
+                height: 64,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: isSelected
+                      ? colorScheme.primary
+                      : colorScheme.primaryContainer,
+                  boxShadow: [
+                    BoxShadow(
+                      color: colorScheme.shadow.withValues(alpha: 0.18),
+                      blurRadius: 18,
+                      offset: const Offset(0, 6),
+                    ),
+                  ],
+                  border: Border.all(
+                    color: colorScheme.surface,
+                    width: 4,
+                  ),
+                ),
+                child: Icon(
+                  AppIcons.scan,
+                  size: 28,
+                  color: isSelected
+                      ? colorScheme.onPrimary
+                      : colorScheme.onPrimaryContainer,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Scan',
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }

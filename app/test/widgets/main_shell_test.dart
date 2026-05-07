@@ -32,4 +32,22 @@ void main() {
     expect(find.text('Settings'), findsOneWidget);
     expect(find.byType(FloatingActionButton), findsOneWidget);
   });
+
+  testWidgets('MainShell renders an emphasized raised scan action on mobile',
+      (tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        child: MaterialApp.router(routerConfig: _router()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final raisedScanButton = find.byKey(const ValueKey('main-shell-scan-button'));
+    expect(raisedScanButton, findsOneWidget);
+
+    final scanPosition = tester.getTopLeft(raisedScanButton);
+    final navigationBarPosition = tester.getTopLeft(find.byType(NavigationBar));
+
+    expect(scanPosition.dy, lessThan(navigationBarPosition.dy));
+  });
 }
