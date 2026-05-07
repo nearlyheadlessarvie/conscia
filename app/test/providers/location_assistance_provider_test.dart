@@ -83,4 +83,29 @@ void main() {
     expect(state.hasPrompted, isTrue);
     expect(state.isEnabled, isTrue);
   });
+
+  test('deny marks the feature as prompted and permission denied', () async {
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+
+    final container = buildContainer(
+      prefs,
+      service: _FakeLocationAssistanceService(permissionGranted: false),
+    );
+    addTearDown(container.dispose);
+
+    await container.read(locationAssistanceProvider.notifier).enableFromPrompt();
+
+    final rehydratedContainer = buildContainer(
+      prefs,
+      service: _FakeLocationAssistanceService(permissionGranted: false),
+    );
+    addTearDown(rehydratedContainer.dispose);
+    final state = rehydratedContainer.read(locationAssistanceProvider);
+
+    expect(state.hasPrompted, isTrue);
+    expect(state.isEnabled, isFalse);
+    expect(state.permissionDenied, isTrue);
+    expect(state.shouldPromptOnFeatureOpen, isFalse);
+  });
 }
