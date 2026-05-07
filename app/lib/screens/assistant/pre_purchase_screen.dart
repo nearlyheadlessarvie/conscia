@@ -9,6 +9,7 @@ import '../../core/constants/category_icons.dart';
 import '../../core/constants/category_visibility.dart';
 import '../../core/utils/currency_formatter.dart';
 import '../../providers/ai_provider.dart';
+import '../../providers/category_recents_provider.dart';
 import '../../providers/location_assistance_provider.dart';
 import '../../providers/subscription_provider.dart';
 import '../../providers/usage_provider.dart';
@@ -331,6 +332,9 @@ class _PrePurchaseScreenState extends ConsumerState<PrePurchaseScreen>
             isPremium: isPremium,
             onCategorySelected: (category) {
               setState(() => _selectedCategory = category);
+              if (category != null) {
+                ref.read(recentCategoryProvider.notifier).record(category);
+              }
             },
           ),
           if (locationAssistance.isEnabled && hasSuggestions) ...[
@@ -429,6 +433,7 @@ class _PrePurchaseScreenState extends ConsumerState<PrePurchaseScreen>
                         setState(() {
                           _selectedCategory = category;
                         });
+                        ref.read(recentCategoryProvider.notifier).record(category);
                       },
                     ),
                   )

@@ -58,7 +58,7 @@ class TransactionStyleCategorySelector extends StatelessWidget {
             TextButton.icon(
               onPressed: () => _showCategoryPickerSheet(context),
               icon: Icon(moreCategoriesIcon, size: 16),
-              label: const Text('More categories'),
+              label: const Text('All categories'),
             ),
           ],
         ),

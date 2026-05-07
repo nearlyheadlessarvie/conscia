@@ -135,8 +135,18 @@ Future<void> _pumpPrePurchaseScreen(
   );
 }
 
-Future<Widget> buildPrePurchaseApp(WidgetTester tester) async {
-  return buildPrePurchaseAppForTier(tester, isPremium: false);
+Future<Widget> buildPrePurchaseApp(
+  WidgetTester tester, {
+  Map<String, Object> initialPrefs = const {
+    'location_suggestions_enabled': false,
+    'location_suggestions_prompted': true,
+  },
+}) async {
+  return buildPrePurchaseAppForTier(
+    tester,
+    isPremium: false,
+    initialPrefs: initialPrefs,
+  );
 }
 
 Future<Widget> buildPrePurchaseAppForTier(
@@ -145,11 +155,12 @@ Future<Widget> buildPrePurchaseAppForTier(
   String currencyCode = 'USD',
   String locale = 'en_US',
   bool locationSuggestionsEnabled = false,
-}) async {
-  SharedPreferences.setMockInitialValues({
+  Map<String, Object> initialPrefs = const {
     'location_suggestions_enabled': false,
     'location_suggestions_prompted': true,
-  });
+  },
+}) async {
+  SharedPreferences.setMockInitialValues(initialPrefs);
   final prefs = await SharedPreferences.getInstance();
 
   return ProviderScope(
@@ -255,20 +266,35 @@ Future<void> _pumpPrePurchaseRouterApp(
 
 void main() {
   testWidgets(
-      'pre-purchase assistant shows quick category chips and more categories entrypoint',
+      'pre-purchase assistant shows all categories entrypoint and orders sheet by recent categories',
       (tester) async {
-    await tester.pumpWidget(await buildPrePurchaseApp(tester));
+    await tester.pumpWidget(await buildPrePurchaseApp(
+      tester,
+      initialPrefs: const {
+        'location_suggestions_enabled': false,
+        'location_suggestions_prompted': true,
+        'recent_categories': ['Transport', 'Dining'],
+      },
+    ));
     await tester.pumpAndSettle();
 
     expect(find.text('Salary'), findsNothing);
-    expect(find.text('More categories'), findsOneWidget);
+    expect(find.text('More categories'), findsNothing);
+    expect(find.text('All categories'), findsOneWidget);
     expect(find.text('Dining'), findsWidgets);
 
-    await tester.tap(find.text('More categories'));
+    await tester.tap(find.text('All categories'));
     await tester.pumpAndSettle();
 
     expect(find.byType(BottomSheet), findsOneWidget);
-    expect(find.text('Groceries'), findsWidgets);
+
+    final choiceChips = tester.widgetList<ChoiceChip>(find.byType(ChoiceChip));
+    final labels = choiceChips
+        .map((chip) => (chip.label as Text).data)
+        .whereType<String>()
+        .toList();
+
+    expect(labels.take(2).toList(), ['Transport', 'Dining']);
 
     await tester.tap(find.widgetWithText(ChoiceChip, 'Groceries').last);
     await tester.pumpAndSettle();
@@ -297,7 +323,7 @@ void main() {
     expect(find.text('Shopping'), findsNothing);
     expect(find.text('Dining'), findsOneWidget);
 
-    await tester.tap(find.text('More categories'));
+    await tester.tap(find.text('All categories'));
     await tester.pumpAndSettle();
 
     expect(find.text('Groceries'), findsWidgets);
@@ -313,9 +339,9 @@ void main() {
     ));
     await tester.pumpAndSettle();
 
-    expect(find.text('Travel'), findsWidgets);
+    expect(find.text('Travel'), findsNothing);
 
-    await tester.tap(find.text('More categories'));
+    await tester.tap(find.text('All categories'));
     await tester.pumpAndSettle();
 
     expect(find.text('Travel'), findsWidgets);

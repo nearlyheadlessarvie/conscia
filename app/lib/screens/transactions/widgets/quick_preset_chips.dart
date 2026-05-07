@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/category_icons.dart';
 import '../../../core/constants/category_visibility.dart';
 import '../../../core/constants/generated/app_constants.g.dart';
-import '../../../providers/category_frequency_provider.dart';
+import '../../../providers/category_recents_provider.dart';
 
 class QuickPresetChips extends ConsumerWidget {
   final String? selectedCategory;
@@ -22,10 +22,13 @@ class QuickPresetChips extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final frequentCategories = ref.watch(categoryFrequencyProvider);
+    final recentCategories = ref.watch(recentCategoryProvider);
     final categories = isExpense
-        ? _expenseQuickCategories(frequentCategories)
-        : incomeCategories.take(5).toList();
+        ? _expenseQuickCategories(recentCategories)
+        : orderCategoriesByRecency(
+            categories: incomeCategories,
+            recents: recentCategories,
+          ).take(5).toList();
 
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
@@ -46,31 +49,14 @@ class QuickPresetChips extends ConsumerWidget {
     );
   }
 
-  List<String> _expenseQuickCategories(List<String> frequentCategories) {
+  List<String> _expenseQuickCategories(List<String> recentCategories) {
     final allowedCategories = visibleBudgetCategories(
       isPremium: isPremium,
       categories: expenseCategories,
     );
-    final visible = <String>[];
-
-    for (final category in frequentCategories) {
-      if (allowedCategories.contains(category) && !visible.contains(category)) {
-        visible.add(category);
-      }
-      if (visible.length == 5) {
-        return visible;
-      }
-    }
-
-    for (final category in allowedCategories) {
-      if (!visible.contains(category)) {
-        visible.add(category);
-      }
-      if (visible.length == 5) {
-        break;
-      }
-    }
-
-    return visible;
+    return orderCategoriesByRecency(
+      categories: allowedCategories,
+      recents: recentCategories,
+    ).take(5).toList();
   }
 }

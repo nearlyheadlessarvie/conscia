@@ -196,14 +196,15 @@ Widget _buildTransactionFormApp(ProviderContainer container) {
   );
 }
 
-Future<Widget> buildTransactionFormApp(WidgetTester tester) async {
-  final resolvedPrefs = await () async {
-    SharedPreferences.setMockInitialValues({
-      'location_suggestions_enabled': false,
-      'location_suggestions_prompted': true,
-    });
-    return SharedPreferences.getInstance();
-  }();
+Future<Widget> buildTransactionFormApp(
+  WidgetTester tester, {
+  Map<String, Object> initialPrefs = const {
+    'location_suggestions_enabled': false,
+    'location_suggestions_prompted': true,
+  },
+}) async {
+  SharedPreferences.setMockInitialValues(initialPrefs);
+  final resolvedPrefs = await SharedPreferences.getInstance();
 
   final container = ProviderContainer(
     overrides: [
@@ -315,15 +316,34 @@ void main() {
   });
 
   testWidgets(
-      'transaction form selects a category from more categories bottom sheet',
+      'transaction form shows all categories entrypoint and orders sheet by recent categories',
       (tester) async {
-    await tester.pumpWidget(await buildTransactionFormApp(tester));
+    await tester.pumpWidget(await buildTransactionFormApp(
+      tester,
+      initialPrefs: const {
+        'location_suggestions_enabled': false,
+        'location_suggestions_prompted': true,
+        'recent_categories': ['Transport', 'Dining'],
+      },
+    ));
 
-    await tester.tap(find.text('More categories'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('More categories'), findsNothing);
+    expect(find.text('All categories'), findsOneWidget);
+
+    await tester.tap(find.text('All categories'));
     await tester.pumpAndSettle();
 
     expect(find.byType(BottomSheet), findsOneWidget);
-    expect(find.text('Groceries'), findsWidgets);
+
+    final choiceChips = tester.widgetList<ChoiceChip>(find.byType(ChoiceChip));
+    final labels = choiceChips
+        .map((chip) => (chip.label as Text).data)
+        .whereType<String>()
+        .toList();
+
+    expect(labels.take(2).toList(), ['Transport', 'Dining']);
 
     await tester.tap(find.widgetWithText(ChoiceChip, 'Groceries').last);
     await tester.pumpAndSettle();

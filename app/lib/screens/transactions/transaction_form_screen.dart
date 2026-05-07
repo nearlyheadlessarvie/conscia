@@ -6,6 +6,7 @@ import '../../core/constants/app_icons.dart';
 import '../../core/constants/category_icons.dart';
 import '../../providers/alert_provider.dart';
 import '../../providers/budget_providers.dart';
+import '../../providers/category_recents_provider.dart';
 import '../../providers/exchange_rate_provider.dart';
 import '../../providers/location_assistance_provider.dart';
 import '../../providers/subscription_provider.dart';
@@ -388,6 +389,9 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
               moreCategoriesIcon: AppIcons.add,
               onCategorySelected: (category) {
                 setState(() => _selectedCategory = category);
+                if (category != null) {
+                  ref.read(recentCategoryProvider.notifier).record(category);
+                }
               },
             ),
             const SizedBox(height: 16),
@@ -556,6 +560,7 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
                         setState(() {
                           _selectedCategory = category;
                         });
+                        ref.read(recentCategoryProvider.notifier).record(category);
                       },
                     ),
                   )
