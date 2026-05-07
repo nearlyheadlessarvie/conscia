@@ -78,6 +78,7 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
     CurrencyPickerSheet.show(
       context,
       selectedCode: _currencyCode,
+      isPremium: true,
       onSelected: (code) => setState(() => _currencyCode = code),
     );
   }
@@ -193,7 +194,6 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
                         preferredCurrency: _currencyCode,
                         locale: _locale,
                       );
-                      ref.invalidate(currentUserProvider);
                     } catch (_) {
                       // Best-effort save; user can update later in Settings
                     }

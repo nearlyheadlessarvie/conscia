@@ -89,6 +89,28 @@ void main() {
     expect(userService.updates.single['locale'], isNotNull);
   });
 
+  testWidgets('setup currency picker is not premium gated', (tester) async {
+    final userService = _RecordingUserService();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          userServiceProvider.overrideWithValue(userService),
+        ],
+        child: const MaterialApp(
+          home: SetupScreen(),
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Currency'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Upgrade'), findsNothing);
+    expect(find.textContaining('Free tier:'), findsNothing);
+  });
+
   testWidgets(
     'spending profile next persists prefer-not-to-say and routes to budgets',
     (tester) async {

@@ -34,7 +34,6 @@ class _SpendingProfileScreenState extends ConsumerState<SpendingProfileScreen> {
       spendingPersonality: _personality,
       incomeRange: incomeRangeOverride ?? _incomeRange,
     );
-    ref.invalidate(currentUserProvider);
   }
 
   Future<void> _next() async {
