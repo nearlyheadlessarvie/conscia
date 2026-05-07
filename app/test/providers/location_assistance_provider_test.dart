@@ -49,6 +49,7 @@ void main() {
     final state = container.read(locationAssistanceProvider);
 
     expect(state.shouldPromptOnFeatureOpen, isFalse);
+    expect(state.hasPrompted, isTrue);
     expect(state.isEnabled, isFalse);
   });
 
