@@ -6,6 +6,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/app_colors.dart';
 import '../../models/health_status.dart';
 import '../../providers/health_provider.dart';
+import '../../widgets/feed_card.dart';
+import '../../widgets/hero_screen_scaffold.dart';
+import '../../widgets/screen_section.dart';
 
 const _serviceMetadata = <String, _ServiceMeta>{
   'api': _ServiceMeta(
@@ -84,7 +87,7 @@ class _ServiceStatusScreenState extends ConsumerState<ServiceStatusScreen> {
       return _buildErrorScaffold(context, theme, state.error!);
     }
 
-    return Scaffold(
+    return HeroScreenScaffold(
       appBar: AppBar(
         title: const Text('Service Status'),
         actions: [
@@ -102,29 +105,45 @@ class _ServiceStatusScreenState extends ConsumerState<ServiceStatusScreen> {
           ),
         ],
       ),
-      body: RefreshIndicator(
+      child: RefreshIndicator(
         onRefresh: () => ref.read(healthStatusProvider.notifier).refresh(),
         child: ListView(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.fromLTRB(16, 20, 16, 28),
           children: [
-            _OverallStatusBanner(
-              state: state,
-              secondsAgo: _secondsSinceCheck,
-            ),
-            const SizedBox(height: 16),
-            if (state.status != null)
-              ...state.status!.checks.map(
-                (check) => Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: _ServiceCard(check: check),
-                ),
+            ScreenSection(
+              title: 'Overview',
+              subtitle: 'Live health across API, AI, and storage services.',
+              compact: true,
+              child: _OverallStatusBanner(
+                state: state,
+                secondsAgo: _secondsSinceCheck,
               ),
-            if (state.status != null && state.status!.checks.isEmpty)
-              ..._buildPlaceholderCards(),
-            if (state.checkHistory.isNotEmpty) ...[
-              const SizedBox(height: 8),
-              _UptimeHistory(history: state.checkHistory),
-            ],
+            ),
+            ScreenSection(
+              title: 'Services',
+              subtitle: 'Response time and current health for each dependency.',
+              compact: true,
+              child: Column(
+                children: [
+                  if (state.status != null)
+                    ...state.status!.checks.map(
+                      (check) => Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: _ServiceCard(check: check),
+                      ),
+                    ),
+                  if (state.status != null && state.status!.checks.isEmpty)
+                    ..._buildPlaceholderCards(),
+                ],
+              ),
+            ),
+            if (state.checkHistory.isNotEmpty)
+              ScreenSection(
+                title: 'Recent uptime',
+                subtitle: 'A quick look at the last health checks.',
+                compact: true,
+                child: _UptimeHistory(history: state.checkHistory),
+              ),
           ],
         ),
       ),
@@ -153,38 +172,43 @@ class _ServiceStatusScreenState extends ConsumerState<ServiceStatusScreen> {
     ThemeData theme,
     String error,
   ) {
-    return Scaffold(
+    return HeroScreenScaffold(
       appBar: AppBar(title: const Text('Service Status')),
-      body: Center(
+      child: Center(
         child: Padding(
           padding: const EdgeInsets.all(32),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                Icons.cloud_off,
-                size: 64,
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-              const SizedBox(height: 16),
-              Text(
-                'Cannot reach server',
-                style: theme.textTheme.headlineMedium,
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Check your internet connection',
-                style: theme.textTheme.bodyMedium?.copyWith(
+          child: FeedCard(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.cloud_off,
+                  size: 64,
                   color: theme.colorScheme.onSurfaceVariant,
                 ),
-              ),
-              const SizedBox(height: 24),
-              FilledButton(
-                onPressed: () =>
-                    ref.read(healthStatusProvider.notifier).refresh(),
-                child: const Text('Retry'),
-              ),
-            ],
+                const SizedBox(height: 16),
+                Text(
+                  'Cannot reach server',
+                  style: theme.textTheme.headlineMedium,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  error.isNotEmpty
+                      ? error
+                      : 'Check your internet connection and try again.',
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                FilledButton(
+                  onPressed: () =>
+                      ref.read(healthStatusProvider.notifier).refresh(),
+                  child: const Text('Retry'),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -213,53 +237,58 @@ class _OverallStatusBanner extends StatelessWidget {
     final statusColor = _statusColorForOverall(state.status?.status, colors);
     final label = state.overallLabel;
 
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: statusColor.withValues(alpha: 0.10),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: statusColor.withValues(alpha: 0.25)),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 12,
-            height: 12,
-            decoration: BoxDecoration(
-              color: statusColor,
-              shape: BoxShape.circle,
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  label,
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
+    return FeedCard(
+      child: Container(
+        padding: const EdgeInsets.all(4),
+        decoration: BoxDecoration(
+          color: statusColor.withValues(alpha: 0.10),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: statusColor.withValues(alpha: 0.18)),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Row(
+            children: [
+              Container(
+                width: 12,
+                height: 12,
+                decoration: BoxDecoration(
+                  color: statusColor,
+                  shape: BoxShape.circle,
                 ),
-                if (state.lastChecked != null) ...[
-                  const SizedBox(height: 2),
-                  Text(
-                    'Last checked: ${_formatSecondsAgo(secondsAgo)}',
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      label,
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
-                  ),
-                ],
-              ],
-            ),
+                    if (state.lastChecked != null) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        'Last checked: ${_formatSecondsAgo(secondsAgo)}',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              if (state.isLoading)
+                const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+            ],
           ),
-          if (state.isLoading)
-            const SizedBox(
-              width: 16,
-              height: 16,
-              child: CircularProgressIndicator(strokeWidth: 2),
-            ),
-        ],
+        ),
       ),
     );
   }
@@ -294,13 +323,7 @@ class _ServiceCard extends StatelessWidget {
     final statusColor = _statusColorForCheck(check.status, colors);
     final isUnhealthy = check.status == 'Unhealthy';
 
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: theme.colorScheme.outlineVariant),
-      ),
+    return FeedCard(
       child: Row(
         children: [
           CircleAvatar(
@@ -375,13 +398,7 @@ class _UptimeHistory extends StatelessWidget {
     final theme = Theme.of(context);
     final colors = theme.appColors;
 
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: theme.colorScheme.outlineVariant),
-      ),
+    return FeedCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
