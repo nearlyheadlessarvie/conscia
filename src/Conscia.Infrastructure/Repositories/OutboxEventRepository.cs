@@ -50,7 +50,7 @@ public class OutboxEventRepository : DynamoRepository, IOutboxEventRepository
         await Dynamo.UpdateItemAsync(new UpdateItemRequest
         {
             TableName = TableName,
-            Key = Key(DynamoKeys.Event(id), createdAt.ToString("O")),
+            Key = Key(DynamoKeys.Outbox(id), DynamoKeys.EventCreatedAt(createdAt)),
             UpdateExpression = "SET ProcessedAt = :now REMOVE #s",
             ExpressionAttributeNames = new() { ["#s"] = "Status" },
             ExpressionAttributeValues = new()
