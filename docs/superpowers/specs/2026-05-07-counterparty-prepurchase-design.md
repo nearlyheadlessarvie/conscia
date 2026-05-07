@@ -19,6 +19,7 @@ It also improves `Pre-Purchase Assistant` so category selection follows the same
 - Make the field wording feel natural in the UI.
 - Remove semantic mismatch in the data model and database.
 - Make pre-purchase category selection feel consistent with transaction entry.
+- Hide the shared add-transaction FAB on Assistant and Settings across layouts.
 
 ## Non-Goals
 
@@ -164,6 +165,20 @@ For free users:
 
 This applies at minimum to category flows where the user would otherwise choose a category that the free tier cannot actually support. The UI should avoid teasing unavailable options when the restriction is known ahead of time.
 
+### 9. Shell FAB Visibility
+
+The shared add-transaction FAB should not appear on:
+
+- Assistant
+- Settings
+
+This rule should apply consistently across:
+
+- mobile layout (`floatingActionButton`)
+- wide layout (`NavigationRail` leading action)
+
+The visibility rule should live in `MainShell` and be route-based, so the shell remains the single source of truth for whether the add FAB is shown.
+
 ## Testing Strategy
 
 - Flutter widget tests for transaction form label switching
@@ -171,6 +186,7 @@ This applies at minimum to category flows where the user would otherwise choose 
 - Flutter service/model tests for `counterparty` payload mapping
 - Flutter/provider tests for optimistic budget adjustment after transaction create, update, and delete
 - Flutter widget/provider tests for free-tier category visibility rules
+- Flutter widget tests for shell FAB visibility by route/layout
 - backend unit/integration tests for transaction DTO/entity/repository mapping
 - migration/build verification for renamed transaction column
 
