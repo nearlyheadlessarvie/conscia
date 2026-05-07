@@ -1,13 +1,20 @@
 # Conscia Enhancement Initiative - Master Documentation Index
 
 **Project Codename**: Duolingo for Financial Discipline  
-**Status**: Phase 1 Frontend Complete | Backend Pending  
-**Timeline**: 4-5 months for all 8 phases  
-**Last Updated**: 2026-05-03
+**Status**: Phases 1-3 Implemented | Phase 4+ Planned  
+**Timeline**: Original 8-phase roadmap retained for remaining work  
+**Last Updated**: 2026-05-07
 
 ---
 
 ## 📚 Documentation Overview
+
+### Current Product Snapshot
+
+- Phases 1-3 are implemented in the current app branch, including dashboard insights, onboarding profiling, transaction-entry redesign, regret memory foundations, and the main shell refresh.
+- Add Transaction and Pre-Purchase Assistant now share first-use `Smart location suggestions`, with a later Settings toggle for control.
+- Unbudgeted expense categories now create an in-app budget nudge with a direct path back to budget management.
+- Phases 4-8 in the roadmap below are still planned work.
 
 All documentation for the Conscia enhancement initiative is organized into 6 comprehensive documents. Start with your role below:
 
@@ -201,14 +208,14 @@ General Tasks (Throughout All Phases)
 ### By Feature/Phase
 | Feature | Main Doc | Task Checklist | Progress |
 |---------|----------|---|---|
-| Dashboard Insights | implementation-plan.md §1 | implementation-tasks.md §1 | phase-1-progress.md |
-| Friction Reduction | implementation-plan.md §4 | implementation-tasks.md §2 | Not started |
-| Regret Memory | implementation-plan.md §5 | implementation-tasks.md §3 | Not started |
-| AI Personality | implementation-plan.md §3 | implementation-tasks.md §4 | Not started |
-| Gamification | implementation-plan.md §8 | implementation-tasks.md §5 | Not started |
-| Weekly Digest | implementation-plan.md §2 | implementation-tasks.md §6 | Not started |
-| Insights Tab | implementation-plan.md §1,5 | implementation-tasks.md §7 | Not started |
-| Positioning | implementation-plan.md §7 | implementation-tasks.md §8 | Not started |
+| Dashboard Insights | implementation-plan.md §1 | implementation-tasks.md §1 | Implemented |
+| Friction Reduction | implementation-plan.md §4 | implementation-tasks.md §2 | Implemented / evolving |
+| Regret Memory | implementation-plan.md §5 | implementation-tasks.md §3 | Implemented / evolving |
+| AI Personality | implementation-plan.md §3 | implementation-tasks.md §4 | Planned |
+| Gamification | implementation-plan.md §8 | implementation-tasks.md §5 | Planned |
+| Weekly Digest | implementation-plan.md §2 | implementation-tasks.md §6 | Planned |
+| Insights Tab | implementation-plan.md §1,5 | implementation-tasks.md §7 | Planned |
+| Positioning | implementation-plan.md §7 | implementation-tasks.md §8 | Planned |
 
 ### By Technical Aspect
 | Aspect | In Plan | In Tasks | In Progress |
@@ -271,15 +278,16 @@ General Tasks (Throughout All Phases)
 - **Project Manager**: SESSION_SUMMARY.md → implementation-plan.md (Section 9)
 
 ### "What's been completed?"
-**Answer**: Phase 1 Frontend is complete. See:
-- [phase-1-progress.md](phase-1-progress.md) - "What's Been Implemented" section
-- [SESSION_SUMMARY.md](SESSION_SUMMARY.md) - "What Was Accomplished" section
+**Answer**: The current branch has Phases 1-3 substantially implemented, with later phases still planned. See:
+- [phase-1-progress.md](phase-1-progress.md) for the original Phase 1 snapshot
+- [implementation-tasks.md](implementation-tasks.md) for the remaining roadmap
+- the current feature specs/plans in `docs/superpowers/` for recently delivered work such as onboarding profiling and location-aware assistance
 
 ### "What's the next step?"
-**Answer**: Backend implementation. See:
-- [phase-1-progress.md](phase-1-progress.md) - "What's Pending" section
-- [implementation-tasks.md](implementation-tasks.md) - "Phase 1 Backend Tasks" section
-- [QUICK_REFERENCE.md](QUICK_REFERENCE.md) - "Next Steps" section
+**Answer**: The next roadmap phases are AI Personality, Gamification, Weekly Digest, Insights Tab, and Positioning. See:
+- [implementation-tasks.md](implementation-tasks.md) - Phases 4-8
+- [implementation-plan.md](implementation-plan.md) - product vision and sequencing
+- [QUICK_REFERENCE.md](QUICK_REFERENCE.md) - day-to-day implementation notes
 
 ### "How long will this take?"
 **Answer**: 16-20 weeks total (4-5 months). See:
@@ -388,7 +396,7 @@ General Tasks (Throughout All Phases)
 
 ---
 
-**Last Updated**: 2026-05-03  
-**Status**: Phase 1 Frontend Complete  
-**Next Milestone**: Phase 1 Backend (6-8 hours)  
-**Total Project**: 4-5 months for 8 phases
+**Last Updated**: 2026-05-07  
+**Status**: Phases 1-3 Implemented  
+**Next Milestone**: Phase 4 AI Personality  
+**Total Project**: Original 8-phase roadmap remains the planning baseline

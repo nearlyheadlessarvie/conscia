@@ -1,8 +1,8 @@
 # Conscia Enhancement Tasks Checklist
 
-**Status Overview:** Not Started
+**Status Overview:** Phases 1-3 implemented in the current app branch; Phases 4-8 remain planned
 **Target Completion:** 16-20 weeks
-**Last Updated:** 2026-05-03
+**Last Updated:** 2026-05-07
 
 ---
 
@@ -96,6 +96,14 @@ Goal: Add behavioral psychology elements to home screen
 
 Goal: Faster, easier transaction entry
 
+### Delivered Since This Checklist Was Written
+- [x] Replace emoji quick presets with app icon-based quick category chips
+- [x] Redesign Add Transaction around a cleaner shell action model (`Scan` + plain add FAB)
+- [x] Add shared `Smart location suggestions` for Add Transaction and Pre-Purchase Assistant
+- [x] Prompt for location assistance on first open, with later control in Settings
+- [x] Add in-app budget nudges after saving an expense in a category without a matching budget
+- [x] Rework onboarding currency/profile flow to reduce setup friction before transaction entry
+
 ### Frontend Tasks
 - [ ] Add quick preset buttons to pre-purchase screen
   - [ ] Create `lib/screens/assistant/widgets/quick_preset_buttons.dart`
@@ -164,6 +172,11 @@ Goal: Faster, easier transaction entry
 ## Phase 3: Regret Memory System (3 weeks)
 
 Goal: Use past regrets to influence future decisions
+
+### Delivered Since This Checklist Was Written
+- [x] Add regret reflection capture to transaction and dashboard flows
+- [x] Surface regret-oriented prompts and transaction detail reflection affordances
+- [x] Keep the phase open for deeper merchant/category memory and analytics work still listed below
 
 ### Database Tasks
 - [ ] Create `PurchasePatterns` table in DynamoDB
