@@ -28,11 +28,11 @@ class _SpendingProfileScreenState extends ConsumerState<SpendingProfileScreen> {
     ('prefer_not_to_say', 0.0, 'Prefer not to say'),
   ];
 
-  Future<void> _persistSelection() async {
+  Future<void> _persistSelection({String? incomeRangeOverride}) async {
     final service = ref.read(userServiceProvider);
     await service.updateProfile(
       spendingPersonality: _personality,
-      incomeRange: _incomeRange,
+      incomeRange: incomeRangeOverride ?? _incomeRange,
     );
     ref.invalidate(currentUserProvider);
   }
@@ -41,7 +41,7 @@ class _SpendingProfileScreenState extends ConsumerState<SpendingProfileScreen> {
     setState(() => _saving = true);
     final incomeRange = _incomeRange ?? 'prefer_not_to_say';
     try {
-      await _persistSelection();
+      await _persistSelection(incomeRangeOverride: incomeRange);
     } catch (_) {}
     if (!mounted) return;
     context.go(
