@@ -7,6 +7,7 @@ import '../../core/routing/app_router.dart';
 import '../../core/constants/generated/app_constants.g.dart';
 import '../../core/constants/category_icons.dart';
 import '../../core/utils/currency_formatter.dart';
+import '../../core/utils/voice_input_parser.dart';
 import '../../providers/ai_provider.dart';
 import '../../providers/category_recents_provider.dart';
 import '../../providers/location_assistance_provider.dart';
@@ -22,6 +23,7 @@ import '../../widgets/premium_upgrade_dialog.dart';
 import '../../widgets/screen_section.dart';
 import '../../widgets/smart_suggestions_card.dart';
 import '../transactions/widgets/transaction_style_category_selector.dart';
+import '../transactions/widgets/voice_input_button.dart';
 import 'widgets/ai_message_bubble.dart';
 import 'widgets/budget_context_card.dart';
 import 'widgets/typing_indicator.dart';
@@ -112,6 +114,46 @@ class _PrePurchaseScreenState extends ConsumerState<PrePurchaseScreen>
         amount != null &&
         amount > 0 &&
         _selectedCategory != null;
+  }
+
+  void _applyVoiceTranscript(String transcript) {
+    final parsed = VoiceInputParser.parse(
+      transcript,
+      categories: expenseCategories,
+    );
+
+    setState(() {
+      if (parsed.counterparty case final description?
+          when description.trim().isNotEmpty) {
+        _descriptionController.text = description;
+      }
+      if (parsed.amount != null) {
+        _amountController.text = parsed.amount!.toStringAsFixed(0);
+      }
+      if (parsed.category != null) {
+        _selectedCategory = parsed.category;
+      }
+    });
+
+    if (parsed.category != null) {
+      ref.read(recentCategoryProvider.notifier).record(parsed.category!);
+    }
+
+    if (!mounted) return;
+    final detected = [
+      if (parsed.amount != null) 'amount',
+      if (parsed.category != null) 'category',
+      if (parsed.counterparty != null) 'details',
+    ];
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          detected.isEmpty
+              ? 'Voice note captured. You can edit the fields manually.'
+              : 'Filled ${detected.join(', ')} from voice.',
+        ),
+      ),
+    );
   }
 
   Future<void> _submit() async {
@@ -280,6 +322,10 @@ class _PrePurchaseScreenState extends ConsumerState<PrePurchaseScreen>
               color: colors.onSurfaceVariant,
             ),
             textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 14),
+          VoiceInputButton(
+            onTranscriptReady: _applyVoiceTranscript,
           ),
           const SizedBox(height: 28),
 
