@@ -3,50 +3,174 @@ import Logo from './icons/Logo.astro';
 import LogoWithText from './icons/LogoWithText.astro';
 ---
 
-<section class="relative overflow-hidden bg-white">
-  <!-- Subtle radial gradient background -->
-  <div class="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_rgba(26,35,126,0.03)_0%,_transparent_60%)]"></div>
+<section class="relative overflow-hidden pt-6">
+  <div class="section-shell">
+    <nav class="glass-card flex items-center justify-between px-5 py-4 md:px-7">
+      <LogoWithText size="38" />
 
-  <div class="relative mx-auto max-w-7xl px-6 py-24 lg:py-32">
-    <!-- Logo mark at top -->
-    <div class="mb-8 flex justify-center lg:justify-start">
-      <LogoWithText size="48" />
-    </div>
-
-    <div class="flex flex-col items-center gap-12 lg:flex-row lg:gap-16">
-      <!-- App Icon / Visual -->
-      <div class="flex shrink-0 items-center justify-center lg:order-2">
-        <Logo size="240" class="drop-shadow-2xl" />
+      <div class="hidden items-center gap-7 text-sm font-medium text-[var(--ink-muted)] md:flex">
+        <a href="#experience" class="transition hover:text-[var(--navy)]">Experience</a>
+        <a href="#pricing" class="transition hover:text-[var(--navy)]">Pricing</a>
+        <a href="#roadmap" class="transition hover:text-[var(--navy)]">Roadmap</a>
       </div>
 
-      <!-- Text content -->
-      <div class="flex-1 text-center lg:text-left">
-        <h1 class="font-heading text-4xl font-bold leading-tight text-primary md:text-5xl lg:text-6xl">
-          Your Financial<br />Conscience
+      <a href="#pricing" class="premium-cta-secondary text-sm">Join the beta</a>
+    </nav>
+  </div>
+
+  <div class="section-shell relative py-12 md:py-16 lg:py-20">
+    <div class="hero-glow left-[5%] top-[15%] h-44 w-44 bg-[rgba(123,208,215,0.22)]"></div>
+    <div class="hero-glow right-[7%] top-[12%] h-52 w-52 bg-[rgba(246,203,104,0.22)]"></div>
+
+    <div class="story-grid items-center gap-14">
+      <div class="relative z-10">
+        <span class="section-kicker">
+          <span class="h-2 w-2 rounded-full bg-[var(--angel-deep)]"></span>
+          Financial conscience, not just expense tracking
+        </span>
+
+        <h1 class="mt-7 max-w-3xl font-heading text-5xl font-extrabold leading-[1.02] tracking-[-0.04em] text-[var(--ink-strong)] md:text-6xl lg:text-7xl">
+          Spend with a little more
+          <span class="relative mx-2 inline-flex">
+            <span class="rounded-[24px] bg-[rgba(246,203,104,0.34)] px-3 py-1 text-[var(--navy)]">
+              conscience
+            </span>
+          </span>
+          and a lot less autopilot.
         </h1>
-        <p class="mx-auto mt-6 max-w-xl text-lg text-gray-600 md:text-xl lg:mx-0">
-          Before you buy, ask yourself — or let two AI advisors argue it out for you.
+
+        <p class="section-copy mt-7 max-w-2xl">
+          Conscia brings impulse, reason, and reflection into one budgeting flow. Ask before you buy,
+          log what happened after, and let the app spot the patterns you keep repeating.
         </p>
 
-        <div class="mt-10 flex flex-col items-center gap-4 sm:flex-row lg:justify-start">
-          <a
-            href="#"
-            class="inline-flex items-center gap-2 rounded-pill bg-primary px-8 py-4 font-body text-sm font-semibold text-white shadow-lg transition hover:bg-primary-dark hover:shadow-xl"
-          >
-            <svg class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11"/>
-            </svg>
-            Download on App Store
+        <div class="mt-9 flex flex-col gap-4 sm:flex-row">
+          <a href="#pricing" class="premium-cta-primary">
+            Start with the free plan
           </a>
-          <a
-            href="#"
-            class="inline-flex items-center gap-2 rounded-pill border-2 border-primary px-8 py-4 font-body text-sm font-semibold text-primary transition hover:bg-primary hover:text-white"
-          >
-            <svg class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M3.609 1.814L13.792 12 3.61 22.186a.996.996 0 01-.61-.92V2.734a1 1 0 01.609-.92zm10.89 10.893l2.302 2.302-10.937 6.333 8.635-8.635zm3.199-3.198l2.807 1.626a1 1 0 010 1.73l-2.808 1.626L15.206 12l2.492-2.491zM5.864 2.658L16.8 8.99l-2.3 2.3-8.636-8.632z"/>
-            </svg>
-            Get on Google Play
+          <a href="#experience" class="premium-cta-secondary">
+            See the product flow
           </a>
+        </div>
+
+        <div class="mt-10 grid gap-4 sm:grid-cols-3">
+          <div class="glass-card px-4 py-4">
+            <div class="text-2xl font-extrabold text-[var(--navy)]">Before</div>
+            <p class="mt-1 text-sm leading-6 text-[var(--ink-muted)]">
+              Ask your conscience before an impulse becomes a transaction.
+            </p>
+          </div>
+          <div class="glass-card px-4 py-4">
+            <div class="text-2xl font-extrabold text-[var(--navy)]">During</div>
+            <p class="mt-1 text-sm leading-6 text-[var(--ink-muted)]">
+              Log quickly with smarter suggestions, voice, and category memory.
+            </p>
+          </div>
+          <div class="glass-card px-4 py-4">
+            <div class="text-2xl font-extrabold text-[var(--navy)]">After</div>
+            <p class="mt-1 text-sm leading-6 text-[var(--ink-muted)]">
+              Reflect on regret, hesitation, and the habits underneath both.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div class="relative">
+        <div class="absolute -left-2 top-20 hidden w-56 rounded-[24px] border border-[rgba(23,36,79,0.08)] bg-white/92 p-4 shadow-[var(--shadow-soft)] lg:block">
+          <div class="flex items-center justify-between">
+            <span class="chip-devil">Impulse</span>
+            <span class="text-xs font-semibold text-[var(--devil-deep)]">Tempted</span>
+          </div>
+          <p class="mt-3 text-sm leading-6 text-[var(--ink-muted)]">
+            “It’s just one upgrade. You’ll use it every day.”
+          </p>
+        </div>
+
+        <div class="absolute -right-3 bottom-14 hidden w-60 rounded-[24px] border border-[rgba(23,36,79,0.08)] bg-white/92 p-4 shadow-[var(--shadow-soft)] lg:block">
+          <div class="flex items-center justify-between">
+            <span class="chip-angel">Reason</span>
+            <span class="text-xs font-semibold text-[var(--angel-deep)]">Budget-aware</span>
+          </div>
+          <p class="mt-3 text-sm leading-6 text-[var(--ink-muted)]">
+            “You’ve already spent 72% of your fun budget. Wait until next week.”
+          </p>
+        </div>
+
+        <div class="device-frame">
+          <div class="device-screen">
+            <div class="flex items-center justify-between">
+              <div>
+                <div class="text-sm font-semibold text-[var(--navy)]">Pre-Purchase Assistant</div>
+                <div class="mt-1 text-xs text-[var(--ink-muted)]">A conversation before the swipe</div>
+              </div>
+              <Logo size="42" />
+            </div>
+
+            <div class="mt-6 rounded-[26px] border border-[rgba(23,36,79,0.08)] bg-white p-4 shadow-[var(--shadow-soft)]">
+              <div class="flex items-center justify-between text-sm font-semibold text-[var(--ink-muted)]">
+                <span>Thinking about</span>
+                <span class="chip-gold">PHP 6,400</span>
+              </div>
+              <div class="mt-3 text-2xl font-extrabold tracking-tight text-[var(--ink-strong)]">
+                A weekend gaming splurge
+              </div>
+              <div class="mt-4 flex flex-wrap gap-2">
+                <span class="chip-devil">Gaming</span>
+                <span class="chip-gold">Fun money</span>
+                <span class="chip-angel">Higher confidence</span>
+              </div>
+            </div>
+
+            <div class="mt-5 grid gap-4">
+              <div class="rounded-[24px] bg-[linear-gradient(135deg,rgba(165,47,40,0.1),rgba(246,203,104,0.12))] p-4">
+                <div class="flex items-center justify-between">
+                  <span class="chip-devil">Impulse</span>
+                  <span class="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--devil-deep)]">
+                    persuasive
+                  </span>
+                </div>
+                <p class="mt-3 text-sm leading-6 text-[var(--ink-strong)]">
+                  “You’ve been talking about this upgrade for weeks. It’s not random if it still feels
+                  exciting after payday.”
+                </p>
+              </div>
+
+              <div class="rounded-[24px] bg-[linear-gradient(135deg,rgba(27,143,159,0.12),rgba(123,208,215,0.18))] p-4">
+                <div class="flex items-center justify-between">
+                  <span class="chip-angel">Reason</span>
+                  <span class="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--angel-deep)]">
+                    grounded
+                  </span>
+                </div>
+                <p class="mt-3 text-sm leading-6 text-[var(--ink-strong)]">
+                  “It would move Gaming from 44% to 78% this month. Not disastrous, but it narrows your
+                  breathing room fast.”
+                </p>
+              </div>
+            </div>
+
+            <div class="mt-5 mock-card p-4">
+              <div class="flex items-center justify-between">
+                <div>
+                  <div class="text-sm font-semibold text-[var(--navy)]">Budget impact</div>
+                  <div class="mt-1 text-xs text-[var(--ink-muted)]">Gaming budget would move to 78%</div>
+                </div>
+                <span class="text-xl font-extrabold text-[var(--navy)]">78%</span>
+              </div>
+              <div class="mock-meter mt-4">
+                <span class="bg-[linear-gradient(90deg,var(--angel-deep),#5abca3)]" style="width: 78%"></span>
+              </div>
+            </div>
+
+            <div class="mt-5 grid grid-cols-2 gap-3 text-center text-sm font-semibold">
+              <div class="rounded-[20px] bg-[rgba(23,36,79,0.06)] px-4 py-3 text-[var(--navy)]">
+                Ask something else
+              </div>
+              <div class="rounded-[20px] bg-[var(--navy)] px-4 py-3 text-white">
+                Bought it anyway
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
