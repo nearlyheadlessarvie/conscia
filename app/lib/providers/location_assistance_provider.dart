@@ -69,3 +69,10 @@ final locationAssistanceProvider =
     return LocationAssistanceNotifier(prefs, service);
   },
 );
+
+final locationAssistanceSuggestionsProvider = Provider<LocationSuggestionSet>((
+  ref,
+) {
+  final service = ref.watch(locationAssistanceServiceProvider);
+  return service.getTransactionSuggestions();
+});

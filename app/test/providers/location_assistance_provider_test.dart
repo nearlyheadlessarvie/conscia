@@ -6,12 +6,22 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class _FakeLocationAssistanceService extends LocationAssistanceService {
-  _FakeLocationAssistanceService({required this.permissionGranted});
+  _FakeLocationAssistanceService({
+    required this.permissionGranted,
+    this.suggestions = const LocationSuggestionSet(
+      nearbyMerchants: ['Blue Bottle Coffee'],
+      likelyCategories: ['Coffee'],
+    ),
+  });
 
   final bool permissionGranted;
+  final LocationSuggestionSet suggestions;
 
   @override
   Future<bool> requestPermission() async => permissionGranted;
+
+  @override
+  LocationSuggestionSet getTransactionSuggestions() => suggestions;
 }
 
 void main() {
@@ -107,5 +117,27 @@ void main() {
     expect(state.isEnabled, isFalse);
     expect(state.permissionDenied, isTrue);
     expect(state.shouldPromptOnFeatureOpen, isFalse);
+  });
+
+  test('shared suggestion provider exposes service suggestions', () async {
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+
+    final container = buildContainer(
+      prefs,
+      service: _FakeLocationAssistanceService(
+        permissionGranted: true,
+        suggestions: const LocationSuggestionSet(
+          nearbyMerchants: ['Corner Bakery'],
+          likelyCategories: ['Groceries'],
+        ),
+      ),
+    );
+    addTearDown(container.dispose);
+
+    final suggestions = container.read(locationAssistanceSuggestionsProvider);
+
+    expect(suggestions.nearbyMerchants, ['Corner Bakery']);
+    expect(suggestions.likelyCategories, ['Groceries']);
   });
 }

@@ -9,6 +9,7 @@ import '../../providers/location_assistance_provider.dart';
 import '../../providers/subscription_provider.dart';
 import '../../providers/transaction_providers.dart';
 import '../../providers/user_provider.dart';
+import '../../services/location_assistance_service.dart';
 import '../../services/transaction_service.dart';
 import '../../widgets/amount_input_field.dart';
 import '../../widgets/location_assistance_prompt_sheet.dart';
@@ -27,17 +28,6 @@ class TransactionFormScreen extends ConsumerStatefulWidget {
 }
 
 class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
-  static const _nearbyMerchantSuggestions = [
-    'Blue Bottle Coffee',
-    'Whole Foods Market',
-    'Shell Station',
-  ];
-  static const _likelyCategorySuggestions = [
-    'Coffee',
-    'Dining',
-    'Groceries',
-  ];
-
   bool get _isEditing => widget.transactionId != null;
 
   bool _isExpense = true;
@@ -61,6 +51,10 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
     if (_isEditing) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _loadEditData();
+      });
+    } else {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _maybePromptForLocationAssistance();
       });
     }
   }
@@ -251,10 +245,7 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
     final isPremium =
         ref.watch(subscriptionProvider).valueOrNull?.isPremium ?? false;
     final locationAssistance = ref.watch(locationAssistanceProvider);
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _maybePromptForLocationAssistance();
-    });
+    final suggestions = ref.watch(locationAssistanceSuggestionsProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -399,7 +390,7 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
             ),
             if (!_isEditing && locationAssistance.isEnabled) ...[
               const SizedBox(height: 16),
-              _buildLocationSuggestionCard(colors, textTheme),
+              _buildLocationSuggestionCard(colors, textTheme, suggestions),
             ],
             const SizedBox(height: 16),
             InkWell(
@@ -487,7 +478,11 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
     );
   }
 
-  Widget _buildLocationSuggestionCard(ColorScheme colors, TextTheme textTheme) {
+  Widget _buildLocationSuggestionCard(
+    ColorScheme colors,
+    TextTheme textTheme,
+    LocationSuggestionSet suggestions,
+  ) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -512,7 +507,7 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
           Wrap(
             spacing: 8,
             runSpacing: 8,
-            children: _nearbyMerchantSuggestions
+            children: suggestions.nearbyMerchants
                 .map(
                   (merchant) => ActionChip(
                     label: Text(merchant),
@@ -531,7 +526,7 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
           Wrap(
             spacing: 8,
             runSpacing: 8,
-            children: _likelyCategorySuggestions
+            children: suggestions.likelyCategories
                 .map(
                   (category) => ActionChip(
                     avatar: Icon(

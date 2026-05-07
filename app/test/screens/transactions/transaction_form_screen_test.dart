@@ -13,12 +13,22 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class _FakeLocationAssistanceService extends LocationAssistanceService {
-  _FakeLocationAssistanceService({required this.permissionGranted});
+  _FakeLocationAssistanceService({
+    required this.permissionGranted,
+    this.suggestions = const LocationSuggestionSet(
+      nearbyMerchants: ['Blue Bottle Coffee'],
+      likelyCategories: ['Coffee'],
+    ),
+  });
 
   final bool permissionGranted;
+  final LocationSuggestionSet suggestions;
 
   @override
   Future<bool> requestPermission() async => permissionGranted;
+
+  @override
+  LocationSuggestionSet getTransactionSuggestions() => suggestions;
 }
 
 Future<void> _pumpTransactionForm(
@@ -131,7 +141,13 @@ void main() {
     await _pumpTransactionForm(
       tester,
       prefs: prefs,
-      locationService: _FakeLocationAssistanceService(permissionGranted: true),
+      locationService: _FakeLocationAssistanceService(
+        permissionGranted: true,
+        suggestions: const LocationSuggestionSet(
+          nearbyMerchants: ['Corner Bakery', 'Local Grocer'],
+          likelyCategories: ['Groceries', 'Dining'],
+        ),
+      ),
     );
 
     await tester.pumpAndSettle();
@@ -139,7 +155,18 @@ void main() {
     expect(find.text('Smart suggestions nearby'), findsOneWidget);
     expect(find.text('Nearby merchants'), findsOneWidget);
     expect(find.text('Likely categories'), findsOneWidget);
-    expect(find.text('Blue Bottle Coffee'), findsOneWidget);
-    expect(find.text('Coffee'), findsWidgets);
+    expect(find.text('Corner Bakery'), findsOneWidget);
+    expect(find.text('Local Grocer'), findsOneWidget);
+    expect(find.text('Groceries'), findsWidgets);
+    expect(find.text('Blue Bottle Coffee'), findsNothing);
+  });
+
+  test('fake suggestion setup sanity check', () {
+    const suggestions = LocationSuggestionSet(
+      nearbyMerchants: ['Corner Bakery'],
+      likelyCategories: ['Groceries'],
+    );
+    expect(suggestions.nearbyMerchants, ['Corner Bakery']);
+    expect(suggestions.likelyCategories, ['Groceries']);
   });
 }
