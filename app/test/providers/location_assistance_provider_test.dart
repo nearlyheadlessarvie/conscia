@@ -1,6 +1,9 @@
 import 'package:conscia_app/providers/location_assistance_provider.dart';
+import 'package:conscia_app/providers/user_provider.dart';
 import 'package:conscia_app/providers/usage_provider.dart';
 import 'package:conscia_app/services/location_assistance_service.dart';
+import 'package:conscia_app/services/user_service.dart';
+import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -26,16 +29,60 @@ class _FakeLocationAssistanceService extends LocationAssistanceService {
   getTransactionSuggestions() => suggestions;
 }
 
+class _FakeUserService extends UserService {
+  _FakeUserService() : super(Dio());
+
+  bool? lastLocationSuggestionsEnabled;
+
+  @override
+  Future<UserProfile> updateProfile({
+    String? preferredCurrency,
+    String? locale,
+    String? spendingPersonality,
+    String? incomeRange,
+    String? occupationType,
+    String? householdSize,
+    bool? hasCompletedOnboarding,
+    bool? locationSuggestionsEnabled,
+  }) async {
+    lastLocationSuggestionsEnabled = locationSuggestionsEnabled;
+    return UserProfile(
+      id: 'user-1',
+      email: 'user@example.com',
+      currencyCode: preferredCurrency ?? 'USD',
+      locale: locale ?? 'en_US',
+      createdAt: DateTime(2026),
+      hasCompletedOnboarding: true,
+      locationSuggestionsEnabled: locationSuggestionsEnabled ?? false,
+    );
+  }
+}
+
 void main() {
   ProviderContainer buildContainer(
     SharedPreferences prefs, {
     LocationAssistanceService? service,
+    UserProfile? userProfile,
+    UserService? userService,
   }) {
+    final resolvedUserProfile = userProfile ??
+        UserProfile(
+          id: 'user-1',
+          email: 'user@example.com',
+          currencyCode: 'USD',
+          locale: 'en_US',
+          createdAt: DateTime(2026),
+          hasCompletedOnboarding: true,
+          locationSuggestionsEnabled: false,
+        );
+
     return ProviderContainer(
       overrides: [
         sharedPreferencesProvider.overrideWithValue(prefs),
         if (service != null)
           locationAssistanceServiceProvider.overrideWithValue(service),
+        currentUserProvider.overrideWith((ref) async => resolvedUserProfile),
+        userServiceProvider.overrideWithValue(userService ?? _FakeUserService()),
       ],
     );
   }
@@ -79,6 +126,7 @@ void main() {
     final container = buildContainer(
       prefs,
       service: _FakeLocationAssistanceService(permissionGranted: true),
+      userService: _FakeUserService(),
     );
     addTearDown(container.dispose);
 
@@ -87,6 +135,7 @@ void main() {
     final rehydratedContainer = buildContainer(
       prefs,
       service: _FakeLocationAssistanceService(permissionGranted: true),
+      userService: _FakeUserService(),
     );
     addTearDown(rehydratedContainer.dispose);
     final state = rehydratedContainer.read(locationAssistanceProvider);
@@ -103,6 +152,7 @@ void main() {
     final container = buildContainer(
       prefs,
       service: _FakeLocationAssistanceService(permissionGranted: false),
+      userService: _FakeUserService(),
     );
     addTearDown(container.dispose);
 
@@ -111,6 +161,7 @@ void main() {
     final rehydratedContainer = buildContainer(
       prefs,
       service: _FakeLocationAssistanceService(permissionGranted: false),
+      userService: _FakeUserService(),
     );
     addTearDown(rehydratedContainer.dispose);
     final state = rehydratedContainer.read(locationAssistanceProvider);
@@ -133,6 +184,7 @@ void main() {
     final container = buildContainer(
       prefs,
       service: _FakeLocationAssistanceService(permissionGranted: true),
+      userService: _FakeUserService(),
     );
     addTearDown(container.dispose);
 
@@ -196,5 +248,32 @@ void main() {
 
     expect(suggestions.nearbyMerchants, isEmpty);
     expect(suggestions.likelyCategories, isEmpty);
+  });
+
+  test('provider syncs enabled state from server-backed user profile', () async {
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+
+    final container = buildContainer(
+      prefs,
+      userProfile: UserProfile(
+        id: 'user-1',
+        email: 'user@example.com',
+        currencyCode: 'USD',
+        locale: 'en_US',
+        createdAt: DateTime(2026),
+        hasCompletedOnboarding: true,
+        locationSuggestionsEnabled: true,
+      ),
+      userService: _FakeUserService(),
+    );
+    addTearDown(container.dispose);
+
+    await container.read(currentUserProvider.future);
+    await Future<void>.delayed(Duration.zero);
+    final state = container.read(locationAssistanceProvider);
+
+    expect(state.isEnabled, isTrue);
+    expect(state.hasPrompted, isFalse);
   });
 }

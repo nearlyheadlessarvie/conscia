@@ -56,10 +56,41 @@ class _FakeAIService extends AIService {
   }
 }
 
+class _FakeUserService extends UserService {
+  _FakeUserService() : super(Dio());
+
+  @override
+  Future<UserProfile> updateProfile({
+    String? preferredCurrency,
+    String? locale,
+    String? spendingPersonality,
+    String? incomeRange,
+    String? occupationType,
+    String? householdSize,
+    bool? hasCompletedOnboarding,
+    bool? locationSuggestionsEnabled,
+  }) async {
+    return UserProfile(
+      id: 'user-1',
+      email: 'prepurchase@example.com',
+      currencyCode: preferredCurrency ?? 'USD',
+      locale: locale ?? 'en_US',
+      createdAt: DateTime(2026),
+      hasCompletedOnboarding: hasCompletedOnboarding ?? true,
+      locationSuggestionsEnabled: locationSuggestionsEnabled ?? false,
+      spendingPersonality: spendingPersonality,
+      incomeRange: incomeRange,
+      occupationType: occupationType,
+      householdSize: householdSize,
+    );
+  }
+}
+
 Future<void> _pumpPrePurchaseScreen(
   WidgetTester tester, {
   SharedPreferences? prefs,
   LocationAssistanceService? locationService,
+  bool locationSuggestionsEnabled = false,
 }) async {
   final resolvedPrefs = prefs ??
       await () async {
@@ -87,9 +118,11 @@ Future<void> _pumpPrePurchaseScreen(
             locale: 'en_US',
             createdAt: DateTime(2026),
             hasCompletedOnboarding: true,
+            locationSuggestionsEnabled: locationSuggestionsEnabled,
           ),
         ),
         sharedPreferencesProvider.overrideWithValue(resolvedPrefs),
+        userServiceProvider.overrideWithValue(_FakeUserService()),
         locationAssistanceServiceProvider.overrideWithValue(
           locationService ??
               _FakeLocationAssistanceService(permissionGranted: true),
@@ -111,6 +144,7 @@ Future<Widget> buildPrePurchaseAppForTier(
   required bool isPremium,
   String currencyCode = 'USD',
   String locale = 'en_US',
+  bool locationSuggestionsEnabled = false,
 }) async {
   SharedPreferences.setMockInitialValues({
     'location_suggestions_enabled': false,
@@ -140,6 +174,7 @@ Future<Widget> buildPrePurchaseAppForTier(
         ),
       ),
       sharedPreferencesProvider.overrideWithValue(prefs),
+      userServiceProvider.overrideWithValue(_FakeUserService()),
       locationAssistanceServiceProvider.overrideWithValue(
         _FakeLocationAssistanceService(permissionGranted: true),
       ),
@@ -156,6 +191,7 @@ Future<void> _pumpPrePurchaseRouterApp(
   required LocationAssistanceService locationService,
   String currencyCode = 'USD',
   String locale = 'en_US',
+  bool locationSuggestionsEnabled = false,
 }) async {
   SharedPreferences.setMockInitialValues({
     'location_suggestions_enabled': true,
@@ -204,9 +240,11 @@ Future<void> _pumpPrePurchaseRouterApp(
             locale: locale,
             createdAt: DateTime(2026),
             hasCompletedOnboarding: true,
+            locationSuggestionsEnabled: locationSuggestionsEnabled,
           ),
         ),
         sharedPreferencesProvider.overrideWithValue(prefs),
+        userServiceProvider.overrideWithValue(_FakeUserService()),
         locationAssistanceServiceProvider.overrideWithValue(locationService),
         aiServiceProvider.overrideWithValue(aiService),
       ],
@@ -362,6 +400,7 @@ void main() {
     await _pumpPrePurchaseScreen(
       tester,
       prefs: prefs,
+      locationSuggestionsEnabled: true,
       locationService: _FakeLocationAssistanceService(
         permissionGranted: true,
         suggestions: const (
@@ -424,6 +463,7 @@ void main() {
       ),
       currencyCode: 'PHP',
       locale: 'en_PH',
+      locationSuggestionsEnabled: true,
     );
 
     await tester.pumpAndSettle();
@@ -476,6 +516,7 @@ void main() {
       ),
       currencyCode: 'PHP',
       locale: 'en_PH',
+      locationSuggestionsEnabled: true,
     );
 
     await tester.pumpAndSettle();

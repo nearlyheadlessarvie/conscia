@@ -2,7 +2,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../services/location_assistance_service.dart';
+import '../services/user_service.dart';
 import 'usage_provider.dart';
+import 'user_provider.dart';
 
 class LocationAssistanceSuggestions {
   final List<String> nearbyMerchants;
@@ -35,20 +37,28 @@ class LocationAssistanceNotifier extends StateNotifier<LocationAssistanceState> 
 
   final SharedPreferences _prefs;
   final LocationAssistanceService _service;
+  final UserService _userService;
 
-  LocationAssistanceNotifier(this._prefs, this._service)
-      : super(_loadFromPrefs(_prefs));
+  LocationAssistanceNotifier(
+    this._prefs,
+    this._service,
+    this._userService, {
+    bool? serverEnabled,
+  }) : super(_loadState(_prefs, serverEnabled: serverEnabled));
 
-  static LocationAssistanceState _loadFromPrefs(SharedPreferences prefs) {
+  static LocationAssistanceState _loadState(
+    SharedPreferences prefs, {
+    bool? serverEnabled,
+  }) {
     return LocationAssistanceState(
-      isEnabled: prefs.getBool(_enabledKey) ?? false,
+      isEnabled: serverEnabled ?? prefs.getBool(_enabledKey) ?? false,
       hasPrompted: prefs.getBool(_promptedKey) ?? false,
       permissionDenied: prefs.getBool(_deniedKey) ?? false,
     );
   }
 
   Future<void> declinePrompt() async {
-    await _persistState(
+    await _persistStateAndProfile(
       isEnabled: false,
       hasPrompted: true,
       permissionDenied: false,
@@ -57,7 +67,7 @@ class LocationAssistanceNotifier extends StateNotifier<LocationAssistanceState> 
 
   Future<void> enableFromPrompt() async {
     final granted = await _service.requestPermission();
-    await _persistState(
+    await _persistStateAndProfile(
       isEnabled: granted,
       hasPrompted: true,
       permissionDenied: !granted,
@@ -67,18 +77,21 @@ class LocationAssistanceNotifier extends StateNotifier<LocationAssistanceState> 
   Future<void> enableFromSettings() => enableFromPrompt();
 
   Future<void> disableFromSettings() async {
-    await _persistState(
+    await _persistStateAndProfile(
       isEnabled: false,
       hasPrompted: true,
       permissionDenied: false,
     );
   }
 
-  Future<void> _persistState({
+  Future<void> _persistStateAndProfile({
     required bool isEnabled,
     required bool hasPrompted,
     required bool permissionDenied,
   }) async {
+    await _userService.updateProfile(
+      locationSuggestionsEnabled: isEnabled,
+    );
     await _prefs.setBool(_enabledKey, isEnabled);
     await _prefs.setBool(_promptedKey, hasPrompted);
     await _prefs.setBool(_deniedKey, permissionDenied);
@@ -95,7 +108,15 @@ final locationAssistanceProvider =
   (ref) {
     final prefs = ref.watch(sharedPreferencesProvider);
     final service = ref.watch(locationAssistanceServiceProvider);
-    return LocationAssistanceNotifier(prefs, service);
+    final userService = ref.watch(userServiceProvider);
+    final serverEnabled =
+        ref.read(currentUserProvider).valueOrNull?.locationSuggestionsEnabled;
+    return LocationAssistanceNotifier(
+      prefs,
+      service,
+      userService,
+      serverEnabled: serverEnabled,
+    );
   },
 );
 

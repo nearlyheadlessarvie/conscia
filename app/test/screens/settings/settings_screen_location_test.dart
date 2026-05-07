@@ -38,6 +38,7 @@ class _RecordingUserService extends UserService {
   _RecordingUserService() : super(Dio());
 
   String? lastLocale;
+  bool? lastLocationSuggestionsEnabled;
 
   @override
   Future<UserProfile> updateProfile({
@@ -48,8 +49,10 @@ class _RecordingUserService extends UserService {
     String? occupationType,
     String? householdSize,
     bool? hasCompletedOnboarding,
+    bool? locationSuggestionsEnabled,
   }) async {
     lastLocale = locale;
+    lastLocationSuggestionsEnabled = locationSuggestionsEnabled;
     return UserProfile(
       id: 'user-1',
       email: 'settings@example.com',
@@ -57,6 +60,8 @@ class _RecordingUserService extends UserService {
       locale: locale ?? 'en_US',
       createdAt: DateTime(2026),
       hasCompletedOnboarding: true,
+      locationSuggestionsEnabled:
+          locationSuggestionsEnabled ?? false,
     );
   }
 }
@@ -114,11 +119,13 @@ void main() {
     final prefs = await SharedPreferences.getInstance();
     final locationService =
         _RecordingLocationAssistanceService(permissionGranted: true);
+    final userService = _RecordingUserService();
 
     final container = await _pumpSettingsScreen(
       tester,
       prefs: prefs,
       locationService: locationService,
+      userService: userService,
     );
 
     await tester.pumpAndSettle();
@@ -134,6 +141,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(locationService.permissionRequests, 1);
+    expect(userService.lastLocationSuggestionsEnabled, isTrue);
     expect(
       container.read(locationAssistanceProvider).isEnabled,
       isTrue,
@@ -144,6 +152,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(locationService.permissionRequests, 1);
+    expect(userService.lastLocationSuggestionsEnabled, isFalse);
     expect(
       container.read(locationAssistanceProvider).isEnabled,
       isFalse,

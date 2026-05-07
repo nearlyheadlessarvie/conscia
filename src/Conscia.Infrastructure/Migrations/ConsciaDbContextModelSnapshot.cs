@@ -120,6 +120,11 @@ namespace Conscia.Infrastructure.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
 
+                    b.Property<bool>("LocationSuggestionsEnabled")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
+
                     b.Property<string>("Locale")
                         .IsRequired()
                         .HasMaxLength(10)

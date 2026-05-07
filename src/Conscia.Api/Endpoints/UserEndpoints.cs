@@ -31,6 +31,7 @@ public static class UserEndpoints
                     user.OccupationType,
                     user.HouseholdSize,
                     user.HasCompletedOnboarding,
+                    user.LocationSuggestionsEnabled,
                 });
         }).WithName("GetCurrentUser");
 
@@ -58,6 +59,7 @@ public static class UserEndpoints
                 user.OccupationType,
                 user.HouseholdSize,
                 user.HasCompletedOnboarding,
+                user.LocationSuggestionsEnabled,
             });
         }).WithName("UpdateCurrentUser");
 
@@ -86,7 +88,8 @@ public static class UserEndpoints
                     user.PreferredCurrency,
                     user.Locale,
                     user.CreatedAt,
-                    user.HasCompletedOnboarding
+                    user.HasCompletedOnboarding,
+                    user.LocationSuggestionsEnabled
                 },
                 Transactions = transactions.Items,
                 Budgets = budgets

@@ -32,7 +32,9 @@ public class UserProfileUpdateValidator : AbstractValidator<UserProfileUpdateDto
                 dto.SpendingPersonality is not null ||
                 dto.IncomeRange is not null ||
                 dto.OccupationType is not null ||
-                dto.HouseholdSize is not null)
+                dto.HouseholdSize is not null ||
+                dto.HasCompletedOnboarding.HasValue ||
+                dto.LocationSuggestionsEnabled.HasValue)
             .WithMessage("At least one field must be provided");
 
         RuleFor(x => x.PreferredCurrency)

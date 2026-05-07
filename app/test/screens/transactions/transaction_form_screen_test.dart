@@ -98,12 +98,43 @@ class _StaticBudgetService extends BudgetService {
   Future<List<Budget>> list() async => budgets;
 }
 
+class _FakeUserService extends UserService {
+  _FakeUserService() : super(Dio());
+
+  @override
+  Future<UserProfile> updateProfile({
+    String? preferredCurrency,
+    String? locale,
+    String? spendingPersonality,
+    String? incomeRange,
+    String? occupationType,
+    String? householdSize,
+    bool? hasCompletedOnboarding,
+    bool? locationSuggestionsEnabled,
+  }) async {
+    return UserProfile(
+      id: 'user-1',
+      email: 'tx@example.com',
+      currencyCode: preferredCurrency ?? 'USD',
+      locale: locale ?? 'en_US',
+      createdAt: DateTime(2026),
+      hasCompletedOnboarding: hasCompletedOnboarding ?? true,
+      locationSuggestionsEnabled: locationSuggestionsEnabled ?? false,
+      spendingPersonality: spendingPersonality,
+      incomeRange: incomeRange,
+      occupationType: occupationType,
+      householdSize: householdSize,
+    );
+  }
+}
+
 Future<ProviderContainer> _pumpTransactionForm(
   WidgetTester tester, {
   SharedPreferences? prefs,
   LocationAssistanceService? locationService,
   TransactionService? transactionService,
   List<Budget> budgets = const [],
+  bool locationSuggestionsEnabled = false,
 }) async {
   final resolvedPrefs = prefs ??
       await () async {
@@ -133,9 +164,11 @@ Future<ProviderContainer> _pumpTransactionForm(
           locale: 'en_US',
           createdAt: DateTime(2026),
           hasCompletedOnboarding: true,
+          locationSuggestionsEnabled: locationSuggestionsEnabled,
         ),
       ),
       sharedPreferencesProvider.overrideWithValue(resolvedPrefs),
+      userServiceProvider.overrideWithValue(_FakeUserService()),
       locationAssistanceServiceProvider.overrideWithValue(
         locationService ??
             _FakeLocationAssistanceService(permissionGranted: true),
@@ -194,6 +227,7 @@ Future<Widget> buildTransactionFormApp(WidgetTester tester) async {
         ),
       ),
       sharedPreferencesProvider.overrideWithValue(resolvedPrefs),
+      userServiceProvider.overrideWithValue(_FakeUserService()),
       locationAssistanceServiceProvider.overrideWithValue(
         _FakeLocationAssistanceService(permissionGranted: true),
       ),
@@ -376,6 +410,7 @@ void main() {
     await _pumpTransactionForm(
       tester,
       prefs: prefs,
+      locationSuggestionsEnabled: true,
       locationService: _FakeLocationAssistanceService(
         permissionGranted: true,
         suggestions: const (
@@ -406,6 +441,7 @@ void main() {
     await _pumpTransactionForm(
       tester,
       prefs: prefs,
+      locationSuggestionsEnabled: true,
       locationService: _FakeLocationAssistanceService(
         permissionGranted: true,
         suggestions: const (
@@ -454,6 +490,7 @@ void main() {
     await _pumpTransactionForm(
       tester,
       prefs: prefs,
+      locationSuggestionsEnabled: true,
       locationService: _FakeLocationAssistanceService(
         permissionGranted: true,
         suggestions: const (
@@ -482,6 +519,7 @@ void main() {
     await _pumpTransactionForm(
       tester,
       prefs: prefs,
+      locationSuggestionsEnabled: true,
       locationService: _FakeLocationAssistanceService(
         permissionGranted: true,
         suggestions: const (
@@ -616,6 +654,7 @@ void main() {
           ),
         ),
         sharedPreferencesProvider.overrideWithValue(prefs),
+        userServiceProvider.overrideWithValue(_FakeUserService()),
         locationAssistanceServiceProvider.overrideWithValue(
           _FakeLocationAssistanceService(permissionGranted: true),
         ),
@@ -701,6 +740,7 @@ void main() {
           ),
         ),
         sharedPreferencesProvider.overrideWithValue(prefs),
+        userServiceProvider.overrideWithValue(_FakeUserService()),
         locationAssistanceServiceProvider.overrideWithValue(
           _FakeLocationAssistanceService(permissionGranted: true),
         ),

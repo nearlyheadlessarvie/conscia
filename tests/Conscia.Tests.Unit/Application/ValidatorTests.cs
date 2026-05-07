@@ -224,6 +224,17 @@ public class ValidatorTests
         Assert.False(result.IsValid);
     }
 
+    [Fact]
+    public async Task UserProfileUpdate_LocationSuggestionsEnabledOnly_Passes()
+    {
+        var validator = new UserProfileUpdateValidator();
+        var dto = new UserProfileUpdateDto { LocationSuggestionsEnabled = true };
+
+        var result = await validator.ValidateAsync(dto);
+
+        Assert.True(result.IsValid);
+    }
+
     // --- PrePurchaseRequestValidator ---
 
     [Fact]
