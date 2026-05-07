@@ -74,10 +74,10 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
       builder: (context) => const LocationAssistancePromptSheet(),
     );
 
-    if (!mounted || accepted == null) return;
+    if (!mounted) return;
 
     final notifier = ref.read(locationAssistanceProvider.notifier);
-    if (accepted) {
+    if (accepted ?? false) {
       await notifier.enableFromPrompt();
     } else {
       await notifier.declinePrompt();
@@ -245,6 +245,8 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
         ref.watch(subscriptionProvider).valueOrNull?.isPremium ?? false;
     final locationAssistance = ref.watch(locationAssistanceProvider);
     final suggestions = ref.watch(locationAssistanceSuggestionsProvider);
+    final hasSuggestions = suggestions.nearbyMerchants.isNotEmpty ||
+        suggestions.likelyCategories.isNotEmpty;
 
     return Scaffold(
       appBar: AppBar(
@@ -387,7 +389,7 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
                 labelText: 'Merchant (optional)',
               ),
             ),
-            if (!_isEditing && locationAssistance.isEnabled) ...[
+            if (!_isEditing && locationAssistance.isEnabled && hasSuggestions) ...[
               const SizedBox(height: 16),
               _buildLocationSuggestionCard(colors, textTheme, suggestions),
             ],

@@ -131,6 +131,39 @@ void main() {
     expect(find.text('Turn on'), findsOneWidget);
   });
 
+  testWidgets('dismissed location assistance prompt is treated as handled', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+
+    await _pumpTransactionForm(
+      tester,
+      prefs: prefs,
+      locationService: _FakeLocationAssistanceService(permissionGranted: true),
+    );
+
+    await tester.pumpAndSettle();
+    expect(find.text('Turn on smart location help?'), findsOneWidget);
+
+    Navigator.of(
+      tester.element(find.byType(TransactionFormScreen)),
+    ).pop();
+    await tester.pumpAndSettle();
+
+    expect(find.text('Turn on smart location help?'), findsNothing);
+
+    await _pumpTransactionForm(
+      tester,
+      prefs: prefs,
+      locationService: _FakeLocationAssistanceService(permissionGranted: true),
+    );
+
+    await tester.pumpAndSettle();
+
+    expect(find.text('Turn on smart location help?'), findsNothing);
+  });
+
   testWidgets('transaction form shows merchant suggestion UI when enabled', (
     tester,
   ) async {
@@ -207,5 +240,32 @@ void main() {
       ),
       findsOneWidget,
     );
+  });
+
+  testWidgets('transaction form hides suggestion card when suggestions are empty',
+      (tester) async {
+    SharedPreferences.setMockInitialValues({
+      'location_suggestions_enabled': true,
+      'location_suggestions_prompted': true,
+    });
+    final prefs = await SharedPreferences.getInstance();
+
+    await _pumpTransactionForm(
+      tester,
+      prefs: prefs,
+      locationService: _FakeLocationAssistanceService(
+        permissionGranted: true,
+        suggestions: const (
+          nearbyMerchants: <String>[],
+          likelyCategories: <String>[],
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    expect(find.text('Smart suggestions nearby'), findsNothing);
+    expect(find.text('Nearby merchants'), findsNothing);
+    expect(find.text('Likely categories'), findsNothing);
   });
 }
