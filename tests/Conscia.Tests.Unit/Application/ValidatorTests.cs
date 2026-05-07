@@ -178,6 +178,17 @@ public class ValidatorTests
         Assert.True(result.IsValid);
     }
 
+    [Fact]
+    public async Task UpdateTransaction_CounterpartyOnly_Passes()
+    {
+        var validator = new UpdateTransactionValidator();
+        var dto = new UpdateTransactionDto { Counterparty = "Payroll" };
+
+        var result = await validator.ValidateAsync(dto);
+
+        Assert.True(result.IsValid);
+    }
+
     // --- UserProfileUpdateValidator ---
 
     [Fact]

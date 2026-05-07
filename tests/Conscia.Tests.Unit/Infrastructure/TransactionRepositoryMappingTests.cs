@@ -35,7 +35,7 @@ public class TransactionRepositoryMappingTests
     }
 
     [Fact]
-    public void ToItem_PreservesOriginalTimestampInSortKey_AfterMerchantUpdate()
+    public void ToItem_PreservesOriginalTimestampInSortKey_AfterCounterpartyUpdate()
     {
         var transactionId = Guid.NewGuid();
         var userId = Guid.NewGuid();
