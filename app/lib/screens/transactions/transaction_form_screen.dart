@@ -14,8 +14,11 @@ import '../../providers/transaction_providers.dart';
 import '../../providers/user_provider.dart';
 import '../../services/transaction_service.dart';
 import '../../widgets/amount_input_field.dart';
+import '../../widgets/hero_screen_scaffold.dart';
 import '../../widgets/location_assistance_prompt_sheet.dart';
 import '../../widgets/skeleton_loader.dart';
+import '../../widgets/smart_suggestions_card.dart';
+import '../../widgets/screen_section.dart';
 import 'widgets/transaction_style_category_selector.dart';
 
 class TransactionFormScreen extends ConsumerStatefulWidget {
@@ -53,7 +56,6 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
   final _notesController = TextEditingController();
   bool _submitting = false;
   bool _prefilled = false;
-  bool _moreOptionsExpanded = false;
   bool _hasCheckedLocationPrompt = false;
   Transaction? _originalTransaction;
 
@@ -129,7 +131,6 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
         _selectedCategory = tx.category;
         _counterpartyController.text = tx.description;
         _selectedDate = tx.date;
-        _moreOptionsExpanded = _notesController.text.isNotEmpty;
       });
     } catch (_) {}
   }
@@ -253,11 +254,10 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
     }
 
     if (_isEditing && !_prefilled) {
-      return Scaffold(
+      return HeroScreenScaffold(
         appBar: AppBar(title: const Text('Edit Transaction')),
-        body: ListView(
-          padding: const EdgeInsets.all(16),
-          children: const [
+        child: const Column(
+          children: [
             SkeletonLoader(height: 48),
             SizedBox(height: 16),
             SkeletonLoader(height: 48),
@@ -283,7 +283,7 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
     final hasSuggestions = suggestions.nearbyMerchants.isNotEmpty ||
         suggestions.likelyCategories.isNotEmpty;
 
-    return Scaffold(
+    return HeroScreenScaffold(
       appBar: AppBar(
         title: Text(_isEditing ? 'Edit Transaction' : 'Add Transaction'),
         leading: IconButton(
@@ -291,94 +291,112 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
           onPressed: () => context.pop(),
         ),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            SegmentedButton<bool>(
-              segments: [
-                ButtonSegment(
-                  value: true,
-                  label: const Text('Expense'),
-                  icon: Icon(
-                    Icons.arrow_downward,
-                    color: _isExpense
-                        ? (colors.brightness == Brightness.light
-                            ? const Color(0xFFE53935)
-                            : const Color(0xFFEF9A9A))
-                        : null,
-                  ),
+      bottom: FilledButton(
+        onPressed: _isValid && !_submitting ? _submit : null,
+        child: _submitting
+            ? const SizedBox(
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: Colors.white,
                 ),
-                ButtonSegment(
-                  value: false,
-                  label: const Text('Income'),
-                  icon: Icon(
-                    Icons.arrow_upward,
-                    color: !_isExpense
-                        ? (colors.brightness == Brightness.light
-                            ? const Color(0xFF4CAF50)
-                            : const Color(0xFF81C784))
-                        : null,
-                  ),
+              )
+            : Text(
+                _isEditing ? 'Update Transaction' : 'Save Transaction',
+              ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          SegmentedButton<bool>(
+            segments: [
+              ButtonSegment(
+                value: true,
+                label: const Text('Expense'),
+                icon: Icon(
+                  Icons.arrow_downward,
+                  color: _isExpense
+                      ? (colors.brightness == Brightness.light
+                          ? const Color(0xFFE53935)
+                          : const Color(0xFFEF9A9A))
+                      : null,
                 ),
-              ],
-              selected: {_isExpense},
-              onSelectionChanged: (v) => setState(() {
-                _isExpense = v.first;
-                _selectedCategory = null;
-              }),
-            ),
-            const SizedBox(height: 16),
-            AmountInputField(
-              controller: _amountController,
-              isExpense: _isExpense,
-              currencyCode: _currencyCode,
-              isPremium: isPremium,
-              onChanged: (_) => setState(() {}),
-              onCurrencyChanged: (code) => setState(() {
-                _currencyManuallyChanged = true;
-                _currencyCode = code;
-              }),
-            ),
-            const SizedBox(height: 16),
-            Consumer(
-              builder: (context, ref, _) {
-                final userCurrency =
-                    ref.watch(userPreferencesProvider).currency;
-                if (_currencyCode == userCurrency) {
-                  return const SizedBox.shrink();
-                }
+              ),
+              ButtonSegment(
+                value: false,
+                label: const Text('Income'),
+                icon: Icon(
+                  Icons.arrow_upward,
+                  color: !_isExpense
+                      ? (colors.brightness == Brightness.light
+                          ? const Color(0xFF4CAF50)
+                          : const Color(0xFF81C784))
+                      : null,
+                ),
+              ),
+            ],
+            selected: {_isExpense},
+            onSelectionChanged: (v) => setState(() {
+              _isExpense = v.first;
+              _selectedCategory = null;
+            }),
+          ),
+          const SizedBox(height: 18),
+          AmountInputField(
+            controller: _amountController,
+            isExpense: _isExpense,
+            currencyCode: _currencyCode,
+            isPremium: isPremium,
+            onChanged: (_) => setState(() {}),
+            onCurrencyChanged: (code) => setState(() {
+              _currencyManuallyChanged = true;
+              _currencyCode = code;
+            }),
+          ),
+          const SizedBox(height: 18),
+          Consumer(
+            builder: (context, ref, _) {
+              final userCurrency = ref.watch(userPreferencesProvider).currency;
+              if (_currencyCode == userCurrency) {
+                return const SizedBox.shrink();
+              }
 
-                final rateAsync = ref.watch(
-                  exchangeRateProvider((_currencyCode, userCurrency)),
-                );
+              final rateAsync = ref.watch(
+                exchangeRateProvider((_currencyCode, userCurrency)),
+              );
 
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 16),
-                  child: rateAsync.when(
-                    loading: () => const LinearProgressIndicator(),
-                    error: (_, __) => const SizedBox.shrink(),
-                    data: (liveRate) => TextField(
-                      controller: _exchangeRateController,
-                      keyboardType: const TextInputType.numberWithOptions(
-                        decimal: true,
-                      ),
-                      decoration: InputDecoration(
-                        labelText: 'Exchange rate (optional)',
-                        hintText: liveRate != null
-                            ? liveRate.toStringAsFixed(4)
-                            : 'Enter rate manually',
-                        helperText: liveRate != null
-                            ? 'Leave blank to use live rate (1 $_currencyCode = ${liveRate.toStringAsFixed(4)} $userCurrency)'
-                            : 'Live rate unavailable — enter manually or leave blank',
-                      ),
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 18),
+                child: rateAsync.when(
+                  loading: () => const LinearProgressIndicator(),
+                  error: (_, __) => const SizedBox.shrink(),
+                  data: (liveRate) => TextField(
+                    controller: _exchangeRateController,
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
+                    decoration: InputDecoration(
+                      labelText: 'Exchange rate (optional)',
+                      hintText: liveRate != null
+                          ? liveRate.toStringAsFixed(4)
+                          : 'Enter rate manually',
+                      helperText: liveRate != null
+                          ? 'Leave blank to use live rate (1 $_currencyCode = ${liveRate.toStringAsFixed(4)} $userCurrency)'
+                          : 'Live rate unavailable — enter manually or leave blank',
                     ),
                   ),
-                );
-              },
-            ),
-            TransactionStyleCategorySelector(
+                ),
+              );
+            },
+          ),
+          ScreenSection(
+            title: 'Category',
+            subtitle: _isExpense
+                ? 'Choose a category first, then refine the rest.'
+                : 'Pick the income source type you want to track.',
+            compact: true,
+            child: TransactionStyleCategorySelector(
               selectedCategory: _selectedCategory,
               isExpense: _isExpense,
               isPremium: isPremium,
@@ -393,181 +411,90 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
                 }
               },
             ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _counterpartyController,
-              textCapitalization: TextCapitalization.words,
-              onChanged: (_) => setState(() {}),
-              decoration: InputDecoration(
-                labelText:
-                    _isExpense ? 'Merchant (optional)' : 'Source (optional)',
+          ),
+          if (!_isEditing && locationAssistance.isEnabled && hasSuggestions) ...[
+            SmartSuggestionsCard(
+              suggestions: suggestions,
+              subtitle:
+                  'Suggestions only help you fill things faster. You can still edit everything manually.',
+              onMerchantSelected: (counterpartySuggestion) {
+                setState(() {
+                  _counterpartyController.text = counterpartySuggestion;
+                });
+              },
+              onCategorySelected: (category) {
+                setState(() {
+                  _selectedCategory = category;
+                });
+                ref.read(recentCategoryProvider.notifier).record(category);
+              },
+              categoryAvatarBuilder: (category) => CategoryIcons.badge(
+                category,
+                size: 14,
               ),
             ),
-            if (!_isEditing &&
-                locationAssistance.isEnabled &&
-                hasSuggestions) ...[
-              const SizedBox(height: 16),
-              _buildLocationSuggestionCard(colors, textTheme, suggestions),
-            ],
-            const SizedBox(height: 16),
-            InkWell(
-              onTap: _pickDate,
-              borderRadius: BorderRadius.circular(12),
-              child: Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                child: Row(
-                  children: [
-                    Icon(
-                      AppIcons.calendar,
-                      size: 18,
-                      color: colors.onSurfaceVariant,
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      _relativeDateLabel(_selectedDate),
-                      style: textTheme.bodyMedium,
-                    ),
-                    const Spacer(),
-                    Icon(
-                      AppIcons.chevronRight,
-                      size: 16,
-                      color: colors.outline,
-                    ),
-                  ],
+            const SizedBox(height: 18),
+          ],
+          ScreenSection(
+            title: 'Details',
+            subtitle:
+                'Add the who, when, and any context you want to remember later.',
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                TextField(
+                  controller: _counterpartyController,
+                  textCapitalization: TextCapitalization.words,
+                  onChanged: (_) => setState(() {}),
+                  decoration: InputDecoration(
+                    labelText: _isExpense
+                        ? 'Merchant (optional)'
+                        : 'Source (optional)',
+                  ),
                 ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            Theme(
-              data:
-                  Theme.of(context).copyWith(dividerColor: Colors.transparent),
-              child: ExpansionTile(
-                tilePadding: EdgeInsets.zero,
-                childrenPadding: EdgeInsets.zero,
-                title: const Text('More options'),
-                initiallyExpanded: _moreOptionsExpanded,
-                onExpansionChanged: (expanded) {
-                  setState(() => _moreOptionsExpanded = expanded);
-                },
-                children: [
-                  if (!_isEditing && locationAssistance.isEnabled) ...[
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
-                      child: Text(
-                        'Smart suggestions use your location only to help with nearby merchants and likely categories. You can still edit everything manually.',
-                        style: textTheme.bodySmall?.copyWith(
+                const SizedBox(height: 14),
+                InkWell(
+                  onTap: _pickDate,
+                  borderRadius: BorderRadius.circular(12),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 10,
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          AppIcons.calendar,
+                          size: 18,
                           color: colors.onSurfaceVariant,
                         ),
-                      ),
-                    ),
-                  ],
-                  TextField(
-                    controller: _notesController,
-                    maxLines: 3,
-                    minLines: 1,
-                    decoration: const InputDecoration(
-                      labelText: 'Notes (optional)',
+                        const SizedBox(width: 8),
+                        Text(
+                          _relativeDateLabel(_selectedDate),
+                          style: textTheme.bodyMedium,
+                        ),
+                        const Spacer(),
+                        Icon(
+                          AppIcons.chevronRight,
+                          size: 16,
+                          color: colors.outline,
+                        ),
+                      ],
                     ),
                   ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 24),
-            FilledButton(
-              onPressed: _isValid && !_submitting ? _submit : null,
-              child: _submitting
-                  ? const SizedBox(
-                      width: 24,
-                      height: 24,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.white,
-                      ),
-                    )
-                  : Text(
-                      _isEditing ? 'Update Transaction' : 'Save Transaction',
-                    ),
-            ),
-            const SizedBox(height: 16),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildLocationSuggestionCard(
-    ColorScheme colors,
-    TextTheme textTheme,
-    LocationAssistanceSuggestions suggestions,
-  ) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: colors.surfaceContainerHighest.withValues(alpha: 0.5),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: colors.outlineVariant),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('Smart suggestions nearby', style: textTheme.titleMedium),
-          const SizedBox(height: 4),
-          Text(
-            'Suggestions are assistive only. Tap one to fill the form faster.',
-            style: textTheme.bodySmall?.copyWith(
-              color: colors.onSurfaceVariant,
+                ),
+                const SizedBox(height: 14),
+                TextField(
+                  controller: _notesController,
+                  maxLines: 3,
+                  minLines: 1,
+                  decoration: const InputDecoration(
+                    labelText: 'Notes (optional)',
+                  ),
+                ),
+              ],
             ),
           ),
-          if (suggestions.nearbyMerchants.isNotEmpty) ...[
-            const SizedBox(height: 16),
-            Text('Nearby merchants', style: textTheme.titleSmall),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: suggestions.nearbyMerchants
-                  .map(
-                    (counterpartySuggestion) => ActionChip(
-                      label: Text(counterpartySuggestion),
-                      onPressed: () {
-                        setState(() {
-                          _counterpartyController.text = counterpartySuggestion;
-                        });
-                      },
-                    ),
-                  )
-                  .toList(),
-            ),
-          ],
-          if (suggestions.likelyCategories.isNotEmpty) ...[
-            const SizedBox(height: 16),
-            Text('Likely categories', style: textTheme.titleSmall),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: suggestions.likelyCategories
-                  .map(
-                    (category) => ActionChip(
-                      avatar: CategoryIcons.badge(
-                        category,
-                        size: 14,
-                      ),
-                      label: Text(category),
-                      onPressed: () {
-                        setState(() {
-                          _selectedCategory = category;
-                        });
-                        ref
-                            .read(recentCategoryProvider.notifier)
-                            .record(category);
-                      },
-                    ),
-                  )
-                  .toList(),
-            ),
-          ],
         ],
       ),
     );

@@ -475,6 +475,7 @@ void main() {
 
     await tester.pumpAndSettle();
 
+    await tester.ensureVisible(find.text('Corner Bakery'));
     await tester.tap(find.text('Corner Bakery'));
     await tester.pumpAndSettle();
 

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'package:conscia_app/widgets/feed_card.dart';
+
 class InAppAlertBanner extends StatelessWidget {
   const InAppAlertBanner({
     super.key,
@@ -21,60 +23,55 @@ class InAppAlertBanner extends StatelessWidget {
     final colors = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
 
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: colors.primaryContainer.withValues(alpha: 0.55),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: colors.primary.withValues(alpha: 0.18),
-        ),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(
-            Icons.tips_and_updates_outlined,
-            color: colors.primary,
-            size: 24,
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: colors.onSurface,
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: FeedCard(
+        padding: const EdgeInsets.all(18),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(
+              Icons.tips_and_updates_outlined,
+              color: colors.primary,
+              size: 24,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: colors.onSurface,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  message,
-                  style: textTheme.bodySmall?.copyWith(
-                    color: colors.onSurfaceVariant,
+                  const SizedBox(height: 4),
+                  Text(
+                    message,
+                    style: textTheme.bodySmall?.copyWith(
+                      color: colors.onSurfaceVariant,
+                    ),
                   ),
-                ),
-                if (actionLabel != null && onAction != null) ...[
-                  const SizedBox(height: 12),
-                  FilledButton.tonal(
-                    onPressed: onAction,
-                    child: Text(actionLabel!),
-                  ),
+                  if (actionLabel != null && onAction != null) ...[
+                    const SizedBox(height: 12),
+                    FilledButton.tonal(
+                      onPressed: onAction,
+                      child: Text(actionLabel!),
+                    ),
+                  ],
                 ],
-              ],
+              ),
             ),
-          ),
-          if (onDismiss != null)
-            IconButton(
-              icon: const Icon(Icons.close, size: 20),
-              onPressed: onDismiss,
-              visualDensity: VisualDensity.compact,
-            ),
-        ],
+            if (onDismiss != null)
+              IconButton(
+                icon: const Icon(Icons.close, size: 20),
+                onPressed: onDismiss,
+                visualDensity: VisualDensity.compact,
+              ),
+          ],
+        ),
       ),
     );
   }

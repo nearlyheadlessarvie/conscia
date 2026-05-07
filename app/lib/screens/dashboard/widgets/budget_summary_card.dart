@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import 'package:conscia_app/widgets/feed_card.dart';
 import 'package:conscia_app/widgets/budget_progress_bar.dart';
 import 'package:conscia_app/widgets/currency_badge.dart';
 
@@ -38,24 +39,11 @@ class BudgetSummaryCard extends StatelessWidget {
 
     final pctText = '${(_percentage * 100).round()}%';
 
-    return GestureDetector(
-      onTap: () => context.push('/settings/budgets'),
-      child: Container(
-        width: 200,
+    return SizedBox(
+      width: 208,
+      child: FeedCard(
+        onTap: () => context.push('/settings/budgets'),
         padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: colors.surface,
-          borderRadius: BorderRadius.circular(16),
-          border:
-              Border.all(color: colors.outlineVariant.withValues(alpha: 0.5)),
-          boxShadow: [
-            BoxShadow(
-              color: colors.shadow.withValues(alpha: 0.05),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,

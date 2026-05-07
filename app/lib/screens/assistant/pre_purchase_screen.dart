@@ -6,7 +6,6 @@ import 'package:go_router/go_router.dart';
 import '../../core/routing/app_router.dart';
 import '../../core/constants/generated/app_constants.g.dart';
 import '../../core/constants/category_icons.dart';
-import '../../core/constants/category_visibility.dart';
 import '../../core/utils/currency_formatter.dart';
 import '../../providers/ai_provider.dart';
 import '../../providers/category_recents_provider.dart';
@@ -17,8 +16,11 @@ import '../../providers/user_provider.dart';
 import '../../services/ai_service.dart';
 import '../../widgets/amount_input_field.dart';
 import '../../widgets/conscience_mark.dart';
+import '../../widgets/hero_screen_scaffold.dart';
 import '../../widgets/location_assistance_prompt_sheet.dart';
 import '../../widgets/premium_upgrade_dialog.dart';
+import '../../widgets/screen_section.dart';
+import '../../widgets/smart_suggestions_card.dart';
 import '../transactions/widgets/transaction_style_category_selector.dart';
 import 'widgets/ai_message_bubble.dart';
 import 'widgets/budget_context_card.dart';
@@ -251,8 +253,16 @@ class _PrePurchaseScreenState extends ConsumerState<PrePurchaseScreen>
     final hasSuggestions = suggestions.nearbyMerchants.isNotEmpty ||
         suggestions.likelyCategories.isNotEmpty;
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
+    return HeroScreenScaffold(
+      padding: const EdgeInsets.fromLTRB(16, 20, 16, 12),
+      bottom: SizedBox(
+        width: double.infinity,
+        child: FilledButton.icon(
+          onPressed: _formValid ? _submit : null,
+          icon: const Icon(Icons.auto_awesome),
+          label: const Text('Ask Conscia'),
+        ),
+      ),
       child: Column(
         children: [
           const SizedBox(height: 20),
@@ -298,122 +308,46 @@ class _PrePurchaseScreenState extends ConsumerState<PrePurchaseScreen>
           ),
           const SizedBox(height: 16),
 
-          TransactionStyleCategorySelector(
-            selectedCategory: _selectedCategory,
-            isExpense: true,
-            isPremium: isPremium,
-            onCategorySelected: (category) {
-              setState(() => _selectedCategory = category);
-              if (category != null) {
-                ref.read(recentCategoryProvider.notifier).record(category);
-              }
-            },
+          ScreenSection(
+            title: 'Category',
+            subtitle:
+                'Give Conscia a category so the tradeoff can stay grounded in your real spending.',
+            compact: true,
+            child: TransactionStyleCategorySelector(
+              selectedCategory: _selectedCategory,
+              isExpense: true,
+              isPremium: isPremium,
+              onCategorySelected: (category) {
+                setState(() => _selectedCategory = category);
+                if (category != null) {
+                  ref.read(recentCategoryProvider.notifier).record(category);
+                }
+              },
+            ),
           ),
           if (locationAssistance.isEnabled && hasSuggestions) ...[
-            const SizedBox(height: 16),
-            _buildLocationSuggestionCard(
-              colors,
-              textTheme,
-              suggestions,
-              isPremium,
+            SmartSuggestionsCard(
+              suggestions: suggestions,
+              subtitle:
+                  'Need a nudge? Try a nearby merchant or likely category, then edit anything you want.',
+              onMerchantSelected: (merchant) {
+                setState(() {
+                  _descriptionController.text = merchant;
+                });
+              },
+              onCategorySelected: (category) {
+                setState(() {
+                  _selectedCategory = category;
+                });
+                ref.read(recentCategoryProvider.notifier).record(category);
+              },
+              categoryAvatarBuilder: (category) => CategoryIcons.badge(
+                category,
+                size: 14,
+              ),
             ),
           ],
-          const SizedBox(height: 24),
-
-          // CTA
-          SizedBox(
-            width: double.infinity,
-            child: FilledButton.icon(
-              onPressed: _formValid ? _submit : null,
-              icon: const Icon(Icons.auto_awesome),
-              label: const Text('Ask Conscia'),
-            ),
-          ),
-          const SizedBox(height: 32),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildLocationSuggestionCard(
-    ColorScheme colors,
-    TextTheme textTheme,
-    LocationAssistanceSuggestions suggestions,
-    bool isPremium,
-  ) {
-    final visibleCategories = visibleBudgetCategories(
-      isPremium: isPremium,
-      categories: suggestions.likelyCategories,
-    );
-
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: colors.surfaceContainerHighest.withValues(alpha: 0.5),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: colors.outlineVariant),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('Smart suggestions nearby', style: textTheme.titleMedium),
-          const SizedBox(height: 4),
-          Text(
-            'Need a nudge? Try a nearby merchant or likely category, then edit anything you want.',
-            style: textTheme.bodySmall?.copyWith(
-              color: colors.onSurfaceVariant,
-            ),
-          ),
-          if (suggestions.nearbyMerchants.isNotEmpty) ...[
-            const SizedBox(height: 16),
-            Text('Nearby merchants', style: textTheme.titleSmall),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: suggestions.nearbyMerchants
-                  .map(
-                    (merchant) => ActionChip(
-                      label: Text(merchant),
-                      onPressed: () {
-                        setState(() {
-                          _descriptionController.text = merchant;
-                        });
-                      },
-                    ),
-                  )
-                  .toList(),
-            ),
-          ],
-          if (visibleCategories.isNotEmpty) ...[
-            const SizedBox(height: 16),
-            Text('Likely categories', style: textTheme.titleSmall),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: visibleCategories
-                  .map(
-                    (category) => ActionChip(
-                      avatar: CategoryIcons.badge(
-                        category,
-                        size: 14,
-                      ),
-                      label: Text(category),
-                      onPressed: () {
-                        setState(() {
-                          _selectedCategory = category;
-                        });
-                        ref
-                            .read(recentCategoryProvider.notifier)
-                            .record(category);
-                      },
-                    ),
-                  )
-                  .toList(),
-            ),
-          ],
+          const SizedBox(height: 20),
         ],
       ),
     );

@@ -285,6 +285,7 @@ void main() {
     expect(find.text('All categories'), findsOneWidget);
     expect(find.text('Dining'), findsWidgets);
 
+    await tester.ensureVisible(find.text('All categories'));
     await tester.tap(find.text('All categories'));
     await tester.pumpAndSettle();
 
@@ -325,6 +326,7 @@ void main() {
     expect(find.text('Shopping'), findsNothing);
     expect(find.text('Dining'), findsOneWidget);
 
+    await tester.ensureVisible(find.text('All categories'));
     await tester.tap(find.text('All categories'));
     await tester.pumpAndSettle();
 
@@ -343,6 +345,7 @@ void main() {
 
     expect(find.text('Travel'), findsNothing);
 
+    await tester.ensureVisible(find.text('All categories'));
     await tester.tap(find.text('All categories'));
     await tester.pumpAndSettle();
 
@@ -511,6 +514,7 @@ void main() {
       'Starbucks coffee',
     );
     await tester.enterText(find.byType(TextField).at(1), '600');
+    await tester.ensureVisible(find.widgetWithText(FilterChip, 'Dining'));
     await tester.tap(find.widgetWithText(FilterChip, 'Dining'));
     await tester.pumpAndSettle();
     await tester.ensureVisible(find.text('Ask Conscia'));
@@ -577,6 +581,7 @@ void main() {
       'Starbucks coffee',
     );
     await tester.enterText(find.byType(TextField).at(1), '600');
+    await tester.ensureVisible(find.widgetWithText(FilterChip, 'Dining'));
     await tester.tap(find.widgetWithText(FilterChip, 'Dining'));
     await tester.pumpAndSettle();
     await tester.ensureVisible(find.text('Ask Conscia'));
