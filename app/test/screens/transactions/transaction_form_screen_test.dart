@@ -28,15 +28,17 @@ class _FakeLocationAssistanceService extends LocationAssistanceService {
   });
 
   final bool permissionGranted;
-  final ({List<String> nearbyMerchants, List<String> likelyCategories})
-      suggestions;
+  final ({
+    List<String> nearbyMerchants,
+    List<String> likelyCategories
+  }) suggestions;
 
   @override
   Future<bool> requestPermission() async => permissionGranted;
 
   @override
   ({List<String> nearbyMerchants, List<String> likelyCategories})
-  getTransactionSuggestions() => suggestions;
+      getTransactionSuggestions() => suggestions;
 }
 
 class _RecordingTransactionService extends TransactionService {
@@ -135,7 +137,8 @@ Future<ProviderContainer> _pumpTransactionForm(
       ),
       sharedPreferencesProvider.overrideWithValue(resolvedPrefs),
       locationAssistanceServiceProvider.overrideWithValue(
-        locationService ?? _FakeLocationAssistanceService(permissionGranted: true),
+        locationService ??
+            _FakeLocationAssistanceService(permissionGranted: true),
       ),
       transactionServiceProvider.overrideWithValue(
         transactionService ?? _RecordingTransactionService(),
@@ -194,7 +197,8 @@ Future<Widget> buildTransactionFormApp(WidgetTester tester) async {
       locationAssistanceServiceProvider.overrideWithValue(
         _FakeLocationAssistanceService(permissionGranted: true),
       ),
-      transactionServiceProvider.overrideWithValue(_RecordingTransactionService()),
+      transactionServiceProvider
+          .overrideWithValue(_RecordingTransactionService()),
       budgetServiceProvider.overrideWithValue(_StaticBudgetService(const [])),
       budgetReconciliationEnabledProvider.overrideWithValue(false),
     ],
@@ -235,7 +239,8 @@ void main() {
     expect(dto.toJson().containsKey('merchant'), isFalse);
   });
 
-  testWidgets('transaction form shows a single quick preset row when unselected', (
+  testWidgets(
+      'transaction form shows a single quick preset row when unselected', (
     tester,
   ) async {
     await _pumpTransactionForm(tester);
@@ -253,14 +258,14 @@ void main() {
 
     await tester.pumpAndSettle();
 
-    expect(find.text('Coffee'), findsOneWidget);
+    expect(find.text('Dining'), findsOneWidget);
     expect(find.text('Salary'), findsNothing);
 
     await tester.tap(find.text('Income'));
     await tester.pumpAndSettle();
 
     expect(find.text('Salary'), findsOneWidget);
-    expect(find.text('Coffee'), findsNothing);
+    expect(find.text('Dining'), findsNothing);
   });
 
   testWidgets('income transactions label counterparty field as Source', (
@@ -279,8 +284,6 @@ void main() {
       'transaction form selects a category from more categories bottom sheet',
       (tester) async {
     await tester.pumpWidget(await buildTransactionFormApp(tester));
-
-    expect(find.text('Groceries'), findsNothing);
 
     await tester.tap(find.text('More categories'));
     await tester.pumpAndSettle();
@@ -301,7 +304,8 @@ void main() {
     );
   });
 
-  testWidgets('transaction form prompts for location assistance on first open', (
+  testWidgets('transaction form prompts for location assistance on first open',
+      (
     tester,
   ) async {
     SharedPreferences.setMockInitialValues({});
@@ -438,7 +442,8 @@ void main() {
     );
   });
 
-  testWidgets('transaction form hides suggestion card when suggestions are empty',
+  testWidgets(
+      'transaction form hides suggestion card when suggestions are empty',
       (tester) async {
     SharedPreferences.setMockInitialValues({
       'location_suggestions_enabled': true,
@@ -518,7 +523,7 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.enterText(find.byType(TextField).first, '12.50');
-    await tester.tap(find.text('Coffee'));
+    await tester.tap(find.text('Dining'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Save Transaction'));
     await tester.pumpAndSettle();
@@ -527,7 +532,7 @@ void main() {
     final alerts = container.read(localAlertsProvider);
     expect(alerts, hasLength(1));
     expect(alerts.first.type, 'budget_nudge');
-    expect(alerts.first.title, 'No budget for Coffee yet');
+    expect(alerts.first.title, 'No budget for Dining yet');
   });
 
   testWidgets('saving a budgeted expense updates budget usage immediately', (
@@ -541,7 +546,7 @@ void main() {
       budgets: const [
         Budget(
           id: 'budget-1',
-          category: 'Coffee',
+          category: 'Groceries',
           monthlyLimit: 100,
           spent: 20,
           currencyCode: 'USD',
@@ -554,7 +559,7 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.enterText(find.byType(TextField).first, '12.50');
-    await tester.tap(find.text('Coffee'));
+    await tester.tap(find.text('Groceries'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Save Transaction'));
     await tester.pumpAndSettle();
@@ -662,5 +667,79 @@ void main() {
     expect(transactionService.lastUpdated, isNotNull);
     expect(container.read(localAlertsProvider), isEmpty);
     expect(find.textContaining('Budget nudge saved'), findsNothing);
+  });
+
+  testWidgets(
+      'editing a budgeted expense updates local budget usage immediately',
+      (tester) async {
+    final transactionService = _RecordingTransactionService();
+    SharedPreferences.setMockInitialValues({
+      'location_suggestions_enabled': false,
+      'location_suggestions_prompted': true,
+    });
+    final prefs = await SharedPreferences.getInstance();
+
+    final container = ProviderContainer(
+      overrides: [
+        categoryFrequencyProvider.overrideWithValue(
+          ['Coffee', 'Dining', 'Shopping', 'Gaming', 'Travel'],
+        ),
+        subscriptionProvider.overrideWith(
+          (ref) async => const SubscriptionStatus(
+            tier: 'free',
+            isPremium: false,
+          ),
+        ),
+        currentUserProvider.overrideWith(
+          (ref) async => UserProfile(
+            id: 'user-1',
+            email: 'tx@example.com',
+            currencyCode: 'USD',
+            locale: 'en_US',
+            createdAt: DateTime(2026),
+            hasCompletedOnboarding: true,
+          ),
+        ),
+        sharedPreferencesProvider.overrideWithValue(prefs),
+        locationAssistanceServiceProvider.overrideWithValue(
+          _FakeLocationAssistanceService(permissionGranted: true),
+        ),
+        transactionServiceProvider.overrideWithValue(transactionService),
+        budgetServiceProvider.overrideWithValue(
+          _StaticBudgetService(const [
+            Budget(
+              id: 'budget-1',
+              category: 'Coffee',
+              monthlyLimit: 100,
+              spent: 20,
+              currencyCode: 'USD',
+              percentage: 0.2,
+              isOverBudget: false,
+            ),
+          ]),
+        ),
+        budgetReconciliationEnabledProvider.overrideWithValue(false),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: const MaterialApp(
+          home: TransactionFormScreen(transactionId: 'tx-1'),
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextField).first, '18.25');
+    await tester.tap(find.text('Update Transaction'));
+    await tester.pumpAndSettle();
+
+    final updatedBudget = container.read(budgetListProvider).budgets.single;
+    expect(updatedBudget.spent, 23.5);
+    expect(updatedBudget.percentage, 0.235);
   });
 }

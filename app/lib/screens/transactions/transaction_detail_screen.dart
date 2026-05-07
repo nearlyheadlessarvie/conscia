@@ -7,6 +7,7 @@ import 'package:intl/intl.dart';
 
 import '../../core/utils/currency_formatter.dart';
 import '../../providers/ai_provider.dart';
+import '../../providers/budget_providers.dart';
 import '../../providers/transaction_providers.dart';
 import '../../providers/usage_provider.dart';
 import '../../services/ai_service.dart';
@@ -37,6 +38,12 @@ class _TransactionDetailScreenState
   bool _deleting = false;
   Transaction? _editedTransactionOverride;
 
+  @override
+  void initState() {
+    super.initState();
+    ref.read(budgetListProvider);
+  }
+
   Color _amountColor(ColorScheme colors, bool isIncome) {
     if (!isIncome) {
       return colors.brightness == Brightness.light
@@ -48,7 +55,7 @@ class _TransactionDetailScreenState
         : const Color(0xFF81C784);
   }
 
-  Future<void> _confirmDelete() async {
+  Future<void> _confirmDelete(Transaction? transaction) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -76,6 +83,13 @@ class _TransactionDetailScreenState
     try {
       final service = ref.read(transactionServiceProvider);
       await service.delete(widget.transactionId);
+      final didUpdateBudget = transaction != null &&
+          ref
+              .read(budgetListProvider.notifier)
+              .applyOptimisticTransactionDelete(transaction);
+      if (didUpdateBudget && ref.read(budgetReconciliationEnabledProvider)) {
+        ref.read(budgetListProvider.notifier).scheduleRefreshInBackground();
+      }
       if (!mounted) return;
       ref.invalidate(transactionListProvider);
       context.pop();
@@ -142,6 +156,8 @@ class _TransactionDetailScreenState
   Widget build(BuildContext context) {
     final detailAsync =
         ref.watch(transactionDetailProvider(widget.transactionId));
+    final currentTransaction =
+        _editedTransactionOverride ?? detailAsync.valueOrNull;
 
     return Scaffold(
       appBar: AppBar(
@@ -152,7 +168,7 @@ class _TransactionDetailScreenState
               if (value == 'edit') {
                 _openEditScreen();
               } else if (value == 'delete') {
-                _confirmDelete();
+                _confirmDelete(currentTransaction);
               }
             },
             itemBuilder: (_) => const [

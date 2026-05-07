@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -86,20 +87,66 @@ class BudgetListNotifier extends StateNotifier<BudgetListState> {
   }
 
   bool applyOptimisticTransaction(Transaction transaction) {
-    if (transaction.type != 'expense') return false;
+    return _applyBudgetDeltas(_transactionBudgetDeltas([
+      transaction.amount
+    ], [
+      transaction,
+    ]));
+  }
 
-    final normalizedCategory = transaction.category.trim().toLowerCase();
-    if (normalizedCategory.isEmpty) return false;
+  bool applyOptimisticTransactionUpdate({
+    required Transaction previousTransaction,
+    required Transaction updatedTransaction,
+  }) {
+    return _applyBudgetDeltas(
+      _transactionBudgetDeltas(
+        [-previousTransaction.amount, updatedTransaction.amount],
+        [previousTransaction, updatedTransaction],
+      ),
+    );
+  }
+
+  bool applyOptimisticTransactionDelete(Transaction transaction) {
+    return _applyBudgetDeltas(
+      _transactionBudgetDeltas([-transaction.amount], [transaction]),
+    );
+  }
+
+  Map<String, double> _transactionBudgetDeltas(
+    List<double> deltas,
+    List<Transaction> transactions,
+  ) {
+    final budgetDeltas = <String, double>{};
+
+    for (var index = 0; index < transactions.length; index++) {
+      final transaction = transactions[index];
+      if (transaction.type != 'expense') continue;
+
+      final normalizedCategory = transaction.category.trim().toLowerCase();
+      if (normalizedCategory.isEmpty) continue;
+
+      budgetDeltas.update(
+        normalizedCategory,
+        (value) => value + deltas[index],
+        ifAbsent: () => deltas[index],
+      );
+    }
+
+    return budgetDeltas;
+  }
+
+  bool _applyBudgetDeltas(Map<String, double> budgetDeltas) {
+    if (budgetDeltas.isEmpty) return false;
 
     var didUpdate = false;
     final updatedBudgets = state.budgets.map((budget) {
-      if (budget.category.trim().toLowerCase() != normalizedCategory) {
-        return budget;
-      }
+      final normalizedCategory = budget.category.trim().toLowerCase();
+      final delta = budgetDeltas[normalizedCategory];
+      if (delta == null || delta == 0) return budget;
 
       didUpdate = true;
       return budget.copyWith(
-        spent: budget.spent + transaction.amount,
+        spent: math.max(0.0, budget.spent + delta),
       );
     }).toList(growable: false);
 
@@ -175,8 +222,7 @@ class BudgetFormNotifier extends StateNotifier<BudgetFormState> {
       state = state.copyWith(category: category);
   void setMonthlyLimit(double limit) =>
       state = state.copyWith(monthlyLimit: limit);
-  void setCurrency(String code) =>
-      state = state.copyWith(currencyCode: code);
+  void setCurrency(String code) => state = state.copyWith(currencyCode: code);
   void setSubmitting(bool v) => state = state.copyWith(isSubmitting: v);
   void reset() => state = const BudgetFormState();
 }
@@ -186,7 +232,8 @@ final budgetFormProvider =
   (_) => BudgetFormNotifier(),
 );
 
-final hasBudgetForCategoryProvider = Provider.family<bool, String>((ref, category) {
+final hasBudgetForCategoryProvider =
+    Provider.family<bool, String>((ref, category) {
   final normalizedCategory = category.trim().toLowerCase();
   if (normalizedCategory.isEmpty) return false;
 

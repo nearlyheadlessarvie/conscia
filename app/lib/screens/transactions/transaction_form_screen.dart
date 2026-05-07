@@ -43,6 +43,7 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
   bool _prefilled = false;
   bool _moreOptionsExpanded = false;
   bool _hasCheckedLocationPrompt = false;
+  Transaction? _originalTransaction;
 
   @override
   void initState() {
@@ -87,6 +88,7 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
       final tx = await service.getById(widget.transactionId!);
       if (!mounted) return;
       setState(() {
+        _originalTransaction = tx;
         _prefilled = true;
         _isExpense = tx.type != 'income';
         _amountController.text = tx.amount.toStringAsFixed(2);
@@ -150,20 +152,20 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
             .addBudgetNudge(category: _selectedCategory!);
       }
 
-      if (!_isEditing) {
-        final updatedBudget = ref
-            .read(budgetListProvider.notifier)
-            .applyOptimisticTransaction(
-              savedTransaction,
-            );
-        if (updatedBudget) {
-          if (ref.read(budgetReconciliationEnabledProvider)) {
-            ref.read(budgetListProvider.notifier).scheduleRefreshInBackground();
-          }
-        }
+      final budgetNotifier = ref.read(budgetListProvider.notifier);
+      final didUpdateBudget = _isEditing
+          ? _originalTransaction != null &&
+              budgetNotifier.applyOptimisticTransactionUpdate(
+                previousTransaction: _originalTransaction!,
+                updatedTransaction: savedTransaction,
+              )
+          : budgetNotifier.applyOptimisticTransaction(savedTransaction);
+      if (didUpdateBudget && ref.read(budgetReconciliationEnabledProvider)) {
+        budgetNotifier.scheduleRefreshInBackground();
       }
 
       if (!mounted) return;
+      _originalTransaction = savedTransaction;
       ref.invalidate(transactionListProvider);
       if (_isEditing) {
         ref.invalidate(transactionDetailProvider(widget.transactionId!));
@@ -310,7 +312,8 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
             const SizedBox(height: 16),
             Consumer(
               builder: (context, ref, _) {
-                final userCurrency = ref.watch(userPreferencesProvider).currency;
+                final userCurrency =
+                    ref.watch(userPreferencesProvider).currency;
                 if (_currencyCode == userCurrency) {
                   return const SizedBox.shrink();
                 }
@@ -346,6 +349,7 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
             TransactionStyleCategorySelector(
               selectedCategory: _selectedCategory,
               isExpense: _isExpense,
+              isPremium: isPremium,
               labelStyle: textTheme.titleSmall?.copyWith(
                 color: colors.onSurfaceVariant,
               ),
@@ -360,12 +364,13 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
               textCapitalization: TextCapitalization.words,
               onChanged: (_) => setState(() {}),
               decoration: InputDecoration(
-                labelText: _isExpense
-                    ? 'Merchant (optional)'
-                    : 'Source (optional)',
+                labelText:
+                    _isExpense ? 'Merchant (optional)' : 'Source (optional)',
               ),
             ),
-            if (!_isEditing && locationAssistance.isEnabled && hasSuggestions) ...[
+            if (!_isEditing &&
+                locationAssistance.isEnabled &&
+                hasSuggestions) ...[
               const SizedBox(height: 16),
               _buildLocationSuggestionCard(colors, textTheme, suggestions),
             ],
@@ -400,7 +405,8 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
             ),
             const SizedBox(height: 16),
             Theme(
-              data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+              data:
+                  Theme.of(context).copyWith(dividerColor: Colors.transparent),
               child: ExpansionTile(
                 tilePadding: EdgeInsets.zero,
                 childrenPadding: EdgeInsets.zero,
@@ -491,8 +497,7 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
                       label: Text(counterpartySuggestion),
                       onPressed: () {
                         setState(() {
-                          _counterpartyController.text =
-                              counterpartySuggestion;
+                          _counterpartyController.text = counterpartySuggestion;
                         });
                       },
                     ),

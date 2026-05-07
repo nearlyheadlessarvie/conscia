@@ -112,4 +112,100 @@ void main() {
     final updated = container.read(budgetListProvider).budgets.single;
     expect(updated.spent, 25);
   });
+
+  test('optimistic expense update reconciles previous and new budgets',
+      () async {
+    final service = _StaticBudgetService(const [
+      Budget(
+        id: 'budget-1',
+        category: 'Dining',
+        monthlyLimit: 500,
+        spent: 100,
+        currencyCode: 'USD',
+        percentage: 0.2,
+        isOverBudget: false,
+      ),
+      Budget(
+        id: 'budget-2',
+        category: 'Coffee',
+        monthlyLimit: 200,
+        spent: 40,
+        currencyCode: 'USD',
+        percentage: 0.2,
+        isOverBudget: false,
+      ),
+    ]);
+
+    final container = buildContainer(service);
+    addTearDown(container.dispose);
+
+    await container.read(budgetListProvider.notifier).load();
+
+    container
+        .read(budgetListProvider.notifier)
+        .applyOptimisticTransactionUpdate(
+          previousTransaction: Transaction(
+            id: 'tx-1',
+            amount: 25,
+            currencyCode: 'USD',
+            category: 'Dining',
+            description: 'Old merchant',
+            type: 'expense',
+            date: DateTime(2026, 5, 7),
+          ),
+          updatedTransaction: Transaction(
+            id: 'tx-1',
+            amount: 10,
+            currencyCode: 'USD',
+            category: 'Coffee',
+            description: 'New merchant',
+            type: 'expense',
+            date: DateTime(2026, 5, 7),
+          ),
+        );
+
+    final budgets = container.read(budgetListProvider).budgets;
+    expect(
+        budgets.firstWhere((budget) => budget.category == 'Dining').spent, 75);
+    expect(
+        budgets.firstWhere((budget) => budget.category == 'Coffee').spent, 50);
+  });
+
+  test('optimistic expense delete removes spend from matching budget',
+      () async {
+    final service = _StaticBudgetService(const [
+      Budget(
+        id: 'budget-1',
+        category: 'Coffee',
+        monthlyLimit: 100,
+        spent: 32.5,
+        currencyCode: 'USD',
+        percentage: 0.325,
+        isOverBudget: false,
+      ),
+    ]);
+
+    final container = buildContainer(service);
+    addTearDown(container.dispose);
+
+    await container.read(budgetListProvider.notifier).load();
+
+    container
+        .read(budgetListProvider.notifier)
+        .applyOptimisticTransactionDelete(
+          Transaction(
+            id: 'tx-1',
+            amount: 12.5,
+            currencyCode: 'USD',
+            category: 'Coffee',
+            description: 'Morning Brew',
+            type: 'expense',
+            date: DateTime(2026, 5, 7),
+          ),
+        );
+
+    final updated = container.read(budgetListProvider).budgets.single;
+    expect(updated.spent, 20);
+    expect(updated.percentage, 0.2);
+  });
 }
