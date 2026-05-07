@@ -65,6 +65,12 @@
 - `tests/Conscia.Tests.Unit/`
   Backend profile + AI behavior coverage.
 
+**Locked art direction:**
+- base the conscience/app icon work on the previously reviewed `C` exploration direction
+- keep the devil on the left and angel on the right
+- shift the devil toward a darker, moodier red that blends more closely with the navy background
+- keep the angel side brighter for contrast and launcher-size readability
+
 ---
 
 ### Task 1: Persist AI Personality Intensity In User Profile
@@ -236,6 +242,7 @@ Implement:
 - compact angel/devil emblem
 - assistant clash-state motion variant
 - reflection calm variant
+- devil-left / angel-right orientation
 
 Prefer small custom-painted/vector-like widgets over reusing the full detailed icon.
 
@@ -392,7 +399,41 @@ git add app/lib/core/constants/category_icons.dart app/lib/core/assets/conscia_c
 git commit -m "feat: add custom category icon family"
 ```
 
-### Task 8: Align The Marketing Entry Surface With The New Visual Language
+### Task 8: Refine App Icon Direction Assets
+
+**Files:**
+- Modify: `app/assets/images/app_icon.svg`
+- Create: any supporting simplified conscience SVGs or derived assets under `app/assets/images/`
+- Test: visual/manual review in launcher-sized export where practical
+
+- [ ] **Step 1: Create the refined icon brief in comments or asset notes before editing**
+
+Lock:
+- `C` direction base
+- devil on the left
+- angel on the right
+- darker devil red close to the navy field
+- richer but cleaner premium mark at launcher size
+
+- [ ] **Step 2: Update the app icon asset direction**
+
+Refine `app_icon.svg` or add a simplified launcher-ready sibling asset that follows the locked direction.
+
+- [ ] **Step 3: Manually inspect small-size readability**
+
+Check the mark at compact sizes to ensure:
+- silhouettes still read clearly
+- left/right character roles remain obvious
+- darker devil red does not disappear into the background
+
+- [ ] **Step 4: Commit**
+
+```bash
+git add app/assets/images/app_icon.svg app/assets/images
+git commit -m "feat: refine conscience app icon direction"
+```
+
+### Task 9: Align The Marketing Entry Surface With The New Visual Language
 
 **Files:**
 - Modify: `app/web/index.html`
@@ -425,7 +466,7 @@ git add app/web/index.html
 git commit -m "docs: align web hero with phase 4 visual language"
 ```
 
-### Task 9: Full Verification Pass
+### Task 10: Full Verification Pass
 
 **Files:**
 - Verify all changed files from Tasks 1-8
@@ -467,7 +508,8 @@ git commit -m "test: verify phase 4 ai personality refresh"
 - Reflection loader: Task 4 + Task 5
 - Shared amount-input redesign: Task 6
 - Simplified conscience motif family: Task 4
-- App/web alignment starter: Task 8
+- App icon direction refinement: Task 8
+- App/web alignment starter: Task 9
 - Full category icon family with platform adaptation: Task 7
 
 ## Notes

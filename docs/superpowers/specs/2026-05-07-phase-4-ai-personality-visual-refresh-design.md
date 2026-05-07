@@ -259,6 +259,9 @@ Do not reuse the detailed full illustration directly in small UI.
 - yin-yang-inspired structure
 - clearly feminine angel silhouette
 - clearly masculine devil silhouette
+- classic shoulder-angel orientation in the composition:
+  - devil on the left
+  - angel on the right
 - premium, elegant, readable at launcher and compact UI sizes
 - more simplified than the current detailed icon
 - not flat for flatness’ sake, but cleaner and easier to read
@@ -298,6 +301,17 @@ Use for:
 
 This is the main design target for this phase.
 
+### Preferred Direction
+
+For execution, use the previously reviewed `C` direction from the icon exploration board as the base composition.
+
+That direction should be refined, not copied mechanically:
+
+- preserve the circular split-balance structure
+- keep the devil left / angel right orientation
+- simplify internal detail where small-size readability improves
+- keep enough richness to avoid becoming a generic flat emblem
+
 ## App Icon Direction
 
 The app icon should move toward:
@@ -306,6 +320,14 @@ The app icon should move toward:
 - cleaner premium mark
 - easier to read at launcher size on Android and iOS
 - still recognizably derived from the current conscience concept
+- based on the reviewed `C` direction from the concept board
+
+Color direction:
+
+- angel should remain the lighter, clearer side of the balance
+- devil should shift to a darker, moodier red
+- the devil red should sit closer to the navy background so it feels premium and integrated rather than neon-bright
+- the two sides should still remain distinguishable at launcher size
 
 The mark should not become generically flat. It can preserve subtle depth, layering, and richness, but the small-size reading test matters more than illustration detail.
 
