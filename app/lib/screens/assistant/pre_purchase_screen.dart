@@ -5,13 +5,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/constants/generated/app_constants.g.dart';
 import '../../core/constants/category_icons.dart';
 import '../../providers/ai_provider.dart';
+import '../../providers/location_assistance_provider.dart';
 import '../../providers/subscription_provider.dart';
 import '../../providers/usage_provider.dart';
 import '../../providers/user_provider.dart';
 import '../../services/ai_service.dart';
 import '../../widgets/amount_input_field.dart';
+import '../../widgets/location_assistance_prompt_sheet.dart';
 import '../../widgets/premium_upgrade_dialog.dart';
-import '../../screens/transactions/widgets/category_picker.dart';
 import '../../screens/transactions/widgets/transaction_tile.dart';
 import 'widgets/ai_message_bubble.dart';
 import 'widgets/budget_context_card.dart';
@@ -31,6 +32,7 @@ class _PrePurchaseScreenState extends ConsumerState<PrePurchaseScreen>
   _ScreenState _state = _ScreenState.input;
   AIResponse? _aiResponse;
   String? _errorMessage;
+  bool _hasCheckedLocationPrompt = false;
 
   // Form
   final _descriptionController = TextEditingController();
@@ -60,6 +62,35 @@ class _PrePurchaseScreenState extends ConsumerState<PrePurchaseScreen>
       vsync: this,
       duration: const Duration(milliseconds: 400),
     );
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _maybePromptForLocationAssistance();
+    });
+  }
+
+  Future<void> _maybePromptForLocationAssistance() async {
+    if (_hasCheckedLocationPrompt || !mounted) {
+      return;
+    }
+    _hasCheckedLocationPrompt = true;
+
+    final state = ref.read(locationAssistanceProvider);
+    if (!state.shouldPromptOnFeatureOpen) return;
+
+    final accepted = await showModalBottomSheet<bool>(
+      context: context,
+      isDismissible: false,
+      enableDrag: false,
+      builder: (context) => const LocationAssistancePromptSheet(),
+    );
+
+    if (!mounted) return;
+
+    final notifier = ref.read(locationAssistanceProvider.notifier);
+    if (accepted ?? false) {
+      await notifier.enableFromPrompt();
+    } else {
+      await notifier.declinePrompt();
+    }
   }
 
   @override
@@ -194,8 +225,13 @@ class _PrePurchaseScreenState extends ConsumerState<PrePurchaseScreen>
 
   Widget _buildInputForm() {
     final textTheme = Theme.of(context).textTheme;
+    final colors = Theme.of(context).colorScheme;
     final isPremium =
         ref.watch(subscriptionProvider).valueOrNull?.isPremium ?? false;
+    final locationAssistance = ref.watch(locationAssistanceProvider);
+    final suggestions = ref.watch(locationAssistanceSuggestionsProvider);
+    final hasSuggestions = suggestions.nearbyMerchants.isNotEmpty ||
+        suggestions.likelyCategories.isNotEmpty;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
@@ -212,7 +248,9 @@ class _PrePurchaseScreenState extends ConsumerState<PrePurchaseScreen>
                   left: 0,
                   child: CircleAvatar(
                     radius: 32,
-                    backgroundColor: const Color(0xFFFFB300).withOpacity(0.2),
+                    backgroundColor: const Color(
+                      0xFFFFB300,
+                    ).withValues(alpha: 0.2),
                     child: const Icon(
                       Icons.local_fire_department,
                       size: 28,
@@ -224,7 +262,9 @@ class _PrePurchaseScreenState extends ConsumerState<PrePurchaseScreen>
                   left: 44,
                   child: CircleAvatar(
                     radius: 32,
-                    backgroundColor: const Color(0xFF00BCD4).withOpacity(0.2),
+                    backgroundColor: const Color(
+                      0xFF00BCD4,
+                    ).withValues(alpha: 0.2),
                     child: const Icon(
                       Icons.shield,
                       size: 28,
@@ -270,7 +310,7 @@ class _PrePurchaseScreenState extends ConsumerState<PrePurchaseScreen>
 
           // Category dropdown
           DropdownButtonFormField<String>(
-            value: _selectedCategory,
+            initialValue: _selectedCategory,
             decoration: const InputDecoration(
               labelText: 'Category',
             ),
@@ -288,6 +328,10 @@ class _PrePurchaseScreenState extends ConsumerState<PrePurchaseScreen>
                 .toList(),
             onChanged: (v) => setState(() => _selectedCategory = v),
           ),
+          if (locationAssistance.isEnabled && hasSuggestions) ...[
+            const SizedBox(height: 16),
+            _buildLocationSuggestionCard(colors, textTheme, suggestions),
+          ],
           const SizedBox(height: 24),
 
           // CTA
@@ -300,6 +344,81 @@ class _PrePurchaseScreenState extends ConsumerState<PrePurchaseScreen>
             ),
           ),
           const SizedBox(height: 32),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLocationSuggestionCard(
+    ColorScheme colors,
+    TextTheme textTheme,
+    LocationAssistanceSuggestions suggestions,
+  ) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: colors.surfaceContainerHighest.withValues(alpha: 0.5),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: colors.outlineVariant),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Smart suggestions nearby', style: textTheme.titleMedium),
+          const SizedBox(height: 4),
+          Text(
+            'Need a nudge? Try a nearby merchant or likely category, then edit anything you want.',
+            style: textTheme.bodySmall?.copyWith(
+              color: colors.onSurfaceVariant,
+            ),
+          ),
+          if (suggestions.nearbyMerchants.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            Text('Nearby merchants', style: textTheme.titleSmall),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: suggestions.nearbyMerchants
+                  .map(
+                    (merchant) => ActionChip(
+                      label: Text(merchant),
+                      onPressed: () {
+                        setState(() {
+                          _descriptionController.text = merchant;
+                        });
+                      },
+                    ),
+                  )
+                  .toList(),
+            ),
+          ],
+          if (suggestions.likelyCategories.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            Text('Likely categories', style: textTheme.titleSmall),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: suggestions.likelyCategories
+                  .map(
+                    (category) => ActionChip(
+                      avatar: Icon(
+                        CategoryIcons.forCategory(category),
+                        size: 18,
+                      ),
+                      label: Text(category),
+                      onPressed: () {
+                        setState(() {
+                          _selectedCategory = category;
+                        });
+                      },
+                    ),
+                  )
+                  .toList(),
+            ),
+          ],
         ],
       ),
     );
