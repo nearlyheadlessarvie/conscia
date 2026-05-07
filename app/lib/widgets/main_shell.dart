@@ -52,11 +52,17 @@ class MainShell extends ConsumerWidget {
     return 0;
   }
 
+  bool _showSharedAddFab(String location) {
+    return !location.startsWith('/assistant') &&
+        !location.startsWith('/settings');
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final location = GoRouterState.of(context).uri.toString();
     final currentIndex = _selectedIndex(location);
     final isWide = MediaQuery.sizeOf(context).width > 840;
+    final showSharedAddFab = _showSharedAddFab(location);
 
     if (isWide) {
       return Scaffold(
@@ -66,13 +72,15 @@ class MainShell extends ConsumerWidget {
               selectedIndex: currentIndex,
               onDestinationSelected: (i) => _onDestinationSelected(context, i),
               labelType: NavigationRailLabelType.all,
-              leading: Padding(
-                padding: const EdgeInsets.only(top: 8),
-                child: FloatingActionButton(
-                  onPressed: () => context.push('/transactions/add'),
-                  child: Icon(AppIcons.add),
-                ),
-              ),
+              leading: showSharedAddFab
+                  ? Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: FloatingActionButton(
+                        onPressed: () => context.push('/transactions/add'),
+                        child: Icon(AppIcons.add),
+                      ),
+                    )
+                  : null,
               destinations: _tabs
                   .map(
                     (t) => NavigationRailDestination(
@@ -92,10 +100,12 @@ class MainShell extends ConsumerWidget {
 
     return Scaffold(
       body: child,
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => context.push('/transactions/add'),
-        child: Icon(AppIcons.add),
-      ),
+      floatingActionButton: showSharedAddFab
+          ? FloatingActionButton(
+              onPressed: () => context.push('/transactions/add'),
+              child: Icon(AppIcons.add),
+            )
+          : null,
       bottomNavigationBar: SizedBox(
         height: 96,
         child: Stack(

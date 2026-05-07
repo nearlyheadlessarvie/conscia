@@ -4,7 +4,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:conscia_app/widgets/main_shell.dart';
 
-GoRouter _router() => GoRouter(
+GoRouter _router({String initialLocation = '/'}) => GoRouter(
+      initialLocation: initialLocation,
       routes: [
         GoRoute(
           path: '/',
@@ -12,18 +13,59 @@ GoRouter _router() => GoRouter(
             child: Scaffold(body: Text('home')),
           ),
         ),
+        GoRoute(
+          path: '/transactions',
+          builder: (_, __) => const MainShell(
+            child: Scaffold(body: Text('transactions')),
+          ),
+        ),
+        GoRoute(
+          path: '/scan',
+          builder: (_, __) => const MainShell(
+            child: Scaffold(body: Text('scan')),
+          ),
+        ),
+        GoRoute(
+          path: '/assistant',
+          builder: (_, __) => const MainShell(
+            child: Scaffold(body: Text('assistant')),
+          ),
+        ),
+        GoRoute(
+          path: '/settings',
+          builder: (_, __) => const MainShell(
+            child: Scaffold(body: Text('settings')),
+          ),
+        ),
       ],
     );
+
+Future<void> _pumpShell(
+  WidgetTester tester, {
+  String initialLocation = '/',
+  Size? windowSize,
+}) async {
+  if (windowSize != null) {
+    tester.view.physicalSize = windowSize;
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+  }
+
+  await tester.pumpWidget(
+    ProviderScope(
+      child: MaterialApp.router(
+        routerConfig: _router(initialLocation: initialLocation),
+      ),
+    ),
+  );
+  await tester.pumpAndSettle();
+}
 
 void main() {
   testWidgets('MainShell shows five navigation destinations and add FAB',
       (tester) async {
-    await tester.pumpWidget(
-      ProviderScope(
-        child: MaterialApp.router(routerConfig: _router()),
-      ),
-    );
-    await tester.pumpAndSettle();
+    await _pumpShell(tester);
 
     expect(find.text('Home'), findsOneWidget);
     expect(find.text('Transactions'), findsOneWidget);
@@ -35,12 +77,7 @@ void main() {
 
   testWidgets('MainShell renders an emphasized raised scan action on mobile',
       (tester) async {
-    await tester.pumpWidget(
-      ProviderScope(
-        child: MaterialApp.router(routerConfig: _router()),
-      ),
-    );
-    await tester.pumpAndSettle();
+    await _pumpShell(tester);
 
     final raisedScanButton =
         find.byKey(const ValueKey('main-shell-scan-button'));
@@ -52,5 +89,35 @@ void main() {
 
     expect(scanPosition.dy, lessThan(navigationBarPosition.dy));
     expect(scanBottom.dy, greaterThan(navigationBarPosition.dy));
+  });
+
+  testWidgets('MainShell hides the shared add FAB on assistant and settings on mobile',
+      (tester) async {
+    await _pumpShell(tester, initialLocation: '/assistant');
+    expect(find.byType(FloatingActionButton), findsNothing);
+
+    await _pumpShell(tester, initialLocation: '/settings');
+    expect(find.byType(FloatingActionButton), findsNothing);
+  });
+
+  testWidgets('MainShell hides the navigation rail add FAB on assistant and settings',
+      (tester) async {
+    const wideSize = Size(1200, 800);
+
+    await _pumpShell(
+      tester,
+      initialLocation: '/assistant',
+      windowSize: wideSize,
+    );
+    expect(find.byType(NavigationRail), findsOneWidget);
+    expect(find.byType(FloatingActionButton), findsNothing);
+
+    await _pumpShell(
+      tester,
+      initialLocation: '/settings',
+      windowSize: wideSize,
+    );
+    expect(find.byType(NavigationRail), findsOneWidget);
+    expect(find.byType(FloatingActionButton), findsNothing);
   });
 }
