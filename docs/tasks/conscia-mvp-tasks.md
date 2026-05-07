@@ -37,7 +37,7 @@ _Goal: Pure C# domain model with no infrastructure dependencies. All domain test
   - `User` (Id, Email, CognitoSub, PreferredCurrency, Locale, CreatedAt)
   - `UserSubscription` (UserId, Tier enum [Free/Premium], Platform enum [iOS/Android], ExpiresAt, OriginalTransactionId)
   - `Transaction` (Id, UserId, Type enum [Income/Expense], Money, Category, Merchant, Date, Location, ExchangeRateToBase, RegretLevel nullable enum [WorthIt/NotSure/Regret])
-  - `Budget` (Id, UserId, Category, MonthlyLimit, CurrentSpend, CurrencyCode)
+  - `Budget` (Id, UserId, Category, MonthlyLimit, CurrencyCode)
   - `BehaviorProfile` (UserId, PreventedPurchases, Overrides, Regrets)
   - `AIInteraction` (Id, TransactionId, DevilMsg, AngelMsg, NeutralMsg, CreatedAt)
   - `Receipt` (Id, TransactionId, S3Key, ExtractedData, OcrConfidence, NeedsReview, Status enum)
@@ -57,7 +57,7 @@ _Goal: RDS schema migrated, DynamoDB tables created, repositories working agains
 - [ ] [B] Verify: `dotnet ef database update` runs clean against local PostgreSQL
 - [ ] [P] Write tests for `UserRepository` (EF Core): CRUD operations, find by CognitoSub, find by email
 - [ ] [P] Implement `UserRepository` in `Conscia.Infrastructure`
-- [ ] [P] Write tests for `BudgetRepository` (EF Core): CRUD, list by UserId, CurrentSpend update
+- [ ] [P] Write tests for `BudgetRepository` (EF Core): CRUD, list by UserId
 - [ ] [P] Implement `BudgetRepository` in `Conscia.Infrastructure`
 - [ ] [P] Write tests for `ReceiptRepository` (EF Core): CRUD, find by TransactionId, status updates
 - [ ] [P] Implement `ReceiptRepository` in `Conscia.Infrastructure`
@@ -99,14 +99,14 @@ _Goal: All service interfaces implemented, FluentValidation wired, outbox patter
 
 - [ ] [B] Write tests for `ITransactionService`: create (atomic DynamoDB write with OutboxEvent), get by id, list paginated with filters, update, delete (reverse OutboxEvent), update RegretLevel
 - [ ] [B] Implement `TransactionService` in `Conscia.Application`
-- [ ] [B] Write tests for `IBudgetService`: create, list by user, update (limit/category), delete, `ProcessOutboxEvent` (increment/decrement CurrentSpend from outbox)
+- [ ] [B] Write tests for `IBudgetService`: create, list by user, compute current-month usage, update (limit/category), delete
 - [ ] [B] Implement `BudgetService` in `Conscia.Application`
 - [ ] [P] Write tests for `IUserService`: get profile, update profile (currency, locale), get subscription status
 - [ ] [P] Implement `UserService` in `Conscia.Application`
 - [ ] [P] Write tests for `ISubscriptionService`: verify iOS receipt, verify Android token, get current status, check tier entitlement
 - [ ] [P] Implement `SubscriptionService` in `Conscia.Application` — writes to UserSubscription, caches tier in SessionCache (DynamoDB, 5-min TTL)
-- [ ] [B] Write integration test for outbox pattern end-to-end: create Transaction → OutboxEvent written atomically → simulated Streams Lambda reads outbox → Budget.CurrentSpend updated in RDS → alert evaluated by BudgetWarningEvaluator
-- [ ] [B] Implement outbox processor Lambda function in `Conscia.Infrastructure`: reads DynamoDB Streams events, updates Budget via BudgetService, evaluates ITriggerEvaluator, writes InAppAlert if triggered, marks OutboxEvent processed
+- [ ] [B] Write integration test for outbox pattern end-to-end: create Transaction → OutboxEvent written atomically → simulated Streams Lambda reads outbox → alert evaluated by BudgetWarningEvaluator using computed budget usage
+- [ ] [B] Implement outbox processor Lambda function in `Conscia.Infrastructure`: reads DynamoDB Streams events, evaluates ITriggerEvaluator against computed budget usage, writes InAppAlert if triggered, marks OutboxEvent processed
 - [ ] [P] Write tests for `IRegretPromptService`: query transactions 24-48h old with null RegretLevel for a user, return prompt candidates
 - [ ] [P] Implement `IRegretPromptService` — simple DynamoDB query, no scheduler
 - [ ] Write FluentValidation validators for all DTOs: CreateTransactionValidator, UpdateTransactionValidator, CreateBudgetValidator, UpdateBudgetValidator, PrePurchaseRequestValidator, UserProfileUpdateValidator

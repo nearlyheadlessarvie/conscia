@@ -29,5 +29,7 @@ appsettings.*.local.json
 ## Terraform / CDK
 cdk.out/
 
-## Superpowers
+## AI helper files
 .superpowers/
+.tmp/
+.review/

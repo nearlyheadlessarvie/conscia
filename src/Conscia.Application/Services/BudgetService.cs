@@ -1,5 +1,7 @@
 using Conscia.Application.Interfaces;
+using Conscia.Application.Models;
 using Conscia.Domain.Entities;
+using Conscia.Domain.Enums;
 using Microsoft.Extensions.Logging;
 
 namespace Conscia.Application.Services;
@@ -7,11 +9,16 @@ namespace Conscia.Application.Services;
 public class BudgetService : IBudgetService
 {
     private readonly IBudgetRepository _repo;
+    private readonly ITransactionRepository _transactionRepo;
     private readonly ILogger<BudgetService> _logger;
 
-    public BudgetService(IBudgetRepository repo, ILogger<BudgetService> logger)
+    public BudgetService(
+        IBudgetRepository repo,
+        ITransactionRepository transactionRepo,
+        ILogger<BudgetService> logger)
     {
         _repo = repo;
+        _transactionRepo = transactionRepo;
         _logger = logger;
     }
 
@@ -42,6 +49,39 @@ public class BudgetService : IBudgetService
     public Task<IReadOnlyList<Budget>> ListByUserAsync(Guid userId, CancellationToken ct = default) =>
         _repo.ListByUserAsync(userId, ct);
 
+    public async Task<BudgetStatus?> GetStatusByIdAsync(
+        Guid userId,
+        Guid id,
+        DateTime? now = null,
+        CancellationToken ct = default)
+    {
+        var budget = await GetByIdAsync(userId, id, ct);
+        if (budget is null)
+        {
+            return null;
+        }
+
+        var spendsByCategory = await GetMonthlyExpenseTotalsByCategoryAsync(userId, now, ct);
+        return BudgetStatus.FromBudget(
+            budget,
+            spendsByCategory.GetValueOrDefault(budget.Category, 0m));
+    }
+
+    public async Task<IReadOnlyList<BudgetStatus>> ListStatusesByUserAsync(
+        Guid userId,
+        DateTime? now = null,
+        CancellationToken ct = default)
+    {
+        var budgets = await _repo.ListByUserAsync(userId, ct);
+        var spendsByCategory = await GetMonthlyExpenseTotalsByCategoryAsync(userId, now, ct);
+
+        return budgets
+            .Select(budget => BudgetStatus.FromBudget(
+                budget,
+                spendsByCategory.GetValueOrDefault(budget.Category, 0m)))
+            .ToList();
+    }
+
     public async Task<Budget> UpdateAsync(Guid userId, Guid id, decimal? monthlyLimit, string? category, CancellationToken ct = default)
     {
         var budget = await _repo.GetByIdAsync(id, ct)
@@ -57,10 +97,6 @@ public class BudgetService : IBudgetService
 
         var updated = await _repo.UpdateAsync(budget, ct);
 
-        if (updated.PercentUsed > 100)
-            _logger.LogWarning("Budget {BudgetId} exceeded: {PercentUsed}% of {MonthlyLimit}",
-                updated.Id, updated.PercentUsed, updated.MonthlyLimit);
-
         return updated;
     }
 
@@ -75,6 +111,26 @@ public class BudgetService : IBudgetService
         await _repo.DeleteAsync(id, ct);
     }
 
-    public Task UpdateCurrentSpendAsync(Guid budgetId, decimal delta, CancellationToken ct = default) =>
-        _repo.IncrementCurrentSpendAsync(budgetId, delta, ct);
+    private async Task<Dictionary<string, decimal>> GetMonthlyExpenseTotalsByCategoryAsync(
+        Guid userId,
+        DateTime? now,
+        CancellationToken ct)
+    {
+        var effectiveNow = (now ?? DateTime.UtcNow).ToUniversalTime();
+        var monthStart = new DateTime(effectiveNow.Year, effectiveNow.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+        var monthEnd = monthStart.AddMonths(1).AddTicks(-1);
+
+        var transactions = await _transactionRepo.GetByUserIdAndDateRangeAsync(userId, monthStart, monthEnd, ct);
+
+        return transactions
+            .Where(transaction =>
+                transaction.Type == TransactionType.Expense &&
+                transaction.Date >= monthStart &&
+                transaction.Date <= monthEnd)
+            .GroupBy(transaction => transaction.Category, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(
+                group => group.Key,
+                group => group.Sum(transaction => transaction.Amount.Amount),
+                StringComparer.OrdinalIgnoreCase);
+    }
 }

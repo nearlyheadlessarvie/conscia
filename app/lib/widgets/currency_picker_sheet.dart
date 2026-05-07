@@ -10,6 +10,7 @@ class CurrencyPickerSheet {
     BuildContext context, {
     required String selectedCode,
     required ValueChanged<String> onSelected,
+    String? priorityCode,
     bool isPremium = false,
   }) {
     return showModalBottomSheet(
@@ -25,6 +26,7 @@ class CurrencyPickerSheet {
           selectedCode: selectedCode,
           onSelected: onSelected,
           scrollController: controller,
+          priorityCode: priorityCode,
           isPremium: isPremium,
         ),
       ),
@@ -36,12 +38,14 @@ class _CurrencyPickerBody extends StatefulWidget {
   final String selectedCode;
   final ValueChanged<String> onSelected;
   final ScrollController scrollController;
+  final String? priorityCode;
   final bool isPremium;
 
   const _CurrencyPickerBody({
     required this.selectedCode,
     required this.onSelected,
     required this.scrollController,
+    this.priorityCode,
     this.isPremium = true,
   });
 
@@ -53,13 +57,33 @@ class _CurrencyPickerBodyState extends State<_CurrencyPickerBody> {
   String _query = '';
 
   List<CurrencyInfo> get _filtered {
-    if (_query.isEmpty) return supportedCurrencies;
+    final currencies = _prioritizedCurrencies(widget.priorityCode);
+    if (_query.isEmpty) return currencies;
     final q = _query.toLowerCase();
-    return supportedCurrencies
+    return currencies
         .where((c) =>
             c.code.toLowerCase().contains(q) ||
             c.name.toLowerCase().contains(q))
         .toList();
+  }
+
+  List<CurrencyInfo> _prioritizedCurrencies(String? priorityCode) {
+    if (priorityCode == null || priorityCode.isEmpty) {
+      return supportedCurrencies;
+    }
+
+    final priorityIndex = supportedCurrencies.indexWhere(
+      (currency) => currency.code == priorityCode,
+    );
+    if (priorityIndex <= 0) {
+      return supportedCurrencies;
+    }
+
+    final prioritized = supportedCurrencies[priorityIndex];
+    return [
+      prioritized,
+      ...supportedCurrencies.where((currency) => currency.code != priorityCode),
+    ];
   }
 
   @override

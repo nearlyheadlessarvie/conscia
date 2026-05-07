@@ -1,5 +1,6 @@
 using Conscia.Application.DTOs;
 using Conscia.Application.Interfaces;
+using System.Linq;
 
 namespace Conscia.Application.Services;
 
@@ -65,7 +66,7 @@ public class PurchasePatternService : IPurchasePatternService
             .OrderByDescending(t => t.Date)
             .Take(10)
             .Select(t => new TransactionSummaryDto(t.Id, t.Amount.Amount, t.Amount.CurrencyCode,
-                t.Category, t.Merchant, t.Date, t.RegretLevel?.ToString()))
+                t.Category, t.Counterparty, t.Date, t.RegretLevel?.ToString()))
             .ToList();
 
         var stats = new CategoryStatDto(match.Category, match.TotalSpend, match.RegrettedSpend,
@@ -87,11 +88,11 @@ public class PurchasePatternService : IPurchasePatternService
         var transactions = await _txRepo.GetByUserIdAndDateRangeAsync(userId, from, to, ct);
 
         var recent = transactions
-            .Where(t => string.Equals(t.Merchant, merchant, StringComparison.OrdinalIgnoreCase))
+            .Where(t => string.Equals(t.Counterparty, merchant, StringComparison.OrdinalIgnoreCase))
             .OrderByDescending(t => t.Date)
             .Take(10)
             .Select(t => new TransactionSummaryDto(t.Id, t.Amount.Amount, t.Amount.CurrencyCode,
-                t.Category, t.Merchant, t.Date, t.RegretLevel?.ToString()))
+                t.Category, t.Counterparty, t.Date, t.RegretLevel?.ToString()))
             .ToList();
 
         var stats = new MerchantStatDto(match.Merchant, match.VisitCount, match.RegretCount,

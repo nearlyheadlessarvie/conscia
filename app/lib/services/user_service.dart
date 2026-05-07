@@ -8,6 +8,12 @@ class UserProfile {
   final String currencyCode;
   final String locale;
   final DateTime createdAt;
+  final String? spendingPersonality;
+  final String? incomeRange;
+  final String? occupationType;
+  final String? householdSize;
+  final bool hasCompletedOnboarding;
+  final bool locationSuggestionsEnabled;
 
   const UserProfile({
     required this.id,
@@ -15,6 +21,12 @@ class UserProfile {
     required this.currencyCode,
     required this.locale,
     required this.createdAt,
+    required this.hasCompletedOnboarding,
+    this.locationSuggestionsEnabled = false,
+    this.spendingPersonality,
+    this.incomeRange,
+    this.occupationType,
+    this.householdSize,
   });
 
   factory UserProfile.fromJson(Map<String, dynamic> json) {
@@ -28,6 +40,14 @@ class UserProfile {
       createdAt: json['createdAt'] != null
           ? DateTime.parse(json['createdAt'] as String)
           : DateTime.now(),
+      hasCompletedOnboarding:
+          json['hasCompletedOnboarding'] as bool? ?? false,
+      locationSuggestionsEnabled:
+          json['locationSuggestionsEnabled'] as bool? ?? false,
+      spendingPersonality: json['spendingPersonality'] as String?,
+      incomeRange: json['incomeRange'] as String?,
+      occupationType: json['occupationType'] as String?,
+      householdSize: json['householdSize'] as String?,
     );
   }
 }
@@ -49,6 +69,12 @@ class UserService {
   Future<UserProfile> updateProfile({
     String? preferredCurrency,
     String? locale,
+    String? spendingPersonality,
+    String? incomeRange,
+    String? occupationType,
+    String? householdSize,
+    bool? hasCompletedOnboarding,
+    bool? locationSuggestionsEnabled,
   }) async {
     try {
       final response = await _dio.put(
@@ -56,6 +82,15 @@ class UserService {
         data: {
           if (preferredCurrency != null) 'preferredCurrency': preferredCurrency,
           if (locale != null) 'locale': locale,
+          if (spendingPersonality != null)
+            'spendingPersonality': spendingPersonality,
+          if (incomeRange != null) 'incomeRange': incomeRange,
+          if (occupationType != null) 'occupationType': occupationType,
+          if (householdSize != null) 'householdSize': householdSize,
+          if (hasCompletedOnboarding != null)
+            'hasCompletedOnboarding': hasCompletedOnboarding,
+          if (locationSuggestionsEnabled != null)
+            'locationSuggestionsEnabled': locationSuggestionsEnabled,
         },
       );
       return UserProfile.fromJson(response.data as Map<String, dynamic>);

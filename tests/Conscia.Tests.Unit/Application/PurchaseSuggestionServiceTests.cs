@@ -20,7 +20,7 @@ public class PurchaseSuggestionServiceTests
     {
         Id = Guid.NewGuid(),
         UserId = Guid.NewGuid(),
-        Merchant = merchant,
+        Counterparty = merchant,
         Category = "Coffee",
         Amount = new Money(amount, "USD"),
         Date = DateTime.UtcNow.AddDays(-daysAgo),

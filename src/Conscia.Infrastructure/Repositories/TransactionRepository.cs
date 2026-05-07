@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.Json;
 using Amazon.DynamoDBv2;
 using Amazon.DynamoDBv2.Model;
@@ -60,6 +61,9 @@ public class TransactionRepository : DynamoRepository, ITransactionRepository
 
     public async Task DeleteWithOutboxAsync(Guid userId, Guid id, OutboxEvent outboxEvent, CancellationToken ct = default)
     {
+        var existing = await GetByIdAsync(userId, id, ct)
+            ?? throw new InvalidOperationException($"Transaction {id} not found");
+
         var transactItems = new List<TransactWriteItem>
         {
             new()
@@ -67,7 +71,7 @@ public class TransactionRepository : DynamoRepository, ITransactionRepository
                 Delete = new Delete
                 {
                     TableName = TableName,
-                    Key = Key(DynamoKeys.User(userId), DynamoKeys.Transaction(id))
+                    Key = Key(DynamoKeys.User(existing.UserId), DynamoKeys.Transaction(existing.Date, id))
                 }
             },
             new()
@@ -89,15 +93,26 @@ public class TransactionRepository : DynamoRepository, ITransactionRepository
     // ---------------- READ ----------------
     public async Task<Transaction?> GetByIdAsync(Guid userId, Guid id, CancellationToken ct = default)
     {
-        var response = await Dynamo.GetItemAsync(new GetItemRequest
+        var response = await Dynamo.QueryAsync(new QueryRequest
         {
             TableName = TableName,
-            Key = Key(DynamoKeys.User(userId), DynamoKeys.Transaction(id))
+            IndexName = "GSI-TransactionId",
+            KeyConditionExpression = "Id = :id",
+            ExpressionAttributeValues = new Dictionary<string, AttributeValue>
+            {
+                [":id"] = new(id.ToString())
+            },
+            Limit = 1
         }, ct);
 
-        return response.IsItemSet ? FromItem(response.Item) : null;
+        if (response.Items.Count == 0)
+            return null;
+
+        var transaction = FromItem(response.Items[0]);
+        return transaction.UserId == userId ? transaction : null;
     }
 
+    // Primary timeline query (FAST)
     public async Task<(IReadOnlyList<Transaction> Items, string? NextToken)> QueryByUserAsync(
         Guid userId,
         DateTime? from,
@@ -107,33 +122,27 @@ public class TransactionRepository : DynamoRepository, ITransactionRepository
         string? paginationToken,
         CancellationToken ct = default)
     {
-        var keyCondition = "UserId = :uid";
+        var keyCondition = "PK = :pk";
         var attrValues = new Dictionary<string, AttributeValue>
         {
-            [":uid"] = new(userId.ToString())
+            [":pk"] = new(DynamoKeys.User(userId))
         };
-        Dictionary<string, string>? attrNames = null;
 
         if (from.HasValue && to.HasValue)
         {
-            keyCondition += " AND #d BETWEEN :from AND :to";
-            attrNames = new Dictionary<string, string> { ["#d"] = "Date" };
-            attrValues[":from"] = new(from.Value.ToString("yyyy-MM-dd"));
-            attrValues[":to"]   = new(to.Value.ToString("yyyy-MM-dd"));
+            keyCondition += " AND SK BETWEEN :skFrom AND :skTo";
+            attrValues[":skFrom"] = new(DynamoKeys.DateRangeStart(from.Value));
+            attrValues[":skTo"]   = new(DynamoKeys.DateRangeEnd(to.Value));
         }
 
         var request = new QueryRequest
         {
             TableName = TableName,
-            IndexName = "GSI-Date",
             KeyConditionExpression = keyCondition,
             ExpressionAttributeValues = attrValues,
             Limit = limit,
             ScanIndexForward = false
         };
-
-        if (attrNames is not null)
-            request.ExpressionAttributeNames = attrNames;
 
         if (!string.IsNullOrEmpty(paginationToken))
         {
@@ -146,6 +155,7 @@ public class TransactionRepository : DynamoRepository, ITransactionRepository
 
         var items = response.Items.Select(FromItem);
 
+        // small-set filter only (UI case)
         if (!string.IsNullOrEmpty(category))
             items = items.Where(t => t.Category == category);
 
@@ -161,6 +171,31 @@ public class TransactionRepository : DynamoRepository, ITransactionRepository
         return (list, nextToken);
     }
 
+    // GSI-backed category query (scalable)
+    public async Task<IReadOnlyList<Transaction>> QueryByUserAndCategoryAsync(
+        Guid userId,
+        string category,
+        DateTime from,
+        DateTime to,
+        CancellationToken ct = default)
+    {
+        var response = await Dynamo.QueryAsync(new QueryRequest
+        {
+            TableName = TableName,
+            IndexName = "GSI-UserId-Category-Date",
+            KeyConditionExpression = "UserId = :uid AND GSI1SK BETWEEN :from AND :to",
+            ExpressionAttributeValues = new Dictionary<string, AttributeValue>
+            {
+                [":uid"] = new(userId.ToString()),
+                [":from"] = new(DynamoKeys.TransactionSortKey(category, from)),
+                [":to"]   = new($"{DynamoKeys.TransactionSortKey(category, to)}~")
+            },
+            ScanIndexForward = false
+        }, ct);
+
+        return response.Items.Select(FromItem).ToList();
+    }
+
     public async Task<IReadOnlyList<Transaction>> GetByUserIdAndDateRangeAsync(
         Guid userId,
         DateTime from,
@@ -170,14 +205,12 @@ public class TransactionRepository : DynamoRepository, ITransactionRepository
         var response = await Dynamo.QueryAsync(new QueryRequest
         {
             TableName = TableName,
-            IndexName = "GSI-Date",
-            KeyConditionExpression = "UserId = :uid AND #d BETWEEN :from AND :to",
-            ExpressionAttributeNames = new Dictionary<string, string> { ["#d"] = "Date" },
+            KeyConditionExpression = "PK = :pk AND SK BETWEEN :skFrom AND :skTo",
             ExpressionAttributeValues = new Dictionary<string, AttributeValue>
             {
-                [":uid"] = new(userId.ToString()),
-                [":from"] = new(from.ToString("yyyy-MM-dd")),
-                [":to"]   = new(to.ToString("yyyy-MM-dd"))
+                [":pk"] = new(DynamoKeys.User(userId)),
+                [":skFrom"] = new(DynamoKeys.DateRangeStart(from)),
+                [":skTo"]   = new(DynamoKeys.DateRangeEnd(to))
             },
             ScanIndexForward = false
         }, ct);
@@ -211,7 +244,7 @@ public class TransactionRepository : DynamoRepository, ITransactionRepository
         var item = new Dictionary<string, AttributeValue>
         {
             ["PK"] = new(DynamoKeys.User(t.UserId)),
-            ["SK"] = new(DynamoKeys.Transaction(t.Id)),
+            ["SK"] = new(DynamoKeys.Transaction(t.Date, t.Id)),
 
             ["Id"] = new(t.Id.ToString()),
             ["UserId"] = new(t.UserId.ToString()),
@@ -219,12 +252,15 @@ public class TransactionRepository : DynamoRepository, ITransactionRepository
             ["Amount"] = new() { N = t.Amount.Amount.ToString("G") },
             ["CurrencyCode"] = new(t.Amount.CurrencyCode),
             ["Category"] = new(t.Category),
-            ["Date"] = new(t.Date.ToString("yyyy-MM-dd")),
-            ["CreatedAt"] = new(t.CreatedAt.ToString("O"))
+            ["Date"] = new(t.Date.ToString("O")),
+            ["CreatedAt"] = new(t.CreatedAt.ToString("O")),
+
+            // GSI SUPPORT
+            ["GSI1SK"] = new(DynamoKeys.TransactionSortKey(t.Category, t.Date))
         };
 
-        if (t.Merchant is not null)
-            item["Merchant"] = new(t.Merchant);
+        if (t.Counterparty is not null)
+            item["Counterparty"] = new(t.Counterparty);
 
         if (t.Amount.ExchangeRateToBase.HasValue)
             item["ExchangeRateToBase"] = new()
@@ -257,16 +293,77 @@ public class TransactionRepository : DynamoRepository, ITransactionRepository
             Type = Enum.Parse<TransactionType>(item["Type"].S),
             Amount = new Money(decimal.Parse(item["Amount"].N), item["CurrencyCode"].S, exchangeRate),
             Category = item["Category"].S,
-            Merchant = item.TryGetValue("Merchant", out var m) ? m.S : null,
-            Date = DateTime.Parse(item["Date"].S),
+            Counterparty = item.TryGetValue("Counterparty", out var counterparty)
+                ? counterparty.S
+                : item.TryGetValue("Merchant", out var merchant) ? merchant.S : null,
+            Date = ParseTransactionDate(item),
             Location = item.TryGetValue("Location", out var loc)
-                ? JsonSerializer.Deserialize<Location>(loc.S)
+                ? ParseLocation(loc.S)
                 : null,
             RegretLevel = item.TryGetValue("RegretLevel", out var rl)
                 ? Enum.Parse<RegretLevel>(rl.S)
                 : null,
-            CreatedAt = DateTime.Parse(item["CreatedAt"].S)
+            CreatedAt = DateTime.Parse(item["CreatedAt"].S, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind)
         };
+    }
+
+    private static Location? ParseLocation(string json)
+    {
+        using var doc = JsonDocument.Parse(json);
+        var root = doc.RootElement;
+
+        if (!root.TryGetProperty("Latitude", out var latitudeElement)
+            || !root.TryGetProperty("Longitude", out var longitudeElement))
+        {
+            return null;
+        }
+
+        string? placeName = null;
+        if (root.TryGetProperty("PlaceName", out var placeNameElement))
+            placeName = placeNameElement.GetString();
+        else if (root.TryGetProperty("MerchantName", out var merchantNameElement))
+            placeName = merchantNameElement.GetString();
+
+        return new Location
+        {
+            Latitude = latitudeElement.GetDouble(),
+            Longitude = longitudeElement.GetDouble(),
+            PlaceName = placeName
+        };
+    }
+
+    private static DateTime ParseTransactionDate(Dictionary<string, AttributeValue> item)
+    {
+        if (item.TryGetValue("SK", out var sk)
+            && sk.S is { } sortKey
+            && TryParseDateFromSortKey(sortKey, out var preciseDate))
+        {
+            return preciseDate;
+        }
+
+        return DateTime.Parse(item["Date"].S, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind);
+    }
+
+    private static bool TryParseDateFromSortKey(string sortKey, out DateTime date)
+    {
+        date = default;
+
+        const string prefix = "DATE#";
+        const string separator = "#TX#";
+
+        if (!sortKey.StartsWith(prefix, StringComparison.Ordinal))
+            return false;
+
+        var separatorIndex = sortKey.IndexOf(separator, StringComparison.Ordinal);
+        if (separatorIndex <= prefix.Length)
+            return false;
+
+        var dateValue = sortKey[prefix.Length..separatorIndex];
+        return DateTime.TryParse(
+            dateValue,
+            CultureInfo.InvariantCulture,
+            DateTimeStyles.RoundtripKind,
+            out date);
     }
 
     private static Dictionary<string, AttributeValue> OutboxToItem(OutboxEvent e)

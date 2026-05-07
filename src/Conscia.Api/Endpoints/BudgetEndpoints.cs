@@ -18,6 +18,7 @@ public static class BudgetEndpoints
             HttpContext ctx,
             CreateBudgetDto dto,
             IBudgetService svc,
+            IUserService userSvc,
             ISubscriptionService subSvc,
             IValidator<CreateBudgetDto> validator) =>
         {
@@ -30,31 +31,36 @@ public static class BudgetEndpoints
             var isPremium = await subSvc.IsPremiumAsync(userId, ctx.RequestAborted);
             if (!isPremium)
             {
+                var user = await userSvc.GetByIdAsync(userId, ctx.RequestAborted);
+                var categoryLimit = user?.HasCompletedOnboarding == false
+                    ? 5
+                    : FreemiumLimits.FreeBudgetCategories;
                 var existing = await svc.ListByUserAsync(userId, ctx.RequestAborted);
-                if (existing.Count >= FreemiumLimits.FreeBudgetCategories)
+                if (existing.Count >= categoryLimit)
                     return Results.Json(
-                        new { error = $"Free tier limit: {FreemiumLimits.FreeBudgetCategories} budget categories", upgradeRequired = true },
+                        new { error = $"Free tier limit: {categoryLimit} budget categories", upgradeRequired = true },
                         statusCode: 403);
             }
 
             var budget = await svc.CreateAsync(userId, dto.Category, dto.MonthlyLimit, dto.CurrencyCode, ctx.RequestAborted);
+            var status = await svc.GetStatusByIdAsync(userId, budget.Id, ct: ctx.RequestAborted);
             return Results.Created($"/api/v1/budgets/{budget.Id}", new
             {
                 budget.Id,
                 budget.UserId,
                 budget.Category,
                 budget.MonthlyLimit,
-                budget.CurrentSpend,
+                CurrentSpend = status?.CurrentSpend ?? 0m,
                 budget.CurrencyCode,
-                budget.PercentUsed,
-                budget.IsOverBudget
+                PercentUsed = status?.PercentUsed ?? 0m,
+                IsOverBudget = status?.IsOverBudget ?? false
             });
         }).WithName("CreateBudget");
 
         group.MapGet("/", async (HttpContext ctx, IBudgetService svc) =>
         {
             var userId = ctx.User.GetUserId();
-            var budgets = await svc.ListByUserAsync(userId, ctx.RequestAborted);
+            var budgets = await svc.ListStatusesByUserAsync(userId, ct: ctx.RequestAborted);
             return Results.Ok(budgets.Select(b => new
             {
                 b.Id,
@@ -70,7 +76,7 @@ public static class BudgetEndpoints
         group.MapGet("/{id:guid}", async (HttpContext ctx, Guid id, IBudgetService svc) =>
         {
             var userId = ctx.User.GetUserId();
-            var budget = await svc.GetByIdAsync(userId, id, ctx.RequestAborted);
+            var budget = await svc.GetStatusByIdAsync(userId, id, ct: ctx.RequestAborted);
             if (budget is null) return Results.NotFound();
 
             return Results.Ok(new
@@ -98,15 +104,16 @@ public static class BudgetEndpoints
 
             var userId = ctx.User.GetUserId();
             var budget = await svc.UpdateAsync(userId, id, dto.MonthlyLimit, dto.Category, ctx.RequestAborted);
+            var status = await svc.GetStatusByIdAsync(userId, budget.Id, ct: ctx.RequestAborted);
             return Results.Ok(new
             {
                 budget.Id,
                 budget.Category,
                 budget.MonthlyLimit,
-                budget.CurrentSpend,
+                CurrentSpend = status?.CurrentSpend ?? 0m,
                 budget.CurrencyCode,
-                budget.PercentUsed,
-                budget.IsOverBudget
+                PercentUsed = status?.PercentUsed ?? 0m,
+                IsOverBudget = status?.IsOverBudget ?? false
             });
         }).WithName("UpdateBudget");
 

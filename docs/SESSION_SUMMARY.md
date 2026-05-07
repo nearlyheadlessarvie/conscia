@@ -1,5 +1,7 @@
 # Conscia Enhancement Initiative - Session Summary
 
+> Historical snapshot: this summary describes the original May 3, 2026 Phase 1 implementation session. It is preserved for reference, but it does not represent the current branch state after later onboarding, assistant, budget, and shell work.
+
 **Date**: May 3, 2026  
 **Focus**: Phase 1 Implementation - Dashboard Behavioral Insights  
 **Status**: 🎉 Frontend Complete | ⏳ Backend Pending

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/constants/api_constants.dart';
 import '../core/network/dio_client.dart';
+import 'budget_providers.dart';
 
 class AppAlert {
   final String id;
@@ -48,4 +49,71 @@ final alertsProvider = FutureProvider<List<AppAlert>>((ref) async {
   } on DioException {
     rethrow;
   }
+});
+
+class LocalAlertsNotifier extends StateNotifier<List<AppAlert>> {
+  LocalAlertsNotifier() : super(const []);
+
+  void addBudgetNudge({required String category}) {
+    final normalizedCategory = category.trim().toLowerCase();
+    final alertId = 'budget-nudge-$normalizedCategory';
+    if (state.any((alert) => alert.id == alertId)) {
+      return;
+    }
+
+    final now = DateTime.now();
+    state = [
+      AppAlert(
+        id: alertId,
+        type: 'budget_nudge',
+        title: 'No budget for $category yet',
+        message:
+            'You logged an expense in $category without a matching budget. Add one in Settings whenever you are ready.',
+        isDismissed: false,
+        createdAt: now,
+      ),
+      ...state,
+    ];
+  }
+
+  void dismiss(String id) {
+    state = [
+      for (final alert in state)
+        if (alert.id == id)
+          AppAlert(
+            id: alert.id,
+            type: alert.type,
+            title: alert.title,
+            message: alert.message,
+            isDismissed: true,
+            createdAt: alert.createdAt,
+          )
+        else
+          alert,
+    ];
+  }
+}
+
+final localAlertsProvider =
+    StateNotifierProvider<LocalAlertsNotifier, List<AppAlert>>(
+  (_) => LocalAlertsNotifier(),
+);
+
+final activeLocalAlertsProvider = Provider<List<AppAlert>>((ref) {
+  final alerts = ref.watch(localAlertsProvider);
+  final budgetCategories = ref
+      .watch(budgetListProvider)
+      .budgets
+      .map((budget) => budget.category.trim().toLowerCase())
+      .toSet();
+
+  return alerts.where((alert) {
+    if (alert.isDismissed) return false;
+    if (alert.type != 'budget_nudge') return true;
+
+    final normalizedCategory = alert.id.startsWith('budget-nudge-')
+        ? alert.id.substring('budget-nudge-'.length)
+        : '';
+    return !budgetCategories.contains(normalizedCategory);
+  }).toList(growable: false);
 });

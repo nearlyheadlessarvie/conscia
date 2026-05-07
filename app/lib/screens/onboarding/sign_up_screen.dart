@@ -64,7 +64,6 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
             _emailController.text.trim(),
             _passwordController.text,
           );
-      // Set device locale/currency on the new profile (best-effort)
       final defaults = deviceDefaults();
       try {
         await ref.read(userServiceProvider).updateProfile(
@@ -154,11 +153,14 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                         prefixIcon: const Icon(Icons.lock_outlined),
                         border: const OutlineInputBorder(),
                         suffixIcon: IconButton(
-                          icon: Icon(_obscurePassword
-                              ? Icons.visibility_outlined
-                              : Icons.visibility_off_outlined),
+                          icon: Icon(
+                            _obscurePassword
+                                ? Icons.visibility_outlined
+                                : Icons.visibility_off_outlined,
+                          ),
                           onPressed: () => setState(
-                              () => _obscurePassword = !_obscurePassword),
+                            () => _obscurePassword = !_obscurePassword,
+                          ),
                         ),
                       ),
                     ),
@@ -174,11 +176,14 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                         prefixIcon: const Icon(Icons.lock_outlined),
                         border: const OutlineInputBorder(),
                         suffixIcon: IconButton(
-                          icon: Icon(_obscureConfirm
-                              ? Icons.visibility_outlined
-                              : Icons.visibility_off_outlined),
+                          icon: Icon(
+                            _obscureConfirm
+                                ? Icons.visibility_outlined
+                                : Icons.visibility_off_outlined,
+                          ),
                           onPressed: () => setState(
-                              () => _obscureConfirm = !_obscureConfirm),
+                            () => _obscureConfirm = !_obscureConfirm,
+                          ),
                         ),
                       ),
                     ),
@@ -204,7 +209,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                       : const Text('Create Account'),
                 ),
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 16),
               Center(
                 child: TextButton(
                   onPressed: () => context.go('/onboarding/sign-in'),

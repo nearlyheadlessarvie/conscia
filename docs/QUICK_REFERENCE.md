@@ -1,5 +1,7 @@
 # Quick Reference: Phase 1 Implementation
 
+> Historical snapshot: this quick reference reflects the original May 3, 2026 Phase 1 checkpoint. Some “pending” items here have since been implemented or superseded by later branch work. For current status, use [README.md](README.md), [implementation-tasks.md](implementation-tasks.md), and `docs/superpowers/`.
+
 ## 📋 What Was Created Today
 
 ### Documentation Files

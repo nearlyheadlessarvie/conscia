@@ -54,7 +54,7 @@ public static class AIEndpoints
             }
 
             decimal? budgetPercent = null;
-            var budgets = await budgetService.ListByUserAsync(userId, ctx.RequestAborted);
+            var budgets = await budgetService.ListStatusesByUserAsync(userId, ct: ctx.RequestAborted);
             var matchedBudget = budgets.FirstOrDefault(b =>
                 b.Category.Equals(dto.Category, StringComparison.OrdinalIgnoreCase));
             if (matchedBudget is not null)
@@ -139,7 +139,7 @@ public static class AIEndpoints
                 return Results.NotFound(new { error = "Transaction not found" });
 
             decimal? budgetPercent = null;
-            var budgets = await budgetService.ListByUserAsync(userId, ctx.RequestAborted);
+            var budgets = await budgetService.ListStatusesByUserAsync(userId, ct: ctx.RequestAborted);
             var matchedBudget = budgets.FirstOrDefault(b =>
                 b.Category.Equals(transaction.Category, StringComparison.OrdinalIgnoreCase));
             if (matchedBudget is not null)

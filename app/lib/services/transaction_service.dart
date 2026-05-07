@@ -29,7 +29,11 @@ class Transaction {
       amount: (json['amount'] as num).toDouble(),
       currencyCode: json['currencyCode'] as String? ?? 'USD',
       category: json['category'] as String,
-      description: json['merchant'] as String? ?? json['description'] as String? ?? '',
+      description:
+          json['counterparty'] as String? ??
+          json['merchant'] as String? ??
+          json['description'] as String? ??
+          '',
       type: (json['type'] as String).toLowerCase(),
       date: DateTime.parse(json['date'] as String),
       regretLevel: _parseRegretLevel(json['regretLevel']),
@@ -64,7 +68,7 @@ class CreateTransactionDto {
   final double amount;
   final String currencyCode;
   final String category;
-  final String merchant;
+  final String counterparty;
   final String type;
   final DateTime date;
   final String? baseCurrencyCode;
@@ -74,7 +78,7 @@ class CreateTransactionDto {
     required this.amount,
     required this.currencyCode,
     required this.category,
-    required this.merchant,
+    required this.counterparty,
     required this.type,
     required this.date,
     this.baseCurrencyCode,
@@ -86,7 +90,7 @@ class CreateTransactionDto {
       'amount': amount,
       'currencyCode': currencyCode,
       'category': category,
-      'merchant': merchant,
+      'counterparty': counterparty,
       'type': _capitalizeType(type),
       'date': date.toIso8601String(),
     };

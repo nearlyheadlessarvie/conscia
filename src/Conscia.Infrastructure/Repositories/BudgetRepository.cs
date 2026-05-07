@@ -40,12 +40,4 @@ public class BudgetRepository : IBudgetRepository
             await _db.SaveChangesAsync(ct);
         }
     }
-
-    public async Task IncrementCurrentSpendAsync(Guid id, decimal delta, CancellationToken ct = default)
-    {
-        await _db.Budgets
-            .Where(b => b.Id == id)
-            .ExecuteUpdateAsync(s =>
-                s.SetProperty(b => b.CurrentSpend, b => b.CurrentSpend + delta), ct);
-    }
 }

@@ -1,18 +1,25 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../core/routing/app_router.dart';
 import '../../core/constants/generated/app_constants.g.dart';
 import '../../core/constants/category_icons.dart';
+import '../../core/constants/category_visibility.dart';
+import '../../core/utils/currency_formatter.dart';
 import '../../providers/ai_provider.dart';
+import '../../providers/category_recents_provider.dart';
+import '../../providers/location_assistance_provider.dart';
 import '../../providers/subscription_provider.dart';
 import '../../providers/usage_provider.dart';
 import '../../providers/user_provider.dart';
 import '../../services/ai_service.dart';
 import '../../widgets/amount_input_field.dart';
+import '../../widgets/location_assistance_prompt_sheet.dart';
 import '../../widgets/premium_upgrade_dialog.dart';
-import '../../screens/transactions/widgets/category_picker.dart';
 import '../../screens/transactions/widgets/transaction_tile.dart';
+import '../transactions/widgets/transaction_style_category_selector.dart';
 import 'widgets/ai_message_bubble.dart';
 import 'widgets/budget_context_card.dart';
 import 'widgets/typing_indicator.dart';
@@ -31,6 +38,7 @@ class _PrePurchaseScreenState extends ConsumerState<PrePurchaseScreen>
   _ScreenState _state = _ScreenState.input;
   AIResponse? _aiResponse;
   String? _errorMessage;
+  bool _hasCheckedLocationPrompt = false;
 
   // Form
   final _descriptionController = TextEditingController();
@@ -60,6 +68,30 @@ class _PrePurchaseScreenState extends ConsumerState<PrePurchaseScreen>
       vsync: this,
       duration: const Duration(milliseconds: 400),
     );
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _maybePromptForLocationAssistance();
+    });
+  }
+
+  Future<void> _maybePromptForLocationAssistance() async {
+    if (_hasCheckedLocationPrompt || !mounted) {
+      return;
+    }
+    _hasCheckedLocationPrompt = true;
+
+    final state = ref.read(locationAssistanceProvider);
+    if (!state.shouldPromptOnFeatureOpen) return;
+
+    final accepted = await LocationAssistancePromptSheet.show(context);
+
+    if (!mounted) return;
+
+    final notifier = ref.read(locationAssistanceProvider.notifier);
+    if (accepted ?? false) {
+      await notifier.enableFromPrompt();
+    } else {
+      await notifier.declinePrompt();
+    }
   }
 
   @override
@@ -166,6 +198,23 @@ class _PrePurchaseScreenState extends ConsumerState<PrePurchaseScreen>
     });
   }
 
+  Future<void> _openExpenseConfirmation() async {
+    final suggestions = ref.read(locationAssistanceSuggestionsProvider);
+    final inferredCounterparty = suggestions.nearbyMerchants.isNotEmpty
+        ? suggestions.nearbyMerchants.first
+        : null;
+
+    await context.push(
+      AppRoutes.addTransaction,
+      extra: <String, String?>{
+        'amount': _amountController.text,
+        'currencyCode': _currencyCode,
+        'category': _selectedCategory,
+        'counterparty': inferredCounterparty,
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final preferredCurrency = ref.watch(userPreferencesProvider).currency;
@@ -194,8 +243,13 @@ class _PrePurchaseScreenState extends ConsumerState<PrePurchaseScreen>
 
   Widget _buildInputForm() {
     final textTheme = Theme.of(context).textTheme;
+    final colors = Theme.of(context).colorScheme;
     final isPremium =
         ref.watch(subscriptionProvider).valueOrNull?.isPremium ?? false;
+    final locationAssistance = ref.watch(locationAssistanceProvider);
+    final suggestions = ref.watch(locationAssistanceSuggestionsProvider);
+    final hasSuggestions = suggestions.nearbyMerchants.isNotEmpty ||
+        suggestions.likelyCategories.isNotEmpty;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
@@ -212,8 +266,9 @@ class _PrePurchaseScreenState extends ConsumerState<PrePurchaseScreen>
                   left: 0,
                   child: CircleAvatar(
                     radius: 32,
-                    backgroundColor:
-                        const Color(0xFFFFB300).withValues(alpha: 0.2),
+                    backgroundColor: const Color(
+                      0xFFFFB300,
+                    ).withValues(alpha: 0.2),
                     child: const Icon(
                       Icons.local_fire_department,
                       size: 28,
@@ -225,8 +280,9 @@ class _PrePurchaseScreenState extends ConsumerState<PrePurchaseScreen>
                   left: 44,
                   child: CircleAvatar(
                     radius: 32,
-                    backgroundColor:
-                        const Color(0xFF00BCD4).withValues(alpha: 0.2),
+                    backgroundColor: const Color(
+                      0xFF00BCD4,
+                    ).withValues(alpha: 0.2),
                     child: const Icon(
                       Icons.shield,
                       size: 28,
@@ -270,26 +326,26 @@ class _PrePurchaseScreenState extends ConsumerState<PrePurchaseScreen>
           ),
           const SizedBox(height: 16),
 
-          // Category dropdown
-          DropdownButtonFormField<String>(
-            value: _selectedCategory,
-            decoration: const InputDecoration(
-              labelText: 'Category',
-            ),
-            items: expenseCategories
-                .map((name) => DropdownMenuItem(
-                      value: name,
-                      child: Row(
-                        children: [
-                          Icon(CategoryIcons.forCategory(name), size: 20),
-                          const SizedBox(width: 8),
-                          Text(name),
-                        ],
-                      ),
-                    ))
-                .toList(),
-            onChanged: (v) => setState(() => _selectedCategory = v),
+          TransactionStyleCategorySelector(
+            selectedCategory: _selectedCategory,
+            isExpense: true,
+            isPremium: isPremium,
+            onCategorySelected: (category) {
+              setState(() => _selectedCategory = category);
+              if (category != null) {
+                ref.read(recentCategoryProvider.notifier).record(category);
+              }
+            },
           ),
+          if (locationAssistance.isEnabled && hasSuggestions) ...[
+            const SizedBox(height: 16),
+            _buildLocationSuggestionCard(
+              colors,
+              textTheme,
+              suggestions,
+              isPremium,
+            ),
+          ],
           const SizedBox(height: 24),
 
           // CTA
@@ -302,6 +358,88 @@ class _PrePurchaseScreenState extends ConsumerState<PrePurchaseScreen>
             ),
           ),
           const SizedBox(height: 32),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLocationSuggestionCard(
+    ColorScheme colors,
+    TextTheme textTheme,
+    LocationAssistanceSuggestions suggestions,
+    bool isPremium,
+  ) {
+    final visibleCategories = visibleBudgetCategories(
+      isPremium: isPremium,
+      categories: suggestions.likelyCategories,
+    );
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: colors.surfaceContainerHighest.withValues(alpha: 0.5),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: colors.outlineVariant),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Smart suggestions nearby', style: textTheme.titleMedium),
+          const SizedBox(height: 4),
+          Text(
+            'Need a nudge? Try a nearby merchant or likely category, then edit anything you want.',
+            style: textTheme.bodySmall?.copyWith(
+              color: colors.onSurfaceVariant,
+            ),
+          ),
+          if (suggestions.nearbyMerchants.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            Text('Nearby merchants', style: textTheme.titleSmall),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: suggestions.nearbyMerchants
+                  .map(
+                    (merchant) => ActionChip(
+                      label: Text(merchant),
+                      onPressed: () {
+                        setState(() {
+                          _descriptionController.text = merchant;
+                        });
+                      },
+                    ),
+                  )
+                  .toList(),
+            ),
+          ],
+          if (visibleCategories.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            Text('Likely categories', style: textTheme.titleSmall),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: visibleCategories
+                  .map(
+                    (category) => ActionChip(
+                      avatar: Icon(
+                        CategoryIcons.forCategory(category),
+                        size: 18,
+                      ),
+                      label: Text(category),
+                      onPressed: () {
+                        setState(() {
+                          _selectedCategory = category;
+                        });
+                        ref.read(recentCategoryProvider.notifier).record(category);
+                      },
+                    ),
+                  )
+                  .toList(),
+            ),
+          ],
         ],
       ),
     );
@@ -335,6 +473,7 @@ class _PrePurchaseScreenState extends ConsumerState<PrePurchaseScreen>
   Widget _buildResponse() {
     final amount = double.tryParse(_amountController.text) ?? 0;
     final response = _aiResponse!;
+    final locale = ref.watch(userPreferencesProvider).locale;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -390,9 +529,18 @@ class _PrePurchaseScreenState extends ConsumerState<PrePurchaseScreen>
               spent: response.budget!.currentSpend,
               limit: response.budget!.monthlyLimit,
               currencyCode: _currencyCode,
+              locale: locale,
               projectedAmount: amount,
             ),
           const SizedBox(height: 24),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton(
+              onPressed: _openExpenseConfirmation,
+              child: const Text('Bought it anyway'),
+            ),
+          ),
+          const SizedBox(height: 12),
           SizedBox(
             width: double.infinity,
             child: OutlinedButton(
@@ -451,8 +599,13 @@ class _PrePurchaseScreenState extends ConsumerState<PrePurchaseScreen>
   Widget _buildSummaryCard() {
     final colors = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
-    final amountText =
-        _amountController.text.isEmpty ? '0.00' : _amountController.text;
+    final locale = ref.watch(userPreferencesProvider).locale;
+    final amount = double.tryParse(_amountController.text) ?? 0;
+    final amountText = CurrencyFormatter.format(
+      amount,
+      currencyCode: _currencyCode,
+      locale: locale,
+    );
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
@@ -480,7 +633,7 @@ class _PrePurchaseScreenState extends ConsumerState<PrePurchaseScreen>
               ),
               const SizedBox(width: 8),
               Text(
-                '\$$amountText $_currencyCode',
+                amountText,
                 style: textTheme.bodyMedium?.copyWith(
                   fontWeight: FontWeight.w600,
                 ),

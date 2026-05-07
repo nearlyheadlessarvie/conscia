@@ -28,7 +28,7 @@ public class UpdateTransactionValidator : AbstractValidator<UpdateTransactionDto
 
         RuleFor(x => x)
             .Must(x => x.Type.HasValue || x.Amount.HasValue || x.CurrencyCode is not null
-                || x.Category is not null || x.Merchant is not null || x.Date.HasValue)
+                || x.Category is not null || x.Counterparty is not null || x.Date.HasValue)
             .WithMessage("At least one field must be provided");
     }
 }

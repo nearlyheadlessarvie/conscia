@@ -24,6 +24,13 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
             .IsRequired()
             .HasMaxLength(10);
 
+        builder.Property(u => u.SpendingPersonality).HasMaxLength(50);
+        builder.Property(u => u.IncomeRange).HasMaxLength(50);
+        builder.Property(u => u.OccupationType).HasMaxLength(50);
+        builder.Property(u => u.HouseholdSize).HasMaxLength(50);
+        builder.Property(u => u.HasCompletedOnboarding)
+            .HasDefaultValue(false);
+
         builder.HasIndex(u => u.Email).IsUnique();
     }
 }

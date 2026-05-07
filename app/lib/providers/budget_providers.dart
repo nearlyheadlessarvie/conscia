@@ -1,11 +1,17 @@
+import 'dart:async';
+import 'dart:math' as math;
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/network/dio_client.dart';
 import '../services/budget_service.dart';
+import '../services/transaction_service.dart';
 
 final budgetServiceProvider = Provider<BudgetService>((ref) {
   return BudgetService(ref.watch(dioProvider));
 });
+
+final budgetReconciliationEnabledProvider = Provider<bool>((_) => true);
 
 class BudgetListState {
   final List<Budget> budgets;
@@ -33,6 +39,7 @@ class BudgetListState {
 
 class BudgetListNotifier extends StateNotifier<BudgetListState> {
   final BudgetService _service;
+  Timer? _pendingRefresh;
 
   BudgetListNotifier(this._service) : super(const BudgetListState()) {
     load();
@@ -78,6 +85,100 @@ class BudgetListNotifier extends StateNotifier<BudgetListState> {
       state = state.copyWith(error: e.toString());
     }
   }
+
+  bool applyOptimisticTransaction(Transaction transaction) {
+    return _applyBudgetDeltas(_transactionBudgetDeltas([
+      transaction.amount
+    ], [
+      transaction,
+    ]));
+  }
+
+  bool applyOptimisticTransactionUpdate({
+    required Transaction previousTransaction,
+    required Transaction updatedTransaction,
+  }) {
+    return _applyBudgetDeltas(
+      _transactionBudgetDeltas(
+        [-previousTransaction.amount, updatedTransaction.amount],
+        [previousTransaction, updatedTransaction],
+      ),
+    );
+  }
+
+  bool applyOptimisticTransactionDelete(Transaction transaction) {
+    return _applyBudgetDeltas(
+      _transactionBudgetDeltas([-transaction.amount], [transaction]),
+    );
+  }
+
+  Map<String, double> _transactionBudgetDeltas(
+    List<double> deltas,
+    List<Transaction> transactions,
+  ) {
+    final budgetDeltas = <String, double>{};
+
+    for (var index = 0; index < transactions.length; index++) {
+      final transaction = transactions[index];
+      if (transaction.type != 'expense') continue;
+
+      final normalizedCategory = transaction.category.trim().toLowerCase();
+      if (normalizedCategory.isEmpty) continue;
+
+      budgetDeltas.update(
+        normalizedCategory,
+        (value) => value + deltas[index],
+        ifAbsent: () => deltas[index],
+      );
+    }
+
+    return budgetDeltas;
+  }
+
+  bool _applyBudgetDeltas(Map<String, double> budgetDeltas) {
+    if (budgetDeltas.isEmpty) return false;
+
+    var didUpdate = false;
+    final updatedBudgets = state.budgets.map((budget) {
+      final normalizedCategory = budget.category.trim().toLowerCase();
+      final delta = budgetDeltas[normalizedCategory];
+      if (delta == null || delta == 0) return budget;
+
+      didUpdate = true;
+      return budget.copyWith(
+        spent: math.max(0.0, budget.spent + delta),
+      );
+    }).toList(growable: false);
+
+    if (!didUpdate) return false;
+
+    state = state.copyWith(budgets: updatedBudgets);
+    return true;
+  }
+
+  Future<void> refreshInBackground() async {
+    try {
+      final budgets = await _service.list();
+      state = state.copyWith(budgets: budgets, error: null);
+    } catch (e) {
+      state = state.copyWith(error: e.toString());
+    }
+  }
+
+  void scheduleRefreshInBackground({
+    Duration delay = const Duration(seconds: 6),
+  }) {
+    _pendingRefresh?.cancel();
+    _pendingRefresh = Timer(delay, () {
+      unawaited(refreshInBackground());
+    });
+  }
+
+  @override
+  void dispose() {
+    _pendingRefresh?.cancel();
+    super.dispose();
+  }
 }
 
 final budgetListProvider =
@@ -121,8 +222,7 @@ class BudgetFormNotifier extends StateNotifier<BudgetFormState> {
       state = state.copyWith(category: category);
   void setMonthlyLimit(double limit) =>
       state = state.copyWith(monthlyLimit: limit);
-  void setCurrency(String code) =>
-      state = state.copyWith(currencyCode: code);
+  void setCurrency(String code) => state = state.copyWith(currencyCode: code);
   void setSubmitting(bool v) => state = state.copyWith(isSubmitting: v);
   void reset() => state = const BudgetFormState();
 }
@@ -131,3 +231,14 @@ final budgetFormProvider =
     StateNotifierProvider<BudgetFormNotifier, BudgetFormState>(
   (_) => BudgetFormNotifier(),
 );
+
+final hasBudgetForCategoryProvider =
+    Provider.family<bool, String>((ref, category) {
+  final normalizedCategory = category.trim().toLowerCase();
+  if (normalizedCategory.isEmpty) return false;
+
+  final budgets = ref.watch(budgetListProvider).budgets;
+  return budgets.any(
+    (budget) => budget.category.trim().toLowerCase() == normalizedCategory,
+  );
+});

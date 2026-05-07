@@ -4,6 +4,7 @@ using Conscia.Application.Interfaces;
 using Conscia.Domain.Entities;
 using Conscia.Domain.Enums;
 using Microsoft.Extensions.Logging;
+using System.Linq;
 
 namespace Conscia.PatternAggregator;
 
@@ -93,15 +94,15 @@ public class PatternAggregatorService
             }).ToList();
 
         var merchantGroups = expenses
-            .Where(t => !string.IsNullOrWhiteSpace(t.Merchant))
-            .GroupBy(t => t.Merchant!.Trim(), StringComparer.OrdinalIgnoreCase)
+            .Where(t => !string.IsNullOrWhiteSpace(t.Counterparty))
+            .GroupBy(t => t.Counterparty!.Trim(), StringComparer.OrdinalIgnoreCase)
             .Select(g =>
             {
                 var regretted = g.Count(t => t.RegretLevel != RegretLevel.WorthIt);
                 return new MerchantPattern
                 {
                     UserId = userId,
-                    Merchant = g.First().Merchant!.Trim(),
+                    Merchant = g.First().Counterparty!.Trim(),
                     VisitCount = g.Count(),
                     RegretCount = regretted,
                     RegretRate = (double)regretted / g.Count(),
@@ -208,7 +209,11 @@ public class PatternAggregatorService
             Type = Enum.Parse<TransactionType>(item["Type"].S),
             Amount = new Conscia.Domain.ValueObjects.Money(decimal.Parse(item["Amount"].N), item["CurrencyCode"].S, exchangeRate),
             Category = item["Category"].S,
-            Merchant = item.TryGetValue("Merchant", out var m) ? m.S : null,
+            Counterparty = item.TryGetValue("Counterparty", out var counterparty)
+                ? counterparty.S
+                : item.TryGetValue("Merchant", out var legacyMerchant)
+                    ? legacyMerchant.S
+                    : null,
             Date = DateTime.Parse(item["Date"].S),
             RegretLevel = item.TryGetValue("RegretLevel", out var rl) ? Enum.Parse<RegretLevel>(rl.S) : null,
             CreatedAt = DateTime.Parse(item["CreatedAt"].S)

@@ -1,42 +1,45 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../providers/category_frequency_provider.dart';
+
+import '../../../core/constants/category_icons.dart';
+import '../../../core/constants/category_visibility.dart';
+import '../../../core/constants/generated/app_constants.g.dart';
+import '../../../providers/category_recents_provider.dart';
 
 class QuickPresetChips extends ConsumerWidget {
   final String? selectedCategory;
+  final bool isExpense;
+  final bool isPremium;
   final ValueChanged<String> onCategorySelected;
 
   const QuickPresetChips({
     super.key,
     required this.selectedCategory,
+    required this.isExpense,
+    this.isPremium = true,
     required this.onCategorySelected,
   });
 
-  static const _categoryIcons = <String, String>{
-    'Coffee': '☕',
-    'Dining': '🍽️',
-    'Shopping': '🛍️',
-    'Gaming': '🎮',
-    'Travel': '✈️',
-    'Transport': '🚗',
-    'Entertainment': '🎬',
-    'Health': '💊',
-    'Utilities': '💡',
-  };
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final categories = ref.watch(categoryFrequencyProvider);
+    final recentCategories = ref.watch(recentCategoryProvider);
+    final categories = isExpense
+        ? _expenseQuickCategories(recentCategories)
+        : orderCategoriesByRecency(
+            categories: incomeCategories,
+            recents: recentCategories,
+          ).take(5).toList();
 
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: Row(
         children: categories.map((cat) {
-          final icon = _categoryIcons[cat] ?? '📦';
+          final icon = CategoryIcons.forCategory(cat);
           return Padding(
             padding: const EdgeInsets.only(right: 8),
             child: FilterChip(
-              label: Text('$icon $cat'),
+              avatar: Icon(icon, size: 16),
+              label: Text(cat),
               selected: selectedCategory == cat,
               onSelected: (_) => onCategorySelected(cat),
             ),
@@ -44,5 +47,16 @@ class QuickPresetChips extends ConsumerWidget {
         }).toList(),
       ),
     );
+  }
+
+  List<String> _expenseQuickCategories(List<String> recentCategories) {
+    final allowedCategories = visibleBudgetCategories(
+      isPremium: isPremium,
+      categories: expenseCategories,
+    );
+    return orderCategoriesByRecency(
+      categories: allowedCategories,
+      recents: recentCategories,
+    ).take(5).toList();
   }
 }

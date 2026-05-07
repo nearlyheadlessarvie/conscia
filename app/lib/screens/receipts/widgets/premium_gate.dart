@@ -6,12 +6,14 @@ class PremiumGate extends StatelessWidget {
   final IconData icon;
   final String headline;
   final String description;
+  final VoidCallback? onMaybeLater;
 
   const PremiumGate({
     super.key,
     required this.icon,
     required this.headline,
     required this.description,
+    this.onMaybeLater,
   });
 
   @override
@@ -59,7 +61,7 @@ class PremiumGate extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             TextButton(
-              onPressed: () => Navigator.of(context).pop(),
+              onPressed: onMaybeLater ?? () => Navigator.of(context).pop(),
               child: const Text('Maybe Later'),
             ),
           ],

@@ -1,7 +1,9 @@
 import 'dart:ui' as ui;
 
+import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'auth_provider.dart';
 import '../core/network/dio_client.dart';
 import '../services/user_service.dart';
 
@@ -10,6 +12,11 @@ final userServiceProvider = Provider<UserService>((ref) {
 });
 
 final currentUserProvider = FutureProvider<UserProfile>((ref) async {
+  final authState = ref.watch(authProvider);
+  if (!authState.isAuthenticated || authState.userId == null) {
+    throw StateError('Cannot load current user without an authenticated session.');
+  }
+
   final service = ref.watch(userServiceProvider);
   return service.getProfile();
 });
@@ -44,7 +51,7 @@ String _currencyFromCountry(String countryCode) {
 }
 
 ui.Locale _bestDeviceLocale() {
-  final dispatcher = ui.PlatformDispatcher.instance;
+  final dispatcher = WidgetsBinding.instance.platformDispatcher;
   return dispatcher.locales.isNotEmpty
       ? dispatcher.locales.first
       : dispatcher.locale;

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/utils/currency_formatter.dart';
 import '../../../screens/transactions/widgets/transaction_tile.dart';
 import '../../../widgets/budget_progress_bar.dart';
 
@@ -8,6 +9,7 @@ class BudgetContextCard extends StatelessWidget {
   final double spent;
   final double limit;
   final String currencyCode;
+  final String? locale;
   final double projectedAmount;
 
   const BudgetContextCard({
@@ -16,6 +18,7 @@ class BudgetContextCard extends StatelessWidget {
     required this.spent,
     required this.limit,
     required this.currencyCode,
+    this.locale,
     required this.projectedAmount,
   });
 
@@ -62,13 +65,21 @@ class BudgetContextCard extends StatelessWidget {
             Row(
               children: [
                 Text(
-                  '\$${spent.toStringAsFixed(2)}',
+                  CurrencyFormatter.format(
+                    spent,
+                    currencyCode: currencyCode,
+                    locale: locale,
+                  ),
                   style: textTheme.bodyLarge?.copyWith(
                     fontWeight: FontWeight.bold,
                   ),
                 ),
                 Text(
-                  ' / \$${limit.toStringAsFixed(2)}',
+                  ' / ${CurrencyFormatter.format(
+                    limit,
+                    currencyCode: currencyCode,
+                    locale: locale,
+                  )}',
                   style: textTheme.bodyLarge?.copyWith(
                     color: colors.onSurfaceVariant,
                   ),

@@ -1,5 +1,6 @@
 using Conscia.Application.DTOs;
 using Conscia.Application.Interfaces;
+using System.Linq;
 
 namespace Conscia.Application.Services;
 
@@ -24,8 +25,8 @@ public class PurchaseSuggestionService : IPurchaseSuggestionService
             return Array.Empty<PurchaseSuggestionDto>();
 
         return transactions
-            .Where(t => !string.IsNullOrWhiteSpace(t.Merchant))
-            .GroupBy(t => t.Merchant!.Trim().ToLowerInvariant())
+            .Where(t => !string.IsNullOrWhiteSpace(t.Counterparty))
+            .GroupBy(t => t.Counterparty!.Trim().ToLowerInvariant())
             .Where(g => g.Count() >= 2)
             .Select(g =>
             {
@@ -56,7 +57,7 @@ public class PurchaseSuggestionService : IPurchaseSuggestionService
                 {
                     Score = score,
                     Dto = new PurchaseSuggestionDto(
-                        items.First().Merchant!.Trim(),
+                        items.First().Counterparty!.Trim(),
                         median,
                         items.First().Amount.CurrencyCode,
                         topCategory,

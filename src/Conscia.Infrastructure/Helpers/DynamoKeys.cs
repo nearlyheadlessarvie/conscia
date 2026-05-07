@@ -54,6 +54,15 @@ public static class DynamoKeys
         => $"TX#{id}";
 
     /// <summary>
+    /// <c>DATE#{date:O}#TX#{id}</c> - Sort key for transaction timeline ordering with stable identity
+    /// </summary>
+    /// <param name="date"></param>
+    /// <param name="id"></param>
+    /// <returns></returns>
+    public static string Transaction(DateTime date, Guid id)
+        => $"DATE#{date:O}#TX#{id}";
+
+    /// <summary>
     /// <c>DATE#{date:O}</c> - Sort key for date-centric data (e.g. events, sessions)
     /// </summary>
     /// <param name="date"></param>

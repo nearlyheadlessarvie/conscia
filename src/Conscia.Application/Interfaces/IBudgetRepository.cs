@@ -9,5 +9,4 @@ public interface IBudgetRepository
     Task<Budget> AddAsync(Budget budget, CancellationToken ct = default);
     Task<Budget> UpdateAsync(Budget budget, CancellationToken ct = default);
     Task DeleteAsync(Guid id, CancellationToken ct = default);
-    Task IncrementCurrentSpendAsync(Guid id, decimal delta, CancellationToken ct = default);
 }

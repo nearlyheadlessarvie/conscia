@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import 'transaction_providers.dart';
 
 const _staticFallback = ['Coffee', 'Dining', 'Shopping', 'Gaming', 'Travel'];
@@ -16,8 +17,6 @@ final categoryFrequencyProvider = Provider<List<String>>((ref) {
   final distinct = counts.keys.toList();
   if (distinct.length < 5) return _staticFallback;
 
-  final sorted = distinct
-    ..sort((a, b) => counts[b]!.compareTo(counts[a]!));
-
+  final sorted = distinct..sort((a, b) => counts[b]!.compareTo(counts[a]!));
   return sorted.take(5).toList();
 });

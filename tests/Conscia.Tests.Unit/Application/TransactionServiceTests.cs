@@ -27,7 +27,7 @@ public class TransactionServiceTests
             Amount = 42.50m,
             CurrencyCode = "USD",
             Category = "Food",
-            Merchant = "McDonald's",
+            Counterparty = "McDonald's",
             Date = DateTime.UtcNow
         };
 
@@ -40,6 +40,7 @@ public class TransactionServiceTests
         Assert.Equal(42.50m, result.Amount.Amount);
         Assert.Equal("USD", result.Amount.CurrencyCode);
         Assert.Equal("Food", result.Category);
+        Assert.Equal("McDonald's", result.Counterparty);
 
         _repoMock.Verify(r => r.AddWithOutboxAsync(
             It.Is<Transaction>(t => t.UserId == userId),
@@ -54,7 +55,7 @@ public class TransactionServiceTests
         {
             Amount = 10, CurrencyCode = "USD", Category = "Food",
             Date = DateTime.UtcNow,
-            Latitude = 40.7128, Longitude = -74.0060, MerchantName = "NYC Shop"
+            Latitude = 40.7128, Longitude = -74.0060, PlaceName = "NYC Shop"
         };
 
         _repoMock.Setup(r => r.AddWithOutboxAsync(It.IsAny<Transaction>(), It.IsAny<OutboxEvent>(), It.IsAny<CancellationToken>()))
@@ -64,7 +65,7 @@ public class TransactionServiceTests
 
         Assert.NotNull(result.Location);
         Assert.Equal(40.7128, result.Location!.Latitude);
-        Assert.Equal("NYC Shop", result.Location.MerchantName);
+        Assert.Equal("NYC Shop", result.Location.PlaceName);
     }
 
     [Fact]
@@ -93,18 +94,20 @@ public class TransactionServiceTests
             Type = TransactionType.Expense,
             Amount = new Money(50, "USD"),
             Category = "Food",
+            Counterparty = "Old Cafe",
             Date = DateTime.UtcNow
         };
 
         _repoMock.Setup(r => r.GetByIdAsync(userId, txnId, It.IsAny<CancellationToken>())).ReturnsAsync(existing);
         _repoMock.Setup(r => r.UpdateAsync(It.IsAny<Transaction>(), It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
 
-        var dto = new UpdateTransactionDto { Amount = 75m, Category = "Dining" };
+        var dto = new UpdateTransactionDto { Amount = 75m, Category = "Dining", Counterparty = "New Cafe" };
         var result = await _svc.UpdateAsync(userId, txnId, dto);
 
         Assert.Equal(75m, result.Amount.Amount);
         Assert.Equal("USD", result.Amount.CurrencyCode);
         Assert.Equal("Dining", result.Category);
+        Assert.Equal("New Cafe", result.Counterparty);
     }
 
     [Fact]

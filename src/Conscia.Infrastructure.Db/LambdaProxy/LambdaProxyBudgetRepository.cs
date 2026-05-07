@@ -23,7 +23,4 @@ public class LambdaProxyBudgetRepository : LambdaProxyRepository, IBudgetReposit
 
     public async Task DeleteAsync(Guid id, CancellationToken ct = default) =>
         await InvokeAsync<object>("Budget.Delete", new { Id = id }, ct);
-
-    public async Task IncrementCurrentSpendAsync(Guid id, decimal delta, CancellationToken ct = default) =>
-        await InvokeAsync<object>("Budget.IncrementCurrentSpend", new { Id = id, Delta = delta }, ct);
 }

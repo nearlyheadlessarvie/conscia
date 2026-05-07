@@ -20,8 +20,6 @@ public class DatabaseStack : Stack
     public ISecret DbPasswordSecret { get; }
     public ITable TransactionsTable { get; }
     public ITable AiInteractionsTable { get; }
-    public ITable BehaviorProfilesTable { get; }
-    public ITable SessionCacheTable { get; }
     public ITable OutboxEventsTable { get; }
     public ITable InAppAlertsTable { get; }
     public ITable WeeklyInsightsTable { get; }
@@ -95,17 +93,6 @@ public class DatabaseStack : Stack
                     ProjectionType = ProjectionType.ALL
                 }
             }
-        );
-
-        BehaviorProfilesTable = CreateTable(
-            "BehaviorProfiles",
-            "PK"
-        );
-
-        SessionCacheTable = CreateTable(
-            "SessionCache",
-            "PK",
-            ttl: "TTL"
         );
 
         OutboxEventsTable = CreateTable(

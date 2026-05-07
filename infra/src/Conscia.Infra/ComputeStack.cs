@@ -17,8 +17,6 @@ public class ComputeStackProps : StackProps
     public required IUserPoolClient UserPoolClient { get; set; }
     public required ITable TransactionsTable { get; set; }
     public required ITable AiInteractionsTable { get; set; }
-    public required ITable BehaviorProfilesTable { get; set; }
-    public required ITable SessionCacheTable { get; set; }
     public required ITable OutboxEventsTable { get; set; }
     public required ITable InAppAlertsTable { get; set; }
     public required ITable WeeklyInsightsTable { get; set; }
@@ -52,8 +50,6 @@ public class ComputeStack : Stack
                 ["AWS__SQS__AiQueueUrl"] = props.AiQueue.QueueUrl,
                 ["AWS__DynamoDB__TransactionsTable"] = props.TransactionsTable.TableName,
                 ["AWS__DynamoDB__AiInteractionsTable"] = props.AiInteractionsTable.TableName,
-                ["AWS__DynamoDB__BehaviorProfilesTable"] = props.BehaviorProfilesTable.TableName,
-                ["AWS__DynamoDB__SessionCacheTable"] = props.SessionCacheTable.TableName,
                 ["AWS__DynamoDB__OutboxEventsTable"] = props.OutboxEventsTable.TableName,
                 ["AWS__DynamoDB__InAppAlertsTable"] = props.InAppAlertsTable.TableName,
                 ["AWS__DynamoDB__WeeklyInsightsTable"] = props.WeeklyInsightsTable.TableName,
@@ -104,8 +100,6 @@ public class ComputeStack : Stack
 
         props.TransactionsTable.GrantReadWriteData(ApiLambda);
         props.AiInteractionsTable.GrantReadWriteData(ApiLambda);
-        props.BehaviorProfilesTable.GrantReadWriteData(ApiLambda);
-        props.SessionCacheTable.GrantReadWriteData(ApiLambda);
         props.OutboxEventsTable.GrantReadWriteData(ApiLambda);
         props.InAppAlertsTable.GrantReadWriteData(ApiLambda);
         props.WeeklyInsightsTable.GrantReadWriteData(ApiLambda);

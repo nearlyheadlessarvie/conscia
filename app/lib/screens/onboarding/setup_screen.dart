@@ -16,6 +16,7 @@ class SetupScreen extends ConsumerStatefulWidget {
 class _SetupScreenState extends ConsumerState<SetupScreen> {
   late String _currencyCode;
   late String _locale;
+  late String _deviceCurrencyCode;
 
   static const _locales = [
     ('en_US', 'English (US)', '🇺🇸'),
@@ -35,6 +36,7 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
     final defaults = deviceDefaults();
     _locale = defaults.locale;
     _currencyCode = defaults.currency;
+    _deviceCurrencyCode = defaults.currency;
   }
 
   String _formattedSample() {
@@ -78,6 +80,8 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
     CurrencyPickerSheet.show(
       context,
       selectedCode: _currencyCode,
+      priorityCode: _deviceCurrencyCode,
+      isPremium: true,
       onSelected: (code) => setState(() => _currencyCode = code),
     );
   }
@@ -198,7 +202,13 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
                       // Best-effort save; user can update later in Settings
                     }
                     if (!mounted) return;
-                    GoRouter.of(this.context).go('/');
+                    GoRouter.of(this.context).go(
+                      '/onboarding/profile',
+                      extra: {
+                        'currencyCode': _currencyCode,
+                        'locale': _locale,
+                      },
+                    );
                   },
                   child: const Text("Let's Go!"),
                 ),

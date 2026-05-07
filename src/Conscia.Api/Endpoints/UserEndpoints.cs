@@ -25,7 +25,13 @@ public static class UserEndpoints
                     user.Email,
                     user.PreferredCurrency,
                     user.Locale,
-                    user.CreatedAt
+                    user.CreatedAt,
+                    user.SpendingPersonality,
+                    user.IncomeRange,
+                    user.OccupationType,
+                    user.HouseholdSize,
+                    user.HasCompletedOnboarding,
+                    user.LocationSuggestionsEnabled,
                 });
         }).WithName("GetCurrentUser");
 
@@ -40,13 +46,20 @@ public static class UserEndpoints
                 return Results.ValidationProblem(validation.ToDictionary());
 
             var userId = ctx.User.GetUserId();
-            var user = await svc.UpdateProfileAsync(userId, dto.PreferredCurrency, dto.Locale, ctx.RequestAborted);
+            var user = await svc.UpdateProfileAsync(userId, dto, ctx.RequestAborted);
             return Results.Ok(new
             {
                 user.Id,
                 user.Email,
                 user.PreferredCurrency,
-                user.Locale
+                user.Locale,
+                user.CreatedAt,
+                user.SpendingPersonality,
+                user.IncomeRange,
+                user.OccupationType,
+                user.HouseholdSize,
+                user.HasCompletedOnboarding,
+                user.LocationSuggestionsEnabled,
             });
         }).WithName("UpdateCurrentUser");
 
@@ -63,12 +76,21 @@ public static class UserEndpoints
             if (user is null) return Results.NotFound();
 
             var transactions = await txnSvc.ListAsync(userId, 1, 10000, null, ct);
-            var budgets = await budgetSvc.ListByUserAsync(userId, ct);
+            var budgets = await budgetSvc.ListStatusesByUserAsync(userId, ct: ct);
 
             return Results.Ok(new
             {
                 ExportedAt = DateTime.UtcNow,
-                Profile = new { user.Id, user.Email, user.PreferredCurrency, user.Locale, user.CreatedAt },
+                Profile = new
+                {
+                    user.Id,
+                    user.Email,
+                    user.PreferredCurrency,
+                    user.Locale,
+                    user.CreatedAt,
+                    user.HasCompletedOnboarding,
+                    user.LocationSuggestionsEnabled
+                },
                 Transactions = transactions.Items,
                 Budgets = budgets
             });

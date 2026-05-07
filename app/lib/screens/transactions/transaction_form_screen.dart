@@ -2,23 +2,37 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/constants/app_icons.dart';
+import '../../core/constants/category_icons.dart';
+import '../../providers/alert_provider.dart';
+import '../../providers/budget_providers.dart';
+import '../../providers/category_recents_provider.dart';
 import '../../providers/exchange_rate_provider.dart';
+import '../../providers/location_assistance_provider.dart';
 import '../../providers/subscription_provider.dart';
 import '../../providers/transaction_providers.dart';
 import '../../providers/user_provider.dart';
 import '../../services/transaction_service.dart';
-import '../../utils/utterance_parser.dart';
 import '../../widgets/amount_input_field.dart';
+import '../../widgets/location_assistance_prompt_sheet.dart';
 import '../../widgets/skeleton_loader.dart';
-import 'widgets/category_picker.dart';
-import 'widgets/quick_preset_chips.dart';
-import 'widgets/voice_input_button.dart';
-import 'widgets/purchase_suggestion_chips.dart';
+import 'widgets/transaction_style_category_selector.dart';
 
 class TransactionFormScreen extends ConsumerStatefulWidget {
   final String? transactionId;
+  final String? initialAmount;
+  final String? initialCurrencyCode;
+  final String? initialCategory;
+  final String? initialCounterparty;
 
-  const TransactionFormScreen({super.key, this.transactionId});
+  const TransactionFormScreen({
+    super.key,
+    this.transactionId,
+    this.initialAmount,
+    this.initialCurrencyCode,
+    this.initialCategory,
+    this.initialCounterparty,
+  });
 
   @override
   ConsumerState<TransactionFormScreen> createState() =>
@@ -34,21 +48,70 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
   String _currencyCode = 'USD';
   bool _currencyManuallyChanged = false;
   String? _selectedCategory;
-  final _merchantController = TextEditingController();
+  final _counterpartyController = TextEditingController();
   DateTime _selectedDate = DateTime.now();
-  bool _includeLocation = false;
   final _notesController = TextEditingController();
   bool _submitting = false;
   bool _prefilled = false;
+  bool _moreOptionsExpanded = false;
+  bool _hasCheckedLocationPrompt = false;
+  Transaction? _originalTransaction;
 
   @override
   void initState() {
     super.initState();
     _currencyCode = ref.read(userPreferencesProvider).currency;
+    ref.read(budgetListProvider);
     if (_isEditing) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _loadEditData();
       });
+    } else {
+      _applyInitialPrefill();
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _maybePromptForLocationAssistance();
+      });
+    }
+  }
+
+  void _applyInitialPrefill() {
+    if (widget.initialAmount case final amount?
+        when amount.trim().isNotEmpty) {
+      _amountController.text = amount;
+    }
+    if (widget.initialCurrencyCode case final currencyCode?
+        when currencyCode.trim().isNotEmpty) {
+      _currencyCode = currencyCode;
+      _currencyManuallyChanged = true;
+    }
+    if (widget.initialCategory case final category?
+        when category.trim().isNotEmpty) {
+      _selectedCategory = category;
+    }
+    if (widget.initialCounterparty case final counterparty?
+        when counterparty.trim().isNotEmpty) {
+      _counterpartyController.text = counterparty;
+    }
+  }
+
+  Future<void> _maybePromptForLocationAssistance() async {
+    if (_hasCheckedLocationPrompt || _isEditing || !mounted) {
+      return;
+    }
+    _hasCheckedLocationPrompt = true;
+
+    final state = ref.read(locationAssistanceProvider);
+    if (!state.shouldPromptOnFeatureOpen) return;
+
+    final accepted = await LocationAssistancePromptSheet.show(context);
+
+    if (!mounted) return;
+
+    final notifier = ref.read(locationAssistanceProvider.notifier);
+    if (accepted ?? false) {
+      await notifier.enableFromPrompt();
+    } else {
+      await notifier.declinePrompt();
     }
   }
 
@@ -58,14 +121,16 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
       final tx = await service.getById(widget.transactionId!);
       if (!mounted) return;
       setState(() {
+        _originalTransaction = tx;
         _prefilled = true;
         _isExpense = tx.type != 'income';
         _amountController.text = tx.amount.toStringAsFixed(2);
         _currencyCode = tx.currencyCode;
         _currencyManuallyChanged = true;
         _selectedCategory = tx.category;
-        _merchantController.text = tx.description;
+        _counterpartyController.text = tx.description;
         _selectedDate = tx.date;
+        _moreOptionsExpanded = _notesController.text.isNotEmpty;
       });
     } catch (_) {}
   }
@@ -74,7 +139,7 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
   void dispose() {
     _amountController.dispose();
     _exchangeRateController.dispose();
-    _merchantController.dispose();
+    _counterpartyController.dispose();
     _notesController.dispose();
     super.dispose();
   }
@@ -82,21 +147,6 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
   bool get _isValid {
     final amount = double.tryParse(_amountController.text);
     return amount != null && amount > 0 && _selectedCategory != null;
-  }
-
-  void _onTranscriptReady(String transcript) {
-    final result = UtteranceParser.parse(transcript);
-    setState(() {
-      if (result.description.isNotEmpty) {
-        _merchantController.text = result.description;
-      }
-      if (result.amount != null) {
-        _amountController.text = result.amount!.toStringAsFixed(2);
-      }
-      if (result.category != null) {
-        _selectedCategory = result.category;
-      }
-    });
   }
 
   Future<void> _submit() async {
@@ -110,7 +160,7 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
       amount: double.parse(_amountController.text),
       currencyCode: _currencyCode,
       category: _selectedCategory!,
-      merchant: _merchantController.text,
+      counterparty: _counterpartyController.text,
       type: _isExpense ? 'expense' : 'income',
       date: _selectedDate,
       baseCurrencyCode: userCurrency,
@@ -119,19 +169,50 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
 
     try {
       final service = ref.read(transactionServiceProvider);
+      late final Transaction savedTransaction;
       if (_isEditing) {
-        await service.update(widget.transactionId!, dto);
+        savedTransaction = await service.update(widget.transactionId!, dto);
       } else {
-        await service.create(dto);
+        savedTransaction = await service.create(dto);
+      }
+      final hasMatchingBudget =
+          ref.read(hasBudgetForCategoryProvider(_selectedCategory!));
+      final shouldAddBudgetNudge =
+          !_isEditing && _isExpense && !hasMatchingBudget;
+      if (shouldAddBudgetNudge) {
+        ref
+            .read(localAlertsProvider.notifier)
+            .addBudgetNudge(category: _selectedCategory!);
+      }
+
+      final budgetNotifier = ref.read(budgetListProvider.notifier);
+      final didUpdateBudget = _isEditing
+          ? _originalTransaction != null &&
+              budgetNotifier.applyOptimisticTransactionUpdate(
+                previousTransaction: _originalTransaction!,
+                updatedTransaction: savedTransaction,
+              )
+          : budgetNotifier.applyOptimisticTransaction(savedTransaction);
+      if (didUpdateBudget && ref.read(budgetReconciliationEnabledProvider)) {
+        budgetNotifier.scheduleRefreshInBackground();
       }
 
       if (!mounted) return;
+      _originalTransaction = savedTransaction;
       ref.invalidate(transactionListProvider);
-      context.pop();
+      if (_isEditing) {
+        ref.invalidate(transactionDetailProvider(widget.transactionId!));
+      }
+      context.pop(savedTransaction);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content:
-              Text(_isEditing ? 'Transaction updated' : 'Transaction added!'),
+          content: Text(
+            shouldAddBudgetNudge
+                ? '${_isEditing ? 'Transaction updated' : 'Transaction added!'} Budget nudge saved for ${_selectedCategory!}.'
+                : _isEditing
+                    ? 'Transaction updated'
+                    : 'Transaction added!',
+          ),
         ),
       );
     } catch (e) {
@@ -198,12 +279,16 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
   Widget _buildForm(ColorScheme colors, TextTheme textTheme) {
     final isPremium =
         ref.watch(subscriptionProvider).valueOrNull?.isPremium ?? false;
+    final locationAssistance = ref.watch(locationAssistanceProvider);
+    final suggestions = ref.watch(locationAssistanceSuggestionsProvider);
+    final hasSuggestions = suggestions.nearbyMerchants.isNotEmpty ||
+        suggestions.likelyCategories.isNotEmpty;
 
     return Scaffold(
       appBar: AppBar(
         title: Text(_isEditing ? 'Edit Transaction' : 'Add Transaction'),
         leading: IconButton(
-          icon: const Icon(Icons.close),
+          icon: Icon(AppIcons.close),
           onPressed: () => context.pop(),
         ),
       ),
@@ -260,8 +345,11 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
             const SizedBox(height: 16),
             Consumer(
               builder: (context, ref, _) {
-                final userCurrency = ref.watch(userPreferencesProvider).currency;
-                if (_currencyCode == userCurrency) return const SizedBox.shrink();
+                final userCurrency =
+                    ref.watch(userPreferencesProvider).currency;
+                if (_currencyCode == userCurrency) {
+                  return const SizedBox.shrink();
+                }
 
                 final rateAsync = ref.watch(
                   exchangeRateProvider((_currencyCode, userCurrency)),
@@ -274,7 +362,9 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
                     error: (_, __) => const SizedBox.shrink(),
                     data: (liveRate) => TextField(
                       controller: _exchangeRateController,
-                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
                       decoration: InputDecoration(
                         labelText: 'Exchange rate (optional)',
                         hintText: liveRate != null
@@ -289,83 +379,99 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
                 );
               },
             ),
-            if (!_isEditing) ...[
-              PurchaseSuggestionChips(
-                onSuggestionSelected: (desc, amount, cat) {
-                  setState(() {
-                    _merchantController.text = desc;
-                    _amountController.text = amount.toStringAsFixed(2);
-                    _selectedCategory = cat;
-                  });
-                },
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Quick add',
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
-              ),
-              const SizedBox(height: 6),
-              QuickPresetChips(
-                selectedCategory: _selectedCategory,
-                onCategorySelected: (cat) {
-                  setState(() => _selectedCategory = cat);
-                },
-              ),
-              const SizedBox(height: 16),
-            ],
-            CategoryPicker(
-              selected: _selectedCategory,
-              onSelected: (cat) => setState(() => _selectedCategory = cat),
+            TransactionStyleCategorySelector(
+              selectedCategory: _selectedCategory,
               isExpense: _isExpense,
+              isPremium: isPremium,
+              labelStyle: textTheme.titleSmall?.copyWith(
+                color: colors.onSurfaceVariant,
+              ),
+              moreCategoriesIcon: AppIcons.add,
+              onCategorySelected: (category) {
+                setState(() => _selectedCategory = category);
+                if (category != null) {
+                  ref.read(recentCategoryProvider.notifier).record(category);
+                }
+              },
             ),
             const SizedBox(height: 16),
             TextField(
-              controller: _merchantController,
+              controller: _counterpartyController,
               textCapitalization: TextCapitalization.words,
               onChanged: (_) => setState(() {}),
               decoration: InputDecoration(
-                labelText: 'Merchant (optional)',
-                suffixIcon: VoiceInputButton(
-                  onTranscriptReady: _onTranscriptReady,
-                ),
+                labelText:
+                    _isExpense ? 'Merchant (optional)' : 'Source (optional)',
               ),
             ),
+            if (!_isEditing &&
+                locationAssistance.isEnabled &&
+                hasSuggestions) ...[
+              const SizedBox(height: 16),
+              _buildLocationSuggestionCard(colors, textTheme, suggestions),
+            ],
             const SizedBox(height: 16),
-            ListTile(
-              leading: const Icon(Icons.calendar_today),
-              title: Text(_formatDate(_selectedDate)),
-              trailing: const Icon(Icons.chevron_right),
+            InkWell(
               onTap: _pickDate,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-                side: BorderSide(color: colors.outline),
-              ),
-            ),
-            const SizedBox(height: 16),
-            SwitchListTile(
-              title: Text('Include Location', style: textTheme.titleSmall),
-              subtitle: Text(
-                'Attach GPS coordinates',
-                style: textTheme.bodySmall?.copyWith(
-                  color: colors.onSurfaceVariant,
+              borderRadius: BorderRadius.circular(12),
+              child: Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                child: Row(
+                  children: [
+                    Icon(
+                      AppIcons.calendar,
+                      size: 18,
+                      color: colors.onSurfaceVariant,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      _relativeDateLabel(_selectedDate),
+                      style: textTheme.bodyMedium,
+                    ),
+                    const Spacer(),
+                    Icon(
+                      AppIcons.chevronRight,
+                      size: 16,
+                      color: colors.outline,
+                    ),
+                  ],
                 ),
               ),
-              value: _includeLocation,
-              onChanged: (v) => setState(() => _includeLocation = v),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-                side: BorderSide(color: colors.outline),
-              ),
             ),
             const SizedBox(height: 16),
-            TextField(
-              controller: _notesController,
-              maxLines: 3,
-              minLines: 1,
-              decoration: const InputDecoration(
-                labelText: 'Notes (optional)',
+            Theme(
+              data:
+                  Theme.of(context).copyWith(dividerColor: Colors.transparent),
+              child: ExpansionTile(
+                tilePadding: EdgeInsets.zero,
+                childrenPadding: EdgeInsets.zero,
+                title: const Text('More options'),
+                initiallyExpanded: _moreOptionsExpanded,
+                onExpansionChanged: (expanded) {
+                  setState(() => _moreOptionsExpanded = expanded);
+                },
+                children: [
+                  if (!_isEditing && locationAssistance.isEnabled) ...[
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: Text(
+                        'Smart suggestions use your location only to help with nearby merchants and likely categories. You can still edit everything manually.',
+                        style: textTheme.bodySmall?.copyWith(
+                          color: colors.onSurfaceVariant,
+                        ),
+                      ),
+                    ),
+                  ],
+                  TextField(
+                    controller: _notesController,
+                    maxLines: 3,
+                    minLines: 1,
+                    decoration: const InputDecoration(
+                      labelText: 'Notes (optional)',
+                    ),
+                  ),
+                ],
               ),
             ),
             const SizedBox(height: 24),
@@ -391,6 +497,81 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
     );
   }
 
+  Widget _buildLocationSuggestionCard(
+    ColorScheme colors,
+    TextTheme textTheme,
+    LocationAssistanceSuggestions suggestions,
+  ) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: colors.surfaceContainerHighest.withValues(alpha: 0.5),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: colors.outlineVariant),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Smart suggestions nearby', style: textTheme.titleMedium),
+          const SizedBox(height: 4),
+          Text(
+            'Suggestions are assistive only. Tap one to fill the form faster.',
+            style: textTheme.bodySmall?.copyWith(
+              color: colors.onSurfaceVariant,
+            ),
+          ),
+          if (suggestions.nearbyMerchants.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            Text('Nearby merchants', style: textTheme.titleSmall),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: suggestions.nearbyMerchants
+                  .map(
+                    (counterpartySuggestion) => ActionChip(
+                      label: Text(counterpartySuggestion),
+                      onPressed: () {
+                        setState(() {
+                          _counterpartyController.text = counterpartySuggestion;
+                        });
+                      },
+                    ),
+                  )
+                  .toList(),
+            ),
+          ],
+          if (suggestions.likelyCategories.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            Text('Likely categories', style: textTheme.titleSmall),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: suggestions.likelyCategories
+                  .map(
+                    (category) => ActionChip(
+                      avatar: Icon(
+                        CategoryIcons.forCategory(category),
+                        size: 18,
+                      ),
+                      label: Text(category),
+                      onPressed: () {
+                        setState(() {
+                          _selectedCategory = category;
+                        });
+                        ref.read(recentCategoryProvider.notifier).record(category);
+                      },
+                    ),
+                  )
+                  .toList(),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
   String _formatDate(DateTime d) {
     const months = [
       'January',
@@ -407,5 +588,16 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
       'December',
     ];
     return '${months[d.month - 1]} ${d.day}, ${d.year}';
+  }
+
+  String _relativeDateLabel(DateTime date) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final selected = DateTime(date.year, date.month, date.day);
+    if (selected == today) return 'Today';
+    if (selected == today.subtract(const Duration(days: 1))) {
+      return 'Yesterday';
+    }
+    return _formatDate(date);
   }
 }

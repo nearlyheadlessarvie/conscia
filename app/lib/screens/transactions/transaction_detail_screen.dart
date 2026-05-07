@@ -7,6 +7,7 @@ import 'package:intl/intl.dart';
 
 import '../../core/utils/currency_formatter.dart';
 import '../../providers/ai_provider.dart';
+import '../../providers/budget_providers.dart';
 import '../../providers/transaction_providers.dart';
 import '../../providers/usage_provider.dart';
 import '../../services/ai_service.dart';
@@ -35,6 +36,13 @@ class _TransactionDetailScreenState
   bool _regretLevelInitialized = false;
   bool _loadingReflection = false;
   bool _deleting = false;
+  Transaction? _editedTransactionOverride;
+
+  @override
+  void initState() {
+    super.initState();
+    ref.read(budgetListProvider);
+  }
 
   Color _amountColor(ColorScheme colors, bool isIncome) {
     if (!isIncome) {
@@ -47,7 +55,7 @@ class _TransactionDetailScreenState
         : const Color(0xFF81C784);
   }
 
-  Future<void> _confirmDelete() async {
+  Future<void> _confirmDelete(Transaction? transaction) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -75,6 +83,13 @@ class _TransactionDetailScreenState
     try {
       final service = ref.read(transactionServiceProvider);
       await service.delete(widget.transactionId);
+      final didUpdateBudget = transaction != null &&
+          ref
+              .read(budgetListProvider.notifier)
+              .applyOptimisticTransactionDelete(transaction);
+      if (didUpdateBudget && ref.read(budgetReconciliationEnabledProvider)) {
+        ref.read(budgetListProvider.notifier).scheduleRefreshInBackground();
+      }
       if (!mounted) return;
       ref.invalidate(transactionListProvider);
       context.pop();
@@ -141,6 +156,8 @@ class _TransactionDetailScreenState
   Widget build(BuildContext context) {
     final detailAsync =
         ref.watch(transactionDetailProvider(widget.transactionId));
+    final currentTransaction =
+        _editedTransactionOverride ?? detailAsync.valueOrNull;
 
     return Scaffold(
       appBar: AppBar(
@@ -149,9 +166,9 @@ class _TransactionDetailScreenState
           PopupMenuButton<String>(
             onSelected: (value) {
               if (value == 'edit') {
-                context.push('/transactions/${widget.transactionId}/edit');
+                _openEditScreen();
               } else if (value == 'delete') {
-                _confirmDelete();
+                _confirmDelete(currentTransaction);
               }
             },
             itemBuilder: (_) => const [
@@ -195,9 +212,23 @@ class _TransactionDetailScreenState
             ),
           ),
         ),
-        data: _buildContent,
+        data: (tx) => _buildContent(_editedTransactionOverride ?? tx),
       ),
     );
+  }
+
+  Future<void> _openEditScreen() async {
+    final updatedTransaction = await context.push<Transaction>(
+      '/transactions/${widget.transactionId}/edit',
+    );
+
+    if (!mounted || updatedTransaction == null) return;
+
+    setState(() {
+      _editedTransactionOverride = updatedTransaction;
+      _regretLevel = updatedTransaction.regretLevel;
+      _regretLevelInitialized = updatedTransaction.regretLevel != null;
+    });
   }
 
   Widget _buildContent(Transaction tx) {
@@ -205,6 +236,8 @@ class _TransactionDetailScreenState
     final textTheme = Theme.of(context).textTheme;
     final isIncome = tx.type == 'income';
     final prefix = isIncome ? '+' : '-';
+    final displayCounterparty =
+        tx.description.isNotEmpty ? tx.description : 'Unknown';
 
     if (!_regretLevelInitialized) {
       _regretLevel = tx.regretLevel;
@@ -232,7 +265,7 @@ class _TransactionDetailScreenState
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    tx.description.isNotEmpty ? tx.description : 'Unknown',
+                    displayCounterparty,
                     style: textTheme.headlineLarge,
                     textAlign: TextAlign.center,
                   ),

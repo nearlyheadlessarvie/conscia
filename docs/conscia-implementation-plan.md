@@ -53,7 +53,7 @@ Clean Architecture with vertical slices. API layer (ASP.NET 8 Minimal APIs), Dom
 | MVP scope | Online-only, no offline sync | Offline adds massive complexity (CRDT, conflict resolution) — defer to post-MVP |
 | API versioning | `/api/v1` prefix on all endpoints | Non-breaking evolution, mobile clients may lag behind |
 | Currency | Money value object (amount + currency code) | Multi-currency from day one, locale-aware formatting |
-| Cross-store writes | Outbox pattern for Transaction + Budget sync | DynamoDB write + outbox event (atomic), Lambda processes outbox to update RDS Budget |
+| Cross-store writes | Outbox pattern for Transaction durability only | DynamoDB write + outbox event (atomic); budget usage is computed from transactions on read |
 | Auth provider | Cognito Essentials (not Lite) | Same free tier, but no migration risk when scaling past 10K MAU |
 | Trigger extensibility | `ITriggerEvaluator` interface — Budget Warning first | Clean abstraction allows adding new triggers (Repeated Spending, Location Pattern, etc.) by implementing a new class |
 | Receipt scanning | Premium-only from day one | 26% of variable costs — must drive revenue, not drain free tier |
@@ -76,7 +76,7 @@ MediatR adds a command/handler indirection layer that makes sense at 50+ endpoin
 | User | Id, Email, CognitoSub, PreferredCurrency, Locale, CreatedAt | RDS |
 | UserSubscription | UserId, Tier, Platform, ExpiresAt, OriginalTransactionId | RDS |
 | Transaction | Id, UserId, Type, Money(Amount+CurrencyCode), Category, Merchant, Date, Location, ExchangeRateToBase, RegretLevel | DynamoDB |
-| Budget | Id, UserId, Category, MonthlyLimit, CurrentSpend, CurrencyCode | RDS |
+| Budget | Id, UserId, Category, MonthlyLimit, CurrencyCode | RDS |
 | BehaviorProfile | UserId, PreventedPurchases, Overrides, Regrets | DynamoDB |
 | AIInteraction | Id, TransactionId, DevilMsg, AngelMsg, NeutralMsg, CreatedAt | DynamoDB |
 | Receipt | Id, TransactionId, S3Key, ExtractedData, OcrConfidence, NeedsReview, Status | RDS + S3 |
@@ -96,9 +96,9 @@ Amounts never silently converted. Display uses user's locale for formatting (com
 
 ### Cross-Store Consistency (Transaction + Budget)
 
-> **The Problem:** Creating a Transaction (DynamoDB) and updating Budget.CurrentSpend (RDS) is a distributed write. If one succeeds and the other fails, you get phantom money. No two-phase commit exists across DynamoDB and RDS.
+> **Current Design:** Budgets store only monthly limit metadata. Usage is derived from the current month's expense transactions at read time, so there is no cross-store "update budget spend" write to keep in sync.
 
-**Solution: Outbox pattern.** When a Transaction is written to DynamoDB, an OutboxEvent is written in the same DynamoDB transaction (TransactWriteItems — atomic). A DynamoDB Streams-triggered Lambda reads OutboxEvents and updates Budget.CurrentSpend in RDS. If the RDS update fails, the Lambda retries (SQS DLQ for poison messages). Budget.CurrentSpend is eventually consistent (~1-2s delay) but never loses data. The Flutter UI shows an optimistic update immediately and reconciles on next fetch.
+**Solution:** When a Transaction is written to DynamoDB, an OutboxEvent is written in the same DynamoDB transaction (TransactWriteItems — atomic) for downstream workflows like alerts and analytics. Budget usage is computed from the transaction source of truth, which eliminates projection drift and monthly reset issues. The Flutter UI can still show an optimistic update immediately and reconcile with the computed server response on refresh.
 
 ### API Endpoints
 
@@ -131,7 +131,7 @@ When the user opens the app, the Dashboard queries: "Transactions from 24-48h ag
 
 > **Interface: `ITriggerEvaluator`** — designed for extensibility. Budget Warning is the first implementation. Future triggers (Repeated Spending, Location Pattern, Large Purchase, Regret Trend) implement the same interface.
 
-When a Transaction is created, the outbox Lambda (which already processes Budget updates) also evaluates triggers. `BudgetWarningEvaluator` checks if `Budget.CurrentSpend >= 80% of MonthlyLimit`. If triggered, an in-app alert is stored (DynamoDB, TTL 7 days) and shown as a Dashboard card on next app open. No push notification in MVP — all alerts are in-app.
+When a Transaction is created, the outbox pipeline can still evaluate triggers. `BudgetWarningEvaluator` checks computed budget usage for the current month and triggers when spend is `>= 80%` of `MonthlyLimit`. If triggered, an in-app alert is stored (DynamoDB, TTL 7 days) and shown as a Dashboard card on next app open. No push notification in MVP — all alerts are in-app.
 
 ### Receipt Scanning Flow (Premium Only)
 
@@ -365,7 +365,7 @@ Estimated 25% premium conversion = 25,000 premium users × 5 receipts = 125,000 
 | Screen | Route | Features |
 |---|---|---|
 | Onboarding | `/onboarding` | Welcome slides, sign-up / sign-in, preferred currency + locale picker |
-| Dashboard | `/` | Budget summary (eventually consistent via outbox), recent transactions, quick-add FAB, **regret prompt cards** (24-48h old unreviewed transactions), **budget warning cards** |
+| Dashboard | `/` | Budget summary (computed from current-month transactions), recent transactions, quick-add FAB, **regret prompt cards** (24-48h old unreviewed transactions), **budget warning cards** |
 | Transactions | `/transactions` | Filterable list, pull-to-refresh, infinite scroll |
 | Transaction Detail | `/transactions/:id` | Detail card, tap triggers AI reflection modal |
 | Add Transaction | `/transactions/add` | Category picker, amount + currency, notes, location toggle |
@@ -385,7 +385,7 @@ Estimated 25% premium conversion = 25,000 premium users × 5 receipts = 125,000 
 | Entering a transaction | Default currency = user's preferred. Tap currency badge to switch (e.g., MXN while traveling). |
 | Displaying amounts | Always show original currency. Budget screens show converted total in preferred currency. |
 | Locale formatting | Inferred from device locale, overridable in Settings. Controls decimal separator, symbol position. |
-| Budget aggregation | Sums converted to preferred currency using cached ECB daily rate. Budget.CurrentSpend is eventually consistent (~1-2s delay after transaction). |
+| Budget aggregation | Sums converted to preferred currency using cached ECB daily rate. Current-month spend is computed from transactions on read. |
 | AI personality messages | Amounts quoted in the transaction's original currency for accuracy. |
 
 ### Key Packages

@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/constants/category_icons.dart';
+import '../../../core/constants/category_visibility.dart';
 import '../../../core/constants/generated/app_constants.g.dart';
+import '../../../providers/category_recents_provider.dart';
 
 class CategoryData {
   final String name;
@@ -10,10 +13,11 @@ class CategoryData {
   const CategoryData(this.name, this.icon);
 }
 
-class CategoryPicker extends StatefulWidget {
+class CategoryPicker extends ConsumerStatefulWidget {
   final String? selected;
   final ValueChanged<String> onSelected;
   final bool isExpense;
+  final bool isPremium;
   final int maxVisible;
 
   const CategoryPicker({
@@ -21,19 +25,31 @@ class CategoryPicker extends StatefulWidget {
     this.selected,
     required this.onSelected,
     this.isExpense = true,
+    this.isPremium = true,
     this.maxVisible = 9,
   });
 
   @override
-  State<CategoryPicker> createState() => _CategoryPickerState();
+  ConsumerState<CategoryPicker> createState() => _CategoryPickerState();
 }
 
-class _CategoryPickerState extends State<CategoryPicker> {
+class _CategoryPickerState extends ConsumerState<CategoryPicker> {
   bool _expanded = false;
 
   List<CategoryData> get _categories {
-    final names = widget.isExpense ? expenseCategories : incomeCategories;
-    return names.map((n) => CategoryData(n, CategoryIcons.forCategory(n))).toList();
+    final names = widget.isExpense
+        ? visibleBudgetCategories(
+            isPremium: widget.isPremium,
+            categories: expenseCategories,
+          )
+        : incomeCategories;
+    final orderedNames = orderCategoriesByRecency(
+      categories: names,
+      recents: ref.watch(recentCategoryProvider),
+    );
+    return orderedNames
+        .map((n) => CategoryData(n, CategoryIcons.forCategory(n)))
+        .toList();
   }
 
   @override

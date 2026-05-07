@@ -9,14 +9,17 @@ import 'package:share_plus/share_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/constants/api_constants.dart';
+import '../../core/constants/app_icons.dart';
 import '../../core/network/dio_client.dart';
 import '../../core/routing/app_router.dart';
 import '../../core/theme/app_colors.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/health_provider.dart';
+import '../../providers/location_assistance_provider.dart';
 import '../../providers/subscription_provider.dart';
 import '../../providers/user_provider.dart';
 import '../../widgets/currency_picker_sheet.dart';
+import '../../widgets/locale_picker_sheet.dart';
 import '../../widgets/skeleton_loader.dart';
 import 'widgets/subscription_card.dart';
 import 'widgets/subscription_sheet.dart';
@@ -95,6 +98,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final textTheme = theme.textTheme;
     final userAsync = ref.watch(currentUserProvider);
     final subAsync = ref.watch(subscriptionProvider);
+    final locationAssistance = ref.watch(locationAssistanceProvider);
 
     return Scaffold(
       appBar: AppBar(title: const Text('Settings')),
@@ -122,6 +126,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               title: Text('Unable to load profile'),
             ),
           ),
+          ListTile(
+            leading: Icon(AppIcons.person),
+            title: const Text('My Profile'),
+            subtitle: const Text('Spending style, income, household'),
+            trailing: Icon(AppIcons.chevronRight),
+            onTap: () => context.push(AppRoutes.settingsProfile),
+          ),
           const Divider(),
 
           // ── Preferences ──────────────────────────────────────
@@ -138,13 +149,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             title: const Text('Region / Number Format'),
             subtitle: Text(ref.watch(userPreferencesProvider).locale),
             trailing: const Icon(Icons.chevron_right),
-            onTap: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                    content: Text(
-                        'Number format follows your device locale settings.')),
-              );
-            },
+            onTap: () => _showLocalePicker(context, ref),
           ),
           if (_biometricSupported)
             SwitchListTile(
@@ -154,6 +159,27 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               value: _biometricEnabled,
               onChanged: _toggleBiometric,
             ),
+          SwitchListTile(
+            secondary: const Icon(Icons.location_searching_outlined),
+            title: const Text('Smart location suggestions'),
+            subtitle: Text(
+              [
+                'Currently ${locationAssistance.isEnabled ? 'on' : 'off'} for nearby merchant and category suggestions.',
+                if (!locationAssistance.isEnabled &&
+                    locationAssistance.permissionDenied)
+                  'System location permission may also need to be enabled.',
+              ].join(' '),
+            ),
+            value: locationAssistance.isEnabled,
+            onChanged: (value) async {
+              final notifier = ref.read(locationAssistanceProvider.notifier);
+              if (value) {
+                await notifier.enableFromSettings();
+              } else {
+                await notifier.disableFromSettings();
+              }
+            },
+          ),
           const Divider(),
 
           // ── Budgets ──────────────────────────────────────────
@@ -269,6 +295,20 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           await ref
               .read(userServiceProvider)
               .updateProfile(preferredCurrency: code);
+          ref.invalidate(currentUserProvider);
+        } catch (_) {}
+      },
+    );
+  }
+
+  void _showLocalePicker(BuildContext context, WidgetRef ref) {
+    final current = ref.read(userPreferencesProvider).locale;
+    LocalePickerSheet.show(
+      context,
+      selectedLocale: current,
+      onSelected: (locale) async {
+        try {
+          await ref.read(userServiceProvider).updateProfile(locale: locale);
           ref.invalidate(currentUserProvider);
         } catch (_) {}
       },

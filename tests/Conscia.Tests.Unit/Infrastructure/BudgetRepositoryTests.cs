@@ -67,32 +67,4 @@ public class BudgetRepositoryTests : EfCoreTestBase
         var found = await _repo.GetByIdAsync(budget.Id);
         Assert.Null(found);
     }
-
-    [Fact]
-    public async Task IncrementCurrentSpend_IncrementsValue()
-    {
-        var budget = new Budget { Id = Guid.NewGuid(), UserId = Guid.NewGuid(), Category = "Food", MonthlyLimit = 100m, CurrentSpend = 20m, CurrencyCode = "USD" };
-        await _repo.AddAsync(budget);
-
-        budget.CurrentSpend += 30m;
-        await _repo.UpdateAsync(budget);
-
-        Db.ChangeTracker.Clear();
-        var found = await _repo.GetByIdAsync(budget.Id);
-        Assert.Equal(50m, found!.CurrentSpend);
-    }
-
-    [Fact]
-    public async Task IncrementCurrentSpend_NegativeDelta_Decrements()
-    {
-        var budget = new Budget { Id = Guid.NewGuid(), UserId = Guid.NewGuid(), Category = "Food", MonthlyLimit = 100m, CurrentSpend = 50m, CurrencyCode = "USD" };
-        await _repo.AddAsync(budget);
-
-        budget.CurrentSpend -= 20m;
-        await _repo.UpdateAsync(budget);
-
-        Db.ChangeTracker.Clear();
-        var found = await _repo.GetByIdAsync(budget.Id);
-        Assert.Equal(30m, found!.CurrentSpend);
-    }
 }

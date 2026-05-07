@@ -8,11 +8,11 @@ public class CreateTransactionDto
     public decimal Amount { get; set; }
     public string CurrencyCode { get; set; } = "USD";
     public string Category { get; set; } = string.Empty;
-    public string? Merchant { get; set; }
+    public string? Counterparty { get; set; }
     public DateTime Date { get; set; }
     public double? Latitude { get; set; }
     public double? Longitude { get; set; }
-    public string? MerchantName { get; set; }
+    public string? PlaceName { get; set; }
     public decimal? ExchangeRateToBase { get; set; }
     /// <summary>User's preferred currency. Used to auto-fetch exchange rate when CurrencyCode differs.</summary>
     public string? BaseCurrencyCode { get; set; }

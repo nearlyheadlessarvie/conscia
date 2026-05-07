@@ -1,14 +1,35 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../core/network/api_exception.dart';
 import '../../core/routing/app_router.dart';
 import '../../providers/auth_provider.dart';
-import 'apple_button.dart';
-import 'google_button.dart';
+
+String friendlySignInErrorMessage(
+  Object error, {
+  bool isPasswordSignIn = false,
+}) {
+  final apiError = switch (error) {
+    ApiException apiException => apiException,
+    DioException dioException => ApiException.fromDioException(dioException),
+    _ => null,
+  };
+
+  if (apiError != null) {
+    if (isPasswordSignIn && apiError.isUnauthorized) {
+      return 'Invalid username or password.';
+    }
+    return apiError.message;
+  }
+
+  return 'Something went wrong. Please try again.';
+}
 
 class SignInScreen extends ConsumerStatefulWidget {
   const SignInScreen({super.key});
@@ -128,7 +149,10 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
       if (!mounted) return;
       setState(() {
         _isLoading = false;
-        _errorMessage = e.toString();
+        _errorMessage = friendlySignInErrorMessage(
+          e,
+          isPasswordSignIn: true,
+        );
       });
       return;
     }
@@ -271,29 +295,46 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
               ),
               const SizedBox(height: 24),
               if (defaultTargetPlatform == TargetPlatform.iOS) ...[
-                AppleButton(
-                  isLoading: _isLoading,
-                  onPressed: () async {
-                    setState(() {
-                      _isLoading = true;
-                      _errorMessage = null;
-                    });
-                    try {
-                      await ref.read(authProvider.notifier).signInWithApple();
-                    } catch (e) {
-                      if (!mounted) return;
-                      setState(() => _errorMessage = e.toString());
-                    } finally {
-                      if (mounted) setState(() => _isLoading = false);
-                    }
-                  },
-                  buttonText: 'Sign in with Apple',
+                SizedBox(
+                  height: 48,
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.black,
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(24),
+                      ),
+                    ),
+                    icon: const Icon(Icons.apple, size: 24),
+                    label: const Text('Sign in with Apple'),
+                    onPressed: _isLoading
+                        ? null
+                        : () async {
+                            setState(() {
+                              _isLoading = true;
+                              _errorMessage = null;
+                            });
+                            try {
+                              await ref
+                                  .read(authProvider.notifier)
+                                  .signInWithApple();
+                            } catch (e) {
+                              if (!mounted) return;
+                              setState(() {
+                                _errorMessage = friendlySignInErrorMessage(e);
+                              });
+                            } finally {
+                              if (mounted) setState(() => _isLoading = false);
+                            }
+                          },
+                  ),
                 ),
                 const SizedBox(height: 12),
               ],
-              GoogleButton(
+              _GoogleSignInButton(
                 isLoading: _isLoading,
-                buttonText: 'Sign in with Google',
                 onPressed: () async {
                   setState(() {
                     _isLoading = true;
@@ -303,7 +344,9 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                     await ref.read(authProvider.notifier).signInWithGoogle();
                   } catch (e) {
                     if (!mounted) return;
-                    setState(() => _errorMessage = e.toString());
+                    setState(() {
+                      _errorMessage = friendlySignInErrorMessage(e);
+                    });
                   } finally {
                     if (mounted) setState(() => _isLoading = false);
                   }
@@ -318,6 +361,44 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _GoogleSignInButton extends StatelessWidget {
+  final bool isLoading;
+  final VoidCallback? onPressed;
+
+  const _GoogleSignInButton({required this.isLoading, required this.onPressed});
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 48,
+      width: double.infinity,
+      child: OutlinedButton(
+        style: OutlinedButton.styleFrom(
+          backgroundColor: Colors.white,
+          foregroundColor: const Color(0xFF1F1F1F),
+          side: const BorderSide(color: Color(0xFFDDDDDD)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
+          ),
+        ),
+        onPressed: isLoading ? null : onPressed,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            SvgPicture.asset(
+              'assets/images/google_logo.svg',
+              width: 20,
+              height: 20,
+            ),
+            const SizedBox(width: 12),
+            const Text('Sign in with Google'),
+          ],
         ),
       ),
     );

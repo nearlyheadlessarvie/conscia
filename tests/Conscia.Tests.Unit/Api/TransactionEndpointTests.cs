@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Text.Json;
 using Conscia.Application.DTOs;
 using Conscia.Application.Interfaces;
 using Conscia.Application.Models;
@@ -29,12 +30,15 @@ public class TransactionEndpointTests : IClassFixture<TestWebAppFactory>
     public async Task CreateTransaction_ValidPayload_Returns201()
     {
         var txnId = Guid.NewGuid();
+        CreateTransactionDto? capturedDto = null;
         _factory.TransactionServiceMock
             .Setup(s => s.CreateAsync(UserId, It.IsAny<CreateTransactionDto>(), It.IsAny<CancellationToken>()))
+            .Callback<Guid, CreateTransactionDto, CancellationToken>((_, dto, _) => capturedDto = dto)
             .ReturnsAsync(new Transaction
             {
                 Id = txnId, UserId = UserId, Type = TransactionType.Expense,
                 Amount = new Money(42.50m, "USD"), Category = "Food",
+                Counterparty = "Corner Cafe",
                 Date = DateTime.UtcNow, CreatedAt = DateTime.UtcNow
             });
 
@@ -44,12 +48,19 @@ public class TransactionEndpointTests : IClassFixture<TestWebAppFactory>
             amount = 42.50,
             currencyCode = "USD",
             category = "Food",
+            counterparty = "Corner Cafe",
+            placeName = "Office Pantry",
             date = DateTime.UtcNow.AddHours(-1).ToString("O")
         });
 
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
-        var body = await response.Content.ReadAsStringAsync();
-        Assert.Contains("Food", body);
+        Assert.NotNull(capturedDto);
+        Assert.Equal("Corner Cafe", capturedDto!.Counterparty);
+        Assert.Equal("Office Pantry", capturedDto.PlaceName);
+
+        using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        Assert.Equal("Corner Cafe", body.RootElement.GetProperty("counterparty").GetString());
+        Assert.False(body.RootElement.TryGetProperty("merchant", out _));
     }
 
     [Fact]
@@ -61,7 +72,14 @@ public class TransactionEndpointTests : IClassFixture<TestWebAppFactory>
             {
                 Items = new List<Transaction>
                 {
-                    new() { Id = Guid.NewGuid(), Type = TransactionType.Expense, Amount = new Money(10, "USD"), Category = "Food" }
+                    new()
+                    {
+                        Id = Guid.NewGuid(),
+                        Type = TransactionType.Expense,
+                        Amount = new Money(10, "USD"),
+                        Category = "Food",
+                        Counterparty = "Corner Cafe"
+                    }
                 },
                 Page = 1, PageSize = 20, TotalCount = 1
             });
@@ -69,6 +87,10 @@ public class TransactionEndpointTests : IClassFixture<TestWebAppFactory>
         var response = await _client.GetAsync("/api/v1/transactions");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        var firstItem = body.RootElement.GetProperty("items")[0];
+        Assert.Equal("Corner Cafe", firstItem.GetProperty("counterparty").GetString());
+        Assert.False(firstItem.TryGetProperty("merchant", out _));
     }
 
     [Fact]
@@ -81,6 +103,73 @@ public class TransactionEndpointTests : IClassFixture<TestWebAppFactory>
         var response = await _client.GetAsync($"/api/v1/transactions/{Guid.NewGuid()}");
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetTransaction_ReturnsCounterpartyAndPlaceName()
+    {
+        var transactionId = Guid.NewGuid();
+        _factory.TransactionServiceMock
+            .Setup(s => s.GetByIdAsync(UserId, transactionId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Transaction
+            {
+                Id = transactionId,
+                UserId = UserId,
+                Type = TransactionType.Expense,
+                Amount = new Money(19.99m, "USD"),
+                Category = "Food",
+                Counterparty = "Corner Cafe",
+                Date = DateTime.UtcNow,
+                CreatedAt = DateTime.UtcNow,
+                Location = new Location
+                {
+                    Latitude = 14.55,
+                    Longitude = 121.02,
+                    PlaceName = "Office Pantry"
+                }
+            });
+
+        var response = await _client.GetAsync($"/api/v1/transactions/{transactionId}");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        Assert.Equal("Corner Cafe", body.RootElement.GetProperty("counterparty").GetString());
+        Assert.False(body.RootElement.TryGetProperty("merchant", out _));
+        Assert.Equal("Office Pantry", body.RootElement.GetProperty("location").GetProperty("placeName").GetString());
+        Assert.False(body.RootElement.GetProperty("location").TryGetProperty("merchantName", out _));
+    }
+
+    [Fact]
+    public async Task UpdateTransaction_ReturnsCounterparty()
+    {
+        var transactionId = Guid.NewGuid();
+        UpdateTransactionDto? capturedDto = null;
+        _factory.TransactionServiceMock
+            .Setup(s => s.UpdateAsync(UserId, transactionId, It.IsAny<UpdateTransactionDto>(), It.IsAny<CancellationToken>()))
+            .Callback<Guid, Guid, UpdateTransactionDto, CancellationToken>((_, _, dto, _) => capturedDto = dto)
+            .ReturnsAsync(new Transaction
+            {
+                Id = transactionId,
+                UserId = UserId,
+                Type = TransactionType.Expense,
+                Amount = new Money(24.50m, "USD"),
+                Category = "Food",
+                Counterparty = "Updated Cafe",
+                Date = DateTime.UtcNow
+            });
+
+        var response = await _client.PutAsJsonAsync($"/api/v1/transactions/{transactionId}", new
+        {
+            counterparty = "Updated Cafe"
+        });
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.NotNull(capturedDto);
+        Assert.Equal("Updated Cafe", capturedDto!.Counterparty);
+
+        using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        Assert.Equal("Updated Cafe", body.RootElement.GetProperty("counterparty").GetString());
+        Assert.False(body.RootElement.TryGetProperty("merchant", out _));
     }
 
     [Fact]

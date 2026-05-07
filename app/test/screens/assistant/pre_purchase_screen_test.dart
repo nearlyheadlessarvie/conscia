@@ -1,0 +1,613 @@
+import 'package:conscia_app/providers/category_frequency_provider.dart';
+import 'package:conscia_app/providers/subscription_provider.dart';
+import 'package:conscia_app/providers/usage_provider.dart';
+import 'package:conscia_app/providers/user_provider.dart';
+import 'package:conscia_app/providers/ai_provider.dart';
+import 'package:conscia_app/core/utils/currency_formatter.dart';
+import 'package:conscia_app/screens/assistant/pre_purchase_screen.dart';
+import 'package:conscia_app/screens/transactions/transaction_form_screen.dart';
+import 'package:conscia_app/services/ai_service.dart';
+import 'package:dio/dio.dart';
+import 'package:conscia_app/services/location_assistance_service.dart';
+import 'package:conscia_app/services/subscription_service.dart';
+import 'package:conscia_app/services/user_service.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+class _FakeLocationAssistanceService extends LocationAssistanceService {
+  _FakeLocationAssistanceService({
+    required this.permissionGranted,
+    this.suggestions = const (
+      nearbyMerchants: ['Corner Bakery'],
+      likelyCategories: ['Groceries'],
+    ),
+  });
+
+  final bool permissionGranted;
+  final ({List<String> nearbyMerchants, List<String> likelyCategories})
+      suggestions;
+
+  @override
+  Future<bool> requestPermission() async => permissionGranted;
+
+  @override
+  ({List<String> nearbyMerchants, List<String> likelyCategories})
+  getTransactionSuggestions() => suggestions;
+}
+
+class _FakeAIService extends AIService {
+  _FakeAIService({
+    required this.response,
+  }) : super(Dio());
+
+  final AIResponse response;
+
+  @override
+  Future<AIResponse> prePurchase({
+    required String description,
+    required double amount,
+    required String currencyCode,
+    required String category,
+  }) async {
+    return response;
+  }
+}
+
+class _FakeUserService extends UserService {
+  _FakeUserService() : super(Dio());
+
+  @override
+  Future<UserProfile> updateProfile({
+    String? preferredCurrency,
+    String? locale,
+    String? spendingPersonality,
+    String? incomeRange,
+    String? occupationType,
+    String? householdSize,
+    bool? hasCompletedOnboarding,
+    bool? locationSuggestionsEnabled,
+  }) async {
+    return UserProfile(
+      id: 'user-1',
+      email: 'prepurchase@example.com',
+      currencyCode: preferredCurrency ?? 'USD',
+      locale: locale ?? 'en_US',
+      createdAt: DateTime(2026),
+      hasCompletedOnboarding: hasCompletedOnboarding ?? true,
+      locationSuggestionsEnabled: locationSuggestionsEnabled ?? false,
+      spendingPersonality: spendingPersonality,
+      incomeRange: incomeRange,
+      occupationType: occupationType,
+      householdSize: householdSize,
+    );
+  }
+}
+
+Future<void> _pumpPrePurchaseScreen(
+  WidgetTester tester, {
+  SharedPreferences? prefs,
+  LocationAssistanceService? locationService,
+  bool locationSuggestionsEnabled = false,
+}) async {
+  final resolvedPrefs = prefs ??
+      await () async {
+        SharedPreferences.setMockInitialValues({
+          'location_suggestions_enabled': false,
+          'location_suggestions_prompted': true,
+        });
+        return SharedPreferences.getInstance();
+      }();
+
+  await tester.pumpWidget(
+    ProviderScope(
+      overrides: [
+        subscriptionProvider.overrideWith(
+          (ref) async => const SubscriptionStatus(
+            tier: 'free',
+            isPremium: false,
+          ),
+        ),
+        currentUserProvider.overrideWith(
+          (ref) async => UserProfile(
+            id: 'user-1',
+            email: 'prepurchase@example.com',
+            currencyCode: 'USD',
+            locale: 'en_US',
+            createdAt: DateTime(2026),
+            hasCompletedOnboarding: true,
+            locationSuggestionsEnabled: locationSuggestionsEnabled,
+          ),
+        ),
+        sharedPreferencesProvider.overrideWithValue(resolvedPrefs),
+        userServiceProvider.overrideWithValue(_FakeUserService()),
+        locationAssistanceServiceProvider.overrideWithValue(
+          locationService ??
+              _FakeLocationAssistanceService(permissionGranted: true),
+        ),
+      ],
+      child: const MaterialApp(
+        home: PrePurchaseScreen(),
+      ),
+    ),
+  );
+}
+
+Future<Widget> buildPrePurchaseApp(
+  WidgetTester tester, {
+  Map<String, Object> initialPrefs = const {
+    'location_suggestions_enabled': false,
+    'location_suggestions_prompted': true,
+  },
+}) async {
+  return buildPrePurchaseAppForTier(
+    tester,
+    isPremium: false,
+    initialPrefs: initialPrefs,
+  );
+}
+
+Future<Widget> buildPrePurchaseAppForTier(
+  WidgetTester tester, {
+  required bool isPremium,
+  String currencyCode = 'USD',
+  String locale = 'en_US',
+  bool locationSuggestionsEnabled = false,
+  Map<String, Object> initialPrefs = const {
+    'location_suggestions_enabled': false,
+    'location_suggestions_prompted': true,
+  },
+}) async {
+  SharedPreferences.setMockInitialValues(initialPrefs);
+  final prefs = await SharedPreferences.getInstance();
+
+  return ProviderScope(
+    overrides: [
+      categoryFrequencyProvider.overrideWithValue(
+        ['Health', 'Dining', 'Shopping', 'Travel', 'Education'],
+      ),
+      subscriptionProvider.overrideWith(
+        (ref) async => SubscriptionStatus(
+          tier: isPremium ? 'premium' : 'free',
+          isPremium: isPremium,
+        ),
+      ),
+      currentUserProvider.overrideWith(
+        (ref) async => UserProfile(
+          id: 'user-1',
+          email: 'prepurchase@example.com',
+          currencyCode: currencyCode,
+          locale: locale,
+          createdAt: DateTime(2026),
+          hasCompletedOnboarding: true,
+        ),
+      ),
+      sharedPreferencesProvider.overrideWithValue(prefs),
+      userServiceProvider.overrideWithValue(_FakeUserService()),
+      locationAssistanceServiceProvider.overrideWithValue(
+        _FakeLocationAssistanceService(permissionGranted: true),
+      ),
+    ],
+    child: const MaterialApp(
+      home: PrePurchaseScreen(),
+    ),
+  );
+}
+
+Future<void> _pumpPrePurchaseRouterApp(
+  WidgetTester tester, {
+  required AIService aiService,
+  required LocationAssistanceService locationService,
+  String currencyCode = 'USD',
+  String locale = 'en_US',
+  bool locationSuggestionsEnabled = false,
+}) async {
+  SharedPreferences.setMockInitialValues({
+    'location_suggestions_enabled': true,
+    'location_suggestions_prompted': true,
+  });
+  final prefs = await SharedPreferences.getInstance();
+  final router = GoRouter(
+    initialLocation: '/assistant',
+    routes: [
+      GoRoute(
+        path: '/assistant',
+        builder: (_, __) => const PrePurchaseScreen(),
+      ),
+      GoRoute(
+        path: '/transactions/add',
+        builder: (_, state) {
+          final extra = state.extra as Map<String, String?>?;
+          return TransactionFormScreen(
+            initialAmount: extra?['amount'],
+            initialCurrencyCode: extra?['currencyCode'],
+            initialCategory: extra?['category'],
+            initialCounterparty: extra?['counterparty'],
+          );
+        },
+      ),
+    ],
+  );
+
+  await tester.pumpWidget(
+    ProviderScope(
+      overrides: [
+        categoryFrequencyProvider.overrideWithValue(
+          ['Health', 'Dining', 'Shopping', 'Travel', 'Education'],
+        ),
+        subscriptionProvider.overrideWith(
+          (ref) async => const SubscriptionStatus(
+            tier: 'free',
+            isPremium: false,
+          ),
+        ),
+        currentUserProvider.overrideWith(
+          (ref) async => UserProfile(
+            id: 'user-1',
+            email: 'prepurchase@example.com',
+            currencyCode: currencyCode,
+            locale: locale,
+            createdAt: DateTime(2026),
+            hasCompletedOnboarding: true,
+            locationSuggestionsEnabled: locationSuggestionsEnabled,
+          ),
+        ),
+        sharedPreferencesProvider.overrideWithValue(prefs),
+        userServiceProvider.overrideWithValue(_FakeUserService()),
+        locationAssistanceServiceProvider.overrideWithValue(locationService),
+        aiServiceProvider.overrideWithValue(aiService),
+      ],
+      child: MaterialApp.router(routerConfig: router),
+    ),
+  );
+}
+
+void main() {
+  testWidgets(
+      'pre-purchase assistant shows all categories entrypoint and orders sheet by recent categories',
+      (tester) async {
+    await tester.pumpWidget(await buildPrePurchaseApp(
+      tester,
+      initialPrefs: const {
+        'location_suggestions_enabled': false,
+        'location_suggestions_prompted': true,
+        'recent_categories': ['Transport', 'Dining'],
+      },
+    ));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Salary'), findsNothing);
+    expect(find.text('More categories'), findsNothing);
+    expect(find.text('All categories'), findsOneWidget);
+    expect(find.text('Dining'), findsWidgets);
+
+    await tester.tap(find.text('All categories'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(BottomSheet), findsOneWidget);
+
+    final choiceChips = tester.widgetList<ChoiceChip>(find.byType(ChoiceChip));
+    final labels = choiceChips
+        .map((chip) => (chip.label as Text).data)
+        .whereType<String>()
+        .toList();
+
+    expect(labels.take(2).toList(), ['Transport', 'Dining']);
+
+    await tester.tap(find.widgetWithText(ChoiceChip, 'Groceries').last);
+    await tester.pumpAndSettle();
+
+    expect(find.byType(BottomSheet), findsNothing);
+    expect(
+      find.descendant(
+        of: find.byType(InputChip),
+        matching: find.text('Groceries'),
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('Dining'), findsNothing);
+  });
+
+  testWidgets('pre-purchase hides upgrade-only categories for free users',
+      (tester) async {
+    await tester.pumpWidget(await buildPrePurchaseAppForTier(
+      tester,
+      isPremium: false,
+    ));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Travel'), findsNothing);
+    expect(find.text('Health'), findsNothing);
+    expect(find.text('Shopping'), findsNothing);
+    expect(find.text('Dining'), findsOneWidget);
+
+    await tester.tap(find.text('All categories'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Groceries'), findsWidgets);
+    expect(find.text('Transport'), findsWidgets);
+    expect(find.text('Travel'), findsNothing);
+  });
+
+  testWidgets('pre-purchase shows all categories for premium users',
+      (tester) async {
+    await tester.pumpWidget(await buildPrePurchaseAppForTier(
+      tester,
+      isPremium: true,
+    ));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Travel'), findsNothing);
+
+    await tester.tap(find.text('All categories'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Travel'), findsWidgets);
+    expect(find.text('Education'), findsWidgets);
+  });
+
+  testWidgets('pre-purchase shows first-use location prompt only when needed',
+      (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+
+    await _pumpPrePurchaseScreen(
+      tester,
+      prefs: prefs,
+      locationService: _FakeLocationAssistanceService(permissionGranted: true),
+    );
+
+    await tester.pumpAndSettle();
+
+    expect(find.text('Turn on smart location help?'), findsOneWidget);
+    expect(find.text('You can change this later in Settings.'), findsOneWidget);
+    expect(
+      find.text(
+        'Get nearby merchant and category suggestions wherever you need a little guidance. Suggestions only help fill things faster. You can still edit everything yourself.',
+      ),
+      findsOneWidget,
+    );
+    await tester.tap(find.text('Not now'));
+    await tester.pumpAndSettle();
+
+    await _pumpPrePurchaseScreen(
+      tester,
+      prefs: prefs,
+      locationService: _FakeLocationAssistanceService(permissionGranted: true),
+    );
+
+    await tester.pumpAndSettle();
+
+    expect(find.text('Turn on smart location help?'), findsNothing);
+  });
+
+  testWidgets(
+      'pre-purchase does not re-prompt after turning location assistance on',
+      (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+
+    await _pumpPrePurchaseScreen(
+      tester,
+      prefs: prefs,
+      locationService: _FakeLocationAssistanceService(permissionGranted: true),
+    );
+
+    await tester.pumpAndSettle();
+
+    expect(find.text('Turn on smart location help?'), findsOneWidget);
+
+    await tester.tap(find.text('Turn on'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Turn on smart location help?'), findsNothing);
+
+    await _pumpPrePurchaseScreen(
+      tester,
+      prefs: prefs,
+      locationService: _FakeLocationAssistanceService(permissionGranted: true),
+    );
+
+    await tester.pumpAndSettle();
+
+    expect(find.text('Turn on smart location help?'), findsNothing);
+  });
+
+  testWidgets('pre-purchase can suggest merchant and category when enabled',
+      (tester) async {
+    SharedPreferences.setMockInitialValues({
+      'location_suggestions_enabled': true,
+      'location_suggestions_prompted': true,
+    });
+    final prefs = await SharedPreferences.getInstance();
+
+    await _pumpPrePurchaseScreen(
+      tester,
+      prefs: prefs,
+      locationSuggestionsEnabled: true,
+      locationService: _FakeLocationAssistanceService(
+        permissionGranted: true,
+        suggestions: const (
+          nearbyMerchants: ['Corner Bakery'],
+          likelyCategories: ['Groceries'],
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    expect(find.text('Smart suggestions nearby'), findsOneWidget);
+    expect(find.text('Corner Bakery'), findsOneWidget);
+    expect(find.text('Groceries'), findsWidgets);
+
+    await tester.ensureVisible(find.widgetWithText(ActionChip, 'Corner Bakery'));
+    await tester.tap(find.text('Corner Bakery'));
+    await tester.pumpAndSettle();
+
+    final descriptionField = tester.widget<TextField>(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is TextField &&
+            widget.decoration?.labelText == 'What are you thinking of buying?',
+      ),
+    );
+    expect(descriptionField.controller?.text, 'Corner Bakery');
+
+    await tester.ensureVisible(find.widgetWithText(ActionChip, 'Groceries'));
+    await tester.tap(find.widgetWithText(ActionChip, 'Groceries'));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.descendant(
+        of: find.byType(InputChip),
+        matching: find.text('Groceries'),
+      ),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets(
+      'pre-purchase response summary formats the selected currency consistently',
+      (tester) async {
+    await _pumpPrePurchaseRouterApp(
+      tester,
+      aiService: _FakeAIService(
+        response: const AIResponse(
+          impulse: 'Treat yourself.',
+          reason: 'Check your budget.',
+          neutral: 'You can decide.',
+          budget: AIBudgetContext(
+            monthlyLimit: 16706.49,
+            currentSpend: 0,
+            percentUsed: 0,
+            isOverBudget: false,
+          ),
+        ),
+      ),
+      locationService: _FakeLocationAssistanceService(
+        permissionGranted: true,
+        suggestions: const (
+          nearbyMerchants: ['Starbucks'],
+          likelyCategories: ['Dining'],
+        ),
+      ),
+      currencyCode: 'PHP',
+      locale: 'en_PH',
+      locationSuggestionsEnabled: true,
+    );
+
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is TextField &&
+            widget.decoration?.labelText == 'What are you thinking of buying?',
+      ),
+      'Starbucks coffee',
+    );
+    await tester.enterText(find.byType(TextField).at(1), '600');
+    await tester.tap(find.widgetWithText(FilterChip, 'Dining'));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Ask Conscia'));
+    await tester.tap(find.text('Ask Conscia'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 700));
+    await tester.pumpAndSettle();
+
+    final formatted = CurrencyFormatter.format(
+      600,
+      currencyCode: 'PHP',
+      locale: 'en_PH',
+    );
+    final spentFormatted = CurrencyFormatter.format(
+      0,
+      currencyCode: 'PHP',
+      locale: 'en_PH',
+    );
+    final limitFormatted = CurrencyFormatter.format(
+      16706.49,
+      currencyCode: 'PHP',
+      locale: 'en_PH',
+    );
+
+    expect(find.textContaining('\$600 PHP'), findsNothing);
+    expect(find.text(formatted), findsOneWidget);
+    expect(find.textContaining('\$0.00 / \$16706.49'), findsNothing);
+    expect(find.text(spentFormatted), findsOneWidget);
+    expect(find.text(' / $limitFormatted'), findsOneWidget);
+  });
+
+  testWidgets(
+      'bought it anyway opens add expense form with prefilled confirmation values',
+      (tester) async {
+    await _pumpPrePurchaseRouterApp(
+      tester,
+      aiService: _FakeAIService(
+        response: const AIResponse(
+          impulse: 'Treat yourself.',
+          reason: 'Check your budget.',
+          neutral: 'You can decide.',
+        ),
+      ),
+      locationService: _FakeLocationAssistanceService(
+        permissionGranted: true,
+        suggestions: const (
+          nearbyMerchants: ['Starbucks'],
+          likelyCategories: ['Dining'],
+        ),
+      ),
+      currencyCode: 'PHP',
+      locale: 'en_PH',
+      locationSuggestionsEnabled: true,
+    );
+
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is TextField &&
+            widget.decoration?.labelText == 'What are you thinking of buying?',
+      ),
+      'Starbucks coffee',
+    );
+    await tester.enterText(find.byType(TextField).at(1), '600');
+    await tester.tap(find.widgetWithText(FilterChip, 'Dining'));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Ask Conscia'));
+    await tester.tap(find.text('Ask Conscia'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 700));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Bought it anyway'), findsOneWidget);
+
+    await tester.tap(find.text('Bought it anyway'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Add Transaction'), findsOneWidget);
+
+    final amountField = tester.widget<TextField>(find.byType(TextField).first);
+    expect(amountField.controller?.text, '600');
+
+    expect(
+      find.descendant(
+        of: find.byType(InputChip),
+        matching: find.text('Dining'),
+      ),
+      findsOneWidget,
+    );
+
+    final merchantField = tester.widget<TextField>(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is TextField &&
+            widget.decoration?.labelText == 'Merchant (optional)',
+      ),
+    );
+    expect(merchantField.controller?.text, 'Starbucks');
+  });
+}

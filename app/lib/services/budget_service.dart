@@ -24,14 +24,43 @@ class Budget {
   factory Budget.fromJson(Map<String, dynamic> json) {
     final limit = (json['monthlyLimit'] as num).toDouble();
     final spend = (json['currentSpend'] as num?)?.toDouble() ?? 0;
+    final percentUsed = (json['percentUsed'] as num?)?.toDouble();
+    final double normalizedPercentage = percentUsed == null
+        ? (limit > 0 ? spend / limit : 0)
+        : percentUsed > 1
+            ? percentUsed / 100
+            : percentUsed;
     return Budget(
       id: json['id'] as String,
       category: json['category'] as String,
       monthlyLimit: limit,
       spent: spend,
       currencyCode: json['currencyCode'] as String? ?? 'USD',
-      percentage: (json['percentUsed'] as num?)?.toDouble() ?? (limit > 0 ? spend / limit : 0),
+      percentage: normalizedPercentage,
       isOverBudget: json['isOverBudget'] as bool? ?? spend > limit,
+    );
+  }
+
+  Budget copyWith({
+    String? id,
+    String? category,
+    double? monthlyLimit,
+    double? spent,
+    String? currencyCode,
+    double? percentage,
+    bool? isOverBudget,
+  }) {
+    final nextLimit = monthlyLimit ?? this.monthlyLimit;
+    final nextSpent = spent ?? this.spent;
+    return Budget(
+      id: id ?? this.id,
+      category: category ?? this.category,
+      monthlyLimit: nextLimit,
+      spent: nextSpent,
+      currencyCode: currencyCode ?? this.currencyCode,
+      percentage:
+          percentage ?? (nextLimit > 0 ? nextSpent / nextLimit : 0),
+      isOverBudget: isOverBudget ?? nextSpent > nextLimit,
     );
   }
 }
