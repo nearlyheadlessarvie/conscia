@@ -497,48 +497,52 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
               color: colors.onSurfaceVariant,
             ),
           ),
-          const SizedBox(height: 16),
-          Text('Nearby merchants', style: textTheme.titleSmall),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: suggestions.nearbyMerchants
-                .map(
-                  (merchant) => ActionChip(
-                    label: Text(merchant),
-                    onPressed: () {
-                      setState(() {
-                        _merchantController.text = merchant;
-                      });
-                    },
-                  ),
-                )
-                .toList(),
-          ),
-          const SizedBox(height: 16),
-          Text('Likely categories', style: textTheme.titleSmall),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: suggestions.likelyCategories
-                .map(
-                  (category) => ActionChip(
-                    avatar: Icon(
-                      CategoryIcons.forCategory(category),
-                      size: 18,
+          if (suggestions.nearbyMerchants.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            Text('Nearby merchants', style: textTheme.titleSmall),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: suggestions.nearbyMerchants
+                  .map(
+                    (merchant) => ActionChip(
+                      label: Text(merchant),
+                      onPressed: () {
+                        setState(() {
+                          _merchantController.text = merchant;
+                        });
+                      },
                     ),
-                    label: Text(category),
-                    onPressed: () {
-                      setState(() {
-                        _selectedCategory = category;
-                      });
-                    },
-                  ),
-                )
-                .toList(),
-          ),
+                  )
+                  .toList(),
+            ),
+          ],
+          if (suggestions.likelyCategories.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            Text('Likely categories', style: textTheme.titleSmall),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: suggestions.likelyCategories
+                  .map(
+                    (category) => ActionChip(
+                      avatar: Icon(
+                        CategoryIcons.forCategory(category),
+                        size: 18,
+                      ),
+                      label: Text(category),
+                      onPressed: () {
+                        setState(() {
+                          _selectedCategory = category;
+                        });
+                      },
+                    ),
+                  )
+                  .toList(),
+            ),
+          ],
         ],
       ),
     );

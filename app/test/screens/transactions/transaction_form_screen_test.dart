@@ -274,4 +274,33 @@ void main() {
     expect(find.text('Nearby merchants'), findsNothing);
     expect(find.text('Likely categories'), findsNothing);
   });
+
+  testWidgets(
+      'transaction form only renders suggestion sections that have content',
+      (tester) async {
+    SharedPreferences.setMockInitialValues({
+      'location_suggestions_enabled': true,
+      'location_suggestions_prompted': true,
+    });
+    final prefs = await SharedPreferences.getInstance();
+
+    await _pumpTransactionForm(
+      tester,
+      prefs: prefs,
+      locationService: _FakeLocationAssistanceService(
+        permissionGranted: true,
+        suggestions: const (
+          nearbyMerchants: ['Corner Bakery'],
+          likelyCategories: <String>[],
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    expect(find.text('Smart suggestions nearby'), findsOneWidget);
+    expect(find.text('Nearby merchants'), findsOneWidget);
+    expect(find.text('Corner Bakery'), findsOneWidget);
+    expect(find.text('Likely categories'), findsNothing);
+  });
 }
