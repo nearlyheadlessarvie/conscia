@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/constants/api_constants.dart';
 import '../core/network/dio_client.dart';
+import 'budget_providers.dart';
 
 class AppAlert {
   final String id;
@@ -100,5 +101,19 @@ final localAlertsProvider =
 
 final activeLocalAlertsProvider = Provider<List<AppAlert>>((ref) {
   final alerts = ref.watch(localAlertsProvider);
-  return alerts.where((alert) => !alert.isDismissed).toList(growable: false);
+  final budgetCategories = ref
+      .watch(budgetListProvider)
+      .budgets
+      .map((budget) => budget.category.trim().toLowerCase())
+      .toSet();
+
+  return alerts.where((alert) {
+    if (alert.isDismissed) return false;
+    if (alert.type != 'budget_nudge') return true;
+
+    final normalizedCategory = alert.id.startsWith('budget-nudge-')
+        ? alert.id.substring('budget-nudge-'.length)
+        : '';
+    return !budgetCategories.contains(normalizedCategory);
+  }).toList(growable: false);
 });

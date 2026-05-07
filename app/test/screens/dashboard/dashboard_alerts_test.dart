@@ -223,4 +223,50 @@ void main() {
     expect(find.text('No budget for Dining yet'), findsNothing);
     expect(container.read(activeLocalAlertsProvider), isEmpty);
   });
+
+  testWidgets(
+      'dashboard hides a budget nudge once a matching budget exists',
+      (tester) async {
+    final container = ProviderContainer(
+      overrides: [
+        budgetServiceProvider.overrideWithValue(
+          _StaticBudgetService(const [
+            Budget(
+              id: 'budget-1',
+              category: 'Gaming',
+              monthlyLimit: 500,
+              spent: 0,
+              currencyCode: 'PHP',
+              percentage: 0,
+              isOverBudget: false,
+            ),
+          ]),
+        ),
+        transactionServiceProvider.overrideWithValue(_StaticTransactionService()),
+        behavioralInsightsProvider.overrideWith((ref) async => null),
+        localAlertsProvider.overrideWith(
+          (ref) => _LocalAlertsTestNotifier(
+            [
+              AppAlert(
+                id: 'budget-nudge-gaming',
+                type: 'budget_nudge',
+                title: 'No budget for Gaming yet',
+                message:
+                    'You logged an expense in Gaming without a matching budget.',
+                isDismissed: false,
+                createdAt: DateTime(2026, 5, 7),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    await tester.pumpWidget(_buildApp(container));
+    await tester.pumpAndSettle();
+
+    expect(find.text('No budget for Gaming yet'), findsNothing);
+    expect(container.read(activeLocalAlertsProvider), isEmpty);
+  });
 }
