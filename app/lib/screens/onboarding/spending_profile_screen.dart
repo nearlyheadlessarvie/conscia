@@ -8,7 +8,14 @@ import '../../core/routing/app_router.dart';
 import '../../providers/user_provider.dart';
 
 class SpendingProfileScreen extends ConsumerStatefulWidget {
-  const SpendingProfileScreen({super.key});
+  final String? initialCurrencyCode;
+  final String? initialLocale;
+
+  const SpendingProfileScreen({
+    super.key,
+    this.initialCurrencyCode,
+    this.initialLocale,
+  });
 
   @override
   ConsumerState<SpendingProfileScreen> createState() =>
@@ -66,9 +73,11 @@ class _SpendingProfileScreenState extends ConsumerState<SpendingProfileScreen> {
     final colors = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
     final prefs = ref.watch(userPreferencesProvider);
+    final currencyCode = widget.initialCurrencyCode ?? prefs.currency;
+    final locale = widget.initialLocale ?? prefs.locale;
     final formatter = NumberFormat.currency(
-      locale: prefs.locale.replaceAll('_', '-'),
-      symbol: '${prefs.currency} ',
+      locale: locale.replaceAll('_', '-'),
+      symbol: '$currencyCode ',
       decimalDigits: 0,
     );
 

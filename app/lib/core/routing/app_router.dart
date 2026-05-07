@@ -155,7 +155,13 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: 'profile',
-            builder: (context, state) => const SpendingProfileScreen(),
+            builder: (context, state) {
+              final extra = state.extra as Map<String, String?>?;
+              return SpendingProfileScreen(
+                initialCurrencyCode: extra?['currencyCode'],
+                initialLocale: extra?['locale'],
+              );
+            },
           ),
           GoRoute(
             path: 'budgets',

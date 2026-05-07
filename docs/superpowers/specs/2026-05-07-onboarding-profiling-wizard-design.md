@@ -240,7 +240,7 @@ Vertically-stacked selectable list items:
 | Over ₱100,000 | `very_high` | 2500 |
 | Prefer not to say | `prefer_not_to_say` | — |
 
-The Flutter UI formats bracket thresholds using the user's preferred currency via the existing `userPreferencesProvider` + `NumberFormat.currency`. The USD thresholds in the table are what the backend uses to compute budget amounts; the Flutter app sends the bracket key, not an amount.
+The Flutter UI formats bracket thresholds using the user's preferred currency via `NumberFormat.currency`. Immediately after Setup, this screen should prefer the currency/locale passed forward from the setup route so the labels reflect the user's just-selected choice even before the profile refetch finishes. The USD thresholds in the table are what the backend uses to compute budget amounts; the Flutter app sends the bracket key, not an amount.
 
 **Next →** button advances to `/onboarding/budgets`.  
 If personality is selected but income is not, treat income as `prefer_not_to_say`.  

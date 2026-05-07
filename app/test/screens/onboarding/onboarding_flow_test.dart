@@ -166,6 +166,62 @@ void main() {
     },
   );
 
+  testWidgets(
+    'spending profile income labels prefer setup currency from route extras',
+    (tester) async {
+      final userService = _RecordingUserService();
+      final router = GoRouter(
+        initialLocation: '/onboarding/profile',
+        routes: [
+          GoRoute(
+            path: '/onboarding/profile',
+            builder: (_, state) {
+              final extra = state.extra as Map<String, String?>?;
+              return SpendingProfileScreen(
+                initialCurrencyCode: extra?['currencyCode'],
+                initialLocale: extra?['locale'],
+              );
+            },
+          ),
+        ],
+      );
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            userServiceProvider.overrideWithValue(userService),
+            currentUserProvider.overrideWith(
+              (ref) async => UserProfile(
+                id: 'user-1',
+                email: 'user@example.com',
+                currencyCode: 'USD',
+                locale: 'en_US',
+                createdAt: DateTime(2026),
+                hasCompletedOnboarding: false,
+              ),
+            ),
+          ],
+          child: MaterialApp.router(
+            routerConfig: router,
+          ),
+        ),
+      );
+
+      router.go(
+        '/onboarding/profile',
+        extra: {
+          'currencyCode': 'EUR',
+          'locale': 'en_IE',
+        },
+      );
+
+      await tester.pumpAndSettle();
+
+      expect(find.text('Under EUR 20,000'), findsOneWidget);
+      expect(find.text('Under USD 20,000'), findsNothing);
+    },
+  );
+
   testWidgets('about you skip marks onboarding complete and returns home', (
     tester,
   ) async {

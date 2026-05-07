@@ -194,11 +194,18 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
                         preferredCurrency: _currencyCode,
                         locale: _locale,
                       );
+                      ref.invalidate(currentUserProvider);
                     } catch (_) {
                       // Best-effort save; user can update later in Settings
                     }
                     if (!mounted) return;
-                    GoRouter.of(this.context).go('/onboarding/profile');
+                    GoRouter.of(this.context).go(
+                      '/onboarding/profile',
+                      extra: {
+                        'currencyCode': _currencyCode,
+                        'locale': _locale,
+                      },
+                    );
                   },
                   child: const Text("Let's Go!"),
                 ),
