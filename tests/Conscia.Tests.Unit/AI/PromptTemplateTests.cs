@@ -85,14 +85,28 @@ public class PromptTemplateTests
     [Fact]
     public void ImpulseSystemPrompt_ContainsExpectedCharacteristics()
     {
-        Assert.Contains("Impulse", PromptTemplates.ImpulseSystemPrompt);
-        Assert.Contains("devil's advocate", PromptTemplates.ImpulseSystemPrompt);
+        var prompt = PromptTemplates.BuildImpulseSystemPrompt("balanced", false);
+
+        Assert.Contains("Impulse", prompt);
+        Assert.Contains("devil-on-the-left-shoulder", prompt);
     }
 
     [Fact]
     public void ReasonSystemPrompt_ContainsExpectedCharacteristics()
     {
-        Assert.Contains("Reason", PromptTemplates.ReasonSystemPrompt);
-        Assert.Contains("reflect", PromptTemplates.ReasonSystemPrompt);
+        var prompt = PromptTemplates.BuildReasonSystemPrompt("balanced", false);
+
+        Assert.Contains("Reason", prompt);
+        Assert.Contains("angel-on-the-right-shoulder", prompt);
+    }
+
+    [Fact]
+    public void ReflectionSystemPrompt_IntenseReflection_IsMoreCandid()
+    {
+        var prompt = PromptTemplates.BuildReflectionSystemPrompt("intense", true);
+
+        Assert.Contains("Reflection", prompt);
+        Assert.Contains("clear-eyed", prompt);
+        Assert.Contains("bigger picture", prompt);
     }
 }

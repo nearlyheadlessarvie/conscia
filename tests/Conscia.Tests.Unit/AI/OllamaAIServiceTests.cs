@@ -96,7 +96,35 @@ public class OllamaAIServiceTests
         var service = CreateService(httpClient);
         await service.GeneratePrePurchaseResponseAsync(CreateTestContext());
 
-        Assert.Equal(2, callCount);
+        Assert.Equal(3, callCount);
+    }
+
+    [Fact]
+    public async Task GeneratePrePurchaseResponseAsync_IntenseProfile_UsesHigherImpulseTemperature()
+    {
+        var temperatures = new List<float>();
+        var httpClient = CreateMockHttpClient(async request =>
+        {
+            var payloadJson = await request.Content!.ReadAsStringAsync();
+            var payload = JsonSerializer.Deserialize<JsonElement>(payloadJson);
+            temperatures.Add(payload.GetProperty("options").GetProperty("temperature").GetSingle());
+
+            var json = JsonSerializer.Serialize(new { message = new { role = "assistant", content = "ok" } });
+            return new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(json, System.Text.Encoding.UTF8, "application/json")
+            };
+        });
+
+        var service = CreateService(httpClient);
+        var context = CreateTestContext();
+        context.AiPersonalityIntensity = "intense";
+
+        await service.GeneratePrePurchaseResponseAsync(context);
+
+        Assert.Contains(1.0f, temperatures);
+        Assert.Contains(0.42f, temperatures);
+        Assert.Contains(0.5f, temperatures);
     }
 
     [Fact]
