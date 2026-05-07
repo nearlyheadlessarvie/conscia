@@ -25,6 +25,16 @@ public class UserProfileUpdateValidator : AbstractValidator<UserProfileUpdateDto
 
     public UserProfileUpdateValidator()
     {
+        RuleFor(x => x)
+            .Must(dto =>
+                dto.PreferredCurrency is not null ||
+                dto.Locale is not null ||
+                dto.SpendingPersonality is not null ||
+                dto.IncomeRange is not null ||
+                dto.OccupationType is not null ||
+                dto.HouseholdSize is not null)
+            .WithMessage("At least one field must be provided");
+
         RuleFor(x => x.PreferredCurrency)
             .Length(3)
             .When(x => x.PreferredCurrency is not null)
