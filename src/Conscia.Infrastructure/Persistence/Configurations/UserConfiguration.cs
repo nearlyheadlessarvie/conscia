@@ -30,6 +30,12 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
         builder.Property(u => u.HouseholdSize).HasMaxLength(50);
         builder.Property(u => u.HasCompletedOnboarding)
             .HasDefaultValue(false);
+        builder.Property(u => u.LocationSuggestionsEnabled)
+            .HasDefaultValue(false);
+        builder.Property(u => u.AiPersonalityIntensity)
+            .IsRequired()
+            .HasMaxLength(20)
+            .HasDefaultValue("balanced");
 
         builder.HasIndex(u => u.Email).IsUnique();
     }

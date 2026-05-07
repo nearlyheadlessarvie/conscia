@@ -235,6 +235,29 @@ public class ValidatorTests
         Assert.True(result.IsValid);
     }
 
+    [Fact]
+    public async Task UserProfileUpdate_AiPersonalityIntensityOnly_Passes()
+    {
+        var validator = new UserProfileUpdateValidator();
+        var dto = new UserProfileUpdateDto { AiPersonalityIntensity = "mild" };
+
+        var result = await validator.ValidateAsync(dto);
+
+        Assert.True(result.IsValid);
+    }
+
+    [Fact]
+    public async Task UserProfileUpdate_InvalidAiPersonalityIntensity_Fails()
+    {
+        var validator = new UserProfileUpdateValidator();
+        var dto = new UserProfileUpdateDto { AiPersonalityIntensity = "chaotic" };
+
+        var result = await validator.ValidateAsync(dto);
+
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, e => e.PropertyName == "AiPersonalityIntensity");
+    }
+
     // --- PrePurchaseRequestValidator ---
 
     [Fact]

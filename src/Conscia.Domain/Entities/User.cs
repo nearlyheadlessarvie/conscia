@@ -13,4 +13,5 @@ public class User
     public string? HouseholdSize { get; set; }          // "solo" | "couple" | "family" | "shared"
     public bool HasCompletedOnboarding { get; set; }
     public bool LocationSuggestionsEnabled { get; set; }
+    public string AiPersonalityIntensity { get; set; } = "balanced";
 }

@@ -14,6 +14,7 @@ class UserProfile {
   final String? householdSize;
   final bool hasCompletedOnboarding;
   final bool locationSuggestionsEnabled;
+  final String aiPersonalityIntensity;
 
   const UserProfile({
     required this.id,
@@ -23,6 +24,7 @@ class UserProfile {
     required this.createdAt,
     required this.hasCompletedOnboarding,
     this.locationSuggestionsEnabled = false,
+    this.aiPersonalityIntensity = 'balanced',
     this.spendingPersonality,
     this.incomeRange,
     this.occupationType,
@@ -44,6 +46,8 @@ class UserProfile {
           json['hasCompletedOnboarding'] as bool? ?? false,
       locationSuggestionsEnabled:
           json['locationSuggestionsEnabled'] as bool? ?? false,
+      aiPersonalityIntensity:
+          json['aiPersonalityIntensity'] as String? ?? 'balanced',
       spendingPersonality: json['spendingPersonality'] as String?,
       incomeRange: json['incomeRange'] as String?,
       occupationType: json['occupationType'] as String?,
@@ -75,6 +79,7 @@ class UserService {
     String? householdSize,
     bool? hasCompletedOnboarding,
     bool? locationSuggestionsEnabled,
+    String? aiPersonalityIntensity,
   }) async {
     try {
       final response = await _dio.put(
@@ -91,6 +96,8 @@ class UserService {
             'hasCompletedOnboarding': hasCompletedOnboarding,
           if (locationSuggestionsEnabled != null)
             'locationSuggestionsEnabled': locationSuggestionsEnabled,
+          if (aiPersonalityIntensity != null)
+            'aiPersonalityIntensity': aiPersonalityIntensity,
         },
       );
       return UserProfile.fromJson(response.data as Map<String, dynamic>);
