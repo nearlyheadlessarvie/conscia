@@ -5,6 +5,9 @@ import 'package:intl/intl.dart';
 import '../../core/constants/app_icons.dart';
 import '../../providers/user_provider.dart';
 import '../../services/user_service.dart';
+import '../../widgets/hero_screen_scaffold.dart';
+import '../../widgets/screen_section.dart';
+import '../../widgets/selection_chip_group.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
@@ -62,39 +65,51 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     final colors = Theme.of(context).colorScheme;
     final userAsync = ref.watch(currentUserProvider);
 
-    return Scaffold(
+    return HeroScreenScaffold(
       appBar: AppBar(title: const Text('My Profile')),
-      body: userAsync.when(
+      bottom: FilledButton(
+        onPressed: _saving ? null : _save,
+        child: _saving
+            ? const SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: Colors.white,
+                ),
+              )
+            : const Text('Save Changes'),
+      ),
+      child: userAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text('Error: $e')),
         data: (profile) {
           _loadFromProfile(profile);
-          return SingleChildScrollView(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: CircleAvatar(
-                    child: Text(
-                      profile.email.isNotEmpty
-                          ? profile.email[0].toUpperCase()
-                          : '?',
-                    ),
-                  ),
-                  title: Text(profile.email),
-                  subtitle: Text(
-                    'Member since ${DateFormat('MMM yyyy').format(profile.createdAt)}',
-                    style: textTheme.bodySmall?.copyWith(
-                      color: colors.onSurfaceVariant,
-                    ),
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: CircleAvatar(
+                  child: Text(
+                    profile.email.isNotEmpty
+                        ? profile.email[0].toUpperCase()
+                        : '?',
                   ),
                 ),
-                const Divider(height: 32),
-                _sectionHeader(textTheme, 'Spending Style'),
-                const SizedBox(height: 12),
-                Row(
+                title: Text(profile.email),
+                subtitle: Text(
+                  'Member since ${DateFormat('MMM yyyy').format(profile.createdAt)}',
+                  style: textTheme.bodySmall?.copyWith(
+                    color: colors.onSurfaceVariant,
+                  ),
+                ),
+              ),
+              const Divider(height: 32),
+              ScreenSection(
+                title: 'Spending Style',
+                subtitle: 'Keep this aligned with how you naturally make tradeoffs.',
+                child: Row(
                   children: [
                     _personalityCard(
                       colors,
@@ -118,60 +133,57 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 24),
-                _sectionHeader(textTheme, 'Monthly Income'),
-                const SizedBox(height: 12),
-                ..._incomeOptions.map(
-                  (option) =>
-                      _incomeRow(colors, textTheme, option.$1, option.$2),
+              ),
+              ScreenSection(
+                title: 'Monthly Income',
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: _incomeOptions
+                      .map(
+                        (option) =>
+                            _incomeRow(colors, textTheme, option.$1, option.$2),
+                      )
+                      .toList(),
                 ),
-                const SizedBox(height: 24),
-                _sectionHeader(textTheme, 'Occupation'),
-                const SizedBox(height: 12),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    _choiceChip('employed', 'Employed', true),
-                    _choiceChip(
-                      'self_employed',
-                      'Self-employed',
-                      true,
-                    ),
-                    _choiceChip('student', 'Student', true),
-                    _choiceChip('retired', 'Retired', true),
-                    _choiceChip('other', 'Other', true),
+              ),
+              ScreenSection(
+                title: 'Occupation',
+                child: SelectionChipGroup(
+                  options: const [
+                    'employed',
+                    'self_employed',
+                    'student',
+                    'retired',
+                    'other',
                   ],
+                  value: _occupation,
+                  labelBuilder: _labelForValue,
+                  avatarBuilder: (value, selected) =>
+                      AppIcons.profileBadge(value, selected: selected),
+                  onSelected: (value) {
+                    setState(() {
+                      _occupation = _occupation == value ? null : value;
+                    });
+                  },
                 ),
-                const SizedBox(height: 24),
-                _sectionHeader(textTheme, 'Household'),
-                const SizedBox(height: 12),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    _choiceChip('solo', 'Just me', false),
-                    _choiceChip('couple', 'Couple', false),
-                    _choiceChip('family', 'Family', false),
-                    _choiceChip('shared', 'Shared', false),
-                  ],
+              ),
+              ScreenSection(
+                title: 'Household',
+                compact: true,
+                child: SelectionChipGroup(
+                  options: const ['solo', 'couple', 'family', 'shared'],
+                  value: _household,
+                  labelBuilder: _labelForValue,
+                  avatarBuilder: (value, selected) =>
+                      AppIcons.profileBadge(value, selected: selected),
+                  onSelected: (value) {
+                    setState(() {
+                      _household = _household == value ? null : value;
+                    });
+                  },
                 ),
-                const SizedBox(height: 32),
-                FilledButton(
-                  onPressed: _saving ? null : _save,
-                  child: _saving
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
-                          ),
-                        )
-                      : const Text('Save Changes'),
-                ),
-              ],
-            ),
+              ),
+            ],
           );
         },
       ),
@@ -186,11 +198,18 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     ('prefer_not_to_say', 'Prefer not to say'),
   ];
 
-  Widget _sectionHeader(TextTheme textTheme, String title) {
-    return Text(
-      title,
-      style: textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
-    );
+  String _labelForValue(String value) {
+    return switch (value) {
+      'self_employed' => 'Self-employed',
+      'solo' => 'Just me',
+      'couple' => 'Couple',
+      'family' => 'Family',
+      'shared' => 'Shared',
+      'student' => 'Student',
+      'retired' => 'Retired',
+      'other' => 'Other',
+      _ => 'Employed',
+    };
   }
 
   Widget _personalityCard(
@@ -268,28 +287,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           ),
         ),
       ),
-    );
-  }
-
-  Widget _choiceChip(
-    String value,
-    String label,
-    bool isOccupation,
-  ) {
-    final selected = isOccupation ? _occupation == value : _household == value;
-    return ChoiceChip(
-      avatar: AppIcons.profileBadge(value, selected: selected),
-      label: Text(label),
-      selected: selected,
-      onSelected: (_) {
-        setState(() {
-          if (isOccupation) {
-            _occupation = selected ? null : value;
-          } else {
-            _household = selected ? null : value;
-          }
-        });
-      },
     );
   }
 }

@@ -47,4 +47,25 @@ void main() {
     expect(find.text('Hello feed'), findsOneWidget);
     expect(find.byType(FeedCard), findsOneWidget);
   });
+
+  testWidgets('selection chip group supports custom labels and avatars', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SelectionChipGroup(
+            options: const ['self_employed'],
+            value: 'self_employed',
+            labelBuilder: (option) => 'Self-employed',
+            avatarBuilder: (_, __) => const CircleAvatar(radius: 8),
+            onSelected: (_) {},
+          ),
+        ),
+      ),
+    );
+
+    expect(find.text('Self-employed'), findsOneWidget);
+    expect(find.byType(CircleAvatar), findsOneWidget);
+  });
 }

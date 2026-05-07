@@ -6,6 +6,8 @@ import 'package:intl/intl.dart';
 import '../../core/constants/app_icons.dart';
 import '../../core/routing/app_router.dart';
 import '../../providers/user_provider.dart';
+import '../../widgets/hero_screen_scaffold.dart';
+import '../../widgets/screen_section.dart';
 
 class SpendingProfileScreen extends ConsumerStatefulWidget {
   final String? initialCurrencyCode;
@@ -81,7 +83,7 @@ class _SpendingProfileScreenState extends ConsumerState<SpendingProfileScreen> {
       decimalDigits: 0,
     );
 
-    return Scaffold(
+    return HeroScreenScaffold(
       appBar: AppBar(
         automaticallyImplyLeading: false,
         title: const Text('Spending Profile'),
@@ -92,58 +94,69 @@ class _SpendingProfileScreenState extends ConsumerState<SpendingProfileScreen> {
           ),
         ],
       ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(
-                'Step 1 of 3',
-                style: textTheme.labelSmall?.copyWith(
-                  color: colors.onSurfaceVariant,
+      bottom: FilledButton(
+        onPressed: _saving ? null : _next,
+        child: _saving
+            ? const SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: Colors.white,
                 ),
-              ),
-              const SizedBox(height: 16),
-              Text('How do you spend?', style: textTheme.headlineSmall),
-              const SizedBox(height: 4),
-              Text(
-                'Helps us suggest realistic budgets.',
-                style: textTheme.bodyMedium?.copyWith(
-                  color: colors.onSurfaceVariant,
+              )
+            : const Text('Next'),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            'Step 1 of 3',
+            style: textTheme.labelSmall?.copyWith(
+              color: colors.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Text('How do you spend?', style: textTheme.headlineSmall),
+          const SizedBox(height: 4),
+          Text(
+            'Helps us suggest realistic budgets.',
+            style: textTheme.bodyMedium?.copyWith(
+              color: colors.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: 28),
+          ScreenSection(
+            title: 'Spending style',
+            subtitle:
+                'Choose the one that feels closest to your default spending instinct.',
+            child: Row(
+              children: [
+                _personalityCard(
+                  context,
+                  value: 'saver',
+                  label: 'Saver',
                 ),
-              ),
-              const SizedBox(height: 28),
-              Row(
-                children: [
-                  _personalityCard(
-                    context,
-                    value: 'saver',
-                    label: 'Saver',
-                  ),
-                  const SizedBox(width: 8),
-                  _personalityCard(
-                    context,
-                    value: 'balanced',
-                    label: 'Balanced',
-                  ),
-                  const SizedBox(width: 8),
-                  _personalityCard(
-                    context,
-                    value: 'free_spender',
-                    label: 'Free spender',
-                  ),
-                ],
-              ),
-              const SizedBox(height: 28),
-              Text(
-                'Monthly income',
-                style: textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.w600,
+                const SizedBox(width: 8),
+                _personalityCard(
+                  context,
+                  value: 'balanced',
+                  label: 'Balanced',
                 ),
-              ),
-              const SizedBox(height: 12),
-              ..._incomeOptions.map((option) {
+                const SizedBox(width: 8),
+                _personalityCard(
+                  context,
+                  value: 'free_spender',
+                  label: 'Free spender',
+                ),
+              ],
+            ),
+          ),
+          ScreenSection(
+            title: 'Monthly income',
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: _incomeOptions.map((option) {
                 final selected = _incomeRange == option.$1;
                 final label = switch (option.$1) {
                   'low' => '${option.$3} ${formatter.format(option.$2)}',
@@ -182,24 +195,10 @@ class _SpendingProfileScreenState extends ConsumerState<SpendingProfileScreen> {
                     ),
                   ),
                 );
-              }),
-              const SizedBox(height: 28),
-              FilledButton(
-                onPressed: _saving ? null : _next,
-                child: _saving
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white,
-                        ),
-                      )
-                    : const Text('Next'),
-              ),
-            ],
+              }).toList(),
+            ),
           ),
-        ),
+        ],
       ),
     );
   }

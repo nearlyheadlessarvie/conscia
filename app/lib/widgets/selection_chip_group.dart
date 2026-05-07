@@ -8,11 +8,15 @@ class SelectionChipGroup extends StatelessWidget {
     required this.options,
     required this.value,
     required this.onSelected,
+    this.labelBuilder,
+    this.avatarBuilder,
   });
 
   final List<String> options;
   final String? value;
   final ValueChanged<String> onSelected;
+  final String Function(String option)? labelBuilder;
+  final Widget Function(String option, bool selected)? avatarBuilder;
 
   @override
   Widget build(BuildContext context) {
@@ -23,13 +27,15 @@ class SelectionChipGroup extends StatelessWidget {
       runSpacing: 10,
       children: options.map((option) {
         final selected = option == value;
+        final label = labelBuilder?.call(option) ?? option;
         return AnimatedContainer(
           key: ValueKey(
             'selection-chip-$option-${selected ? 'selected' : 'idle'}',
           ),
           duration: const Duration(milliseconds: 160),
           child: ChoiceChip(
-            label: Text(option),
+            avatar: avatarBuilder?.call(option, selected),
+            label: Text(label),
             selected: selected,
             onSelected: (_) => onSelected(option),
             backgroundColor: colors.surfaceMuted,
