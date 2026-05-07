@@ -59,9 +59,9 @@ public class TransactionRepository : DynamoRepository, ITransactionRepository
         }, ct);
     }
 
-    public async Task DeleteWithOutboxAsync(Guid id, OutboxEvent outboxEvent, CancellationToken ct = default)
+    public async Task DeleteWithOutboxAsync(Guid userId, Guid id, OutboxEvent outboxEvent, CancellationToken ct = default)
     {
-        var existing = await GetByIdAsync(id, ct)
+        var existing = await GetByIdAsync(userId, id, ct)
             ?? throw new InvalidOperationException($"Transaction {id} not found");
 
         var transactItems = new List<TransactWriteItem>
@@ -91,7 +91,7 @@ public class TransactionRepository : DynamoRepository, ITransactionRepository
     }
 
     // ---------------- READ ----------------
-    public async Task<Transaction?> GetByIdAsync(Guid id, CancellationToken ct = default)
+    public async Task<Transaction?> GetByIdAsync(Guid userId, Guid id, CancellationToken ct = default)
     {
         var response = await Dynamo.QueryAsync(new QueryRequest
         {
@@ -105,9 +105,11 @@ public class TransactionRepository : DynamoRepository, ITransactionRepository
             Limit = 1
         }, ct);
 
-        return response.Items.Count > 0
-            ? FromItem(response.Items[0])
-            : null;
+        if (response.Items.Count == 0)
+            return null;
+
+        var transaction = FromItem(response.Items[0]);
+        return transaction.UserId == userId ? transaction : null;
     }
 
     // Primary timeline query (FAST)
@@ -216,9 +218,9 @@ public class TransactionRepository : DynamoRepository, ITransactionRepository
         return response.Items.Select(FromItem).ToList();
     }
 
-    public async Task UpdateRegretLevelAsync(Guid id, RegretLevel level, CancellationToken ct = default)
+    public async Task UpdateRegretLevelAsync(Guid userId, Guid id, RegretLevel level, CancellationToken ct = default)
     {
-        var existing = await GetByIdAsync(id, ct)
+        var existing = await GetByIdAsync(userId, id, ct)
             ?? throw new InvalidOperationException($"Transaction {id} not found");
 
         existing.RegretLevel = level;

@@ -31,7 +31,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             center: Alignment.topRight,
             radius: 1.5,
             colors: [
-              colors.primaryContainer.withOpacity(0.3),
+              colors.primaryContainer.withValues(alpha: 0.3),
               colors.surface,
             ],
           ),
@@ -216,4 +216,3 @@ class _PageIndicators extends StatelessWidget {
     );
   }
 }
-

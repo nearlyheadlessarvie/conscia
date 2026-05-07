@@ -45,7 +45,7 @@ class BudgetCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         side: budget.isOverBudget
             ? BorderSide(
-                color: theme.appColors.budgetDanger.withOpacity(0.5),
+                color: theme.appColors.budgetDanger.withValues(alpha: 0.5),
                 width: 1,
               )
             : BorderSide.none,
@@ -59,8 +59,7 @@ class BudgetCard extends StatelessWidget {
               children: [
                 CircleAvatar(
                   radius: 16,
-                  backgroundColor:
-                      theme.colorScheme.primaryContainer,
+                  backgroundColor: theme.colorScheme.primaryContainer,
                   child: Icon(
                     CategoryIcons.forCategory(budget.category),
                     size: 16,

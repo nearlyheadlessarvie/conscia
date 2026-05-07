@@ -136,6 +136,7 @@ builder.Services.AddScoped<ITransactionRepository, TransactionRepository>();
 builder.Services.AddScoped<IOutboxEventRepository, OutboxEventRepository>();
 builder.Services.AddScoped<IAIInteractionRepository, AIInteractionRepository>();
 builder.Services.AddScoped<IWeeklyInsightsRepository, WeeklyInsightsRepository>();
+builder.Services.AddScoped<IPurchasePatternRepository, PurchasePatternRepository>();
 builder.Services.AddScoped<IInAppAlertRepository, InAppAlertRepository>();
 
 // --- Store Validation ---
@@ -153,6 +154,8 @@ builder.Services.AddScoped<ITransactionService, TransactionService>();
 builder.Services.AddScoped<ISubscriptionService, SubscriptionService>();
 builder.Services.AddScoped<IReceiptService, ReceiptService>();
 builder.Services.AddScoped<IBehavioralInsightsService, BehavioralInsightsService>();
+builder.Services.AddScoped<IPurchaseSuggestionService, PurchaseSuggestionService>();
+builder.Services.AddScoped<IPurchasePatternService, PurchasePatternService>();
 
 // --- Exchange Rates ---
 builder.Services.AddMemoryCache();
@@ -357,7 +360,9 @@ app.MapAlertEndpoints().RequireRateLimiting("standard");
 app.MapReceiptEndpoints().RequireRateLimiting("standard");
 app.MapAIEndpoints().RequireRateLimiting("ai");
 app.MapInsightsEndpoints().RequireRateLimiting("standard");
+app.MapSuggestionEndpoints().RequireRateLimiting("standard");
 app.MapExchangeRateEndpoints().RequireRateLimiting("standard");
+app.MapUtteranceEndpoints().RequireRateLimiting("ai");
 
 app.Run();
 

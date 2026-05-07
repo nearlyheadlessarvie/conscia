@@ -97,7 +97,7 @@ public class TransactionEndpointTests : IClassFixture<TestWebAppFactory>
     public async Task GetTransaction_NotFound_Returns404()
     {
         _factory.TransactionServiceMock
-            .Setup(s => s.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .Setup(s => s.GetByIdAsync(UserId, It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((Transaction?)null);
 
         var response = await _client.GetAsync($"/api/v1/transactions/{Guid.NewGuid()}");
@@ -110,7 +110,7 @@ public class TransactionEndpointTests : IClassFixture<TestWebAppFactory>
     {
         var transactionId = Guid.NewGuid();
         _factory.TransactionServiceMock
-            .Setup(s => s.GetByIdAsync(transactionId, It.IsAny<CancellationToken>()))
+            .Setup(s => s.GetByIdAsync(UserId, transactionId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new Transaction
             {
                 Id = transactionId,
@@ -145,8 +145,8 @@ public class TransactionEndpointTests : IClassFixture<TestWebAppFactory>
         var transactionId = Guid.NewGuid();
         UpdateTransactionDto? capturedDto = null;
         _factory.TransactionServiceMock
-            .Setup(s => s.UpdateAsync(transactionId, It.IsAny<UpdateTransactionDto>(), It.IsAny<CancellationToken>()))
-            .Callback<Guid, UpdateTransactionDto, CancellationToken>((_, dto, _) => capturedDto = dto)
+            .Setup(s => s.UpdateAsync(UserId, transactionId, It.IsAny<UpdateTransactionDto>(), It.IsAny<CancellationToken>()))
+            .Callback<Guid, Guid, UpdateTransactionDto, CancellationToken>((_, _, dto, _) => capturedDto = dto)
             .ReturnsAsync(new Transaction
             {
                 Id = transactionId,
@@ -176,7 +176,7 @@ public class TransactionEndpointTests : IClassFixture<TestWebAppFactory>
     public async Task DeleteTransaction_Success_Returns204()
     {
         _factory.TransactionServiceMock
-            .Setup(s => s.DeleteAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .Setup(s => s.DeleteAsync(UserId, It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 
         var response = await _client.DeleteAsync($"/api/v1/transactions/{Guid.NewGuid()}");

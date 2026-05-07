@@ -216,9 +216,9 @@ class _OverallStatusBanner extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: statusColor.withOpacity(0.10),
+        color: statusColor.withValues(alpha: 0.10),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: statusColor.withOpacity(0.25)),
+        border: Border.all(color: statusColor.withValues(alpha: 0.25)),
       ),
       child: Row(
         children: [
@@ -304,7 +304,7 @@ class _ServiceCard extends StatelessWidget {
       child: Row(
         children: [
           CircleAvatar(
-            backgroundColor: statusColor.withOpacity(0.15),
+            backgroundColor: statusColor.withValues(alpha: 0.15),
             foregroundColor: statusColor,
             child: Icon(meta.icon, size: 20),
           ),

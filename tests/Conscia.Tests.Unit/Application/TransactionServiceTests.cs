@@ -75,9 +75,9 @@ public class TransactionServiceTests
         var txnId = Guid.NewGuid();
         var txn = new Transaction { Id = txnId, UserId = userId, Amount = new Money(10, "USD"), Category = "Food" };
 
-        _repoMock.Setup(r => r.GetByIdAsync(txnId, It.IsAny<CancellationToken>())).ReturnsAsync(txn);
+        _repoMock.Setup(r => r.GetByIdAsync(userId, txnId, It.IsAny<CancellationToken>())).ReturnsAsync(txn);
 
-        var result = await _svc.GetByIdAsync(txnId);
+        var result = await _svc.GetByIdAsync(userId, txnId);
 
         Assert.NotNull(result);
         Assert.Equal(txnId, result!.Id);
@@ -98,11 +98,11 @@ public class TransactionServiceTests
             Date = DateTime.UtcNow
         };
 
-        _repoMock.Setup(r => r.GetByIdAsync(txnId, It.IsAny<CancellationToken>())).ReturnsAsync(existing);
+        _repoMock.Setup(r => r.GetByIdAsync(userId, txnId, It.IsAny<CancellationToken>())).ReturnsAsync(existing);
         _repoMock.Setup(r => r.UpdateAsync(It.IsAny<Transaction>(), It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
 
         var dto = new UpdateTransactionDto { Amount = 75m, Category = "Dining", Counterparty = "New Cafe" };
-        var result = await _svc.UpdateAsync(txnId, dto);
+        var result = await _svc.UpdateAsync(userId, txnId, dto);
 
         Assert.Equal(75m, result.Amount.Amount);
         Assert.Equal("USD", result.Amount.CurrencyCode);
@@ -113,11 +113,11 @@ public class TransactionServiceTests
     [Fact]
     public async Task UpdateAsync_ThrowsKeyNotFound_WhenMissing()
     {
-        _repoMock.Setup(r => r.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+        _repoMock.Setup(r => r.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((Transaction?)null);
 
         await Assert.ThrowsAsync<KeyNotFoundException>(
-            () => _svc.UpdateAsync(Guid.NewGuid(), new UpdateTransactionDto()));
+            () => _svc.UpdateAsync(Guid.NewGuid(), Guid.NewGuid(), new UpdateTransactionDto()));
     }
 
     [Fact]
@@ -131,14 +131,15 @@ public class TransactionServiceTests
             Amount = new Money(50, "USD"), Category = "Food", Date = DateTime.UtcNow
         };
 
-        _repoMock.Setup(r => r.GetByIdAsync(txnId, It.IsAny<CancellationToken>()))
+        _repoMock.Setup(r => r.GetByIdAsync(userId, txnId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(existing);
-        _repoMock.Setup(r => r.DeleteWithOutboxAsync(txnId, It.IsAny<OutboxEvent>(), It.IsAny<CancellationToken>()))
+        _repoMock.Setup(r => r.DeleteWithOutboxAsync(userId, txnId, It.IsAny<OutboxEvent>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 
-        await _svc.DeleteAsync(txnId);
+        await _svc.DeleteAsync(userId, txnId);
 
         _repoMock.Verify(r => r.DeleteWithOutboxAsync(
+            userId,
             txnId,
             It.Is<OutboxEvent>(e => e.EventType == OutboxEventType.TransactionDeleted
                 && e.Payload.Contains("Food") && e.Payload.Contains("50")),
@@ -150,12 +151,13 @@ public class TransactionServiceTests
     {
         var txnId = Guid.NewGuid();
 
-        _repoMock.Setup(r => r.UpdateRegretLevelAsync(txnId, RegretLevel.Regret, It.IsAny<CancellationToken>()))
+        var userId = Guid.NewGuid();
+        _repoMock.Setup(r => r.UpdateRegretLevelAsync(userId, txnId, RegretLevel.Regret, It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 
-        await _svc.UpdateRegretLevelAsync(txnId, RegretLevel.Regret);
+        await _svc.UpdateRegretLevelAsync(userId, txnId, RegretLevel.Regret);
 
-        _repoMock.Verify(r => r.UpdateRegretLevelAsync(txnId, RegretLevel.Regret, It.IsAny<CancellationToken>()), Times.Once);
+        _repoMock.Verify(r => r.UpdateRegretLevelAsync(userId, txnId, RegretLevel.Regret, It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]

@@ -46,7 +46,15 @@ public static class DynamoKeys
         => $"EVENT#{date:O}";
 
     /// <summary>
-    /// <c>DATE#{date:O}#TX#{id}</c> - Sort key for transaction-centric data
+    /// <c>TX#{id}</c> - Sort key for transaction-centric data (immutable)
+    /// </summary>
+    /// <param name="id"></param>
+    /// <returns></returns>
+    public static string Transaction(Guid id)
+        => $"TX#{id}";
+
+    /// <summary>
+    /// <c>DATE#{date:O}#TX#{id}</c> - Sort key for transaction timeline ordering with stable identity
     /// </summary>
     /// <param name="date"></param>
     /// <param name="id"></param>
@@ -106,4 +114,27 @@ public static class DynamoKeys
     /// <returns></returns>
     public static string Alert(DateTime date)
         => $"ALERT#{date:O}";
+
+    /// <summary>
+    /// <c>SUMMARY</c> - Sort key for purchase pattern summary data
+    /// </summary>
+    /// <returns></returns>
+    public static string PurchasePatternSummary()
+        => "SUMMARY";
+
+    /// <summary>
+    /// <c>CAT#{category}</c> - Sort key for purchase pattern category-centric data
+    /// </summary>
+    /// <param name="category"></param>
+    /// <returns></returns>
+    public static string PurchasePatternCategory(string category)
+        => $"CAT#{category.Trim().ToLowerInvariant()}";
+
+    /// <summary>
+    /// <c>MER#{merchant}</c> - Sort key for purchase pattern merchant-centric data
+    /// </summary>
+    /// <param name="merchant"></param>
+    /// <returns></returns>
+    public static string PurchasePatternMerchant(string merchant)
+        => $"MER#{merchant.Trim().ToLowerInvariant()}";
 }

@@ -26,8 +26,10 @@ class BudgetProgressBar extends StatelessWidget {
           child: LinearProgressIndicator(
             value: value,
             minHeight: 8,
-            backgroundColor:
-                Theme.of(context).colorScheme.outlineVariant.withOpacity(0.3),
+            backgroundColor: Theme.of(context)
+                .colorScheme
+                .outlineVariant
+                .withValues(alpha: 0.3),
             valueColor: AlwaysStoppedAnimation(color),
           ),
         );

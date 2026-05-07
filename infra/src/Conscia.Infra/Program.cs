@@ -48,6 +48,7 @@ sealed class Program
             OutboxEventsTable = database.OutboxEventsTable,
             InAppAlertsTable = database.InAppAlertsTable,
             WeeklyInsightsTable = database.WeeklyInsightsTable,
+            PurchasePatternsTable = database.PurchasePatternsTable,
             AiQueue = ai.AiQueue,
             DbAccessLambda = dbAccess.DbAccessLambda
         });
@@ -69,6 +70,14 @@ sealed class Program
             ApiLambda = compute.ApiLambda,
             DbAccessLambda = dbAccess.DbAccessLambda,
             OutboxLambda = outbox.OutboxLambda
+        });
+
+        _ = new PatternAggregatorStack(app, "Conscia-PatternAggregator", new PatternAggregatorStackProps
+        {
+            Env = env,
+            TransactionsTable = database.TransactionsTable,
+            WeeklyInsightsTable = database.WeeklyInsightsTable,
+            PurchasePatternsTable = database.PurchasePatternsTable
         });
 
         var web = new WebStack(app, "Conscia-Web", new StackProps { Env = env });
