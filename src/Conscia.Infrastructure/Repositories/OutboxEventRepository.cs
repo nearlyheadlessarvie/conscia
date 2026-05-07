@@ -45,17 +45,69 @@ public class OutboxEventRepository : DynamoRepository, IOutboxEventRepository
     public Task MarkProcessedAsync(OutboxEvent outboxEvent, CancellationToken ct = default) =>
         MarkProcessedInternalAsync(outboxEvent.AggregateId, outboxEvent.CreatedAt, ct);
 
+    public Task<bool> TryStartProcessingAsync(OutboxEvent outboxEvent, CancellationToken ct = default) =>
+        TryStartProcessingInternalAsync(outboxEvent.AggregateId, outboxEvent.CreatedAt, ct);
+
+    public Task MarkPendingAsync(OutboxEvent outboxEvent, CancellationToken ct = default) =>
+        MarkPendingInternalAsync(outboxEvent.AggregateId, outboxEvent.CreatedAt, ct);
+
+    internal async Task<bool> TryStartProcessingInternalAsync(Guid id, DateTime createdAt, CancellationToken ct = default)
+    {
+        try
+        {
+            await Dynamo.UpdateItemAsync(new UpdateItemRequest
+            {
+                TableName = TableName,
+                Key = Key(DynamoKeys.Outbox(id), DynamoKeys.EventCreatedAt(createdAt)),
+                ConditionExpression = "attribute_exists(#s) AND #s = :pending",
+                UpdateExpression = "SET #s = :processing, ProcessingStartedAt = :now",
+                ExpressionAttributeNames = new() { ["#s"] = "Status" },
+                ExpressionAttributeValues = new()
+                {
+                    [":pending"] = new("PENDING"),
+                    [":processing"] = new("PROCESSING"),
+                    [":now"] = new(DateTime.UtcNow.ToString("O"))
+                }
+            }, ct);
+
+            return true;
+        }
+        catch (ConditionalCheckFailedException)
+        {
+            return false;
+        }
+    }
+
     internal async Task MarkProcessedInternalAsync(Guid id, DateTime createdAt, CancellationToken ct = default)
     {
         await Dynamo.UpdateItemAsync(new UpdateItemRequest
         {
             TableName = TableName,
             Key = Key(DynamoKeys.Outbox(id), DynamoKeys.EventCreatedAt(createdAt)),
-            UpdateExpression = "SET ProcessedAt = :now REMOVE #s",
+            ConditionExpression = "#s = :processing",
+            UpdateExpression = "SET ProcessedAt = :now REMOVE #s, ProcessingStartedAt",
             ExpressionAttributeNames = new() { ["#s"] = "Status" },
             ExpressionAttributeValues = new()
             {
+                [":processing"] = new("PROCESSING"),
                 [":now"] = new(DateTime.UtcNow.ToString("O"))
+            }
+        }, ct);
+    }
+
+    internal async Task MarkPendingInternalAsync(Guid id, DateTime createdAt, CancellationToken ct = default)
+    {
+        await Dynamo.UpdateItemAsync(new UpdateItemRequest
+        {
+            TableName = TableName,
+            Key = Key(DynamoKeys.Outbox(id), DynamoKeys.EventCreatedAt(createdAt)),
+            ConditionExpression = "#s = :processing",
+            UpdateExpression = "SET #s = :pending REMOVE ProcessingStartedAt",
+            ExpressionAttributeNames = new() { ["#s"] = "Status" },
+            ExpressionAttributeValues = new()
+            {
+                [":processing"] = new("PROCESSING"),
+                [":pending"] = new("PENDING")
             }
         }, ct);
     }

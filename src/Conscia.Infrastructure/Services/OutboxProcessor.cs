@@ -59,14 +59,34 @@ public class OutboxProcessor : BackgroundService
 
         foreach (var evt in pending)
         {
+            var claimed = false;
             try
             {
+                claimed = await outboxRepo.TryStartProcessingAsync(evt, ct);
+                if (!claimed)
+                {
+                    _logger.LogDebug("Skipping outbox event {EventId}; it was already claimed", evt.Id);
+                    continue;
+                }
+
                 _logger.LogInformation("Processing outbox event {EventId}: {EventType}", evt.Id, evt.EventType);
                 await DispatchEventAsync(evt.EventType, evt.Payload, budgetRepo, ct);
                 await outboxRepo.MarkProcessedAsync(evt, ct);
             }
             catch (Exception ex)
             {
+                if (claimed)
+                {
+                    try
+                    {
+                        await outboxRepo.MarkPendingAsync(evt, ct);
+                    }
+                    catch (Exception revertEx)
+                    {
+                        _logger.LogError(revertEx, "Failed to return outbox event {EventId} to pending", evt.Id);
+                    }
+                }
+
                 _logger.LogError(ex, "Failed to process outbox event {EventId}: {Error}",
                     evt.Id, ex.Message);
             }

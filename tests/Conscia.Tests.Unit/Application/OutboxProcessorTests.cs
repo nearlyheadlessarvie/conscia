@@ -62,6 +62,8 @@ public class OutboxProcessorTests
         _budgetRepoMock.Setup(r => r.IncrementCurrentSpendAsync(budgetId, 42.50m, It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 
+        _outboxRepoMock.Setup(r => r.TryStartProcessingAsync(It.IsAny<OutboxEvent>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
         _outboxRepoMock.Setup(r => r.MarkProcessedAsync(It.IsAny<OutboxEvent>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 
@@ -117,6 +119,8 @@ public class OutboxProcessorTests
                 new() { Id = Guid.NewGuid(), UserId = userId, Category = "Food", MonthlyLimit = 500 }
             });
 
+        _outboxRepoMock.Setup(r => r.TryStartProcessingAsync(It.IsAny<OutboxEvent>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
         _outboxRepoMock.Setup(r => r.MarkProcessedAsync(It.IsAny<OutboxEvent>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 
@@ -158,6 +162,52 @@ public class OutboxProcessorTests
             await processor.StopAsync(CancellationToken.None);
         }
 
+        _outboxRepoMock.Verify(r => r.MarkProcessedAsync(It.IsAny<OutboxEvent>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task SkipsDispatch_WhenPendingEventWasAlreadyClaimed()
+    {
+        var userId = Guid.NewGuid();
+
+        _outboxRepoMock.Setup(r => r.GetPendingAsync(50, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<OutboxEvent>
+            {
+                new()
+                {
+                    Id = Guid.NewGuid(),
+                    AggregateId = Guid.NewGuid(),
+                    EventType = OutboxEventType.TransactionCreated,
+                    Payload = System.Text.Json.JsonSerializer.Serialize(new
+                    {
+                        TransactionId = Guid.NewGuid(),
+                        UserId = userId,
+                        Amount = 15m,
+                        CurrencyCode = "USD",
+                        Category = "Food"
+                    }),
+                    CreatedAt = DateTime.UtcNow
+                }
+            }.AsReadOnly());
+
+        _outboxRepoMock.Setup(r => r.TryStartProcessingAsync(It.IsAny<OutboxEvent>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
+
+        var processor = CreateProcessor();
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
+
+        try
+        {
+            await processor.StartAsync(cts.Token);
+            await Task.Delay(1000, cts.Token);
+        }
+        catch (OperationCanceledException) { }
+        finally
+        {
+            await processor.StopAsync(CancellationToken.None);
+        }
+
+        _budgetRepoMock.Verify(r => r.IncrementCurrentSpendAsync(It.IsAny<Guid>(), It.IsAny<decimal>(), It.IsAny<CancellationToken>()), Times.Never);
         _outboxRepoMock.Verify(r => r.MarkProcessedAsync(It.IsAny<OutboxEvent>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 }
