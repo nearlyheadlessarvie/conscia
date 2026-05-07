@@ -1,3 +1,4 @@
+using Conscia.Application.DTOs;
 using Conscia.Application.Interfaces;
 using Conscia.Application.Services;
 using Conscia.Domain.Entities;
@@ -59,7 +60,7 @@ public class UserServiceTests
         _repoMock.Setup(r => r.UpdateAsync(It.IsAny<User>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((User u, CancellationToken _) => u);
 
-        var result = await _svc.UpdateProfileAsync(id, "EUR", null);
+        var result = await _svc.UpdateProfileAsync(id, new UserProfileUpdateDto { PreferredCurrency = "EUR" });
 
         Assert.Equal("EUR", result.PreferredCurrency);
         Assert.Equal("en-US", result.Locale);
@@ -74,7 +75,7 @@ public class UserServiceTests
         _repoMock.Setup(r => r.UpdateAsync(It.IsAny<User>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((User u, CancellationToken _) => u);
 
-        var result = await _svc.UpdateProfileAsync(id, null, "es-MX");
+        var result = await _svc.UpdateProfileAsync(id, new UserProfileUpdateDto { Locale = "es-MX" });
 
         Assert.Equal("USD", result.PreferredCurrency);
         Assert.Equal("es-MX", result.Locale);
@@ -87,6 +88,6 @@ public class UserServiceTests
             .ReturnsAsync((User?)null);
 
         await Assert.ThrowsAsync<KeyNotFoundException>(
-            () => _svc.UpdateProfileAsync(Guid.NewGuid(), "EUR", null));
+            () => _svc.UpdateProfileAsync(Guid.NewGuid(), new UserProfileUpdateDto { PreferredCurrency = "EUR" }));
     }
 }

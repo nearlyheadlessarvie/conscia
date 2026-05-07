@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using Conscia.Application.DTOs;
 using Conscia.Domain.Entities;
 using Moq;
 
@@ -49,7 +50,7 @@ public class UserEndpointTests : IClassFixture<TestWebAppFactory>
     {
         var userId = Guid.Parse("a1b2c3d4-0001-4000-8000-000000000001");
         _factory.UserServiceMock
-            .Setup(s => s.UpdateProfileAsync(userId, "EUR", null, It.IsAny<CancellationToken>()))
+            .Setup(s => s.UpdateProfileAsync(userId, It.Is<UserProfileUpdateDto>(d => d.PreferredCurrency == "EUR"), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new User { Id = userId, Email = "alice@example.com", PreferredCurrency = "EUR", Locale = "en-US" });
 
         var response = await _client.PutAsJsonAsync("/api/v1/users/me", new
