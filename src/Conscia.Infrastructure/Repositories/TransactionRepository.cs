@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.Json;
 using Amazon.DynamoDBv2;
 using Amazon.DynamoDBv2.Model;
@@ -249,7 +250,7 @@ public class TransactionRepository : DynamoRepository, ITransactionRepository
             ["Amount"] = new() { N = t.Amount.Amount.ToString("G") },
             ["CurrencyCode"] = new(t.Amount.CurrencyCode),
             ["Category"] = new(t.Category),
-            ["Date"] = new(t.Date.ToString("yyyy-MM-dd")),
+            ["Date"] = new(t.Date.ToString("O")),
             ["CreatedAt"] = new(t.CreatedAt.ToString("O")),
 
             // GSI SUPPORT
@@ -291,15 +292,49 @@ public class TransactionRepository : DynamoRepository, ITransactionRepository
             Amount = new Money(decimal.Parse(item["Amount"].N), item["CurrencyCode"].S, exchangeRate),
             Category = item["Category"].S,
             Merchant = item.TryGetValue("Merchant", out var m) ? m.S : null,
-            Date = DateTime.Parse(item["Date"].S),
+            Date = ParseTransactionDate(item),
             Location = item.TryGetValue("Location", out var loc)
                 ? JsonSerializer.Deserialize<Location>(loc.S)
                 : null,
             RegretLevel = item.TryGetValue("RegretLevel", out var rl)
                 ? Enum.Parse<RegretLevel>(rl.S)
                 : null,
-            CreatedAt = DateTime.Parse(item["CreatedAt"].S)
+            CreatedAt = DateTime.Parse(item["CreatedAt"].S, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind)
         };
+    }
+
+    private static DateTime ParseTransactionDate(Dictionary<string, AttributeValue> item)
+    {
+        if (item.TryGetValue("SK", out var sk)
+            && sk.S is { } sortKey
+            && TryParseDateFromSortKey(sortKey, out var preciseDate))
+        {
+            return preciseDate;
+        }
+
+        return DateTime.Parse(item["Date"].S, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind);
+    }
+
+    private static bool TryParseDateFromSortKey(string sortKey, out DateTime date)
+    {
+        date = default;
+
+        const string prefix = "DATE#";
+        const string separator = "#TX#";
+
+        if (!sortKey.StartsWith(prefix, StringComparison.Ordinal))
+            return false;
+
+        var separatorIndex = sortKey.IndexOf(separator, StringComparison.Ordinal);
+        if (separatorIndex <= prefix.Length)
+            return false;
+
+        var dateValue = sortKey[prefix.Length..separatorIndex];
+        return DateTime.TryParse(
+            dateValue,
+            CultureInfo.InvariantCulture,
+            DateTimeStyles.RoundtripKind,
+            out date);
     }
 
     private static Dictionary<string, AttributeValue> OutboxToItem(OutboxEvent e)

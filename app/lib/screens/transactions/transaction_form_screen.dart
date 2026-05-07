@@ -114,6 +114,9 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
 
       if (!mounted) return;
       ref.invalidate(transactionListProvider);
+      if (_isEditing) {
+        ref.invalidate(transactionDetailProvider(widget.transactionId!));
+      }
       context.pop();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
