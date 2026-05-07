@@ -192,6 +192,8 @@ While the authenticated profile is still loading, the router should avoid making
 
 The client-side current-user fetch should also be scoped to the authenticated session rather than treated as a global cache. When the authenticated `userId` changes, the profile provider must re-fetch `/api/v1/users/me` so onboarding decisions and profile-driven UI always reflect the newly signed-in account.
 
+The router instance itself should stay stable across auth loading and error transitions. Auth, local onboarding cache, and current-profile changes should refresh redirect evaluation without recreating `GoRouter`, so a failed sign-in remains on the sign-in screen instead of jumping back to the onboarding landing page.
+
 This avoids two failure modes:
 - Returning users on a new device should not be sent through onboarding again just because local storage is empty.
 - Optional profile fields should remain optional and must not be used to infer whether onboarding is complete.

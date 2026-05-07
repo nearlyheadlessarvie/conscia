@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../providers/auth_provider.dart';
 import '../../providers/user_provider.dart';
+import '../../services/user_service.dart';
 import '../../screens/assistant/pre_purchase_screen.dart';
 import '../../screens/budgets/budgets_screen.dart';
 import '../../screens/dashboard/dashboard_screen.dart';
@@ -74,29 +75,33 @@ Future<String?> getLastEmail() async {
   return prefs.getString(_lastEmailKey);
 }
 
-class _AuthNotifierListenable extends ChangeNotifier {
-  _AuthNotifierListenable(Ref ref) {
-    ref.listen<AuthState>(authProvider, (_, __) => notifyListeners());
-  }
+class _RouterRefreshListenable extends ChangeNotifier {
+  void refresh() => notifyListeners();
 }
 
 final hasOnboardedProvider = FutureProvider<bool>((ref) => hasCompletedOnboarding());
 
 final appRouterProvider = Provider<GoRouter>((ref) {
-  final listenable = _AuthNotifierListenable(ref);
-  final localHasOnboarded = ref.watch(hasOnboardedProvider).valueOrNull ?? false;
-  final authState = ref.watch(authProvider);
-  final currentUserAsync =
-      authState.isAuthenticated ? ref.watch(currentUserProvider) : null;
-  final userProfile = currentUserAsync?.valueOrNull;
-  final hasOnboarded = userProfile?.hasCompletedOnboarding ?? localHasOnboarded;
+  final listenable = _RouterRefreshListenable();
+  ref.onDispose(listenable.dispose);
+  ref.listen<AuthState>(authProvider, (_, __) => listenable.refresh());
+  ref.listen<AsyncValue<bool>>(hasOnboardedProvider, (_, __) => listenable.refresh());
+  ref.listen<AsyncValue<UserProfile>>(currentUserProvider, (_, __) => listenable.refresh());
 
   return GoRouter(
     initialLocation: AppRoutes.home,
     debugLogDiagnostics: kDebugMode,
     refreshListenable: listenable,
     redirect: (context, state) {
-      final isAuthenticated = ref.read(authProvider).isAuthenticated;
+      final authState = ref.read(authProvider);
+      final isAuthenticated = authState.isAuthenticated;
+      final localHasOnboarded =
+          ref.read(hasOnboardedProvider).valueOrNull ?? false;
+      final currentUserAsync =
+          isAuthenticated ? ref.read(currentUserProvider) : null;
+      final userProfile = currentUserAsync?.valueOrNull;
+      final hasOnboarded =
+          userProfile?.hasCompletedOnboarding ?? localHasOnboarded;
       final isOnboarding = state.uri.path.startsWith('/onboarding');
       final isHealthCheck = state.uri.path.startsWith('/health');
 
