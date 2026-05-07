@@ -2,21 +2,27 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/constants/category_icons.dart';
+import '../../../core/constants/generated/app_constants.g.dart';
 import '../../../providers/category_frequency_provider.dart';
 
 class QuickPresetChips extends ConsumerWidget {
   final String? selectedCategory;
+  final bool isExpense;
   final ValueChanged<String> onCategorySelected;
 
   const QuickPresetChips({
     super.key,
     required this.selectedCategory,
+    required this.isExpense,
     required this.onCategorySelected,
   });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final categories = ref.watch(categoryFrequencyProvider);
+    final frequentCategories = ref.watch(categoryFrequencyProvider);
+    final categories = isExpense
+        ? _expenseQuickCategories(frequentCategories)
+        : incomeCategories.take(5).toList();
 
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
@@ -35,5 +41,29 @@ class QuickPresetChips extends ConsumerWidget {
         }).toList(),
       ),
     );
+  }
+
+  List<String> _expenseQuickCategories(List<String> frequentCategories) {
+    final visible = <String>[];
+
+    for (final category in frequentCategories) {
+      if (expenseCategories.contains(category) && !visible.contains(category)) {
+        visible.add(category);
+      }
+      if (visible.length == 5) {
+        return visible;
+      }
+    }
+
+    for (final category in expenseCategories) {
+      if (!visible.contains(category)) {
+        visible.add(category);
+      }
+      if (visible.length == 5) {
+        break;
+      }
+    }
+
+    return visible;
   }
 }

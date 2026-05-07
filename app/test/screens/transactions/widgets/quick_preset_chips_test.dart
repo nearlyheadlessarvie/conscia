@@ -16,6 +16,7 @@ void main() {
         home: Scaffold(
           body: QuickPresetChips(
             selectedCategory: null,
+            isExpense: true,
             onCategorySelected: (_) {},
           ),
         ),
@@ -37,6 +38,7 @@ void main() {
         home: Scaffold(
           body: QuickPresetChips(
             selectedCategory: 'Coffee',
+            isExpense: true,
             onCategorySelected: (_) {},
           ),
         ),
@@ -57,6 +59,7 @@ void main() {
         home: Scaffold(
           body: QuickPresetChips(
             selectedCategory: null,
+            isExpense: true,
             onCategorySelected: (cat) => selected = cat,
           ),
         ),
@@ -65,5 +68,28 @@ void main() {
 
     await tester.tap(find.text('Dining'));
     expect(selected, 'Dining');
+  });
+
+  testWidgets('shows income quick categories in income mode', (tester) async {
+    await tester.pumpWidget(ProviderScope(
+      overrides: [
+        categoryFrequencyProvider.overrideWithValue(
+          ['Coffee', 'Dining', 'Shopping', 'Gaming', 'Travel'],
+        ),
+      ],
+      child: MaterialApp(
+        home: Scaffold(
+          body: QuickPresetChips(
+            selectedCategory: null,
+            isExpense: false,
+            onCategorySelected: (_) {},
+          ),
+        ),
+      ),
+    ));
+
+    expect(find.text('Salary'), findsOneWidget);
+    expect(find.text('Freelance'), findsOneWidget);
+    expect(find.text('Coffee'), findsNothing);
   });
 }

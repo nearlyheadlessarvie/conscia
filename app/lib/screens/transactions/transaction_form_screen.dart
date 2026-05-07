@@ -335,6 +335,7 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
             ] else ...[
               QuickPresetChips(
                 selectedCategory: _selectedCategory,
+                isExpense: _isExpense,
                 onCategorySelected: (cat) {
                   setState(() => _selectedCategory = cat);
                 },

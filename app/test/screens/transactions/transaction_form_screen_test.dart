@@ -47,4 +47,48 @@ void main() {
     expect(find.byType(QuickPresetChips), findsOneWidget);
     expect(find.text('Quick add'), findsNothing);
   });
+
+  testWidgets('transaction form swaps visible quick categories for income', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          categoryFrequencyProvider.overrideWithValue(
+            ['Coffee', 'Dining', 'Shopping', 'Gaming', 'Travel'],
+          ),
+          subscriptionProvider.overrideWith(
+            (ref) async => const SubscriptionStatus(
+              tier: 'free',
+              isPremium: false,
+            ),
+          ),
+          currentUserProvider.overrideWith(
+            (ref) async => UserProfile(
+              id: 'user-1',
+              email: 'tx@example.com',
+              currencyCode: 'USD',
+              locale: 'en_US',
+              createdAt: DateTime(2026),
+              hasCompletedOnboarding: true,
+            ),
+          ),
+        ],
+        child: const MaterialApp(
+          home: TransactionFormScreen(),
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    expect(find.text('Coffee'), findsOneWidget);
+    expect(find.text('Salary'), findsNothing);
+
+    await tester.tap(find.text('Income'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Salary'), findsOneWidget);
+    expect(find.text('Coffee'), findsNothing);
+  });
 }
