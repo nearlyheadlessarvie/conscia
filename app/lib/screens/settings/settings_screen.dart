@@ -19,6 +19,7 @@ import '../../providers/location_assistance_provider.dart';
 import '../../providers/subscription_provider.dart';
 import '../../providers/user_provider.dart';
 import '../../widgets/currency_picker_sheet.dart';
+import '../../widgets/locale_picker_sheet.dart';
 import '../../widgets/skeleton_loader.dart';
 import 'widgets/subscription_card.dart';
 import 'widgets/subscription_sheet.dart';
@@ -148,13 +149,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             title: const Text('Region / Number Format'),
             subtitle: Text(ref.watch(userPreferencesProvider).locale),
             trailing: const Icon(Icons.chevron_right),
-            onTap: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                    content: Text(
-                        'Number format follows your device locale settings.')),
-              );
-            },
+            onTap: () => _showLocalePicker(context, ref),
           ),
           if (_biometricSupported)
             SwitchListTile(
@@ -300,6 +295,20 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           await ref
               .read(userServiceProvider)
               .updateProfile(preferredCurrency: code);
+          ref.invalidate(currentUserProvider);
+        } catch (_) {}
+      },
+    );
+  }
+
+  void _showLocalePicker(BuildContext context, WidgetRef ref) {
+    final current = ref.read(userPreferencesProvider).locale;
+    LocalePickerSheet.show(
+      context,
+      selectedLocale: current,
+      onSelected: (locale) async {
+        try {
+          await ref.read(userServiceProvider).updateProfile(locale: locale);
           ref.invalidate(currentUserProvider);
         } catch (_) {}
       },

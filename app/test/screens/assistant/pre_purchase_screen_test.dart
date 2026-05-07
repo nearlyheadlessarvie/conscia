@@ -113,6 +113,38 @@ void main() {
     expect(find.text('Turn on smart location help?'), findsNothing);
   });
 
+  testWidgets(
+      'pre-purchase does not re-prompt after turning location assistance on',
+      (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+
+    await _pumpPrePurchaseScreen(
+      tester,
+      prefs: prefs,
+      locationService: _FakeLocationAssistanceService(permissionGranted: true),
+    );
+
+    await tester.pumpAndSettle();
+
+    expect(find.text('Turn on smart location help?'), findsOneWidget);
+
+    await tester.tap(find.text('Turn on'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Turn on smart location help?'), findsNothing);
+
+    await _pumpPrePurchaseScreen(
+      tester,
+      prefs: prefs,
+      locationService: _FakeLocationAssistanceService(permissionGranted: true),
+    );
+
+    await tester.pumpAndSettle();
+
+    expect(find.text('Turn on smart location help?'), findsNothing);
+  });
+
   testWidgets('pre-purchase can suggest merchant and category when enabled',
       (tester) async {
     SharedPreferences.setMockInitialValues({

@@ -7,14 +7,13 @@ abstract class LocationAssistanceService {
   getTransactionSuggestions();
 }
 
-class _UnsupportedLocationAssistanceService
+class LocalLocationAssistanceService
     implements LocationAssistanceService {
   @override
-  Future<bool> requestPermission() {
-    throw UnimplementedError(
-      'LocationAssistanceService.requestPermission must be provided by '
-      'the app shell or a test override.',
-    );
+  Future<bool> requestPermission() async {
+    // The app does not request OS location permission yet, so we treat
+    // this as a local opt-in and keep suggestions best-effort.
+    return true;
   }
 
   @override
@@ -29,5 +28,5 @@ class _UnsupportedLocationAssistanceService
 
 final locationAssistanceServiceProvider =
     Provider<LocationAssistanceService>((ref) {
-  return _UnsupportedLocationAssistanceService();
+  return LocalLocationAssistanceService();
 });

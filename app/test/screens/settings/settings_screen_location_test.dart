@@ -6,6 +6,7 @@ import 'package:conscia_app/screens/settings/settings_screen.dart';
 import 'package:conscia_app/services/location_assistance_service.dart';
 import 'package:conscia_app/services/subscription_service.dart';
 import 'package:conscia_app/services/user_service.dart';
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -33,10 +34,38 @@ class _RecordingLocationAssistanceService extends LocationAssistanceService {
   }
 }
 
+class _RecordingUserService extends UserService {
+  _RecordingUserService() : super(Dio());
+
+  String? lastLocale;
+
+  @override
+  Future<UserProfile> updateProfile({
+    String? preferredCurrency,
+    String? locale,
+    String? spendingPersonality,
+    String? incomeRange,
+    String? occupationType,
+    String? householdSize,
+    bool? hasCompletedOnboarding,
+  }) async {
+    lastLocale = locale;
+    return UserProfile(
+      id: 'user-1',
+      email: 'settings@example.com',
+      currencyCode: preferredCurrency ?? 'USD',
+      locale: locale ?? 'en_US',
+      createdAt: DateTime(2026),
+      hasCompletedOnboarding: true,
+    );
+  }
+}
+
 Future<ProviderContainer> _pumpSettingsScreen(
   WidgetTester tester, {
   required SharedPreferences prefs,
   required LocationAssistanceService locationService,
+  UserService? userService,
 }) async {
   final container = ProviderContainer(
     overrides: [
@@ -58,6 +87,7 @@ Future<ProviderContainer> _pumpSettingsScreen(
       ),
       sharedPreferencesProvider.overrideWithValue(prefs),
       locationAssistanceServiceProvider.overrideWithValue(locationService),
+      if (userService != null) userServiceProvider.overrideWithValue(userService),
     ],
   );
   addTearDown(container.dispose);
@@ -123,5 +153,32 @@ void main() {
       find.textContaining('System location permission may also need to be enabled'),
       findsNothing,
     );
+  });
+
+  testWidgets('settings can change region and number format', (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+    final locationService =
+        _RecordingLocationAssistanceService(permissionGranted: true);
+    final userService = _RecordingUserService();
+
+    await _pumpSettingsScreen(
+      tester,
+      prefs: prefs,
+      locationService: locationService,
+      userService: userService,
+    );
+
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Region / Number Format'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Number Format'), findsOneWidget);
+
+    await tester.tap(find.text('English (UK)'));
+    await tester.pumpAndSettle();
+
+    expect(userService.lastLocale, 'en_GB');
   });
 }
