@@ -21,7 +21,9 @@ class _StaticBudgetService extends BudgetService {
 }
 
 class _StaticTransactionService extends TransactionService {
-  _StaticTransactionService() : super(Dio());
+  _StaticTransactionService([this.transactions = const []]) : super(Dio());
+
+  final List<Transaction> transactions;
 
   @override
   Future<PaginatedTransactions> list({
@@ -29,9 +31,9 @@ class _StaticTransactionService extends TransactionService {
     int pageSize = 20,
     String? category,
   }) async {
-    return const PaginatedTransactions(
-      items: [],
-      totalCount: 0,
+    return PaginatedTransactions(
+      items: transactions,
+      totalCount: transactions.length,
       page: 1,
       pageSize: 20,
       hasMore: false,
@@ -50,7 +52,7 @@ Widget _buildApp(ProviderContainer container) {
     routes: [
       GoRoute(
         path: '/',
-        builder: (context, state) => const DashboardScreen(),
+        builder: (context, state) => const Scaffold(body: DashboardScreen()),
       ),
       GoRoute(
         path: '/settings/budgets',
@@ -68,6 +70,45 @@ Widget _buildApp(ProviderContainer container) {
 }
 
 void main() {
+  testWidgets('dashboard header stays visible while scrolling', (tester) async {
+    final transactions = List.generate(
+      12,
+      (index) => Transaction(
+        id: 'tx-$index',
+        amount: 25 + index.toDouble(),
+        currencyCode: 'USD',
+        category: 'Dining',
+        description: 'Transaction $index',
+        type: 'expense',
+        date: DateTime(2026, 5, 7).subtract(Duration(days: index)),
+      ),
+    );
+
+    final container = ProviderContainer(
+      overrides: [
+        budgetServiceProvider.overrideWithValue(_StaticBudgetService(const [])),
+        transactionServiceProvider.overrideWithValue(
+          _StaticTransactionService(transactions),
+        ),
+        behavioralInsightsProvider.overrideWith((ref) async => null),
+        localAlertsProvider.overrideWith(
+          (ref) => _LocalAlertsTestNotifier(const []),
+        ),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    await tester.pumpWidget(_buildApp(container));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Conscia'), findsOneWidget);
+
+    await tester.drag(find.byType(CustomScrollView), const Offset(0, -600));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Conscia'), findsOneWidget);
+  });
+
   testWidgets('dashboard surfaces local budget nudges with a budget CTA',
       (tester) async {
     final container = ProviderContainer(

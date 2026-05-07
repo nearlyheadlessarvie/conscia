@@ -103,6 +103,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       slivers: [
         SliverAppBar(
           floating: true,
+          pinned: true,
           title: Text(
             'Conscia',
             style: GoogleFonts.poppins(
