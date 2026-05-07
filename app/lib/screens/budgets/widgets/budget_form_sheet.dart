@@ -21,6 +21,7 @@ class BudgetFormSheet extends ConsumerStatefulWidget {
   static Future<void> show(BuildContext context, {Budget? existing}) {
     return showModalBottomSheet(
       context: context,
+      useRootNavigator: true,
       isScrollControlled: true,
       useSafeArea: true,
       builder: (_) => BudgetFormSheet(existing: existing),
@@ -163,6 +164,7 @@ class _BudgetFormSheetState extends ConsumerState<BudgetFormSheet> {
                         child: SelectionChipGroup(
                           options: visibleCategories,
                           value: _selectedCategory,
+                          scrollable: true,
                           onSelected: _isEditing
                               ? (_) {}
                               : (v) => setState(() => _selectedCategory = v),

@@ -14,6 +14,7 @@ class SubscriptionSheet {
   static Future<void> show(BuildContext context) {
     return showModalBottomSheet(
       context: context,
+      useRootNavigator: true,
       isScrollControlled: true,
       useSafeArea: true,
       builder: (_) => DraggableScrollableSheet(

@@ -329,8 +329,11 @@ class _PrePurchaseScreenState extends ConsumerState<PrePurchaseScreen>
           TextField(
             controller: _descriptionController,
             maxLines: 1,
-            decoration: const InputDecoration(
+            decoration: InputDecoration(
               labelText: 'What are you thinking of buying?',
+              suffixIcon: VoiceInputButton(
+                onTranscriptReady: _applyVoiceTranscript,
+              ),
             ),
             onChanged: (_) => setState(() {}),
           ),
@@ -342,10 +345,6 @@ class _PrePurchaseScreenState extends ConsumerState<PrePurchaseScreen>
             isExpense: true,
             currencyCode: _currencyCode,
             isPremium: isPremium,
-            inlineAction: VoiceInputButton(
-              onTranscriptReady: _applyVoiceTranscript,
-              compact: true,
-            ),
             onChanged: (_) => setState(() {}),
             onCurrencyChanged: (code) => setState(() {
               _currencyManuallyChanged = true;

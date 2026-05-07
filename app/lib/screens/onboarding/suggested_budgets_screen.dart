@@ -83,6 +83,7 @@ class _SuggestedBudgetsScreenState
 
     await showModalBottomSheet<void>(
       context: context,
+      useRootNavigator: true,
       isScrollControlled: true,
       builder: (context) => Padding(
         padding: EdgeInsets.only(
@@ -125,6 +126,7 @@ class _SuggestedBudgetsScreenState
   Future<void> _addCategory() async {
     await showModalBottomSheet<void>(
       context: context,
+      useRootNavigator: true,
       isScrollControlled: true,
       builder: (context) => SafeArea(
         child: Padding(

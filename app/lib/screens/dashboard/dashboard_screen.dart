@@ -25,6 +25,7 @@ import 'package:conscia_app/services/transaction_service.dart';
 import 'package:conscia_app/widgets/empty_state.dart';
 import 'package:conscia_app/widgets/premium_upgrade_dialog.dart';
 import 'package:conscia_app/widgets/skeleton_loader.dart';
+import 'dart:async';
 
 class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
@@ -36,6 +37,14 @@ class DashboardScreen extends ConsumerStatefulWidget {
 class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   bool _bannerDismissed = false;
   final Set<String> _dismissedPrompts = {};
+
+  Future<void> _onRefresh() async {
+    await Future.wait([
+      ref.read(budgetListProvider.notifier).load(),
+      ref.read(transactionListProvider.notifier).refresh(),
+    ]);
+    ref.invalidate(behavioralInsightsProvider);
+  }
 
   Future<void> _recordReflection(Transaction tx, String feeling) async {
     final isPremium =
@@ -101,8 +110,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
     final overBudgetCount = budgets.where((b) => b.percentage >= 0.8).length;
 
-    return CustomScrollView(
-      slivers: [
+    return RefreshIndicator(
+      onRefresh: _onRefresh,
+      child: CustomScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        slivers: [
         SliverAppBar(
           floating: true,
           pinned: true,
@@ -331,7 +343,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             },
           ),
         const SliverPadding(padding: EdgeInsets.only(bottom: 80)),
-      ],
+        ],
+      ),
     );
   }
 

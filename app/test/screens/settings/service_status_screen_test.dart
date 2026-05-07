@@ -55,6 +55,8 @@ void main() {
     expect(find.text('AI Service'), findsOneWidget);
     expect(find.text('Response: 10ms'), findsOneWidget);
     expect(find.text('Response: 50ms'), findsOneWidget);
+    expect(find.byIcon(Icons.refresh), findsNothing);
+    expect(find.byType(RefreshIndicator), findsOneWidget);
 
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump();

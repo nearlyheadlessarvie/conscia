@@ -37,6 +37,27 @@ GoRouter _router({String initialLocation = '/'}) => GoRouter(
             child: Scaffold(body: Text('settings')),
           ),
         ),
+        GoRoute(
+          path: '/sheet-demo',
+          builder: (_, __) => MainShell(
+            child: Scaffold(
+              body: Center(
+                child: Builder(
+                  builder: (context) => FilledButton(
+                    onPressed: () => showModalBottomSheet<void>(
+                      context: context,
+                      builder: (_) => const SizedBox(
+                        height: 120,
+                        child: Center(child: Text('Sheet content')),
+                      ),
+                    ),
+                    child: const Text('Open sheet'),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
       ],
     );
 
@@ -119,5 +140,30 @@ void main() {
     );
     expect(find.byType(NavigationRail), findsOneWidget);
     expect(find.byType(FloatingActionButton), findsNothing);
+  });
+
+  testWidgets('MainShell dismisses an open bottom sheet when switching tabs',
+      (tester) async {
+    final router = _router(initialLocation: '/sheet-demo');
+
+    await tester.pumpWidget(
+      ProviderScope(
+        child: MaterialApp.router(
+          routerConfig: router,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Open sheet'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Sheet content'), findsOneWidget);
+
+    router.go('/transactions');
+    await tester.pumpAndSettle();
+
+    expect(find.text('Sheet content'), findsNothing);
+    expect(find.text('transactions'), findsOneWidget);
   });
 }

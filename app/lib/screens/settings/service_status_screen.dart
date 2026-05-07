@@ -89,63 +89,52 @@ class _ServiceStatusScreenState extends ConsumerState<ServiceStatusScreen> {
 
     final checks = state.status?.checks ?? const <HealthCheck>[];
 
-    return HeroScreenScaffold(
-      appBar: AppBar(
-        title: const Text('Service Status'),
-        actions: [
-          IconButton(
-            icon: state.isLoading
-                ? const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Icon(Icons.refresh),
-            onPressed: state.isLoading
-                ? null
-                : () => ref.read(healthStatusProvider.notifier).refresh(),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          ScreenSection(
-            title: 'Overview',
-            subtitle: 'Live health across API, AI, and storage services.',
-            compact: true,
-            child: _OverallStatusBanner(
-              state: state,
-              secondsAgo: _secondsSinceCheck,
-            ),
-          ),
-          ScreenSection(
-            title: 'Services',
-            subtitle: 'Response time and current health for each dependency.',
-            compact: true,
-            child: Column(
-              children: [
-                if (checks.isNotEmpty)
-                  ...checks.map(
-                    (check) => Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
-                      child: _ServiceCard(check: check),
-                    ),
-                  )
-                else if (state.isLoading)
-                  ..._buildPlaceholderCards(loading: true)
-                else
-                  ..._buildPlaceholderCards(),
-              ],
-            ),
-          ),
-          if (state.checkHistory.isNotEmpty)
+    return RefreshIndicator(
+      onRefresh: () => ref.read(healthStatusProvider.notifier).refresh(),
+      child: HeroScreenScaffold(
+        appBar: AppBar(
+          title: const Text('Service Status'),
+        ),
+        child: Column(
+          children: [
             ScreenSection(
-              title: 'Recent uptime',
-              subtitle: 'A quick look at the last health checks.',
+              title: 'Overview',
+              subtitle: 'Live health across API, AI, and storage services.',
               compact: true,
-              child: _UptimeHistory(history: state.checkHistory),
+              child: _OverallStatusBanner(
+                state: state,
+                secondsAgo: _secondsSinceCheck,
+              ),
             ),
-        ],
+            ScreenSection(
+              title: 'Services',
+              subtitle: 'Response time and current health for each dependency.',
+              compact: true,
+              child: Column(
+                children: [
+                  if (checks.isNotEmpty)
+                    ...checks.map(
+                      (check) => Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: _ServiceCard(check: check),
+                      ),
+                    )
+                  else if (state.isLoading)
+                    ..._buildPlaceholderCards(loading: true)
+                  else
+                    ..._buildPlaceholderCards(),
+                ],
+              ),
+            ),
+            if (state.checkHistory.isNotEmpty)
+              ScreenSection(
+                title: 'Recent uptime',
+                subtitle: 'A quick look at the last health checks.',
+                compact: true,
+                child: _UptimeHistory(history: state.checkHistory),
+              ),
+          ],
+        ),
       ),
     );
   }

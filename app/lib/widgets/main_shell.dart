@@ -4,10 +4,17 @@ import 'package:go_router/go_router.dart';
 
 import '../core/constants/app_icons.dart';
 
-class MainShell extends ConsumerWidget {
+class MainShell extends ConsumerStatefulWidget {
   final Widget child;
 
   const MainShell({super.key, required this.child});
+
+  @override
+  ConsumerState<MainShell> createState() => _MainShellState();
+}
+
+class _MainShellState extends ConsumerState<MainShell> {
+  String? _lastLocation;
 
   static final _tabs = [
     (
@@ -58,8 +65,16 @@ class MainShell extends ConsumerWidget {
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final location = GoRouterState.of(context).uri.toString();
+    if (_lastLocation != null && _lastLocation != location) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        Navigator.of(context, rootNavigator: true)
+            .popUntil((route) => route is! PopupRoute);
+      });
+    }
+    _lastLocation = location;
     final currentIndex = _selectedIndex(location);
     final isWide = MediaQuery.sizeOf(context).width > 840;
     final showSharedAddFab = _showSharedAddFab(location);
@@ -92,14 +107,14 @@ class MainShell extends ConsumerWidget {
                   .toList(),
             ),
             const VerticalDivider(width: 1, thickness: 1),
-            Expanded(child: child),
+            Expanded(child: widget.child),
           ],
         ),
       );
     }
 
     return Scaffold(
-      body: child,
+      body: widget.child,
       floatingActionButton: showSharedAddFab
           ? FloatingActionButton(
               onPressed: () => context.push('/transactions/add'),

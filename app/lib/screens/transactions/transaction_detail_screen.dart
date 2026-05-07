@@ -140,6 +140,7 @@ class _TransactionDetailScreenState
   void _showReflectionSheet() {
     showModalBottomSheet(
       context: context,
+      useRootNavigator: true,
       isScrollControlled: true,
       useSafeArea: true,
       builder: (_) => DraggableScrollableSheet(

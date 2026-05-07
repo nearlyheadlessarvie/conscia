@@ -4,8 +4,6 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/constants/app_icons.dart';
 import '../../core/constants/category_icons.dart';
-import '../../core/constants/generated/app_constants.g.dart';
-import '../../core/utils/voice_input_parser.dart';
 import '../../providers/alert_provider.dart';
 import '../../providers/budget_providers.dart';
 import '../../providers/category_recents_provider.dart';
@@ -22,7 +20,6 @@ import '../../widgets/skeleton_loader.dart';
 import '../../widgets/smart_suggestions_card.dart';
 import '../../widgets/screen_section.dart';
 import 'widgets/transaction_style_category_selector.dart';
-import 'widgets/voice_input_button.dart';
 
 class TransactionFormScreen extends ConsumerStatefulWidget {
   final String? transactionId;
@@ -150,46 +147,6 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
   bool get _isValid {
     final amount = double.tryParse(_amountController.text);
     return amount != null && amount > 0 && _selectedCategory != null;
-  }
-
-  void _applyVoiceTranscript(String transcript) {
-    final parsed = VoiceInputParser.parse(
-      transcript,
-      categories: _isExpense ? expenseCategories : incomeCategories,
-    );
-
-    setState(() {
-      if (parsed.amount != null) {
-        _amountController.text = parsed.amount!.toStringAsFixed(0);
-      }
-      if (parsed.category != null) {
-        _selectedCategory = parsed.category;
-      }
-      if (parsed.counterparty case final counterparty?
-          when counterparty.trim().isNotEmpty) {
-        _counterpartyController.text = counterparty;
-      }
-    });
-
-    if (parsed.category != null) {
-      ref.read(recentCategoryProvider.notifier).record(parsed.category!);
-    }
-
-    if (!mounted) return;
-    final detected = [
-      if (parsed.amount != null) 'amount',
-      if (parsed.category != null) 'category',
-      if (parsed.counterparty != null) 'details',
-    ];
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          detected.isEmpty
-              ? 'Voice note captured. You can finish filling the rest manually.'
-              : 'Filled ${detected.join(', ')} from voice.',
-        ),
-      ),
-    );
   }
 
   Future<void> _submit() async {
@@ -391,10 +348,6 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
             isExpense: _isExpense,
             currencyCode: _currencyCode,
             isPremium: isPremium,
-            inlineAction: VoiceInputButton(
-              onTranscriptReady: _applyVoiceTranscript,
-              compact: true,
-            ),
             onChanged: (_) => setState(() {}),
             onCurrencyChanged: (code) => setState(() {
               _currencyManuallyChanged = true;
@@ -501,6 +454,15 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
                   ),
                 ),
                 const SizedBox(height: 14),
+                TextField(
+                  controller: _notesController,
+                  maxLines: 3,
+                  minLines: 1,
+                  decoration: const InputDecoration(
+                    labelText: 'Notes (optional)',
+                  ),
+                ),
+                const SizedBox(height: 14),
                 InkWell(
                   onTap: _pickDate,
                   borderRadius: BorderRadius.circular(12),
@@ -529,15 +491,6 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
                         ),
                       ],
                     ),
-                  ),
-                ),
-                const SizedBox(height: 14),
-                TextField(
-                  controller: _notesController,
-                  maxLines: 3,
-                  minLines: 1,
-                  decoration: const InputDecoration(
-                    labelText: 'Notes (optional)',
                   ),
                 ),
               ],

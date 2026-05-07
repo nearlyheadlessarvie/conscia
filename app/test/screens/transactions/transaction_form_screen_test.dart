@@ -7,6 +7,7 @@ import 'package:conscia_app/providers/usage_provider.dart';
 import 'package:conscia_app/providers/user_provider.dart';
 import 'package:conscia_app/screens/transactions/transaction_form_screen.dart';
 import 'package:conscia_app/screens/transactions/widgets/quick_preset_chips.dart';
+import 'package:conscia_app/screens/transactions/widgets/voice_input_button.dart';
 import 'package:conscia_app/services/budget_service.dart';
 import 'package:conscia_app/services/location_assistance_service.dart';
 import 'package:conscia_app/services/subscription_service.dart';
@@ -315,6 +316,27 @@ void main() {
 
     expect(find.text('Source (optional)'), findsOneWidget);
     expect(find.text('Merchant (optional)'), findsNothing);
+  });
+
+  testWidgets('transaction form does not show a voice mic button', (
+    tester,
+  ) async {
+    await tester.pumpWidget(await buildTransactionFormApp(tester));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(VoiceInputButton), findsNothing);
+  });
+
+  testWidgets('transaction form shows category chips above all categories action', (
+    tester,
+  ) async {
+    await tester.pumpWidget(await buildTransactionFormApp(tester));
+    await tester.pumpAndSettle();
+
+    final chipsTopLeft = tester.getTopLeft(find.text('Dining').first);
+    final actionTopLeft = tester.getTopLeft(find.text('All categories'));
+
+    expect(chipsTopLeft.dy, lessThan(actionTopLeft.dy));
   });
 
   testWidgets(
