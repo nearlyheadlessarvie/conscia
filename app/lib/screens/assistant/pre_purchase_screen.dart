@@ -16,9 +16,9 @@ import '../../providers/usage_provider.dart';
 import '../../providers/user_provider.dart';
 import '../../services/ai_service.dart';
 import '../../widgets/amount_input_field.dart';
+import '../../widgets/conscience_mark.dart';
 import '../../widgets/location_assistance_prompt_sheet.dart';
 import '../../widgets/premium_upgrade_dialog.dart';
-import '../../screens/transactions/widgets/transaction_tile.dart';
 import '../transactions/widgets/transaction_style_category_selector.dart';
 import 'widgets/ai_message_bubble.dart';
 import 'widgets/budget_context_card.dart';
@@ -255,51 +255,23 @@ class _PrePurchaseScreenState extends ConsumerState<PrePurchaseScreen>
       padding: const EdgeInsets.all(16),
       child: Column(
         children: [
-          const SizedBox(height: 24),
-          // Illustration: overlapping circle avatars
-          SizedBox(
-            height: 72,
-            width: 110,
-            child: Stack(
-              children: [
-                Positioned(
-                  left: 0,
-                  child: CircleAvatar(
-                    radius: 32,
-                    backgroundColor: const Color(
-                      0xFFFFB300,
-                    ).withValues(alpha: 0.2),
-                    child: const Icon(
-                      Icons.local_fire_department,
-                      size: 28,
-                      color: Color(0xFFE65100),
-                    ),
-                  ),
-                ),
-                Positioned(
-                  left: 44,
-                  child: CircleAvatar(
-                    radius: 32,
-                    backgroundColor: const Color(
-                      0xFF00BCD4,
-                    ).withValues(alpha: 0.2),
-                    child: const Icon(
-                      Icons.shield,
-                      size: 28,
-                      color: Color(0xFF00838F),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 20),
+          const ConscienceMark(size: 96),
+          const SizedBox(height: 18),
           Text(
             "Let's think this through",
             style: textTheme.headlineMedium,
             textAlign: TextAlign.center,
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 8),
+          Text(
+            'A little impulse. A little reason. A clearer next move.',
+            style: textTheme.bodyMedium?.copyWith(
+              color: colors.onSurfaceVariant,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 28),
 
           // Description
           TextField(
@@ -424,16 +396,18 @@ class _PrePurchaseScreenState extends ConsumerState<PrePurchaseScreen>
               children: visibleCategories
                   .map(
                     (category) => ActionChip(
-                      avatar: Icon(
-                        CategoryIcons.forCategory(category),
-                        size: 18,
+                      avatar: CategoryIcons.badge(
+                        category,
+                        size: 14,
                       ),
                       label: Text(category),
                       onPressed: () {
                         setState(() {
                           _selectedCategory = category;
                         });
-                        ref.read(recentCategoryProvider.notifier).record(category);
+                        ref
+                            .read(recentCategoryProvider.notifier)
+                            .record(category);
                       },
                     ),
                   )
@@ -448,20 +422,12 @@ class _PrePurchaseScreenState extends ConsumerState<PrePurchaseScreen>
   // ── Loading ─────────────────────────────────────────────────────────
 
   Widget _buildLoading() {
-    final textTheme = Theme.of(context).textTheme;
-    final colors = Theme.of(context).colorScheme;
-
     return Column(
       children: [
         _buildSummaryCard(),
         const Spacer(),
-        const TypingIndicator(),
-        const SizedBox(height: 12),
-        Text(
-          'Your conscience is thinking...',
-          style: textTheme.bodySmall?.copyWith(
-            color: colors.onSurfaceVariant,
-          ),
+        const TypingIndicator(
+          label: 'Your conscience is weighing both sides...',
         ),
         const Spacer(),
       ],
@@ -610,10 +576,16 @@ class _PrePurchaseScreenState extends ConsumerState<PrePurchaseScreen>
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
       child: Card(
-        color: colors.surfaceContainerHighest,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        color: colors.surface,
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(18),
+          side: BorderSide(
+            color: colors.outlineVariant.withValues(alpha: 0.8),
+          ),
+        ),
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
           child: Row(
             children: [
               Expanded(
@@ -647,10 +619,10 @@ class _PrePurchaseScreenState extends ConsumerState<PrePurchaseScreen>
                   ),
                 ),
                 const SizedBox(width: 8),
-                Icon(
-                  TransactionTile.iconFor(_selectedCategory!),
-                  size: 18,
-                  color: colors.onSurfaceVariant,
+                CategoryIcons.badge(
+                  _selectedCategory!,
+                  size: 14,
+                  filled: false,
                 ),
               ],
             ],

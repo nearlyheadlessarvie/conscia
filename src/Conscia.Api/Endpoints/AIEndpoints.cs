@@ -27,6 +27,7 @@ public static class AIEndpoints
             ITransactionService transactionService,
             IAIInteractionRepository aiRepo,
             ISubscriptionService subSvc,
+            IUserService userService,
             IValidator<PrePurchaseRequestDto> validator) =>
         {
             using var activity = ConsciaActivitySources.AI.StartActivity("PrePurchaseAdvice");
@@ -41,6 +42,7 @@ public static class AIEndpoints
             activity?.SetTag("ai.request.currency", dto.CurrencyCode);
 
             var userId = ctx.User.GetUserId();
+            var user = await userService.GetByIdAsync(userId, ctx.RequestAborted);
 
             var isPremium = await subSvc.IsPremiumAsync(userId, ctx.RequestAborted);
             if (!isPremium)
@@ -73,7 +75,8 @@ public static class AIEndpoints
                 Category = dto.Category,
                 BudgetPercentUsed = budgetPercent,
                 RecentRegrets = recentRegrets,
-                SpendingFrequencyThisWeek = spendingThisWeek
+                SpendingFrequencyThisWeek = spendingThisWeek,
+                AiPersonalityIntensity = user?.AiPersonalityIntensity ?? "balanced"
             };
 
             var response = await aiService.GeneratePrePurchaseResponseAsync(context, ctx.RequestAborted);
@@ -116,12 +119,14 @@ public static class AIEndpoints
             IBudgetService budgetService,
             ITransactionService transactionService,
             IAIInteractionRepository aiRepo,
-            ISubscriptionService subSvc) =>
+            ISubscriptionService subSvc,
+            IUserService userService) =>
         {
             using var activity = ConsciaActivitySources.AI.StartActivity("ReflectionAdvice");
             var sw = Stopwatch.StartNew();
 
             var userId = ctx.User.GetUserId();
+            var user = await userService.GetByIdAsync(userId, ctx.RequestAborted);
 
             var isPremium = await subSvc.IsPremiumAsync(userId, ctx.RequestAborted);
             if (!isPremium)
@@ -155,7 +160,8 @@ public static class AIEndpoints
                 CurrencyCode = transaction.Amount.CurrencyCode,
                 Category = transaction.Category,
                 BudgetPercentUsed = budgetPercent,
-                RecentRegrets = recentRegrets
+                RecentRegrets = recentRegrets,
+                AiPersonalityIntensity = user?.AiPersonalityIntensity ?? "balanced"
             };
 
             var response = await aiService.GenerateReflectionAsync(context, ctx.RequestAborted);

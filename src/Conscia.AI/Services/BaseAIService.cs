@@ -24,7 +24,7 @@ public abstract class BaseAIService : IAIService
             context.Amount, context.CurrencyCode, context.Category,
             context.BudgetPercentUsed, context.RecentRegrets, context.SpendingFrequencyThisWeek);
 
-        return await OrchestrateAsync(userPrompt, context, ct);
+        return await OrchestrateAsync(userPrompt, context, isReflectionFlow: false, ct);
     }
 
     public async Task<AIResponse> GenerateReflectionAsync(AIContext context, CancellationToken ct = default)
@@ -36,27 +36,29 @@ public abstract class BaseAIService : IAIService
             context.Amount, context.CurrencyCode, context.Category,
             context.BudgetPercentUsed, context.RecentRegrets);
 
-        return await OrchestrateAsync(userPrompt, context, ct);
+        return await OrchestrateAsync(userPrompt, context, isReflectionFlow: true, ct);
     }
 
-    private async Task<AIResponse> OrchestrateAsync(string userPrompt, AIContext context, CancellationToken ct)
+    private async Task<AIResponse> OrchestrateAsync(
+        string userPrompt,
+        AIContext context,
+        bool isReflectionFlow,
+        CancellationToken ct)
     {
         var sw = Stopwatch.StartNew();
 
-        var impulseTask = TracedLlmCallAsync("impulse", PromptTemplates.ImpulseSystemPrompt, userPrompt, 0.9f, ct);
-        var reasonTask = TracedLlmCallAsync("reason", PromptTemplates.ReasonSystemPrompt, userPrompt, 0.3f, ct);
+        var plans = BuildPersonaPlans(context, userPrompt, isReflectionFlow, ct);
 
-        await Task.WhenAll(impulseTask, reasonTask);
+        await Task.WhenAll(plans.AllTasks);
 
         sw.Stop();
         Logger.LogInformation("AI response generated in {DurationMs}ms", sw.ElapsedMilliseconds);
 
         return new AIResponse
         {
-            DevilMessage = await impulseTask,
-            AngelMessage = await reasonTask,
-            NeutralMessage = PromptTemplates.BuildNeutralSummary(
-                context.Amount, context.CurrencyCode, context.Category, context.BudgetPercentUsed)
+            DevilMessage = await plans.Impulse.Task,
+            AngelMessage = await plans.Reason.Task,
+            NeutralMessage = await plans.Reflection.Task
         };
     }
 
@@ -107,5 +109,71 @@ public abstract class BaseAIService : IAIService
         var response = await CallLlmAsync(systemPrompt, userPrompt, temperature, ct);
         activity?.SetTag("llm.response_length", response.Length);
         return response;
+    }
+
+    private PersonaPlans BuildPersonaPlans(
+        AIContext context,
+        string userPrompt,
+        bool isReflectionFlow,
+        CancellationToken ct)
+    {
+        var intensity = NormalizeIntensity(context.AiPersonalityIntensity);
+
+        return new PersonaPlans(
+            Impulse: CreatePlan(
+                "impulse",
+                PromptTemplates.BuildImpulseSystemPrompt(intensity, isReflectionFlow),
+                userPrompt,
+                intensity switch
+                {
+                    "mild" => 0.65f,
+                    "intense" => 1.0f,
+                    _ => 0.82f
+                },
+                ct),
+            Reason: CreatePlan(
+                "reason",
+                PromptTemplates.BuildReasonSystemPrompt(intensity, isReflectionFlow),
+                userPrompt,
+                intensity switch
+                {
+                    "mild" => 0.18f,
+                    "intense" => 0.42f,
+                    _ => 0.28f
+                },
+                ct),
+            Reflection: CreatePlan(
+                "reflection",
+                PromptTemplates.BuildReflectionSystemPrompt(intensity, isReflectionFlow),
+                userPrompt,
+                intensity switch
+                {
+                    "mild" => 0.2f,
+                    "intense" => 0.5f,
+                    _ => 0.34f
+                },
+                ct));
+    }
+
+    private PersonaPlan CreatePlan(
+        string persona,
+        string systemPrompt,
+        string userPrompt,
+        float temperature,
+        CancellationToken ct) =>
+        new(persona, TracedLlmCallAsync(persona, systemPrompt, userPrompt, temperature, ct));
+
+    private static string NormalizeIntensity(string? intensity) => intensity?.ToLowerInvariant() switch
+    {
+        "mild" => "mild",
+        "intense" => "intense",
+        _ => "balanced"
+    };
+
+    private sealed record PersonaPlan(string Persona, Task<string> Task);
+
+    private sealed record PersonaPlans(PersonaPlan Impulse, PersonaPlan Reason, PersonaPlan Reflection)
+    {
+        public Task[] AllTasks => [Impulse.Task, Reason.Task, Reflection.Task];
     }
 }

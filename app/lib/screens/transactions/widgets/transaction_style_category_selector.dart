@@ -53,7 +53,8 @@ class TransactionStyleCategorySelector extends StatelessWidget {
       children: [
         Row(
           children: [
-            Text('Category', style: labelStyle ?? Theme.of(context).textTheme.titleSmall),
+            Text('Category',
+                style: labelStyle ?? Theme.of(context).textTheme.titleSmall),
             const Spacer(),
             TextButton.icon(
               onPressed: () => _showCategoryPickerSheet(context),
@@ -67,9 +68,10 @@ class TransactionStyleCategorySelector extends StatelessWidget {
           Align(
             alignment: Alignment.centerLeft,
             child: InputChip(
-              avatar: Icon(
-                CategoryIcons.forCategory(selectedCategory!),
-                size: 18,
+              avatar: CategoryIcons.badge(
+                selectedCategory!,
+                size: 16,
+                selected: true,
               ),
               label: Text(selectedCategory!),
               onDeleted: () => onCategorySelected(null),

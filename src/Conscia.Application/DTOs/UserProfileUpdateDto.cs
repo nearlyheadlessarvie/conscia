@@ -10,4 +10,5 @@ public class UserProfileUpdateDto
     public string? HouseholdSize { get; set; }
     public bool? HasCompletedOnboarding { get; set; }
     public bool? LocationSuggestionsEnabled { get; set; }
+    public string? AiPersonalityIntensity { get; set; }
 }

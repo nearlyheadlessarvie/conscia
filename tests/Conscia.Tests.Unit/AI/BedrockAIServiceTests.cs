@@ -84,7 +84,7 @@ public class BedrockAIServiceTests
     }
 
     [Fact]
-    public async Task GeneratePrePurchaseResponseAsync_MakesTwoParallelCalls()
+    public async Task GeneratePrePurchaseResponseAsync_MakesThreeParallelCalls()
     {
         SetupBedrockReturns("ok");
 
@@ -93,7 +93,7 @@ public class BedrockAIServiceTests
 
         _bedrockMock.Verify(
             b => b.InvokeModelAsync(It.IsAny<InvokeModelRequest>(), It.IsAny<CancellationToken>()),
-            Times.Exactly(2));
+            Times.Exactly(3));
     }
 
     [Fact]
@@ -150,5 +150,30 @@ public class BedrockAIServiceTests
 
         Assert.Equal("bedrock-2023-05-31", doc.RootElement.GetProperty("anthropic_version").GetString());
         Assert.Equal(200, doc.RootElement.GetProperty("max_tokens").GetInt32());
+    }
+
+    [Fact]
+    public async Task GenerateReflectionAsync_MildProfile_UsesMilderTemperatures()
+    {
+        var temperatures = new List<float>();
+        _bedrockMock
+            .Setup(b => b.InvokeModelAsync(It.IsAny<InvokeModelRequest>(), It.IsAny<CancellationToken>()))
+            .Callback<InvokeModelRequest, CancellationToken>((req, _) =>
+            {
+                req.Body.Position = 0;
+                using var doc = JsonDocument.Parse(req.Body);
+                temperatures.Add(doc.RootElement.GetProperty("temperature").GetSingle());
+            })
+            .Returns(() => Task.FromResult(CreateBedrockResponse("ok")));
+
+        var service = CreateService();
+        var context = CreateTestContext();
+        context.AiPersonalityIntensity = "mild";
+
+        await service.GenerateReflectionAsync(context);
+
+        Assert.Contains(0.65f, temperatures);
+        Assert.Contains(0.18f, temperatures);
+        Assert.Contains(0.2f, temperatures);
     }
 }

@@ -30,6 +30,18 @@ class TransactionTile extends StatelessWidget {
   static IconData iconFor(String category) =>
       CategoryIcons.forCategory(category);
 
+  static Widget badgeFor(
+    String category, {
+    double size = 20,
+    bool filled = true,
+  }) {
+    return CategoryIcons.badge(
+      category,
+      size: size,
+      filled: filled,
+    );
+  }
+
   Color _amountColor(ColorScheme colors) {
     if (!isIncome) {
       return colors.brightness == Brightness.light
@@ -77,11 +89,7 @@ class TransactionTile extends StatelessWidget {
             CircleAvatar(
               radius: 20,
               backgroundColor: colors.primaryContainer,
-              child: Icon(
-                iconFor(category),
-                size: 20,
-                color: colors.onPrimaryContainer,
-              ),
+              child: badgeFor(category, size: 18, filled: false),
             ),
             const SizedBox(width: 12),
             Expanded(

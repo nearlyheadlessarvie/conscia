@@ -25,6 +25,27 @@ import 'widgets/subscription_card.dart';
 import 'widgets/subscription_sheet.dart';
 
 const _biometricEnabledKey = 'biometric_enabled';
+const _aiIntensityOptions = <({
+  String value,
+  String label,
+  String description,
+})>[
+  (
+    value: 'mild',
+    label: 'Mild',
+    description: 'Softer tone with gentler push-and-pull.',
+  ),
+  (
+    value: 'balanced',
+    label: 'Balanced',
+    description: 'Default mix of warmth, clarity, and directness.',
+  ),
+  (
+    value: 'intense',
+    label: 'Intense',
+    description: 'Sharper contrast between impulse, reason, and reflection.',
+  ),
+];
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -180,6 +201,22 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               }
             },
           ),
+          ListTile(
+            leading: const Icon(Icons.tune),
+            title: const Text('AI Personality Intensity'),
+            subtitle: Text(
+              userAsync.maybeWhen(
+                data: (user) =>
+                    _labelForAiIntensity(user.aiPersonalityIntensity),
+                orElse: () => 'Balanced',
+              ),
+            ),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: userAsync.maybeWhen(
+              data: (_) => () => _showAiIntensityPicker(context, ref),
+              orElse: () => null,
+            ),
+          ),
           const Divider(),
 
           // ── Budgets ──────────────────────────────────────────
@@ -311,6 +348,52 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           await ref.read(userServiceProvider).updateProfile(locale: locale);
           ref.invalidate(currentUserProvider);
         } catch (_) {}
+      },
+    );
+  }
+
+  void _showAiIntensityPicker(BuildContext context, WidgetRef ref) {
+    final current = ref.read(currentUserProvider).valueOrNull;
+    if (current == null) return;
+
+    showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (sheetContext) {
+        final theme = Theme.of(sheetContext);
+        return SafeArea(
+          child: ListView(
+            shrinkWrap: true,
+            children: [
+              const ListTile(
+                title: Text('AI Personality Intensity'),
+                subtitle: Text(
+                  'Applies across Pre-Purchase, Reflection, and future AI guidance.',
+                ),
+              ),
+              for (final option in _aiIntensityOptions)
+                ListTile(
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+                  title: Text(option.label),
+                  subtitle: Text(option.description),
+                  trailing: option.value == current.aiPersonalityIntensity
+                      ? Icon(Icons.check_circle, color: theme.colorScheme.primary)
+                      : const Icon(Icons.circle_outlined),
+                  selected: option.value == current.aiPersonalityIntensity,
+                  onTap: () async {
+                    Navigator.of(sheetContext).pop();
+                    try {
+                      await ref.read(userServiceProvider).updateProfile(
+                            aiPersonalityIntensity: option.value,
+                          );
+                      ref.invalidate(currentUserProvider);
+                    } catch (_) {}
+                  },
+                ),
+            ],
+          ),
+        );
       },
     );
   }
@@ -557,6 +640,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       'Dec',
     ];
     return '${months[date.month - 1]} ${date.year}';
+  }
+
+  String _labelForAiIntensity(String intensity) {
+    for (final option in _aiIntensityOptions) {
+      if (option.value == intensity) return option.label;
+    }
+    return 'Balanced';
   }
 }
 

@@ -72,13 +72,14 @@ Widget _buildApp(ProviderContainer container) {
 }
 
 void main() {
-  testWidgets('recent transaction tile displays counterparty text', (tester) async {
+  testWidgets('recent transaction tile displays counterparty text',
+      (tester) async {
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
           body: RecentTransactionTile(
             id: 'tx-1',
-            categoryIcon: Icons.restaurant,
+            categoryBadge: const Icon(Icons.restaurant),
             counterparty: 'Corner Bakery',
             category: 'Dining',
             date: DateTime(2026, 5, 7),
@@ -98,7 +99,7 @@ void main() {
       MaterialApp(
         home: Scaffold(
           body: RegretPromptCard(
-            categoryIcon: Icons.restaurant,
+            categoryBadge: const Icon(Icons.restaurant),
             counterparty: 'Corner Bakery',
             amount: 12.5,
             currencyCode: 'USD',
@@ -156,7 +157,8 @@ void main() {
     final container = ProviderContainer(
       overrides: [
         budgetServiceProvider.overrideWithValue(_StaticBudgetService(const [])),
-        transactionServiceProvider.overrideWithValue(_StaticTransactionService()),
+        transactionServiceProvider
+            .overrideWithValue(_StaticTransactionService()),
         behavioralInsightsProvider.overrideWith((ref) async => null),
         localAlertsProvider.overrideWith(
           (ref) => _LocalAlertsTestNotifier(
@@ -193,7 +195,8 @@ void main() {
     final container = ProviderContainer(
       overrides: [
         budgetServiceProvider.overrideWithValue(_StaticBudgetService(const [])),
-        transactionServiceProvider.overrideWithValue(_StaticTransactionService()),
+        transactionServiceProvider
+            .overrideWithValue(_StaticTransactionService()),
         behavioralInsightsProvider.overrideWith((ref) async => null),
         localAlertsProvider.overrideWith(
           (ref) => _LocalAlertsTestNotifier(
@@ -224,8 +227,7 @@ void main() {
     expect(container.read(activeLocalAlertsProvider), isEmpty);
   });
 
-  testWidgets(
-      'dashboard hides a budget nudge once a matching budget exists',
+  testWidgets('dashboard hides a budget nudge once a matching budget exists',
       (tester) async {
     final container = ProviderContainer(
       overrides: [
@@ -242,7 +244,8 @@ void main() {
             ),
           ]),
         ),
-        transactionServiceProvider.overrideWithValue(_StaticTransactionService()),
+        transactionServiceProvider
+            .overrideWithValue(_StaticTransactionService()),
         behavioralInsightsProvider.overrideWith((ref) async => null),
         localAlertsProvider.overrideWith(
           (ref) => _LocalAlertsTestNotifier(

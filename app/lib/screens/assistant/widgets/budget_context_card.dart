@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/constants/category_icons.dart';
 import '../../../core/utils/currency_formatter.dart';
-import '../../../screens/transactions/widgets/transaction_tile.dart';
 import '../../../widgets/budget_progress_bar.dart';
 
 class BudgetContextCard extends StatelessWidget {
@@ -49,10 +49,10 @@ class BudgetContextCard extends StatelessWidget {
           children: [
             Row(
               children: [
-                Icon(
-                  TransactionTile.iconFor(category),
-                  size: 20,
-                  color: colors.primary,
+                CategoryIcons.badge(
+                  category,
+                  size: 16,
+                  filled: false,
                 ),
                 const SizedBox(width: 8),
                 Text(

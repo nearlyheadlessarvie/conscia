@@ -5,6 +5,9 @@ namespace Conscia.Application.Validators;
 
 public class UserProfileUpdateValidator : AbstractValidator<UserProfileUpdateDto>
 {
+    private static readonly string[] AllowedAiPersonalityIntensities =
+        ["mild", "balanced", "intense"];
+
     // Mapping of country codes to their primary currency codes for validation purposes
     // see currencies.dart for the full list of supported currencies in the app
     private readonly Dictionary<string, string> _countryToCurrency = new()
@@ -34,7 +37,8 @@ public class UserProfileUpdateValidator : AbstractValidator<UserProfileUpdateDto
                 dto.OccupationType is not null ||
                 dto.HouseholdSize is not null ||
                 dto.HasCompletedOnboarding.HasValue ||
-                dto.LocationSuggestionsEnabled.HasValue)
+                dto.LocationSuggestionsEnabled.HasValue ||
+                dto.AiPersonalityIntensity is not null)
             .WithMessage("At least one field must be provided");
 
         RuleFor(x => x.PreferredCurrency)
@@ -49,5 +53,9 @@ public class UserProfileUpdateValidator : AbstractValidator<UserProfileUpdateDto
         RuleFor(x => x.Locale)
             .MaximumLength(10)
             .When(x => x.Locale is not null);
+
+        RuleFor(x => x.AiPersonalityIntensity)
+            .Must(v => v is null || AllowedAiPersonalityIntensities.Contains(v))
+            .WithMessage("AI personality intensity must be one of: mild, balanced, intense");
     }
 }

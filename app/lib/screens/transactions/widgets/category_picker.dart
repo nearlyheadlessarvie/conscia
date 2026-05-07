@@ -8,9 +8,8 @@ import '../../../providers/category_recents_provider.dart';
 
 class CategoryData {
   final String name;
-  final IconData icon;
 
-  const CategoryData(this.name, this.icon);
+  const CategoryData(this.name);
 }
 
 class CategoryPicker extends ConsumerStatefulWidget {
@@ -47,18 +46,15 @@ class _CategoryPickerState extends ConsumerState<CategoryPicker> {
       categories: names,
       recents: ref.watch(recentCategoryProvider),
     );
-    return orderedNames
-        .map((n) => CategoryData(n, CategoryIcons.forCategory(n)))
-        .toList();
+    return orderedNames.map(CategoryData.new).toList();
   }
 
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     final categories = _categories;
-    final visible = _expanded
-        ? categories
-        : categories.take(widget.maxVisible).toList();
+    final visible =
+        _expanded ? categories : categories.take(widget.maxVisible).toList();
     final hasMore = categories.length > widget.maxVisible && !_expanded;
 
     return Column(
@@ -77,7 +73,11 @@ class _CategoryPickerState extends ConsumerState<CategoryPicker> {
           children: [
             for (final cat in visible)
               ChoiceChip(
-                avatar: Icon(cat.icon, size: 18),
+                avatar: CategoryIcons.badge(
+                  cat.name,
+                  size: 16,
+                  selected: widget.selected == cat.name,
+                ),
                 label: Text(cat.name),
                 selected: widget.selected == cat.name,
                 onSelected: (_) => widget.onSelected(cat.name),
@@ -90,7 +90,7 @@ class _CategoryPickerState extends ConsumerState<CategoryPicker> {
               ),
             if (hasMore)
               ActionChip(
-                label: const Text('More...'),
+                label: const Text('Show all'),
                 onPressed: () => setState(() => _expanded = true),
               ),
           ],

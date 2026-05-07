@@ -69,6 +69,7 @@ class _FakeUserService extends UserService {
     String? householdSize,
     bool? hasCompletedOnboarding,
     bool? locationSuggestionsEnabled,
+    String? aiPersonalityIntensity,
   }) async {
     return UserProfile(
       id: 'user-1',
@@ -78,6 +79,7 @@ class _FakeUserService extends UserService {
       createdAt: DateTime(2026),
       hasCompletedOnboarding: hasCompletedOnboarding ?? true,
       locationSuggestionsEnabled: locationSuggestionsEnabled ?? false,
+      aiPersonalityIntensity: aiPersonalityIntensity ?? 'balanced',
       spendingPersonality: spendingPersonality,
       incomeRange: incomeRange,
       occupationType: occupationType,

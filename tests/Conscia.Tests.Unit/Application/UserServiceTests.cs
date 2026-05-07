@@ -114,6 +114,22 @@ public class UserServiceTests
     }
 
     [Fact]
+    public async Task UpdateProfileAsync_UpdatesAiPersonalityIntensity()
+    {
+        var id = Guid.NewGuid();
+        var user = new User { Id = id, AiPersonalityIntensity = "balanced" };
+        _repoMock.Setup(r => r.GetByIdAsync(id, It.IsAny<CancellationToken>())).ReturnsAsync(user);
+        _repoMock.Setup(r => r.UpdateAsync(It.IsAny<User>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((User u, CancellationToken _) => u);
+
+        var result = await _svc.UpdateProfileAsync(
+            id,
+            new UserProfileUpdateDto { AiPersonalityIntensity = "intense" });
+
+        Assert.Equal("intense", result.AiPersonalityIntensity);
+    }
+
+    [Fact]
     public async Task UpdateProfileAsync_ThrowsKeyNotFound_WhenUserMissing()
     {
         _repoMock.Setup(r => r.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))

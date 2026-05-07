@@ -10,4 +10,5 @@ public class AIContext
     public string? Merchant { get; set; }
     public int RecentRegrets { get; set; }
     public int SpendingFrequencyThisWeek { get; set; }
+    public string AiPersonalityIntensity { get; set; } = "balanced";
 }

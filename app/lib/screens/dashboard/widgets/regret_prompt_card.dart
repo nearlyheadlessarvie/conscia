@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 class RegretPromptCard extends StatelessWidget {
-  final IconData categoryIcon;
+  final Widget categoryBadge;
   final String counterparty;
   final double amount;
   final String currencyCode;
@@ -14,7 +14,7 @@ class RegretPromptCard extends StatelessWidget {
 
   const RegretPromptCard({
     super.key,
-    required this.categoryIcon,
+    required this.categoryBadge,
     required this.counterparty,
     required this.amount,
     required this.currencyCode,
@@ -66,7 +66,7 @@ class RegretPromptCard extends StatelessWidget {
                 children: [
                   CircleAvatar(
                     backgroundColor: colors.primaryContainer,
-                    child: Icon(categoryIcon, color: colors.primary, size: 20),
+                    child: categoryBadge,
                   ),
                   const SizedBox(width: 12),
                   Expanded(

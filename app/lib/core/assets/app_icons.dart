@@ -1,7 +1,8 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
+
+import '../../widgets/conscience_mark.dart';
 
 class ConsciaSvgLogo extends StatelessWidget {
   final double size;
@@ -22,11 +23,19 @@ class ConsciaSvgLogo extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          SvgPicture.asset(
-            'assets/images/app_icon.svg',
-            width: size,
-            height: size,
-            fit: BoxFit.contain,
+          DecoratedBox(
+            decoration: BoxDecoration(
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF091A38).withValues(alpha: 0.08),
+                  blurRadius: size * 0.12,
+                  offset: Offset(0, size * 0.04),
+                ),
+              ],
+            ),
+            child: ConscienceMark(
+              size: size,
+            ),
           ),
           if (showText) ...[
             const SizedBox(height: 8),
@@ -67,8 +76,8 @@ class _ImpulseFacePainter extends CustomPainter {
 
     // Orange-red gradient circle
     final gradient = Paint()
-      ..shader = RadialGradient(
-        colors: const [Color(0xFFFFB300), Color(0xFFE65100)],
+      ..shader = const RadialGradient(
+        colors: [Color(0xFFFFB300), Color(0xFFE65100)],
       ).createShader(Rect.fromCircle(center: center, radius: radius));
     canvas.drawCircle(center, radius, gradient);
 
@@ -145,8 +154,8 @@ class _ReasonFacePainter extends CustomPainter {
 
     // Teal gradient circle
     final gradient = Paint()
-      ..shader = RadialGradient(
-        colors: const [Color(0xFF00BCD4), Color(0xFF00838F)],
+      ..shader = const RadialGradient(
+        colors: [Color(0xFF00BCD4), Color(0xFF00838F)],
       ).createShader(Rect.fromCircle(center: center, radius: radius));
     canvas.drawCircle(center, radius, gradient);
 
