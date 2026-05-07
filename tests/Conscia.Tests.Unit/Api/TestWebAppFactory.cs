@@ -24,6 +24,7 @@ public class TestWebAppFactory : WebApplicationFactory<Program>
     public Mock<ISubscriptionService> SubscriptionServiceMock { get; } = new();
     public Mock<IAIService> AIServiceMock { get; } = new();
     public Mock<IInAppAlertRepository> AlertRepoMock { get; } = new();
+    public Mock<IAlertService> AlertServiceMock { get; } = new();
     public Mock<IAIInteractionRepository> AIInteractionRepoMock { get; } = new();
     public Mock<IExchangeRateService> ExchangeRateServiceMock { get; } = new();
 
@@ -47,6 +48,7 @@ public class TestWebAppFactory : WebApplicationFactory<Program>
             ReplaceService<ISubscriptionService>(services, SubscriptionServiceMock.Object);
             ReplaceService<IAIService>(services, AIServiceMock.Object);
             ReplaceService<IInAppAlertRepository>(services, AlertRepoMock.Object);
+            ReplaceService<IAlertService>(services, AlertServiceMock.Object);
             ReplaceService<IAIInteractionRepository>(services, AIInteractionRepoMock.Object);
             ReplaceService<IExchangeRateService>(services, ExchangeRateServiceMock.Object);
         });

@@ -5,6 +5,7 @@ import '../../../core/utils/currency_formatter.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../services/budget_service.dart';
 import '../../../widgets/budget_progress_bar.dart';
+import '../../../widgets/feed_card.dart';
 
 int _daysUntilReset() {
   final now = DateTime.now();
@@ -39,92 +40,141 @@ class BudgetCard extends StatelessWidget {
     final pct = budget.percentage;
     final healthColor = _healthColor(context, pct);
 
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: budget.isOverBudget
-            ? BorderSide(
-                color: theme.appColors.budgetDanger.withValues(alpha: 0.5),
-                width: 1,
-              )
-            : BorderSide.none,
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                CategoryIcons.badge(
-                  budget.category,
-                  size: 18,
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: FeedCard(
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(22),
+            border: budget.isOverBudget
+                ? Border.all(
+                    color: theme.appColors.budgetDanger.withValues(alpha: 0.5),
+                  )
+                : null,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  CategoryIcons.badge(
                     budget.category,
-                    style: textTheme.titleMedium,
+                    size: 18,
                   ),
-                ),
-                PopupMenuButton<String>(
-                  onSelected: (value) {
-                    if (value == 'edit') onEdit?.call();
-                    if (value == 'delete') onDelete?.call();
-                  },
-                  itemBuilder: (_) => [
-                    const PopupMenuItem(
-                      value: 'edit',
-                      child: Text('Edit'),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      budget.category,
+                      style: textTheme.titleMedium,
                     ),
-                    const PopupMenuItem(
-                      value: 'delete',
-                      child: Text('Delete'),
+                  ),
+                  PopupMenuButton<String>(
+                    onSelected: (value) {
+                      if (value == 'edit') onEdit?.call();
+                      if (value == 'delete') onDelete?.call();
+                    },
+                    itemBuilder: (_) => [
+                      const PopupMenuItem(
+                        value: 'edit',
+                        child: Text('Edit'),
+                      ),
+                      const PopupMenuItem(
+                        value: 'delete',
+                        child: Text('Delete'),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Spent so far',
+                          style: textTheme.labelSmall?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          CurrencyFormatter.format(
+                            budget.spent,
+                            currencyCode: budget.currencyCode,
+                          ),
+                          style: textTheme.bodyLarge,
+                        ),
+                      ],
                     ),
-                  ],
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    '${CurrencyFormatter.format(budget.spent, currencyCode: budget.currencyCode)} / ${CurrencyFormatter.format(budget.monthlyLimit, currencyCode: budget.currencyCode)}',
-                    style: textTheme.bodyLarge,
                   ),
-                ),
-                Text(
-                  '${(pct * 100).toInt()}%',
-                  style: textTheme.bodyLarge?.copyWith(
-                    color: healthColor,
-                    fontWeight: FontWeight.w600,
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(
+                        'Monthly cap',
+                        style: textTheme.labelSmall?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        CurrencyFormatter.format(
+                          budget.monthlyLimit,
+                          currencyCode: budget.currencyCode,
+                        ),
+                        style: textTheme.bodyLarge,
+                      ),
+                    ],
                   ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            BudgetProgressBar(percentage: pct),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                Text(
-                  budget.currencyCode,
-                  style: textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
+                ],
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Text(
+                    '${(pct * 100).toInt()}%',
+                    style: textTheme.bodyLarge?.copyWith(
+                      color: healthColor,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
-                ),
-                const Spacer(),
-                Text(
-                  'Resets in ${_daysUntilReset()} days',
-                  style: textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
+                  const Spacer(),
+                  Text(
+                    budget.isOverBudget ? 'Over pace' : 'On pace',
+                    style: textTheme.labelMedium?.copyWith(
+                      color: healthColor,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
-                ),
-              ],
-            ),
-          ],
+                ],
+              ),
+              const SizedBox(height: 8),
+              BudgetProgressBar(percentage: pct),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Text(
+                    budget.currencyCode,
+                    style: textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                  const Spacer(),
+                  Text(
+                    'Resets in ${_daysUntilReset()} days',
+                    style: textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );

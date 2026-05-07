@@ -157,6 +157,57 @@ Future<void> _pumpReceiptRouterAppWithPreviousRoute(WidgetTester tester) async {
 }
 
 void main() {
+  testWidgets('premium receipt scanner uses redesigned shared surface',
+      (tester) async {
+    SharedPreferences.setMockInitialValues({
+      'location_suggestions_enabled': false,
+      'location_suggestions_prompted': true,
+    });
+    final prefs = await SharedPreferences.getInstance();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          subscriptionProvider.overrideWith(
+            (ref) async => const SubscriptionStatus(
+              tier: 'premium',
+              isPremium: true,
+            ),
+          ),
+          currentUserProvider.overrideWith(
+            (ref) async => UserProfile(
+              id: 'user-1',
+              email: 'receipt@example.com',
+              currencyCode: 'USD',
+              locale: 'en_US',
+              createdAt: DateTime(2026),
+              hasCompletedOnboarding: true,
+            ),
+          ),
+          sharedPreferencesProvider.overrideWithValue(prefs),
+          categoryFrequencyProvider.overrideWithValue(
+            ['Coffee', 'Dining', 'Shopping', 'Gaming', 'Travel'],
+          ),
+          locationAssistanceServiceProvider.overrideWithValue(
+            _FakeLocationAssistanceService(),
+          ),
+          budgetServiceProvider.overrideWithValue(_StaticBudgetService()),
+          budgetReconciliationEnabledProvider.overrideWithValue(false),
+        ],
+        child: const MaterialApp(
+          home: ReceiptScannerScreen(),
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    expect(find.text('Scan the receipt, then sanity-check the details'),
+        findsOneWidget);
+    expect(find.text('Take photo'), findsOneWidget);
+    expect(find.text('Choose from gallery'), findsOneWidget);
+  });
+
   testWidgets('receipt maybe later opens add expense form for free users',
       (tester) async {
     await _pumpReceiptRouterApp(tester);

@@ -5,6 +5,9 @@ import 'package:go_router/go_router.dart';
 import '../../core/constants/app_icons.dart';
 import '../../core/routing/app_router.dart';
 import '../../providers/user_provider.dart';
+import '../../widgets/hero_screen_scaffold.dart';
+import '../../widgets/screen_section.dart';
+import '../../widgets/selection_chip_group.dart';
 
 class AboutYouScreen extends ConsumerStatefulWidget {
   const AboutYouScreen({super.key});
@@ -51,7 +54,7 @@ class _AboutYouScreenState extends ConsumerState<AboutYouScreen> {
     final textTheme = Theme.of(context).textTheme;
     final colors = Theme.of(context).colorScheme;
 
-    return Scaffold(
+    return HeroScreenScaffold(
       appBar: AppBar(
         automaticallyImplyLeading: false,
         title: const Text('About You'),
@@ -62,104 +65,92 @@ class _AboutYouScreenState extends ConsumerState<AboutYouScreen> {
           ),
         ],
       ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(
-                'Step 3 of 3',
-                style: textTheme.labelSmall?.copyWith(
-                  color: colors.onSurfaceVariant,
+      bottom: FilledButton(
+        onPressed: _saving ? null : _finish,
+        child: _saving
+            ? const SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: Colors.white,
                 ),
-              ),
-              const SizedBox(height: 16),
-              Text('A bit more about you', style: textTheme.headlineSmall),
-              const SizedBox(height: 4),
-              Text(
-                'All optional. Helps us personalise your experience.',
-                style: textTheme.bodyMedium?.copyWith(
-                  color: colors.onSurfaceVariant,
-                ),
-              ),
-              const SizedBox(height: 28),
-              Text(
-                'Occupation',
-                style: textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              const SizedBox(height: 12),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  _chip('employed', 'Employed', true),
-                  _chip(
-                    'self_employed',
-                    'Self-employed',
-                    true,
-                  ),
-                  _chip('student', 'Student', true),
-                  _chip('retired', 'Retired', true),
-                  _chip('other', 'Other', true),
-                ],
-              ),
-              const SizedBox(height: 28),
-              Text(
-                'Household',
-                style: textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              const SizedBox(height: 12),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  _chip('solo', 'Just me', false),
-                  _chip('couple', 'Couple', false),
-                  _chip('family', 'Family', false),
-                  _chip('shared', 'Shared', false),
-                ],
-              ),
-              const SizedBox(height: 32),
-              FilledButton(
-                onPressed: _saving ? null : _finish,
-                child: _saving
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white,
-                        ),
-                      )
-                    : const Text('Go to dashboard'),
-              ),
-            ],
+              )
+            : const Text('Go to dashboard'),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            'Step 3 of 3',
+            style: textTheme.labelSmall?.copyWith(
+              color: colors.onSurfaceVariant,
+            ),
           ),
-        ),
+          const SizedBox(height: 16),
+          Text('A bit more about you', style: textTheme.headlineSmall),
+          const SizedBox(height: 4),
+          Text(
+            'All optional. Helps us personalise your experience.',
+            style: textTheme.bodyMedium?.copyWith(
+              color: colors.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: 28),
+          ScreenSection(
+            title: 'Occupation',
+            subtitle: 'Pick the closest fit for how you usually earn or spend.',
+            child: SelectionChipGroup(
+              options: const [
+                'employed',
+                'self_employed',
+                'student',
+                'retired',
+                'other',
+              ],
+              value: _occupation,
+              labelBuilder: _labelForValue,
+              avatarBuilder: (value, selected) =>
+                  AppIcons.profileBadge(value, selected: selected),
+              onSelected: (value) {
+                setState(() {
+                  _occupation = _occupation == value ? null : value;
+                });
+              },
+            ),
+          ),
+          ScreenSection(
+            title: 'Household',
+            subtitle: 'This helps Conscia make guidance feel more realistic.',
+            child: SelectionChipGroup(
+              options: const ['solo', 'couple', 'family', 'shared'],
+              value: _household,
+              labelBuilder: _labelForValue,
+              avatarBuilder: (value, selected) =>
+                  AppIcons.profileBadge(value, selected: selected),
+              onSelected: (value) {
+                setState(() {
+                  _household = _household == value ? null : value;
+                });
+              },
+            ),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _chip(String value, String label, bool isOccupation) {
-    final selected = isOccupation ? _occupation == value : _household == value;
-    return ChoiceChip(
-      avatar: AppIcons.profileBadge(value, selected: selected),
-      label: Text(label),
-      selected: selected,
-      onSelected: (_) {
-        setState(() {
-          if (isOccupation) {
-            _occupation = selected ? null : value;
-          } else {
-            _household = selected ? null : value;
-          }
-        });
-      },
-    );
+  String _labelForValue(String value) {
+    return switch (value) {
+      'self_employed' => 'Self-employed',
+      'solo' => 'Just me',
+      'couple' => 'Couple',
+      'family' => 'Family',
+      'shared' => 'Shared',
+      'student' => 'Student',
+      'retired' => 'Retired',
+      'other' => 'Other',
+      _ => 'Employed',
+    };
   }
 }

@@ -1,39 +1,77 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/constants/category_icons.dart';
 import '../../models/insights_models.dart';
 import '../../providers/insights_provider.dart';
+import '../../providers/user_provider.dart';
+import '../../widgets/feed_card.dart';
+import '../../widgets/hero_screen_scaffold.dart';
+import '../../widgets/screen_section.dart';
+import 'widgets/insight_transaction_card.dart';
+import 'widgets/insights_formatting.dart';
 
 class CategoryDetailScreen extends ConsumerWidget {
-  final String category;
-
   const CategoryDetailScreen({super.key, required this.category});
+
+  final String category;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final detailAsync = ref.watch(categoryDetailProvider(category));
-    final colors = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
+    final prefs = ref.watch(userPreferencesProvider);
 
-    return Scaffold(
+    return HeroScreenScaffold(
       appBar: AppBar(title: Text(category)),
-      body: detailAsync.when(
+      child: detailAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (_, __) => const Center(child: Text('Could not load data.')),
+        error: (_, __) => const _StateCard(
+          title: 'Could not load category details',
+          body: 'Try this category again in a moment.',
+        ),
         data: (detail) {
           if (detail == null) {
-            return const Center(child: Text('No data found.'));
+            return const _StateCard(
+              title: 'No category details yet',
+              body:
+                  'Once enough purchases land in this category, the transaction story will appear here.',
+            );
           }
-          return ListView(
-            padding: const EdgeInsets.all(16),
+
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _CategoryStatsHeader(stats: detail.stats),
-              const SizedBox(height: 16),
-              Text('Recent transactions',
-                  style: textTheme.labelMedium?.copyWith(
-                      color: colors.onSurfaceVariant, fontWeight: FontWeight.w600)),
-              const SizedBox(height: 8),
-              ...detail.recentTransactions.map((t) => _TransactionRow(tx: t)),
+              _CategorySummaryCard(
+                stats: detail.stats,
+                currencyCode: prefs.currency,
+                locale: prefs.locale,
+              ),
+              const SizedBox(height: 26),
+              ScreenSection(
+                title: 'Recent transactions',
+                subtitle:
+                    'The purchases currently driving this category pattern.',
+                child: detail.recentTransactions.isEmpty
+                    ? const _StateCard(
+                        title: 'No recent transactions',
+                        body:
+                            'There are not any recent purchases to show for this category yet.',
+                      )
+                    : Column(
+                        children: [
+                          for (final tx in detail.recentTransactions) ...[
+                            InsightTransactionCard(
+                              tx: tx,
+                              locale: prefs.locale,
+                              subtitle:
+                                  '${tx.merchant ?? tx.category} • ${formatInsightDate(tx.date, locale: prefs.locale)}',
+                              leading: CategoryIcons.badge(tx.category, size: 18),
+                            ),
+                            const SizedBox(height: 12),
+                          ],
+                        ],
+                      ),
+              ),
             ],
           );
         },
@@ -42,100 +80,185 @@ class CategoryDetailScreen extends ConsumerWidget {
   }
 }
 
-class _CategoryStatsHeader extends StatelessWidget {
-  final CategoryStat stats;
+class _CategorySummaryCard extends StatelessWidget {
+  const _CategorySummaryCard({
+    required this.stats,
+    required this.currencyCode,
+    required this.locale,
+  });
 
-  const _CategoryStatsHeader({required this.stats});
+  final CategoryStat stats;
+  final String currencyCode;
+  final String? locale;
 
   @override
   Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
     final colors = Theme.of(context).colorScheme;
-    final rate = (stats.regretRate * 100).toStringAsFixed(0);
-    final rateColor = stats.regretRate >= 0.6
-        ? colors.error
-        : stats.regretRate >= 0.4
-            ? colors.tertiary
-            : colors.primary;
+    final textTheme = Theme.of(context).textTheme;
+    final rateColor = insightRateColor(context, stats.regretRate);
 
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                Column(children: [
-                  Text('£${stats.totalSpend.toStringAsFixed(0)}',
-                      style: textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
-                  Text('spent', style: textTheme.labelSmall?.copyWith(color: colors.onSurfaceVariant)),
-                ]),
-                Column(children: [
-                  Text('£${stats.regrettedSpend.toStringAsFixed(0)}',
-                      style: textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold, color: rateColor)),
-                  Text('regretted', style: textTheme.labelSmall?.copyWith(color: colors.onSurfaceVariant)),
-                ]),
-                Column(children: [
-                  Text('$rate%',
-                      style: textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold, color: rateColor)),
-                  Text('rate', style: textTheme.labelSmall?.copyWith(color: colors.onSurfaceVariant)),
-                ]),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: colors.errorContainer.withValues(alpha: 0.4),
-                borderRadius: BorderRadius.circular(8),
+    return FeedCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              CategoryIcons.badge(stats.category, size: 22),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      stats.category,
+                      style: textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '${stats.transactionCount} tracked purchases in this category',
+                      style: textTheme.bodyMedium?.copyWith(
+                        color: colors.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
               ),
+            ],
+          ),
+          const SizedBox(height: 18),
+          Row(
+            children: [
+              Expanded(
+                child: _Metric(
+                  label: 'Spent',
+                  value: formatInsightCurrency(
+                    stats.totalSpend,
+                    currencyCode: currencyCode,
+                    locale: locale,
+                  ),
+                ),
+              ),
+              Expanded(
+                child: _Metric(
+                  label: 'Regretted',
+                  value: formatInsightCurrency(
+                    stats.regrettedSpend,
+                    currencyCode: currencyCode,
+                    locale: locale,
+                  ),
+                  emphasize: rateColor,
+                ),
+              ),
+              Expanded(
+                child: _Metric(
+                  label: 'Rate',
+                  value: '${(stats.regretRate * 100).toStringAsFixed(0)}%',
+                  emphasize: rateColor,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 18),
+          DecoratedBox(
+            decoration: BoxDecoration(
+              color: rateColor.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(18),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(14),
               child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(Icons.trending_up, color: colors.onErrorContainer, size: 16),
-                  const SizedBox(width: 6),
-                  Text(
-                    '£${stats.projectedAnnual.toStringAsFixed(0)} in regretted spend projected this year',
-                    style: textTheme.bodySmall?.copyWith(color: colors.onErrorContainer),
+                  Icon(Icons.timeline_rounded, color: rateColor, size: 18),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      '${formatInsightCompactCurrency(stats.projectedAnnual, currencyCode: currencyCode, locale: locale)} projected in yearly regret spend if this pace holds.',
+                      style: textTheme.bodySmall?.copyWith(
+                        color: rateColor,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                   ),
                 ],
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 }
 
-class _TransactionRow extends StatelessWidget {
-  final TransactionSummary tx;
+class _Metric extends StatelessWidget {
+  const _Metric({
+    required this.label,
+    required this.value,
+    this.emphasize,
+  });
 
-  const _TransactionRow({required this.tx});
+  final String label;
+  final String value;
+  final Color? emphasize;
 
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
-    final regretEmoji = switch (tx.regretLevel?.toLowerCase()) {
-      'worthit' => '✅',
-      'regret' => '❌',
-      'notsure' => '🤔',
-      _ => '—',
-    };
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      child: Row(
-        children: [
-          Text(regretEmoji),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(tx.merchant ?? tx.category, style: textTheme.bodyMedium),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          value,
+          style: textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.w800,
+            color: emphasize,
           ),
-          Text('${tx.currencyCode} ${tx.amount.toStringAsFixed(2)}',
-              style: textTheme.bodyMedium?.copyWith(color: colors.onSurfaceVariant)),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          label,
+          style: textTheme.labelSmall?.copyWith(
+            color: colors.onSurfaceVariant,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _StateCard extends StatelessWidget {
+  const _StateCard({
+    required this.title,
+    required this.body,
+  });
+
+  final String title;
+  final String body;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
+    return FeedCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            body,
+            style: textTheme.bodyMedium?.copyWith(
+              color: colors.onSurfaceVariant,
+            ),
+          ),
         ],
       ),
     );

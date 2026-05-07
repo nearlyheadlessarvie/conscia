@@ -25,5 +25,7 @@ void main() {
 
     expect(find.text('9%'), findsOneWidget);
     expect(find.text('938%'), findsNothing);
+    expect(find.text('Monthly cap'), findsOneWidget);
+    expect(find.text('Spent so far'), findsOneWidget);
   });
 }

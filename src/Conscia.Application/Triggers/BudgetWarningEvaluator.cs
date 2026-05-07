@@ -30,10 +30,15 @@ public class BudgetWarningEvaluator : ITriggerEvaluator
                 alerts.Add(new InAppAlert
                 {
                     UserId = userId,
+                    AlertKey = $"budget-warning-{NormalizeKey(budget.Category)}",
                     TriggerName = TriggerName,
                     Title = $"Budget Warning: {budget.Category}",
                     Message = $"You've spent {percentUsed:F0}% of your {budget.Category} budget " +
                               $"({budget.CurrentSpend:F2}/{budget.MonthlyLimit:F2} {budget.CurrencyCode}).",
+                    Priority = 30,
+                    ActionLabel = "Review budgets",
+                    ActionRoute = "/settings/budgets",
+                    Category = budget.Category,
                     TTL = new DateTimeOffset(DateTime.UtcNow.AddDays(7)).ToUnixTimeSeconds()
                 });
             }
@@ -41,4 +46,7 @@ public class BudgetWarningEvaluator : ITriggerEvaluator
 
         return alerts;
     }
+
+    private static string NormalizeKey(string value) =>
+        value.Trim().ToLowerInvariant().Replace(' ', '-');
 }

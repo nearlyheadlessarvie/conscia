@@ -51,8 +51,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       return;
     }
 
-    ref.read(monthlyUsageProvider.notifier).recordReflection();
-
     final level = switch (feeling) {
       'worth_it' => 0,
       'regret' => 2,
@@ -87,12 +85,12 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     final budgetState = ref.watch(budgetListProvider);
     final txState = ref.watch(transactionListProvider);
     final insightsState = ref.watch(behavioralInsightsProvider);
-    final localAlerts = ref.watch(activeLocalAlertsProvider);
+    final alerts = ref.watch(activeAlertsProvider);
 
     final budgets = budgetState.budgets;
     final transactions = txState.transactions;
     final recentTransactions = transactions.take(5).toList();
-    final highlightedAlert = localAlerts.isNotEmpty ? localAlerts.first : null;
+    final highlightedAlert = alerts.isNotEmpty ? alerts.first : null;
     final regretPrompts = transactions
         .where((t) =>
             t.regretLevel == null &&
@@ -135,13 +133,16 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             child: InAppAlertBanner(
               title: highlightedAlert.title,
               message: highlightedAlert.message,
-              actionLabel:
-                  highlightedAlert.type == 'budget_nudge' ? 'Add budget' : null,
-              onAction: highlightedAlert.type == 'budget_nudge'
-                  ? () => context.push(AppRoutes.budgets)
-                  : null,
+              actionLabel: highlightedAlert.actionLabel ??
+                  (highlightedAlert.type == 'budget_nudge' ? 'Add budget' : null),
+              onAction: (highlightedAlert.actionRoute == null &&
+                      highlightedAlert.type != 'budget_nudge')
+                  ? null
+                  : () => context.push(
+                        highlightedAlert.actionRoute ?? AppRoutes.budgets,
+                      ),
               onDismiss: () => ref
-                  .read(localAlertsProvider.notifier)
+                  .read(dismissedAlertIdsProvider.notifier)
                   .dismiss(highlightedAlert.id),
             ),
           ),

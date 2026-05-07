@@ -11,7 +11,7 @@ export default {
         expense: '#E53935',
       },
       fontFamily: {
-        heading: ['Poppins', 'sans-serif'],
+        heading: ['Manrope', 'sans-serif'],
         body: ['Inter', 'sans-serif'],
       },
       borderRadius: {

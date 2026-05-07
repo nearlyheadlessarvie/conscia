@@ -4,6 +4,12 @@ class AppColors extends ThemeExtension<AppColors> {
   const AppColors({
     required this.income,
     required this.expense,
+    required this.pageTop,
+    required this.pageBottom,
+    required this.surfaceRaised,
+    required this.surfaceMuted,
+    required this.sectionBorder,
+    required this.heroTint,
     required this.devilBg,
     required this.devilAccent,
     required this.devilText,
@@ -21,6 +27,12 @@ class AppColors extends ThemeExtension<AppColors> {
 
   final Color income;
   final Color expense;
+  final Color pageTop;
+  final Color pageBottom;
+  final Color surfaceRaised;
+  final Color surfaceMuted;
+  final Color sectionBorder;
+  final Color heroTint;
   final Color devilBg;
   final Color devilAccent;
   final Color devilText;
@@ -38,6 +50,12 @@ class AppColors extends ThemeExtension<AppColors> {
   static const light = AppColors(
     income: Color(0xFF4CAF50),
     expense: Color(0xFFE53935),
+    pageTop: Color(0xFFF7F8FF),
+    pageBottom: Color(0xFFFFFFFF),
+    surfaceRaised: Color(0xFFFFFFFF),
+    surfaceMuted: Color(0xFFF7F8FB),
+    sectionBorder: Color(0xFFE4E7F2),
+    heroTint: Color(0xFFEEF1FF),
     devilBg: Color(0xFFFFF8E1),
     devilAccent: Color(0xFFE65100),
     devilText: Color(0xFF3E2723),
@@ -56,6 +74,12 @@ class AppColors extends ThemeExtension<AppColors> {
   static const dark = AppColors(
     income: Color(0xFF81C784),
     expense: Color(0xFFEF9A9A),
+    pageTop: Color(0xFF0E1525),
+    pageBottom: Color(0xFF0A101C),
+    surfaceRaised: Color(0xFF151D2D),
+    surfaceMuted: Color(0xFF111827),
+    sectionBorder: Color(0xFF22314A),
+    heroTint: Color(0xFF18233B),
     devilBg: Color(0xFF3E2723),
     devilAccent: Color(0xFFE65100),
     devilText: Color(0xFFFFE0B2),
@@ -75,6 +99,12 @@ class AppColors extends ThemeExtension<AppColors> {
   AppColors copyWith({
     Color? income,
     Color? expense,
+    Color? pageTop,
+    Color? pageBottom,
+    Color? surfaceRaised,
+    Color? surfaceMuted,
+    Color? sectionBorder,
+    Color? heroTint,
     Color? devilBg,
     Color? devilAccent,
     Color? devilText,
@@ -92,6 +122,12 @@ class AppColors extends ThemeExtension<AppColors> {
     return AppColors(
       income: income ?? this.income,
       expense: expense ?? this.expense,
+      pageTop: pageTop ?? this.pageTop,
+      pageBottom: pageBottom ?? this.pageBottom,
+      surfaceRaised: surfaceRaised ?? this.surfaceRaised,
+      surfaceMuted: surfaceMuted ?? this.surfaceMuted,
+      sectionBorder: sectionBorder ?? this.sectionBorder,
+      heroTint: heroTint ?? this.heroTint,
       devilBg: devilBg ?? this.devilBg,
       devilAccent: devilAccent ?? this.devilAccent,
       devilText: devilText ?? this.devilText,
@@ -114,6 +150,12 @@ class AppColors extends ThemeExtension<AppColors> {
     return AppColors(
       income: Color.lerp(income, other.income, t)!,
       expense: Color.lerp(expense, other.expense, t)!,
+      pageTop: Color.lerp(pageTop, other.pageTop, t)!,
+      pageBottom: Color.lerp(pageBottom, other.pageBottom, t)!,
+      surfaceRaised: Color.lerp(surfaceRaised, other.surfaceRaised, t)!,
+      surfaceMuted: Color.lerp(surfaceMuted, other.surfaceMuted, t)!,
+      sectionBorder: Color.lerp(sectionBorder, other.sectionBorder, t)!,
+      heroTint: Color.lerp(heroTint, other.heroTint, t)!,
       devilBg: Color.lerp(devilBg, other.devilBg, t)!,
       devilAccent: Color.lerp(devilAccent, other.devilAccent, t)!,
       devilText: Color.lerp(devilText, other.devilText, t)!,

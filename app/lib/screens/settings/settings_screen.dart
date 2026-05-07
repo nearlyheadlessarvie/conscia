@@ -18,8 +18,12 @@ import '../../providers/health_provider.dart';
 import '../../providers/location_assistance_provider.dart';
 import '../../providers/subscription_provider.dart';
 import '../../providers/user_provider.dart';
+import '../../services/user_service.dart';
 import '../../widgets/currency_picker_sheet.dart';
+import '../../widgets/feed_card.dart';
+import '../../widgets/hero_screen_scaffold.dart';
 import '../../widgets/locale_picker_sheet.dart';
+import '../../widgets/screen_section.dart';
 import '../../widgets/skeleton_loader.dart';
 import 'widgets/subscription_card.dart';
 import 'widgets/subscription_sheet.dart';
@@ -116,205 +120,207 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final textTheme = theme.textTheme;
     final userAsync = ref.watch(currentUserProvider);
     final subAsync = ref.watch(subscriptionProvider);
     final locationAssistance = ref.watch(locationAssistanceProvider);
+    final userPreferences = ref.watch(userPreferencesProvider);
 
-    return Scaffold(
+    return HeroScreenScaffold(
       appBar: AppBar(title: const Text('Settings')),
-      body: ListView(
-        padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ── Profile ──────────────────────────────────────────
-          _sectionHeader(textTheme, 'Profile'),
-          userAsync.when(
-            data: (user) => ListTile(
-              leading: CircleAvatar(
-                child: Text(
-                  user.email.isNotEmpty ? user.email[0].toUpperCase() : '?',
-                ),
-              ),
-              title: Text(user.email),
-              subtitle: Text('Member since ${_formatDate(user.createdAt)}'),
-            ),
-            loading: () => const ListTile(
-              leading: CircleAvatar(child: Icon(Icons.person)),
-              title: Text('Loading...'),
-            ),
-            error: (_, __) => const ListTile(
-              leading: CircleAvatar(child: Icon(Icons.person)),
-              title: Text('Unable to load profile'),
-            ),
-          ),
-          ListTile(
-            leading: Icon(AppIcons.person),
-            title: const Text('My Profile'),
-            subtitle: const Text('Spending style, income, household'),
-            trailing: Icon(AppIcons.chevronRight),
-            onTap: () => context.push(AppRoutes.settingsProfile),
-          ),
-          const Divider(),
-
-          // ── Preferences ──────────────────────────────────────
-          _sectionHeader(textTheme, 'Preferences'),
-          ListTile(
-            leading: const Icon(Icons.currency_exchange),
-            title: const Text('Default Currency'),
-            subtitle: Text(ref.watch(userPreferencesProvider).currency),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => _showCurrencyPicker(context, ref),
-          ),
-          ListTile(
-            leading: const Icon(Icons.language),
-            title: const Text('Region / Number Format'),
-            subtitle: Text(ref.watch(userPreferencesProvider).locale),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => _showLocalePicker(context, ref),
-          ),
-          if (_biometricSupported)
-            SwitchListTile(
-              secondary: const Icon(Icons.fingerprint),
-              title: const Text('Biometric Sign-In'),
-              subtitle: const Text('Use fingerprint or face to sign in'),
-              value: _biometricEnabled,
-              onChanged: _toggleBiometric,
-            ),
-          SwitchListTile(
-            secondary: const Icon(Icons.location_searching_outlined),
-            title: const Text('Smart location suggestions'),
-            subtitle: Text(
-              [
-                'Currently ${locationAssistance.isEnabled ? 'on' : 'off'} for nearby merchant and category suggestions.',
-                if (!locationAssistance.isEnabled &&
-                    locationAssistance.permissionDenied)
-                  'System location permission may also need to be enabled.',
-              ].join(' '),
-            ),
-            value: locationAssistance.isEnabled,
-            onChanged: (value) async {
-              final notifier = ref.read(locationAssistanceProvider.notifier);
-              if (value) {
-                await notifier.enableFromSettings();
-              } else {
-                await notifier.disableFromSettings();
-              }
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.tune),
-            title: const Text('AI Personality Intensity'),
-            subtitle: Text(
-              userAsync.maybeWhen(
-                data: (user) =>
-                    _labelForAiIntensity(user.aiPersonalityIntensity),
-                orElse: () => 'Balanced',
+          ScreenSection(
+            title: 'Profile',
+            child: FeedCard(
+              child: Column(
+                children: [
+                  userAsync.when(
+                    data: (user) => _ProfileSummary(user: user),
+                    loading: () => const _SettingsInfoRow(
+                      leading: CircleAvatar(child: Icon(Icons.person)),
+                      title: 'Loading...',
+                    ),
+                    error: (_, __) => const _SettingsInfoRow(
+                      leading: CircleAvatar(child: Icon(Icons.person)),
+                      title: 'Unable to load profile',
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  _SettingsActionRow(
+                    leading: Icon(AppIcons.person),
+                    title: 'My Profile',
+                    subtitle: 'Spending style, income, household',
+                    onTap: () => context.push(AppRoutes.settingsProfile),
+                  ),
+                ],
               ),
             ),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: userAsync.maybeWhen(
-              data: (_) => () => _showAiIntensityPicker(context, ref),
-              orElse: () => null,
+          ),
+          ScreenSection(
+            title: 'Preferences',
+            child: FeedCard(
+              child: Column(
+                children: [
+                  _SettingsActionRow(
+                    leading: const Icon(Icons.currency_exchange),
+                    title: 'Default Currency',
+                    subtitle: userPreferences.currency,
+                    onTap: () => _showCurrencyPicker(context, ref),
+                  ),
+                  _SettingsActionRow(
+                    leading: const Icon(Icons.language),
+                    title: 'Region / Number Format',
+                    subtitle: userPreferences.locale,
+                    onTap: () => _showLocalePicker(context, ref),
+                  ),
+                  if (_biometricSupported)
+                    _SettingsSwitchRow(
+                      leading: const Icon(Icons.fingerprint),
+                      title: 'Biometric Sign-In',
+                      subtitle: 'Use fingerprint or face to sign in',
+                      value: _biometricEnabled,
+                      onChanged: _toggleBiometric,
+                    ),
+                  _SettingsSwitchRow(
+                    leading: const Icon(Icons.location_searching_outlined),
+                    title: 'Smart location suggestions',
+                    subtitle: [
+                      'Currently ${locationAssistance.isEnabled ? 'on' : 'off'} for nearby merchant and category suggestions.',
+                      if (!locationAssistance.isEnabled &&
+                          locationAssistance.permissionDenied)
+                        'System location permission may also need to be enabled.',
+                    ].join(' '),
+                    value: locationAssistance.isEnabled,
+                    onChanged: (value) async {
+                      final notifier =
+                          ref.read(locationAssistanceProvider.notifier);
+                      if (value) {
+                        await notifier.enableFromSettings();
+                      } else {
+                        await notifier.disableFromSettings();
+                      }
+                    },
+                  ),
+                  _SettingsActionRow(
+                    leading: const Icon(Icons.tune),
+                    title: 'AI Personality Intensity',
+                    subtitle: userAsync.maybeWhen(
+                      data: (user) =>
+                          _labelForAiIntensity(user.aiPersonalityIntensity),
+                      orElse: () => 'Balanced',
+                    ),
+                    onTap: userAsync.maybeWhen(
+                      data: (_) => () => _showAiIntensityPicker(context, ref),
+                      orElse: () => null,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
-          const Divider(),
-
-          // ── Budgets ──────────────────────────────────────────
-          _sectionHeader(textTheme, 'Budgets'),
-          ListTile(
-            leading: const Icon(Icons.pie_chart_outline),
-            title: const Text('Manage Budgets'),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => context.push(AppRoutes.budgets),
+          ScreenSection(
+            title: 'Budgets',
+            child: FeedCard(
+              child: _SettingsActionRow(
+                leading: const Icon(Icons.pie_chart_outline),
+                title: 'Manage Budgets',
+                onTap: () => context.push(AppRoutes.budgets),
+              ),
+            ),
           ),
-          const Divider(),
-
-          // ── Subscription ─────────────────────────────────────
-          _sectionHeader(textTheme, 'Subscription'),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          ScreenSection(
+            title: 'Subscription',
             child: subAsync.when(
               data: (status) => SubscriptionCard(
                 status: status,
                 onUpgrade: () => SubscriptionSheet.show(context),
                 onManage: () => SubscriptionSheet.show(context),
               ),
-              loading: () => const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                child: SkeletonCard(),
+              loading: () => const SkeletonCard(),
+              error: (_, __) => FeedCard(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Unable to load subscription'),
+                    const SizedBox(height: 8),
+                    OutlinedButton.icon(
+                      onPressed: () => ref.invalidate(subscriptionProvider),
+                      icon: const Icon(Icons.refresh),
+                      label: const Text('Retry'),
+                    ),
+                  ],
+                ),
               ),
-              error: (_, __) => Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+            ),
+          ),
+          if (ApiConstants.useMockAuth)
+            ScreenSection(
+              title: 'Developer',
+              child: FeedCard(child: _DevUpgradeTile()),
+            ),
+          ScreenSection(
+            title: 'Data & Privacy',
+            child: FeedCard(
+              child: Column(
                 children: [
-                  const Text('Unable to load subscription'),
-                  const SizedBox(height: 8),
-                  OutlinedButton.icon(
-                    onPressed: () => ref.invalidate(subscriptionProvider),
-                    icon: const Icon(Icons.refresh),
-                    label: const Text('Retry'),
+                  _SettingsActionRow(
+                    leading: const Icon(Icons.download_outlined),
+                    title: 'Export My Data',
+                    subtitle: 'Download all your data as JSON',
+                    onTap: () => _exportData(context, ref),
+                  ),
+                  _SettingsActionRow(
+                    leading: Icon(
+                      Icons.delete_forever,
+                      color: theme.colorScheme.error,
+                    ),
+                    title: 'Delete Account',
+                    subtitle: 'Permanently remove all your data',
+                    titleColor: theme.colorScheme.error,
+                    onTap: () => _confirmDeleteAccount(context, ref),
                   ),
                 ],
               ),
             ),
           ),
-          if (ApiConstants.useMockAuth) _DevUpgradeTile(),
-          const Divider(),
-
-          // ── Data & Privacy ───────────────────────────────────
-          _sectionHeader(textTheme, 'Data & Privacy'),
-          ListTile(
-            leading: const Icon(Icons.download_outlined),
-            title: const Text('Export My Data'),
-            subtitle: const Text('Download all your data as JSON'),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => _exportData(context, ref),
-          ),
-          ListTile(
-            leading: Icon(Icons.delete_forever, color: theme.colorScheme.error),
-            title: Text('Delete Account',
-                style: TextStyle(color: theme.colorScheme.error)),
-            subtitle: const Text('Permanently remove all your data'),
-            onTap: () => _confirmDeleteAccount(context, ref),
-          ),
-          const Divider(),
-
-          // ── About ────────────────────────────────────────────
-          _sectionHeader(textTheme, 'About'),
-          _ServiceStatusTile(),
-          const ListTile(
-            leading: Icon(Icons.info_outline),
-            title: Text('App Version'),
-            subtitle: Text('Version 1.0.0 (build 1)'),
-          ),
-          const SizedBox(height: 8),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: SizedBox(
-              width: double.infinity,
-              child: OutlinedButton.icon(
-                icon: Icon(Icons.logout, color: theme.colorScheme.error),
-                label: Text('Sign Out',
-                    style: TextStyle(color: theme.colorScheme.error)),
-                style: OutlinedButton.styleFrom(
-                  side: BorderSide(
-                      color: theme.colorScheme.error.withValues(alpha: 0.5)),
-                ),
-                onPressed: () => _confirmSignOut(context, ref),
+          const ScreenSection(
+            title: 'About',
+            child: FeedCard(
+              child: Column(
+                children: [
+                  _ServiceStatusTile(compact: true),
+                  _SettingsStaticRow(
+                    leading: Icon(Icons.info_outline),
+                    title: 'App Version',
+                    subtitle: 'Version 1.0.0 (build 1)',
+                  ),
+                ],
               ),
             ),
           ),
-          const SizedBox(height: 32),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              icon: Icon(Icons.logout, color: theme.colorScheme.error),
+              label: Text(
+                'Sign Out',
+                style: TextStyle(color: theme.colorScheme.error),
+              ),
+              style: OutlinedButton.styleFrom(
+                side: BorderSide(
+                  color: theme.colorScheme.error.withValues(alpha: 0.5),
+                ),
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                backgroundColor: Colors.white.withValues(alpha: 0.86),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(18),
+                ),
+              ),
+              onPressed: () => _confirmSignOut(context, ref),
+            ),
+          ),
         ],
-      ),
-    );
-  }
-
-  Widget _sectionHeader(TextTheme textTheme, String title) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
-      child: Text(
-        title,
-        style: textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
       ),
     );
   }
@@ -624,7 +630,31 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     );
   }
 
-  String _formatDate(DateTime date) {
+  String _labelForAiIntensity(String intensity) {
+    for (final option in _aiIntensityOptions) {
+      if (option.value == intensity) return option.label;
+    }
+    return 'Balanced';
+  }
+}
+
+class _ProfileSummary extends StatelessWidget {
+  const _ProfileSummary({required this.user});
+
+  final UserProfile user;
+
+  @override
+  Widget build(BuildContext context) {
+    return _SettingsInfoRow(
+      leading: CircleAvatar(
+        child: Text(user.email.isNotEmpty ? user.email[0].toUpperCase() : '?'),
+      ),
+      title: user.email,
+      subtitle: 'Member since ${_formatCreated(user.createdAt)}',
+    );
+  }
+
+  String _formatCreated(DateTime date) {
     const months = [
       'Jan',
       'Feb',
@@ -641,12 +671,206 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     ];
     return '${months[date.month - 1]} ${date.year}';
   }
+}
 
-  String _labelForAiIntensity(String intensity) {
-    for (final option in _aiIntensityOptions) {
-      if (option.value == intensity) return option.label;
-    }
-    return 'Balanced';
+class _SettingsInfoRow extends StatelessWidget {
+  const _SettingsInfoRow({
+    required this.leading,
+    required this.title,
+    this.subtitle,
+  });
+
+  final Widget leading;
+  final String title;
+  final String? subtitle;
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        leading,
+        const SizedBox(width: 14),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(title, style: textTheme.titleMedium),
+              if (subtitle != null) ...[
+                const SizedBox(height: 4),
+                Text(
+                  subtitle!,
+                  style: textTheme.bodyMedium?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _SettingsActionRow extends StatelessWidget {
+  const _SettingsActionRow({
+    required this.leading,
+    required this.title,
+    this.subtitle,
+    this.onTap,
+    this.titleColor,
+  });
+
+  final Widget leading;
+  final String title;
+  final String? subtitle;
+  final VoidCallback? onTap;
+  final Color? titleColor;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(18),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          child: Row(
+            children: [
+              SizedBox(width: 28, child: Center(child: leading)),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                            color: titleColor,
+                            fontWeight: FontWeight.w600,
+                          ),
+                    ),
+                    if (subtitle != null) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        subtitle!,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color:
+                                  Theme.of(context).colorScheme.onSurfaceVariant,
+                              height: 1.35,
+                            ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              Icon(AppIcons.chevronRight),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SettingsSwitchRow extends StatelessWidget {
+  const _SettingsSwitchRow({
+    required this.leading,
+    required this.title,
+    required this.subtitle,
+    required this.value,
+    required this.onChanged,
+  });
+
+  final Widget leading;
+  final String title;
+  final String subtitle;
+  final bool value;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(width: 28, child: Center(child: leading)),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    subtitle,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                          height: 1.35,
+                        ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          Switch(value: value, onChanged: onChanged),
+        ],
+      ),
+    );
+  }
+}
+
+class _SettingsStaticRow extends StatelessWidget {
+  const _SettingsStaticRow({
+    required this.leading,
+    required this.title,
+    this.subtitle,
+  });
+
+  final Widget leading;
+  final String title;
+  final String? subtitle;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      child: Row(
+        children: [
+          SizedBox(width: 28, child: Center(child: leading)),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: Theme.of(context).textTheme.titleSmall),
+                if (subtitle != null) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    subtitle!,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 
@@ -692,8 +916,21 @@ class _DevUpgradeTile extends ConsumerWidget {
 }
 
 class _ServiceStatusTile extends ConsumerWidget {
+  const _ServiceStatusTile({this.compact = false});
+
+  final bool compact;
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    if (compact) {
+      return _SettingsActionRow(
+        leading: const Icon(Icons.monitor_heart_outlined),
+        title: 'Service Status',
+        subtitle: 'Check API, AI, and storage health',
+        onTap: () => context.push(AppRoutes.serviceStatus),
+      );
+    }
+
     final state = ref.watch(healthStatusProvider);
     final colors = Theme.of(context).appColors;
 
