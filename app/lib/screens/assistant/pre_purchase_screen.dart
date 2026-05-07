@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/constants/generated/app_constants.g.dart';
 import '../../core/constants/category_icons.dart';
+import '../../core/constants/category_visibility.dart';
 import '../../providers/ai_provider.dart';
 import '../../providers/location_assistance_provider.dart';
 import '../../providers/subscription_provider.dart';
@@ -307,13 +308,19 @@ class _PrePurchaseScreenState extends ConsumerState<PrePurchaseScreen>
           TransactionStyleCategorySelector(
             selectedCategory: _selectedCategory,
             isExpense: true,
+            isPremium: isPremium,
             onCategorySelected: (category) {
               setState(() => _selectedCategory = category);
             },
           ),
           if (locationAssistance.isEnabled && hasSuggestions) ...[
             const SizedBox(height: 16),
-            _buildLocationSuggestionCard(colors, textTheme, suggestions),
+            _buildLocationSuggestionCard(
+              colors,
+              textTheme,
+              suggestions,
+              isPremium,
+            ),
           ],
           const SizedBox(height: 24),
 
@@ -336,7 +343,13 @@ class _PrePurchaseScreenState extends ConsumerState<PrePurchaseScreen>
     ColorScheme colors,
     TextTheme textTheme,
     LocationAssistanceSuggestions suggestions,
+    bool isPremium,
   ) {
+    final visibleCategories = visibleBudgetCategories(
+      isPremium: isPremium,
+      categories: suggestions.likelyCategories,
+    );
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
@@ -377,14 +390,14 @@ class _PrePurchaseScreenState extends ConsumerState<PrePurchaseScreen>
                   .toList(),
             ),
           ],
-          if (suggestions.likelyCategories.isNotEmpty) ...[
+          if (visibleCategories.isNotEmpty) ...[
             const SizedBox(height: 16),
             Text('Likely categories', style: textTheme.titleSmall),
             const SizedBox(height: 8),
             Wrap(
               spacing: 8,
               runSpacing: 8,
-              children: suggestions.likelyCategories
+              children: visibleCategories
                   .map(
                     (category) => ActionChip(
                       avatar: Icon(

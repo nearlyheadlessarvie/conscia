@@ -79,6 +79,13 @@ Future<void> _pumpPrePurchaseScreen(
 }
 
 Future<Widget> buildPrePurchaseApp(WidgetTester tester) async {
+  return buildPrePurchaseAppForTier(tester, isPremium: false);
+}
+
+Future<Widget> buildPrePurchaseAppForTier(
+  WidgetTester tester, {
+  required bool isPremium,
+}) async {
   SharedPreferences.setMockInitialValues({
     'location_suggestions_enabled': false,
     'location_suggestions_prompted': true,
@@ -91,9 +98,9 @@ Future<Widget> buildPrePurchaseApp(WidgetTester tester) async {
         ['Health', 'Dining', 'Shopping', 'Travel', 'Education'],
       ),
       subscriptionProvider.overrideWith(
-        (ref) async => const SubscriptionStatus(
-          tier: 'free',
-          isPremium: false,
+        (ref) async => SubscriptionStatus(
+          tier: isPremium ? 'premium' : 'free',
+          isPremium: isPremium,
         ),
       ),
       currentUserProvider.overrideWith(
@@ -122,10 +129,11 @@ void main() {
       'pre-purchase assistant shows quick category chips and more categories entrypoint',
       (tester) async {
     await tester.pumpWidget(await buildPrePurchaseApp(tester));
+    await tester.pumpAndSettle();
 
     expect(find.text('Salary'), findsNothing);
     expect(find.text('More categories'), findsOneWidget);
-    expect(find.text('Health'), findsWidgets);
+    expect(find.text('Dining'), findsWidgets);
 
     await tester.tap(find.text('More categories'));
     await tester.pumpAndSettle();
@@ -144,7 +152,45 @@ void main() {
       ),
       findsOneWidget,
     );
+    expect(find.text('Dining'), findsNothing);
+  });
+
+  testWidgets('pre-purchase hides upgrade-only categories for free users',
+      (tester) async {
+    await tester.pumpWidget(await buildPrePurchaseAppForTier(
+      tester,
+      isPremium: false,
+    ));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Travel'), findsNothing);
     expect(find.text('Health'), findsNothing);
+    expect(find.text('Shopping'), findsNothing);
+    expect(find.text('Dining'), findsOneWidget);
+
+    await tester.tap(find.text('More categories'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Groceries'), findsWidgets);
+    expect(find.text('Transport'), findsWidgets);
+    expect(find.text('Travel'), findsNothing);
+  });
+
+  testWidgets('pre-purchase shows all categories for premium users',
+      (tester) async {
+    await tester.pumpWidget(await buildPrePurchaseAppForTier(
+      tester,
+      isPremium: true,
+    ));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Travel'), findsWidgets);
+
+    await tester.tap(find.text('More categories'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Travel'), findsWidgets);
+    expect(find.text('Education'), findsWidgets);
   });
 
   testWidgets('pre-purchase shows first-use location prompt only when needed',

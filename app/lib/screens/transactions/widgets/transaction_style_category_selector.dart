@@ -9,6 +9,7 @@ class TransactionStyleCategorySelector extends StatelessWidget {
     super.key,
     required this.selectedCategory,
     required this.isExpense,
+    required this.isPremium,
     required this.onCategorySelected,
     this.labelStyle,
     this.moreCategoriesIcon = Icons.add,
@@ -16,6 +17,7 @@ class TransactionStyleCategorySelector extends StatelessWidget {
 
   final String? selectedCategory;
   final bool isExpense;
+  final bool isPremium;
   final ValueChanged<String?> onCategorySelected;
   final TextStyle? labelStyle;
   final IconData moreCategoriesIcon;
@@ -31,6 +33,7 @@ class TransactionStyleCategorySelector extends StatelessWidget {
             child: CategoryPicker(
               selected: selectedCategory,
               isExpense: isExpense,
+              isPremium: isPremium,
               maxVisible: 100,
               onSelected: (category) {
                 onCategorySelected(category);
@@ -76,6 +79,7 @@ class TransactionStyleCategorySelector extends StatelessWidget {
           QuickPresetChips(
             selectedCategory: selectedCategory,
             isExpense: isExpense,
+            isPremium: isPremium,
             onCategorySelected: onCategorySelected,
           ),
         ],

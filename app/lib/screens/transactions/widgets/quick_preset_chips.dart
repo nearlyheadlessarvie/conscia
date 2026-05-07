@@ -2,18 +2,21 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/constants/category_icons.dart';
+import '../../../core/constants/category_visibility.dart';
 import '../../../core/constants/generated/app_constants.g.dart';
 import '../../../providers/category_frequency_provider.dart';
 
 class QuickPresetChips extends ConsumerWidget {
   final String? selectedCategory;
   final bool isExpense;
+  final bool isPremium;
   final ValueChanged<String> onCategorySelected;
 
   const QuickPresetChips({
     super.key,
     required this.selectedCategory,
     required this.isExpense,
+    this.isPremium = true,
     required this.onCategorySelected,
   });
 
@@ -44,10 +47,14 @@ class QuickPresetChips extends ConsumerWidget {
   }
 
   List<String> _expenseQuickCategories(List<String> frequentCategories) {
+    final allowedCategories = visibleBudgetCategories(
+      isPremium: isPremium,
+      categories: expenseCategories,
+    );
     final visible = <String>[];
 
     for (final category in frequentCategories) {
-      if (expenseCategories.contains(category) && !visible.contains(category)) {
+      if (allowedCategories.contains(category) && !visible.contains(category)) {
         visible.add(category);
       }
       if (visible.length == 5) {
@@ -55,7 +62,7 @@ class QuickPresetChips extends ConsumerWidget {
       }
     }
 
-    for (final category in expenseCategories) {
+    for (final category in allowedCategories) {
       if (!visible.contains(category)) {
         visible.add(category);
       }

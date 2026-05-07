@@ -92,4 +92,32 @@ void main() {
     expect(find.text('Freelance'), findsOneWidget);
     expect(find.text('Coffee'), findsNothing);
   });
+
+  testWidgets('free-tier expense chips hide categories beyond the cap',
+      (tester) async {
+    await tester.pumpWidget(ProviderScope(
+      overrides: [
+        categoryFrequencyProvider.overrideWithValue(
+          ['Travel', 'Health', 'Shopping', 'Dining', 'Coffee'],
+        ),
+      ],
+      child: MaterialApp(
+        home: Scaffold(
+          body: QuickPresetChips(
+            selectedCategory: null,
+            isExpense: true,
+            isPremium: false,
+            onCategorySelected: (_) {},
+          ),
+        ),
+      ),
+    ));
+
+    expect(find.text('Travel'), findsNothing);
+    expect(find.text('Health'), findsNothing);
+    expect(find.text('Shopping'), findsNothing);
+    expect(find.text('Dining'), findsOneWidget);
+    expect(find.text('Groceries'), findsOneWidget);
+    expect(find.text('Transport'), findsOneWidget);
+  });
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/constants/category_icons.dart';
+import '../../../core/constants/category_visibility.dart';
 import '../../../core/constants/generated/app_constants.g.dart';
 
 class CategoryData {
@@ -14,6 +15,7 @@ class CategoryPicker extends StatefulWidget {
   final String? selected;
   final ValueChanged<String> onSelected;
   final bool isExpense;
+  final bool isPremium;
   final int maxVisible;
 
   const CategoryPicker({
@@ -21,6 +23,7 @@ class CategoryPicker extends StatefulWidget {
     this.selected,
     required this.onSelected,
     this.isExpense = true,
+    this.isPremium = true,
     this.maxVisible = 9,
   });
 
@@ -32,7 +35,12 @@ class _CategoryPickerState extends State<CategoryPicker> {
   bool _expanded = false;
 
   List<CategoryData> get _categories {
-    final names = widget.isExpense ? expenseCategories : incomeCategories;
+    final names = widget.isExpense
+        ? visibleBudgetCategories(
+            isPremium: widget.isPremium,
+            categories: expenseCategories,
+          )
+        : incomeCategories;
     return names.map((n) => CategoryData(n, CategoryIcons.forCategory(n))).toList();
   }
 
