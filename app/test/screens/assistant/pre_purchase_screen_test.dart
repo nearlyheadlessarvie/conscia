@@ -2,13 +2,19 @@ import 'package:conscia_app/providers/category_frequency_provider.dart';
 import 'package:conscia_app/providers/subscription_provider.dart';
 import 'package:conscia_app/providers/usage_provider.dart';
 import 'package:conscia_app/providers/user_provider.dart';
+import 'package:conscia_app/providers/ai_provider.dart';
+import 'package:conscia_app/core/utils/currency_formatter.dart';
 import 'package:conscia_app/screens/assistant/pre_purchase_screen.dart';
+import 'package:conscia_app/screens/transactions/transaction_form_screen.dart';
+import 'package:conscia_app/services/ai_service.dart';
+import 'package:dio/dio.dart';
 import 'package:conscia_app/services/location_assistance_service.dart';
 import 'package:conscia_app/services/subscription_service.dart';
 import 'package:conscia_app/services/user_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class _FakeLocationAssistanceService extends LocationAssistanceService {
@@ -30,6 +36,24 @@ class _FakeLocationAssistanceService extends LocationAssistanceService {
   @override
   ({List<String> nearbyMerchants, List<String> likelyCategories})
   getTransactionSuggestions() => suggestions;
+}
+
+class _FakeAIService extends AIService {
+  _FakeAIService({
+    required this.response,
+  }) : super(Dio());
+
+  final AIResponse response;
+
+  @override
+  Future<AIResponse> prePurchase({
+    required String description,
+    required double amount,
+    required String currencyCode,
+    required String category,
+  }) async {
+    return response;
+  }
 }
 
 Future<void> _pumpPrePurchaseScreen(
@@ -85,6 +109,8 @@ Future<Widget> buildPrePurchaseApp(WidgetTester tester) async {
 Future<Widget> buildPrePurchaseAppForTier(
   WidgetTester tester, {
   required bool isPremium,
+  String currencyCode = 'USD',
+  String locale = 'en_US',
 }) async {
   SharedPreferences.setMockInitialValues({
     'location_suggestions_enabled': false,
@@ -107,8 +133,8 @@ Future<Widget> buildPrePurchaseAppForTier(
         (ref) async => UserProfile(
           id: 'user-1',
           email: 'prepurchase@example.com',
-          currencyCode: 'USD',
-          locale: 'en_US',
+          currencyCode: currencyCode,
+          locale: locale,
           createdAt: DateTime(2026),
           hasCompletedOnboarding: true,
         ),
@@ -120,6 +146,71 @@ Future<Widget> buildPrePurchaseAppForTier(
     ],
     child: const MaterialApp(
       home: PrePurchaseScreen(),
+    ),
+  );
+}
+
+Future<void> _pumpPrePurchaseRouterApp(
+  WidgetTester tester, {
+  required AIService aiService,
+  required LocationAssistanceService locationService,
+  String currencyCode = 'USD',
+  String locale = 'en_US',
+}) async {
+  SharedPreferences.setMockInitialValues({
+    'location_suggestions_enabled': true,
+    'location_suggestions_prompted': true,
+  });
+  final prefs = await SharedPreferences.getInstance();
+  final router = GoRouter(
+    initialLocation: '/assistant',
+    routes: [
+      GoRoute(
+        path: '/assistant',
+        builder: (_, __) => const PrePurchaseScreen(),
+      ),
+      GoRoute(
+        path: '/transactions/add',
+        builder: (_, state) {
+          final extra = state.extra as Map<String, String?>?;
+          return TransactionFormScreen(
+            initialAmount: extra?['amount'],
+            initialCurrencyCode: extra?['currencyCode'],
+            initialCategory: extra?['category'],
+            initialCounterparty: extra?['counterparty'],
+          );
+        },
+      ),
+    ],
+  );
+
+  await tester.pumpWidget(
+    ProviderScope(
+      overrides: [
+        categoryFrequencyProvider.overrideWithValue(
+          ['Health', 'Dining', 'Shopping', 'Travel', 'Education'],
+        ),
+        subscriptionProvider.overrideWith(
+          (ref) async => const SubscriptionStatus(
+            tier: 'free',
+            isPremium: false,
+          ),
+        ),
+        currentUserProvider.overrideWith(
+          (ref) async => UserProfile(
+            id: 'user-1',
+            email: 'prepurchase@example.com',
+            currencyCode: currencyCode,
+            locale: locale,
+            createdAt: DateTime(2026),
+            hasCompletedOnboarding: true,
+          ),
+        ),
+        sharedPreferencesProvider.overrideWithValue(prefs),
+        locationAssistanceServiceProvider.overrideWithValue(locationService),
+        aiServiceProvider.overrideWithValue(aiService),
+      ],
+      child: MaterialApp.router(routerConfig: router),
     ),
   );
 }
@@ -310,5 +401,127 @@ void main() {
       ),
       findsOneWidget,
     );
+  });
+
+  testWidgets(
+      'pre-purchase response summary formats the selected currency consistently',
+      (tester) async {
+    await _pumpPrePurchaseRouterApp(
+      tester,
+      aiService: _FakeAIService(
+        response: const AIResponse(
+          impulse: 'Treat yourself.',
+          reason: 'Check your budget.',
+          neutral: 'You can decide.',
+        ),
+      ),
+      locationService: _FakeLocationAssistanceService(
+        permissionGranted: true,
+        suggestions: const (
+          nearbyMerchants: ['Starbucks'],
+          likelyCategories: ['Dining'],
+        ),
+      ),
+      currencyCode: 'PHP',
+      locale: 'en_PH',
+    );
+
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is TextField &&
+            widget.decoration?.labelText == 'What are you thinking of buying?',
+      ),
+      'Starbucks coffee',
+    );
+    await tester.enterText(find.byType(TextField).at(1), '600');
+    await tester.tap(find.widgetWithText(FilterChip, 'Dining'));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Ask Conscia'));
+    await tester.tap(find.text('Ask Conscia'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 700));
+    await tester.pumpAndSettle();
+
+    final formatted = CurrencyFormatter.format(
+      600,
+      currencyCode: 'PHP',
+      locale: 'en_PH',
+    );
+
+    expect(find.textContaining('\$600 PHP'), findsNothing);
+    expect(find.text(formatted), findsOneWidget);
+  });
+
+  testWidgets(
+      'bought it anyway opens add expense form with prefilled confirmation values',
+      (tester) async {
+    await _pumpPrePurchaseRouterApp(
+      tester,
+      aiService: _FakeAIService(
+        response: const AIResponse(
+          impulse: 'Treat yourself.',
+          reason: 'Check your budget.',
+          neutral: 'You can decide.',
+        ),
+      ),
+      locationService: _FakeLocationAssistanceService(
+        permissionGranted: true,
+        suggestions: const (
+          nearbyMerchants: ['Starbucks'],
+          likelyCategories: ['Dining'],
+        ),
+      ),
+      currencyCode: 'PHP',
+      locale: 'en_PH',
+    );
+
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is TextField &&
+            widget.decoration?.labelText == 'What are you thinking of buying?',
+      ),
+      'Starbucks coffee',
+    );
+    await tester.enterText(find.byType(TextField).at(1), '600');
+    await tester.tap(find.widgetWithText(FilterChip, 'Dining'));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Ask Conscia'));
+    await tester.tap(find.text('Ask Conscia'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 700));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Bought it anyway'), findsOneWidget);
+
+    await tester.tap(find.text('Bought it anyway'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Add Transaction'), findsOneWidget);
+
+    final amountField = tester.widget<TextField>(find.byType(TextField).first);
+    expect(amountField.controller?.text, '600');
+
+    expect(
+      find.descendant(
+        of: find.byType(InputChip),
+        matching: find.text('Dining'),
+      ),
+      findsOneWidget,
+    );
+
+    final merchantField = tester.widget<TextField>(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is TextField &&
+            widget.decoration?.labelText == 'Merchant (optional)',
+      ),
+    );
+    expect(merchantField.controller?.text, 'Starbucks');
   });
 }

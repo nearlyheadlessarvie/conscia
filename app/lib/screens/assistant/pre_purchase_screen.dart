@@ -1,10 +1,13 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../core/routing/app_router.dart';
 import '../../core/constants/generated/app_constants.g.dart';
 import '../../core/constants/category_icons.dart';
 import '../../core/constants/category_visibility.dart';
+import '../../core/utils/currency_formatter.dart';
 import '../../providers/ai_provider.dart';
 import '../../providers/location_assistance_provider.dart';
 import '../../providers/subscription_provider.dart';
@@ -192,6 +195,23 @@ class _PrePurchaseScreenState extends ConsumerState<PrePurchaseScreen>
       _errorMessage = null;
       _state = _ScreenState.input;
     });
+  }
+
+  Future<void> _openExpenseConfirmation() async {
+    final suggestions = ref.read(locationAssistanceSuggestionsProvider);
+    final inferredCounterparty = suggestions.nearbyMerchants.isNotEmpty
+        ? suggestions.nearbyMerchants.first
+        : null;
+
+    await context.push(
+      AppRoutes.addTransaction,
+      extra: <String, String?>{
+        'amount': _amountController.text,
+        'currencyCode': _currencyCode,
+        'category': _selectedCategory,
+        'counterparty': inferredCounterparty,
+      },
+    );
   }
 
   @override
@@ -508,6 +528,14 @@ class _PrePurchaseScreenState extends ConsumerState<PrePurchaseScreen>
           const SizedBox(height: 24),
           SizedBox(
             width: double.infinity,
+            child: FilledButton(
+              onPressed: _openExpenseConfirmation,
+              child: const Text('Bought it anyway'),
+            ),
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
             child: OutlinedButton(
               onPressed: _reset,
               child: const Text('Ask About Something Else'),
@@ -564,8 +592,13 @@ class _PrePurchaseScreenState extends ConsumerState<PrePurchaseScreen>
   Widget _buildSummaryCard() {
     final colors = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
-    final amountText =
-        _amountController.text.isEmpty ? '0.00' : _amountController.text;
+    final locale = ref.watch(userPreferencesProvider).locale;
+    final amount = double.tryParse(_amountController.text) ?? 0;
+    final amountText = CurrencyFormatter.format(
+      amount,
+      currencyCode: _currencyCode,
+      locale: locale,
+    );
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
@@ -593,7 +626,7 @@ class _PrePurchaseScreenState extends ConsumerState<PrePurchaseScreen>
               ),
               const SizedBox(width: 8),
               Text(
-                '\$$amountText $_currencyCode',
+                amountText,
                 style: textTheme.bodyMedium?.copyWith(
                   fontWeight: FontWeight.w600,
                 ),

@@ -19,8 +19,19 @@ import 'widgets/transaction_style_category_selector.dart';
 
 class TransactionFormScreen extends ConsumerStatefulWidget {
   final String? transactionId;
+  final String? initialAmount;
+  final String? initialCurrencyCode;
+  final String? initialCategory;
+  final String? initialCounterparty;
 
-  const TransactionFormScreen({super.key, this.transactionId});
+  const TransactionFormScreen({
+    super.key,
+    this.transactionId,
+    this.initialAmount,
+    this.initialCurrencyCode,
+    this.initialCategory,
+    this.initialCounterparty,
+  });
 
   @override
   ConsumerState<TransactionFormScreen> createState() =>
@@ -55,9 +66,30 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
         _loadEditData();
       });
     } else {
+      _applyInitialPrefill();
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _maybePromptForLocationAssistance();
       });
+    }
+  }
+
+  void _applyInitialPrefill() {
+    if (widget.initialAmount case final amount?
+        when amount.trim().isNotEmpty) {
+      _amountController.text = amount;
+    }
+    if (widget.initialCurrencyCode case final currencyCode?
+        when currencyCode.trim().isNotEmpty) {
+      _currencyCode = currencyCode;
+      _currencyManuallyChanged = true;
+    }
+    if (widget.initialCategory case final category?
+        when category.trim().isNotEmpty) {
+      _selectedCategory = category;
+    }
+    if (widget.initialCounterparty case final counterparty?
+        when counterparty.trim().isNotEmpty) {
+      _counterpartyController.text = counterparty;
     }
   }
 

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../../core/routing/app_router.dart';
 import '../../core/network/dio_client.dart';
 import '../../providers/subscription_provider.dart';
 import 'widgets/premium_gate.dart';
@@ -71,12 +72,13 @@ class _ReceiptScannerScreenState extends ConsumerState<ReceiptScannerScreen> {
       body: subAsync.when(
         data: (status) {
           if (!status.isPremium) {
-            return const PremiumGate(
+            return PremiumGate(
               icon: Icons.camera_alt,
               headline: 'Receipt Scanner',
               description:
                   'Automatically extract transaction details from receipts '
                   'using AI. Available with Conscia Premium.',
+              onMaybeLater: () => context.go(AppRoutes.addTransaction),
             );
           }
           return _buildPremiumContent(context);

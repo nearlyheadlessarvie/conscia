@@ -225,7 +225,15 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       // ── Full-screen routes ─────────────────────────────────────────
       GoRoute(
         path: '/transactions/add',
-        builder: (context, state) => const TransactionFormScreen(),
+        builder: (context, state) {
+          final extra = _routeStringExtras(state.extra);
+          return TransactionFormScreen(
+            initialAmount: extra?['amount'],
+            initialCurrencyCode: extra?['currencyCode'],
+            initialCategory: extra?['category'],
+            initialCounterparty: extra?['counterparty'],
+          );
+        },
       ),
       GoRoute(
         path: '/transactions/:id',
