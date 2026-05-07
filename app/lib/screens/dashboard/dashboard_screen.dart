@@ -69,10 +69,12 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       'regret' => 'Marked as regret',
       _ => 'Reflection recorded',
     };
+    final displayCounterparty =
+        tx.description.isNotEmpty ? tx.description : 'Unknown';
     if (!mounted) return;
     setState(() => _dismissedPrompts.add(tx.id));
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('${tx.description}: $label')),
+      SnackBar(content: Text('$displayCounterparty: $label')),
     );
   }
 
@@ -249,11 +251,13 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               itemCount: regretPrompts.length,
               itemBuilder: (context, index) {
                 final tx = regretPrompts[index];
+                final displayCounterparty =
+                    tx.description.isNotEmpty ? tx.description : 'Unknown';
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 8),
                   child: RegretPromptCard(
                     categoryIcon: TransactionTile.iconFor(tx.category),
-                    merchant: tx.description,
+                    merchant: displayCounterparty,
                     amount: tx.amount,
                     currencyCode: tx.currencyCode,
                     date: tx.date,
@@ -291,10 +295,12 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             itemCount: recentTransactions.length,
             itemBuilder: (context, index) {
               final t = recentTransactions[index];
+              final displayCounterparty =
+                  t.description.isNotEmpty ? t.description : 'Unknown';
               return RecentTransactionTile(
                 id: t.id,
                 categoryIcon: TransactionTile.iconFor(t.category),
-                merchant: t.description.isNotEmpty ? t.description : 'Unknown',
+                merchant: displayCounterparty,
                 category: t.category,
                 date: t.date,
                 amount: t.amount,

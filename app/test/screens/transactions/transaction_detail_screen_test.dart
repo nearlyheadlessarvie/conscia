@@ -7,6 +7,35 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
 void main() {
+  testWidgets('detail screen falls back to Unknown when description is empty', (
+    tester,
+  ) async {
+    final transaction = Transaction(
+      id: 'tx-2',
+      amount: 250,
+      currencyCode: 'PHP',
+      category: 'Dining',
+      description: '',
+      type: 'expense',
+      date: DateTime(2026, 5, 7, 19, 0),
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          transactionDetailProvider.overrideWith((ref, id) async => transaction),
+        ],
+        child: const MaterialApp(
+          home: TransactionDetailScreen(transactionId: 'tx-2'),
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    expect(find.text('Unknown'), findsOneWidget);
+  });
+
   testWidgets('detail screen shows edited transaction returned from edit route', (
     tester,
   ) async {

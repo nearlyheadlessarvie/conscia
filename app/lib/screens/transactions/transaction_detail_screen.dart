@@ -220,6 +220,8 @@ class _TransactionDetailScreenState
     final textTheme = Theme.of(context).textTheme;
     final isIncome = tx.type == 'income';
     final prefix = isIncome ? '+' : '-';
+    final displayCounterparty =
+        tx.description.isNotEmpty ? tx.description : 'Unknown';
 
     if (!_regretLevelInitialized) {
       _regretLevel = tx.regretLevel;
@@ -247,7 +249,7 @@ class _TransactionDetailScreenState
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    tx.description.isNotEmpty ? tx.description : 'Unknown',
+                    displayCounterparty,
                     style: textTheme.headlineLarge,
                     textAlign: TextAlign.center,
                   ),

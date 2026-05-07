@@ -59,6 +59,8 @@ class TransactionTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
+    final displayCounterparty =
+        merchant != null && merchant!.trim().isNotEmpty ? merchant! : 'Unknown';
     final amountText = isIncome
         ? '+${CurrencyFormatter.format(amount.abs(), currencyCode: currencyCode)}'
         : '-${CurrencyFormatter.format(amount.abs(), currencyCode: currencyCode)}';
@@ -85,7 +87,7 @@ class TransactionTile extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    merchant ?? 'Unknown',
+                    displayCounterparty,
                     style: textTheme.titleMedium,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,

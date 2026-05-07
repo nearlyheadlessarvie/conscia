@@ -53,7 +53,7 @@ class _RecordingTransactionService extends TransactionService {
       amount: dto.amount,
       currencyCode: dto.currencyCode,
       category: dto.category,
-      description: dto.merchant,
+      description: dto.counterparty,
       type: dto.type,
       date: dto.date,
     );
@@ -80,7 +80,7 @@ class _RecordingTransactionService extends TransactionService {
       amount: dto.amount,
       currencyCode: dto.currencyCode,
       category: dto.category,
-      description: dto.merchant,
+      description: dto.counterparty,
       type: dto.type,
       date: dto.date,
     );
@@ -205,6 +205,36 @@ Future<Widget> buildTransactionFormApp(WidgetTester tester) async {
 }
 
 void main() {
+  test('transaction json reads counterparty before legacy merchant fields', () {
+    final tx = Transaction.fromJson({
+      'id': 'tx-1',
+      'amount': 1000,
+      'currencyCode': 'PHP',
+      'category': 'Salary',
+      'counterparty': 'ACME Corp',
+      'merchant': 'Legacy Merchant',
+      'description': 'Legacy Description',
+      'type': 'Income',
+      'date': '2026-05-07T00:00:00Z',
+    });
+
+    expect(tx.description, 'ACME Corp');
+  });
+
+  test('create transaction dto serializes counterparty', () {
+    final dto = CreateTransactionDto(
+      amount: 1000,
+      currencyCode: 'PHP',
+      category: 'Salary',
+      counterparty: 'ACME Corp',
+      type: 'income',
+      date: DateTime.utc(2026, 5, 7),
+    );
+
+    expect(dto.toJson()['counterparty'], 'ACME Corp');
+    expect(dto.toJson().containsKey('merchant'), isFalse);
+  });
+
   testWidgets('transaction form shows a single quick preset row when unselected', (
     tester,
   ) async {

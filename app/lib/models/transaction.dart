@@ -18,8 +18,10 @@ class Transaction with _$Transaction {
     required double amount,
     required String currencyCode,
     required String category,
-    String? merchant,
+    @JsonKey(name: 'counterparty', readValue: _readCounterparty)
+    String? counterparty,
     required DateTime date,
+    @JsonKey(name: 'placeName', readValue: _readPlaceName)
     String? location,
     @Default(0) int regretLevel,
     String? notes,
@@ -30,3 +32,9 @@ class Transaction with _$Transaction {
   factory Transaction.fromJson(Map<String, dynamic> json) =>
       _$TransactionFromJson(json);
 }
+
+Object? _readCounterparty(Map json, String _) =>
+    json['counterparty'] ?? json['merchant'] ?? json['description'];
+
+Object? _readPlaceName(Map json, String _) =>
+    json['placeName'] ?? json['merchantName'] ?? json['location'];

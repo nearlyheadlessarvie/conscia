@@ -125,7 +125,7 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
       amount: double.parse(_amountController.text),
       currencyCode: _currencyCode,
       category: _selectedCategory!,
-      merchant: _merchantController.text,
+      counterparty: _merchantController.text,
       type: _isExpense ? 'expense' : 'income',
       date: _selectedDate,
       baseCurrencyCode: userCurrency,
