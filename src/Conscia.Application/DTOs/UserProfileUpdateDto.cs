@@ -8,4 +8,5 @@ public class UserProfileUpdateDto
     public string? IncomeRange { get; set; }
     public string? OccupationType { get; set; }
     public string? HouseholdSize { get; set; }
+    public bool? HasCompletedOnboarding { get; set; }
 }

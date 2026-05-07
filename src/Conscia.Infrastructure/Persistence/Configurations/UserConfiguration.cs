@@ -28,6 +28,8 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
         builder.Property(u => u.IncomeRange).HasMaxLength(50);
         builder.Property(u => u.OccupationType).HasMaxLength(50);
         builder.Property(u => u.HouseholdSize).HasMaxLength(50);
+        builder.Property(u => u.HasCompletedOnboarding)
+            .HasDefaultValue(false);
 
         builder.HasIndex(u => u.Email).IsUnique();
     }

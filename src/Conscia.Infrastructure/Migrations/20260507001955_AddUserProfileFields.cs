@@ -73,7 +73,8 @@ namespace Conscia.Infrastructure.Migrations
                     SpendingPersonality = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: true),
                     IncomeRange = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: true),
                     OccupationType = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: true),
-                    HouseholdSize = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: true)
+                    HouseholdSize = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: true),
+                    HasCompletedOnboarding = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false)
                 },
                 constraints: table =>
                 {

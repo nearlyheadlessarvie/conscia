@@ -30,6 +30,7 @@ public static class UserEndpoints
                     user.IncomeRange,
                     user.OccupationType,
                     user.HouseholdSize,
+                    user.HasCompletedOnboarding,
                 });
         }).WithName("GetCurrentUser");
 
@@ -56,6 +57,7 @@ public static class UserEndpoints
                 user.IncomeRange,
                 user.OccupationType,
                 user.HouseholdSize,
+                user.HasCompletedOnboarding,
             });
         }).WithName("UpdateCurrentUser");
 
@@ -77,7 +79,15 @@ public static class UserEndpoints
             return Results.Ok(new
             {
                 ExportedAt = DateTime.UtcNow,
-                Profile = new { user.Id, user.Email, user.PreferredCurrency, user.Locale, user.CreatedAt },
+                Profile = new
+                {
+                    user.Id,
+                    user.Email,
+                    user.PreferredCurrency,
+                    user.Locale,
+                    user.CreatedAt,
+                    user.HasCompletedOnboarding
+                },
                 Transactions = transactions.Items,
                 Budgets = budgets
             });

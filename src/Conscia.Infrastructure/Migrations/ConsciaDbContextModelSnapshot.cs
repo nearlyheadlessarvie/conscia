@@ -111,6 +111,11 @@ namespace Conscia.Infrastructure.Migrations
                         .HasMaxLength(256)
                         .HasColumnType("character varying(256)");
 
+                    b.Property<bool>("HasCompletedOnboarding")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
+
                     b.Property<string>("HouseholdSize")
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
