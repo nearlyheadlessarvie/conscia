@@ -5,11 +5,13 @@ import 'package:go_router/go_router.dart';
 import '../../core/constants/app_icons.dart';
 import '../../core/constants/category_icons.dart';
 import '../../providers/exchange_rate_provider.dart';
+import '../../providers/location_assistance_provider.dart';
 import '../../providers/subscription_provider.dart';
 import '../../providers/transaction_providers.dart';
 import '../../providers/user_provider.dart';
 import '../../services/transaction_service.dart';
 import '../../widgets/amount_input_field.dart';
+import '../../widgets/location_assistance_prompt_sheet.dart';
 import '../../widgets/skeleton_loader.dart';
 import 'widgets/category_picker.dart';
 import 'widgets/quick_preset_chips.dart';
@@ -25,6 +27,17 @@ class TransactionFormScreen extends ConsumerStatefulWidget {
 }
 
 class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
+  static const _nearbyMerchantSuggestions = [
+    'Blue Bottle Coffee',
+    'Whole Foods Market',
+    'Shell Station',
+  ];
+  static const _likelyCategorySuggestions = [
+    'Coffee',
+    'Dining',
+    'Groceries',
+  ];
+
   bool get _isEditing => widget.transactionId != null;
 
   bool _isExpense = true;
@@ -35,11 +48,11 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
   String? _selectedCategory;
   final _merchantController = TextEditingController();
   DateTime _selectedDate = DateTime.now();
-  bool _includeLocation = false;
   final _notesController = TextEditingController();
   bool _submitting = false;
   bool _prefilled = false;
   bool _moreOptionsExpanded = false;
+  bool _hasCheckedLocationPrompt = false;
 
   @override
   void initState() {
@@ -49,6 +62,32 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _loadEditData();
       });
+    }
+  }
+
+  Future<void> _maybePromptForLocationAssistance() async {
+    if (_hasCheckedLocationPrompt || _isEditing || !mounted) {
+      return;
+    }
+    _hasCheckedLocationPrompt = true;
+
+    final state = ref.read(locationAssistanceProvider);
+    if (!state.shouldPromptOnFeatureOpen) return;
+
+    final accepted = await showModalBottomSheet<bool>(
+      context: context,
+      isDismissible: false,
+      enableDrag: false,
+      builder: (context) => const LocationAssistancePromptSheet(),
+    );
+
+    if (!mounted || accepted == null) return;
+
+    final notifier = ref.read(locationAssistanceProvider.notifier);
+    if (accepted) {
+      await notifier.enableFromPrompt();
+    } else {
+      await notifier.declinePrompt();
     }
   }
 
@@ -66,8 +105,7 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
         _selectedCategory = tx.category;
         _merchantController.text = tx.description;
         _selectedDate = tx.date;
-        _moreOptionsExpanded =
-            _notesController.text.isNotEmpty || _includeLocation;
+        _moreOptionsExpanded = _notesController.text.isNotEmpty;
       });
     } catch (_) {}
   }
@@ -212,6 +250,11 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
   Widget _buildForm(ColorScheme colors, TextTheme textTheme) {
     final isPremium =
         ref.watch(subscriptionProvider).valueOrNull?.isPremium ?? false;
+    final locationAssistance = ref.watch(locationAssistanceProvider);
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _maybePromptForLocationAssistance();
+    });
 
     return Scaffold(
       appBar: AppBar(
@@ -354,6 +397,10 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
                 labelText: 'Merchant (optional)',
               ),
             ),
+            if (!_isEditing && locationAssistance.isEnabled) ...[
+              const SizedBox(height: 16),
+              _buildLocationSuggestionCard(colors, textTheme),
+            ],
             const SizedBox(height: 16),
             InkWell(
               onTap: _pickDate,
@@ -395,18 +442,17 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
                   setState(() => _moreOptionsExpanded = expanded);
                 },
                 children: [
-                  SwitchListTile(
-                    title: Text('Include Location', style: textTheme.titleSmall),
-                    subtitle: Text(
-                      'Attach GPS coordinates',
-                      style: textTheme.bodySmall?.copyWith(
-                        color: colors.onSurfaceVariant,
+                  if (!_isEditing && locationAssistance.isEnabled) ...[
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: Text(
+                        'Smart suggestions use your location only to help with nearby merchants and likely categories. You can still edit everything manually.',
+                        style: textTheme.bodySmall?.copyWith(
+                          color: colors.onSurfaceVariant,
+                        ),
                       ),
                     ),
-                    value: _includeLocation,
-                    onChanged: (v) => setState(() => _includeLocation = v),
-                  ),
-                  const SizedBox(height: 12),
+                  ],
                   TextField(
                     controller: _notesController,
                     maxLines: 3,
@@ -437,6 +483,72 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
             const SizedBox(height: 16),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildLocationSuggestionCard(ColorScheme colors, TextTheme textTheme) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: colors.surfaceContainerHighest.withValues(alpha: 0.5),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: colors.outlineVariant),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Smart suggestions nearby', style: textTheme.titleMedium),
+          const SizedBox(height: 4),
+          Text(
+            'Suggestions are assistive only. Tap one to fill the form faster.',
+            style: textTheme.bodySmall?.copyWith(
+              color: colors.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Text('Nearby merchants', style: textTheme.titleSmall),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: _nearbyMerchantSuggestions
+                .map(
+                  (merchant) => ActionChip(
+                    label: Text(merchant),
+                    onPressed: () {
+                      setState(() {
+                        _merchantController.text = merchant;
+                      });
+                    },
+                  ),
+                )
+                .toList(),
+          ),
+          const SizedBox(height: 16),
+          Text('Likely categories', style: textTheme.titleSmall),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: _likelyCategorySuggestions
+                .map(
+                  (category) => ActionChip(
+                    avatar: Icon(
+                      CategoryIcons.forCategory(category),
+                      size: 18,
+                    ),
+                    label: Text(category),
+                    onPressed: () {
+                      setState(() {
+                        _selectedCategory = category;
+                      });
+                    },
+                  ),
+                )
+                .toList(),
+          ),
+        ],
       ),
     );
   }
