@@ -101,12 +101,13 @@ void main() {
     await tester.pumpWidget(_buildApp(container));
     await tester.pumpAndSettle();
 
-    expect(find.text('Conscia'), findsOneWidget);
+    final headerFinder = find.text('Conscia');
+    expect(headerFinder.hitTestable(), findsOneWidget);
 
     await tester.drag(find.byType(CustomScrollView), const Offset(0, -600));
     await tester.pumpAndSettle();
 
-    expect(find.text('Conscia'), findsOneWidget);
+    expect(headerFinder.hitTestable(), findsOneWidget);
   });
 
   testWidgets('dashboard surfaces local budget nudges with a budget CTA',
