@@ -18,6 +18,7 @@ public static class BudgetEndpoints
             HttpContext ctx,
             CreateBudgetDto dto,
             IBudgetService svc,
+            IUserService userSvc,
             ISubscriptionService subSvc,
             IValidator<CreateBudgetDto> validator) =>
         {
@@ -30,10 +31,14 @@ public static class BudgetEndpoints
             var isPremium = await subSvc.IsPremiumAsync(userId, ctx.RequestAborted);
             if (!isPremium)
             {
+                var user = await userSvc.GetByIdAsync(userId, ctx.RequestAborted);
+                var categoryLimit = user?.HasCompletedOnboarding == false
+                    ? 5
+                    : FreemiumLimits.FreeBudgetCategories;
                 var existing = await svc.ListByUserAsync(userId, ctx.RequestAborted);
-                if (existing.Count >= FreemiumLimits.FreeBudgetCategories)
+                if (existing.Count >= categoryLimit)
                     return Results.Json(
-                        new { error = $"Free tier limit: {FreemiumLimits.FreeBudgetCategories} budget categories", upgradeRequired = true },
+                        new { error = $"Free tier limit: {categoryLimit} budget categories", upgradeRequired = true },
                         statusCode: 403);
             }
 

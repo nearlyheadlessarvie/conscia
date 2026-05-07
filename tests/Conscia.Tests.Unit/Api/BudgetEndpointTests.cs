@@ -19,6 +19,10 @@ public class BudgetEndpointTests : IClassFixture<TestWebAppFactory>
         _client = factory.CreateClient();
         _client.DefaultRequestHeaders.Authorization =
             new AuthenticationHeaderValue("Bearer", factory.GenerateTestToken());
+
+        _factory.SubscriptionServiceMock
+            .Setup(s => s.IsPremiumAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
     }
 
     [Fact]
@@ -92,5 +96,49 @@ public class BudgetEndpointTests : IClassFixture<TestWebAppFactory>
         });
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task CreateBudget_FreeUserDuringOnboarding_AllowsFifthStarterBudget()
+    {
+        _factory.SubscriptionServiceMock
+            .Setup(s => s.IsPremiumAsync(UserId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
+        _factory.UserServiceMock
+            .Setup(s => s.GetByIdAsync(UserId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new User
+            {
+                Id = UserId,
+                Email = "alice@example.com",
+                HasCompletedOnboarding = false
+            });
+        _factory.BudgetServiceMock
+            .Setup(s => s.ListByUserAsync(UserId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<Budget>
+            {
+                new() { Id = Guid.NewGuid(), UserId = UserId, Category = "Groceries", MonthlyLimit = 274m, CurrencyCode = "USD" },
+                new() { Id = Guid.NewGuid(), UserId = UserId, Category = "Bills", MonthlyLimit = 196m, CurrencyCode = "USD" },
+                new() { Id = Guid.NewGuid(), UserId = UserId, Category = "Dining", MonthlyLimit = 176m, CurrencyCode = "USD" },
+                new() { Id = Guid.NewGuid(), UserId = UserId, Category = "Transport", MonthlyLimit = 137m, CurrencyCode = "USD" },
+            });
+        _factory.BudgetServiceMock
+            .Setup(s => s.CreateAsync(UserId, "Shopping", 98m, "USD", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Budget
+            {
+                Id = Guid.NewGuid(),
+                UserId = UserId,
+                Category = "Shopping",
+                MonthlyLimit = 98m,
+                CurrencyCode = "USD"
+            });
+
+        var response = await _client.PostAsJsonAsync("/api/v1/budgets", new
+        {
+            category = "Shopping",
+            monthlyLimit = 98,
+            currencyCode = "USD"
+        });
+
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
     }
 }
