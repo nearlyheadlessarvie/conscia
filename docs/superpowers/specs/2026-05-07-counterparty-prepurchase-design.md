@@ -1,0 +1,125 @@
+# Counterparty Rename and Pre-Purchase Category Alignment
+
+Date: 2026-05-07
+
+## Summary
+
+This change does two related things:
+
+1. Replaces the transaction field currently modeled as `merchant` with a neutral `counterparty` name across app, API, domain, persistence, and tests.
+2. Makes the UI label context-specific:
+   - expense transactions show `Merchant`
+   - income transactions show `Source`
+
+It also improves `Pre-Purchase Assistant` so category selection follows the same interaction model as the transaction form instead of using a plain dropdown.
+
+## Goals
+
+- Keep transaction entry fast for both expense and income.
+- Make the field wording feel natural in the UI.
+- Remove semantic mismatch in the data model and database.
+- Make pre-purchase category selection feel consistent with transaction entry.
+
+## Non-Goals
+
+- Changing the conceptual meaning of existing transaction data beyond the rename.
+- Reworking the full pre-purchase layout beyond category interaction and related fit-and-finish needed for consistency.
+- Making merchant/source mandatory.
+
+## Design
+
+### 1. Data Model Rename
+
+The stored transaction field becomes `Counterparty`.
+
+Affected layers:
+
+- Flutter models and DTOs
+- API request/response contracts
+- application DTOs and validators
+- domain `Transaction` entity
+- persistence mapping and repository serialization
+- database column name
+- tests and fixtures
+
+The rename is semantic, not behavioral. Existing transaction values continue to mean “the other party involved in the transaction,” but the name now fits both expenses and income.
+
+### 2. UI Wording
+
+The transaction form becomes type-aware in copy only:
+
+- expense: `Merchant`
+- income: `Source`
+
+The same input control is reused. Only the label, placeholder, and any nearby helper copy change.
+
+If there are transaction-detail or editing surfaces that expose the label explicitly, they should use the same wording rule where practical. Generic list/history displays can simply show the saved value without adding a label.
+
+### 3. Database Rename
+
+The backing persistence column is renamed, not just aliased in code.
+
+This includes:
+
+- EF Core model update
+- migration that renames the transaction table column from `Merchant` to `Counterparty`
+- repository mapping updates so old and new data paths stay coherent during development
+
+Because this is still local/dev-focused work, the migration can prioritize correctness and clarity over elaborate backward compatibility.
+
+### 4. Pre-Purchase Category UX
+
+`Pre-Purchase Assistant` should stop using the basic category dropdown and instead align with the transaction form’s category experience.
+
+New interaction:
+
+- show quick visible expense categories with icons
+- keep a `More categories` entrypoint
+- use the same expense category source as transaction entry
+- allow location-based likely-category suggestions to prefill or override the current selection
+
+This should make the assistant feel like a guided expense-intent flow instead of a disconnected form.
+
+### 5. Field Mapping Rules
+
+To reduce ambiguity:
+
+- app-side `description` usage that currently mirrors `merchant` should be updated to reflect `counterparty`
+- API payload keys should move to `counterparty`
+- UI copy should remain contextual (`Merchant` / `Source`) and should not expose the raw `Counterparty` term to end users
+
+### 6. Error Handling and Migration Safety
+
+Expected risks:
+
+- missed serialization paths still reading/writing `merchant`
+- stale tests assuming `merchant`
+- detail/history widgets still using expense-specific wording in income paths
+
+Implementation should include focused regression coverage for:
+
+- create/update transaction payloads
+- transaction read mapping
+- income form showing `Source`
+- expense form showing `Merchant`
+- pre-purchase category selection using the shared category interaction
+
+## Testing Strategy
+
+- Flutter widget tests for transaction form label switching
+- Flutter widget tests for pre-purchase category interaction
+- Flutter service/model tests for `counterparty` payload mapping
+- backend unit/integration tests for transaction DTO/entity/repository mapping
+- migration/build verification for renamed transaction column
+
+## Recommended Implementation Split
+
+1. UI-first wording fix:
+   - transaction form label switches by type
+   - pre-purchase category control aligns with transaction form
+
+2. Full data-model rename:
+   - app/API/domain/repository rename to `counterparty`
+   - DB migration renames backing column
+
+This keeps the user-facing improvement small and reviewable while still delivering the full semantic cleanup.
