@@ -2,9 +2,9 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Add a 3-screen post-signup profiling wizard, platform-adaptive icons, a redesigned main shell (5-tab nav + scan button + plain Add Expense FAB), a cleaner transaction form, and a Settings > My Profile screen where users can update their spending profile.
+**Goal:** Add a 3-screen post-signup profiling wizard, platform-adaptive icons, a redesigned main shell (5-tab nav + scan button + plain Add Expense FAB), a cleaner transaction form, and a Settings > My Profile screen where users can update their spending profile. Onboarding state must be tracked explicitly by the backend with `HasCompletedOnboarding`, and social auth should live on sign-in only.
 
-**Architecture:** Backend gains 4 nullable string columns on `User` and an extended profile update endpoint. Flutter gains a new `AppIcons` helper and adaptive `CategoryIcons`, then the three wizard screens pass personality/income as go_router `extra` to avoid shared state. Profile data is persisted via the existing `PUT /api/v1/users/me` endpoint.
+**Architecture:** Backend gains `HasCompletedOnboarding` plus 4 nullable string columns on `User` and an extended profile update endpoint. Flutter gains a new `AppIcons` helper and adaptive `CategoryIcons`, then the three wizard screens pass personality/income as go_router `extra` to avoid shared state. Profile data and onboarding state are persisted via the existing `PUT /api/v1/users/me` endpoint, and authenticated routing should prefer the server-backed onboarding flag.
 
 **Tech Stack:** Flutter (Riverpod, go_router, Dio), .NET 8 Minimal API, EF Core (Postgres), DynamoDB (for dead-code cleanup only).
 
@@ -21,6 +21,7 @@
 
 **Modify:**
 - `src/Conscia.Domain/Entities/User.cs` — 4 new nullable string props
+- `src/Conscia.Infrastructure/Migrations/*AddUserProfileFields*` — include onboarding flag default false
 - `src/Conscia.Infrastructure/Persistence/Configurations/UserConfiguration.cs` — varchar(50) configs
 - `src/Conscia.Application/DTOs/UserProfileUpdateDto.cs` — 4 new nullable fields
 - `src/Conscia.Application/Interfaces/IUserService.cs` — updated UpdateProfileAsync signature
@@ -30,12 +31,12 @@
 - `tools/DynamoSetup/Program.cs` — remove BehaviorProfiles + SessionCache table blocks
 - `infra/src/Conscia.Infra/DatabaseStack.cs` — remove BehaviorProfilesTable + SessionCacheTable
 - `app/lib/core/constants/category_icons.dart` — add Cupertino map + adaptive forCategory()
-- `app/lib/core/routing/app_router.dart` — add 4 new routes + fix authenticated wizard redirect
+- `app/lib/core/routing/app_router.dart` — add 4 new routes + fix authenticated wizard redirect using `HasCompletedOnboarding`
 - `app/lib/widgets/main_shell.dart` — 5-tab nav, Scan centre item, plain Add Expense FAB
 - `app/lib/services/user_service.dart` — 4 new fields on UserProfile, extended updateProfile()
 - `app/lib/screens/onboarding/setup_screen.dart` — redirect to /onboarding/profile instead of /
-- `app/lib/screens/onboarding/sign_in_screen.dart` — verify Apple/Google buttons wired
-- `app/lib/screens/onboarding/sign_up_screen.dart` — add Apple/Google buttons
+- `app/lib/screens/onboarding/sign_in_screen.dart` — keep Apple/Google buttons as the only social auth entrypoint
+- `app/lib/screens/onboarding/sign_up_screen.dart` — remove Apple/Google buttons
 - `app/lib/screens/transactions/widgets/quick_preset_chips.dart` — emoji → adaptive icons
 - `app/lib/screens/transactions/transaction_form_screen.dart` — consolidated category, compact date, collapsed optional fields
 - `app/lib/screens/settings/settings_screen.dart` — add My Profile tile + route

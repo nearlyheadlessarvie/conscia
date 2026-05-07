@@ -8,7 +8,7 @@
 
 ## Overview
 
-After sign-up and currency/locale setup, users see a 3-screen profiling wizard that personalises their budget setup. All screens are skippable. The collected data seeds the user's first budgets and is persisted so insights can use it later.
+After sign-up and currency/locale setup, users see a 3-screen profiling wizard that personalises their budget setup. All screens are skippable. The collected data seeds the user's first budgets and is persisted so insights can use it later. Onboarding completion is tracked explicitly on the backend via a `HasCompletedOnboarding` flag on `User`; the client does not infer onboarding state from optional profile fields.
 
 This spec also covers seven cleanup/improvement tasks that travel with this feature:
 - Platform-adaptive icon system: Cupertino icons on iOS, Material icons on Android/web
@@ -17,7 +17,7 @@ This spec also covers seven cleanup/improvement tasks that travel with this feat
 - Migrate Quick Add preset chips from emoji strings to adaptive `IconData` (consistency)
 - Settings > Profile screen: editable view of all four profile fields post-onboarding
 - Delete dead code: `BehaviorProfile` and `SessionCache` entities, repos, DI registrations, and DynamoDB table entries
-- Integrate the existing `apple_button.dart` and `google_button.dart` files into the sign-in/sign-up screens
+- Keep Google/Apple entry points on the sign-in screen only; social sign-in may create a new backend user and then route into onboarding when `HasCompletedOnboarding == false`
 
 ---
 
@@ -174,7 +174,7 @@ Delete the file entirely. No replacement — the speed dial is removed. The thre
 
 ```
 OnboardingScreen (slides)
-  → SignUpScreen / SignInScreen  (with Google + Apple buttons)
+  → SignUpScreen / SignInScreen
     → SetupScreen (currency/locale)          ← existing
       → SpendingProfileScreen  (Step 1 of 3, skippable)  ← new
         → SuggestedBudgetsScreen (Step 2 of 3, skippable) ← new
@@ -183,6 +183,14 @@ OnboardingScreen (slides)
 ```
 
 `SetupScreen` currently calls `context.go('/')` on save. Change it to `context.go('/onboarding/profile')` instead. After any wizard screen navigates to `/` (skip or finish), `markOnboardingComplete()` is called as normal.
+
+### Onboarding state source of truth
+
+The source of truth for onboarding state is `User.HasCompletedOnboarding` on the backend. The client still keeps a local onboarding flag as a convenience cache, but authenticated routing must prefer the server-backed field once the current user profile has loaded.
+
+This avoids two failure modes:
+- Returning users on a new device should not be sent through onboarding again just because local storage is empty.
+- Optional profile fields should remain optional and must not be used to infer whether onboarding is complete.
 
 ### New routes (add to `app_router.dart`)
 
@@ -303,14 +311,14 @@ If no fx rate is available yet, show amounts as `—` and disable the Create but
 | Shared | `AppIcons.sharedHome` | `shared` |
 
 **"Go to dashboard 🎉"** button:
-- Calls `PATCH /api/users/profile` with `{ spendingPersonality, incomeRange, occupationType, householdSize }` (all nullable; only sends fields that were selected).
-- Calls `markOnboardingComplete()`.
+- Calls `PATCH /api/users/profile` with `{ spendingPersonality, incomeRange, occupationType, householdSize, hasCompletedOnboarding: true }` (all nullable except the onboarding flag).
+- Calls `markOnboardingComplete()` after the backend update succeeds (or as best-effort fallback if the UI should not strand the user).
 - Navigates to `/`.
 
 Skip logic summary:
 - Step 1 Skip → `/onboarding/about` (user skips personality/income but still fills in About You)
 - Step 2 Skip → `/onboarding/about` (user skips budget creation but still fills in About You)
-- Step 3 Skip → `/` (user skips demographics; `markOnboardingComplete()` called)
+- Step 3 Skip → `/` (user skips demographics; `hasCompletedOnboarding` is still set to `true`)
 
 When Skip is tapped on Step 1 or Step 2, persist whatever was already selected before navigating away (best-effort `PATCH /api/users/profile` call, fire-and-forget).
 
@@ -318,9 +326,10 @@ When Skip is tapped on Step 1 or Step 2, persist whatever was already selected b
 
 ## Backend — User Entity Changes
 
-### New columns on `User` (all nullable strings)
+### New columns on `User`
 
 ```csharp
+public bool HasCompletedOnboarding { get; set; }
 public string? SpendingPersonality { get; set; }   // "saver" | "balanced" | "free_spender"
 public string? IncomeRange { get; set; }           // "low" | "mid" | "high" | "very_high" | "prefer_not_to_say"
 public string? OccupationType { get; set; }        // "employed" | "self_employed" | "student" | "retired" | "other"
@@ -328,26 +337,27 @@ public string? HouseholdSize { get; set; }         // "solo" | "couple" | "famil
 ```
 
 Values are stored as lowercase strings (not enums) to avoid migration churn if new values are added later.
+`HasCompletedOnboarding` defaults to `false` for new users and flips to `true` only when the wizard is completed or intentionally skipped at the final step.
 
 ### EF Core migration
 
-Add a migration: `AddUserProfileFields`. Four nullable `varchar(50)` columns on the `Users` table. No data backfill needed.
+Add a migration: `AddUserProfileFields`. Four nullable `varchar(50)` columns plus a non-null boolean `HasCompletedOnboarding` defaulting to `false` on the `Users` table. Existing users can be left at the default and will complete onboarding the next time the app routes them through the flow if desired.
 
 ### API endpoint
 
-Extend `PATCH /api/users/profile` (or `PUT /api/users/profile` if that's the existing pattern) to accept and persist the four new fields. All four are optional in the request body.
+Extend `PATCH /api/users/profile` (or `PUT /api/users/profile` if that's the existing pattern) to accept and persist the four new fields plus `hasCompletedOnboarding`. The profile fields remain optional in the request body; the onboarding flag is also optional so callers can set it only when onboarding completion changes.
 
-The existing `updateProfile` in `UserService` (Flutter) sends `preferredCurrency` and `locale`. Extend the Dart `UserService.updateProfile()` method to accept the four new nullable fields and include them in the request body when non-null.
+The existing `updateProfile` in `UserService` (Flutter) sends `preferredCurrency` and `locale`. Extend the Dart `UserService.updateProfile()` method to accept the four new nullable fields plus `hasCompletedOnboarding` and include them in the request body when non-null.
 
 ---
 
 ## Google + Apple Sign-In Integration
 
-`apple_button.dart` and `google_button.dart` already exist in the working tree. Add them to `sign_up_screen.dart` and `sign_in_screen.dart` with a visual separator ("— or —") between the email form and the social buttons.
+`apple_button.dart` and `google_button.dart` belong on `sign_in_screen.dart` only, with a visual separator ("— or —") between the email form and the social buttons. `sign_up_screen.dart` stays email/password only.
 
-The button widgets handle their own auth flow and should call the same `authProvider.notifier.login()` method after receiving a token, so the router redirect picks them up automatically.
+The social entrypoints handle sign-in-or-create-account semantics through the backend auth endpoints. If the backend needs to create a user record for a first-time social identity, it does so there. After the client receives tokens and fetches the current profile, the router sends the user into onboarding when `HasCompletedOnboarding == false`.
 
-> **Note:** The actual OAuth flow implementation (plugin configuration, token exchange) is out of scope for this spec. This spec covers UI placement only; if the buttons are not yet functional, they should be visible but disabled with a `TODO` comment.
+> **Note:** The actual OAuth flow implementation (plugin configuration, token exchange) is still out of scope here. This spec covers client routing/placement and the onboarding decision rule.
 
 ---
 
