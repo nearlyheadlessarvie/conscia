@@ -40,7 +40,7 @@ public class TransactionService : ITransactionService
             Type = dto.Type,
             Amount = new Money(dto.Amount, dto.CurrencyCode, exchangeRate),
             Category = dto.Category,
-            Merchant = dto.Merchant,
+            Counterparty = dto.Counterparty,
             Date = dto.Date,
             CreatedAt = DateTime.UtcNow
         };
@@ -51,7 +51,7 @@ public class TransactionService : ITransactionService
             {
                 Latitude = dto.Latitude.Value,
                 Longitude = dto.Longitude.Value,
-                MerchantName = dto.MerchantName
+                PlaceName = dto.PlaceName
             };
         }
 
@@ -110,7 +110,7 @@ public class TransactionService : ITransactionService
         else if (dto.Amount.HasValue)
             existing.Amount = new Money(dto.Amount.Value, existing.Amount.CurrencyCode);
         if (dto.Category is not null) existing.Category = dto.Category;
-        if (dto.Merchant is not null) existing.Merchant = dto.Merchant;
+        if (dto.Counterparty is not null) existing.Counterparty = dto.Counterparty;
         if (dto.Date.HasValue) existing.Date = dto.Date.Value;
 
         await _repo.UpdateAsync(existing, ct);

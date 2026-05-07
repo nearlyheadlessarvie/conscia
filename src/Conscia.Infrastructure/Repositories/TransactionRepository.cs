@@ -257,8 +257,8 @@ public class TransactionRepository : DynamoRepository, ITransactionRepository
             ["GSI1SK"] = new(DynamoKeys.TransactionSortKey(t.Category, t.Date))
         };
 
-        if (t.Merchant is not null)
-            item["Merchant"] = new(t.Merchant);
+        if (t.Counterparty is not null)
+            item["Counterparty"] = new(t.Counterparty);
 
         if (t.Amount.ExchangeRateToBase.HasValue)
             item["ExchangeRateToBase"] = new()
@@ -291,15 +291,42 @@ public class TransactionRepository : DynamoRepository, ITransactionRepository
             Type = Enum.Parse<TransactionType>(item["Type"].S),
             Amount = new Money(decimal.Parse(item["Amount"].N), item["CurrencyCode"].S, exchangeRate),
             Category = item["Category"].S,
-            Merchant = item.TryGetValue("Merchant", out var m) ? m.S : null,
+            Counterparty = item.TryGetValue("Counterparty", out var counterparty)
+                ? counterparty.S
+                : item.TryGetValue("Merchant", out var merchant) ? merchant.S : null,
             Date = ParseTransactionDate(item),
             Location = item.TryGetValue("Location", out var loc)
-                ? JsonSerializer.Deserialize<Location>(loc.S)
+                ? ParseLocation(loc.S)
                 : null,
             RegretLevel = item.TryGetValue("RegretLevel", out var rl)
                 ? Enum.Parse<RegretLevel>(rl.S)
                 : null,
             CreatedAt = DateTime.Parse(item["CreatedAt"].S, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind)
+        };
+    }
+
+    private static Location? ParseLocation(string json)
+    {
+        using var doc = JsonDocument.Parse(json);
+        var root = doc.RootElement;
+
+        if (!root.TryGetProperty("Latitude", out var latitudeElement)
+            || !root.TryGetProperty("Longitude", out var longitudeElement))
+        {
+            return null;
+        }
+
+        string? placeName = null;
+        if (root.TryGetProperty("PlaceName", out var placeNameElement))
+            placeName = placeNameElement.GetString();
+        else if (root.TryGetProperty("MerchantName", out var merchantNameElement))
+            placeName = merchantNameElement.GetString();
+
+        return new Location
+        {
+            Latitude = latitudeElement.GetDouble(),
+            Longitude = longitudeElement.GetDouble(),
+            PlaceName = placeName
         };
     }
 

@@ -43,7 +43,7 @@ public static class TransactionEndpoints
                 Amount = txn.Amount.Amount,
                 CurrencyCode = txn.Amount.CurrencyCode,
                 txn.Category,
-                txn.Merchant,
+                txn.Counterparty,
                 txn.Date,
                 txn.CreatedAt
             });
@@ -71,7 +71,7 @@ public static class TransactionEndpoints
                     Amount = t.Amount.Amount,
                     CurrencyCode = t.Amount.CurrencyCode,
                     t.Category,
-                    t.Merchant,
+                    t.Counterparty,
                     t.Date,
                     RegretLevel = t.RegretLevel?.ToString()
                 })
@@ -90,13 +90,13 @@ public static class TransactionEndpoints
                 Amount = txn.Amount.Amount,
                 CurrencyCode = txn.Amount.CurrencyCode,
                 txn.Category,
-                txn.Merchant,
+                txn.Counterparty,
                 txn.Date,
                 Location = txn.Location is not null ? new
                 {
                     txn.Location.Latitude,
                     txn.Location.Longitude,
-                    txn.Location.MerchantName
+                    txn.Location.PlaceName
                 } : null,
                 RegretLevel = txn.RegretLevel?.ToString(),
                 txn.CreatedAt
@@ -122,7 +122,7 @@ public static class TransactionEndpoints
                 Amount = txn.Amount.Amount,
                 CurrencyCode = txn.Amount.CurrencyCode,
                 txn.Category,
-                txn.Merchant,
+                txn.Counterparty,
                 txn.Date
             });
         }).WithName("UpdateTransaction");

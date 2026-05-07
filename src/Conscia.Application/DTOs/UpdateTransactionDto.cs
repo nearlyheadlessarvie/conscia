@@ -8,6 +8,6 @@ public class UpdateTransactionDto
     public decimal? Amount { get; set; }
     public string? CurrencyCode { get; set; }
     public string? Category { get; set; }
-    public string? Merchant { get; set; }
+    public string? Counterparty { get; set; }
     public DateTime? Date { get; set; }
 }

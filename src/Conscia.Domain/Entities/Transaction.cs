@@ -10,7 +10,7 @@ public class Transaction
     public TransactionType Type { get; set; }
     public Money Amount { get; set; } = null!;
     public string Category { get; set; } = string.Empty;
-    public string? Merchant { get; set; }
+    public string? Counterparty { get; set; }
     public DateTime Date { get; set; }
     public Location? Location { get; set; }
     public RegretLevel? RegretLevel { get; set; }
@@ -21,5 +21,5 @@ public class Location
 {
     public double Latitude { get; set; }
     public double Longitude { get; set; }
-    public string? MerchantName { get; set; }
+    public string? PlaceName { get; set; }
 }
