@@ -33,6 +33,13 @@ class ApiConstants {
   // Insights
   static const String behavioralInsights = 'insights/behavioral';
 
+  // Regret Memory Insights
+  static const String insightsSummary = 'insights/summary';
+  static const String insightsCategories = 'insights/categories';
+  static String insightsCategoryDetail(String category) => 'insights/categories/$category';
+  static const String insightsMerchants = 'insights/merchants';
+  static String insightsMerchantDetail(String merchant) => 'insights/merchants/$merchant';
+
   // Suggestions
   static const String purchaseSuggestions = 'suggestions/purchases';
 

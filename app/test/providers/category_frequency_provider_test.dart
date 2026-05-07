@@ -51,8 +51,8 @@ void main() {
 
       final chips = container.read(categoryFrequencyProvider);
 
-      expect(
-          chips, containsAll(['Coffee', 'Dining', 'Shopping', 'Gaming', 'Travel']));
+      expect(chips,
+          containsAll(['Coffee', 'Dining', 'Shopping', 'Gaming', 'Travel']));
       expect(chips.length, 5);
     });
   });

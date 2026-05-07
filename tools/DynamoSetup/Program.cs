@@ -142,6 +142,23 @@ var tables = new (string Name, CreateTableRequest Request)[]
         BillingMode = BillingMode.PAY_PER_REQUEST
     }),
 
+    // ---------------- PURCHASE PATTERNS ----------------
+    ("PurchasePatterns", new CreateTableRequest
+    {
+        TableName = "PurchasePatterns",
+        KeySchema =
+        [
+            new KeySchemaElement("PK", KeyType.HASH),
+            new KeySchemaElement("SK", KeyType.RANGE)
+        ],
+        AttributeDefinitions =
+        [
+            new("PK", ScalarAttributeType.S),
+            new("SK", ScalarAttributeType.S)
+        ],
+        BillingMode = BillingMode.PAY_PER_REQUEST
+    }),
+
     // ---------------- IN-APP ALERTS ----------------
     ("InAppAlerts", new CreateTableRequest
     {

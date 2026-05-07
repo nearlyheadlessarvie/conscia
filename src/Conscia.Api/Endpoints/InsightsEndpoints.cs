@@ -1,6 +1,5 @@
-using Conscia.Application.DTOs;
-using Conscia.Application.Interfaces;
 using Conscia.Api.Extensions;
+using Conscia.Application.Interfaces;
 
 namespace Conscia.Api.Endpoints;
 
@@ -8,38 +7,52 @@ public static class InsightsEndpoints
 {
     public static RouteGroupBuilder MapInsightsEndpoints(this IEndpointRouteBuilder app)
     {
-        var insightsGroup = app.MapGroup("/api/v1/insights")
+        var group = app.MapGroup("/api/v1/insights")
             .RequireAuthorization()
             .WithTags("Insights");
 
-        insightsGroup.MapGet("/behavioral", GetBehavioralInsights)
-            .WithName("GetBehavioralInsights")
-            .WithDescription("Get user's behavioral insights for dashboard")
-            .Produces<BehavioralInsights>(StatusCodes.Status200OK)
-            .Produces<BehavioralInsights>(StatusCodes.Status204NoContent)            
-            .Produces(StatusCodes.Status500InternalServerError);
-
-        return insightsGroup;
-    }
-
-    private static async Task<IResult> GetBehavioralInsights(
-        HttpContext ctx,
-        IBehavioralInsightsService insightsService,
-        CancellationToken ct)
-    {
-        try
+        group.MapGet("/behavioral", async (HttpContext ctx, IBehavioralInsightsService svc, CancellationToken ct) =>
         {
             var userId = ctx.User.GetUserId();
-            var insights = await insightsService.GetBehavioralInsightsAsync(userId, ct);
+            var insights = await svc.GetBehavioralInsightsAsync(userId, ct);
             return insights != null ? Results.Ok(insights) : Results.NoContent();
-        }
-        catch (Exception ex)
+        }).WithName("GetBehavioralInsights");
+
+        group.MapGet("/summary", async (HttpContext ctx, IPurchasePatternService svc, CancellationToken ct) =>
         {
-            // Log the exception
-            return Results.Problem(
-                title: "Failed to retrieve behavioral insights",
-                detail: ex.Message,
-                statusCode: StatusCodes.Status500InternalServerError);
-        }
+            var userId = ctx.User.GetUserId();
+            var summary = await svc.GetSummaryAsync(userId, ct);
+            return summary is null ? Results.NotFound() : Results.Ok(summary);
+        }).WithName("GetInsightsSummary");
+
+        group.MapGet("/categories", async (HttpContext ctx, IPurchasePatternService svc, CancellationToken ct) =>
+        {
+            var userId = ctx.User.GetUserId();
+            var categories = await svc.GetCategoriesAsync(userId, ct);
+            return Results.Ok(categories);
+        }).WithName("GetInsightsCategories");
+
+        group.MapGet("/categories/{category}", async (HttpContext ctx, string category, IPurchasePatternService svc, CancellationToken ct) =>
+        {
+            var userId = ctx.User.GetUserId();
+            var detail = await svc.GetCategoryDetailAsync(userId, category, ct);
+            return detail is null ? Results.NotFound() : Results.Ok(detail);
+        }).WithName("GetInsightsCategoryDetail");
+
+        group.MapGet("/merchants", async (HttpContext ctx, IPurchasePatternService svc, CancellationToken ct) =>
+        {
+            var userId = ctx.User.GetUserId();
+            var merchants = await svc.GetMerchantsAsync(userId, ct);
+            return Results.Ok(merchants);
+        }).WithName("GetInsightsMerchants");
+
+        group.MapGet("/merchants/{merchant}", async (HttpContext ctx, string merchant, IPurchasePatternService svc, CancellationToken ct) =>
+        {
+            var userId = ctx.User.GetUserId();
+            var detail = await svc.GetMerchantDetailAsync(userId, merchant, ct);
+            return detail is null ? Results.NotFound() : Results.Ok(detail);
+        }).WithName("GetInsightsMerchantDetail");
+
+        return group;
     }
 }

@@ -28,7 +28,7 @@ class PremiumGate extends StatelessWidget {
             Icon(
               icon,
               size: 80,
-              color: theme.colorScheme.primary.withOpacity(0.6),
+              color: theme.colorScheme.primary.withValues(alpha: 0.6),
             ),
             const SizedBox(height: 24),
             Text(

@@ -212,7 +212,8 @@ class _PrePurchaseScreenState extends ConsumerState<PrePurchaseScreen>
                   left: 0,
                   child: CircleAvatar(
                     radius: 32,
-                    backgroundColor: const Color(0xFFFFB300).withOpacity(0.2),
+                    backgroundColor:
+                        const Color(0xFFFFB300).withValues(alpha: 0.2),
                     child: const Icon(
                       Icons.local_fire_department,
                       size: 28,
@@ -224,7 +225,8 @@ class _PrePurchaseScreenState extends ConsumerState<PrePurchaseScreen>
                   left: 44,
                   child: CircleAvatar(
                     radius: 32,
-                    backgroundColor: const Color(0xFF00BCD4).withOpacity(0.2),
+                    backgroundColor:
+                        const Color(0xFF00BCD4).withValues(alpha: 0.2),
                     child: const Icon(
                       Icons.shield,
                       size: 28,

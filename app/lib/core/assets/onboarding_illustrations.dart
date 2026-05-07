@@ -73,7 +73,7 @@ class _BudgetTrackingPainter extends CustomPainter {
 
     // Baseline
     final linePaint = Paint()
-      ..color = const Color(0xFF1A237E).withOpacity(0.3)
+      ..color = const Color(0xFF1A237E).withValues(alpha: 0.3)
       ..strokeWidth = 1.5;
     canvas.drawLine(
       Offset(startX - unit * 0.5, baseY),
@@ -96,8 +96,10 @@ class _BudgetTrackingPainter extends CustomPainter {
       ..strokeJoin = StrokeJoin.round;
     final checkPath = Path()
       ..moveTo(checkCenter.dx - checkRadius * 0.35, checkCenter.dy)
-      ..lineTo(checkCenter.dx - checkRadius * 0.05, checkCenter.dy + checkRadius * 0.3)
-      ..lineTo(checkCenter.dx + checkRadius * 0.4, checkCenter.dy - checkRadius * 0.3);
+      ..lineTo(checkCenter.dx - checkRadius * 0.05,
+          checkCenter.dy + checkRadius * 0.3)
+      ..lineTo(checkCenter.dx + checkRadius * 0.4,
+          checkCenter.dy - checkRadius * 0.3);
     canvas.drawPath(checkPath, checkPaint);
   }
 
@@ -139,7 +141,7 @@ class _AiInsightsPainter extends CustomPainter {
 
     // Brain line detail
     final linePaint = Paint()
-      ..color = Colors.white.withOpacity(0.5)
+      ..color = Colors.white.withValues(alpha: 0.5)
       ..style = PaintingStyle.stroke
       ..strokeWidth = unit * 0.12
       ..strokeCap = StrokeCap.round;
@@ -177,7 +179,8 @@ class _AiInsightsPainter extends CustomPainter {
     }
 
     // Connection dots
-    final dotPaint = Paint()..color = const Color(0xFF00BCD4).withOpacity(0.6);
+    final dotPaint = Paint()
+      ..color = const Color(0xFF00BCD4).withValues(alpha: 0.6);
     final dotPositions = [
       Offset(center.dx - brainRadius * 1.0, center.dy),
       Offset(center.dx + brainRadius * 1.0, center.dy + brainRadius * 0.2),

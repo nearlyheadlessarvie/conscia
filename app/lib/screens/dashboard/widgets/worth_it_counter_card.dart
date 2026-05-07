@@ -33,8 +33,8 @@ class WorthItCounterCard extends StatelessWidget {
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
-              colors.primary.withOpacity(0.1),
-              colors.primary.withOpacity(0.05),
+              colors.primary.withValues(alpha: 0.1),
+              colors.primary.withValues(alpha: 0.05),
             ],
           ),
         ),
@@ -74,7 +74,7 @@ class WorthItCounterCard extends StatelessWidget {
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: colors.primary.withOpacity(0.2),
+                    color: colors.primary.withValues(alpha: 0.2),
                   ),
                   child: Text(
                     thisMonthCount.toString(),

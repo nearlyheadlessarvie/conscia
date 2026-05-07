@@ -137,6 +137,7 @@ builder.Services.AddScoped<IOutboxEventRepository, OutboxEventRepository>();
 builder.Services.AddScoped<IAIInteractionRepository, AIInteractionRepository>();
 builder.Services.AddScoped<IBehaviorProfileRepository, BehaviorProfileRepository>();
 builder.Services.AddScoped<IWeeklyInsightsRepository, WeeklyInsightsRepository>();
+builder.Services.AddScoped<IPurchasePatternRepository, PurchasePatternRepository>();
 builder.Services.AddScoped<IInAppAlertRepository, InAppAlertRepository>();
 builder.Services.AddScoped<ISessionCacheRepository, SessionCacheRepository>();
 
@@ -156,6 +157,7 @@ builder.Services.AddScoped<ISubscriptionService, SubscriptionService>();
 builder.Services.AddScoped<IReceiptService, ReceiptService>();
 builder.Services.AddScoped<IBehavioralInsightsService, BehavioralInsightsService>();
 builder.Services.AddScoped<IPurchaseSuggestionService, PurchaseSuggestionService>();
+builder.Services.AddScoped<IPurchasePatternService, PurchasePatternService>();
 
 // --- Exchange Rates ---
 builder.Services.AddMemoryCache();
