@@ -124,6 +124,8 @@ Expected risks:
 - missed serialization paths still reading/writing `merchant`
 - stale tests assuming `merchant`
 - detail/history widgets still using expense-specific wording in income paths
+- transaction deletion leaving stale budget usage in app state
+- free-tier users seeing category choices they cannot actually use
 
 Implementation should include focused regression coverage for:
 
@@ -132,12 +134,37 @@ Implementation should include focused regression coverage for:
 - income form showing `Source`
 - expense form showing `Merchant`
 - pre-purchase category selection using the shared category interaction
+- transaction deletion immediately reconciling budget usage in dashboard and budgets/settings surfaces
+- free-tier category UI only surfacing allowed categories unless the user is eligible for more
+
+### 7. Budget Reconciliation on Delete
+
+Deleting a transaction should update budget usage consistently in app surfaces that show budgets, including:
+
+- dashboard budget summary
+- budgets screen
+- settings-linked budget management flows
+
+This should be treated as part of the same implementation track because the `counterparty` rename will already touch transaction data plumbing. The expected behavior is that deleting a budgeted expense removes its contribution from the local budget state immediately, then reconciles with server truth afterward.
+
+### 8. Freemium Category Visibility
+
+The free-tier category cap should be enforced in the UI, not only at submit time.
+
+For free users:
+
+- category selectors should only surface the allowed number of budget categories by default
+- upgrade-only categories should be hidden or otherwise not presented as normal selectable options
+
+This applies at minimum to category flows where the user would otherwise choose a category that the free tier cannot actually support. The UI should avoid teasing unavailable options when the restriction is known ahead of time.
 
 ## Testing Strategy
 
 - Flutter widget tests for transaction form label switching
 - Flutter widget tests for pre-purchase category interaction
 - Flutter service/model tests for `counterparty` payload mapping
+- Flutter/provider tests for optimistic budget decrement after transaction delete
+- Flutter widget/provider tests for free-tier category visibility rules
 - backend unit/integration tests for transaction DTO/entity/repository mapping
 - migration/build verification for renamed transaction column
 
