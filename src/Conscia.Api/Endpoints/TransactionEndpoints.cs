@@ -45,7 +45,10 @@ public static class TransactionEndpoints
                 txn.Category,
                 txn.Counterparty,
                 txn.Date,
-                txn.CreatedAt
+                txn.CreatedAt,
+                txn.RecurringScheduleId,
+                txn.RecurringOccurrenceDate,
+                IsRecurring = txn.RecurringScheduleId is not null
             });
         }).WithName("CreateTransaction");
 
@@ -73,7 +76,10 @@ public static class TransactionEndpoints
                     t.Category,
                     t.Counterparty,
                     t.Date,
-                    RegretLevel = t.RegretLevel?.ToString()
+                    RegretLevel = t.RegretLevel?.ToString(),
+                    t.RecurringScheduleId,
+                    t.RecurringOccurrenceDate,
+                    IsRecurring = t.RecurringScheduleId is not null
                 })
             });
         }).WithName("ListTransactions");
@@ -100,7 +106,10 @@ public static class TransactionEndpoints
                     txn.Location.PlaceName
                 } : null,
                 RegretLevel = txn.RegretLevel?.ToString(),
-                txn.CreatedAt
+                txn.CreatedAt,
+                txn.RecurringScheduleId,
+                txn.RecurringOccurrenceDate,
+                IsRecurring = txn.RecurringScheduleId is not null
             });
         }).WithName("GetTransaction");
 
@@ -125,7 +134,10 @@ public static class TransactionEndpoints
                 CurrencyCode = txn.Amount.CurrencyCode,
                 txn.Category,
                 txn.Counterparty,
-                txn.Date
+                txn.Date,
+                txn.RecurringScheduleId,
+                txn.RecurringOccurrenceDate,
+                IsRecurring = txn.RecurringScheduleId is not null
             });
         }).WithName("UpdateTransaction");
 

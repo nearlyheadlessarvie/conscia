@@ -14,12 +14,18 @@ public class TransactionService : ITransactionService
     private readonly ITransactionRepository _repo;
     private readonly IExchangeRateService _exchangeRateService;
     private readonly ILogger<TransactionService> _logger;
+    private readonly IRecurringScheduleService? _recurringScheduleService;
 
-    public TransactionService(ITransactionRepository repo, IExchangeRateService exchangeRateService, ILogger<TransactionService> logger)
+    public TransactionService(
+        ITransactionRepository repo,
+        IExchangeRateService exchangeRateService,
+        ILogger<TransactionService> logger,
+        IRecurringScheduleService? recurringScheduleService = null)
     {
         _repo = repo;
         _exchangeRateService = exchangeRateService;
         _logger = logger;
+        _recurringScheduleService = recurringScheduleService;
     }
 
     public async Task<Transaction> CreateAsync(Guid userId, CreateTransactionDto dto, CancellationToken ct = default)
@@ -72,6 +78,22 @@ public class TransactionService : ITransactionService
         };
 
         var result = await _repo.AddWithOutboxAsync(transaction, outboxEvent, ct);
+
+        if (dto.Recurring is not null && _recurringScheduleService is not null)
+        {
+            await _recurringScheduleService.CreateAsync(userId, new CreateRecurringScheduleDto
+            {
+                Type = dto.Type,
+                Amount = dto.Amount,
+                CurrencyCode = dto.CurrencyCode,
+                Category = dto.Category,
+                Counterparty = dto.Counterparty,
+                StartDate = dto.Recurring.StartDate ?? dto.Date,
+                Cadence = dto.Recurring.Cadence,
+                EndDate = dto.Recurring.EndDate,
+            }, ct);
+        }
+
         _logger.LogInformation("Creating transaction {TransactionId} for user {UserId}, amount {Amount} {Currency}",
             transaction.Id, userId, dto.Amount, dto.CurrencyCode);
         return result;
