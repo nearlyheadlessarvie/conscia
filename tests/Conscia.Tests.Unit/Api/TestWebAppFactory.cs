@@ -27,6 +27,7 @@ public class TestWebAppFactory : WebApplicationFactory<Program>
     public Mock<IAlertService> AlertServiceMock { get; } = new();
     public Mock<IAIInteractionRepository> AIInteractionRepoMock { get; } = new();
     public Mock<IExchangeRateService> ExchangeRateServiceMock { get; } = new();
+    private readonly string _dbName = $"ConsciaTest-{Guid.NewGuid()}";
 
     private const string SigningKey = "this-is-a-test-signing-key-at-least-32-chars!!";
 
@@ -40,7 +41,7 @@ public class TestWebAppFactory : WebApplicationFactory<Program>
             var dbDescriptor = services.FirstOrDefault(d => d.ServiceType == typeof(DbContextOptions<ConsciaDbContext>));
             if (dbDescriptor is not null) services.Remove(dbDescriptor);
             services.AddDbContext<ConsciaDbContext>(options =>
-                options.UseInMemoryDatabase($"ConsciTest-{Guid.NewGuid()}"));
+                options.UseInMemoryDatabase(_dbName));
 
             ReplaceService<IUserService>(services, UserServiceMock.Object);
             ReplaceService<IBudgetService>(services, BudgetServiceMock.Object);

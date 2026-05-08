@@ -308,7 +308,10 @@ class _PrePurchaseScreenState extends ConsumerState<PrePurchaseScreen>
       child: Column(
         children: [
           const SizedBox(height: 20),
-          const ConscienceBrandIcon(size: 96),
+          const ConsciaAlterEgoMotion(
+            preset: ConsciaAlterEgoPreset.idle,
+            size: 110,
+          ),
           const SizedBox(height: 18),
           Text(
             "Let's think this through",

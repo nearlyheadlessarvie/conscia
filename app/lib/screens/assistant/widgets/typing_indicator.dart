@@ -15,6 +15,7 @@ class TypingIndicator extends StatelessWidget {
     return ConscienceLoader(
       size: 88,
       label: label,
+      preset: ConscienceLoaderPreset.assistant,
     );
   }
 }

@@ -30,6 +30,17 @@ public static class AuthEndpoints
                 : Results.Json(new { error = "Invalid email or password" }, statusCode: 401);
         }).WithName("Login").RequireRateLimiting("auth");
 
+        group.MapPost("/refresh", async (HttpContext ctx, RefreshRequest req, IAuthService auth) =>
+        {
+            if (string.IsNullOrWhiteSpace(req.RefreshToken))
+                return Results.BadRequest(new { error = "RefreshToken is required" });
+
+            var result = await auth.RefreshAsync(req.RefreshToken, ctx.RequestAborted);
+            return result.Success
+                ? Results.Ok(new { result.AccessToken, result.RefreshToken, result.UserId })
+                : Results.Json(new { error = "Session expired" }, statusCode: 401);
+        }).WithName("Refresh").RequireRateLimiting("auth");
+
         group.MapPost("/google", async (HttpContext ctx, GoogleLoginRequest req, IAuthService auth) =>
         {
             if (string.IsNullOrWhiteSpace(req.IdToken))
@@ -58,5 +69,6 @@ public static class AuthEndpoints
 
 public record RegisterRequest(string Email, string Password);
 public record LoginRequest(string Email, string Password);
+public record RefreshRequest(string RefreshToken);
 public record GoogleLoginRequest(string IdToken);
 public record AppleLoginRequest(string IdentityToken, string? AuthorizationCode);

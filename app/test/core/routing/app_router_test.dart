@@ -228,4 +228,34 @@ void main() {
       expect(merchantField.controller?.text, 'Starbucks');
     },
   );
+
+  testWidgets('session expired auth state routes to a session expired screen', (
+    tester,
+  ) async {
+    final fakeAuthNotifier = _TestAuthNotifier(
+      const AuthState(
+        status: AuthStatus.sessionExpired,
+      ),
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          authProvider.overrideWith((ref) => fakeAuthNotifier),
+        ],
+        child: Consumer(
+          builder: (context, ref, _) {
+            final router = ref.watch(appRouterProvider);
+            return MaterialApp.router(routerConfig: router);
+          },
+        ),
+      ),
+    );
+
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+
+    expect(find.text('Session expired'), findsOneWidget);
+    expect(find.text('Sign in again'), findsOneWidget);
+  });
 }

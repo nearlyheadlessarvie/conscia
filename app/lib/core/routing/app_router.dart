@@ -16,6 +16,7 @@ import '../../screens/onboarding/suggested_budgets_screen.dart';
 import '../../screens/onboarding/setup_screen.dart';
 import '../../screens/onboarding/sign_in_screen.dart';
 import '../../screens/onboarding/sign_up_screen.dart';
+import '../../screens/onboarding/session_expired_screen.dart';
 import '../../screens/receipts/receipt_review_screen.dart';
 import '../../screens/receipts/receipt_scanner_screen.dart';
 import '../../screens/settings/service_status_screen.dart';
@@ -35,6 +36,7 @@ abstract class AppRoutes {
   static const onboarding = '/onboarding';
   static const signIn = '/onboarding/sign-in';
   static const signUp = '/onboarding/sign-up';
+  static const sessionExpired = '/session-expired';
   static const setup = '/onboarding/setup';
   static const spendingProfile = '/onboarding/profile';
   static const suggestedBudgets = '/onboarding/budgets';
@@ -111,6 +113,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     redirect: (context, state) {
       final authState = ref.read(authProvider);
       final isAuthenticated = authState.isAuthenticated;
+      final isSessionExpired = authState.isSessionExpired;
       final localHasOnboarded =
           ref.read(hasOnboardedProvider).valueOrNull ?? false;
       final currentUserAsync =
@@ -119,9 +122,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       final hasOnboarded =
           userProfile?.hasCompletedOnboarding ?? localHasOnboarded;
       final isOnboarding = state.uri.path.startsWith('/onboarding');
+      final isSessionExpiredRoute = state.uri.path == AppRoutes.sessionExpired;
       final isHealthCheck = state.uri.path.startsWith('/health');
 
       if (isHealthCheck) return null;
+
+      if (isSessionExpired) {
+        return isSessionExpiredRoute ? null : AppRoutes.sessionExpired;
+      }
 
       if (!isAuthenticated && !isOnboarding) {
         return hasOnboarded ? AppRoutes.signIn : AppRoutes.onboarding;
@@ -194,6 +202,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             builder: (context, state) => const AboutYouScreen(),
           ),
         ],
+      ),
+      GoRoute(
+        path: AppRoutes.sessionExpired,
+        builder: (context, state) => const SessionExpiredScreen(),
       ),
 
       // ── Main shell with bottom nav ─────────────────────────────────

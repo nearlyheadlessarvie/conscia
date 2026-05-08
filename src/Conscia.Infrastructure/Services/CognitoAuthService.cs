@@ -33,6 +33,12 @@ public class CognitoAuthService : IAuthService
         return Task.FromResult(new AuthResult { Success = false, Error = "Authentication service not configured. Cognito User Pool required." });
     }
 
+    public Task<AuthResult> RefreshAsync(string refreshToken, CancellationToken ct = default)
+    {
+        _logger.LogError("CognitoAuthService.RefreshAsync called but Cognito token refresh is not configured");
+        return Task.FromResult(new AuthResult { Success = false, Error = "Authentication service not configured. Cognito refresh required." });
+    }
+
     public Task<AuthResult> LoginWithGoogleAsync(string idToken, CancellationToken ct = default)
     {
         _logger.LogError("CognitoAuthService.LoginWithGoogleAsync called but Cognito Identity Pool is not provisioned");

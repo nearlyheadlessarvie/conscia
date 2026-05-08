@@ -6,7 +6,9 @@ import '../core/constants/api_constants.dart';
 import '../core/routing/app_router.dart';
 import '../services/auth_service.dart';
 
-enum AuthStatus { unauthenticated, authenticated }
+enum AuthStatus { unauthenticated, authenticated, sessionExpired }
+
+const _unset = Object();
 
 class AuthState {
   final AuthStatus status;
@@ -26,22 +28,29 @@ class AuthState {
   });
 
   bool get isAuthenticated => status == AuthStatus.authenticated;
+  bool get isSessionExpired => status == AuthStatus.sessionExpired;
 
   AuthState copyWith({
     AuthStatus? status,
-    String? accessToken,
-    String? refreshToken,
-    String? userId,
+    Object? accessToken = _unset,
+    Object? refreshToken = _unset,
+    Object? userId = _unset,
     bool? isLoading,
-    String? error,
+    Object? error = _unset,
   }) {
     return AuthState(
       status: status ?? this.status,
-      accessToken: accessToken ?? this.accessToken,
-      refreshToken: refreshToken ?? this.refreshToken,
-      userId: userId ?? this.userId,
+      accessToken: identical(accessToken, _unset)
+          ? this.accessToken
+          : accessToken as String?,
+      refreshToken: identical(refreshToken, _unset)
+          ? this.refreshToken
+          : refreshToken as String?,
+      userId: identical(userId, _unset)
+          ? this.userId
+          : userId as String?,
       isLoading: isLoading ?? this.isLoading,
-      error: error,
+      error: identical(error, _unset) ? this.error : error as String?,
     );
   }
 }
@@ -202,6 +211,41 @@ class AuthNotifier extends StateNotifier<AuthState> {
     await _storage.delete(key: _refreshTokenKey);
     await _storage.delete(key: _userIdKey);
     state = const AuthState();
+  }
+
+  Future<bool> refreshSession() async {
+    final refreshToken = state.refreshToken ?? await _storage.read(key: _refreshTokenKey);
+    if (refreshToken == null || refreshToken.isEmpty) {
+      await markSessionExpired();
+      return false;
+    }
+
+    try {
+      final tokens = await _authService.refreshSession(refreshToken);
+      await _persistTokens(tokens);
+      state = state.copyWith(
+        status: AuthStatus.authenticated,
+        accessToken: tokens.accessToken,
+        refreshToken: tokens.refreshToken,
+        userId: tokens.userId,
+        isLoading: false,
+        error: null,
+      );
+      return true;
+    } catch (_) {
+      await markSessionExpired();
+      return false;
+    }
+  }
+
+  Future<void> markSessionExpired() async {
+    await _storage.delete(key: _accessTokenKey);
+    await _storage.delete(key: _refreshTokenKey);
+    await _storage.delete(key: _userIdKey);
+    state = const AuthState(
+      status: AuthStatus.sessionExpired,
+      error: 'Session expired',
+    );
   }
 
   Future<void> _persistTokens(AuthTokens tokens) async {

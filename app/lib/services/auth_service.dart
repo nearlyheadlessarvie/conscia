@@ -53,6 +53,18 @@ class AuthService {
     }
   }
 
+  Future<AuthTokens> refreshSession(String refreshToken) async {
+    try {
+      final response = await _dio.post(
+        ApiConstants.refreshToken,
+        data: {'refreshToken': refreshToken},
+      );
+      return AuthTokens.fromJson(response.data as Map<String, dynamic>);
+    } on DioException {
+      rethrow;
+    }
+  }
+
   Future<AuthTokens> signInWithGoogle() async {
     final googleUser = await GoogleSignIn().signIn();
     if (googleUser == null) throw Exception('Google sign-in cancelled');

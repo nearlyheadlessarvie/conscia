@@ -84,7 +84,7 @@ void main() {
       ],
     );
 
-    await tester.tap(find.widgetWithText(ChoiceChip, 'All'));
+    await tester.tap(find.byKey(const ValueKey('selection-chip-button-All')));
     await tester.pump();
 
     expect(tester.takeException(), isNull);
@@ -109,7 +109,7 @@ void main() {
     await tester.pump();
 
     expect(find.text('Filters'), findsOneWidget);
-    expect(find.widgetWithText(ChoiceChip, 'Gift'), findsOneWidget);
+    expect(find.byKey(const ValueKey('selection-chip-button-Gift')), findsOneWidget);
     expect(find.byType(SkeletonListTile), findsWidgets);
   });
 
@@ -149,12 +149,16 @@ void main() {
       ],
     );
 
-    final allY = tester.getCenter(find.widgetWithText(ChoiceChip, 'All')).dy;
-    final giftY = tester.getCenter(find.widgetWithText(ChoiceChip, 'Gift')).dy;
-    final groceriesY =
-        tester.getCenter(find.widgetWithText(ChoiceChip, 'Groceries')).dy;
-    final subscriptionsY =
-        tester.getCenter(find.widgetWithText(ChoiceChip, 'Subscriptions')).dy;
+    final allY =
+        tester.getCenter(find.byKey(const ValueKey('selection-chip-button-All'))).dy;
+    final giftY =
+        tester.getCenter(find.byKey(const ValueKey('selection-chip-button-Gift'))).dy;
+    final groceriesY = tester
+        .getCenter(find.byKey(const ValueKey('selection-chip-button-Groceries')))
+        .dy;
+    final subscriptionsY = tester
+        .getCenter(find.byKey(const ValueKey('selection-chip-button-Subscriptions')))
+        .dy;
 
     expect((allY - giftY).abs(), lessThan(8));
     expect((allY - groceriesY).abs(), lessThan(8));

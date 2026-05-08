@@ -1,25 +1,18 @@
 using System.Net;
 using System.Net.Http.Json;
 using Conscia.Application.Interfaces;
-using Moq;
-
+using Microsoft.Extensions.DependencyInjection;
 namespace Conscia.Tests.Unit.Api;
 
-public class AuthEndpointTests : IClassFixture<TestWebAppFactory>
+public class AuthEndpointTests
 {
-    private readonly HttpClient _client;
-    private readonly TestWebAppFactory _factory;
-
-    public AuthEndpointTests(TestWebAppFactory factory)
-    {
-        _factory = factory;
-        _client = factory.CreateClient();
-    }
-
     [Fact]
     public async Task Register_ValidCredentials_Returns201()
     {
-        var response = await _client.PostAsJsonAsync("/api/v1/auth/register", new
+        await using var factory = new TestWebAppFactory();
+        using var client = factory.CreateClient();
+
+        var response = await client.PostAsJsonAsync("/api/v1/auth/register", new
         {
             email = $"test-{Guid.NewGuid()}@example.com",
             password = "SecureP@ss123"
@@ -34,9 +27,20 @@ public class AuthEndpointTests : IClassFixture<TestWebAppFactory>
     [Fact]
     public async Task Login_ValidCredentials_Returns200()
     {
-        var response = await _client.PostAsJsonAsync("/api/v1/auth/login", new
+        await using var factory = new TestWebAppFactory();
+        var email = $"login-{Guid.NewGuid()}@example.com";
+
+        await using (var scope = factory.Services.CreateAsyncScope())
         {
-            email = "alice@example.com",
+            var auth = scope.ServiceProvider.GetRequiredService<IAuthService>();
+            await auth.RegisterAsync(email, "password123");
+        }
+
+        using var client = factory.CreateClient();
+
+        var response = await client.PostAsJsonAsync("/api/v1/auth/login", new
+        {
+            email,
             password = "password123"
         });
 
@@ -46,7 +50,10 @@ public class AuthEndpointTests : IClassFixture<TestWebAppFactory>
     [Fact]
     public async Task Login_InvalidCredentials_Returns401()
     {
-        var response = await _client.PostAsJsonAsync("/api/v1/auth/login", new
+        await using var factory = new TestWebAppFactory();
+        using var client = factory.CreateClient();
+
+        var response = await client.PostAsJsonAsync("/api/v1/auth/login", new
         {
             email = "nonexistent@example.com",
             password = "wrong"
@@ -58,7 +65,10 @@ public class AuthEndpointTests : IClassFixture<TestWebAppFactory>
     [Fact]
     public async Task Register_EmptyEmail_Returns400()
     {
-        var response = await _client.PostAsJsonAsync("/api/v1/auth/register", new
+        await using var factory = new TestWebAppFactory();
+        using var client = factory.CreateClient();
+
+        var response = await client.PostAsJsonAsync("/api/v1/auth/register", new
         {
             email = "",
             password = "password123"
@@ -70,7 +80,10 @@ public class AuthEndpointTests : IClassFixture<TestWebAppFactory>
     [Fact]
     public async Task GoogleLogin_ValidToken_Returns200()
     {
-        var response = await _client.PostAsJsonAsync("/api/v1/auth/google", new
+        await using var factory = new TestWebAppFactory();
+        using var client = factory.CreateClient();
+
+        var response = await client.PostAsJsonAsync("/api/v1/auth/google", new
         {
             idToken = "mock-google-id-token"
         });
@@ -86,7 +99,10 @@ public class AuthEndpointTests : IClassFixture<TestWebAppFactory>
     [Fact]
     public async Task GoogleLogin_EmptyToken_Returns400()
     {
-        var response = await _client.PostAsJsonAsync("/api/v1/auth/google", new
+        await using var factory = new TestWebAppFactory();
+        using var client = factory.CreateClient();
+
+        var response = await client.PostAsJsonAsync("/api/v1/auth/google", new
         {
             idToken = ""
         });
@@ -97,7 +113,10 @@ public class AuthEndpointTests : IClassFixture<TestWebAppFactory>
     [Fact]
     public async Task AppleLogin_ValidToken_Returns200()
     {
-        var response = await _client.PostAsJsonAsync("/api/v1/auth/apple", new
+        await using var factory = new TestWebAppFactory();
+        using var client = factory.CreateClient();
+
+        var response = await client.PostAsJsonAsync("/api/v1/auth/apple", new
         {
             identityToken = "mock-apple-identity-token",
             authorizationCode = "mock-auth-code"
@@ -112,10 +131,70 @@ public class AuthEndpointTests : IClassFixture<TestWebAppFactory>
     [Fact]
     public async Task AppleLogin_EmptyToken_Returns400()
     {
-        var response = await _client.PostAsJsonAsync("/api/v1/auth/apple", new
+        await using var factory = new TestWebAppFactory();
+        using var client = factory.CreateClient();
+
+        var response = await client.PostAsJsonAsync("/api/v1/auth/apple", new
         {
             identityToken = "",
             authorizationCode = (string?)null
+        });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Refresh_ValidRefreshToken_Returns200()
+    {
+        await using var factory = new TestWebAppFactory();
+        using var client = factory.CreateClient();
+        var email = $"refresh-{Guid.NewGuid()}@example.com";
+
+        var register = await client.PostAsJsonAsync("/api/v1/auth/register", new
+        {
+            email,
+            password = "password123"
+        });
+
+        var loginBody = await register.Content.ReadFromJsonAsync<Dictionary<string, object>>();
+        Assert.NotNull(loginBody);
+
+        var response = await client.PostAsJsonAsync("/api/v1/auth/refresh", new
+        {
+            refreshToken = loginBody!["refreshToken"]?.ToString()
+        });
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<Dictionary<string, object>>();
+        Assert.NotNull(body);
+        Assert.True(body!.ContainsKey("accessToken"));
+        Assert.True(body.ContainsKey("refreshToken"));
+        Assert.True(body.ContainsKey("userId"));
+    }
+
+    [Fact]
+    public async Task Refresh_InvalidRefreshToken_Returns401()
+    {
+        await using var factory = new TestWebAppFactory();
+        using var client = factory.CreateClient();
+
+        var response = await client.PostAsJsonAsync("/api/v1/auth/refresh", new
+        {
+            refreshToken = "not-a-valid-refresh-token"
+        });
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Refresh_EmptyRefreshToken_Returns400()
+    {
+        await using var factory = new TestWebAppFactory();
+        using var client = factory.CreateClient();
+
+        var response = await client.PostAsJsonAsync("/api/v1/auth/refresh", new
+        {
+            refreshToken = ""
         });
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
