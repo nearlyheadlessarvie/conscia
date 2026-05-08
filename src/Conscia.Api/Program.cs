@@ -160,6 +160,7 @@ builder.Services.AddScoped<IBehavioralInsightsService, BehavioralInsightsService
 builder.Services.AddScoped<IPurchaseSuggestionService, PurchaseSuggestionService>();
 builder.Services.AddScoped<IPurchasePatternService, PurchasePatternService>();
 builder.Services.AddScoped<IAlertService, AlertService>();
+builder.Services.AddSingleton<IRecurringScheduleGenerator, RecurringScheduleGenerator>();
 builder.Services.AddScoped<ITriggerEvaluator, BudgetWarningEvaluator>();
 builder.Services.AddScoped<ITriggerEvaluator, CoolingOffSuggestionEvaluator>();
 builder.Services.AddScoped<ITriggerEvaluator, RepeatedRegretCounterpartyEvaluator>();
@@ -209,6 +210,7 @@ builder.Services.AddCors(options =>
 
 // --- Background Services ---
 builder.Services.AddHostedService<OutboxProcessor>();
+builder.Services.AddHostedService<RecurringScheduleProcessor>();
 
 // --- Auth ---
 var useMockAuth = builder.Configuration.GetValue<bool>("Auth:UseMock");
