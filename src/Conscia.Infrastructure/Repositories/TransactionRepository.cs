@@ -17,6 +17,19 @@ public class TransactionRepository : DynamoRepository, ITransactionRepository
     {}
 
     // ---------------- WRITE ----------------
+    public async Task<Transaction> AddAsync(
+        Transaction transaction,
+        CancellationToken ct = default)
+    {
+        await Dynamo.PutItemAsync(new PutItemRequest
+        {
+            TableName = TableName,
+            Item = ToItem(transaction)
+        }, ct);
+
+        return transaction;
+    }
+
     public async Task<Transaction> AddWithOutboxAsync(
         Transaction transaction,
         OutboxEvent outboxEvent,
@@ -118,6 +131,17 @@ public class TransactionRepository : DynamoRepository, ITransactionRepository
         while (lastEvaluatedKey is { Count: > 0 });
 
         return null;
+    }
+
+    public async Task<bool> ExistsRecurringOccurrenceAsync(
+        Guid userId,
+        Guid recurringScheduleId,
+        DateTime occurrenceDate,
+        CancellationToken ct = default)
+    {
+        var (items, _) = await QueryByUserAsync(userId, null, null, null, 200, null, ct);
+        return items.Any(t => t.RecurringScheduleId == recurringScheduleId &&
+                              t.RecurringOccurrenceDate == occurrenceDate);
     }
 
     // Primary timeline query (FAST)
