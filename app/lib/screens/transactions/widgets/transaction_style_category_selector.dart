@@ -13,6 +13,7 @@ class TransactionStyleCategorySelector extends StatelessWidget {
     required this.onCategorySelected,
     this.labelStyle,
     this.moreCategoriesIcon = Icons.add,
+    this.showHeader = true,
   });
 
   final String? selectedCategory;
@@ -21,10 +22,12 @@ class TransactionStyleCategorySelector extends StatelessWidget {
   final ValueChanged<String?> onCategorySelected;
   final TextStyle? labelStyle;
   final IconData moreCategoriesIcon;
+  final bool showHeader;
 
   Future<void> _showCategoryPickerSheet(BuildContext context) async {
     await showModalBottomSheet<void>(
       context: context,
+      useRootNavigator: true,
       isScrollControlled: true,
       builder: (context) => SafeArea(
         child: Padding(
@@ -48,24 +51,8 @@ class TransactionStyleCategorySelector extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Row(
-          children: [
-            Text('Category',
-                style: labelStyle ?? Theme.of(context).textTheme.titleSmall),
-            const Spacer(),
-            TextButton.icon(
-              onPressed: () => _showCategoryPickerSheet(context),
-              icon: Icon(moreCategoriesIcon, size: 16),
-              label: const Text('All categories'),
-            ),
-          ],
-        ),
-        if (selectedCategory != null) ...[
-          const SizedBox(height: 8),
-          Align(
+    final categoriesContent = selectedCategory != null
+        ? Align(
             alignment: Alignment.centerLeft,
             child: InputChip(
               avatar: CategoryIcons.badge(
@@ -76,15 +63,39 @@ class TransactionStyleCategorySelector extends StatelessWidget {
               label: Text(selectedCategory!),
               onDeleted: () => onCategorySelected(null),
             ),
-          ),
-        ] else ...[
-          QuickPresetChips(
+          )
+        : QuickPresetChips(
             selectedCategory: selectedCategory,
             isExpense: isExpense,
             isPremium: isPremium,
             onCategorySelected: onCategorySelected,
-          ),
-        ],
+          );
+
+    final action = Align(
+      alignment: Alignment.centerRight,
+      child: TextButton.icon(
+        onPressed: () => _showCategoryPickerSheet(context),
+        icon: Icon(moreCategoriesIcon, size: 16),
+        label: const Text('All categories'),
+      ),
+    );
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (showHeader)
+          Row(
+            children: [
+              Text('Category',
+                  style: labelStyle ?? Theme.of(context).textTheme.titleSmall),
+            ],
+          )
+        else
+          const SizedBox.shrink(),
+        if (showHeader) const SizedBox(height: 8),
+        categoriesContent,
+        const SizedBox(height: 4),
+        action,
       ],
     );
   }

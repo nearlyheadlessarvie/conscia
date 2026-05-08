@@ -19,6 +19,8 @@ class HeroScreenScaffold extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).appColors;
+    final keyboardInset = MediaQuery.viewInsetsOf(context).bottom;
+    final resolvedPadding = padding.resolve(Directionality.of(context));
 
     return Scaffold(
       appBar: appBar,
@@ -38,13 +40,27 @@ class HeroScreenScaffold extends StatelessWidget {
             children: [
               Expanded(
                 child: SingleChildScrollView(
-                  padding: padding,
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: EdgeInsets.only(
+                    left: resolvedPadding.left,
+                    top: resolvedPadding.top,
+                    right: resolvedPadding.right,
+                    bottom: resolvedPadding.bottom +
+                        (bottom != null ? 0 : keyboardInset),
+                  ),
                   child: child,
                 ),
               ),
               if (bottom != null)
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
+                AnimatedPadding(
+                  duration: const Duration(milliseconds: 180),
+                  curve: Curves.easeOut,
+                  padding: EdgeInsets.fromLTRB(
+                    16,
+                    0,
+                    16,
+                    20 + keyboardInset,
+                  ),
                   child: bottom!,
                 ),
             ],

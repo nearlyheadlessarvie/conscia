@@ -93,23 +93,31 @@ public class TransactionRepository : DynamoRepository, ITransactionRepository
     // ---------------- READ ----------------
     public async Task<Transaction?> GetByIdAsync(Guid userId, Guid id, CancellationToken ct = default)
     {
-        var response = await Dynamo.QueryAsync(new QueryRequest
+        Dictionary<string, AttributeValue>? lastEvaluatedKey = null;
+
+        do
         {
-            TableName = TableName,
-            KeyConditionExpression = "PK = :pk",
-            FilterExpression = "Id = :id",
-            ExpressionAttributeValues = new Dictionary<string, AttributeValue>
+            var response = await Dynamo.QueryAsync(new QueryRequest
             {
-                [":pk"] = new(DynamoKeys.User(userId)),
-                [":id"] = new(id.ToString())
-            },
-            Limit = 1
-        }, ct);
+                TableName = TableName,
+                KeyConditionExpression = "PK = :pk",
+                FilterExpression = "Id = :id",
+                ExpressionAttributeValues = new Dictionary<string, AttributeValue>
+                {
+                    [":pk"] = new(DynamoKeys.User(userId)),
+                    [":id"] = new(id.ToString())
+                },
+                ExclusiveStartKey = lastEvaluatedKey
+            }, ct);
 
-        if (response.Items.Count == 0)
-            return null;
+            if (response.Items.Count > 0)
+                return FromItem(response.Items[0]);
 
-        return FromItem(response.Items[0]);
+            lastEvaluatedKey = response.LastEvaluatedKey;
+        }
+        while (lastEvaluatedKey is { Count: > 0 });
+
+        return null;
     }
 
     // Primary timeline query (FAST)

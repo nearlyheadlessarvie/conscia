@@ -15,6 +15,7 @@ class CurrencyPickerSheet {
   }) {
     return showModalBottomSheet(
       context: context,
+      useRootNavigator: true,
       isScrollControlled: true,
       useSafeArea: true,
       builder: (_) => DraggableScrollableSheet(

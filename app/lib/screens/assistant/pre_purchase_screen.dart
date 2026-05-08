@@ -323,18 +323,17 @@ class _PrePurchaseScreenState extends ConsumerState<PrePurchaseScreen>
             ),
             textAlign: TextAlign.center,
           ),
-          const SizedBox(height: 14),
-          VoiceInputButton(
-            onTranscriptReady: _applyVoiceTranscript,
-          ),
           const SizedBox(height: 28),
 
           // Description
           TextField(
             controller: _descriptionController,
             maxLines: 1,
-            decoration: const InputDecoration(
+            decoration: InputDecoration(
               labelText: 'What are you thinking of buying?',
+              suffixIcon: VoiceInputButton(
+                onTranscriptReady: _applyVoiceTranscript,
+              ),
             ),
             onChanged: (_) => setState(() {}),
           ),
@@ -363,6 +362,7 @@ class _PrePurchaseScreenState extends ConsumerState<PrePurchaseScreen>
               selectedCategory: _selectedCategory,
               isExpense: true,
               isPremium: isPremium,
+              showHeader: false,
               onCategorySelected: (category) {
                 setState(() => _selectedCategory = category);
                 if (category != null) {

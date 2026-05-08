@@ -87,28 +87,15 @@ class _ServiceStatusScreenState extends ConsumerState<ServiceStatusScreen> {
       return _buildErrorScaffold(context, theme, state.error!);
     }
 
-    return HeroScreenScaffold(
-      appBar: AppBar(
-        title: const Text('Service Status'),
-        actions: [
-          IconButton(
-            icon: state.isLoading
-                ? const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Icon(Icons.refresh),
-            onPressed: state.isLoading
-                ? null
-                : () => ref.read(healthStatusProvider.notifier).refresh(),
-          ),
-        ],
-      ),
-      child: RefreshIndicator(
-        onRefresh: () => ref.read(healthStatusProvider.notifier).refresh(),
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 20, 16, 28),
+    final checks = state.status?.checks ?? const <HealthCheck>[];
+
+    return RefreshIndicator(
+      onRefresh: () => ref.read(healthStatusProvider.notifier).refresh(),
+      child: HeroScreenScaffold(
+        appBar: AppBar(
+          title: const Text('Service Status'),
+        ),
+        child: Column(
           children: [
             ScreenSection(
               title: 'Overview',
@@ -125,14 +112,16 @@ class _ServiceStatusScreenState extends ConsumerState<ServiceStatusScreen> {
               compact: true,
               child: Column(
                 children: [
-                  if (state.status != null)
-                    ...state.status!.checks.map(
+                  if (checks.isNotEmpty)
+                    ...checks.map(
                       (check) => Padding(
                         padding: const EdgeInsets.only(bottom: 12),
                         child: _ServiceCard(check: check),
                       ),
-                    ),
-                  if (state.status != null && state.status!.checks.isEmpty)
+                    )
+                  else if (state.isLoading)
+                    ..._buildPlaceholderCards(loading: true)
+                  else
                     ..._buildPlaceholderCards(),
                 ],
               ),
@@ -150,7 +139,7 @@ class _ServiceStatusScreenState extends ConsumerState<ServiceStatusScreen> {
     );
   }
 
-  List<Widget> _buildPlaceholderCards() {
+  List<Widget> _buildPlaceholderCards({bool loading = false}) {
     return _serviceMetadata.entries
         .map(
           (e) => Padding(
@@ -158,8 +147,8 @@ class _ServiceStatusScreenState extends ConsumerState<ServiceStatusScreen> {
             child: _ServiceCard(
               check: HealthCheck(
                 name: e.key,
-                status: 'Unknown',
-                duration: '-',
+                status: loading ? 'Checking' : 'Unknown',
+                duration: loading ? 'Checking…' : '-',
               ),
             ),
           ),
@@ -322,6 +311,7 @@ class _ServiceCard extends StatelessWidget {
 
     final statusColor = _statusColorForCheck(check.status, colors);
     final isUnhealthy = check.status == 'Unhealthy';
+    final isChecking = check.status == 'Checking';
 
     return FeedCard(
       child: Row(
@@ -353,20 +343,31 @@ class _ServiceCard extends StatelessWidget {
               ],
             ),
           ),
-          Container(
-            width: 10,
-            height: 10,
-            decoration: BoxDecoration(
-              color: statusColor,
-              shape: BoxShape.circle,
+          if (isChecking)
+            SizedBox(
+              width: 18,
+              height: 18,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: statusColor,
+              ),
+            )
+          else ...[
+            Container(
+              width: 10,
+              height: 10,
+              decoration: BoxDecoration(
+                color: statusColor,
+                shape: BoxShape.circle,
+              ),
             ),
-          ),
-          const SizedBox(width: 6),
-          Icon(
-            isUnhealthy ? Icons.arrow_downward : Icons.arrow_upward,
-            size: 16,
-            color: statusColor,
-          ),
+            const SizedBox(width: 6),
+            Icon(
+              isUnhealthy ? Icons.arrow_downward : Icons.arrow_upward,
+              size: 16,
+              color: statusColor,
+            ),
+          ],
         ],
       ),
     );

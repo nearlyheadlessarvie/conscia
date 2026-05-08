@@ -15,6 +15,10 @@ import 'widgets/budget_form_sheet.dart';
 class BudgetsScreen extends ConsumerWidget {
   const BudgetsScreen({super.key});
 
+  Future<void> _onRefresh(WidgetRef ref) {
+    return ref.read(budgetListProvider.notifier).load();
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final budgetState = ref.watch(budgetListProvider);
@@ -29,7 +33,13 @@ class BudgetsScreen extends ConsumerWidget {
           ),
         ],
       ),
-      child: _buildBody(context, ref, budgetState),
+      child: RefreshIndicator(
+        onRefresh: () => _onRefresh(ref),
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          child: _buildBody(context, ref, budgetState),
+        ),
+      ),
     );
   }
 
@@ -69,11 +79,6 @@ class BudgetsScreen extends ConsumerWidget {
           title: 'Active budgets',
           subtitle: 'Track how each category is pacing this month.',
           compact: true,
-          trailing: IconButton(
-            tooltip: 'Refresh budgets',
-            onPressed: () => ref.read(budgetListProvider.notifier).load(),
-            icon: const Icon(Icons.refresh),
-          ),
           child: Column(
             children: [
               for (final budget in state.budgets)

@@ -6,6 +6,7 @@ class LocationAssistancePromptSheet extends StatelessWidget {
   static Future<bool?> show(BuildContext context) {
     return showModalBottomSheet<bool>(
       context: context,
+      useRootNavigator: true,
       isDismissible: false,
       enableDrag: false,
       builder: (context) => const LocationAssistancePromptSheet(),

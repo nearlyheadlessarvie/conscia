@@ -70,4 +70,25 @@ void main() {
     expect(find.text('Monthly cap'), findsOneWidget);
     expect(find.text('Spent so far'), findsOneWidget);
   });
+
+  testWidgets('budgets screen uses pull to refresh instead of a refresh icon',
+      (tester) async {
+    await _pumpBudgetsScreen(
+      tester,
+      budgets: const [
+        Budget(
+          id: 'budget-1',
+          category: 'Shopping',
+          monthlyLimit: 1200,
+          spent: 650,
+          currencyCode: 'USD',
+          percentage: 0.54,
+          isOverBudget: false,
+        ),
+      ],
+    );
+
+    expect(find.byType(RefreshIndicator), findsOneWidget);
+    expect(find.byIcon(Icons.refresh), findsNothing);
+  });
 }

@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../core/constants/api_constants.dart';
 import 'subscription_service.dart';
@@ -126,6 +127,25 @@ class IAPService {
         _emit(IAPStatus(state: IAPState.available, product: product));
       }
     });
+  }
+
+  Future<bool> openManageSubscriptions() async {
+    if (_isDevMode) return false;
+
+    final uri = _subscriptionManagementUri;
+    return launchUrl(uri, mode: LaunchMode.externalApplication);
+  }
+
+  Uri get _subscriptionManagementUri {
+    if (kIsWeb) {
+      return Uri.parse('https://play.google.com/store/account/subscriptions');
+    }
+    if (Platform.isIOS) {
+      return Uri.parse('https://apps.apple.com/account/subscriptions');
+    }
+    return Uri.parse(
+      'https://play.google.com/store/account/subscriptions?sku=$kPremiumMonthlyId&package=com.example.conscia_app',
+    );
   }
 
   void _handlePurchaseUpdates(List<PurchaseDetails> purchases) {

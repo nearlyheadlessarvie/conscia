@@ -14,6 +14,7 @@ class SubscriptionSheet {
   static Future<void> show(BuildContext context) {
     return showModalBottomSheet(
       context: context,
+      useRootNavigator: true,
       isScrollControlled: true,
       useSafeArea: true,
       builder: (_) => DraggableScrollableSheet(
@@ -44,6 +45,7 @@ class _SubscriptionSheetBodyState
   bool _waitingForPurchase = false;
   bool _isRestore = false;
   String? _error;
+  String? _notice;
 
   @override
   void initState() {
@@ -66,6 +68,7 @@ class _SubscriptionSheetBodyState
         setState(() {
           _waitingForPurchase = false;
           _error = null;
+          _notice = null;
         });
         ref.invalidate(subscriptionProvider);
         final sub = await ref.read(subscriptionProvider.future);
@@ -78,9 +81,9 @@ class _SubscriptionSheetBodyState
             const SnackBar(content: Text('Welcome to Conscia Premium!')),
           );
         } else if (_isRestore) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('No previous purchases found.')),
-          );
+          setState(() {
+            _notice = 'No previous purchases found.';
+          });
         }
         _isRestore = false;
 
@@ -107,6 +110,9 @@ class _SubscriptionSheetBodyState
     final priceLabel = iapAsync.whenOrNull(
       data: (status) => status.product?.price,
     );
+    final subscription = ref.watch(subscriptionProvider).valueOrNull;
+    final isCurrentPremium = subscription?.isPremium ?? false;
+    final expiresAt = subscription?.expiresAt;
 
     return ListView(
       controller: widget.scrollController,
@@ -124,32 +130,74 @@ class _SubscriptionSheetBodyState
         ),
         const SizedBox(height: 24),
         Text(
-          'Unlock Conscia Premium',
+          isCurrentPremium ? 'Manage Conscia Premium' : 'Unlock Conscia Premium',
           style:
               textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: 32),
-        _buildComparisonTable(theme, textTheme),
-        const SizedBox(height: 32),
-        Text(
-          priceLabel != null ? '$priceLabel / month' : '\$4.99 / month',
-          style:
-              textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold),
-          textAlign: TextAlign.center,
+        _buildComparisonTable(
+          theme,
+          textTheme,
+          isPremiumActive: isCurrentPremium,
         ),
-        if (priceLabel == null && !ApiConstants.useMockAuth)
-          Padding(
-            padding: const EdgeInsets.only(top: 4),
-            child: Text(
-              'Price loading from store...',
-              style: textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
+        const SizedBox(height: 32),
+        if (isCurrentPremium) ...[
+          Text(
+            expiresAt != null
+                ? 'Premium access stays active until ${_formatDate(expiresAt)}'
+                : 'Premium access is currently active.',
+            style: textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w600,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'You can cancel renewal in the store and keep Premium until your paid period ends.',
+            style: textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ] else ...[
+          Text(
+            priceLabel != null ? '$priceLabel / month' : '\$4.99 / month',
+            style:
+                textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold),
+            textAlign: TextAlign.center,
+          ),
+          if (priceLabel == null && !ApiConstants.useMockAuth)
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Text(
+                'Price loading from store...',
+                style: textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+                textAlign: TextAlign.center,
               ),
-              textAlign: TextAlign.center,
+            ),
+        ],
+        const SizedBox(height: 24),
+        if (_notice != null)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 16),
+            child: Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.surfaceContainerHighest,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                _notice!,
+                style: textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurface,
+                ),
+                textAlign: TextAlign.center,
+              ),
             ),
           ),
-        const SizedBox(height: 24),
         if (_error != null)
           Padding(
             padding: const EdgeInsets.only(bottom: 16),
@@ -169,7 +217,11 @@ class _SubscriptionSheetBodyState
             ),
           ),
         FilledButton(
-          onPressed: _waitingForPurchase ? null : _subscribe,
+          onPressed: _waitingForPurchase
+              ? null
+              : isCurrentPremium
+                  ? _manageSubscription
+                  : _subscribe,
           style: FilledButton.styleFrom(
             minimumSize: const Size.fromHeight(48),
             backgroundColor: theme.colorScheme.secondary,
@@ -184,20 +236,25 @@ class _SubscriptionSheetBodyState
                   height: 20,
                   child: CircularProgressIndicator(strokeWidth: 2),
                 )
-              : const Text('Subscribe Now'),
+              : Text(isCurrentPremium ? 'Manage Subscription' : 'Subscribe Now'),
         ),
         const SizedBox(height: 12),
-        Center(
-          child: TextButton(
-            onPressed: _waitingForPurchase ? null : _restorePurchases,
-            child: const Text('Restore Purchases'),
+        if (!isCurrentPremium)
+          Center(
+            child: TextButton(
+              onPressed: _waitingForPurchase ? null : _restorePurchases,
+              child: const Text('Restore Purchases'),
+            ),
           ),
-        ),
       ],
     );
   }
 
-  Widget _buildComparisonTable(ThemeData theme, TextTheme textTheme) {
+  Widget _buildComparisonTable(
+    ThemeData theme,
+    TextTheme textTheme, {
+    required bool isPremiumActive,
+  }) {
     final features = [
       ('Transactions', 'Unlimited', 'Unlimited'),
       ('Budgets', '3', 'Unlimited'),
@@ -207,78 +264,84 @@ class _SubscriptionSheetBodyState
       ('Multi-Currency', '1', 'Unlimited'),
     ];
 
-    return Table(
-      columnWidths: const {
-        0: FlexColumnWidth(2),
-        1: FlexColumnWidth(1.5),
-        2: FlexColumnWidth(1.5),
-      },
-      children: [
-        TableRow(
-          children: [
-            const SizedBox.shrink(),
-            Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: Text('Free',
-                  style: textTheme.labelLarge,
-                  textAlign: TextAlign.center),
-            ),
-            Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: Text('Premium',
-                  style: textTheme.labelLarge,
-                  textAlign: TextAlign.center),
-            ),
-          ],
-        ),
-        ...features.map((f) => TableRow(
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerLowest,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: theme.colorScheme.outlineVariant),
+      ),
+      child: Table(
+        columnWidths: const {
+          0: FlexColumnWidth(2),
+          1: FlexColumnWidth(1.5),
+          2: FlexColumnWidth(1.5),
+        },
+        children: [
+          TableRow(
+            children: [
+              const SizedBox.shrink(),
+              Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: _PlanHeader(
+                  label: 'Free',
+                  isActive: !isPremiumActive,
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: _PlanHeader(
+                  label: 'Premium',
+                  isActive: isPremiumActive,
+                ),
+              ),
+            ],
+          ),
+          ...features.map(
+            (f) => TableRow(
               children: [
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: 8),
                   child: Text(f.$1, style: textTheme.bodyMedium),
                 ),
                 Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                  child: Text(
-                    f.$2,
-                    style: textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
-                    textAlign: TextAlign.center,
+                  padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+                  child: _PlanValueCell(
+                    value: f.$2,
+                    isActive: !isPremiumActive,
+                    emphasize: false,
                   ),
                 ),
                 Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                  child: Text(
-                    f.$3,
-                    style: textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.primary,
-                      fontWeight: FontWeight.w600,
-                    ),
-                    textAlign: TextAlign.center,
+                  padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+                  child: _PlanValueCell(
+                    value: f.$3,
+                    isActive: isPremiumActive,
+                    emphasize: true,
                   ),
                 ),
               ],
-            )),
-      ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 
   Future<void> _subscribe() async {
     if (ApiConstants.useMockAuth) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-              'IAP not available in development mode. Deploy to a device with store access to test.'),
-        ),
-      );
+      setState(() {
+        _notice =
+            'Subscription purchases are not available in development mode. Deploy to a device with store access to test.';
+      });
       return;
     }
 
     setState(() {
       _waitingForPurchase = true;
       _error = null;
+      _notice = null;
     });
 
     try {
@@ -306,12 +369,10 @@ class _SubscriptionSheetBodyState
   Future<void> _restorePurchases() async {
     if (ApiConstants.useMockAuth) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-              'IAP not available in development mode. Deploy to a device with store access to test.'),
-        ),
-      );
+      setState(() {
+        _notice =
+            'Purchase restore is not available in development mode. Deploy to a device with store access to test.';
+      });
       return;
     }
 
@@ -319,6 +380,7 @@ class _SubscriptionSheetBodyState
       _waitingForPurchase = true;
       _isRestore = true;
       _error = null;
+      _notice = null;
     });
 
     try {
@@ -331,5 +393,128 @@ class _SubscriptionSheetBodyState
         _error = 'Restore failed: $e';
       });
     }
+  }
+
+  Future<void> _manageSubscription() async {
+    if (ApiConstants.useMockAuth) {
+      setState(() {
+        _notice =
+            'Subscription management is not available in development mode. On a live device, this opens the App Store or Play Store so you can cancel renewal while keeping Premium until the expiry date.';
+      });
+      return;
+    }
+
+    final iapService = ref.read(iapServiceProvider);
+    final launched = await iapService.openManageSubscriptions();
+    if (!mounted) return;
+
+    if (!launched) {
+      setState(() {
+        _error =
+            'Could not open the store subscription settings. Please manage your subscription directly in the App Store or Play Store.';
+      });
+    }
+  }
+
+  String _formatDate(DateTime date) {
+    return '${date.month}/${date.day}/${date.year}';
+  }
+}
+
+class _PlanHeader extends StatelessWidget {
+  final String label;
+  final bool isActive;
+
+  const _PlanHeader({
+    required this.label,
+    required this.isActive,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final textTheme = theme.textTheme;
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 180),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+      decoration: BoxDecoration(
+        color: isActive
+            ? theme.colorScheme.primaryContainer
+            : theme.colorScheme.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isActive
+              ? theme.colorScheme.primary
+              : theme.colorScheme.outlineVariant,
+        ),
+      ),
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (isActive) ...[
+              Icon(
+                Icons.check_circle,
+                size: 14,
+                color: theme.colorScheme.tertiary,
+              ),
+              const SizedBox(width: 4),
+            ],
+            Text(
+              label,
+              style: textTheme.labelMedium?.copyWith(
+                fontWeight: FontWeight.w700,
+                color: isActive
+                    ? theme.colorScheme.onPrimaryContainer
+                    : theme.colorScheme.onSurface,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PlanValueCell extends StatelessWidget {
+  final String value;
+  final bool isActive;
+  final bool emphasize;
+
+  const _PlanValueCell({
+    required this.value,
+    required this.isActive,
+    required this.emphasize,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final textTheme = theme.textTheme;
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 180),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: isActive
+            ? theme.colorScheme.primaryContainer.withValues(alpha: 0.55)
+            : Colors.transparent,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Text(
+        value,
+        style: textTheme.bodySmall?.copyWith(
+          color: emphasize
+              ? theme.colorScheme.primary
+              : theme.colorScheme.onSurfaceVariant,
+          fontWeight: isActive || emphasize ? FontWeight.w600 : FontWeight.w400,
+        ),
+        textAlign: TextAlign.center,
+      ),
+    );
   }
 }

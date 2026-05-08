@@ -12,6 +12,7 @@ class AmountInputField extends StatelessWidget {
   final bool isPremium;
   final ValueChanged<String>? onChanged;
   final ValueChanged<String> onCurrencyChanged;
+  final Widget? inlineAction;
 
   const AmountInputField({
     super.key,
@@ -21,6 +22,7 @@ class AmountInputField extends StatelessWidget {
     this.isPremium = false,
     this.onChanged,
     required this.onCurrencyChanged,
+    this.inlineAction,
   });
 
   @override
@@ -91,7 +93,12 @@ class AmountInputField extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(width: 12),
+          if (inlineAction != null) ...[
+            const SizedBox(width: 10),
+            inlineAction!,
+            const SizedBox(width: 10),
+          ] else
+            const SizedBox(width: 12),
           CurrencyBadge(
             currencyCode: currencyCode,
             onTap: () => CurrencyPickerSheet.show(

@@ -3,8 +3,13 @@ import 'package:speech_to_text/speech_to_text.dart';
 
 class VoiceInputButton extends StatefulWidget {
   final ValueChanged<String> onTranscriptReady;
+  final bool compact;
 
-  const VoiceInputButton({super.key, required this.onTranscriptReady});
+  const VoiceInputButton({
+    super.key,
+    required this.onTranscriptReady,
+    this.compact = false,
+  });
 
   @override
   State<VoiceInputButton> createState() => _VoiceInputButtonState();
@@ -53,11 +58,29 @@ class _VoiceInputButtonState extends State<VoiceInputButton> {
   Widget build(BuildContext context) {
     if (!_available) return const SizedBox.shrink();
 
+    final icon = Icon(
+      _listening ? Icons.stop_circle_outlined : Icons.mic_outlined,
+      color: _listening ? Colors.red : null,
+      size: widget.compact ? 18 : 22,
+    );
+
+    if (widget.compact) {
+      return Material(
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+        shape: const CircleBorder(),
+        child: InkWell(
+          customBorder: const CircleBorder(),
+          onTap: _toggle,
+          child: Padding(
+            padding: const EdgeInsets.all(8),
+            child: icon,
+          ),
+        ),
+      );
+    }
+
     return IconButton(
-      icon: Icon(
-        _listening ? Icons.stop_circle_outlined : Icons.mic_outlined,
-        color: _listening ? Colors.red : null,
-      ),
+      icon: icon,
       tooltip: _listening ? 'Stop listening' : 'Speak to fill',
       onPressed: _toggle,
     );

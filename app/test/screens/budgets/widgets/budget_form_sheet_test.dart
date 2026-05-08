@@ -54,6 +54,19 @@ Future<void> _pumpBudgetFormSheet(
 }
 
 void main() {
+  testWidgets('budget form category chips stay in a horizontal rail', (
+    tester,
+  ) async {
+    await _pumpBudgetFormSheet(tester, isPremium: true);
+
+    final groceriesY = tester.getCenter(find.text('Groceries')).dy;
+    final diningY = tester.getCenter(find.text('Dining')).dy;
+    final transportY = tester.getCenter(find.text('Transport')).dy;
+
+    expect((groceriesY - diningY).abs(), lessThan(8));
+    expect((groceriesY - transportY).abs(), lessThan(8));
+  });
+
   testWidgets('budget form hides upgrade-only categories for free users',
       (tester) async {
     await _pumpBudgetFormSheet(tester, isPremium: false);

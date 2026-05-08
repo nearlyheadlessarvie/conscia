@@ -52,10 +52,10 @@ class _TransactionListScreenState extends ConsumerState<TransactionListScreen> {
     final state = ref.watch(transactionListProvider);
     final selectedCategory = ref.watch(categoryFilterProvider);
 
-    final categories = state.transactions
-        .map((t) => t.category)
-        .toSet()
-        .toList()
+    final categories = {
+      if (selectedCategory != null) selectedCategory,
+      ...state.transactions.map((t) => t.category),
+    }.toList()
       ..sort();
 
     return Scaffold(
@@ -81,17 +81,6 @@ class _TransactionListScreenState extends ConsumerState<TransactionListScreen> {
     String? selectedCategory,
     List<String> categories,
   ) {
-    if (state.isLoading && state.transactions.isEmpty) {
-      return ListView.builder(
-        padding: const EdgeInsets.fromLTRB(16, 20, 16, 28),
-        itemCount: 8,
-        itemBuilder: (_, __) => const Padding(
-          padding: EdgeInsets.only(bottom: 12),
-          child: SkeletonListTile(),
-        ),
-      );
-    }
-
     if (state.error != null && state.transactions.isEmpty) {
       return Center(
         child: Padding(
@@ -124,50 +113,77 @@ class _TransactionListScreenState extends ConsumerState<TransactionListScreen> {
       );
     }
 
-    if (state.transactions.isEmpty) {
-      return const EmptyState(
-        icon: Icons.receipt_long_outlined,
-        title: 'No transactions yet',
-        subtitle: 'Tap + to add your first',
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 20, 16, 12),
+          child: ScreenSection(
+            title: 'Filters',
+            subtitle: 'Jump between your most recent spending categories.',
+            compact: true,
+            child: SelectionChipGroup(
+              options: ['All', ...categories],
+              value: selectedCategory ?? 'All',
+              scrollable: true,
+              onSelected: (value) {
+                ref.read(categoryFilterProvider.notifier).state =
+                    value == 'All' ? null : value;
+              },
+            ),
+          ),
+        ),
+        Expanded(
+          child: RefreshIndicator(
+            onRefresh: _onRefresh,
+            child: _buildScrollableList(state),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildScrollableList(TransactionListState state) {
+    if (state.isLoading && state.transactions.isEmpty) {
+      return ListView.builder(
+        controller: _scrollController,
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 28),
+        itemCount: 8,
+        itemBuilder: (_, __) => const Padding(
+          padding: EdgeInsets.only(bottom: 12),
+          child: SkeletonListTile(),
+        ),
       );
     }
 
-    return RefreshIndicator(
-      onRefresh: _onRefresh,
-      child: CustomScrollView(
+    if (state.transactions.isEmpty) {
+      return ListView(
         controller: _scrollController,
         physics: const AlwaysScrollableScrollPhysics(),
-        slivers: [
-          SliverPadding(
-            padding: const EdgeInsets.fromLTRB(16, 20, 16, 28),
-            sliver: SliverList(
-              delegate: SliverChildListDelegate.fixed([
-                ScreenSection(
-                  title: 'Filters',
-                  subtitle: 'Jump between your most recent spending categories.',
-                  compact: true,
-                  child: SelectionChipGroup(
-                    options: ['All', ...categories],
-                    value: selectedCategory ?? 'All',
-                    onSelected: (value) {
-                      ref.read(categoryFilterProvider.notifier).state =
-                          value == 'All' ? null : value;
-                    },
-                  ),
-                ),
-              ]),
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 28),
+        children: const [
+          EmptyState(
+            icon: Icons.receipt_long_outlined,
+            title: 'No transactions yet',
+            subtitle: 'Tap + to add your first',
+          ),
+        ],
+      );
+    }
+
+    return CustomScrollView(
+      controller: _scrollController,
+      physics: const AlwaysScrollableScrollPhysics(),
+      slivers: [
+        ..._buildGroupedSections(state.transactions),
+        if (state.isLoading)
+          const SliverToBoxAdapter(
+            child: Padding(
+              padding: EdgeInsets.fromLTRB(16, 0, 16, 28),
+              child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
             ),
           ),
-          ..._buildGroupedSections(state.transactions),
-          if (state.isLoading)
-            const SliverToBoxAdapter(
-              child: Padding(
-                padding: EdgeInsets.fromLTRB(16, 0, 16, 28),
-                child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
-              ),
-            ),
-        ],
-      ),
+      ],
     );
   }
 

@@ -6,6 +6,7 @@ import 'package:conscia_app/providers/ai_provider.dart';
 import 'package:conscia_app/core/utils/currency_formatter.dart';
 import 'package:conscia_app/screens/assistant/pre_purchase_screen.dart';
 import 'package:conscia_app/screens/transactions/transaction_form_screen.dart';
+import 'package:conscia_app/screens/transactions/widgets/voice_input_button.dart';
 import 'package:conscia_app/services/ai_service.dart';
 import 'package:dio/dio.dart';
 import 'package:conscia_app/services/location_assistance_service.dart';
@@ -311,6 +312,33 @@ void main() {
       findsOneWidget,
     );
     expect(find.text('Dining'), findsNothing);
+  });
+
+  testWidgets('pre-purchase assistant shows only one category heading',
+      (tester) async {
+    await tester.pumpWidget(await buildPrePurchaseApp(tester));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Category'), findsOneWidget);
+  });
+
+  testWidgets('pre-purchase assistant keeps a voice input control in the hero prompt area',
+      (tester) async {
+    await tester.pumpWidget(await buildPrePurchaseApp(tester));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(VoiceInputButton), findsOneWidget);
+  });
+
+  testWidgets('pre-purchase assistant shows category chips above all categories action',
+      (tester) async {
+    await tester.pumpWidget(await buildPrePurchaseApp(tester));
+    await tester.pumpAndSettle();
+
+    final chipsTopLeft = tester.getTopLeft(find.text('Dining').first);
+    final actionTopLeft = tester.getTopLeft(find.text('All categories'));
+
+    expect(chipsTopLeft.dy, lessThan(actionTopLeft.dy));
   });
 
   testWidgets('pre-purchase hides upgrade-only categories for free users',
