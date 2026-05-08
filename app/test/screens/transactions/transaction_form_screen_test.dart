@@ -406,10 +406,73 @@ void main() {
     expect(find.text('Category'), findsOneWidget);
   });
 
+  testWidgets('category and details accordions start expanded', (tester) async {
+    await tester.pumpWidget(await buildTransactionFormApp(tester));
+    await tester.pumpAndSettle();
+
+    expect(find.text('All categories'), findsOneWidget);
+    expect(find.text('Merchant (optional)'), findsOneWidget);
+  });
+
+  testWidgets('category accordion can collapse and expand', (tester) async {
+    await tester.pumpWidget(await buildTransactionFormApp(tester));
+    await tester.pumpAndSettle();
+
+    expect(find.text('All categories'), findsOneWidget);
+
+    await tester.tap(find.text('Category'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('All categories'), findsNothing);
+
+    await tester.tap(find.text('Category'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('All categories'), findsOneWidget);
+  });
+
+  testWidgets('details accordion can collapse and expand', (tester) async {
+    await tester.pumpWidget(await buildTransactionFormApp(tester));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Merchant (optional)'), findsOneWidget);
+
+    await tester.tap(find.text('Details'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Merchant (optional)'), findsNothing);
+    expect(find.text('Notes (optional)'), findsNothing);
+    expect(find.text('Today'), findsNothing);
+
+    await tester.tap(find.text('Details'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Merchant (optional)'), findsOneWidget);
+  });
+
+  testWidgets('recurring accordion starts collapsed and can expand', (
+    tester,
+  ) async {
+    await tester.pumpWidget(await buildTransactionFormApp(tester));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Make this recurring'), findsNothing);
+
+    await tester.ensureVisible(find.text('Recurring'));
+    await tester.tap(find.text('Recurring'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Make this recurring'), findsOneWidget);
+  });
+
   testWidgets('shows recurring controls when make this recurring is enabled', (
     tester,
   ) async {
     await tester.pumpWidget(await buildTransactionFormApp(tester));
+    await tester.pumpAndSettle();
+
+    await tester.ensureVisible(find.text('Recurring'));
+    await tester.tap(find.text('Recurring'));
     await tester.pumpAndSettle();
 
     await tester.ensureVisible(find.byType(Switch));

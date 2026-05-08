@@ -45,7 +45,8 @@ abstract class AppRoutes {
   static const home = '/';
   static const transactions = '/transactions';
   static const addTransaction = '/transactions/add';
-  static String transactionDetail(String id) => '/transactions/$id';
+  static String transactionDetail(String id, {bool autoReflect = false}) =>
+      autoReflect ? '/transactions/$id?autoReflect=1' : '/transactions/$id';
   static String editTransaction(String id) => '/transactions/$id/edit';
 
   static const assistant = '/assistant';
@@ -256,7 +257,12 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: '/transactions/:id',
         builder: (context, state) {
           final id = state.pathParameters['id']!;
-          return TransactionDetailScreen(transactionId: id);
+          final autoReflect =
+              state.uri.queryParameters['autoReflect'] == '1';
+          return TransactionDetailScreen(
+            transactionId: id,
+            autoReflect: autoReflect,
+          );
         },
         routes: [
           GoRoute(
