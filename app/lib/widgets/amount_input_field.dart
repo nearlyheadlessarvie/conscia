@@ -38,10 +38,11 @@ class AmountInputField extends StatelessWidget {
             : const Color(0xFFA4D8A7));
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      constraints: const BoxConstraints(minHeight: 74),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
         color: colors.surface,
-        borderRadius: BorderRadius.circular(22),
+        borderRadius: BorderRadius.circular(20),
         border: Border.all(
           color: colors.outlineVariant.withValues(alpha: 0.9),
         ),
@@ -58,12 +59,12 @@ class AmountInputField extends StatelessWidget {
           Text(
             prefix,
             style: GoogleFonts.poppins(
-              fontSize: 28,
+              fontSize: 24,
               fontWeight: FontWeight.w700,
               color: prefixColor,
             ),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 10),
           Expanded(
             child: TextField(
               controller: controller,
@@ -75,9 +76,9 @@ class AmountInputField extends StatelessWidget {
                 FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
               ],
               style: GoogleFonts.poppins(
-                fontSize: 34,
+                fontSize: 28,
                 fontWeight: FontWeight.w700,
-                letterSpacing: -1.2,
+                letterSpacing: -0.8,
                 color: colors.onSurface,
               ),
               decoration: InputDecoration(
@@ -85,20 +86,20 @@ class AmountInputField extends StatelessWidget {
                 isCollapsed: true,
                 hintText: '0.00',
                 hintStyle: GoogleFonts.poppins(
-                  fontSize: 34,
+                  fontSize: 28,
                   fontWeight: FontWeight.w700,
-                  letterSpacing: -1.2,
+                  letterSpacing: -0.8,
                   color: colors.onSurfaceVariant.withValues(alpha: 0.42),
                 ),
               ),
             ),
           ),
           if (inlineAction != null) ...[
-            const SizedBox(width: 10),
+            const SizedBox(width: 8),
             inlineAction!,
-            const SizedBox(width: 10),
+            const SizedBox(width: 8),
           ] else
-            const SizedBox(width: 12),
+            const SizedBox(width: 10),
           CurrencyBadge(
             currencyCode: currencyCode,
             onTap: () => CurrencyPickerSheet.show(

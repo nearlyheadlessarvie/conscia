@@ -336,12 +336,13 @@ void main() {
     expect(find.byType(VoiceInputButton), findsOneWidget);
   });
 
-  testWidgets('pre-purchase assistant uses the shared brand icon on the input screen',
+  testWidgets('pre-purchase assistant uses the alter ego hero on the input screen',
       (tester) async {
     await tester.pumpWidget(await buildPrePurchaseApp(tester));
     await tester.pumpAndSettle();
 
-    expect(find.byKey(const ValueKey('conscience-brand-icon-svg')), findsOneWidget);
+    expect(find.byKey(const ValueKey('conscience-alter-ego-idle')), findsOneWidget);
+    expect(find.byKey(const ValueKey('conscience-alter-ego-image')), findsOneWidget);
   });
 
   testWidgets('shows shared loader while AI response is pending', (tester) async {
@@ -378,6 +379,7 @@ void main() {
 
     expect(find.text('Your conscience is weighing both sides...'), findsOneWidget);
     expect(find.byType(ConscienceLoader), findsOneWidget);
+    expect(find.byKey(const ValueKey('conscience-loader-assistant')), findsOneWidget);
 
     await tester.pump(const Duration(seconds: 5));
     await tester.pumpAndSettle();

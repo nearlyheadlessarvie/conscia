@@ -566,6 +566,7 @@ class _ReflectionSheetState extends ConsumerState<_ReflectionSheet> {
               ? const Center(
                   child: ConscienceLoader(
                     size: 90,
+                    preset: ConscienceLoaderPreset.reflection,
                     label: 'Reflection is making sense of the moment...',
                   ),
                 )

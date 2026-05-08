@@ -25,48 +25,26 @@ class SelectionChipGroup extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).appColors;
     final chips = options.map((option) {
       final selected = option == value;
       final label = labelBuilder?.call(option) ?? option;
-      return AnimatedContainer(
+      return Padding(
         key: ValueKey(
           'selection-chip-$option-${selected ? 'selected' : 'idle'}',
         ),
-        duration: const Duration(milliseconds: 160),
-        margin: EdgeInsets.only(right: scrollable ? 10 : 0),
-        child: ChoiceChip(
-          showCheckmark: false,
+        padding: EdgeInsets.only(right: scrollable ? 10 : 0),
+        child: SelectionChipButton(
+          label: label,
+          selected: selected,
           avatar: avatarBuilder?.call(option, selected),
-          label: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(label),
-              if (showTrailingCheck && selected) ...[
-                const SizedBox(width: 10),
-                Icon(
+          onTap: () => onSelected(option),
+          trailing: showTrailingCheck && selected
+              ? Icon(
                   AppIcons.check,
                   key: ValueKey('selection-chip-check-$option'),
                   size: 16,
-                ),
-              ],
-            ],
-          ),
-          selected: selected,
-          onSelected: (_) => onSelected(option),
-          backgroundColor: colors.surfaceMuted,
-          selectedColor: colors.heroTint,
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-          labelPadding: const EdgeInsets.only(left: 2, right: 10),
-          side: BorderSide(
-            color: selected ? colors.sectionBorder : Colors.transparent,
-          ),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(18),
-          ),
-          labelStyle: Theme.of(context).textTheme.labelLarge?.copyWith(
-                fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-              ),
+                )
+              : null,
         ),
       );
     }).toList();
@@ -81,10 +59,66 @@ class SelectionChipGroup extends StatelessWidget {
     return Wrap(
       spacing: 10,
       runSpacing: 10,
-      children: chips.map((chip) => Padding(
-        padding: const EdgeInsets.only(right: 0),
-        child: chip,
-      )).toList(),
+      children: chips,
+    );
+  }
+}
+
+class SelectionChipButton extends StatelessWidget {
+  const SelectionChipButton({
+    super.key,
+    required this.label,
+    required this.selected,
+    required this.onTap,
+    this.avatar,
+    this.trailing,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+  final Widget? avatar;
+  final Widget? trailing;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).appColors;
+    final textStyle = Theme.of(context).textTheme.labelLarge?.copyWith(
+          fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+        );
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        key: ValueKey('selection-chip-button-$label'),
+        borderRadius: BorderRadius.circular(18),
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 160),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          decoration: BoxDecoration(
+            color: selected ? colors.heroTint : colors.surfaceMuted,
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(
+              color: selected ? colors.sectionBorder : Colors.transparent,
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (avatar != null) ...[
+                avatar!,
+                const SizedBox(width: 8),
+              ],
+              Text(label, style: textStyle),
+              if (trailing != null) ...[
+                const SizedBox(width: 10),
+                trailing!,
+              ],
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

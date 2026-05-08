@@ -1,6 +1,7 @@
 import 'package:conscia_app/providers/user_provider.dart';
 import 'package:conscia_app/screens/settings/profile_screen.dart';
 import 'package:conscia_app/services/user_service.dart';
+import 'package:conscia_app/widgets/selection_chip_group.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -123,7 +124,9 @@ void main() {
 
     await tester.pumpAndSettle();
 
-    final chips = tester.widgetList<ChoiceChip>(find.byType(ChoiceChip)).toList();
+    final chips = tester
+        .widgetList<SelectionChipButton>(find.byType(SelectionChipButton))
+        .toList();
 
     expect(chips, isNotEmpty);
     expect(chips.first.avatar, isNotNull);

@@ -294,6 +294,7 @@ void main() {
 
     expect(find.byType(ConscienceLoader), findsAtLeastNWidgets(1));
     expect(find.text('Reflection is making sense of the moment...'), findsOneWidget);
+    expect(find.byKey(const ValueKey('conscience-loader-reflection')), findsOneWidget);
 
     await tester.pump(const Duration(seconds: 5));
     await tester.pumpAndSettle();

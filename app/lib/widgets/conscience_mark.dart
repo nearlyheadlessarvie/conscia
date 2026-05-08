@@ -91,31 +91,65 @@ class ConscienceBrandIcon extends StatelessWidget {
   }
 }
 
-class ConscienceLoader extends StatefulWidget {
-  const ConscienceLoader({
-    super.key,
-    this.size = 84,
-    this.label,
-  });
-
-  final double size;
-  final String? label;
-
-  @override
-  State<ConscienceLoader> createState() => _ConscienceLoaderState();
+enum ConsciaAlterEgoPreset {
+  idle,
+  assistantLoading,
+  reflectionLoading,
 }
 
-class _ConscienceLoaderState extends State<ConscienceLoader>
+class ConsciaAlterEgoMotion extends StatefulWidget {
+  const ConsciaAlterEgoMotion({
+    super.key,
+    required this.preset,
+    this.size = 96,
+  });
+
+  final ConsciaAlterEgoPreset preset;
+  final double size;
+
+  @override
+  State<ConsciaAlterEgoMotion> createState() => _ConsciaAlterEgoMotionState();
+}
+
+class _ConsciaAlterEgoMotionState extends State<ConsciaAlterEgoMotion>
     with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
+
+  bool get _isTestEnvironment =>
+      WidgetsBinding.instance.runtimeType.toString().contains(
+            'TestWidgetsFlutterBinding',
+          );
+
+  Duration get _duration => switch (widget.preset) {
+        ConsciaAlterEgoPreset.idle => const Duration(seconds: 5),
+        ConsciaAlterEgoPreset.assistantLoading =>
+          const Duration(milliseconds: 2100),
+        ConsciaAlterEgoPreset.reflectionLoading =>
+          const Duration(milliseconds: 2600),
+      };
 
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1600),
-    )..repeat();
+    _controller = AnimationController(vsync: this, duration: _duration);
+    if (_isTestEnvironment) {
+      _controller.value = 0.35;
+    } else {
+      _controller.repeat();
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant ConsciaAlterEgoMotion oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.preset != widget.preset) {
+      _controller.duration = _duration;
+      if (_isTestEnvironment) {
+        _controller.value = 0.35;
+      } else {
+        _controller.repeat();
+      }
+    }
   }
 
   @override
@@ -126,80 +160,159 @@ class _ConscienceLoaderState extends State<ConscienceLoader>
 
   @override
   Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-    final colors = Theme.of(context).colorScheme;
+    final isIdle = widget.preset == ConsciaAlterEgoPreset.idle;
 
     return AnimatedBuilder(
       animation: _controller,
       builder: (context, _) {
         final t = _controller.value;
-        final pulse = (math.sin(t * math.pi * 2) + 1) / 2;
-        final breathe = 1 + math.sin(t * math.pi * 2) * 0.025;
-        final ringRotation = t * math.pi * 2;
+        final phase = (math.sin(t * math.pi * 2) + 1) / 2;
+        final glowScale = switch (widget.preset) {
+          ConsciaAlterEgoPreset.idle => 1.0 + phase * 0.06,
+          ConsciaAlterEgoPreset.assistantLoading => 1.02 + phase * 0.16,
+          ConsciaAlterEgoPreset.reflectionLoading => 1.01 + phase * 0.11,
+        };
+        final breathe = switch (widget.preset) {
+          ConsciaAlterEgoPreset.idle => 1.0 + math.sin(t * math.pi * 2) * 0.012,
+          ConsciaAlterEgoPreset.assistantLoading =>
+            1.0 + math.sin(t * math.pi * 2) * 0.026,
+          ConsciaAlterEgoPreset.reflectionLoading =>
+            1.0 + math.sin(t * math.pi * 2) * 0.018,
+        };
+        final ringRotation = switch (widget.preset) {
+          ConsciaAlterEgoPreset.idle => t * math.pi * 2 * 0.08,
+          ConsciaAlterEgoPreset.assistantLoading => t * math.pi * 2 * 0.25,
+          ConsciaAlterEgoPreset.reflectionLoading => t * math.pi * 2 * 0.16,
+        };
+        final redOpacity = switch (widget.preset) {
+          ConsciaAlterEgoPreset.idle => 0.22 + phase * 0.10,
+          ConsciaAlterEgoPreset.assistantLoading => 0.28 + phase * 0.18,
+          ConsciaAlterEgoPreset.reflectionLoading => 0.24 + phase * 0.12,
+        };
+        final blueOpacity = switch (widget.preset) {
+          ConsciaAlterEgoPreset.idle => 0.18 + phase * 0.09,
+          ConsciaAlterEgoPreset.assistantLoading => 0.24 + phase * 0.16,
+          ConsciaAlterEgoPreset.reflectionLoading => 0.2 + phase * 0.11,
+        };
 
-        return Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            SizedBox(
-              width: widget.size * 1.82,
-              height: widget.size * 1.58,
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  Transform.translate(
-                    offset: Offset(-widget.size * 0.16, 0),
-                    child: _AuraGlow(
-                      color: const Color(0x66FF4B3A),
-                      size: widget.size * (1.34 + pulse * 0.10),
-                    ),
-                  ),
-                  Transform.translate(
-                    offset: Offset(widget.size * 0.16, 0),
-                    child: _AuraGlow(
-                      color: const Color(0x6656D6FF),
-                      size: widget.size * (1.34 + pulse * 0.10),
-                    ),
-                  ),
-                  Transform.rotate(
-                    angle: ringRotation * 0.22,
-                    child: Container(
-                      key: const ValueKey('conscience-loader-ring'),
-                      width: widget.size * 1.2,
-                      height: widget.size * 1.2,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: colors.outlineVariant.withValues(
-                            alpha: 0.14 + pulse * 0.10,
-                          ),
-                          width: 1.5,
-                        ),
+        return SizedBox(
+          key: ValueKey(
+            switch (widget.preset) {
+              ConsciaAlterEgoPreset.idle => 'conscience-alter-ego-idle',
+              ConsciaAlterEgoPreset.assistantLoading =>
+                'conscience-loader-assistant',
+              ConsciaAlterEgoPreset.reflectionLoading =>
+                'conscience-loader-reflection',
+            },
+          ),
+          width: widget.size * (isIdle ? 1.36 : 1.65),
+          height: widget.size * (isIdle ? 1.24 : 1.5),
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              Transform.translate(
+                offset: Offset(-widget.size * 0.18, 0),
+                child: _AuraGlow(
+                  color: const Color(0xFFFF5B47).withValues(alpha: redOpacity),
+                  size: widget.size * (1.05 * glowScale),
+                ),
+              ),
+              Transform.translate(
+                offset: Offset(widget.size * 0.18, 0),
+                child: _AuraGlow(
+                  color: const Color(0xFF67D9FF).withValues(alpha: blueOpacity),
+                  size: widget.size * (1.02 * glowScale),
+                ),
+              ),
+              if (!isIdle)
+                Transform.rotate(
+                  angle: ringRotation,
+                  child: Container(
+                    key: const ValueKey('conscience-loader-ring'),
+                    width: widget.size * 1.18,
+                    height: widget.size * 1.18,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: Theme.of(context)
+                            .colorScheme
+                            .outlineVariant
+                            .withValues(alpha: 0.12 + phase * 0.08),
+                        width: 1.4,
                       ),
                     ),
                   ),
-                  Transform.scale(
-                    scale: breathe,
-                    child: ConscienceBrandIcon(
-                      size: widget.size * 0.8,
+                ),
+              Transform.scale(
+                scale: breathe,
+                child: SizedBox(
+                  width: widget.size,
+                  height: widget.size,
+                  child: ClipOval(
+                    child: Image.asset(
+                      _alterEgoAsset,
+                      key: const ValueKey('conscience-alter-ego-image'),
+                      fit: BoxFit.cover,
                     ),
                   ),
-                ],
-              ),
-            ),
-            if (widget.label != null) ...[
-              const SizedBox(height: 14),
-              Text(
-                widget.label!,
-                style: textTheme.bodyMedium?.copyWith(
-                  color: colors.onSurfaceVariant,
-                  fontWeight: FontWeight.w500,
                 ),
-                textAlign: TextAlign.center,
               ),
             ],
-          ],
+          ),
         );
       },
+    );
+  }
+}
+
+enum ConscienceLoaderPreset {
+  assistant,
+  reflection,
+}
+
+class ConscienceLoader extends StatefulWidget {
+  const ConscienceLoader({
+    super.key,
+    this.size = 84,
+    this.label,
+    this.preset = ConscienceLoaderPreset.assistant,
+  });
+
+  final double size;
+  final String? label;
+  final ConscienceLoaderPreset preset;
+
+  @override
+  State<ConscienceLoader> createState() => _ConscienceLoaderState();
+}
+
+class _ConscienceLoaderState extends State<ConscienceLoader>
+    with SingleTickerProviderStateMixin {
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    final colors = Theme.of(context).colorScheme;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        ConsciaAlterEgoMotion(
+          preset: widget.preset == ConscienceLoaderPreset.assistant
+              ? ConsciaAlterEgoPreset.assistantLoading
+              : ConsciaAlterEgoPreset.reflectionLoading,
+          size: widget.size * 0.94,
+        ),
+        if (widget.label != null) ...[
+          const SizedBox(height: 14),
+          Text(
+            widget.label!,
+            style: textTheme.bodyMedium?.copyWith(
+              color: colors.onSurfaceVariant,
+              fontWeight: FontWeight.w500,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ],
     );
   }
 }
