@@ -66,12 +66,14 @@ Suggested enums:
   - `Monthly`
   - `Yearly`
 
-Transaction linkage should be explicit. Generated transactions should store recurring provenance so the app can show a `Recurring` hint and future schedule-management flows can find the origin.
+Transaction linkage should be explicit. Generated transactions should store recurring provenance so the app can show a `Recurring` hint, future schedule-management flows can find the origin, and the generator can safely prevent duplicate occurrences during retries or backfill.
 
 Suggested transaction metadata:
 
 - `RecurringScheduleId` nullable
-- `IsRecurringOccurrence` derived from the above, or explicit if preferred
+- `RecurringOccurrenceDate` nullable
+
+`IsRecurringOccurrence` should be derived from `RecurringScheduleId != null`, not stored separately unless a storage constraint later forces it.
 
 ## Scheduling Rules
 
@@ -119,7 +121,7 @@ Recommended flow:
 5. advance `NextRunAt` to the next future due point
 6. record lightweight reminder/alert metadata for the user
 
-The generation logic must be idempotent enough to avoid duplicate occurrences if the worker retries. The safest design is to persist enough schedule-run metadata or use deterministic duplicate checks around `RecurringScheduleId + occurrence date`.
+The generation logic must be idempotent enough to avoid duplicate occurrences if the worker retries. The safest v1 design is to persist explicit recurring provenance on each generated transaction and use deterministic duplicate checks around `RecurringScheduleId + RecurringOccurrenceDate`.
 
 ## Editing Behavior
 
@@ -160,7 +162,8 @@ Transaction endpoints should include recurring metadata in transaction detail/li
 Suggested transaction response additions:
 
 - `recurringScheduleId`
-- `isRecurring`
+- `recurringOccurrenceDate`
+- `isRecurring` derived from `recurringScheduleId != null`
 
 ## UI Design
 
