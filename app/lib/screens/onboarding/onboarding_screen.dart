@@ -45,22 +45,22 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   onPageChanged: (i) => setState(() => _currentPage = i),
                   children: const [
                     _Slide(
-                      illustration: OnboardingIllustration1(size: 220),
+                      illustration: OnboardingIllustration1(size: 252),
                       title: 'Meet Your Financial Conscience',
                       subtitle:
                           'A devil and angel on your shoulder, guiding every spending decision.',
                     ),
                     _Slide(
-                      illustration: OnboardingIllustration2(size: 220),
-                      title: 'Track Without Guilt',
+                      illustration: OnboardingIllustration2(size: 252),
+                      title: 'Track Without Shame',
                       subtitle:
-                          'Log expenses effortlessly and reflect on what truly matters to you.',
+                          'Log spending in seconds, spot patterns, and stay honest without guilt.',
                     ),
                     _Slide(
-                      illustration: OnboardingIllustration3(size: 220),
-                      title: 'Take Control of Your Money',
+                      illustration: OnboardingIllustration3(size: 252),
+                      title: 'Turn Reflection Into Better Habits',
                       subtitle:
-                          'Set budgets, review regrets, and build lasting financial habits.',
+                          'Set budgets, notice regrets, and build a money routine that actually sticks.',
                     ),
                   ],
                 ),
@@ -150,14 +150,14 @@ class _Slide extends StatelessWidget {
       child: Column(
         children: [
           Expanded(
-            flex: 55,
+            flex: 60,
             child: Center(child: illustration),
           ),
           Expanded(
-            flex: 45,
+            flex: 40,
             child: Column(
               children: [
-                const SizedBox(height: 24),
+                const SizedBox(height: 12),
                 Text(
                   title,
                   style: GoogleFonts.poppins(

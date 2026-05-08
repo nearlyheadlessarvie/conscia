@@ -8,6 +8,7 @@ import 'package:conscia_app/screens/assistant/pre_purchase_screen.dart';
 import 'package:conscia_app/screens/transactions/transaction_form_screen.dart';
 import 'package:conscia_app/screens/transactions/widgets/voice_input_button.dart';
 import 'package:conscia_app/services/ai_service.dart';
+import 'package:conscia_app/widgets/conscience_mark.dart';
 import 'package:dio/dio.dart';
 import 'package:conscia_app/services/location_assistance_service.dart';
 import 'package:conscia_app/services/subscription_service.dart';
@@ -42,9 +43,11 @@ class _FakeLocationAssistanceService extends LocationAssistanceService {
 class _FakeAIService extends AIService {
   _FakeAIService({
     required this.response,
+    this.delay = Duration.zero,
   }) : super(Dio());
 
   final AIResponse response;
+  final Duration delay;
 
   @override
   Future<AIResponse> prePurchase({
@@ -53,6 +56,9 @@ class _FakeAIService extends AIService {
     required String currencyCode,
     required String category,
   }) async {
+    if (delay > Duration.zero) {
+      await Future<void>.delayed(delay);
+    }
     return response;
   }
 }
@@ -328,6 +334,53 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(VoiceInputButton), findsOneWidget);
+  });
+
+  testWidgets('pre-purchase assistant uses the shared brand icon on the input screen',
+      (tester) async {
+    await tester.pumpWidget(await buildPrePurchaseApp(tester));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey('conscience-brand-icon-svg')), findsOneWidget);
+  });
+
+  testWidgets('shows shared loader while AI response is pending', (tester) async {
+    await _pumpPrePurchaseRouterApp(
+      tester,
+      aiService: _FakeAIService(
+        response: const AIResponse(
+          impulse: 'Treat yourself.',
+          reason: 'Check your budget.',
+          neutral: 'You can decide.',
+        ),
+        delay: const Duration(seconds: 5),
+      ),
+      locationService: _FakeLocationAssistanceService(permissionGranted: true),
+    );
+
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is TextField &&
+            widget.decoration?.labelText == 'What are you thinking of buying?',
+      ),
+      'Coffee',
+    );
+    await tester.enterText(find.byType(TextField).at(1), '180');
+    await tester.ensureVisible(find.widgetWithText(FilterChip, 'Dining'));
+    await tester.tap(find.widgetWithText(FilterChip, 'Dining'));
+    await tester.pump();
+
+    await tester.tap(find.text('Ask Conscia'));
+    await tester.pump();
+
+    expect(find.text('Your conscience is weighing both sides...'), findsOneWidget);
+    expect(find.byType(ConscienceLoader), findsOneWidget);
+
+    await tester.pump(const Duration(seconds: 5));
+    await tester.pumpAndSettle();
   });
 
   testWidgets('pre-purchase assistant shows category chips above all categories action',

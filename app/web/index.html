@@ -26,11 +26,8 @@
       --paper: #f6f7fb;
       --text: #171a26;
       --muted: #667085;
-      --devil: #8c1d18;
-      --devil-glow: #d75a45;
       --angel: #79e2df;
       --angel-deep: #0f7e8d;
-      --halo: #ffe27a;
     }
 
     html, body {
@@ -76,63 +73,24 @@
       width: 116px;
       height: 116px;
       margin: 0 auto 24px;
-      border-radius: 50%;
       position: relative;
-      background: linear-gradient(135deg, var(--devil) 0%, #641114 48%, var(--angel-deep) 52%, var(--angel) 100%);
-      border: 8px solid var(--navy);
-      overflow: hidden;
-      animation: settle 1.8s ease-in-out infinite alternate;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      background:
+        radial-gradient(circle at 28% 50%, rgba(255, 91, 74, 0.26), transparent 38%),
+        radial-gradient(circle at 72% 50%, rgba(121, 226, 223, 0.3), transparent 40%),
+        rgba(255, 255, 255, 0.6);
+      box-shadow:
+        0 10px 24px rgba(9, 26, 56, 0.08),
+        inset 0 0 0 1px rgba(9, 26, 56, 0.08);
     }
 
-    .mark::before,
-    .mark::after {
-      content: "";
-      position: absolute;
-      border-radius: 999px;
-    }
-
-    .mark::before {
-      inset: 18% 44% 18% 14%;
-      border-left: 6px solid #ffc8a2;
-      border-top: 6px solid #ffc8a2;
-      transform: rotate(-12deg);
-      border-right: 0;
-      border-bottom: 0;
-      filter: drop-shadow(0 0 8px rgba(255, 141, 97, 0.2));
-    }
-
-    .mark::after {
-      inset: 18% 14% 18% 44%;
-      border-right: 6px solid #063a52;
-      border-top: 6px solid #063a52;
-      transform: scaleX(-1) rotate(-14deg);
-      border-left: 0;
-      border-bottom: 0;
-    }
-
-    .spark,
-    .halo {
-      position: absolute;
-      border-radius: 999px;
-    }
-
-    .spark {
-      width: 14px;
-      height: 14px;
-      left: 58px;
-      bottom: 24px;
-      background: radial-gradient(circle, #ffb477 0%, #ff6c2f 72%);
-      animation: pulse 1.5s ease-in-out infinite;
-    }
-
-    .halo {
-      width: 26px;
-      height: 12px;
-      right: 14px;
-      top: 14px;
-      border: 4px solid var(--halo);
-      border-bottom: 0;
-      transform: rotate(18deg);
+    .mark img {
+      width: 88px;
+      height: 88px;
+      display: block;
+      animation: breathe 1.8s ease-in-out infinite;
     }
 
     h1 {
@@ -175,9 +133,9 @@
       50% { transform: scale(1.08); opacity: 1; }
     }
 
-    @keyframes settle {
-      0% { transform: translateY(0) rotate(-1deg); }
-      100% { transform: translateY(-4px) rotate(1deg); }
+    @keyframes breathe {
+      0%, 100% { transform: scale(0.98); }
+      50% { transform: scale(1.02); }
     }
   </style>
 </head>
@@ -185,8 +143,7 @@
   <div id="loading-shell">
     <div class="loading-card">
       <div class="mark" aria-hidden="true">
-        <span class="halo"></span>
-        <span class="spark"></span>
+        <img src="assets/images/app_icon.svg" alt="">
       </div>
       <h1>Meet your<br>financial conscience</h1>
       <p>

@@ -1,4 +1,3 @@
-import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../../widgets/conscience_mark.dart';
@@ -10,41 +9,38 @@ class OnboardingIllustration1 extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: size,
-      height: size,
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          Container(
-            width: size * 0.92,
-            height: size * 0.92,
-            decoration: const BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: RadialGradient(
-                colors: <Color>[
-                  Color(0x1F79E2DF),
-                  Color(0x00FFFFFF),
-                ],
+    return _IllustrationHalo(
+      size: size,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF091A38).withValues(alpha: 0.12),
+              blurRadius: size * 0.12,
+              offset: Offset(0, size * 0.04),
+            ),
+          ],
+        ),
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: Colors.white.withValues(alpha: 0.92),
+            border: Border.all(
+              color: const Color(0xFFB8C5E6).withValues(alpha: 0.38),
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF091A38).withValues(alpha: 0.08),
+                blurRadius: size * 0.09,
+                offset: Offset(0, size * 0.025),
               ),
-            ),
+            ],
           ),
-          Container(
-            width: size * 0.74,
-            height: size * 0.74,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: const Color(0xFF091A38).withValues(alpha: 0.1),
-                  blurRadius: size * 0.08,
-                  offset: Offset(0, size * 0.025),
-                ),
-              ],
-            ),
-            child: ConscienceMark(size: size * 0.74),
+          child: Padding(
+            padding: EdgeInsets.all(size * 0.11),
+            child: ConscienceBrandIcon(size: size * 0.58),
           ),
-        ],
+        ),
       ),
     );
   }
@@ -57,82 +53,147 @@ class OnboardingIllustration2 extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: size,
-      height: size,
-      child: CustomPaint(
-        size: Size(size, size),
-        painter: _BudgetTrackingPainter(),
+    final colors = Theme.of(context).colorScheme;
+
+    return _IllustrationHalo(
+      size: size,
+      child: SizedBox(
+        width: size,
+        height: size * 0.78,
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Positioned(
+              left: size * 0.07,
+              right: size * 0.07,
+              top: size * 0.1,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: colors.surface,
+                  borderRadius: BorderRadius.circular(size * 0.12),
+                  border: Border.all(
+                    color: colors.outlineVariant.withValues(alpha: 0.42),
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFF091A38).withValues(alpha: 0.09),
+                      blurRadius: size * 0.085,
+                      offset: Offset(0, size * 0.03),
+                    ),
+                  ],
+                ),
+                child: Padding(
+                  padding: EdgeInsets.fromLTRB(
+                    size * 0.085,
+                    size * 0.08,
+                    size * 0.085,
+                    size * 0.08,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Row(
+                        children: [
+                          DecoratedBox(
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFEEF5FF),
+                              borderRadius:
+                                  BorderRadius.circular(size * 0.08),
+                            ),
+                            child: Padding(
+                              padding: EdgeInsets.all(size * 0.022),
+                              child: ConscienceBrandIcon(size: size * 0.09),
+                            ),
+                          ),
+                          const Spacer(),
+                          DecoratedBox(
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFE7F5EA),
+                              borderRadius:
+                                  BorderRadius.circular(size * 0.08),
+                            ),
+                            child: Padding(
+                              padding: EdgeInsets.symmetric(
+                                horizontal: size * 0.03,
+                                vertical: size * 0.015,
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.check_circle_rounded,
+                                    size: size * 0.052,
+                                    color: const Color(0xFF37A855),
+                                  ),
+                                  SizedBox(width: size * 0.01),
+                                  Text(
+                                    'Logged',
+                                    style: TextStyle(
+                                      fontSize: size * 0.034,
+                                      fontWeight: FontWeight.w700,
+                                      color: const Color(0xFF2D7441),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      SizedBox(height: size * 0.07),
+                      Text(
+                        '-PHP 180',
+                        style: TextStyle(
+                          fontSize: size * 0.085,
+                          fontWeight: FontWeight.w800,
+                          color: const Color(0xFFD4483B),
+                        ),
+                      ),
+                      SizedBox(height: size * 0.025),
+                      Text(
+                        'Coffee run',
+                        style: TextStyle(
+                          fontSize: size * 0.06,
+                          fontWeight: FontWeight.w700,
+                          color: colors.onSurface,
+                        ),
+                      ),
+                      SizedBox(height: size * 0.014),
+                      Text(
+                        'Saved to your transactions in seconds.',
+                        style: TextStyle(
+                          fontSize: size * 0.04,
+                          height: 1.3,
+                          fontWeight: FontWeight.w500,
+                          color: colors.onSurfaceVariant,
+                        ),
+                      ),
+                      SizedBox(height: size * 0.055),
+                      _MiniChip(
+                        label: 'Dining',
+                        color: const Color(0xFFEAF0FF),
+                        size: size,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            Positioned(
+              right: size * 0.03,
+              bottom: size * 0.09,
+              child: _FloatingAccent(
+                size: size * 0.16,
+                color: const Color(0xFFFFE8A6),
+                icon: Icons.auto_graph_rounded,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
-}
-
-class _BudgetTrackingPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final unit = size.width / 10;
-    final baseY = size.height * 0.75;
-    final barWidth = unit * 1.0;
-    final gap = unit * 0.6;
-
-    final heights = [0.3, 0.55, 0.4, 0.7, 0.5];
-    final colors = [
-      const Color(0xFF00838F),
-      const Color(0xFF00BCD4),
-      const Color(0xFF00838F),
-      const Color(0xFF00BCD4),
-      const Color(0xFF00838F),
-    ];
-
-    final totalWidth = heights.length * barWidth + (heights.length - 1) * gap;
-    final startX = (size.width - totalWidth) / 2;
-
-    for (var i = 0; i < heights.length; i++) {
-      final barHeight = size.height * 0.5 * heights[i];
-      final x = startX + i * (barWidth + gap);
-      final barRect = RRect.fromRectAndRadius(
-        Rect.fromLTWH(x, baseY - barHeight, barWidth, barHeight),
-        Radius.circular(unit * 0.2),
-      );
-      final barPaint = Paint()..color = colors[i];
-      canvas.drawRRect(barRect, barPaint);
-    }
-
-    // Baseline
-    final linePaint = Paint()
-      ..color = const Color(0xFF1A237E).withValues(alpha: 0.3)
-      ..strokeWidth = 1.5;
-    canvas.drawLine(
-      Offset(startX - unit * 0.5, baseY),
-      Offset(startX + totalWidth + unit * 0.5, baseY),
-      linePaint,
-    );
-
-    // Checkmark circle
-    final checkCenter = Offset(size.width * 0.72, size.height * 0.25);
-    final checkRadius = unit * 1.2;
-    final checkBgPaint = Paint()..color = const Color(0xFF4CAF50);
-    canvas.drawCircle(checkCenter, checkRadius, checkBgPaint);
-
-    // Checkmark
-    final checkPaint = Paint()
-      ..color = Colors.white
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = unit * 0.25
-      ..strokeCap = StrokeCap.round
-      ..strokeJoin = StrokeJoin.round;
-    final checkPath = Path()
-      ..moveTo(checkCenter.dx - checkRadius * 0.35, checkCenter.dy)
-      ..lineTo(checkCenter.dx - checkRadius * 0.05,
-          checkCenter.dy + checkRadius * 0.3)
-      ..lineTo(checkCenter.dx + checkRadius * 0.4,
-          checkCenter.dy - checkRadius * 0.3);
-    canvas.drawPath(checkPath, checkPaint);
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
 class OnboardingIllustration3 extends StatelessWidget {
@@ -142,104 +203,326 @@ class OnboardingIllustration3 extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: size,
-      height: size,
-      child: CustomPaint(
-        size: Size(size, size),
-        painter: _AiInsightsPainter(),
+    final colors = Theme.of(context).colorScheme;
+
+    return _IllustrationHalo(
+      size: size,
+      child: SizedBox(
+        width: size,
+        height: size * 0.82,
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Positioned(
+              top: size * 0.05,
+              left: size * 0.11,
+              right: size * 0.02,
+              child: _FeatureCard(
+                size: size,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        ConscienceBrandIcon(size: size * 0.1),
+                        SizedBox(width: size * 0.024),
+                        Expanded(
+                          child: Text(
+                            'Budget pulse',
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: size * 0.052,
+                              fontWeight: FontWeight.w700,
+                              color: colors.onSurface,
+                            ),
+                          ),
+                        ),
+                        SizedBox(width: size * 0.02),
+                        Text(
+                          'On track',
+                          style: TextStyle(
+                            fontSize: size * 0.042,
+                            fontWeight: FontWeight.w700,
+                            color: const Color(0xFF2D7441),
+                          ),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: size * 0.055),
+                    _MetricBar(
+                      widthFactor: 0.9,
+                      color: const Color(0xFFDFE6F5),
+                      height: size * 0.05,
+                    ),
+                    SizedBox(height: size * 0.03),
+                    _MetricBar(
+                      widthFactor: 0.58,
+                      color: const Color(0xFF37A855),
+                      height: size * 0.05,
+                    ),
+                    SizedBox(height: size * 0.05),
+                    Row(
+                      children: [
+                        _MiniChip(
+                          label: 'Dining',
+                          color: const Color(0xFFEAF0FF),
+                          size: size * 0.9,
+                        ),
+                        SizedBox(width: size * 0.02),
+                        Text(
+                          '35%',
+                          style: TextStyle(
+                            fontSize: size * 0.045,
+                            fontWeight: FontWeight.w700,
+                            color: const Color(0xFF2D7441),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            Positioned(
+              left: 0,
+              right: size * 0.14,
+              bottom: size * 0.02,
+              child: _FeatureCard(
+                size: size,
+                accentColor: const Color(0xFFEAF0FF),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        DecoratedBox(
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFEFF4FF),
+                            borderRadius: BorderRadius.circular(size * 0.06),
+                          ),
+                          child: Padding(
+                            padding: EdgeInsets.all(size * 0.024),
+                            child: Icon(
+                              Icons.favorite_rounded,
+                              size: size * 0.06,
+                              color: const Color(0xFF27436F),
+                            ),
+                          ),
+                        ),
+                        SizedBox(width: size * 0.025),
+                        Expanded(
+                          child: Text(
+                            'Reflection',
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: size * 0.055,
+                              fontWeight: FontWeight.w700,
+                              color: colors.onSurface,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: size * 0.05),
+                    Text(
+                      'Notice regrets, reset faster, and build habits that stick.',
+                      style: TextStyle(
+                        fontSize: size * 0.055,
+                        height: 1.35,
+                        color: colors.onSurfaceVariant,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 }
 
-class _AiInsightsPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final center = Offset(size.width / 2, size.height / 2);
-    final unit = size.width / 10;
+class _IllustrationHalo extends StatelessWidget {
+  const _IllustrationHalo({
+    required this.size,
+    required this.child,
+  });
 
-    // Brain outline
-    final brainRadius = unit * 2.5;
-    final brainGradient = Paint()
-      ..shader = const RadialGradient(
-        colors: [Color(0xFF7C4DFF), Color(0xFF1A237E)],
-      ).createShader(Rect.fromCircle(center: center, radius: brainRadius));
-    canvas.drawCircle(center, brainRadius, brainGradient);
-
-    // Brain line detail
-    final linePaint = Paint()
-      ..color = Colors.white.withValues(alpha: 0.5)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = unit * 0.12
-      ..strokeCap = StrokeCap.round;
-
-    final brainLine = Path()
-      ..moveTo(center.dx, center.dy - brainRadius * 0.7)
-      ..quadraticBezierTo(
-        center.dx + brainRadius * 0.3,
-        center.dy - brainRadius * 0.2,
-        center.dx,
-        center.dy + brainRadius * 0.1,
-      )
-      ..quadraticBezierTo(
-        center.dx - brainRadius * 0.3,
-        center.dy + brainRadius * 0.4,
-        center.dx,
-        center.dy + brainRadius * 0.7,
-      );
-    canvas.drawPath(brainLine, linePaint);
-
-    // Sparkles/stars around the brain
-    final sparklePaint = Paint()..color = const Color(0xFFFFD54F);
-    final sparklePositions = [
-      Offset(center.dx + brainRadius * 1.3, center.dy - brainRadius * 0.8),
-      Offset(center.dx - brainRadius * 1.4, center.dy - brainRadius * 0.5),
-      Offset(center.dx + brainRadius * 1.1, center.dy + brainRadius * 0.9),
-      Offset(center.dx - brainRadius * 1.2, center.dy + brainRadius * 0.7),
-      Offset(center.dx + brainRadius * 0.3, center.dy - brainRadius * 1.4),
-      Offset(center.dx - brainRadius * 0.5, center.dy - brainRadius * 1.3),
-    ];
-
-    for (var i = 0; i < sparklePositions.length; i++) {
-      final sparkleSize = unit * (0.2 + (i % 3) * 0.1);
-      _drawSparkle(canvas, sparklePositions[i], sparkleSize, sparklePaint);
-    }
-
-    // Connection dots
-    final dotPaint = Paint()
-      ..color = const Color(0xFF00BCD4).withValues(alpha: 0.6);
-    final dotPositions = [
-      Offset(center.dx - brainRadius * 1.0, center.dy),
-      Offset(center.dx + brainRadius * 1.0, center.dy + brainRadius * 0.2),
-      Offset(center.dx, center.dy + brainRadius * 1.3),
-    ];
-    for (final pos in dotPositions) {
-      canvas.drawCircle(pos, unit * 0.2, dotPaint);
-    }
-  }
-
-  void _drawSparkle(Canvas canvas, Offset center, double size, Paint paint) {
-    final path = Path();
-    for (var i = 0; i < 4; i++) {
-      final angle = i * math.pi / 2;
-      final outerX = center.dx + math.cos(angle) * size;
-      final outerY = center.dy + math.sin(angle) * size;
-      final innerAngle = angle + math.pi / 4;
-      final innerX = center.dx + math.cos(innerAngle) * size * 0.3;
-      final innerY = center.dy + math.sin(innerAngle) * size * 0.3;
-
-      if (i == 0) {
-        path.moveTo(outerX, outerY);
-      } else {
-        path.lineTo(outerX, outerY);
-      }
-      path.lineTo(innerX, innerY);
-    }
-    path.close();
-    canvas.drawPath(path, paint);
-  }
+  final double size;
+  final Widget child;
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: size,
+      height: size,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          Container(
+            width: size * 0.94,
+            height: size * 0.94,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: const RadialGradient(
+                colors: <Color>[
+                  Color(0x2279E2DF),
+                  Color(0x00FFFFFF),
+                ],
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF091A38).withValues(alpha: 0.05),
+                  blurRadius: size * 0.12,
+                  offset: Offset(0, size * 0.03),
+                ),
+              ],
+            ),
+          ),
+          child,
+        ],
+      ),
+    );
+  }
+}
+
+class _FeatureCard extends StatelessWidget {
+  const _FeatureCard({
+    required this.size,
+    required this.child,
+    this.accentColor = Colors.white,
+  });
+
+  final double size;
+  final Widget child;
+  final Color accentColor;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: accentColor,
+        borderRadius: BorderRadius.circular(size * 0.11),
+        border: Border.all(
+          color: colors.outlineVariant.withValues(alpha: 0.55),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF091A38).withValues(alpha: 0.08),
+            blurRadius: size * 0.08,
+            offset: Offset(0, size * 0.03),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: EdgeInsets.all(size * 0.09),
+        child: child,
+      ),
+    );
+  }
+}
+
+class _MetricBar extends StatelessWidget {
+  const _MetricBar({
+    required this.widthFactor,
+    required this.color,
+    required this.height,
+  });
+
+  final double widthFactor;
+  final Color color;
+  final double height;
+
+  @override
+  Widget build(BuildContext context) {
+    return FractionallySizedBox(
+      alignment: Alignment.centerLeft,
+      widthFactor: widthFactor,
+      child: Container(
+        height: height,
+        decoration: BoxDecoration(
+          color: color,
+          borderRadius: BorderRadius.circular(height),
+        ),
+      ),
+    );
+  }
+}
+
+class _MiniChip extends StatelessWidget {
+  const _MiniChip({
+    required this.label,
+    required this.color,
+    required this.size,
+  });
+
+  final String label;
+  final Color color;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(size * 0.08),
+      ),
+      child: Padding(
+        padding: EdgeInsets.symmetric(
+          horizontal: size * 0.05,
+          vertical: size * 0.026,
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: size * 0.048,
+            fontWeight: FontWeight.w700,
+            color: const Color(0xFF1B2A4A),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _FloatingAccent extends StatelessWidget {
+  const _FloatingAccent({
+    required this.size,
+    required this.color,
+    required this.icon,
+  });
+
+  final double size;
+  final Color color;
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: color,
+        shape: BoxShape.circle,
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF091A38).withValues(alpha: 0.08),
+            blurRadius: size * 0.18,
+            offset: Offset(0, size * 0.05),
+          ),
+        ],
+      ),
+      child: SizedBox(
+        width: size,
+        height: size,
+        child: Icon(
+          icon,
+          size: size * 0.46,
+          color: const Color(0xFF27436F),
+        ),
+      ),
+    );
+  }
 }

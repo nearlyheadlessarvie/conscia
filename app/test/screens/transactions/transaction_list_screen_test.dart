@@ -61,30 +61,39 @@ Future<void> _pumpTransactionList(
 }
 
 void main() {
+  testWidgets('selected transaction filters stay compact without overflow', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(320, 700);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await _pumpTransactionList(
+      tester,
+      transactions: [
+        Transaction(
+          id: 'tx-1',
+          amount: 1,
+          currencyCode: 'USD',
+          category: 'Bills',
+          description: 'Bills',
+          type: 'expense',
+          date: DateTime(2026, 5, 8),
+        ),
+      ],
+    );
+
+    await tester.tap(find.widgetWithText(ChoiceChip, 'All'));
+    await tester.pump();
+
+    expect(tester.takeException(), isNull);
+    expect(find.byKey(const ValueKey('selection-chip-check-All')), findsNothing);
+  });
+
   testWidgets('transaction filters stay visible while filtered list refreshes', (
     tester,
   ) async {
-    final transactions = [
-      Transaction(
-        id: 'tx-1',
-        amount: 1,
-        currencyCode: 'USD',
-        category: 'Gift',
-        description: 'Gift',
-        type: 'expense',
-        date: DateTime(2026, 5, 8),
-      ),
-      Transaction(
-        id: 'tx-2',
-        amount: 1,
-        currencyCode: 'USD',
-        category: 'Groceries',
-        description: 'Groceries',
-        type: 'expense',
-        date: DateTime(2026, 5, 8),
-      ),
-    ];
-
     await tester.pumpWidget(
       ProviderScope(
         overrides: [

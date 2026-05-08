@@ -112,6 +112,7 @@ class _AboutYouScreenState extends ConsumerState<AboutYouScreen> {
               labelBuilder: _labelForValue,
               avatarBuilder: (value, selected) =>
                   AppIcons.profileBadge(value, selected: selected),
+              showTrailingCheck: true,
               onSelected: (value) {
                 setState(() {
                   _occupation = _occupation == value ? null : value;
@@ -128,6 +129,7 @@ class _AboutYouScreenState extends ConsumerState<AboutYouScreen> {
               labelBuilder: _labelForValue,
               avatarBuilder: (value, selected) =>
                   AppIcons.profileBadge(value, selected: selected),
+              showTrailingCheck: true,
               onSelected: (value) {
                 setState(() {
                   _household = _household == value ? null : value;

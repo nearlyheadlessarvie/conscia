@@ -68,4 +68,25 @@ void main() {
     expect(find.text('Self-employed'), findsOneWidget);
     expect(find.byType(CircleAvatar), findsOneWidget);
   });
+
+  testWidgets('selection chip group shows a trailing check for the active option', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SelectionChipGroup(
+            options: const ['employed', 'retired'],
+            value: 'retired',
+            labelBuilder: (option) => option,
+            showTrailingCheck: true,
+            onSelected: (_) {},
+          ),
+        ),
+      ),
+    );
+
+    expect(find.byKey(const ValueKey('selection-chip-check-retired')), findsOneWidget);
+    expect(find.byKey(const ValueKey('selection-chip-check-employed')), findsNothing);
+  });
 }
