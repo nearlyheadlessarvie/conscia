@@ -347,8 +347,9 @@ class _TransactionDetailScreenState
               onPressed: _loadingReflection ? null : _askAiReflection,
               child: _loadingReflection
                   ? const SizedBox(
-                      height: 28,
-                      child: ConscienceLoader(size: 28),
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
                     )
                   : const Row(
                       mainAxisSize: MainAxisSize.min,

@@ -361,7 +361,8 @@ void main() {
       'Coffee',
     );
     await tester.enterText(find.byType(TextField).at(1), '180');
-    await tester.tap(find.text('Dining'));
+    await tester.ensureVisible(find.widgetWithText(FilterChip, 'Dining'));
+    await tester.tap(find.widgetWithText(FilterChip, 'Dining'));
     await tester.pump();
 
     await tester.tap(find.text('Ask Conscia'));
@@ -369,6 +370,9 @@ void main() {
 
     expect(find.text('Your conscience is weighing both sides...'), findsOneWidget);
     expect(find.byType(ConscienceLoader), findsOneWidget);
+
+    await tester.pump(const Duration(seconds: 5));
+    await tester.pumpAndSettle();
   });
 
   testWidgets('pre-purchase assistant shows category chips above all categories action',

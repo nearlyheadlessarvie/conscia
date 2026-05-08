@@ -2,6 +2,8 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+const _alterEgoAsset = 'assets/images/conscia_alterego.png';
+
 class ConscienceMark extends StatelessWidget {
   const ConscienceMark({
     super.key,
@@ -62,35 +64,86 @@ class _ConscienceLoaderState extends State<ConscienceLoader>
     return AnimatedBuilder(
       animation: _controller,
       builder: (context, _) {
-        final t = Curves.easeInOut.transform(_controller.value);
-        final sway = math.sin(t * math.pi * 2) * 6;
-        final pulse = 0.97 + (math.sin(t * math.pi * 2) + 1) * 0.03;
+        final t = _controller.value;
+        final clash = math.sin(t * math.pi * 8).abs();
+        final breathe = 1 + math.sin(t * math.pi * 2) * 0.018;
+        final ringRotation = t * math.pi * 2;
+        final flashSize = 20 + clash * 22;
 
         return Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Transform.scale(
-              scale: pulse,
+            SizedBox(
+              width: widget.size * 2.8,
+              height: widget.size * 2.4,
               child: Stack(
                 alignment: Alignment.center,
                 children: [
                   Transform.translate(
-                    offset: Offset(-sway, 0),
-                    child: const Opacity(
-                      opacity: 0.9,
-                      child: _MiniDevilBadge(),
+                    offset: Offset(-widget.size * 0.18 - clash * 4, 0),
+                    child: _AuraGlow(
+                      color: const Color(0x66FF4B3A),
+                      size: widget.size * (1.75 + clash * 0.12),
                     ),
                   ),
                   Transform.translate(
-                    offset: Offset(sway, 0),
-                    child: const Opacity(
-                      opacity: 0.95,
-                      child: _MiniAngelBadge(),
+                    offset: Offset(widget.size * 0.18 + clash * 4, 0),
+                    child: _AuraGlow(
+                      color: const Color(0x6656D6FF),
+                      size: widget.size * (1.75 + clash * 0.12),
                     ),
                   ),
-                  IgnorePointer(
-                    child: ConscienceMark(
-                      size: widget.size,
+                  Transform.rotate(
+                    angle: ringRotation,
+                    child: Container(
+                      key: const ValueKey('conscience-loader-ring'),
+                      width: widget.size * 1.72,
+                      height: widget.size * 1.72,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: colors.outlineVariant.withValues(
+                            alpha: 0.22 + clash * 0.14,
+                          ),
+                          width: 2,
+                        ),
+                      ),
+                    ),
+                  ),
+                  Transform.scale(
+                    scale: breathe + clash * 0.01,
+                    child: ClipOval(
+                      child: Image.asset(
+                        _alterEgoAsset,
+                        width: widget.size * 1.45,
+                        height: widget.size * 1.45,
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+                  ),
+                  Container(
+                    key: const ValueKey('conscience-loader-flash'),
+                    width: flashSize,
+                    height: flashSize,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Colors.white.withValues(alpha: clash * 0.10),
+                    ),
+                  ),
+                  Positioned(
+                    bottom: widget.size * 0.08 + math.sin(t * math.pi * 2) * 4,
+                    child: Text(
+                      '\$',
+                      style: textTheme.titleLarge?.copyWith(
+                        color: const Color(0xFFFFC94D).withValues(alpha: 0.82),
+                        fontWeight: FontWeight.w800,
+                        shadows: const [
+                          Shadow(
+                            color: Color(0x99FFB300),
+                            blurRadius: 14,
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ],
@@ -114,43 +167,29 @@ class _ConscienceLoaderState extends State<ConscienceLoader>
   }
 }
 
-class _MiniDevilBadge extends StatelessWidget {
-  const _MiniDevilBadge();
+class _AuraGlow extends StatelessWidget {
+  const _AuraGlow({
+    required this.color,
+    required this.size,
+  });
+
+  final Color color;
+  final double size;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 24,
-      height: 24,
-      decoration: const BoxDecoration(
-        color: Color(0xFF8C1D18),
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
         shape: BoxShape.circle,
-      ),
-      child: const Icon(
-        Icons.local_fire_department_rounded,
-        size: 14,
-        color: Color(0xFFFFC58F),
-      ),
-    );
-  }
-}
-
-class _MiniAngelBadge extends StatelessWidget {
-  const _MiniAngelBadge();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 24,
-      height: 24,
-      decoration: const BoxDecoration(
-        color: Color(0xFF6FD8DC),
-        shape: BoxShape.circle,
-      ),
-      child: const Icon(
-        Icons.shield_rounded,
-        size: 14,
-        color: Color(0xFF084B60),
+        boxShadow: [
+          BoxShadow(
+            color: color,
+            blurRadius: size * 0.24,
+            spreadRadius: size * 0.03,
+          ),
+        ],
       ),
     );
   }

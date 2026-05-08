@@ -22,6 +22,9 @@ class _RecordingTransactionService extends TransactionService {
   Future<void> delete(String id) async {
     deletedId = id;
   }
+
+  @override
+  Future<void> updateRegret(String id, int regretLevel) async {}
 }
 
 class _StaticBudgetService extends BudgetService {
@@ -268,11 +271,14 @@ void main() {
       date: DateTime(2026, 5, 7, 21, 0),
     );
 
+    final transactionService = _RecordingTransactionService();
+
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
           transactionDetailProvider.overrideWith((ref, id) async => transaction),
           aiServiceProvider.overrideWithValue(_DelayedReflectionAIService()),
+          transactionServiceProvider.overrideWithValue(transactionService),
         ],
         child: const MaterialApp(
           home: TransactionDetailScreen(transactionId: 'tx-reflect'),
@@ -284,8 +290,12 @@ void main() {
 
     await tester.tap(find.text('Ask AI to Reflect'));
     await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
 
     expect(find.byType(ConscienceLoader), findsAtLeastNWidgets(1));
     expect(find.text('Reflection is making sense of the moment...'), findsOneWidget);
+
+    await tester.pump(const Duration(seconds: 5));
+    await tester.pumpAndSettle();
   });
 }

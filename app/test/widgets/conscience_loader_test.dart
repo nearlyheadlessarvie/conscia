@@ -33,6 +33,6 @@ void main() {
     );
 
     expect(find.byType(Image), findsOneWidget);
-    expect(find.byType(Text), findsNothing);
+    expect(find.text('Your conscience is weighing both sides...'), findsNothing);
   });
 }
