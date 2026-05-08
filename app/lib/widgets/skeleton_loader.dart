@@ -193,9 +193,9 @@ class BudgetListSkeletonCard extends StatelessWidget {
             SizedBox(height: 8),
             Row(
               children: [
-                const SkeletonLoader(width: 40, height: 12),
-                const Spacer(),
-                const SkeletonLoader(width: 100, height: 12),
+                SkeletonLoader(width: 40, height: 12),
+                Spacer(),
+                SkeletonLoader(width: 100, height: 12),
               ],
             ),
           ],

@@ -120,7 +120,7 @@ class _NoBudgetsPainter extends CustomPainter {
     const dashLength = 0.18;
     for (var i = 0; i < dashCount; i++) {
       final startAngle = (i / dashCount) * 2 * math.pi;
-      final sweepAngle = dashLength;
+      const sweepAngle = dashLength;
       canvas.drawArc(
         Rect.fromCircle(center: center, radius: radius),
         startAngle,
@@ -157,7 +157,8 @@ class _NoBudgetsPainter extends CustomPainter {
     final dividerPaint = Paint()
       ..color = const Color(0xFF1A237E).withValues(alpha: 0.12)
       ..strokeWidth = 1.0;
-    for (final angle in [0.0, 2.2, 4.0]) {
+    const angles = [0.0, 2.2, 4.0];
+    for (final angle in angles) {
       canvas.drawLine(
         center,
         Offset(

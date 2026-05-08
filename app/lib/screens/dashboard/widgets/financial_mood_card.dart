@@ -63,9 +63,9 @@ class FinancialMoodCard extends StatelessWidget {
   String _trendText() {
     final diff = (worthItPercentage - previousMonthPercentage).round();
     if (diff > 0) {
-      return '(+${diff}% vs last month) 📈';
+      return '(+$diff% vs last month) 📈';
     } else if (diff < 0) {
-      return '(${diff}% vs last month) 📉';
+      return '($diff% vs last month) 📉';
     } else {
       return '(same as last month) ➡️';
     }

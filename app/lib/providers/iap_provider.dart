@@ -13,7 +13,7 @@ final iapServiceProvider = Provider<IAPService>((ref) {
     },
   );
 
-  ref.onDispose(() => service.dispose());
+  ref.onDispose(service.dispose);
 
   service.initialize();
 

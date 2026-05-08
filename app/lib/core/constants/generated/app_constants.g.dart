@@ -13,7 +13,6 @@ class FreemiumLimits {
 
 // ── Enums ────────────────────────────────────────────────────────
 enum RegretLevel { worthIt, notSure, regret }
-
 enum SubscriptionTier { free, premium }
 
 // ── Categories ───────────────────────────────────────────────────

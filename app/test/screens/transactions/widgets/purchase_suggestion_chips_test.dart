@@ -5,7 +5,7 @@ import 'package:conscia_app/providers/purchase_suggestions_provider.dart';
 import 'package:conscia_app/screens/transactions/widgets/purchase_suggestion_chips.dart';
 
 void main() {
-  final testSuggestion = PurchaseSuggestion(
+  const testSuggestion = PurchaseSuggestion(
     description: 'Starbucks',
     amount: 6.50,
     currencyCode: 'USD',
