@@ -79,6 +79,7 @@ void main() {
             options: const ['employed', 'retired'],
             value: 'retired',
             labelBuilder: (option) => option,
+            showTrailingCheck: true,
             onSelected: (_) {},
           ),
         ),

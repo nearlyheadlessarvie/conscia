@@ -12,6 +12,7 @@ class SelectionChipGroup extends StatelessWidget {
     this.labelBuilder,
     this.avatarBuilder,
     this.scrollable = false,
+    this.showTrailingCheck = false,
   });
 
   final List<String> options;
@@ -20,6 +21,7 @@ class SelectionChipGroup extends StatelessWidget {
   final String Function(String option)? labelBuilder;
   final Widget Function(String option, bool selected)? avatarBuilder;
   final bool scrollable;
+  final bool showTrailingCheck;
 
   @override
   Widget build(BuildContext context) {
@@ -40,7 +42,7 @@ class SelectionChipGroup extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(label),
-              if (selected) ...[
+              if (showTrailingCheck && selected) ...[
                 const SizedBox(width: 10),
                 Icon(
                   AppIcons.check,
