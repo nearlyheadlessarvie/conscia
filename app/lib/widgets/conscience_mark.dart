@@ -23,6 +23,31 @@ class ConscienceMark extends StatelessWidget {
   }
 }
 
+class ConscienceAlterEgo extends StatelessWidget {
+  const ConscienceAlterEgo({
+    super.key,
+    this.size = 96,
+  });
+
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipOval(
+      child: Image.asset(
+        _alterEgoAsset,
+        key: const ValueKey('conscience-alter-ego-image'),
+        width: size,
+        height: size,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) {
+          return ConscienceMark(size: size);
+        },
+      ),
+    );
+  }
+}
+
 class ConscienceLoader extends StatefulWidget {
   const ConscienceLoader({
     super.key,
@@ -112,13 +137,8 @@ class _ConscienceLoaderState extends State<ConscienceLoader>
                   ),
                   Transform.scale(
                     scale: breathe + clash * 0.01,
-                    child: ClipOval(
-                      child: Image.asset(
-                        _alterEgoAsset,
-                        width: widget.size * 1.45,
-                        height: widget.size * 1.45,
-                        fit: BoxFit.cover,
-                      ),
+                    child: ConscienceAlterEgo(
+                      size: widget.size * 1.45,
                     ),
                   ),
                   Container(
@@ -290,7 +310,8 @@ class _ConscienceMarkPainter extends CustomPainter {
 
   void _paintDevil(Canvas canvas, Rect rect) {
     final profile = Path()
-      ..moveTo(rect.center.dx - rect.width * 0.05, rect.top + rect.height * 0.19)
+      ..moveTo(
+          rect.center.dx - rect.width * 0.05, rect.top + rect.height * 0.19)
       ..quadraticBezierTo(
         rect.left + rect.width * 0.18,
         rect.top + rect.height * 0.17,
@@ -338,7 +359,8 @@ class _ConscienceMarkPainter extends CustomPainter {
 
   void _paintAngel(Canvas canvas, Rect rect) {
     final profile = Path()
-      ..moveTo(rect.center.dx + rect.width * 0.04, rect.top + rect.height * 0.19)
+      ..moveTo(
+          rect.center.dx + rect.width * 0.04, rect.top + rect.height * 0.19)
       ..quadraticBezierTo(
         rect.right - rect.width * 0.17,
         rect.top + rect.height * 0.2,
@@ -392,7 +414,8 @@ class _ConscienceMarkPainter extends CustomPainter {
     );
 
     canvas.drawCircle(
-      Offset(rect.center.dx - rect.width * 0.02, rect.bottom - rect.height * 0.22),
+      Offset(
+          rect.center.dx - rect.width * 0.02, rect.bottom - rect.height * 0.22),
       rect.width * 0.055,
       Paint()..color = const Color(0xFFFF7A30),
     );

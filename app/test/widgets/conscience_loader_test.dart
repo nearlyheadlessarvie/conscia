@@ -18,7 +18,7 @@ void main() {
     );
 
     expect(find.text('Your conscience is weighing both sides...'), findsOneWidget);
-    expect(find.byType(Image), findsOneWidget);
+    expect(find.byKey(const ValueKey('conscience-alter-ego-image')), findsOneWidget);
     expect(find.byKey(const ValueKey('conscience-loader-ring')), findsOneWidget);
     expect(find.byKey(const ValueKey('conscience-loader-flash')), findsOneWidget);
   });
@@ -32,7 +32,7 @@ void main() {
       ),
     );
 
-    expect(find.byType(Image), findsOneWidget);
+    expect(find.byKey(const ValueKey('conscience-alter-ego-image')), findsOneWidget);
     expect(find.text('Your conscience is weighing both sides...'), findsNothing);
   });
 }
