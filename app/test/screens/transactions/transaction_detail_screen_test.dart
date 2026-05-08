@@ -1,9 +1,12 @@
 import 'package:conscia_app/providers/transaction_providers.dart';
 import 'package:conscia_app/providers/budget_providers.dart';
 import 'package:conscia_app/providers/alert_provider.dart';
+import 'package:conscia_app/providers/ai_provider.dart';
 import 'package:conscia_app/screens/transactions/transaction_detail_screen.dart';
+import 'package:conscia_app/services/ai_service.dart';
 import 'package:conscia_app/services/budget_service.dart';
 import 'package:conscia_app/services/transaction_service.dart';
+import 'package:conscia_app/widgets/conscience_mark.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -28,6 +31,20 @@ class _StaticBudgetService extends BudgetService {
 
   @override
   Future<List<Budget>> list() async => budgets;
+}
+
+class _DelayedReflectionAIService extends AIService {
+  _DelayedReflectionAIService() : super(Dio());
+
+  @override
+  Future<AIResponse> reflection({required String transactionId}) async {
+    await Future<void>.delayed(const Duration(seconds: 5));
+    return const AIResponse(
+      impulse: 'Impulse',
+      reason: 'Reason',
+      neutral: 'Reflection',
+    );
+  }
 }
 
 void main() {
@@ -238,5 +255,37 @@ void main() {
 
     expect(find.text('This purchase still deserves a second look'), findsOneWidget);
     expect(find.text('Reflect now'), findsOneWidget);
+  });
+
+  testWidgets('shows shared loader while reflection is loading', (tester) async {
+    final transaction = Transaction(
+      id: 'tx-reflect',
+      amount: 320,
+      currencyCode: 'PHP',
+      category: 'Dining',
+      description: 'Coffee',
+      type: 'expense',
+      date: DateTime(2026, 5, 7, 21, 0),
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          transactionDetailProvider.overrideWith((ref, id) async => transaction),
+          aiServiceProvider.overrideWithValue(_DelayedReflectionAIService()),
+        ],
+        child: const MaterialApp(
+          home: TransactionDetailScreen(transactionId: 'tx-reflect'),
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Ask AI to Reflect'));
+    await tester.pump();
+
+    expect(find.byType(ConscienceLoader), findsAtLeastNWidgets(1));
+    expect(find.text('Reflection is making sense of the moment...'), findsOneWidget);
   });
 }
