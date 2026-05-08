@@ -88,6 +88,14 @@ public static class DynamoKeys
         => $"CATEGORY#{category}#DATE#{date:O}";
 
     /// <summary>
+    /// <c>RECURRING#{id}</c> - Sort key for recurring schedule records
+    /// </summary>
+    /// <param name="id"></param>
+    /// <returns></returns>
+    public static string RecurringSchedule(Guid id)
+        => $"RECURRING#{id}";
+
+    /// <summary>
     /// <c>WEEK#{date:yyyy-MM-dd}</c> - Sort key for week-based data
     /// </summary>
     /// <param name="date"></param>

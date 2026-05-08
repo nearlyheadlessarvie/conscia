@@ -285,6 +285,12 @@ public class TransactionRepository : DynamoRepository, ITransactionRepository
         if (t.RegretLevel.HasValue)
             item["RegretLevel"] = new(t.RegretLevel.Value.ToString());
 
+        if (t.RecurringScheduleId.HasValue)
+            item["RecurringScheduleId"] = new(t.RecurringScheduleId.Value.ToString());
+
+        if (t.RecurringOccurrenceDate.HasValue)
+            item["RecurringOccurrenceDate"] = new(t.RecurringOccurrenceDate.Value.ToString("O"));
+
         return item;
     }
 
@@ -311,6 +317,14 @@ public class TransactionRepository : DynamoRepository, ITransactionRepository
             RegretLevel = item.TryGetValue("RegretLevel", out var rl)
                 ? Enum.Parse<RegretLevel>(rl.S)
                 : null,
+            RecurringScheduleId = item.TryGetValue("RecurringScheduleId", out var recurringScheduleId)
+                && Guid.TryParse(recurringScheduleId.S, out var scheduleId)
+                    ? scheduleId
+                    : null,
+            RecurringOccurrenceDate = item.TryGetValue("RecurringOccurrenceDate", out var recurringOccurrenceDate)
+                && DateTime.TryParse(recurringOccurrenceDate.S, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var occurrenceDate)
+                    ? occurrenceDate
+                    : null,
             CreatedAt = DateTime.Parse(item["CreatedAt"].S, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind)
         };
     }
