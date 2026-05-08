@@ -85,6 +85,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         error: (e, _) => Center(child: Text('Error: $e')),
         data: (profile) {
           _loadFromProfile(profile);
+          final currencyCode = profile.currencyCode;
+          final locale = profile.locale;
+          final formatter = NumberFormat.currency(
+            locale: locale.replaceAll('_', '-'),
+            symbol: '$currencyCode ',
+            decimalDigits: 0,
+          );
           return Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -141,7 +148,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   children: _incomeOptions
                       .map(
                         (option) =>
-                            _incomeRow(colors, textTheme, option.$1, option.$2),
+                            _incomeRow(
+                              colors,
+                              textTheme,
+                              option.$1,
+                              _incomeLabel(option.$1, formatter),
+                            ),
                       )
                       .toList(),
                 ),
@@ -191,12 +203,22 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   }
 
   static const _incomeOptions = [
-    ('low', 'Lower income'),
-    ('mid', 'Mid income'),
-    ('high', 'Higher income'),
-    ('very_high', 'Very high income'),
-    ('prefer_not_to_say', 'Prefer not to say'),
+    ('low',),
+    ('mid',),
+    ('high',),
+    ('very_high',),
+    ('prefer_not_to_say',),
   ];
+
+  String _incomeLabel(String value, NumberFormat formatter) {
+    return switch (value) {
+      'low' => 'Under ${formatter.format(20000)}',
+      'mid' => '${formatter.format(20000)} - ${formatter.format(50000)}',
+      'high' => '${formatter.format(50000)} - ${formatter.format(100000)}',
+      'very_high' => 'Over ${formatter.format(100000)}',
+      _ => 'Prefer not to say',
+    };
+  }
 
   String _labelForValue(String value) {
     return switch (value) {

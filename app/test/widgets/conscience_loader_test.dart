@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  testWidgets('ConscienceLoader renders alter ego scene and label', (
+  testWidgets('ConscienceLoader renders brand icon scene and label', (
     tester,
   ) async {
     await tester.pumpWidget(
@@ -18,9 +18,8 @@ void main() {
     );
 
     expect(find.text('Your conscience is weighing both sides...'), findsOneWidget);
-    expect(find.byKey(const ValueKey('conscience-alter-ego-image')), findsOneWidget);
+    expect(find.byKey(const ValueKey('conscience-brand-icon-svg')), findsOneWidget);
     expect(find.byKey(const ValueKey('conscience-loader-ring')), findsOneWidget);
-    expect(find.byKey(const ValueKey('conscience-loader-flash')), findsOneWidget);
   });
 
   testWidgets('ConscienceLoader supports no-label mode', (tester) async {
@@ -32,7 +31,7 @@ void main() {
       ),
     );
 
-    expect(find.byKey(const ValueKey('conscience-alter-ego-image')), findsOneWidget);
+    expect(find.byKey(const ValueKey('conscience-brand-icon-svg')), findsOneWidget);
     expect(find.text('Your conscience is weighing both sides...'), findsNothing);
   });
 }

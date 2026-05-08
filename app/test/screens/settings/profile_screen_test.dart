@@ -129,4 +129,41 @@ void main() {
     expect(chips.first.avatar, isNotNull);
     expect(chips.first.avatar, isNot(isA<Icon>()));
   });
+
+  testWidgets('profile shows explicit monthly income ranges', (tester) async {
+    final userService = _RecordingUserService();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          currentUserProvider.overrideWith(
+            (ref) async => UserProfile(
+              id: 'user-1',
+              email: 'profile@example.com',
+              currencyCode: 'PHP',
+              locale: 'en_US',
+              createdAt: DateTime(2026),
+              hasCompletedOnboarding: true,
+              spendingPersonality: 'balanced',
+              incomeRange: 'high',
+              occupationType: 'employed',
+              householdSize: 'family',
+            ),
+          ),
+          userServiceProvider.overrideWithValue(userService),
+        ],
+        child: const MaterialApp(
+          home: ProfileScreen(),
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    expect(find.text('Under PHP 20,000'), findsOneWidget);
+    expect(find.text('PHP 20,000 - PHP 50,000'), findsOneWidget);
+    expect(find.text('PHP 50,000 - PHP 100,000'), findsOneWidget);
+    expect(find.text('Over PHP 100,000'), findsOneWidget);
+    expect(find.text('Prefer not to say'), findsOneWidget);
+  });
 }

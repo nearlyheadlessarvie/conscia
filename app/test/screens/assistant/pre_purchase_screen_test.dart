@@ -336,12 +336,12 @@ void main() {
     expect(find.byType(VoiceInputButton), findsOneWidget);
   });
 
-  testWidgets('pre-purchase assistant uses alter ego hero art on the input screen',
+  testWidgets('pre-purchase assistant uses the shared brand icon on the input screen',
       (tester) async {
     await tester.pumpWidget(await buildPrePurchaseApp(tester));
     await tester.pumpAndSettle();
 
-    expect(find.byKey(const ValueKey('conscience-alter-ego-image')), findsOneWidget);
+    expect(find.byKey(const ValueKey('conscience-brand-icon-svg')), findsOneWidget);
   });
 
   testWidgets('shows shared loader while AI response is pending', (tester) async {

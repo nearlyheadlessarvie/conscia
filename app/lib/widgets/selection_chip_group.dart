@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../core/constants/app_icons.dart';
 import '../core/theme/app_colors.dart';
 
 class SelectionChipGroup extends StatelessWidget {
@@ -33,12 +34,28 @@ class SelectionChipGroup extends StatelessWidget {
         duration: const Duration(milliseconds: 160),
         margin: EdgeInsets.only(right: scrollable ? 10 : 0),
         child: ChoiceChip(
+          showCheckmark: false,
           avatar: avatarBuilder?.call(option, selected),
-          label: Text(label),
+          label: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(label),
+              if (selected) ...[
+                const SizedBox(width: 10),
+                Icon(
+                  AppIcons.check,
+                  key: ValueKey('selection-chip-check-$option'),
+                  size: 16,
+                ),
+              ],
+            ],
+          ),
           selected: selected,
           onSelected: (_) => onSelected(option),
           backgroundColor: colors.surfaceMuted,
           selectedColor: colors.heroTint,
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+          labelPadding: const EdgeInsets.only(left: 2, right: 10),
           side: BorderSide(
             color: selected ? colors.sectionBorder : Colors.transparent,
           ),

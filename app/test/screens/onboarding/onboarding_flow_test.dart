@@ -1,5 +1,6 @@
 import 'package:conscia_app/providers/user_provider.dart';
 import 'package:conscia_app/screens/onboarding/about_you_screen.dart';
+import 'package:conscia_app/screens/onboarding/onboarding_screen.dart';
 import 'package:conscia_app/screens/onboarding/setup_screen.dart';
 import 'package:conscia_app/screens/onboarding/spending_profile_screen.dart';
 import 'package:conscia_app/services/user_service.dart';
@@ -167,6 +168,70 @@ void main() {
       expect(firstCurrencyTitle.data, 'PHP');
     },
   );
+
+  testWidgets('onboarding uses the shared brand icon on the first slide', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1080, 1920);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: OnboardingScreen(),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const ValueKey('conscience-brand-icon-svg')),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('onboarding uses refreshed copy on slides two and three', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1080, 1920);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: OnboardingScreen(),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Next'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Track Without Shame'), findsOneWidget);
+    expect(find.text('Coffee run'), findsOneWidget);
+    expect(find.text('-PHP 180'), findsOneWidget);
+    expect(find.text('Dining'), findsOneWidget);
+    expect(
+      find.text(
+        'Log spending in seconds, spot patterns, and stay honest without guilt.',
+      ),
+      findsOneWidget,
+    );
+
+    await tester.tap(find.text('Next'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Turn Reflection Into Better Habits'), findsOneWidget);
+    expect(
+      find.text(
+        'Set budgets, notice regrets, and build a money routine that actually sticks.',
+      ),
+      findsOneWidget,
+    );
+  });
 
   testWidgets(
     'spending profile next persists prefer-not-to-say and routes to budgets',

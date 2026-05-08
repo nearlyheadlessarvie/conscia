@@ -1,7 +1,9 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
+const _brandIconAsset = 'assets/images/app_icon.svg';
 const _alterEgoAsset = 'assets/images/conscia_alterego.png';
 
 class ConscienceMark extends StatelessWidget {
@@ -27,22 +29,63 @@ class ConscienceAlterEgo extends StatelessWidget {
   const ConscienceAlterEgo({
     super.key,
     this.size = 96,
+    this.zoom = 1.85,
+    this.verticalBias = -0.08,
+  });
+
+  final double size;
+  final double zoom;
+  final double verticalBias;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: size,
+      height: size,
+      child: ClipOval(
+        child: OverflowBox(
+          maxWidth: size * zoom,
+          maxHeight: size * zoom,
+          alignment: Alignment.center,
+          child: Transform.translate(
+            offset: Offset(0, size * verticalBias),
+            child: Image.asset(
+              _alterEgoAsset,
+              key: const ValueKey('conscience-alter-ego-image'),
+              width: size * zoom,
+              height: size * zoom,
+              fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) {
+                return ConscienceMark(size: size);
+              },
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class ConscienceBrandIcon extends StatelessWidget {
+  const ConscienceBrandIcon({
+    super.key,
+    this.size = 96,
   });
 
   final double size;
 
   @override
   Widget build(BuildContext context) {
-    return ClipOval(
-      child: Image.asset(
-        _alterEgoAsset,
-        key: const ValueKey('conscience-alter-ego-image'),
+    return SizedBox(
+      width: size,
+      height: size,
+      child: SvgPicture.asset(
+        _brandIconAsset,
+        key: const ValueKey('conscience-brand-icon-svg'),
         width: size,
         height: size,
-        fit: BoxFit.cover,
-        errorBuilder: (context, error, stackTrace) {
-          return ConscienceMark(size: size);
-        },
+        fit: BoxFit.contain,
+        placeholderBuilder: (context) => ConscienceMark(size: size),
       ),
     );
   }
@@ -90,80 +133,54 @@ class _ConscienceLoaderState extends State<ConscienceLoader>
       animation: _controller,
       builder: (context, _) {
         final t = _controller.value;
-        final clash = math.sin(t * math.pi * 8).abs();
-        final breathe = 1 + math.sin(t * math.pi * 2) * 0.018;
+        final pulse = (math.sin(t * math.pi * 2) + 1) / 2;
+        final breathe = 1 + math.sin(t * math.pi * 2) * 0.025;
         final ringRotation = t * math.pi * 2;
-        final flashSize = 20 + clash * 22;
 
         return Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             SizedBox(
-              width: widget.size * 2.8,
-              height: widget.size * 2.4,
+              width: widget.size * 1.82,
+              height: widget.size * 1.58,
               child: Stack(
                 alignment: Alignment.center,
                 children: [
                   Transform.translate(
-                    offset: Offset(-widget.size * 0.18 - clash * 4, 0),
+                    offset: Offset(-widget.size * 0.16, 0),
                     child: _AuraGlow(
                       color: const Color(0x66FF4B3A),
-                      size: widget.size * (1.75 + clash * 0.12),
+                      size: widget.size * (1.34 + pulse * 0.10),
                     ),
                   ),
                   Transform.translate(
-                    offset: Offset(widget.size * 0.18 + clash * 4, 0),
+                    offset: Offset(widget.size * 0.16, 0),
                     child: _AuraGlow(
                       color: const Color(0x6656D6FF),
-                      size: widget.size * (1.75 + clash * 0.12),
+                      size: widget.size * (1.34 + pulse * 0.10),
                     ),
                   ),
                   Transform.rotate(
-                    angle: ringRotation,
+                    angle: ringRotation * 0.22,
                     child: Container(
                       key: const ValueKey('conscience-loader-ring'),
-                      width: widget.size * 1.72,
-                      height: widget.size * 1.72,
+                      width: widget.size * 1.2,
+                      height: widget.size * 1.2,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         border: Border.all(
                           color: colors.outlineVariant.withValues(
-                            alpha: 0.22 + clash * 0.14,
+                            alpha: 0.14 + pulse * 0.10,
                           ),
-                          width: 2,
+                          width: 1.5,
                         ),
                       ),
                     ),
                   ),
                   Transform.scale(
-                    scale: breathe + clash * 0.01,
-                    child: ConscienceAlterEgo(
-                      size: widget.size * 1.45,
-                    ),
-                  ),
-                  Container(
-                    key: const ValueKey('conscience-loader-flash'),
-                    width: flashSize,
-                    height: flashSize,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: Colors.white.withValues(alpha: clash * 0.10),
-                    ),
-                  ),
-                  Positioned(
-                    bottom: widget.size * 0.08 + math.sin(t * math.pi * 2) * 4,
-                    child: Text(
-                      '\$',
-                      style: textTheme.titleLarge?.copyWith(
-                        color: const Color(0xFFFFC94D).withValues(alpha: 0.82),
-                        fontWeight: FontWeight.w800,
-                        shadows: const [
-                          Shadow(
-                            color: Color(0x99FFB300),
-                            blurRadius: 14,
-                          ),
-                        ],
-                      ),
+                    scale: breathe,
+                    child: ConscienceBrandIcon(
+                      size: widget.size * 0.8,
                     ),
                   ),
                 ],
