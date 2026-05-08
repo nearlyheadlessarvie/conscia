@@ -1,6 +1,7 @@
 import 'package:conscia_app/providers/category_frequency_provider.dart';
 import 'package:conscia_app/providers/alert_provider.dart';
 import 'package:conscia_app/providers/budget_providers.dart';
+import 'package:conscia_app/models/recurring_schedule.dart';
 import 'package:conscia_app/providers/subscription_provider.dart';
 import 'package:conscia_app/providers/transaction_providers.dart';
 import 'package:conscia_app/providers/usage_provider.dart';
@@ -10,6 +11,7 @@ import 'package:conscia_app/screens/transactions/widgets/quick_preset_chips.dart
 import 'package:conscia_app/screens/transactions/widgets/voice_input_button.dart';
 import 'package:conscia_app/services/budget_service.dart';
 import 'package:conscia_app/services/location_assistance_service.dart';
+import 'package:conscia_app/services/recurring_service.dart';
 import 'package:conscia_app/services/subscription_service.dart';
 import 'package:conscia_app/services/transaction_service.dart';
 import 'package:conscia_app/services/user_service.dart';
@@ -59,6 +61,10 @@ class _RecordingTransactionService extends TransactionService {
       description: dto.counterparty,
       type: dto.type,
       date: dto.date,
+      recurringScheduleId: dto.recurring?.enabled == true
+          ? 'schedule-1'
+          : null,
+      recurringOccurrenceDate: dto.recurring?.enabled == true ? dto.date : null,
     );
   }
 
@@ -86,8 +92,16 @@ class _RecordingTransactionService extends TransactionService {
       description: dto.counterparty,
       type: dto.type,
       date: dto.date,
+      recurringScheduleId: dto.recurring?.enabled == true
+          ? 'schedule-1'
+          : null,
+      recurringOccurrenceDate: dto.recurring?.enabled == true ? dto.date : null,
     );
   }
+}
+
+class _FakeRecurringService extends RecurringService {
+  _FakeRecurringService() : super(Dio());
 }
 
 class _StaticBudgetService extends BudgetService {
@@ -179,6 +193,7 @@ Future<ProviderContainer> _pumpTransactionForm(
       transactionServiceProvider.overrideWithValue(
         transactionService ?? _RecordingTransactionService(),
       ),
+      recurringServiceProvider.overrideWithValue(_FakeRecurringService()),
       budgetServiceProvider.overrideWithValue(_StaticBudgetService(budgets)),
       budgetReconciliationEnabledProvider.overrideWithValue(false),
     ],
@@ -237,6 +252,7 @@ Future<Widget> buildTransactionFormApp(
       ),
       transactionServiceProvider
           .overrideWithValue(_RecordingTransactionService()),
+      recurringServiceProvider.overrideWithValue(_FakeRecurringService()),
       budgetServiceProvider.overrideWithValue(_StaticBudgetService(const [])),
       budgetReconciliationEnabledProvider.overrideWithValue(false),
     ],
@@ -388,6 +404,40 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Category'), findsOneWidget);
+  });
+
+  testWidgets('shows recurring controls when make this recurring is enabled', (
+    tester,
+  ) async {
+    await tester.pumpWidget(await buildTransactionFormApp(tester));
+    await tester.pumpAndSettle();
+
+    await tester.ensureVisible(find.byType(Switch));
+    await tester.tap(find.byType(Switch));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Weekly'), findsOneWidget);
+    expect(find.text('Monthly'), findsOneWidget);
+    expect(find.text('Yearly'), findsOneWidget);
+    expect(find.text('End date (optional)'), findsOneWidget);
+  });
+
+  testWidgets('create transaction dto serializes recurring payload', (
+    tester,
+  ) async {
+    final dto = CreateTransactionDto(
+      amount: 1000,
+      currencyCode: 'PHP',
+      category: 'Salary',
+      counterparty: 'ACME Corp',
+      type: 'income',
+      date: DateTime.utc(2026, 5, 7),
+      recurring: const RecurringDraft(enabled: true, cadence: 'Monthly'),
+    );
+
+    expect(dto.toJson()['recurring'], {
+      'cadence': 'Monthly',
+    });
   });
 
   testWidgets('transaction form prompts for location assistance on first open',

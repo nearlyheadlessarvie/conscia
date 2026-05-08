@@ -218,6 +218,7 @@ class _TransactionListScreenState extends ConsumerState<TransactionListScreen> {
                         counterparty: groups[key]![index].description,
                         date: groups[key]![index].date,
                         regretLevel: groups[key]![index].regretLevel,
+                        isRecurring: groups[key]![index].isRecurring,
                       ),
                       if (index < groups[key]!.length - 1)
                         const Divider(indent: 72, height: 1),

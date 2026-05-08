@@ -12,10 +12,12 @@ import '../../providers/location_assistance_provider.dart';
 import '../../providers/subscription_provider.dart';
 import '../../providers/transaction_providers.dart';
 import '../../providers/user_provider.dart';
+import '../../models/recurring_schedule.dart';
 import '../../services/transaction_service.dart';
 import '../../widgets/amount_input_field.dart';
 import '../../widgets/hero_screen_scaffold.dart';
 import '../../widgets/location_assistance_prompt_sheet.dart';
+import '../../widgets/recurring_schedule_section.dart';
 import '../../widgets/skeleton_loader.dart';
 import '../../widgets/smart_suggestions_card.dart';
 import '../../widgets/screen_section.dart';
@@ -58,6 +60,9 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
   bool _prefilled = false;
   bool _hasCheckedLocationPrompt = false;
   Transaction? _originalTransaction;
+  bool _recurringEnabled = false;
+  String _recurringCadence = 'Monthly';
+  DateTime? _recurringEndDate;
 
   @override
   void initState() {
@@ -165,6 +170,13 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
       date: _selectedDate,
       baseCurrencyCode: userCurrency,
       exchangeRateOverride: rateOverride,
+      recurring: !_isEditing
+          ? RecurringDraft(
+              enabled: _recurringEnabled,
+              cadence: _recurringCadence,
+              endDate: _recurringEndDate,
+            )
+          : null,
     );
 
     try {
@@ -496,6 +508,25 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
               ],
             ),
           ),
+          if (!_isEditing) ...[
+            const SizedBox(height: 18),
+            ScreenSection(
+              title: 'Recurring',
+              subtitle:
+                  'Create future transactions automatically on a schedule.',
+              child: RecurringScheduleSection(
+                enabled: _recurringEnabled,
+                cadence: _recurringCadence,
+                endDate: _recurringEndDate,
+                onEnabledChanged: (value) =>
+                    setState(() => _recurringEnabled = value),
+                onCadenceChanged: (value) =>
+                    setState(() => _recurringCadence = value),
+                onEndDateChanged: (value) =>
+                    setState(() => _recurringEndDate = value),
+              ),
+            ),
+          ],
         ],
       ),
     );

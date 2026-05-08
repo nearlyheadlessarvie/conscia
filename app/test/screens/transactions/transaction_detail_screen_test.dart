@@ -299,4 +299,33 @@ void main() {
     await tester.pump(const Duration(seconds: 5));
     await tester.pumpAndSettle();
   });
+
+  testWidgets('detail screen shows recurring provenance hint', (tester) async {
+    final transaction = Transaction(
+      id: 'tx-recurring',
+      amount: 499,
+      currencyCode: 'PHP',
+      category: 'Subscriptions',
+      description: 'Netflix',
+      type: 'expense',
+      date: DateTime(2026, 5, 31),
+      recurringScheduleId: 'schedule-1',
+      recurringOccurrenceDate: DateTime(2026, 5, 31),
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          transactionDetailProvider.overrideWith((ref, id) async => transaction),
+        ],
+        child: const MaterialApp(
+          home: TransactionDetailScreen(transactionId: 'tx-recurring'),
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    expect(find.text('Recurring transaction'), findsOneWidget);
+  });
 }

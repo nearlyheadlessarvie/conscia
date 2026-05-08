@@ -18,6 +18,7 @@ import '../../screens/assistant/widgets/ai_message_bubble.dart';
 import '../../screens/dashboard/widgets/in_app_alert_banner.dart';
 import '../../widgets/conscience_mark.dart';
 import '../../widgets/premium_upgrade_dialog.dart';
+import '../../widgets/recurring_badge.dart';
 import '../../widgets/skeleton_loader.dart';
 
 class TransactionDetailScreen extends ConsumerStatefulWidget {
@@ -311,6 +312,17 @@ class _TransactionDetailScreenState
                       color: colors.onSurfaceVariant,
                     ),
                   ),
+                  if (tx.isRecurring) ...[
+                    const SizedBox(height: 10),
+                    const RecurringBadge(),
+                    const SizedBox(height: 6),
+                    Text(
+                      'Recurring transaction',
+                      style: textTheme.bodySmall?.copyWith(
+                        color: colors.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),

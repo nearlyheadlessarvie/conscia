@@ -29,6 +29,7 @@ class ApiConstants {
   static String transaction(String id) => 'transactions/$id';
   static const String transactionsSummary = 'transactions/summary';
   static const String scanReceipt = 'transactions/scan';
+  static const String recurring = 'recurring';
 
   // Insights
   static const String behavioralInsights = 'insights/behavioral';
