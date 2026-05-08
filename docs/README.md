@@ -14,6 +14,7 @@
 - Phases 1-3 are implemented in the current app branch, including dashboard insights, onboarding profiling, transaction-entry redesign, regret memory foundations, and the main shell refresh.
 - Add Transaction and Pre-Purchase Assistant now share first-use `Smart location suggestions`, with a later Settings toggle for control.
 - Unbudgeted expense categories now create an in-app budget nudge with a direct path back to budget management.
+- Recurring expense and income schedules are now supported with weekly, monthly, and yearly cadence, optional end dates, automatic occurrence generation, and reminder alerts.
 - Phases 4-8 in the roadmap below are still planned work.
 
 All documentation for the Conscia enhancement initiative is organized into 6 comprehensive documents. Start with your role below:
