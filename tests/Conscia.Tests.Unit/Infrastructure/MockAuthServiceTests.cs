@@ -176,4 +176,26 @@ public class MockAuthServiceTests : IDisposable
 
         Assert.Equal(first.UserId, second.UserId);
     }
+
+    [Fact]
+    public async Task Refresh_ValidRefreshToken_ReturnsFreshTokensForSameUser()
+    {
+        var register = await _auth.RegisterAsync("refreshable@test.com", "pass");
+
+        var refresh = await _auth.RefreshAsync(register.RefreshToken!);
+
+        Assert.True(refresh.Success);
+        Assert.NotNull(refresh.AccessToken);
+        Assert.NotNull(refresh.RefreshToken);
+        Assert.Equal(register.UserId, refresh.UserId);
+    }
+
+    [Fact]
+    public async Task Refresh_InvalidRefreshToken_ReturnsError()
+    {
+        var result = await _auth.RefreshAsync("bad-refresh-token");
+
+        Assert.False(result.Success);
+        Assert.Equal("Invalid refresh token", result.Error);
+    }
 }

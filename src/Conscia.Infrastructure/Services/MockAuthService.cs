@@ -67,6 +67,36 @@ public class MockAuthService : IAuthService
         };
     }
 
+    public async Task<AuthResult> RefreshAsync(string refreshToken, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(refreshToken) ||
+            !refreshToken.StartsWith("mock-refresh-", StringComparison.Ordinal))
+        {
+            return new AuthResult { Success = false, Error = "Invalid refresh token" };
+        }
+
+        var userIdText = refreshToken["mock-refresh-".Length..];
+        if (!Guid.TryParse(userIdText, out var userId))
+        {
+            return new AuthResult { Success = false, Error = "Invalid refresh token" };
+        }
+
+        var user = await _repo.GetByIdAsync(userId, ct);
+        if (user is null)
+        {
+            return new AuthResult { Success = false, Error = "Invalid refresh token" };
+        }
+
+        var token = GenerateToken(user.Id.ToString(), user.Email, "Free");
+        return new AuthResult
+        {
+            Success = true,
+            AccessToken = token,
+            RefreshToken = $"mock-refresh-{user.Id}",
+            UserId = user.Id.ToString()
+        };
+    }
+
     public async Task<AuthResult> LoginWithGoogleAsync(string idToken, CancellationToken ct = default)
     {
         var bytes = System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(idToken));

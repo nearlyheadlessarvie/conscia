@@ -6,8 +6,6 @@ import '../../providers/auth_provider.dart';
 import '../constants/api_constants.dart';
 
 const _tokenKey = 'access_token';
-const _refreshTokenKey = 'refresh_token';
-const _userIdKey = 'user_id';
 
 final dioProvider = Provider<Dio>((ref) {
   final dio = Dio(
@@ -23,6 +21,7 @@ final dioProvider = Provider<Dio>((ref) {
   );
 
   const storage = FlutterSecureStorage();
+  Future<bool>? refreshInFlight;
 
   dio.interceptors.add(
     InterceptorsWrapper(
@@ -34,11 +33,41 @@ final dioProvider = Provider<Dio>((ref) {
         return handler.next(options);
       },
       onError: (error, handler) async {
-        if (error.response?.statusCode == 401) {
-          await storage.delete(key: _tokenKey);
-          await storage.delete(key: _refreshTokenKey);
-          await storage.delete(key: _userIdKey);
-          ref.read(authProvider.notifier).logout();
+        final request = error.requestOptions;
+        final isUnauthorized = error.response?.statusCode == 401;
+        final alreadyRetried = request.extra['authRetried'] == true;
+        final isRefreshRequest = request.path.endsWith(ApiConstants.refreshToken);
+
+        if (isUnauthorized && !alreadyRetried && !isRefreshRequest) {
+          refreshInFlight ??= ref.read(authProvider.notifier).refreshSession();
+          final refreshed = await refreshInFlight!;
+          refreshInFlight = null;
+
+          if (refreshed) {
+            final nextToken = await storage.read(key: _tokenKey);
+            final retryHeaders = Map<String, dynamic>.from(request.headers);
+            if (nextToken != null) {
+              retryHeaders['Authorization'] = 'Bearer $nextToken';
+            }
+
+            final retryRequest = request.copyWith(
+              headers: retryHeaders,
+              extra: {
+                ...request.extra,
+                'authRetried': true,
+              },
+            );
+
+            final response = await dio.fetch<dynamic>(retryRequest);
+            return handler.resolve(response);
+          }
+
+          await ref.read(authProvider.notifier).markSessionExpired();
+          return handler.next(error);
+        }
+
+        if (isUnauthorized && isRefreshRequest) {
+          await ref.read(authProvider.notifier).markSessionExpired();
         }
         return handler.next(error);
       },
