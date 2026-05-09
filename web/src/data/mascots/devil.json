@@ -1,0 +1,114 @@
+{
+  "sprites": [
+    {
+      "fileName": "1_neutral.png",
+      "width": 1254,
+      "height": 1254,
+      "x": 0,
+      "y": 0
+    },
+    {
+      "fileName": "2_push.png",
+      "width": 1254,
+      "height": 1254,
+      "x": 1254,
+      "y": 0
+    },
+    {
+      "fileName": "3_block.png",
+      "width": 1254,
+      "height": 1254,
+      "x": 2508,
+      "y": 0
+    },
+    {
+      "fileName": "4_lose.png",
+      "width": 1254,
+      "height": 1254,
+      "x": 3762,
+      "y": 0
+    },
+    {
+      "fileName": "5_win.png",
+      "width": 1254,
+      "height": 1254,
+      "x": 5016,
+      "y": 0
+    },
+    {
+      "fileName": "6_force.png",
+      "width": 1254,
+      "height": 1254,
+      "x": 0,
+      "y": 1254
+    },
+    {
+      "fileName": "7_tug.png",
+      "width": 1254,
+      "height": 1254,
+      "x": 1254,
+      "y": 1254
+    },
+    {
+      "fileName": "8_whisper.png",
+      "width": 1254,
+      "height": 1254,
+      "x": 2508,
+      "y": 1254
+    },
+    {
+      "fileName": "9_coin.png",
+      "width": 1254,
+      "height": 1254,
+      "x": 3762,
+      "y": 1254
+    },
+    {
+      "fileName": "10_receipthook.png",
+      "width": 1254,
+      "height": 1254,
+      "x": 5016,
+      "y": 1254
+    },
+    {
+      "fileName": "11_sneak.png",
+      "width": 1254,
+      "height": 1254,
+      "x": 0,
+      "y": 2508
+    },
+    {
+      "fileName": "12_ragepush.png",
+      "width": 1254,
+      "height": 1254,
+      "x": 1254,
+      "y": 2508
+    },
+    {
+      "fileName": "13_slip.png",
+      "width": 1254,
+      "height": 1254,
+      "x": 2508,
+      "y": 2508
+    },
+    {
+      "fileName": "14_frustrated.png",
+      "width": 1254,
+      "height": 1254,
+      "x": 3762,
+      "y": 2508
+    },
+    {
+      "fileName": "15_secret.png",
+      "width": 1254,
+      "height": 1254,
+      "x": 5016,
+      "y": 2508
+    }
+  ],
+  "packMode": "grid",
+  "padding": 0,
+  "backgroundColor": "rgba(0, 0, 0, 0)",
+  "spriteSheetWidth": 6270,
+  "spriteSheetHeight": 3762
+}

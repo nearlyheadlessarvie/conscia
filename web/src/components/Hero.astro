@@ -1,178 +1,56 @@
 ---
-import Logo from './icons/Logo.astro';
 import LogoWithText from './icons/LogoWithText.astro';
+import PlatformBadge from './icons/PlatformBadge.astro';
+import HeroBattleScene from './marketing/HeroBattleScene.astro';
+import { heroContent } from '../data/marketingChapters.js';
 ---
 
-<section class="relative overflow-hidden pt-6">
-  <div class="section-shell">
-    <nav class="glass-card flex items-center justify-between px-5 py-4 md:px-7">
-      <LogoWithText size="38" />
+<section class="relative pt-6">
+  <div class="hero-nav-shell fixed inset-x-0 top-4 z-50">
+    <div class="section-shell">
+      <nav class="hero-nav glass-card flex items-center justify-between px-5 py-4 md:px-7">
+        <LogoWithText size="38" />
 
-      <div class="hidden items-center gap-7 text-sm font-medium text-[var(--ink-muted)] md:flex">
-        <a href="#experience" class="transition hover:text-[var(--navy)]">Experience</a>
-        <a href="#pricing" class="transition hover:text-[var(--navy)]">Pricing</a>
-        <a href="#roadmap" class="transition hover:text-[var(--navy)]">Roadmap</a>
-      </div>
-
-      <a href="#pricing" class="premium-cta-secondary text-sm">Join the beta</a>
-    </nav>
+        <div class="flex items-center gap-3">
+          <PlatformBadge platform="ios" />
+          <PlatformBadge platform="android" />
+        </div>
+      </nav>
+    </div>
   </div>
 
-  <div class="section-shell relative py-12 md:py-16 lg:py-20">
-    <div class="hero-glow left-[5%] top-[15%] h-44 w-44 bg-[rgba(123,208,215,0.22)]"></div>
-    <div class="hero-glow right-[7%] top-[12%] h-52 w-52 bg-[rgba(246,203,104,0.22)]"></div>
-
+  <div class="section-shell relative pb-12 pt-28 md:pb-16 md:pt-32 lg:pb-20 lg:pt-36">
     <div class="story-grid items-center gap-14">
       <div class="relative z-10">
-        <span class="section-kicker">
-          <span class="h-2 w-2 rounded-full bg-[var(--angel-deep)]"></span>
-          Financial conscience, not just expense tracking
-        </span>
+        <span class="section-kicker">{heroContent.kicker}</span>
 
         <h1 class="mt-7 max-w-3xl font-heading text-5xl font-extrabold leading-[1.02] tracking-[-0.04em] text-[var(--ink-strong)] md:text-6xl lg:text-7xl">
-          Spend with a little more
-          <span class="relative mx-2 inline-flex">
-            <span class="rounded-[24px] bg-[rgba(246,203,104,0.34)] px-3 py-1 text-[var(--navy)]">
-              conscience
-            </span>
-          </span>
-          and a lot less autopilot.
+          {heroContent.title}
         </h1>
 
-        <p class="section-copy mt-7 max-w-2xl">
-          Conscia brings impulse, reason, and reflection into one budgeting flow. Ask before you buy,
-          log what happened after, and let the app spot the patterns you keep repeating.
-        </p>
-
-        <div class="mt-9 flex flex-col gap-4 sm:flex-row">
-          <a href="#pricing" class="premium-cta-primary">
-            Start with the free plan
-          </a>
-          <a href="#experience" class="premium-cta-secondary">
-            See the product flow
-          </a>
-        </div>
+        <p class="section-copy mt-7 max-w-2xl">{heroContent.body}</p>
 
         <div class="mt-10 grid gap-4 sm:grid-cols-3">
-          <div class="glass-card px-4 py-4">
-            <div class="text-2xl font-extrabold text-[var(--navy)]">Before</div>
-            <p class="mt-1 text-sm leading-6 text-[var(--ink-muted)]">
-              Ask your conscience before an impulse becomes a transaction.
-            </p>
-          </div>
-          <div class="glass-card px-4 py-4">
-            <div class="text-2xl font-extrabold text-[var(--navy)]">During</div>
-            <p class="mt-1 text-sm leading-6 text-[var(--ink-muted)]">
-              Log quickly with smarter suggestions, voice, and category memory.
-            </p>
-          </div>
-          <div class="glass-card px-4 py-4">
-            <div class="text-2xl font-extrabold text-[var(--navy)]">After</div>
-            <p class="mt-1 text-sm leading-6 text-[var(--ink-muted)]">
-              Reflect on regret, hesitation, and the habits underneath both.
-            </p>
-          </div>
+          {heroContent.proof.map((item) => (
+            <div class="glass-card px-4 py-4 text-sm leading-6 text-[var(--ink-muted)]">
+              {item}
+            </div>
+          ))}
         </div>
       </div>
 
-      <div class="relative">
-        <div class="absolute -left-2 top-20 hidden w-56 rounded-[24px] border border-[rgba(23,36,79,0.08)] bg-white/92 p-4 shadow-[var(--shadow-soft)] lg:block">
-          <div class="flex items-center justify-between">
-            <span class="chip-devil">Impulse</span>
-            <span class="text-xs font-semibold text-[var(--devil-deep)]">Tempted</span>
-          </div>
-          <p class="mt-3 text-sm leading-6 text-[var(--ink-muted)]">
-            “It’s just one upgrade. You’ll use it every day.”
-          </p>
-        </div>
-
-        <div class="absolute -right-3 bottom-14 hidden w-60 rounded-[24px] border border-[rgba(23,36,79,0.08)] bg-white/92 p-4 shadow-[var(--shadow-soft)] lg:block">
-          <div class="flex items-center justify-between">
-            <span class="chip-angel">Reason</span>
-            <span class="text-xs font-semibold text-[var(--angel-deep)]">Budget-aware</span>
-          </div>
-          <p class="mt-3 text-sm leading-6 text-[var(--ink-muted)]">
-            “You’ve already spent 72% of your fun budget. Wait until next week.”
-          </p>
-        </div>
-
-        <div class="device-frame">
-          <div class="device-screen">
-            <div class="flex items-center justify-between">
-              <div>
-                <div class="text-sm font-semibold text-[var(--navy)]">Pre-Purchase Assistant</div>
-                <div class="mt-1 text-xs text-[var(--ink-muted)]">A conversation before the swipe</div>
-              </div>
-              <Logo size="42" />
-            </div>
-
-            <div class="mt-6 rounded-[26px] border border-[rgba(23,36,79,0.08)] bg-white p-4 shadow-[var(--shadow-soft)]">
-              <div class="flex items-center justify-between text-sm font-semibold text-[var(--ink-muted)]">
-                <span>Thinking about</span>
-                <span class="chip-gold">PHP 6,400</span>
-              </div>
-              <div class="mt-3 text-2xl font-extrabold tracking-tight text-[var(--ink-strong)]">
-                A weekend gaming splurge
-              </div>
-              <div class="mt-4 flex flex-wrap gap-2">
-                <span class="chip-devil">Gaming</span>
-                <span class="chip-gold">Fun money</span>
-                <span class="chip-angel">Higher confidence</span>
-              </div>
-            </div>
-
-            <div class="mt-5 grid gap-4">
-              <div class="rounded-[24px] bg-[linear-gradient(135deg,rgba(165,47,40,0.1),rgba(246,203,104,0.12))] p-4">
-                <div class="flex items-center justify-between">
-                  <span class="chip-devil">Impulse</span>
-                  <span class="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--devil-deep)]">
-                    persuasive
-                  </span>
-                </div>
-                <p class="mt-3 text-sm leading-6 text-[var(--ink-strong)]">
-                  “You’ve been talking about this upgrade for weeks. It’s not random if it still feels
-                  exciting after payday.”
-                </p>
-              </div>
-
-              <div class="rounded-[24px] bg-[linear-gradient(135deg,rgba(27,143,159,0.12),rgba(123,208,215,0.18))] p-4">
-                <div class="flex items-center justify-between">
-                  <span class="chip-angel">Reason</span>
-                  <span class="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--angel-deep)]">
-                    grounded
-                  </span>
-                </div>
-                <p class="mt-3 text-sm leading-6 text-[var(--ink-strong)]">
-                  “It would move Gaming from 44% to 78% this month. Not disastrous, but it narrows your
-                  breathing room fast.”
-                </p>
-              </div>
-            </div>
-
-            <div class="mt-5 mock-card p-4">
-              <div class="flex items-center justify-between">
-                <div>
-                  <div class="text-sm font-semibold text-[var(--navy)]">Budget impact</div>
-                  <div class="mt-1 text-xs text-[var(--ink-muted)]">Gaming budget would move to 78%</div>
-                </div>
-                <span class="text-xl font-extrabold text-[var(--navy)]">78%</span>
-              </div>
-              <div class="mock-meter mt-4">
-                <span class="bg-[linear-gradient(90deg,var(--angel-deep),#5abca3)]" style="width: 78%"></span>
-              </div>
-            </div>
-
-            <div class="mt-5 grid grid-cols-2 gap-3 text-center text-sm font-semibold">
-              <div class="rounded-[20px] bg-[rgba(23,36,79,0.06)] px-4 py-3 text-[var(--navy)]">
-                Ask something else
-              </div>
-              <div class="rounded-[20px] bg-[var(--navy)] px-4 py-3 text-white">
-                Bought it anyway
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+      <HeroBattleScene />
     </div>
   </div>
 </section>
+
+<script>
+  const navShell = document.querySelector('.hero-nav-shell');
+  const dockAtTop = () => {
+    if (!navShell) return;
+    navShell.classList.toggle('is-docked', window.scrollY > 50);
+  };
+
+  dockAtTop();
+  window.addEventListener('scroll', dockAtTop, { passive: true });
+</script>

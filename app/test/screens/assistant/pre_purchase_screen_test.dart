@@ -19,6 +19,13 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+Finder _assetImageFinder(String assetName) => find.byWidgetPredicate(
+      (widget) =>
+          widget is Image &&
+          widget.image is AssetImage &&
+          (widget.image as AssetImage).assetName == assetName,
+    );
+
 class _FakeLocationAssistanceService extends LocationAssistanceService {
   _FakeLocationAssistanceService({
     required this.permissionGranted,
@@ -29,15 +36,17 @@ class _FakeLocationAssistanceService extends LocationAssistanceService {
   });
 
   final bool permissionGranted;
-  final ({List<String> nearbyMerchants, List<String> likelyCategories})
-      suggestions;
+  final ({
+    List<String> nearbyMerchants,
+    List<String> likelyCategories
+  }) suggestions;
 
   @override
   Future<bool> requestPermission() async => permissionGranted;
 
   @override
   ({List<String> nearbyMerchants, List<String> likelyCategories})
-  getTransactionSuggestions() => suggestions;
+      getTransactionSuggestions() => suggestions;
 }
 
 class _FakeAIService extends AIService {
@@ -328,7 +337,8 @@ void main() {
     expect(find.text('Category'), findsOneWidget);
   });
 
-  testWidgets('pre-purchase assistant keeps a voice input control in the hero prompt area',
+  testWidgets(
+      'pre-purchase assistant keeps a voice input control in the hero prompt area',
       (tester) async {
     await tester.pumpWidget(await buildPrePurchaseApp(tester));
     await tester.pumpAndSettle();
@@ -336,18 +346,48 @@ void main() {
     expect(find.byType(VoiceInputButton), findsOneWidget);
   });
 
-  testWidgets('pre-purchase assistant uses the layered alter ego hero on the input screen',
+  testWidgets(
+      'pre-purchase assistant uses the layered alter ego hero on the input screen',
       (tester) async {
     await tester.pumpWidget(await buildPrePurchaseApp(tester));
     await tester.pumpAndSettle();
 
-    expect(find.byKey(const ValueKey('conscience-alter-ego-idle')), findsOneWidget);
-    expect(find.byKey(const ValueKey('conscience-devil-neutral')), findsOneWidget);
-    expect(find.byKey(const ValueKey('conscience-angel-neutral')), findsOneWidget);
-    expect(find.byKey(const ValueKey('conscience-money-neutral')), findsOneWidget);
+    expect(find.byKey(const ValueKey('conscience-alter-ego-idle')),
+        findsOneWidget);
+    expect(
+      _assetImageFinder('assets/images/sprites/devil/1_neutral.PNG'),
+      findsNothing,
+    );
+    expect(
+      _assetImageFinder('assets/images/sprites/angel/1_neutral.PNG'),
+      findsNothing,
+    );
+    expect(
+      _assetImageFinder('assets/images/sprites/money/1_neutral.PNG'),
+      findsNothing,
+    );
+    expect(
+      _assetImageFinder('assets/images/sprites/devil/sprite_sheet.png'),
+      findsOneWidget,
+    );
+    expect(
+      _assetImageFinder('assets/images/sprites/angel/sprite_sheet.png'),
+      findsOneWidget,
+    );
+    expect(
+      _assetImageFinder('assets/images/sprites/money/sprite_sheet.png'),
+      findsOneWidget,
+    );
+    expect(
+        find.byKey(const ValueKey('conscience-devil-neutral')), findsOneWidget);
+    expect(
+        find.byKey(const ValueKey('conscience-angel-neutral')), findsOneWidget);
+    expect(
+        find.byKey(const ValueKey('conscience-money-neutral')), findsOneWidget);
   });
 
-  testWidgets('shows shared loader while AI response is pending', (tester) async {
+  testWidgets('shows shared loader while AI response is pending',
+      (tester) async {
     await _pumpPrePurchaseRouterApp(
       tester,
       aiService: _FakeAIService(
@@ -379,15 +419,18 @@ void main() {
     await tester.tap(find.text('Ask Conscia'));
     await tester.pump();
 
-    expect(find.text('Your conscience is weighing both sides...'), findsOneWidget);
+    expect(
+        find.text('Your conscience is weighing both sides...'), findsOneWidget);
     expect(find.byType(ConscienceLoader), findsOneWidget);
-    expect(find.byKey(const ValueKey('conscience-loader-assistant')), findsOneWidget);
+    expect(find.byKey(const ValueKey('conscience-loader-assistant')),
+        findsOneWidget);
 
     await tester.pump(const Duration(seconds: 5));
     await tester.pumpAndSettle();
   });
 
-  testWidgets('pre-purchase assistant shows category chips above all categories action',
+  testWidgets(
+      'pre-purchase assistant shows category chips above all categories action',
       (tester) async {
     await tester.pumpWidget(await buildPrePurchaseApp(tester));
     await tester.pumpAndSettle();
@@ -532,7 +575,8 @@ void main() {
     expect(find.text('Corner Bakery'), findsOneWidget);
     expect(find.text('Groceries'), findsWidgets);
 
-    await tester.ensureVisible(find.widgetWithText(ActionChip, 'Corner Bakery'));
+    await tester
+        .ensureVisible(find.widgetWithText(ActionChip, 'Corner Bakery'));
     await tester.tap(find.text('Corner Bakery'));
     await tester.pumpAndSettle();
 

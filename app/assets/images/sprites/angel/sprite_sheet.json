@@ -1,0 +1,114 @@
+{
+  "sprites": [
+    {
+      "fileName": "1_neutral.png",
+      "width": 1254,
+      "height": 1254,
+      "x": 0,
+      "y": 0
+    },
+    {
+      "fileName": "2_block.png",
+      "width": 1254,
+      "height": 1254,
+      "x": 1254,
+      "y": 0
+    },
+    {
+      "fileName": "3_push.png",
+      "width": 1254,
+      "height": 1254,
+      "x": 2508,
+      "y": 0
+    },
+    {
+      "fileName": "4_win.png",
+      "width": 1254,
+      "height": 1254,
+      "x": 3762,
+      "y": 0
+    },
+    {
+      "fileName": "5_lose.png",
+      "width": 1254,
+      "height": 1254,
+      "x": 5016,
+      "y": 0
+    },
+    {
+      "fileName": "6_force.png",
+      "width": 1254,
+      "height": 1254,
+      "x": 0,
+      "y": 1254
+    },
+    {
+      "fileName": "7_tug.png",
+      "width": 1254,
+      "height": 1254,
+      "x": 1254,
+      "y": 1254
+    },
+    {
+      "fileName": "8_shield.png",
+      "width": 1254,
+      "height": 1254,
+      "x": 2508,
+      "y": 1254
+    },
+    {
+      "fileName": "9_coinshield.png",
+      "width": 1254,
+      "height": 1254,
+      "x": 3762,
+      "y": 1254
+    },
+    {
+      "fileName": "10_intercept.png",
+      "width": 1254,
+      "height": 1254,
+      "x": 5016,
+      "y": 1254
+    },
+    {
+      "fileName": "11_focuspray.png",
+      "width": 1254,
+      "height": 1254,
+      "x": 0,
+      "y": 2508
+    },
+    {
+      "fileName": "12_holyburst.png",
+      "width": 1254,
+      "height": 1254,
+      "x": 1254,
+      "y": 2508
+    },
+    {
+      "fileName": "13_laststand.png",
+      "width": 1254,
+      "height": 1254,
+      "x": 2508,
+      "y": 2508
+    },
+    {
+      "fileName": "14_wingblock.png",
+      "width": 1254,
+      "height": 1254,
+      "x": 3762,
+      "y": 2508
+    },
+    {
+      "fileName": "15_numberone.png",
+      "width": 1254,
+      "height": 1254,
+      "x": 5016,
+      "y": 2508
+    }
+  ],
+  "packMode": "grid",
+  "padding": 0,
+  "backgroundColor": "rgba(0, 0, 0, 0)",
+  "spriteSheetWidth": 6270,
+  "spriteSheetHeight": 3762
+}
