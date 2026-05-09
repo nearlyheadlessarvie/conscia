@@ -18,4 +18,5 @@ public class CreateTransactionDto
     public string? BaseCurrencyCode { get; set; }
     /// <summary>Client-provided rate override. When set, skips API fetch.</summary>
     public decimal? ExchangeRateOverride { get; set; }
+    public RecurringOptionsDto? Recurring { get; set; }
 }

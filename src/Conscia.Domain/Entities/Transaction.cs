@@ -14,6 +14,8 @@ public class Transaction
     public DateTime Date { get; set; }
     public Location? Location { get; set; }
     public RegretLevel? RegretLevel { get; set; }
+    public Guid? RecurringScheduleId { get; set; }
+    public DateTime? RecurringOccurrenceDate { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }
 

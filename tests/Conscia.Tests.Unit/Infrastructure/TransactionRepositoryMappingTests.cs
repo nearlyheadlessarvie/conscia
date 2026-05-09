@@ -149,6 +149,36 @@ public class TransactionRepositoryMappingTests
         Assert.DoesNotContain("\"MerchantName\":", item["Location"].S);
     }
 
+    [Fact]
+    public void FromItem_ReadsRecurringProvenanceKeys()
+    {
+        var transactionId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+        var scheduleId = Guid.NewGuid();
+        var occurrenceDate = new DateTime(2026, 05, 31, 0, 0, 0, DateTimeKind.Utc);
+        var item = new Dictionary<string, AttributeValue>
+        {
+            ["PK"] = new($"USER#{userId}"),
+            ["SK"] = new($"DATE#{occurrenceDate:O}#TX#{transactionId}"),
+            ["Id"] = new(transactionId.ToString()),
+            ["UserId"] = new(userId.ToString()),
+            ["Type"] = new(TransactionType.Expense.ToString()),
+            ["Amount"] = new() { N = "499" },
+            ["CurrencyCode"] = new("PHP"),
+            ["Category"] = new("Subscriptions"),
+            ["Counterparty"] = new("Netflix"),
+            ["Date"] = new(occurrenceDate.ToString("O")),
+            ["CreatedAt"] = new(occurrenceDate.ToString("O")),
+            ["RecurringScheduleId"] = new(scheduleId.ToString()),
+            ["RecurringOccurrenceDate"] = new(occurrenceDate.ToString("O")),
+        };
+
+        var transaction = InvokeFromItem(item);
+
+        Assert.Equal(scheduleId, transaction.RecurringScheduleId);
+        Assert.Equal(occurrenceDate, transaction.RecurringOccurrenceDate);
+    }
+
     private static Transaction InvokeFromItem(Dictionary<string, AttributeValue> item)
     {
         var method = typeof(TransactionRepository).GetMethod(

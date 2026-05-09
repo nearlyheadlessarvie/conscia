@@ -150,9 +150,24 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               onAction: (highlightedAlert.actionRoute == null &&
                       highlightedAlert.type != 'budget_nudge')
                   ? null
-                  : () => context.push(
+                  : () {
+                      ref
+                          .read(dismissedAlertIdsProvider.notifier)
+                          .dismiss(highlightedAlert.id);
+                      if (highlightedAlert.type == 'ReflectionFollowUp' &&
+                          highlightedAlert.transactionId != null) {
+                        context.push(
+                          AppRoutes.transactionDetail(
+                            highlightedAlert.transactionId!,
+                            autoReflect: true,
+                          ),
+                        );
+                        return;
+                      }
+                      context.push(
                         highlightedAlert.actionRoute ?? AppRoutes.budgets,
-                      ),
+                      );
+                    },
               onDismiss: () => ref
                   .read(dismissedAlertIdsProvider.notifier)
                   .dismiss(highlightedAlert.id),

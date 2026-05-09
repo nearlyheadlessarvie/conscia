@@ -50,6 +50,8 @@ class AppAlert {
       createdAt: DateTime.parse(json['createdAt'] as String),
     );
   }
+
+  bool get isRecurringReminder => type == 'recurring_transaction_created';
 }
 
 final alertsDioProvider = Provider<Dio>((ref) {

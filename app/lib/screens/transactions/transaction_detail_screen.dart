@@ -18,14 +18,17 @@ import '../../screens/assistant/widgets/ai_message_bubble.dart';
 import '../../screens/dashboard/widgets/in_app_alert_banner.dart';
 import '../../widgets/conscience_mark.dart';
 import '../../widgets/premium_upgrade_dialog.dart';
+import '../../widgets/recurring_badge.dart';
 import '../../widgets/skeleton_loader.dart';
 
 class TransactionDetailScreen extends ConsumerStatefulWidget {
   final String transactionId;
+  final bool autoReflect;
 
   const TransactionDetailScreen({
     super.key,
     required this.transactionId,
+    this.autoReflect = false,
   });
 
   @override
@@ -40,6 +43,7 @@ class _TransactionDetailScreenState
   bool _loadingReflection = false;
   bool _deleting = false;
   Transaction? _editedTransactionOverride;
+  bool _autoReflectHandled = false;
 
   @override
   void initState() {
@@ -120,8 +124,20 @@ class _TransactionDetailScreenState
     }
   }
 
-  void _askAiReflection() async {
+  void _askAiReflection({bool dismissFollowUpAlert = false}) async {
     setState(() => _loadingReflection = true);
+
+    if (dismissFollowUpAlert) {
+      final alerts = ref.read(activeAlertsProvider);
+      final matchingFollowUp = alerts.where(
+        (alert) =>
+            alert.type == 'ReflectionFollowUp' &&
+            alert.transactionId == widget.transactionId,
+      );
+      for (final alert in matchingFollowUp) {
+        ref.read(dismissedAlertIdsProvider.notifier).dismiss(alert.id);
+      }
+    }
 
     final service = ref.read(transactionServiceProvider);
     try {
@@ -257,9 +273,23 @@ class _TransactionDetailScreenState
       }
     }
 
+    if (widget.autoReflect && !_autoReflectHandled) {
+      _autoReflectHandled = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        _askAiReflection(dismissFollowUpAlert: true);
+      });
+    }
+
     if (!_regretLevelInitialized) {
       _regretLevel = tx.regretLevel;
       _regretLevelInitialized = true;
+    }
+
+    if (widget.autoReflect &&
+        contextualAlert?.type == 'ReflectionFollowUp' &&
+        contextualAlert?.transactionId == widget.transactionId) {
+      contextualAlert = null;
     }
 
     return SingleChildScrollView(
@@ -311,6 +341,17 @@ class _TransactionDetailScreenState
                       color: colors.onSurfaceVariant,
                     ),
                   ),
+                  if (tx.isRecurring) ...[
+                    const SizedBox(height: 10),
+                    const RecurringBadge(),
+                    const SizedBox(height: 6),
+                    Text(
+                      'Recurring transaction',
+                      style: textTheme.bodySmall?.copyWith(
+                        color: colors.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -325,7 +366,7 @@ class _TransactionDetailScreenState
                 final alert = contextualAlert!;
                 if (alert.transactionId == widget.transactionId &&
                     alert.type == 'ReflectionFollowUp') {
-                  _askAiReflection();
+                  _askAiReflection(dismissFollowUpAlert: true);
                   return;
                 }
                 final route = alert.actionRoute;

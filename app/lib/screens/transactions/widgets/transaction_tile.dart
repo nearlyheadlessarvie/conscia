@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 
 import '../../../core/constants/category_icons.dart';
 import '../../../core/utils/currency_formatter.dart';
+import '../../../widgets/recurring_badge.dart';
 
 class TransactionTile extends StatelessWidget {
   final String id;
@@ -14,6 +15,7 @@ class TransactionTile extends StatelessWidget {
   final String? counterparty;
   final DateTime date;
   final int? regretLevel;
+  final bool isRecurring;
 
   const TransactionTile({
     super.key,
@@ -25,6 +27,7 @@ class TransactionTile extends StatelessWidget {
     this.counterparty,
     required this.date,
     this.regretLevel,
+    this.isRecurring = false,
   });
 
   static IconData iconFor(String category) =>
@@ -109,6 +112,10 @@ class TransactionTile extends StatelessWidget {
                       color: colors.onSurfaceVariant,
                     ),
                   ),
+                  if (isRecurring) ...[
+                    const SizedBox(height: 6),
+                    const RecurringBadge(compact: true),
+                  ],
                 ],
               ),
             ),

@@ -134,6 +134,7 @@ else
         new LambdaProxyReceiptRepository(sp.GetRequiredService<IAmazonLambda>(), dbFunctionName));
 }
 builder.Services.AddScoped<ITransactionRepository, TransactionRepository>();
+builder.Services.AddScoped<IRecurringScheduleRepository, RecurringScheduleRepository>();
 builder.Services.AddScoped<IOutboxEventRepository, OutboxEventRepository>();
 builder.Services.AddScoped<IAIInteractionRepository, AIInteractionRepository>();
 builder.Services.AddScoped<IWeeklyInsightsRepository, WeeklyInsightsRepository>();
@@ -152,12 +153,14 @@ builder.Services.AddSingleton<ISqsQueueService, SqsQueueService>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IBudgetService, BudgetService>();
 builder.Services.AddScoped<ITransactionService, TransactionService>();
+builder.Services.AddScoped<IRecurringScheduleService, RecurringScheduleService>();
 builder.Services.AddScoped<ISubscriptionService, SubscriptionService>();
 builder.Services.AddScoped<IReceiptService, ReceiptService>();
 builder.Services.AddScoped<IBehavioralInsightsService, BehavioralInsightsService>();
 builder.Services.AddScoped<IPurchaseSuggestionService, PurchaseSuggestionService>();
 builder.Services.AddScoped<IPurchasePatternService, PurchasePatternService>();
 builder.Services.AddScoped<IAlertService, AlertService>();
+builder.Services.AddSingleton<IRecurringScheduleGenerator, RecurringScheduleGenerator>();
 builder.Services.AddScoped<ITriggerEvaluator, BudgetWarningEvaluator>();
 builder.Services.AddScoped<ITriggerEvaluator, CoolingOffSuggestionEvaluator>();
 builder.Services.AddScoped<ITriggerEvaluator, RepeatedRegretCounterpartyEvaluator>();
@@ -207,6 +210,7 @@ builder.Services.AddCors(options =>
 
 // --- Background Services ---
 builder.Services.AddHostedService<OutboxProcessor>();
+builder.Services.AddHostedService<RecurringScheduleProcessor>();
 
 // --- Auth ---
 var useMockAuth = builder.Configuration.GetValue<bool>("Auth:UseMock");
@@ -362,6 +366,7 @@ app.MapGet("/api/v1", () => Results.Ok(new { version = "1.0", service = "Conscia
 app.MapAuthEndpoints().RequireRateLimiting("standard");
 app.MapUserEndpoints().RequireRateLimiting("standard");
 app.MapTransactionEndpoints().RequireRateLimiting("standard");
+app.MapRecurringEndpoints().RequireRateLimiting("standard");
 app.MapBudgetEndpoints().RequireRateLimiting("standard");
 app.MapSubscriptionEndpoints().RequireRateLimiting("standard");
 app.MapAlertEndpoints().RequireRateLimiting("standard");

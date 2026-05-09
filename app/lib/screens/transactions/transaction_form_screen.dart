@@ -12,13 +12,14 @@ import '../../providers/location_assistance_provider.dart';
 import '../../providers/subscription_provider.dart';
 import '../../providers/transaction_providers.dart';
 import '../../providers/user_provider.dart';
+import '../../models/recurring_schedule.dart';
 import '../../services/transaction_service.dart';
 import '../../widgets/amount_input_field.dart';
 import '../../widgets/hero_screen_scaffold.dart';
 import '../../widgets/location_assistance_prompt_sheet.dart';
+import '../../widgets/recurring_schedule_section.dart';
 import '../../widgets/skeleton_loader.dart';
 import '../../widgets/smart_suggestions_card.dart';
-import '../../widgets/screen_section.dart';
 import 'widgets/transaction_style_category_selector.dart';
 
 class TransactionFormScreen extends ConsumerStatefulWidget {
@@ -45,6 +46,9 @@ class TransactionFormScreen extends ConsumerStatefulWidget {
 class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
   bool get _isEditing => widget.transactionId != null;
 
+  bool _categoryExpanded = true;
+  bool _detailsExpanded = true;
+  bool _recurringExpanded = false;
   bool _isExpense = true;
   final _amountController = TextEditingController();
   final _exchangeRateController = TextEditingController();
@@ -58,6 +62,9 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
   bool _prefilled = false;
   bool _hasCheckedLocationPrompt = false;
   Transaction? _originalTransaction;
+  bool _recurringEnabled = false;
+  String _recurringCadence = 'Monthly';
+  DateTime? _recurringEndDate;
 
   @override
   void initState() {
@@ -165,6 +172,13 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
       date: _selectedDate,
       baseCurrencyCode: userCurrency,
       exchangeRateOverride: rateOverride,
+      recurring: !_isEditing
+          ? RecurringDraft(
+              enabled: _recurringEnabled,
+              cadence: _recurringCadence,
+              endDate: _recurringEndDate,
+            )
+          : null,
     );
 
     try {
@@ -390,12 +404,15 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
               );
             },
           ),
-          ScreenSection(
+          _AccordionSection(
             title: 'Category',
             subtitle: _isExpense
                 ? 'Choose a category first, then refine the rest.'
                 : 'Pick the income source type you want to track.',
-            compact: true,
+            expanded: _categoryExpanded,
+            onToggle: () => setState(() {
+              _categoryExpanded = !_categoryExpanded;
+            }),
             child: TransactionStyleCategorySelector(
               selectedCategory: _selectedCategory,
               isExpense: _isExpense,
@@ -436,10 +453,14 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
             ),
             const SizedBox(height: 18),
           ],
-          ScreenSection(
+          _AccordionSection(
             title: 'Details',
             subtitle:
                 'Add the who, when, and any context you want to remember later.',
+            expanded: _detailsExpanded,
+            onToggle: () => setState(() {
+              _detailsExpanded = !_detailsExpanded;
+            }),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -496,6 +517,29 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
               ],
             ),
           ),
+          if (!_isEditing) ...[
+            const SizedBox(height: 18),
+            _AccordionSection(
+              title: 'Recurring',
+              subtitle:
+                  'Create future transactions automatically on a schedule.',
+              expanded: _recurringExpanded,
+              onToggle: () => setState(() {
+                _recurringExpanded = !_recurringExpanded;
+              }),
+              child: RecurringScheduleSection(
+                enabled: _recurringEnabled,
+                cadence: _recurringCadence,
+                endDate: _recurringEndDate,
+                onEnabledChanged: (value) =>
+                    setState(() => _recurringEnabled = value),
+                onCadenceChanged: (value) =>
+                    setState(() => _recurringCadence = value),
+                onEndDateChanged: (value) =>
+                    setState(() => _recurringEndDate = value),
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -528,5 +572,96 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
       return 'Yesterday';
     }
     return _formatDate(date);
+  }
+}
+
+class _AccordionSection extends StatelessWidget {
+  const _AccordionSection({
+    required this.title,
+    this.subtitle,
+    required this.expanded,
+    required this.onToggle,
+    required this.child,
+  });
+
+  final String title;
+  final String? subtitle;
+  final bool expanded;
+  final VoidCallback onToggle;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    final colors = Theme.of(context).colorScheme;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 18),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          InkWell(
+            onTap: onToggle,
+            borderRadius: BorderRadius.circular(16),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 2),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          title,
+                          style: textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        if (subtitle != null) ...[
+                          const SizedBox(height: 4),
+                          Text(
+                            subtitle!,
+                            style: textTheme.bodySmall?.copyWith(
+                              color: colors.onSurfaceVariant,
+                              height: 1.35,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Padding(
+                    padding: const EdgeInsets.only(top: 2),
+                    child: AnimatedRotation(
+                      turns: expanded ? 0.5 : 0,
+                      duration: const Duration(milliseconds: 180),
+                      curve: Curves.easeOutCubic,
+                      child: Icon(
+                        Icons.keyboard_arrow_down_rounded,
+                        color: colors.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          ClipRect(
+            child: AnimatedSize(
+              duration: const Duration(milliseconds: 180),
+              curve: Curves.easeOutCubic,
+              child: expanded
+                  ? Padding(
+                      padding: const EdgeInsets.only(top: 10),
+                      child: child,
+                    )
+                  : const SizedBox.shrink(),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }

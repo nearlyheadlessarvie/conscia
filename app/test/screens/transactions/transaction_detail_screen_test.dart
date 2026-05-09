@@ -299,4 +299,89 @@ void main() {
     await tester.pump(const Duration(seconds: 5));
     await tester.pumpAndSettle();
   });
+
+  testWidgets('detail screen shows recurring provenance hint', (tester) async {
+    final transaction = Transaction(
+      id: 'tx-recurring',
+      amount: 499,
+      currencyCode: 'PHP',
+      category: 'Subscriptions',
+      description: 'Netflix',
+      type: 'expense',
+      date: DateTime(2026, 5, 31),
+      recurringScheduleId: 'schedule-1',
+      recurringOccurrenceDate: DateTime(2026, 5, 31),
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          transactionDetailProvider.overrideWith((ref, id) async => transaction),
+        ],
+        child: const MaterialApp(
+          home: TransactionDetailScreen(transactionId: 'tx-recurring'),
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    expect(find.text('Recurring transaction'), findsOneWidget);
+  });
+
+  testWidgets(
+      'auto reflect entry suppresses follow-up banner and opens reflection flow',
+      (tester) async {
+    final transaction = Transaction(
+      id: 'tx-auto',
+      amount: 1500,
+      currencyCode: 'PHP',
+      category: 'Dining',
+      description: 'Late Night Delivery',
+      type: 'expense',
+      date: DateTime(2026, 5, 7, 21, 0),
+      regretLevel: 2,
+    );
+
+    final transactionService = _RecordingTransactionService();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          alertsProvider.overrideWith((ref) async => [
+                AppAlert(
+                  id: 'reflection-follow-up-tx-auto',
+                  type: 'ReflectionFollowUp',
+                  title: 'This purchase still deserves a second look',
+                  message: 'A reflection can help you spot the pattern.',
+                  priority: 40,
+                  actionLabel: 'Reflect now',
+                  transactionId: 'tx-auto',
+                  isDismissed: false,
+                  createdAt: DateTime.utc(2026, 5, 8),
+                ),
+              ]),
+          transactionDetailProvider.overrideWith((ref, id) async => transaction),
+          aiServiceProvider.overrideWithValue(_DelayedReflectionAIService()),
+          transactionServiceProvider.overrideWithValue(transactionService),
+        ],
+        child: const MaterialApp(
+          home: TransactionDetailScreen(
+            transactionId: 'tx-auto',
+            autoReflect: true,
+          ),
+        ),
+      ),
+    );
+
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(find.text('Reflect now'), findsNothing);
+    expect(find.byType(ConscienceLoader), findsAtLeastNWidgets(1));
+    expect(find.text('Reflection is making sense of the moment...'), findsOneWidget);
+
+    await tester.pump(const Duration(seconds: 5));
+    await tester.pumpAndSettle();
+  });
 }

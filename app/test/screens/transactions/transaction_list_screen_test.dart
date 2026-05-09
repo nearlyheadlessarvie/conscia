@@ -164,4 +164,27 @@ void main() {
     expect((allY - groceriesY).abs(), lessThan(8));
     expect((allY - subscriptionsY).abs(), lessThan(8));
   });
+
+  testWidgets('renders recurring badge in transaction list item', (
+    tester,
+  ) async {
+    await _pumpTransactionList(
+      tester,
+      transactions: [
+        Transaction(
+          id: 'tx-1',
+          amount: 9.99,
+          currencyCode: 'PHP',
+          category: 'Subscriptions',
+          description: 'Spotify',
+          type: 'expense',
+          date: DateTime(2026, 5, 31),
+          recurringScheduleId: 'schedule-1',
+          recurringOccurrenceDate: DateTime(2026, 5, 31),
+        ),
+      ],
+    );
+
+    expect(find.text('Recurring'), findsOneWidget);
+  });
 }

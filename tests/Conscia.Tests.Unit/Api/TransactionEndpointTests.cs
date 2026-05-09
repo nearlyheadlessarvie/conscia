@@ -109,6 +109,8 @@ public class TransactionEndpointTests : IClassFixture<TestWebAppFactory>
     public async Task GetTransaction_ReturnsCounterpartyAndPlaceName()
     {
         var transactionId = Guid.NewGuid();
+        var scheduleId = Guid.NewGuid();
+        var occurrenceDate = new DateTime(2026, 05, 31, 0, 0, 0, DateTimeKind.Utc);
         _factory.TransactionServiceMock
             .Setup(s => s.GetByIdAsync(UserId, transactionId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new Transaction
@@ -119,8 +121,10 @@ public class TransactionEndpointTests : IClassFixture<TestWebAppFactory>
                 Amount = new Money(19.99m, "USD"),
                 Category = "Food",
                 Counterparty = "Corner Cafe",
-                Date = DateTime.UtcNow,
-                CreatedAt = DateTime.UtcNow,
+                Date = occurrenceDate,
+                CreatedAt = occurrenceDate,
+                RecurringScheduleId = scheduleId,
+                RecurringOccurrenceDate = occurrenceDate,
                 Location = new Location
                 {
                     Latitude = 14.55,
@@ -137,6 +141,11 @@ public class TransactionEndpointTests : IClassFixture<TestWebAppFactory>
         Assert.False(body.RootElement.TryGetProperty("merchant", out _));
         Assert.Equal("Office Pantry", body.RootElement.GetProperty("location").GetProperty("placeName").GetString());
         Assert.False(body.RootElement.GetProperty("location").TryGetProperty("merchantName", out _));
+        Assert.Equal(scheduleId.ToString(), body.RootElement.GetProperty("recurringScheduleId").GetString());
+        Assert.Equal(
+            occurrenceDate,
+            DateTime.Parse(body.RootElement.GetProperty("recurringOccurrenceDate").GetString()!).ToUniversalTime());
+        Assert.True(body.RootElement.GetProperty("isRecurring").GetBoolean());
     }
 
     [Fact]

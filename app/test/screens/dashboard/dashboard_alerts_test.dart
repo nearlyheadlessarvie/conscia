@@ -2,6 +2,7 @@ import 'package:conscia_app/providers/alert_provider.dart';
 import 'package:conscia_app/providers/behavioral_insights_provider.dart';
 import 'package:conscia_app/providers/budget_providers.dart';
 import 'package:conscia_app/providers/transaction_providers.dart';
+import 'package:conscia_app/core/routing/app_router.dart';
 import 'package:conscia_app/screens/dashboard/dashboard_screen.dart';
 import 'package:conscia_app/screens/dashboard/widgets/recent_transaction_tile.dart';
 import 'package:conscia_app/screens/dashboard/widgets/regret_prompt_card.dart';
@@ -60,6 +61,14 @@ Widget _buildApp(ProviderContainer container) {
         path: '/settings/budgets',
         builder: (context, state) => const Scaffold(
           body: Center(child: Text('Budgets placeholder')),
+        ),
+      ),
+      GoRoute(
+        path: '/transactions/:id',
+        builder: (context, state) => Scaffold(
+          body: Center(
+            child: Text('detail:${state.uri.toString()}'),
+          ),
         ),
       ),
     ],
@@ -318,5 +327,48 @@ void main() {
 
     expect(find.text('Dining keeps turning into regret'), findsOneWidget);
     expect(find.text('No budget for Dining yet'), findsNothing);
+  });
+
+  testWidgets(
+      'dashboard reflection alert dismisses and routes to detail with auto reflect',
+      (tester) async {
+    final container = ProviderContainer(
+      overrides: [
+        budgetServiceProvider.overrideWithValue(_StaticBudgetService(const [])),
+        transactionServiceProvider
+            .overrideWithValue(_StaticTransactionService()),
+        behavioralInsightsProvider.overrideWith((ref) async => null),
+        alertsProvider.overrideWith((ref) async => [
+              AppAlert(
+                id: 'reflection-follow-up-tx-1',
+                type: 'ReflectionFollowUp',
+                title: 'This purchase still deserves a second look',
+                message: 'A reflection can help you spot what was really going on.',
+                priority: 50,
+                actionLabel: 'Reflect now',
+                actionRoute: AppRoutes.transactionDetail('tx-1'),
+                transactionId: 'tx-1',
+                isDismissed: false,
+                createdAt: DateTime.utc(2026, 5, 9),
+              ),
+            ]),
+        localAlertsProvider.overrideWith(
+          (ref) => _LocalAlertsTestNotifier(const []),
+        ),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    await tester.pumpWidget(_buildApp(container));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Reflect now'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('detail:/transactions/tx-1?autoReflect=1'), findsOneWidget);
+    expect(
+      container.read(dismissedAlertIdsProvider),
+      contains('reflection-follow-up-tx-1'),
+    );
   });
 }

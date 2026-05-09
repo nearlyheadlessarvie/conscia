@@ -1,6 +1,6 @@
 # Conscia Enhancement Tasks Checklist
 
-**Status Overview:** Phases 1-3 implemented in the current app branch; Phases 4-8 remain planned
+**Status Overview:** Phases 1-3 implemented in the current app branch; recurring transactions are now shipped; Phases 4-8 remain planned
 **Target Completion:** 16-20 weeks
 **Last Updated:** 2026-05-07
 
@@ -103,6 +103,7 @@ Goal: Faster, easier transaction entry
 - [x] Prompt for location assistance on first open, with later control in Settings
 - [x] Add in-app budget nudges after saving an expense in a category without a matching budget
 - [x] Rework onboarding currency/profile flow to reduce setup friction before transaction entry
+- [x] Add recurring expense/income schedules with weekly, monthly, and yearly cadence plus optional end date
 
 ### Frontend Tasks
 - [ ] Add quick preset buttons to pre-purchase screen

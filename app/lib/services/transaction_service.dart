@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 
 import '../core/constants/api_constants.dart';
+import '../models/recurring_schedule.dart';
 
 class Transaction {
   final String id;
@@ -11,6 +12,8 @@ class Transaction {
   final String type;
   final DateTime date;
   final int? regretLevel;
+  final String? recurringScheduleId;
+  final DateTime? recurringOccurrenceDate;
 
   const Transaction({
     required this.id,
@@ -21,7 +24,11 @@ class Transaction {
     required this.type,
     required this.date,
     this.regretLevel,
+    this.recurringScheduleId,
+    this.recurringOccurrenceDate,
   });
+
+  bool get isRecurring => recurringScheduleId != null;
 
   factory Transaction.fromJson(Map<String, dynamic> json) {
     return Transaction(
@@ -37,6 +44,10 @@ class Transaction {
       type: (json['type'] as String).toLowerCase(),
       date: DateTime.parse(json['date'] as String),
       regretLevel: _parseRegretLevel(json['regretLevel']),
+      recurringScheduleId: json['recurringScheduleId'] as String?,
+      recurringOccurrenceDate: json['recurringOccurrenceDate'] != null
+          ? DateTime.parse(json['recurringOccurrenceDate'] as String)
+          : null,
     );
   }
 
@@ -73,6 +84,7 @@ class CreateTransactionDto {
   final DateTime date;
   final String? baseCurrencyCode;
   final double? exchangeRateOverride;
+  final RecurringDraft? recurring;
 
   const CreateTransactionDto({
     required this.amount,
@@ -83,6 +95,7 @@ class CreateTransactionDto {
     required this.date,
     this.baseCurrencyCode,
     this.exchangeRateOverride,
+    this.recurring,
   });
 
   Map<String, dynamic> toJson() {
@@ -96,6 +109,9 @@ class CreateTransactionDto {
     };
     if (baseCurrencyCode != null) json['baseCurrencyCode'] = baseCurrencyCode;
     if (exchangeRateOverride != null) json['exchangeRateOverride'] = exchangeRateOverride;
+    if (recurring != null && recurring!.enabled) {
+      json['recurring'] = recurring!.toJson();
+    }
     return json;
   }
 
