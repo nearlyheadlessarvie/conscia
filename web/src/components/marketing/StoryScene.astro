@@ -8,17 +8,20 @@ const {
   moneyPose,
   uiBadge,
   cardTitle,
+  cardSide = 'right',
 } = Astro.props;
 ---
 
-<div class={`story-scene story-scene-${mood}`}>
-  <div class={`chapter-cloud chapter-cloud-${mood}`}></div>
+<div class:list={['story-scene', `story-scene-${mood}`, cardSide === 'left' && 'story-scene-left-card', cardSide === 'right' && 'story-scene-right-card']}>
+  <div class="story-scene-stage">
+    <div class={`chapter-cloud chapter-cloud-${mood}`}></div>
 
-  {devilPose && <MascotSprite kind="devil" pose={devilPose} class="scene-devil" alt="Devil mascot" scale={0.2} />}
-  <MascotSprite kind="money" pose={moneyPose} class="scene-money" alt="Receipt mascot" scale={0.18} />
-  {angelPose && <MascotSprite kind="angel" pose={angelPose} class="scene-angel" alt="Angel mascot" scale={0.21} />}
+    {devilPose && <MascotSprite kind="devil" pose={devilPose} class="scene-devil" alt="Devil mascot" scale={0.2} />}
+    <MascotSprite kind="money" pose={moneyPose} class="scene-money" alt="Receipt mascot" scale={0.18} />
+    {angelPose && <MascotSprite kind="angel" pose={angelPose} class="scene-angel" alt="Angel mascot" scale={0.21} />}
+  </div>
 
-  <div class="story-scene-card">
+  <div class:list={['story-scene-card', cardSide === 'left' && 'story-scene-card-left']}>
     <span class="chip-gold">{uiBadge}</span>
     <div class="mt-4 text-lg font-extrabold text-[var(--ink-strong)]">{cardTitle}</div>
     <div class="mt-4 space-y-3">

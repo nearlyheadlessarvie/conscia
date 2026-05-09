@@ -1,9 +1,8 @@
 export const heroContent = {
   kicker: 'Meet the inner voices',
-  title: 'Your financial conscience, in full color.',
+  title: 'Your financial conscience.',
   body:
     'Conscia turns impulse, reason, and reflection into one product flow so people can catch a spending decision before it disappears into a ledger.',
-  primaryCta: { label: 'Open the app', href: '#open-the-app' },
   secondaryCta: { label: 'See how it works', href: '#experience' },
   proof: [
     'Pre-purchase assistant before a spend',
@@ -41,6 +40,7 @@ export const storyChapters = [
       moneyPose: '1_neutral.png',
       uiBadge: 'Reflection + memory',
       cardTitle: 'Notice what happened',
+      cardSide: 'left',
     },
   },
   {
@@ -56,6 +56,7 @@ export const storyChapters = [
       moneyPose: '4_save.png',
       uiBadge: 'Reflection + budgets',
       cardTitle: 'See the payoff',
+      cardSide: 'left',
     },
   },
 ];

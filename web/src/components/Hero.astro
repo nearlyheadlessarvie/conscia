@@ -1,25 +1,25 @@
 ---
 import LogoWithText from './icons/LogoWithText.astro';
+import PlatformBadge from './icons/PlatformBadge.astro';
 import HeroBattleScene from './marketing/HeroBattleScene.astro';
 import { heroContent } from '../data/marketingChapters.js';
 ---
 
-<section class="relative overflow-hidden pt-6">
-  <div class="section-shell">
-    <nav class="glass-card flex items-center justify-between px-5 py-4 md:px-7">
-      <LogoWithText size="38" />
+<section class="relative pt-6">
+  <div class="hero-nav-shell fixed inset-x-0 top-4 z-50">
+    <div class="section-shell">
+      <nav class="hero-nav glass-card flex items-center justify-between px-5 py-4 md:px-7">
+        <LogoWithText size="38" />
 
-      <div class="hidden items-center gap-7 text-sm font-medium text-[var(--ink-muted)] md:flex">
-        <a href="#experience" class="transition hover:text-[var(--navy)]">How it works</a>
-        <a href="#trust" class="transition hover:text-[var(--navy)]">Why it works</a>
-        <a href="#open-the-app" class="transition hover:text-[var(--navy)]">Open the app</a>
-      </div>
-
-      <a href="#open-the-app" class="premium-cta-secondary text-sm">Open the app</a>
-    </nav>
+        <div class="flex items-center gap-3">
+          <PlatformBadge platform="ios" />
+          <PlatformBadge platform="android" />
+        </div>
+      </nav>
+    </div>
   </div>
 
-  <div class="section-shell relative py-12 md:py-16 lg:py-20">
+  <div class="section-shell relative pb-12 pt-28 md:pb-16 md:pt-32 lg:pb-20 lg:pt-36">
     <div class="story-grid items-center gap-14">
       <div class="relative z-10">
         <span class="section-kicker">{heroContent.kicker}</span>
@@ -29,11 +29,6 @@ import { heroContent } from '../data/marketingChapters.js';
         </h1>
 
         <p class="section-copy mt-7 max-w-2xl">{heroContent.body}</p>
-
-        <div class="mt-9 flex flex-col gap-4 sm:flex-row">
-          <a href={heroContent.primaryCta.href} class="premium-cta-primary">{heroContent.primaryCta.label}</a>
-          <a href={heroContent.secondaryCta.href} class="premium-cta-secondary">{heroContent.secondaryCta.label}</a>
-        </div>
 
         <div class="mt-10 grid gap-4 sm:grid-cols-3">
           {heroContent.proof.map((item) => (
@@ -48,3 +43,14 @@ import { heroContent } from '../data/marketingChapters.js';
     </div>
   </div>
 </section>
+
+<script>
+  const navShell = document.querySelector('.hero-nav-shell');
+  const dockAtTop = () => {
+    if (!navShell) return;
+    navShell.classList.toggle('is-docked', window.scrollY > 50);
+  };
+
+  dockAtTop();
+  window.addEventListener('scroll', dockAtTop, { passive: true });
+</script>

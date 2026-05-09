@@ -170,7 +170,7 @@ void main() {
     },
   );
 
-  testWidgets('onboarding uses the shared brand icon on the first slide', (
+  testWidgets('onboarding first slide uses the mascot standoff scene', (
     tester,
   ) async {
     tester.view.physicalSize = const Size(1080, 1920);
@@ -187,7 +187,33 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(
-      find.byKey(const ValueKey('conscience-brand-icon-svg')),
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is Image &&
+            widget.image is AssetImage &&
+            (widget.image as AssetImage).assetName ==
+                'assets/images/sprites/devil/1_neutral.PNG',
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is Image &&
+            widget.image is AssetImage &&
+            (widget.image as AssetImage).assetName ==
+                'assets/images/sprites/angel/1_neutral.PNG',
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is Image &&
+            widget.image is AssetImage &&
+            (widget.image as AssetImage).assetName ==
+                'assets/images/sprites/money/1_neutral.PNG',
+      ),
       findsOneWidget,
     );
   });
@@ -212,9 +238,27 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Track Without Shame'), findsOneWidget);
-    expect(find.text('Coffee run'), findsOneWidget);
-    expect(find.text('-PHP 180'), findsOneWidget);
-    expect(find.text('Dining'), findsOneWidget);
+    expect(find.text('Logged in seconds'), findsOneWidget);
+    expect(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is Image &&
+            widget.image is AssetImage &&
+            (widget.image as AssetImage).assetName ==
+                'assets/images/sprites/devil/8_whisper.PNG',
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is Image &&
+            widget.image is AssetImage &&
+            (widget.image as AssetImage).assetName ==
+                'assets/images/sprites/money/4_save.PNG',
+      ),
+      findsOneWidget,
+    );
     expect(
       find.text(
         'Log spending in seconds, spot patterns, and stay honest without guilt.',
@@ -226,6 +270,27 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Turn Reflection Into Better Habits'), findsOneWidget);
+    expect(find.text('Reflection + budgets'), findsOneWidget);
+    expect(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is Image &&
+            widget.image is AssetImage &&
+            (widget.image as AssetImage).assetName ==
+                'assets/images/sprites/angel/8_shield.PNG',
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is Image &&
+            widget.image is AssetImage &&
+            (widget.image as AssetImage).assetName ==
+                'assets/images/sprites/money/1_neutral.PNG',
+      ),
+      findsOneWidget,
+    );
     expect(
       find.text(
         'Set budgets, notice regrets, and build a money routine that actually sticks.',

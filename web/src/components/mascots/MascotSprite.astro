@@ -10,16 +10,22 @@ const {
 } = Astro.props;
 
 const frame = getMascotFrame(kind, pose);
+const scaledWidth = frame.width * scale;
+const scaledHeight = frame.height * scale;
+const scaledX = frame.x * scale;
+const scaledY = frame.y * scale;
+const scaledSheetWidth = frame.sheetWidth * scale;
+const scaledSheetHeight = frame.sheetHeight * scale;
 ---
 
 <div
   class={`mascot-frame ${className}`}
   role="img"
   aria-label={alt}
-  style={`--sprite-scale:${scale}; width:${frame.width}px; height:${frame.height}px;`}
+  style={`width:${scaledWidth}px; height:${scaledHeight}px;`}
 >
   <div
     class="mascot-sprite"
-    style={`background-image:url(${frame.imagePath}); background-position:-${frame.x}px -${frame.y}px; background-size:${frame.sheetWidth}px ${frame.sheetHeight}px; width:${frame.width}px; height:${frame.height}px;`}
+    style={`background-image:url(${frame.imagePath}); background-position:-${scaledX}px -${scaledY}px; background-size:${scaledSheetWidth}px ${scaledSheetHeight}px; width:${scaledWidth}px; height:${scaledHeight}px;`}
   ></div>
 </div>

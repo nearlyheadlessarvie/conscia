@@ -19,6 +19,13 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+Finder _assetImageFinder(String assetName) => find.byWidgetPredicate(
+      (widget) =>
+          widget is Image &&
+          widget.image is AssetImage &&
+          (widget.image as AssetImage).assetName == assetName,
+    );
+
 class _FakeLocationAssistanceService extends LocationAssistanceService {
   _FakeLocationAssistanceService({
     required this.permissionGranted,
@@ -342,6 +349,18 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byKey(const ValueKey('conscience-alter-ego-idle')), findsOneWidget);
+    expect(
+      _assetImageFinder('assets/images/sprites/devil/1_neutral.PNG'),
+      findsOneWidget,
+    );
+    expect(
+      _assetImageFinder('assets/images/sprites/angel/1_neutral.PNG'),
+      findsOneWidget,
+    );
+    expect(
+      _assetImageFinder('assets/images/sprites/money/1_neutral.PNG'),
+      findsOneWidget,
+    );
     expect(find.byKey(const ValueKey('conscience-devil-neutral')), findsOneWidget);
     expect(find.byKey(const ValueKey('conscience-angel-neutral')), findsOneWidget);
     expect(find.byKey(const ValueKey('conscience-money-neutral')), findsOneWidget);
