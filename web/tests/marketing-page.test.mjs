@@ -21,3 +21,10 @@ test('homepage renders the three storytelling chapters in order', () => {
   assert.match(html, /Reflection prompts/);
   assert.match(html, /Recurring transactions/);
 });
+
+test('homepage ends with an app-first CTA and trust language', () => {
+  assert.match(html, /Open the app/);
+  assert.match(html, /iPhone, Android, and web companion surfaces/);
+  assert.match(html, /Private by default/);
+  assert.match(html, /The app handles onboarding and account creation/);
+});

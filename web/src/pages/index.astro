@@ -2,6 +2,7 @@
 import Layout from '../layouts/Layout.astro';
 import Hero from '../components/Hero.astro';
 import StoryChapter from '../components/marketing/StoryChapter.astro';
+import OpenAppCta from '../components/marketing/OpenAppCta.astro';
 import Footer from '../components/Footer.astro';
 import { storyChapters } from '../data/marketingChapters.js';
 ---
@@ -11,5 +12,6 @@ import { storyChapters } from '../data/marketingChapters.js';
   <StoryChapter chapter={storyChapters[0]} />
   <StoryChapter chapter={storyChapters[1]} reverse={true} />
   <StoryChapter chapter={storyChapters[2]} />
+  <OpenAppCta />
   <Footer />
 </Layout>
