@@ -1,0 +1,65 @@
+{
+  "sprites": [
+    {
+      "fileName": "1_neutral.png",
+      "width": 1254,
+      "height": 1254,
+      "x": 0,
+      "y": 0
+    },
+    {
+      "fileName": "2_right.png",
+      "width": 1254,
+      "height": 1254,
+      "x": 1254,
+      "y": 0
+    },
+    {
+      "fileName": "3_left.png",
+      "width": 1254,
+      "height": 1254,
+      "x": 2508,
+      "y": 0
+    },
+    {
+      "fileName": "4_save.png",
+      "width": 1254,
+      "height": 1254,
+      "x": 3762,
+      "y": 0
+    },
+    {
+      "fileName": "5_afraid.png",
+      "width": 1254,
+      "height": 1254,
+      "x": 0,
+      "y": 1254
+    },
+    {
+      "fileName": "6_squish.png",
+      "width": 1254,
+      "height": 1254,
+      "x": 1254,
+      "y": 1254
+    },
+    {
+      "fileName": "7_burst.png",
+      "width": 1254,
+      "height": 1254,
+      "x": 2508,
+      "y": 1254
+    },
+    {
+      "fileName": "8_folded.png",
+      "width": 1254,
+      "height": 1254,
+      "x": 3762,
+      "y": 1254
+    }
+  ],
+  "packMode": "grid",
+  "padding": 0,
+  "backgroundColor": "rgba(0, 0, 0, 0)",
+  "spriteSheetWidth": 5016,
+  "spriteSheetHeight": 2508
+}
