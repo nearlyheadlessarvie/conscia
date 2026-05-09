@@ -46,3 +46,6 @@ flutter:
   assets:
     - assets/
     - assets/images/
+    - assets/images/angel/
+    - assets/images/devil/
+    - assets/images/money/

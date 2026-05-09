@@ -84,7 +84,7 @@ void main() {
     );
 
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Mid income'));
+    await tester.tap(find.text('USD 20,000 - USD 50,000'));
     await tester.pumpAndSettle();
     await tester.ensureVisible(find.text('Save Changes'));
     await tester.tap(find.text('Save Changes'));
