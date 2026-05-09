@@ -1,67 +1,57 @@
 import 'dart:math' as math;
 
 import 'package:conscia_app/core/assets/mascot_sprite_sheet.dart';
+import 'package:conscia_app/widgets/conscience_loader_tracks.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
 const _brandIconAsset = 'assets/images/app_icon.svg';
 const _alterEgoAsset = 'assets/images/conscia_alterego.png';
 
-enum _CharacterPose { neutral, push, block }
-
-enum _MoneyPose { neutral, left, right, shake }
-
-class _BattleFrame {
-  const _BattleFrame({
-    required this.devilPose,
-    required this.angelPose,
-    required this.moneyPose,
-  });
-
-  final _CharacterPose devilPose;
-  final _CharacterPose angelPose;
-  final _MoneyPose moneyPose;
-}
-
-double _segmentProgress(double t, double start, double end) {
-  if (t <= start) return 0;
-  if (t >= end) return 1;
-  return (t - start) / (end - start);
-}
-
-class _BattleMotionProfile {
-  const _BattleMotionProfile({
-    required this.devilPressure,
-    required this.angelPressure,
-    required this.clashStrength,
-    required this.moneyBias,
-    required this.settleStrength,
-  });
-
-  final double devilPressure;
-  final double angelPressure;
-  final double clashStrength;
-  final double moneyBias;
-  final double settleStrength;
-}
-
-const _devilPoseFrames = <_CharacterPose, String>{
-  _CharacterPose.neutral: '1_neutral.png',
-  _CharacterPose.push: '2_push.png',
-  _CharacterPose.block: '3_block.png',
+const _devilPoseFrames = <DevilBattlePose, String>{
+  DevilBattlePose.neutral: '1_neutral.png',
+  DevilBattlePose.push: '2_push.png',
+  DevilBattlePose.block: '3_block.png',
+  DevilBattlePose.lose: '4_lose.png',
+  DevilBattlePose.win: '5_win.png',
+  DevilBattlePose.force: '6_force.png',
+  DevilBattlePose.tug: '7_tug.png',
+  DevilBattlePose.whisper: '8_whisper.png',
+  DevilBattlePose.coin: '9_coin.png',
+  DevilBattlePose.receiptHook: '10_receipthook.png',
+  DevilBattlePose.sneak: '11_sneak.png',
+  DevilBattlePose.ragePush: '12_ragepush.png',
+  DevilBattlePose.slip: '13_slip.png',
+  DevilBattlePose.frustrated: '14_frustrated.png',
 };
 
-const _angelPoseFrames = <_CharacterPose, String>{
-  _CharacterPose.neutral: '1_neutral.png',
-  _CharacterPose.block: '2_block.png',
-  _CharacterPose.push: '3_push.png',
+const _angelPoseFrames = <AngelBattlePose, String>{
+  AngelBattlePose.neutral: '1_neutral.png',
+  AngelBattlePose.block: '2_block.png',
+  AngelBattlePose.push: '3_push.png',
+  AngelBattlePose.win: '4_win.png',
+  AngelBattlePose.lose: '5_lose.png',
+  AngelBattlePose.force: '6_force.png',
+  AngelBattlePose.tug: '7_tug.png',
+  AngelBattlePose.shield: '8_shield.png',
+  AngelBattlePose.coinShield: '9_coinshield.png',
+  AngelBattlePose.intercept: '10_intercept.png',
+  AngelBattlePose.focusPray: '11_focuspray.png',
+  AngelBattlePose.holyBurst: '12_holyburst.png',
+  AngelBattlePose.lastStand: '13_laststand.png',
+  AngelBattlePose.wingBlock: '14_wingblock.png',
+  AngelBattlePose.numberOne: '15_numberone.png',
 };
 
-const _moneyPoseFrames = <_MoneyPose, String>{
-  _MoneyPose.neutral: '1_neutral.png',
-  _MoneyPose.right: '2_right.png',
-  _MoneyPose.left: '3_left.png',
-  _MoneyPose.shake: '5_afraid.png',
+const _moneyPoseFrames = <MoneyBattlePose, String>{
+  MoneyBattlePose.neutral: '1_neutral.png',
+  MoneyBattlePose.right: '2_right.png',
+  MoneyBattlePose.left: '3_left.png',
+  MoneyBattlePose.save: '4_save.png',
+  MoneyBattlePose.afraid: '5_afraid.png',
+  MoneyBattlePose.squish: '6_squish.png',
+  MoneyBattlePose.burst: '7_burst.png',
+  MoneyBattlePose.folded: '8_folded.png',
 };
 
 class ConscienceMark extends StatelessWidget {
@@ -160,10 +150,12 @@ class ConsciaAlterEgoMotion extends StatefulWidget {
     super.key,
     required this.preset,
     this.size = 96,
+    this.forcedOutcome,
   });
 
   final ConsciaAlterEgoPreset preset;
   final double size;
+  final ConscienceBattleOutcome? forcedOutcome;
 
   @override
   State<ConsciaAlterEgoMotion> createState() => _ConsciaAlterEgoMotionState();
@@ -172,6 +164,7 @@ class ConsciaAlterEgoMotion extends StatefulWidget {
 class _ConsciaAlterEgoMotionState extends State<ConsciaAlterEgoMotion>
     with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
+  late ConscienceBattleOutcome _activeOutcome;
 
   bool get _isTestEnvironment =>
       WidgetsBinding.instance.runtimeType.toString().contains(
@@ -181,31 +174,93 @@ class _ConsciaAlterEgoMotionState extends State<ConsciaAlterEgoMotion>
   Duration get _duration => switch (widget.preset) {
         ConsciaAlterEgoPreset.idle => const Duration(seconds: 5),
         ConsciaAlterEgoPreset.assistantLoading =>
-          const Duration(milliseconds: 2100),
+          const Duration(milliseconds: 2800),
         ConsciaAlterEgoPreset.reflectionLoading =>
-          const Duration(milliseconds: 2600),
+          const Duration(milliseconds: 2200),
       };
+
+  ConscienceBattleOutcome _pickOutcome() {
+    if (widget.forcedOutcome case final forced?) return forced;
+    if (_isTestEnvironment) return ConscienceBattleOutcome.saved;
+    return math.Random().nextBool()
+        ? ConscienceBattleOutcome.saved
+        : ConscienceBattleOutcome.spent;
+  }
+
+  double _testSampleValue() {
+    return switch (widget.preset) {
+      ConsciaAlterEgoPreset.idle => 0.0,
+      ConsciaAlterEgoPreset.assistantLoading =>
+        widget.forcedOutcome == ConscienceBattleOutcome.spent ? 0.96 : 0.9,
+      ConsciaAlterEgoPreset.reflectionLoading => 0.72,
+    };
+  }
+
+  void _startLoop() {
+    _controller
+      ..stop()
+      ..forward(from: 0);
+  }
+
+  List<LoaderBattlePhase> _phasesForPreset(ConsciaAlterEgoPreset preset) {
+    return switch (preset) {
+      ConsciaAlterEgoPreset.idle => const [
+          LoaderBattlePhase(
+            start: 0,
+            end: 1.01,
+            devilPose: DevilBattlePose.neutral,
+            angelPose: AngelBattlePose.neutral,
+            moneyPose: MoneyBattlePose.neutral,
+            moneyY: 0.17,
+          ),
+        ],
+      ConsciaAlterEgoPreset.assistantLoading => [
+          ...assistantCommonPhases,
+          ...(_activeOutcome == ConscienceBattleOutcome.saved
+              ? assistantSavedPhases
+              : assistantSpentPhases),
+        ],
+      ConsciaAlterEgoPreset.reflectionLoading => reflectionPhases,
+    };
+  }
+
+  LoaderBattlePhase _phaseForPreset(ConsciaAlterEgoPreset preset, double t) {
+    final phases = _phasesForPreset(preset);
+    return phases.firstWhere(
+      (phase) => phase.contains(t),
+      orElse: () => phases.last,
+    );
+  }
 
   @override
   void initState() {
     super.initState();
+    _activeOutcome = _pickOutcome();
     _controller = AnimationController(vsync: this, duration: _duration);
+    _controller.addStatusListener((status) {
+      if (status == AnimationStatus.completed && !_isTestEnvironment) {
+        _activeOutcome = _pickOutcome();
+        _startLoop();
+      }
+    });
     if (_isTestEnvironment) {
-      _controller.value = 0.35;
+      _controller.value = _testSampleValue();
     } else {
-      _controller.repeat();
+      _startLoop();
     }
   }
 
   @override
   void didUpdateWidget(covariant ConsciaAlterEgoMotion oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.preset != widget.preset) {
+    if (oldWidget.preset != widget.preset ||
+        oldWidget.forcedOutcome != widget.forcedOutcome) {
       _controller.duration = _duration;
+      _activeOutcome = _pickOutcome();
       if (_isTestEnvironment) {
-        _controller.value = 0.35;
+        _controller.value = _testSampleValue();
       } else {
-        _controller.repeat();
+        _startLoop();
       }
     }
   }
@@ -216,115 +271,6 @@ class _ConsciaAlterEgoMotionState extends State<ConsciaAlterEgoMotion>
     super.dispose();
   }
 
-  _BattleFrame _frameForPreset(ConsciaAlterEgoPreset preset, double t) {
-    return switch (preset) {
-      ConsciaAlterEgoPreset.idle => const _BattleFrame(
-          devilPose: _CharacterPose.neutral,
-          angelPose: _CharacterPose.neutral,
-          moneyPose: _MoneyPose.neutral,
-        ),
-      ConsciaAlterEgoPreset.assistantLoading => t < 0.2
-          ? const _BattleFrame(
-              devilPose: _CharacterPose.push,
-              angelPose: _CharacterPose.neutral,
-              moneyPose: _MoneyPose.left,
-            )
-          : t < 0.42
-              ? const _BattleFrame(
-                  devilPose: _CharacterPose.push,
-                  angelPose: _CharacterPose.block,
-                  moneyPose: _MoneyPose.left,
-                )
-              : t < 0.62
-                  ? const _BattleFrame(
-                      devilPose: _CharacterPose.push,
-                      angelPose: _CharacterPose.push,
-                      moneyPose: _MoneyPose.shake,
-                    )
-                  : t < 0.84
-                      ? const _BattleFrame(
-                          devilPose: _CharacterPose.block,
-                          angelPose: _CharacterPose.push,
-                          moneyPose: _MoneyPose.right,
-                        )
-                      : const _BattleFrame(
-                          devilPose: _CharacterPose.neutral,
-                          angelPose: _CharacterPose.block,
-                          moneyPose: _MoneyPose.neutral,
-                        ),
-      ConsciaAlterEgoPreset.reflectionLoading => t < 0.46
-          ? const _BattleFrame(
-              devilPose: _CharacterPose.neutral,
-              angelPose: _CharacterPose.block,
-              moneyPose: _MoneyPose.neutral,
-            )
-          : t < 0.7
-              ? const _BattleFrame(
-                  devilPose: _CharacterPose.block,
-                  angelPose: _CharacterPose.push,
-                  moneyPose: _MoneyPose.shake,
-                )
-              : t < 0.88
-                  ? const _BattleFrame(
-                      devilPose: _CharacterPose.neutral,
-                      angelPose: _CharacterPose.block,
-                      moneyPose: _MoneyPose.right,
-                    )
-                  : const _BattleFrame(
-                      devilPose: _CharacterPose.neutral,
-                      angelPose: _CharacterPose.neutral,
-                      moneyPose: _MoneyPose.neutral,
-                    ),
-    };
-  }
-
-  _BattleMotionProfile _motionForPreset(
-      ConsciaAlterEgoPreset preset, double t) {
-    return switch (preset) {
-      ConsciaAlterEgoPreset.idle => const _BattleMotionProfile(
-          devilPressure: 0,
-          angelPressure: 0,
-          clashStrength: 0,
-          moneyBias: 0,
-          settleStrength: 0,
-        ),
-      ConsciaAlterEgoPreset.assistantLoading => () {
-          final devilPressure = _segmentProgress(t, 0.0, 0.36);
-          final angelPressure = _segmentProgress(t, 0.38, 0.82);
-          final clashIn = _segmentProgress(t, 0.38, 0.5);
-          final clashOut = 1 - _segmentProgress(t, 0.5, 0.66);
-          final clashStrength =
-              math.max(0.0, math.min(clashIn, clashOut)).toDouble();
-          final settleStrength = _segmentProgress(t, 0.82, 1.0);
-          final moneyBias = (-devilPressure * 0.8) + (angelPressure * 0.9);
-          return _BattleMotionProfile(
-            devilPressure: devilPressure,
-            angelPressure: angelPressure,
-            clashStrength: clashStrength,
-            moneyBias: moneyBias,
-            settleStrength: settleStrength,
-          );
-        }(),
-      ConsciaAlterEgoPreset.reflectionLoading => () {
-          final devilPressure = _segmentProgress(t, 0.46, 0.66) * 0.45;
-          final angelPressure = _segmentProgress(t, 0.24, 0.74) * 0.72;
-          final clashIn = _segmentProgress(t, 0.48, 0.58);
-          final clashOut = 1 - _segmentProgress(t, 0.58, 0.74);
-          final clashStrength =
-              math.max(0.0, math.min(clashIn, clashOut)).toDouble() * 0.65;
-          final settleStrength = _segmentProgress(t, 0.74, 1.0);
-          final moneyBias = (-devilPressure * 0.35) + (angelPressure * 0.48);
-          return _BattleMotionProfile(
-            devilPressure: devilPressure,
-            angelPressure: angelPressure,
-            clashStrength: clashStrength,
-            moneyBias: moneyBias,
-            settleStrength: settleStrength,
-          );
-        }(),
-    };
-  }
-
   @override
   Widget build(BuildContext context) {
     final isIdle = widget.preset == ConsciaAlterEgoPreset.idle;
@@ -332,9 +278,10 @@ class _ConsciaAlterEgoMotionState extends State<ConsciaAlterEgoMotion>
       animation: _controller,
       builder: (context, _) {
         final t = _controller.value;
-        final frame = _frameForPreset(widget.preset, t);
-        final motion = _motionForPreset(widget.preset, t);
+        final battlePhase = _phaseForPreset(widget.preset, t);
         final phase = (math.sin(t * math.pi * 2) + 1) / 2;
+        final shieldGlowBoost = battlePhase.shieldPulse ? 0.12 : 0.0;
+        final burstBoost = battlePhase.burstFlash ? 0.18 : 0.0;
         final glowScale = switch (widget.preset) {
           ConsciaAlterEgoPreset.idle => 1.0 + phase * 0.05,
           ConsciaAlterEgoPreset.assistantLoading => 1.04 + phase * 0.2,
@@ -358,67 +305,44 @@ class _ConsciaAlterEgoMotionState extends State<ConsciaAlterEgoMotion>
           ConsciaAlterEgoPreset.reflectionLoading => 0.23 + phase * 0.1,
         };
         final blueOpacity = switch (widget.preset) {
-          ConsciaAlterEgoPreset.idle => 0.2 + phase * 0.07,
-          ConsciaAlterEgoPreset.assistantLoading => 0.25 + phase * 0.14,
-          ConsciaAlterEgoPreset.reflectionLoading => 0.21 + phase * 0.09,
-        };
+              ConsciaAlterEgoPreset.idle => 0.2 + phase * 0.07,
+              ConsciaAlterEgoPreset.assistantLoading =>
+                0.25 + phase * 0.14 + shieldGlowBoost,
+              ConsciaAlterEgoPreset.reflectionLoading =>
+                0.21 + phase * 0.09 + shieldGlowBoost,
+            } +
+            burstBoost;
         final goldOpacity = switch (widget.preset) {
           ConsciaAlterEgoPreset.idle => 0.18 + phase * 0.06,
-          ConsciaAlterEgoPreset.assistantLoading => 0.24 + phase * 0.1,
-          ConsciaAlterEgoPreset.reflectionLoading => 0.2 + phase * 0.07,
+          ConsciaAlterEgoPreset.assistantLoading =>
+            0.24 + phase * 0.1 + burstBoost,
+          ConsciaAlterEgoPreset.reflectionLoading =>
+            0.2 + phase * 0.07 + shieldGlowBoost,
         };
-        final devilOffset = switch (widget.preset) {
-          ConsciaAlterEgoPreset.idle =>
-            Offset(-widget.size * 0.42, -widget.size * 0.045),
-          ConsciaAlterEgoPreset.assistantLoading => Offset(
-              -widget.size *
-                  (0.42 +
-                      motion.devilPressure * 0.12 -
-                      motion.settleStrength * 0.04),
-              -widget.size * (0.042 + motion.devilPressure * 0.03),
-            ),
-          ConsciaAlterEgoPreset.reflectionLoading => Offset(
-              -widget.size *
-                  (0.4 +
-                      motion.devilPressure * 0.06 -
-                      motion.settleStrength * 0.02),
-              -widget.size * (0.038 + motion.devilPressure * 0.016),
-            ),
+        final devilOffset = Offset(
+          -widget.size * (0.42 - battlePhase.devilX),
+          -widget.size * 0.05,
+        );
+        final angelOffset = Offset(
+          widget.size * (0.46 + battlePhase.angelX),
+          -widget.size * 0.15,
+        );
+        final moneyShake = switch (battlePhase.shake) {
+          LoaderShakeMode.none => Offset.zero,
+          LoaderShakeMode.light =>
+            Offset(math.sin(t * math.pi * 12) * widget.size * 0.004, 0),
+          LoaderShakeMode.impact =>
+            Offset(math.sin(t * math.pi * 24) * widget.size * 0.007, 0),
+          LoaderShakeMode.panic =>
+            Offset(math.sin(t * math.pi * 30) * widget.size * 0.01, 0),
+          LoaderShakeMode.tug =>
+            Offset(math.sin(t * math.pi * 18) * widget.size * 0.012, 0),
         };
-        final angelOffset = switch (widget.preset) {
-          ConsciaAlterEgoPreset.idle =>
-            Offset(widget.size * 0.46, -widget.size * 0.16),
-          ConsciaAlterEgoPreset.assistantLoading => Offset(
-              widget.size *
-                  (0.48 +
-                      motion.angelPressure * 0.12 -
-                      motion.settleStrength * 0.03),
-              -widget.size * (0.16 + motion.angelPressure * 0.03),
-            ),
-          ConsciaAlterEgoPreset.reflectionLoading => Offset(
-              widget.size *
-                  (0.44 +
-                      motion.angelPressure * 0.075 -
-                      motion.settleStrength * 0.02),
-              -widget.size * (0.145 + motion.angelPressure * 0.022),
-            ),
-        };
-        final moneyOffset = switch (widget.preset) {
-              ConsciaAlterEgoPreset.idle => Offset(0, widget.size * 0.17),
-              ConsciaAlterEgoPreset.assistantLoading => Offset(
-                  widget.size * motion.moneyBias * 0.14,
-                  widget.size * (0.175 - motion.clashStrength * 0.03)),
-              ConsciaAlterEgoPreset.reflectionLoading => Offset(
-                  widget.size * motion.moneyBias * 0.09,
-                  widget.size * (0.17 - motion.clashStrength * 0.02)),
-            } +
-            (frame.moneyPose == _MoneyPose.shake
-                ? Offset(
-                    math.sin(t * math.pi * 24) *
-                        widget.size *
-                        (0.008 + motion.clashStrength * 0.01),
-                    0)
-                : Offset.zero);
+        final moneyOffset = Offset(
+              widget.size * battlePhase.moneyX,
+              widget.size * battlePhase.moneyY,
+            ) +
+            moneyShake;
 
         return SizedBox(
           key: ValueKey(
@@ -480,18 +404,20 @@ class _ConsciaAlterEgoMotionState extends State<ConsciaAlterEgoMotion>
                         child: Transform.rotate(
                           angle: isIdle
                               ? 0
-                              : (-0.03 * motion.devilPressure) +
-                                  (0.018 * motion.clashStrength) -
-                                  (0.012 * motion.settleStrength),
+                              : (-0.12 * battlePhase.devilX) +
+                                  (battlePhase.shake == LoaderShakeMode.impact
+                                      ? 0.02
+                                      : 0),
                           child: AnimatedSwitcher(
                             duration: const Duration(milliseconds: 180),
                             switchInCurve: Curves.easeOut,
                             switchOutCurve: Curves.easeIn,
                             child: _PoseAssetImage(
                               atlas: devilMascotAtlas,
-                              frameName: _devilPoseFrames[frame.devilPose]!,
+                              frameName:
+                                  _devilPoseFrames[battlePhase.devilPose]!,
                               keyValue:
-                                  'conscience-devil-${frame.devilPose.name}',
+                                  'conscience-devil-${battlePhase.devilPose.name}',
                               width: widget.size * 0.98,
                             ),
                           ),
@@ -502,17 +428,20 @@ class _ConsciaAlterEgoMotionState extends State<ConsciaAlterEgoMotion>
                         child: Transform.rotate(
                           angle: isIdle
                               ? 0
-                              : (0.028 * motion.angelPressure) -
-                                  (0.014 * motion.clashStrength),
+                              : (0.12 * battlePhase.angelX) -
+                                  (battlePhase.shake == LoaderShakeMode.impact
+                                      ? 0.014
+                                      : 0),
                           child: AnimatedSwitcher(
                             duration: const Duration(milliseconds: 180),
                             switchInCurve: Curves.easeOut,
                             switchOutCurve: Curves.easeIn,
                             child: _PoseAssetImage(
                               atlas: angelMascotAtlas,
-                              frameName: _angelPoseFrames[frame.angelPose]!,
+                              frameName:
+                                  _angelPoseFrames[battlePhase.angelPose]!,
                               keyValue:
-                                  'conscience-angel-${frame.angelPose.name}',
+                                  'conscience-angel-${battlePhase.angelPose.name}',
                               width: widget.size * 0.9,
                             ),
                           ),
@@ -526,9 +455,9 @@ class _ConsciaAlterEgoMotionState extends State<ConsciaAlterEgoMotion>
                           switchOutCurve: Curves.easeIn,
                           child: _PoseAssetImage(
                             atlas: moneyMascotAtlas,
-                            frameName: _moneyPoseFrames[frame.moneyPose]!,
+                            frameName: _moneyPoseFrames[battlePhase.moneyPose]!,
                             keyValue:
-                                'conscience-money-${frame.moneyPose.name}',
+                                'conscience-money-${battlePhase.moneyPose.name}',
                             width: widget.size * 0.48,
                           ),
                         ),

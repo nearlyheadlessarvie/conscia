@@ -91,4 +91,24 @@ void main() {
     expect(find.byType(RefreshIndicator), findsOneWidget);
     expect(find.byIcon(Icons.refresh), findsNothing);
   });
+
+  testWidgets('budgets screen uses a single vertical scroll container',
+      (tester) async {
+    await _pumpBudgetsScreen(
+      tester,
+      budgets: const [
+        Budget(
+          id: 'budget-1',
+          category: 'Shopping',
+          monthlyLimit: 1200,
+          spent: 650,
+          currencyCode: 'USD',
+          percentage: 0.54,
+          isOverBudget: false,
+        ),
+      ],
+    );
+
+    expect(find.byType(SingleChildScrollView), findsOneWidget);
+  });
 }

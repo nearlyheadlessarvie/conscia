@@ -33,6 +33,7 @@ class BudgetsScreen extends ConsumerWidget {
           ),
         ],
       ),
+      scrollable: false,
       child: RefreshIndicator(
         onRefresh: () => _onRefresh(ref),
         child: SingleChildScrollView(
