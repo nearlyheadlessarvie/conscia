@@ -10,7 +10,8 @@ Finder _assetImageFinder(String assetName) => find.byWidgetPredicate(
     );
 
 void main() {
-  testWidgets('ConscienceLoader renders layered assistant loading scene and label', (
+  testWidgets(
+      'ConscienceLoader renders layered assistant loading scene and label', (
     tester,
   ) async {
     await tester.pumpWidget(
@@ -26,27 +27,45 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Your conscience is weighing both sides...'), findsOneWidget);
+    expect(
+        find.text('Your conscience is weighing both sides...'), findsOneWidget);
     expect(
       _assetImageFinder('assets/images/sprites/devil/2_push.PNG'),
-      findsOneWidget,
+      findsNothing,
     );
     expect(
       _assetImageFinder('assets/images/sprites/angel/2_block.PNG'),
-      findsOneWidget,
+      findsNothing,
     );
     expect(
       _assetImageFinder('assets/images/sprites/money/3_left.PNG'),
+      findsNothing,
+    );
+    expect(
+      _assetImageFinder('assets/images/sprites/devil/sprite_sheet.png'),
+      findsOneWidget,
+    );
+    expect(
+      _assetImageFinder('assets/images/sprites/angel/sprite_sheet.png'),
+      findsOneWidget,
+    );
+    expect(
+      _assetImageFinder('assets/images/sprites/money/sprite_sheet.png'),
       findsOneWidget,
     );
     expect(find.byKey(const ValueKey('conscience-devil-push')), findsOneWidget);
-    expect(find.byKey(const ValueKey('conscience-angel-block')), findsOneWidget);
+    expect(
+        find.byKey(const ValueKey('conscience-angel-block')), findsOneWidget);
     expect(find.byKey(const ValueKey('conscience-money-left')), findsOneWidget);
-    expect(find.byKey(const ValueKey('conscience-loader-ring')), findsOneWidget);
-    expect(find.byKey(const ValueKey('conscience-loader-assistant')), findsOneWidget);
+    expect(
+        find.byKey(const ValueKey('conscience-loader-ring')), findsOneWidget);
+    expect(find.byKey(const ValueKey('conscience-loader-assistant')),
+        findsOneWidget);
   });
 
-  testWidgets('ConscienceLoader supports calmer reflection preset with no-label mode', (tester) async {
+  testWidgets(
+      'ConscienceLoader supports calmer reflection preset with no-label mode',
+      (tester) async {
     await tester.pumpWidget(
       const MaterialApp(
         home: Scaffold(
@@ -61,20 +80,37 @@ void main() {
 
     expect(
       _assetImageFinder('assets/images/sprites/devil/1_neutral.PNG'),
-      findsOneWidget,
+      findsNothing,
     );
     expect(
       _assetImageFinder('assets/images/sprites/angel/2_block.PNG'),
-      findsOneWidget,
+      findsNothing,
     );
     expect(
       _assetImageFinder('assets/images/sprites/money/1_neutral.PNG'),
+      findsNothing,
+    );
+    expect(
+      _assetImageFinder('assets/images/sprites/devil/sprite_sheet.png'),
       findsOneWidget,
     );
-    expect(find.byKey(const ValueKey('conscience-devil-neutral')), findsOneWidget);
-    expect(find.byKey(const ValueKey('conscience-angel-block')), findsOneWidget);
-    expect(find.byKey(const ValueKey('conscience-money-neutral')), findsOneWidget);
-    expect(find.byKey(const ValueKey('conscience-loader-reflection')), findsOneWidget);
-    expect(find.text('Your conscience is weighing both sides...'), findsNothing);
+    expect(
+      _assetImageFinder('assets/images/sprites/angel/sprite_sheet.png'),
+      findsOneWidget,
+    );
+    expect(
+      _assetImageFinder('assets/images/sprites/money/sprite_sheet.png'),
+      findsOneWidget,
+    );
+    expect(
+        find.byKey(const ValueKey('conscience-devil-neutral')), findsOneWidget);
+    expect(
+        find.byKey(const ValueKey('conscience-angel-block')), findsOneWidget);
+    expect(
+        find.byKey(const ValueKey('conscience-money-neutral')), findsOneWidget);
+    expect(find.byKey(const ValueKey('conscience-loader-reflection')),
+        findsOneWidget);
+    expect(
+        find.text('Your conscience is weighing both sides...'), findsNothing);
   });
 }

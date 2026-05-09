@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 
-const _devilNeutralAsset = 'assets/images/sprites/devil/1_neutral.PNG';
-const _devilWhisperAsset = 'assets/images/sprites/devil/8_whisper.PNG';
-const _angelNeutralAsset = 'assets/images/sprites/angel/1_neutral.PNG';
-const _angelShieldAsset = 'assets/images/sprites/angel/8_shield.PNG';
-const _moneyNeutralAsset = 'assets/images/sprites/money/1_neutral.PNG';
-const _moneySaveAsset = 'assets/images/sprites/money/4_save.PNG';
+import 'mascot_sprite_sheet.dart';
+
+const _devilNeutralAsset = '1_neutral.png';
+const _devilWhisperAsset = '8_whisper.png';
+const _angelNeutralAsset = '1_neutral.png';
+const _angelShieldAsset = '8_shield.png';
+const _moneyNeutralAsset = '1_neutral.png';
+const _moneySaveAsset = '4_save.png';
 
 class OnboardingIllustration1 extends StatelessWidget {
   final double size;
@@ -28,7 +30,8 @@ class OnboardingIllustration1 extends StatelessWidget {
             left: size * 0.01,
             bottom: size * 0.035,
             child: _StoryAsset(
-              asset: _devilNeutralAsset,
+              atlas: devilMascotAtlas,
+              frameName: _devilNeutralAsset,
               width: size * 0.58,
             ),
           ),
@@ -36,7 +39,8 @@ class OnboardingIllustration1 extends StatelessWidget {
             left: size * 0.37,
             bottom: size * 0.05,
             child: _StoryAsset(
-              asset: _moneyNeutralAsset,
+              atlas: moneyMascotAtlas,
+              frameName: _moneyNeutralAsset,
               width: size * 0.42,
             ),
           ),
@@ -44,7 +48,8 @@ class OnboardingIllustration1 extends StatelessWidget {
             right: size * 0.06,
             bottom: size * 0.14,
             child: _StoryAsset(
-              asset: _angelNeutralAsset,
+              atlas: angelMascotAtlas,
+              frameName: _angelNeutralAsset,
               width: size * 0.6,
             ),
           ),
@@ -75,7 +80,8 @@ class OnboardingIllustration2 extends StatelessWidget {
             left: size * 0.01,
             bottom: size * 0.03,
             child: _StoryAsset(
-              asset: _devilWhisperAsset,
+              atlas: devilMascotAtlas,
+              frameName: _devilWhisperAsset,
               width: size * 0.62,
             ),
           ),
@@ -83,15 +89,16 @@ class OnboardingIllustration2 extends StatelessWidget {
             left: size * 0.38,
             bottom: size * 0.06,
             child: _StoryAsset(
-              asset: _moneySaveAsset,
+              atlas: moneyMascotAtlas,
+              frameName: _moneySaveAsset,
               width: size * 0.38,
               foreground: true,
             ),
           ),
-            Positioned(
-              right: size * 0.02,
-              top: size * 0.06,
-              child: _SceneUiCard(
+          Positioned(
+            right: size * 0.02,
+            top: size * 0.06,
+            child: _SceneUiCard(
               size: size,
               title: 'Logged in seconds',
               lines: const [1.0, 0.68, 0.52],
@@ -133,7 +140,8 @@ class OnboardingIllustration3 extends StatelessWidget {
             right: size * 0.01,
             bottom: 0,
             child: _StoryAsset(
-              asset: _angelShieldAsset,
+              atlas: angelMascotAtlas,
+              frameName: _angelShieldAsset,
               width: size * 0.64,
             ),
           ),
@@ -141,7 +149,8 @@ class OnboardingIllustration3 extends StatelessWidget {
             left: size * 0.36,
             bottom: size * 0.05,
             child: _StoryAsset(
-              asset: _moneyNeutralAsset,
+              atlas: moneyMascotAtlas,
+              frameName: _moneyNeutralAsset,
               width: size * 0.38,
               foreground: true,
             ),
@@ -283,23 +292,23 @@ class _SceneMood {
 
 class _StoryAsset extends StatelessWidget {
   const _StoryAsset({
-    required this.asset,
+    required this.atlas,
+    required this.frameName,
     required this.width,
     this.foreground = false,
   });
 
-  final String asset;
+  final MascotSpriteAtlas atlas;
+  final String frameName;
   final double width;
   final bool foreground;
 
   @override
   Widget build(BuildContext context) {
-    return Image.asset(
-      asset,
+    return MascotSpriteFrame(
+      atlas: atlas,
+      frameName: frameName,
       width: width,
-      fit: BoxFit.contain,
-      filterQuality: FilterQuality.high,
-      isAntiAlias: true,
     );
   }
 }

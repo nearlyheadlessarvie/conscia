@@ -194,7 +194,7 @@ void main() {
             (widget.image as AssetImage).assetName ==
                 'assets/images/sprites/devil/1_neutral.PNG',
       ),
-      findsOneWidget,
+      findsNothing,
     );
     expect(
       find.byWidgetPredicate(
@@ -204,7 +204,7 @@ void main() {
             (widget.image as AssetImage).assetName ==
                 'assets/images/sprites/angel/1_neutral.PNG',
       ),
-      findsOneWidget,
+      findsNothing,
     );
     expect(
       find.byWidgetPredicate(
@@ -213,6 +213,36 @@ void main() {
             widget.image is AssetImage &&
             (widget.image as AssetImage).assetName ==
                 'assets/images/sprites/money/1_neutral.PNG',
+      ),
+      findsNothing,
+    );
+    expect(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is Image &&
+            widget.image is AssetImage &&
+            (widget.image as AssetImage).assetName ==
+                'assets/images/sprites/devil/sprite_sheet.png',
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is Image &&
+            widget.image is AssetImage &&
+            (widget.image as AssetImage).assetName ==
+                'assets/images/sprites/angel/sprite_sheet.png',
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is Image &&
+            widget.image is AssetImage &&
+            (widget.image as AssetImage).assetName ==
+                'assets/images/sprites/money/sprite_sheet.png',
       ),
       findsOneWidget,
     );
@@ -247,7 +277,7 @@ void main() {
             (widget.image as AssetImage).assetName ==
                 'assets/images/sprites/devil/8_whisper.PNG',
       ),
-      findsOneWidget,
+      findsNothing,
     );
     expect(
       find.byWidgetPredicate(
@@ -257,7 +287,27 @@ void main() {
             (widget.image as AssetImage).assetName ==
                 'assets/images/sprites/money/4_save.PNG',
       ),
-      findsOneWidget,
+      findsNothing,
+    );
+    expect(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is Image &&
+            widget.image is AssetImage &&
+            (widget.image as AssetImage).assetName ==
+                'assets/images/sprites/devil/sprite_sheet.png',
+      ),
+      findsWidgets,
+    );
+    expect(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is Image &&
+            widget.image is AssetImage &&
+            (widget.image as AssetImage).assetName ==
+                'assets/images/sprites/money/sprite_sheet.png',
+      ),
+      findsWidgets,
     );
     expect(
       find.text(
@@ -279,7 +329,7 @@ void main() {
             (widget.image as AssetImage).assetName ==
                 'assets/images/sprites/angel/8_shield.PNG',
       ),
-      findsOneWidget,
+      findsNothing,
     );
     expect(
       find.byWidgetPredicate(
@@ -289,7 +339,27 @@ void main() {
             (widget.image as AssetImage).assetName ==
                 'assets/images/sprites/money/1_neutral.PNG',
       ),
-      findsOneWidget,
+      findsNothing,
+    );
+    expect(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is Image &&
+            widget.image is AssetImage &&
+            (widget.image as AssetImage).assetName ==
+                'assets/images/sprites/angel/sprite_sheet.png',
+      ),
+      findsWidgets,
+    );
+    expect(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is Image &&
+            widget.image is AssetImage &&
+            (widget.image as AssetImage).assetName ==
+                'assets/images/sprites/money/sprite_sheet.png',
+      ),
+      findsWidgets,
     );
     expect(
       find.text(

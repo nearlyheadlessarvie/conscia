@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 
+import 'package:conscia_app/core/assets/mascot_sprite_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
@@ -44,23 +45,23 @@ class _BattleMotionProfile {
   final double settleStrength;
 }
 
-const _devilPoseAssets = <_CharacterPose, String>{
-  _CharacterPose.neutral: 'assets/images/sprites/devil/1_neutral.PNG',
-  _CharacterPose.push: 'assets/images/sprites/devil/2_push.PNG',
-  _CharacterPose.block: 'assets/images/sprites/devil/3_block.PNG',
+const _devilPoseFrames = <_CharacterPose, String>{
+  _CharacterPose.neutral: '1_neutral.png',
+  _CharacterPose.push: '2_push.png',
+  _CharacterPose.block: '3_block.png',
 };
 
-const _angelPoseAssets = <_CharacterPose, String>{
-  _CharacterPose.neutral: 'assets/images/sprites/angel/1_neutral.PNG',
-  _CharacterPose.block: 'assets/images/sprites/angel/2_block.PNG',
-  _CharacterPose.push: 'assets/images/sprites/angel/3_push.PNG',
+const _angelPoseFrames = <_CharacterPose, String>{
+  _CharacterPose.neutral: '1_neutral.png',
+  _CharacterPose.block: '2_block.png',
+  _CharacterPose.push: '3_push.png',
 };
 
-const _moneyPoseAssets = <_MoneyPose, String>{
-  _MoneyPose.neutral: 'assets/images/sprites/money/1_neutral.PNG',
-  _MoneyPose.right: 'assets/images/sprites/money/2_right.PNG',
-  _MoneyPose.left: 'assets/images/sprites/money/3_left.PNG',
-  _MoneyPose.shake: 'assets/images/sprites/money/5_afraid.PNG',
+const _moneyPoseFrames = <_MoneyPose, String>{
+  _MoneyPose.neutral: '1_neutral.png',
+  _MoneyPose.right: '2_right.png',
+  _MoneyPose.left: '3_left.png',
+  _MoneyPose.shake: '5_afraid.png',
 };
 
 class ConscienceMark extends StatelessWidget {
@@ -277,7 +278,8 @@ class _ConsciaAlterEgoMotionState extends State<ConsciaAlterEgoMotion>
     };
   }
 
-  _BattleMotionProfile _motionForPreset(ConsciaAlterEgoPreset preset, double t) {
+  _BattleMotionProfile _motionForPreset(
+      ConsciaAlterEgoPreset preset, double t) {
     return switch (preset) {
       ConsciaAlterEgoPreset.idle => const _BattleMotionProfile(
           devilPressure: 0,
@@ -369,11 +371,17 @@ class _ConsciaAlterEgoMotionState extends State<ConsciaAlterEgoMotion>
           ConsciaAlterEgoPreset.idle =>
             Offset(-widget.size * 0.42, -widget.size * 0.045),
           ConsciaAlterEgoPreset.assistantLoading => Offset(
-              -widget.size * (0.42 + motion.devilPressure * 0.12 - motion.settleStrength * 0.04),
+              -widget.size *
+                  (0.42 +
+                      motion.devilPressure * 0.12 -
+                      motion.settleStrength * 0.04),
               -widget.size * (0.042 + motion.devilPressure * 0.03),
             ),
           ConsciaAlterEgoPreset.reflectionLoading => Offset(
-              -widget.size * (0.4 + motion.devilPressure * 0.06 - motion.settleStrength * 0.02),
+              -widget.size *
+                  (0.4 +
+                      motion.devilPressure * 0.06 -
+                      motion.settleStrength * 0.02),
               -widget.size * (0.038 + motion.devilPressure * 0.016),
             ),
         };
@@ -381,23 +389,35 @@ class _ConsciaAlterEgoMotionState extends State<ConsciaAlterEgoMotion>
           ConsciaAlterEgoPreset.idle =>
             Offset(widget.size * 0.46, -widget.size * 0.16),
           ConsciaAlterEgoPreset.assistantLoading => Offset(
-              widget.size * (0.48 + motion.angelPressure * 0.12 - motion.settleStrength * 0.03),
+              widget.size *
+                  (0.48 +
+                      motion.angelPressure * 0.12 -
+                      motion.settleStrength * 0.03),
               -widget.size * (0.16 + motion.angelPressure * 0.03),
             ),
           ConsciaAlterEgoPreset.reflectionLoading => Offset(
-              widget.size * (0.44 + motion.angelPressure * 0.075 - motion.settleStrength * 0.02),
+              widget.size *
+                  (0.44 +
+                      motion.angelPressure * 0.075 -
+                      motion.settleStrength * 0.02),
               -widget.size * (0.145 + motion.angelPressure * 0.022),
             ),
         };
         final moneyOffset = switch (widget.preset) {
-          ConsciaAlterEgoPreset.idle => Offset(0, widget.size * 0.17),
-          ConsciaAlterEgoPreset.assistantLoading =>
-            Offset(widget.size * motion.moneyBias * 0.14, widget.size * (0.175 - motion.clashStrength * 0.03)),
-          ConsciaAlterEgoPreset.reflectionLoading =>
-            Offset(widget.size * motion.moneyBias * 0.09, widget.size * (0.17 - motion.clashStrength * 0.02)),
-        } +
+              ConsciaAlterEgoPreset.idle => Offset(0, widget.size * 0.17),
+              ConsciaAlterEgoPreset.assistantLoading => Offset(
+                  widget.size * motion.moneyBias * 0.14,
+                  widget.size * (0.175 - motion.clashStrength * 0.03)),
+              ConsciaAlterEgoPreset.reflectionLoading => Offset(
+                  widget.size * motion.moneyBias * 0.09,
+                  widget.size * (0.17 - motion.clashStrength * 0.02)),
+            } +
             (frame.moneyPose == _MoneyPose.shake
-                ? Offset(math.sin(t * math.pi * 24) * widget.size * (0.008 + motion.clashStrength * 0.01), 0)
+                ? Offset(
+                    math.sin(t * math.pi * 24) *
+                        widget.size *
+                        (0.008 + motion.clashStrength * 0.01),
+                    0)
                 : Offset.zero);
 
         return SizedBox(
@@ -468,8 +488,10 @@ class _ConsciaAlterEgoMotionState extends State<ConsciaAlterEgoMotion>
                             switchInCurve: Curves.easeOut,
                             switchOutCurve: Curves.easeIn,
                             child: _PoseAssetImage(
-                              assetPath: _devilPoseAssets[frame.devilPose]!,
-                              keyValue: 'conscience-devil-${frame.devilPose.name}',
+                              atlas: devilMascotAtlas,
+                              frameName: _devilPoseFrames[frame.devilPose]!,
+                              keyValue:
+                                  'conscience-devil-${frame.devilPose.name}',
                               width: widget.size * 0.98,
                             ),
                           ),
@@ -487,8 +509,10 @@ class _ConsciaAlterEgoMotionState extends State<ConsciaAlterEgoMotion>
                             switchInCurve: Curves.easeOut,
                             switchOutCurve: Curves.easeIn,
                             child: _PoseAssetImage(
-                              assetPath: _angelPoseAssets[frame.angelPose]!,
-                              keyValue: 'conscience-angel-${frame.angelPose.name}',
+                              atlas: angelMascotAtlas,
+                              frameName: _angelPoseFrames[frame.angelPose]!,
+                              keyValue:
+                                  'conscience-angel-${frame.angelPose.name}',
                               width: widget.size * 0.9,
                             ),
                           ),
@@ -501,8 +525,10 @@ class _ConsciaAlterEgoMotionState extends State<ConsciaAlterEgoMotion>
                           switchInCurve: Curves.easeOut,
                           switchOutCurve: Curves.easeIn,
                           child: _PoseAssetImage(
-                            assetPath: _moneyPoseAssets[frame.moneyPose]!,
-                            keyValue: 'conscience-money-${frame.moneyPose.name}',
+                            atlas: moneyMascotAtlas,
+                            frameName: _moneyPoseFrames[frame.moneyPose]!,
+                            keyValue:
+                                'conscience-money-${frame.moneyPose.name}',
                             width: widget.size * 0.48,
                           ),
                         ),
@@ -573,23 +599,24 @@ class _ConscienceLoaderState extends State<ConscienceLoader>
 
 class _PoseAssetImage extends StatelessWidget {
   const _PoseAssetImage({
-    required this.assetPath,
+    required this.atlas,
+    required this.frameName,
     required this.keyValue,
     required this.width,
   });
 
-  final String assetPath;
+  final MascotSpriteAtlas atlas;
+  final String frameName;
   final String keyValue;
   final double width;
 
   @override
   Widget build(BuildContext context) {
-    return Image.asset(
-      assetPath,
+    return MascotSpriteFrame(
       key: ValueKey(keyValue),
+      atlas: atlas,
+      frameName: frameName,
       width: width,
-      filterQuality: FilterQuality.high,
-      errorBuilder: (context, error, stackTrace) => const SizedBox.shrink(),
     );
   }
 }
