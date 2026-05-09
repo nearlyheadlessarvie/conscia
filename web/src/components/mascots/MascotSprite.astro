@@ -1,0 +1,25 @@
+---
+import { getMascotFrame } from '../../utils/mascotFrames.js';
+
+const {
+  kind,
+  pose,
+  class: className = '',
+  alt = '',
+  scale = 1,
+} = Astro.props;
+
+const frame = getMascotFrame(kind, pose);
+---
+
+<div
+  class={`mascot-frame ${className}`}
+  role="img"
+  aria-label={alt}
+  style={`--sprite-scale:${scale}; width:${frame.width}px; height:${frame.height}px;`}
+>
+  <div
+    class="mascot-sprite"
+    style={`background-image:url(${frame.imagePath}); background-position:-${frame.x}px -${frame.y}px; background-size:${frame.sheetWidth}px ${frame.sheetHeight}px; width:${frame.width}px; height:${frame.height}px;`}
+  ></div>
+</div>

@@ -1,8 +1,8 @@
-import { readFileSync } from 'node:fs';
+import angelAtlas from '../data/mascots/angel.json' with { type: 'json' };
+import devilAtlas from '../data/mascots/devil.json' with { type: 'json' };
+import moneyAtlas from '../data/mascots/money.json' with { type: 'json' };
 
-function loadAtlas(relativePath, imagePath) {
-  const file = new URL(relativePath, import.meta.url);
-  const atlas = JSON.parse(readFileSync(file, 'utf8'));
+function loadAtlas(atlas, imagePath) {
   const frameMap = new Map(atlas.sprites.map((sprite) => [sprite.fileName, sprite]));
 
   return {
@@ -14,9 +14,9 @@ function loadAtlas(relativePath, imagePath) {
 }
 
 const atlases = {
-  angel: loadAtlas('../data/mascots/angel.json', '/images/mascots/angel/sprite_sheet.png'),
-  devil: loadAtlas('../data/mascots/devil.json', '/images/mascots/devil/sprite_sheet.png'),
-  money: loadAtlas('../data/mascots/money.json', '/images/mascots/money/sprite_sheet.png'),
+  angel: loadAtlas(angelAtlas, '/images/mascots/angel/sprite_sheet.png'),
+  devil: loadAtlas(devilAtlas, '/images/mascots/devil/sprite_sheet.png'),
+  money: loadAtlas(moneyAtlas, '/images/mascots/money/sprite_sheet.png'),
 };
 
 export function getMascotFrame(kind, fileName) {
