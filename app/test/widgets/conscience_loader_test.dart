@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  testWidgets('ConscienceLoader renders assistant alter ego loading scene and label', (
+  testWidgets('ConscienceLoader renders layered assistant loading scene and label', (
     tester,
   ) async {
     await tester.pumpWidget(
@@ -19,7 +19,9 @@ void main() {
     );
 
     expect(find.text('Your conscience is weighing both sides...'), findsOneWidget);
-    expect(find.byKey(const ValueKey('conscience-alter-ego-image')), findsOneWidget);
+    expect(find.byKey(const ValueKey('conscience-devil-push')), findsOneWidget);
+    expect(find.byKey(const ValueKey('conscience-angel-push')), findsOneWidget);
+    expect(find.byKey(const ValueKey('conscience-money-shake')), findsOneWidget);
     expect(find.byKey(const ValueKey('conscience-loader-ring')), findsOneWidget);
     expect(find.byKey(const ValueKey('conscience-loader-assistant')), findsOneWidget);
   });
@@ -36,7 +38,9 @@ void main() {
       ),
     );
 
-    expect(find.byKey(const ValueKey('conscience-alter-ego-image')), findsOneWidget);
+    expect(find.byKey(const ValueKey('conscience-devil-neutral')), findsOneWidget);
+    expect(find.byKey(const ValueKey('conscience-angel-block')), findsOneWidget);
+    expect(find.byKey(const ValueKey('conscience-money-neutral')), findsOneWidget);
     expect(find.byKey(const ValueKey('conscience-loader-reflection')), findsOneWidget);
     expect(find.text('Your conscience is weighing both sides...'), findsNothing);
   });

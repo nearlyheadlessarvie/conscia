@@ -5,6 +5,31 @@ import 'package:flutter_svg/flutter_svg.dart';
 
 const _brandIconAsset = 'assets/images/app_icon.svg';
 const _alterEgoAsset = 'assets/images/conscia_alterego.png';
+const _angelAssetDirectory = 'assets/images/angel';
+const _devilAssetDirectory = 'assets/images/devil';
+const _moneyAssetDirectory = 'assets/images/money';
+
+enum _CharacterPose { neutral, push, block }
+
+enum _MoneyPose { neutral, left, right, shake }
+
+String _characterPoseAsset(String directory, _CharacterPose pose) =>
+    '$directory/${pose.name}.png';
+
+String _moneyPoseAsset(_MoneyPose pose) =>
+    '$_moneyAssetDirectory/${pose.name}.png';
+
+class _BattleFrame {
+  const _BattleFrame({
+    required this.devilPose,
+    required this.angelPose,
+    required this.moneyPose,
+  });
+
+  final _CharacterPose devilPose;
+  final _CharacterPose angelPose;
+  final _MoneyPose moneyPose;
+}
 
 class ConscienceMark extends StatelessWidget {
   const ConscienceMark({
@@ -158,6 +183,56 @@ class _ConsciaAlterEgoMotionState extends State<ConsciaAlterEgoMotion>
     super.dispose();
   }
 
+  _BattleFrame _frameForPreset(ConsciaAlterEgoPreset preset, double t) {
+    return switch (preset) {
+      ConsciaAlterEgoPreset.idle => const _BattleFrame(
+          devilPose: _CharacterPose.neutral,
+          angelPose: _CharacterPose.neutral,
+          moneyPose: _MoneyPose.neutral,
+        ),
+      ConsciaAlterEgoPreset.assistantLoading => t < 0.28
+          ? const _BattleFrame(
+              devilPose: _CharacterPose.push,
+              angelPose: _CharacterPose.block,
+              moneyPose: _MoneyPose.left,
+            )
+          : t < 0.58
+              ? const _BattleFrame(
+                  devilPose: _CharacterPose.push,
+                  angelPose: _CharacterPose.push,
+                  moneyPose: _MoneyPose.shake,
+                )
+              : t < 0.82
+                  ? const _BattleFrame(
+                      devilPose: _CharacterPose.block,
+                      angelPose: _CharacterPose.push,
+                      moneyPose: _MoneyPose.right,
+                    )
+                  : const _BattleFrame(
+                      devilPose: _CharacterPose.neutral,
+                      angelPose: _CharacterPose.neutral,
+                      moneyPose: _MoneyPose.neutral,
+                    ),
+      ConsciaAlterEgoPreset.reflectionLoading => t < 0.42
+          ? const _BattleFrame(
+              devilPose: _CharacterPose.neutral,
+              angelPose: _CharacterPose.block,
+              moneyPose: _MoneyPose.neutral,
+            )
+          : t < 0.72
+              ? const _BattleFrame(
+                  devilPose: _CharacterPose.block,
+                  angelPose: _CharacterPose.push,
+                  moneyPose: _MoneyPose.shake,
+                )
+              : const _BattleFrame(
+                  devilPose: _CharacterPose.neutral,
+                  angelPose: _CharacterPose.neutral,
+                  moneyPose: _MoneyPose.neutral,
+                ),
+    };
+  }
+
   @override
   Widget build(BuildContext context) {
     final isIdle = widget.preset == ConsciaAlterEgoPreset.idle;
@@ -166,34 +241,75 @@ class _ConsciaAlterEgoMotionState extends State<ConsciaAlterEgoMotion>
       animation: _controller,
       builder: (context, _) {
         final t = _controller.value;
+        final frame = _frameForPreset(widget.preset, t);
         final phase = (math.sin(t * math.pi * 2) + 1) / 2;
         final glowScale = switch (widget.preset) {
-          ConsciaAlterEgoPreset.idle => 1.0 + phase * 0.06,
-          ConsciaAlterEgoPreset.assistantLoading => 1.02 + phase * 0.16,
-          ConsciaAlterEgoPreset.reflectionLoading => 1.01 + phase * 0.11,
+          ConsciaAlterEgoPreset.idle => 1.0 + phase * 0.05,
+          ConsciaAlterEgoPreset.assistantLoading => 1.04 + phase * 0.2,
+          ConsciaAlterEgoPreset.reflectionLoading => 1.02 + phase * 0.12,
         };
         final breathe = switch (widget.preset) {
-          ConsciaAlterEgoPreset.idle => 1.0 + math.sin(t * math.pi * 2) * 0.012,
+          ConsciaAlterEgoPreset.idle => 1.0 + math.sin(t * math.pi * 2) * 0.01,
           ConsciaAlterEgoPreset.assistantLoading =>
-            1.0 + math.sin(t * math.pi * 2) * 0.026,
+            1.0 + math.sin(t * math.pi * 2) * 0.03,
           ConsciaAlterEgoPreset.reflectionLoading =>
             1.0 + math.sin(t * math.pi * 2) * 0.018,
         };
         final ringRotation = switch (widget.preset) {
-          ConsciaAlterEgoPreset.idle => t * math.pi * 2 * 0.08,
-          ConsciaAlterEgoPreset.assistantLoading => t * math.pi * 2 * 0.25,
-          ConsciaAlterEgoPreset.reflectionLoading => t * math.pi * 2 * 0.16,
+          ConsciaAlterEgoPreset.idle => 0.0,
+          ConsciaAlterEgoPreset.assistantLoading => t * math.pi * 2 * 0.16,
+          ConsciaAlterEgoPreset.reflectionLoading => t * math.pi * 2 * 0.08,
         };
+        final shimmerRotation = math.sin(t * math.pi * 2) * 0.03;
         final redOpacity = switch (widget.preset) {
-          ConsciaAlterEgoPreset.idle => 0.22 + phase * 0.10,
-          ConsciaAlterEgoPreset.assistantLoading => 0.28 + phase * 0.18,
-          ConsciaAlterEgoPreset.reflectionLoading => 0.24 + phase * 0.12,
+          ConsciaAlterEgoPreset.idle => 0.22 + phase * 0.08,
+          ConsciaAlterEgoPreset.assistantLoading => 0.28 + phase * 0.16,
+          ConsciaAlterEgoPreset.reflectionLoading => 0.23 + phase * 0.1,
         };
         final blueOpacity = switch (widget.preset) {
-          ConsciaAlterEgoPreset.idle => 0.18 + phase * 0.09,
-          ConsciaAlterEgoPreset.assistantLoading => 0.24 + phase * 0.16,
-          ConsciaAlterEgoPreset.reflectionLoading => 0.2 + phase * 0.11,
+          ConsciaAlterEgoPreset.idle => 0.2 + phase * 0.07,
+          ConsciaAlterEgoPreset.assistantLoading => 0.25 + phase * 0.14,
+          ConsciaAlterEgoPreset.reflectionLoading => 0.21 + phase * 0.09,
         };
+        final goldOpacity = switch (widget.preset) {
+          ConsciaAlterEgoPreset.idle => 0.18 + phase * 0.06,
+          ConsciaAlterEgoPreset.assistantLoading => 0.24 + phase * 0.1,
+          ConsciaAlterEgoPreset.reflectionLoading => 0.2 + phase * 0.07,
+        };
+        final devilOffset = switch (widget.preset) {
+          ConsciaAlterEgoPreset.idle =>
+            Offset(-widget.size * 0.23, -widget.size * 0.02),
+          ConsciaAlterEgoPreset.assistantLoading => Offset(
+              -widget.size * (0.24 + phase * 0.04),
+              -widget.size * (0.02 + phase * 0.012),
+            ),
+          ConsciaAlterEgoPreset.reflectionLoading => Offset(
+              -widget.size * (0.21 + phase * 0.026),
+              -widget.size * (0.018 + phase * 0.008),
+            ),
+        };
+        final angelOffset = switch (widget.preset) {
+          ConsciaAlterEgoPreset.idle =>
+            Offset(widget.size * 0.25, -widget.size * 0.085),
+          ConsciaAlterEgoPreset.assistantLoading => Offset(
+              widget.size * (0.255 + phase * 0.04),
+              -widget.size * (0.085 + phase * 0.015),
+            ),
+          ConsciaAlterEgoPreset.reflectionLoading => Offset(
+              widget.size * (0.225 + phase * 0.026),
+              -widget.size * (0.08 + phase * 0.01),
+            ),
+        };
+        final moneyOffset = switch (widget.preset) {
+          ConsciaAlterEgoPreset.idle => Offset(0, widget.size * 0.17),
+          ConsciaAlterEgoPreset.assistantLoading =>
+            Offset(0, widget.size * (0.175 - phase * 0.022)),
+          ConsciaAlterEgoPreset.reflectionLoading =>
+            Offset(0, widget.size * (0.17 - phase * 0.014)),
+        } +
+            (frame.moneyPose == _MoneyPose.shake
+                ? Offset(math.sin(t * math.pi * 24) * widget.size * 0.012, 0)
+                : Offset.zero);
 
         return SizedBox(
           key: ValueKey(
@@ -205,23 +321,21 @@ class _ConsciaAlterEgoMotionState extends State<ConsciaAlterEgoMotion>
                 'conscience-loader-reflection',
             },
           ),
-          width: widget.size * (isIdle ? 1.36 : 1.65),
-          height: widget.size * (isIdle ? 1.24 : 1.5),
+          width: widget.size * (isIdle ? 1.96 : 2.18),
+          height: widget.size * (isIdle ? 1.34 : 1.62),
           child: Stack(
             alignment: Alignment.center,
             children: [
-              Transform.translate(
-                offset: Offset(-widget.size * 0.18, 0),
-                child: _AuraGlow(
-                  color: const Color(0xFFFF5B47).withValues(alpha: redOpacity),
-                  size: widget.size * (1.05 * glowScale),
+              CustomPaint(
+                size: Size(
+                  widget.size * (isIdle ? 1.36 : 1.56) * glowScale,
+                  widget.size * (isIdle ? 1.14 : 1.34) * glowScale,
                 ),
-              ),
-              Transform.translate(
-                offset: Offset(widget.size * 0.18, 0),
-                child: _AuraGlow(
-                  color: const Color(0xFF67D9FF).withValues(alpha: blueOpacity),
-                  size: widget.size * (1.02 * glowScale),
+                painter: _GalaxyBackgroundPainter(
+                  redOpacity: redOpacity,
+                  blueOpacity: blueOpacity,
+                  goldOpacity: goldOpacity,
+                  pulse: phase,
                 ),
               ),
               if (!isIdle)
@@ -246,14 +360,66 @@ class _ConsciaAlterEgoMotionState extends State<ConsciaAlterEgoMotion>
               Transform.scale(
                 scale: breathe,
                 child: SizedBox(
-                  width: widget.size,
-                  height: widget.size,
-                  child: ClipOval(
-                    child: Image.asset(
-                      _alterEgoAsset,
-                      key: const ValueKey('conscience-alter-ego-image'),
-                      fit: BoxFit.cover,
-                    ),
+                  width: widget.size * 1.62,
+                  height: widget.size * 1.18,
+                  child: Stack(
+                    alignment: Alignment.center,
+                    clipBehavior: Clip.none,
+                    children: [
+                      Transform.translate(
+                        offset: devilOffset,
+                        child: Transform.rotate(
+                          angle: isIdle ? 0 : -shimmerRotation,
+                          child: AnimatedSwitcher(
+                            duration: const Duration(milliseconds: 180),
+                            switchInCurve: Curves.easeOut,
+                            switchOutCurve: Curves.easeIn,
+                            child: _LayeredAssetImage(
+                              assetPath: _characterPoseAsset(
+                                _devilAssetDirectory,
+                                frame.devilPose,
+                              ),
+                              keyValue:
+                                  'conscience-devil-${frame.devilPose.name}',
+                              width: widget.size * 0.39,
+                            ),
+                          ),
+                        ),
+                      ),
+                      Transform.translate(
+                        offset: angelOffset,
+                        child: Transform.rotate(
+                          angle: isIdle ? 0 : shimmerRotation,
+                          child: AnimatedSwitcher(
+                            duration: const Duration(milliseconds: 180),
+                            switchInCurve: Curves.easeOut,
+                            switchOutCurve: Curves.easeIn,
+                            child: _LayeredAssetImage(
+                              assetPath: _characterPoseAsset(
+                                _angelAssetDirectory,
+                                frame.angelPose,
+                              ),
+                              keyValue:
+                                  'conscience-angel-${frame.angelPose.name}',
+                              width: widget.size * 0.43,
+                            ),
+                          ),
+                        ),
+                      ),
+                      Transform.translate(
+                        offset: moneyOffset,
+                        child: AnimatedSwitcher(
+                          duration: const Duration(milliseconds: 160),
+                          switchInCurve: Curves.easeOut,
+                          switchOutCurve: Curves.easeIn,
+                          child: _LayeredAssetImage(
+                            assetPath: _moneyPoseAsset(frame.moneyPose),
+                            keyValue: 'conscience-money-${frame.moneyPose.name}',
+                          width: widget.size * 0.58,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -317,31 +483,94 @@ class _ConscienceLoaderState extends State<ConscienceLoader>
   }
 }
 
-class _AuraGlow extends StatelessWidget {
-  const _AuraGlow({
-    required this.color,
-    required this.size,
+class _LayeredAssetImage extends StatelessWidget {
+  const _LayeredAssetImage({
+    required this.assetPath,
+    required this.keyValue,
+    required this.width,
   });
 
-  final Color color;
-  final double size;
+  final String assetPath;
+  final String keyValue;
+  final double width;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        boxShadow: [
-          BoxShadow(
-            color: color,
-            blurRadius: size * 0.24,
-            spreadRadius: size * 0.03,
-          ),
-        ],
-      ),
+    return Image.asset(
+      assetPath,
+      key: ValueKey(keyValue),
+      width: width,
+      fit: BoxFit.contain,
+      filterQuality: FilterQuality.high,
+      errorBuilder: (context, error, stackTrace) => const SizedBox.shrink(),
     );
+  }
+}
+
+class _GalaxyBackgroundPainter extends CustomPainter {
+  const _GalaxyBackgroundPainter({
+    required this.redOpacity,
+    required this.blueOpacity,
+    required this.goldOpacity,
+    required this.pulse,
+  });
+
+  final double redOpacity;
+  final double blueOpacity;
+  final double goldOpacity;
+  final double pulse;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+
+    void drawGlow({
+      required Offset offset,
+      required Color color,
+      required double radius,
+      required double blurSigma,
+    }) {
+      canvas.drawCircle(
+        offset,
+        radius,
+        Paint()
+          ..color = color
+          ..maskFilter = MaskFilter.blur(BlurStyle.normal, blurSigma),
+      );
+    }
+
+    drawGlow(
+      offset: Offset(size.width * 0.28, center.dy * 0.95),
+      color: const Color(0xFFFF5A4A).withValues(alpha: redOpacity),
+      radius: size.width * (0.18 + pulse * 0.03),
+      blurSigma: size.width * 0.09,
+    );
+    drawGlow(
+      offset: Offset(size.width * 0.74, center.dy * 0.98),
+      color: const Color(0xFF67D9FF).withValues(alpha: blueOpacity),
+      radius: size.width * (0.19 + pulse * 0.025),
+      blurSigma: size.width * 0.09,
+    );
+    drawGlow(
+      offset: Offset(size.width * 0.54, size.height * 0.18),
+      color: const Color(0xFFFFD45E).withValues(alpha: goldOpacity),
+      radius: size.width * (0.13 + pulse * 0.02),
+      blurSigma: size.width * 0.075,
+    );
+    drawGlow(
+      offset: Offset(size.width * 0.5, center.dy),
+      color: Colors.white.withValues(alpha: 0.1 + pulse * 0.04),
+      radius: size.width * 0.12,
+      blurSigma: size.width * 0.05,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _GalaxyBackgroundPainter oldDelegate) {
+    return oldDelegate.redOpacity != redOpacity ||
+        oldDelegate.blueOpacity != blueOpacity ||
+        oldDelegate.goldOpacity != goldOpacity ||
+        oldDelegate.pulse != pulse;
   }
 }
 
