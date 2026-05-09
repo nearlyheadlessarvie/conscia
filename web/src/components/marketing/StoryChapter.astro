@@ -1,0 +1,27 @@
+---
+import StoryScene from './StoryScene.astro';
+
+const { chapter, reverse = false } = Astro.props;
+---
+
+<section id={chapter.id} class="py-24 md:py-32">
+  <div class="section-shell">
+    <div class:list={['chapter-grid', reverse && 'chapter-grid-reverse']}>
+      <div>
+        <span class="section-kicker">{chapter.kicker}</span>
+        <h2 class="section-heading mt-6">{chapter.title}</h2>
+        <p class="section-copy mt-6">{chapter.body}</p>
+        <ul class="mt-8 space-y-4 text-sm leading-7 text-[var(--ink-muted)]">
+          {chapter.bullets.map((item) => (
+            <li class="flex items-start gap-3">
+              <span class="mt-2 h-2.5 w-2.5 rounded-full bg-[var(--gold)]"></span>
+              <span>{item}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      <StoryScene {...chapter.scene} />
+    </div>
+  </div>
+</section>

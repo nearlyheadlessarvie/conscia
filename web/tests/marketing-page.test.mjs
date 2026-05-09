@@ -12,3 +12,12 @@ test('homepage uses the mascot-led storytelling headline and app-first CTA', () 
   assert.doesNotMatch(html, /Start with the free plan/);
   assert.doesNotMatch(html, /Join the beta/);
 });
+
+test('homepage renders the three storytelling chapters in order', () => {
+  assert.match(html, /Catch the moment/);
+  assert.match(html, /Reflect without shame/);
+  assert.match(html, /Build better habits/);
+  assert.match(html, /Pre-purchase assistant/);
+  assert.match(html, /Reflection prompts/);
+  assert.match(html, /Recurring transactions/);
+});
