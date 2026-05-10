@@ -9,6 +9,7 @@ public sealed class StoryDemoScenario
 {
     public required User User { get; init; }
     public required UserIdentity Identity { get; init; }
+    public required UserSubscription Subscription { get; init; }
     public required IReadOnlyList<Budget> Budgets { get; init; }
     public required IReadOnlyList<Transaction> Transactions { get; init; }
     public required IReadOnlyList<RecurringSchedule> RecurringSchedules { get; init; }
@@ -49,6 +50,15 @@ public sealed class StoryDemoScenario
             Provider = AuthProvider.Email,
             ProviderSub = "story-demo@example.com",
             CreatedAt = nowUtc.AddMonths(-4)
+        };
+
+        var subscription = new UserSubscription
+        {
+            Id = Guid.Parse("7aa7aa7a-1111-4444-8888-250000000001"),
+            UserId = userId,
+            Tier = SubscriptionTier.Premium,
+            Platform = Platform.iOS,
+            OriginalTransactionId = "story-demo-premium"
         };
 
         var budgets = new List<Budget>
@@ -162,6 +172,7 @@ public sealed class StoryDemoScenario
         {
             User = user,
             Identity = identity,
+            Subscription = subscription,
             Budgets = budgets,
             Transactions = transactions,
             RecurringSchedules = recurringSchedules,
