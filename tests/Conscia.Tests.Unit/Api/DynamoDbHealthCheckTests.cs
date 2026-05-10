@@ -23,7 +23,8 @@ public class DynamoDbHealthCheckTests
                     "AIInteractions",
                     "WeeklyInsights",
                     "PurchasePatterns",
-                    "InAppAlerts"
+                    "InAppAlerts",
+                    "MonthlyCategorySpends"
                 ]
             });
 
@@ -39,6 +40,8 @@ public class DynamoDbHealthCheckTests
             .ReturnsAsync(DescribeTableResponseFor("WeeklyInsights"));
         _dynamoMock.Setup(d => d.DescribeTableAsync("PurchasePatterns", It.IsAny<CancellationToken>()))
             .ReturnsAsync(DescribeTableResponseFor("PurchasePatterns"));
+        _dynamoMock.Setup(d => d.DescribeTableAsync("MonthlyCategorySpends", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(DescribeTableResponseFor("MonthlyCategorySpends"));
 
         var healthCheck = new DynamoDbHealthCheck(_dynamoMock.Object);
 
@@ -59,7 +62,8 @@ public class DynamoDbHealthCheckTests
                     "RecurringSchedules",
                     "AIInteractions",
                     "WeeklyInsights",
-                    "PurchasePatterns"
+                    "PurchasePatterns",
+                    "MonthlyCategorySpends"
                 ]
             });
 
@@ -84,7 +88,8 @@ public class DynamoDbHealthCheckTests
                     "AIInteractions",
                     "WeeklyInsights",
                     "PurchasePatterns",
-                    "InAppAlerts"
+                    "InAppAlerts",
+                    "MonthlyCategorySpends"
                 ]
             });
 
@@ -100,6 +105,8 @@ public class DynamoDbHealthCheckTests
             .ReturnsAsync(DescribeTableResponseFor("WeeklyInsights"));
         _dynamoMock.Setup(d => d.DescribeTableAsync("PurchasePatterns", It.IsAny<CancellationToken>()))
             .ReturnsAsync(DescribeTableResponseFor("PurchasePatterns"));
+        _dynamoMock.Setup(d => d.DescribeTableAsync("MonthlyCategorySpends", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(DescribeTableResponseFor("MonthlyCategorySpends"));
 
         var healthCheck = new DynamoDbHealthCheck(_dynamoMock.Object);
 
@@ -107,6 +114,31 @@ public class DynamoDbHealthCheckTests
 
         Assert.Equal(HealthStatus.Unhealthy, result.Status);
         Assert.Contains("GSI-UserId-Category-Date", result.Description);
+    }
+
+    [Fact]
+    public async Task CheckHealthAsync_ReturnsUnhealthy_WhenMonthlyCategorySpendsTableIsMissing()
+    {
+        _dynamoMock.Setup(d => d.ListTablesAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ListTablesResponse
+            {
+                TableNames =
+                [
+                    "Transactions",
+                    "RecurringSchedules",
+                    "AIInteractions",
+                    "WeeklyInsights",
+                    "PurchasePatterns",
+                    "InAppAlerts"
+                ]
+            });
+
+        var healthCheck = new DynamoDbHealthCheck(_dynamoMock.Object);
+
+        var result = await healthCheck.CheckHealthAsync(new HealthCheckContext());
+
+        Assert.Equal(HealthStatus.Unhealthy, result.Status);
+        Assert.Contains("MonthlyCategorySpends", result.Description);
     }
 
     private static DescribeTableResponse DescribeTableResponseFor(string tableName, params string[] globalSecondaryIndexes)

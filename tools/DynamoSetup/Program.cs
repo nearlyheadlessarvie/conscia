@@ -161,6 +161,23 @@ var tables = new (string Name, CreateTableRequest Request)[]
         BillingMode = BillingMode.PAY_PER_REQUEST
     }),
 
+    // ---------------- MONTHLY CATEGORY SPENDS ----------------
+    ("MonthlyCategorySpends", new CreateTableRequest
+    {
+        TableName = "MonthlyCategorySpends",
+        KeySchema =
+        [
+            new("PK", KeyType.HASH),
+            new("SK", KeyType.RANGE)
+        ],
+        AttributeDefinitions =
+        [
+            new("PK", ScalarAttributeType.S),
+            new("SK", ScalarAttributeType.S)
+        ],
+        BillingMode = BillingMode.PAY_PER_REQUEST
+    }),
+
     // ---------------- IN-APP ALERTS ----------------
     ("InAppAlerts", new CreateTableRequest
     {
