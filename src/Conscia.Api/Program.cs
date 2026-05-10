@@ -135,7 +135,6 @@ else
 }
 builder.Services.AddScoped<ITransactionRepository, TransactionRepository>();
 builder.Services.AddScoped<IRecurringScheduleRepository, RecurringScheduleRepository>();
-builder.Services.AddScoped<IOutboxEventRepository, OutboxEventRepository>();
 builder.Services.AddScoped<IAIInteractionRepository, AIInteractionRepository>();
 builder.Services.AddScoped<IWeeklyInsightsRepository, WeeklyInsightsRepository>();
 builder.Services.AddScoped<IPurchasePatternRepository, PurchasePatternRepository>();
@@ -209,7 +208,6 @@ builder.Services.AddCors(options =>
 });
 
 // --- Background Services ---
-builder.Services.AddHostedService<OutboxProcessor>();
 builder.Services.AddHostedService<RecurringScheduleProcessor>();
 
 // --- Auth ---

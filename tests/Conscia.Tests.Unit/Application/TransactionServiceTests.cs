@@ -23,7 +23,7 @@ public class TransactionServiceTests
         _recurringScheduleServiceMock.Object);
 
     [Fact]
-    public async Task CreateAsync_CreatesTransactionWithOutbox()
+    public async Task CreateAsync_CreatesTransaction()
     {
         var userId = Guid.NewGuid();
         var dto = new CreateTransactionDto
@@ -36,8 +36,8 @@ public class TransactionServiceTests
             Date = DateTime.UtcNow
         };
 
-        _repoMock.Setup(r => r.AddWithOutboxAsync(It.IsAny<Transaction>(), It.IsAny<OutboxEvent>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((Transaction t, OutboxEvent _, CancellationToken __) => t);
+        _repoMock.Setup(r => r.AddAsync(It.IsAny<Transaction>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Transaction t, CancellationToken __) => t);
 
         var result = await _svc.CreateAsync(userId, dto);
 
@@ -47,9 +47,8 @@ public class TransactionServiceTests
         Assert.Equal("Food", result.Category);
         Assert.Equal("McDonald's", result.Counterparty);
 
-        _repoMock.Verify(r => r.AddWithOutboxAsync(
+        _repoMock.Verify(r => r.AddAsync(
             It.Is<Transaction>(t => t.UserId == userId),
-            It.Is<OutboxEvent>(e => e.EventType == OutboxEventType.TransactionCreated),
             It.IsAny<CancellationToken>()), Times.Once);
     }
 
@@ -63,8 +62,8 @@ public class TransactionServiceTests
             Latitude = 40.7128, Longitude = -74.0060, PlaceName = "NYC Shop"
         };
 
-        _repoMock.Setup(r => r.AddWithOutboxAsync(It.IsAny<Transaction>(), It.IsAny<OutboxEvent>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((Transaction t, OutboxEvent _, CancellationToken __) => t);
+        _repoMock.Setup(r => r.AddAsync(It.IsAny<Transaction>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Transaction t, CancellationToken __) => t);
 
         var result = await _svc.CreateAsync(Guid.NewGuid(), dto);
 
@@ -126,7 +125,7 @@ public class TransactionServiceTests
     }
 
     [Fact]
-    public async Task DeleteAsync_CallsDeleteWithOutbox()
+    public async Task DeleteAsync_CallsDelete()
     {
         var userId = Guid.NewGuid();
         var txnId = Guid.NewGuid();
@@ -138,17 +137,12 @@ public class TransactionServiceTests
 
         _repoMock.Setup(r => r.GetByIdAsync(userId, txnId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(existing);
-        _repoMock.Setup(r => r.DeleteWithOutboxAsync(userId, txnId, It.IsAny<OutboxEvent>(), It.IsAny<CancellationToken>()))
+        _repoMock.Setup(r => r.DeleteAsync(userId, txnId, It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 
         await _svc.DeleteAsync(userId, txnId);
 
-        _repoMock.Verify(r => r.DeleteWithOutboxAsync(
-            userId,
-            txnId,
-            It.Is<OutboxEvent>(e => e.EventType == OutboxEventType.TransactionDeleted
-                && e.Payload.Contains("Food") && e.Payload.Contains("50")),
-            It.IsAny<CancellationToken>()), Times.Once);
+        _repoMock.Verify(r => r.DeleteAsync(userId, txnId, It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -201,8 +195,8 @@ public class TransactionServiceTests
 
         _fxMock.Setup(f => f.GetRateAsync("EUR", "USD", It.IsAny<CancellationToken>()))
             .ReturnsAsync(1.08m);
-        _repoMock.Setup(r => r.AddWithOutboxAsync(It.IsAny<Transaction>(), It.IsAny<OutboxEvent>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((Transaction t, OutboxEvent _, CancellationToken __) => t);
+        _repoMock.Setup(r => r.AddAsync(It.IsAny<Transaction>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Transaction t, CancellationToken __) => t);
 
         var result = await _svc.CreateAsync(userId, dto);
 
@@ -225,8 +219,8 @@ public class TransactionServiceTests
             Date = DateTime.UtcNow
         };
 
-        _repoMock.Setup(r => r.AddWithOutboxAsync(It.IsAny<Transaction>(), It.IsAny<OutboxEvent>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((Transaction t, OutboxEvent _, CancellationToken __) => t);
+        _repoMock.Setup(r => r.AddAsync(It.IsAny<Transaction>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Transaction t, CancellationToken __) => t);
 
         var result = await _svc.CreateAsync(userId, dto);
 
@@ -254,8 +248,8 @@ public class TransactionServiceTests
             }
         };
 
-        _repoMock.Setup(r => r.AddWithOutboxAsync(It.IsAny<Transaction>(), It.IsAny<OutboxEvent>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((Transaction t, OutboxEvent _, CancellationToken __) => t);
+        _repoMock.Setup(r => r.AddAsync(It.IsAny<Transaction>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Transaction t, CancellationToken __) => t);
         _recurringScheduleServiceMock
             .Setup(s => s.CreateAsync(userId, It.IsAny<CreateRecurringScheduleDto>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new RecurringSchedule

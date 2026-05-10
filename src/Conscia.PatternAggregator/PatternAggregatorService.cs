@@ -142,14 +142,12 @@ public class PatternAggregatorService
             var request = new QueryRequest
             {
                 TableName = "Transactions",
-                IndexName = "GSI-Date",
-                KeyConditionExpression = "UserId = :uid AND #d BETWEEN :from AND :to",
-                ExpressionAttributeNames = new Dictionary<string, string> { ["#d"] = "Date" },
+                KeyConditionExpression = "PK = :pk AND SK BETWEEN :from AND :to",
                 ExpressionAttributeValues = new Dictionary<string, AttributeValue>
                 {
-                    [":uid"] = new(userId.ToString()),
-                    [":from"] = new(from.ToString("yyyy-MM-dd")),
-                    [":to"] = new(to.ToString("yyyy-MM-dd"))
+                    [":pk"] = new($"USER#{userId}"),
+                    [":from"] = new(DynamoKeys.DateRangeStart(from)),
+                    [":to"] = new(DynamoKeys.DateRangeEnd(to))
                 },
                 ExclusiveStartKey = lastKey
             };

@@ -23,17 +23,17 @@ var tables = new (string Name, CreateTableRequest Request)[]
             new("PK", ScalarAttributeType.S),
             new("SK", ScalarAttributeType.S),
             new("UserId", ScalarAttributeType.S),
-            new("Date", ScalarAttributeType.S)
+            new("GSI1SK", ScalarAttributeType.S)
         ],
         GlobalSecondaryIndexes =
         [
             new GlobalSecondaryIndex
             {
-                IndexName = "GSI-Date",
+                IndexName = "GSI-UserId-Category-Date",
                 KeySchema =
                 [
                     new("UserId", KeyType.HASH),
-                    new("Date", KeyType.RANGE)
+                    new("GSI1SK", KeyType.RANGE)
                 ],
                 Projection = new Projection { ProjectionType = ProjectionType.ALL }
             }
@@ -44,6 +44,23 @@ var tables = new (string Name, CreateTableRequest Request)[]
             StreamEnabled = true,
             StreamViewType = StreamViewType.NEW_AND_OLD_IMAGES
         }
+    }),
+
+    // ---------------- RECURRING SCHEDULES ----------------
+    ("RecurringSchedules", new CreateTableRequest
+    {
+        TableName = "RecurringSchedules",
+        KeySchema =
+        [
+            new("PK", KeyType.HASH),
+            new("SK", KeyType.RANGE)
+        ],
+        AttributeDefinitions =
+        [
+            new("PK", ScalarAttributeType.S),
+            new("SK", ScalarAttributeType.S)
+        ],
+        BillingMode = BillingMode.PAY_PER_REQUEST
     }),
 
     // ---------------- AI INTERACTIONS ----------------

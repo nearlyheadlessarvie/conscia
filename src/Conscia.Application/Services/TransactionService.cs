@@ -1,4 +1,3 @@
-using System.Text.Json;
 using Conscia.Application.DTOs;
 using Conscia.Application.Interfaces;
 using Conscia.Application.Models;
@@ -61,23 +60,7 @@ public class TransactionService : ITransactionService
             };
         }
 
-        var outboxEvent = new OutboxEvent
-        {
-            Id = Guid.NewGuid(),
-            AggregateId = transaction.Id,
-            EventType = OutboxEventType.TransactionCreated,
-            Payload = JsonSerializer.Serialize(new
-            {
-                TransactionId = transaction.Id,
-                UserId = userId,
-                Amount = dto.Amount,
-                CurrencyCode = dto.CurrencyCode,
-                Category = dto.Category
-            }),
-            CreatedAt = DateTime.UtcNow
-        };
-
-        var result = await _repo.AddWithOutboxAsync(transaction, outboxEvent, ct);
+        var result = await _repo.AddAsync(transaction, ct);
 
         if (dto.Recurring is not null && _recurringScheduleService is not null)
         {
@@ -148,23 +131,7 @@ public class TransactionService : ITransactionService
             throw new KeyNotFoundException($"Transaction {id} not found");
         }
 
-        var outboxEvent = new OutboxEvent
-        {
-            Id = Guid.NewGuid(),
-            AggregateId = id,
-            EventType = OutboxEventType.TransactionDeleted,
-            Payload = JsonSerializer.Serialize(new
-            {
-                TransactionId = id,
-                UserId = userId,
-                Amount = existing.Amount.Amount,
-                CurrencyCode = existing.Amount.CurrencyCode,
-                Category = existing.Category
-            }),
-            CreatedAt = DateTime.UtcNow
-        };
-
-        await _repo.DeleteWithOutboxAsync(userId, id, outboxEvent, ct);
+        await _repo.DeleteAsync(userId, id, ct);
         _logger.LogInformation("Deleting transaction {TransactionId} for user {UserId}", id, userId);
     }
 
