@@ -9,12 +9,14 @@ class HeroScreenScaffold extends StatelessWidget {
     required this.child,
     this.padding = const EdgeInsets.fromLTRB(16, 20, 16, 28),
     this.bottom,
+    this.scrollable = true,
   });
 
   final PreferredSizeWidget? appBar;
   final Widget child;
   final EdgeInsetsGeometry padding;
   final Widget? bottom;
+  final bool scrollable;
 
   @override
   Widget build(BuildContext context) {
@@ -39,17 +41,28 @@ class HeroScreenScaffold extends StatelessWidget {
           child: Column(
             children: [
               Expanded(
-                child: SingleChildScrollView(
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  padding: EdgeInsets.only(
-                    left: resolvedPadding.left,
-                    top: resolvedPadding.top,
-                    right: resolvedPadding.right,
-                    bottom: resolvedPadding.bottom +
-                        (bottom != null ? 0 : keyboardInset),
-                  ),
-                  child: child,
-                ),
+                child: scrollable
+                    ? SingleChildScrollView(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        padding: EdgeInsets.only(
+                          left: resolvedPadding.left,
+                          top: resolvedPadding.top,
+                          right: resolvedPadding.right,
+                          bottom: resolvedPadding.bottom +
+                              (bottom != null ? 0 : keyboardInset),
+                        ),
+                        child: child,
+                      )
+                    : Padding(
+                        padding: EdgeInsets.only(
+                          left: resolvedPadding.left,
+                          top: resolvedPadding.top,
+                          right: resolvedPadding.right,
+                          bottom: resolvedPadding.bottom +
+                              (bottom != null ? 0 : keyboardInset),
+                        ),
+                        child: child,
+                      ),
               ),
               if (bottom != null)
                 AnimatedPadding(
