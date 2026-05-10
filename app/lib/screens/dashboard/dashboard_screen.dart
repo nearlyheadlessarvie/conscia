@@ -8,19 +8,16 @@ import 'package:conscia_app/core/routing/app_router.dart';
 import 'package:conscia_app/providers/alert_provider.dart';
 import 'package:conscia_app/providers/behavioral_insights_provider.dart';
 import 'package:conscia_app/providers/budget_providers.dart';
+import 'package:conscia_app/providers/insight_feed_provider.dart';
 import 'package:conscia_app/providers/subscription_provider.dart';
 import 'package:conscia_app/providers/transaction_providers.dart';
 import 'package:conscia_app/providers/usage_provider.dart';
 import 'package:conscia_app/screens/dashboard/widgets/budget_summary_card.dart';
 import 'package:conscia_app/screens/dashboard/widgets/in_app_alert_banner.dart';
 import 'package:conscia_app/screens/dashboard/widgets/budget_warning_banner.dart';
-import 'package:conscia_app/screens/dashboard/widgets/budget_trends_card.dart';
-import 'package:conscia_app/screens/dashboard/widgets/financial_mood_card.dart';
-import 'package:conscia_app/screens/dashboard/widgets/impulse_trends_card.dart';
-import 'package:conscia_app/screens/dashboard/widgets/regret_summary_card.dart';
+import 'package:conscia_app/screens/dashboard/widgets/insight_feed_card.dart';
 import 'package:conscia_app/screens/dashboard/widgets/recent_transaction_tile.dart';
 import 'package:conscia_app/screens/dashboard/widgets/regret_prompt_card.dart';
-import 'package:conscia_app/screens/dashboard/widgets/worth_it_counter_card.dart';
 import 'package:conscia_app/screens/budgets/widgets/budget_form_sheet.dart';
 import 'package:conscia_app/screens/transactions/widgets/transaction_tile.dart';
 import 'package:conscia_app/services/transaction_service.dart';
@@ -46,6 +43,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       ref.read(transactionListProvider.notifier).refresh(),
     ]);
     ref.invalidate(behavioralInsightsProvider);
+    ref.invalidate(insightFeedProvider);
+    ref.invalidate(dashboardInsightFeedProvider);
   }
 
   Future<void> _recordReflection(Transaction tx, String feeling) async {
@@ -95,7 +94,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     final textTheme = Theme.of(context).textTheme;
     final budgetState = ref.watch(budgetListProvider);
     final txState = ref.watch(transactionListProvider);
-    final insightsState = ref.watch(behavioralInsightsProvider);
+    final insightsState = ref.watch(dashboardInsightFeedProvider);
     final alerts = ref.watch(activeAlertsProvider);
 
     final budgets = budgetState.budgets;
@@ -183,7 +182,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   .dismiss(highlightedAlert.id),
             ),
           ),
-        // Behavioral Insights Section — only rendered when data is available
         ...insightsState.when<List<Widget>>(
           loading: () => [
             SliverToBoxAdapter(
@@ -196,46 +194,28 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               ),
             ),
           ],
-          data: (insights) {
-            if (insights == null) return <Widget>[];
+          data: (items) {
+            if (items.isEmpty) return <Widget>[];
             return [
               SliverToBoxAdapter(
                 child: _buildSectionHeader(context, 'Your Insights'),
               ),
               SliverPadding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
-                sliver: SliverList(
-                  delegate: SliverChildListDelegate([
-                    FinancialMoodCard(
-                      mood: insights.mood,
-                      worthItPercentage: insights.worthItPercentage,
-                      previousMonthPercentage:
-                          insights.previousMonthWorthItCount > 0
-                              ? (insights.previousMonthWorthItCount /
-                                  (insights.previousMonthWorthItCount + 10) *
-                                  100)
-                              : 50,
-                    ),
-                    const SizedBox(height: 12),
-                    WorthItCounterCard(
-                      thisMonthCount: insights.worthItCount,
-                      previousMonthCount: insights.previousMonthWorthItCount,
-                    ),
-                    const SizedBox(height: 12),
-                    if (insights.budgetTrends.isNotEmpty)
-                      BudgetTrendsCard(trends: insights.budgetTrends),
-                    if (insights.budgetTrends.isNotEmpty)
-                      const SizedBox(height: 12),
-                    if (insights.impulseeTrends.isNotEmpty)
-                      ImpulseTrendsCard(trends: insights.impulseeTrends),
-                    const SizedBox(height: 12),
-                  ]),
-                ),
-              ),
-              const SliverPadding(
-                padding: EdgeInsets.symmetric(horizontal: 16),
-                sliver: SliverToBoxAdapter(
-                  child: RegretSummaryCard(),
+                sliver: SliverList.separated(
+                  itemCount: items.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 12),
+                  itemBuilder: (context, index) {
+                    final item = items[index];
+                    return InsightFeedCard(
+                      item: item,
+                      onDismiss: item.dismissible
+                          ? () => ref
+                              .read(insightDismissalsProvider.notifier)
+                              .dismiss(item.id)
+                          : null,
+                    );
+                  },
                 ),
               ),
             ];

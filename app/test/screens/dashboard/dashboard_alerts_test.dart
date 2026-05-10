@@ -3,8 +3,10 @@ import 'package:conscia_app/providers/alert_provider.dart';
 import 'package:conscia_app/providers/behavioral_insights_provider.dart';
 import 'package:conscia_app/models/behavioral_insights.dart';
 import 'package:conscia_app/providers/budget_providers.dart';
+import 'package:conscia_app/providers/insights_provider.dart';
 import 'package:conscia_app/providers/subscription_provider.dart';
 import 'package:conscia_app/providers/transaction_providers.dart';
+import 'package:conscia_app/providers/usage_provider.dart';
 import 'package:conscia_app/providers/user_provider.dart';
 import 'package:conscia_app/core/routing/app_router.dart';
 import 'package:conscia_app/screens/dashboard/dashboard_screen.dart';
@@ -20,6 +22,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class _StaticBudgetService extends BudgetService {
   _StaticBudgetService(this.budgets) : super(Dio());
@@ -102,6 +105,13 @@ Widget _buildApp(ProviderContainer container) {
 }
 
 void main() {
+  late SharedPreferences prefs;
+
+  setUp(() async {
+    SharedPreferences.setMockInitialValues({});
+    prefs = await SharedPreferences.getInstance();
+  });
+
   testWidgets('recent transaction tile displays counterparty text',
       (tester) async {
     await tester.pumpWidget(
@@ -195,11 +205,15 @@ void main() {
 
     final container = ProviderContainer(
       overrides: [
+        sharedPreferencesProvider.overrideWithValue(prefs),
         budgetServiceProvider.overrideWithValue(_StaticBudgetService(const [])),
         transactionServiceProvider.overrideWithValue(
           _StaticTransactionService(transactions),
         ),
         behavioralInsightsProvider.overrideWith((ref) async => null),
+        insightsSummaryProvider.overrideWith((ref) async => null),
+        insightsCategoriesProvider.overrideWith((ref) async => const []),
+        insightsMerchantsProvider.overrideWith((ref) async => const []),
         localAlertsProvider.overrideWith(
           (ref) => _LocalAlertsTestNotifier(const []),
         ),
@@ -223,6 +237,7 @@ void main() {
       (tester) async {
     final container = ProviderContainer(
       overrides: [
+        sharedPreferencesProvider.overrideWithValue(prefs),
         budgetServiceProvider.overrideWithValue(_StaticBudgetService(const [])),
         transactionServiceProvider
             .overrideWithValue(_StaticTransactionService()),
@@ -253,6 +268,9 @@ void main() {
                 ),
               ],
             )),
+        insightsSummaryProvider.overrideWith((ref) async => null),
+        insightsCategoriesProvider.overrideWith((ref) async => const []),
+        insightsMerchantsProvider.overrideWith((ref) async => const []),
         localAlertsProvider.overrideWith(
           (ref) => _LocalAlertsTestNotifier(const []),
         ),
@@ -263,20 +281,66 @@ void main() {
     await tester.pumpWidget(_buildApp(container));
     await tester.pumpAndSettle();
 
-    expect(find.text('Budget trends'), findsOneWidget);
-    expect(find.text('Dining'), findsOneWidget);
-    expect(find.text('Subscriptions'), findsOneWidget);
+    expect(find.text('Your Insights'), findsOneWidget);
+    expect(
+      find.text('Subscriptions has enough activity for a budget'),
+      findsOneWidget,
+    );
+    expect(find.text('No budget yet'), findsOneWidget);
     expect(find.text('Add a budget for sharper insights'), findsOneWidget);
+    expect(find.text('Budget trends'), findsNothing);
+  });
+
+  testWidgets('dashboard insight card can be dismissed locally', (tester) async {
+    final container = ProviderContainer(
+      overrides: [
+        sharedPreferencesProvider.overrideWithValue(prefs),
+        budgetServiceProvider.overrideWithValue(_StaticBudgetService(const [])),
+        transactionServiceProvider
+            .overrideWithValue(_StaticTransactionService()),
+        behavioralInsightsProvider.overrideWith(
+          (ref) async => const BehavioralInsights(
+            mood: FinancialMood.confident,
+            worthItPercentage: 90,
+            worthItCount: 9,
+            previousMonthWorthItCount: 3,
+            impulseeTrends: [],
+            budgetTrends: [],
+          ),
+        ),
+        insightsSummaryProvider.overrideWith((ref) async => null),
+        insightsCategoriesProvider.overrideWith((ref) async => const []),
+        insightsMerchantsProvider.overrideWith((ref) async => const []),
+        localAlertsProvider.overrideWith(
+          (ref) => _LocalAlertsTestNotifier(const []),
+        ),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    await tester.pumpWidget(_buildApp(container));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Your financial mood is confident'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Dismiss insight').first);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Your financial mood is confident'), findsNothing);
   });
 
   testWidgets('dashboard surfaces local budget nudges with a budget CTA',
       (tester) async {
     final container = ProviderContainer(
       overrides: [
+        sharedPreferencesProvider.overrideWithValue(prefs),
         budgetServiceProvider.overrideWithValue(_StaticBudgetService(const [])),
         transactionServiceProvider
             .overrideWithValue(_StaticTransactionService()),
         behavioralInsightsProvider.overrideWith((ref) async => null),
+        insightsSummaryProvider.overrideWith((ref) async => null),
+        insightsCategoriesProvider.overrideWith((ref) async => const []),
+        insightsMerchantsProvider.overrideWith((ref) async => const []),
         currentUserProvider.overrideWith((ref) async => _testUser),
         subscriptionProvider.overrideWith((ref) async => _testSubscription),
         localAlertsProvider.overrideWith(
@@ -324,10 +388,14 @@ void main() {
   testWidgets('dashboard can dismiss a local budget nudge', (tester) async {
     final container = ProviderContainer(
       overrides: [
+        sharedPreferencesProvider.overrideWithValue(prefs),
         budgetServiceProvider.overrideWithValue(_StaticBudgetService(const [])),
         transactionServiceProvider
             .overrideWithValue(_StaticTransactionService()),
         behavioralInsightsProvider.overrideWith((ref) async => null),
+        insightsSummaryProvider.overrideWith((ref) async => null),
+        insightsCategoriesProvider.overrideWith((ref) async => const []),
+        insightsMerchantsProvider.overrideWith((ref) async => const []),
         localAlertsProvider.overrideWith(
           (ref) => _LocalAlertsTestNotifier(
             [
@@ -361,6 +429,7 @@ void main() {
       (tester) async {
     final container = ProviderContainer(
       overrides: [
+        sharedPreferencesProvider.overrideWithValue(prefs),
         budgetServiceProvider.overrideWithValue(
           _StaticBudgetService(const [
             Budget(
@@ -377,6 +446,9 @@ void main() {
         transactionServiceProvider
             .overrideWithValue(_StaticTransactionService()),
         behavioralInsightsProvider.overrideWith((ref) async => null),
+        insightsSummaryProvider.overrideWith((ref) async => null),
+        insightsCategoriesProvider.overrideWith((ref) async => const []),
+        insightsMerchantsProvider.overrideWith((ref) async => const []),
         localAlertsProvider.overrideWith(
           (ref) => _LocalAlertsTestNotifier(
             [
@@ -407,10 +479,14 @@ void main() {
       (tester) async {
     final container = ProviderContainer(
       overrides: [
+        sharedPreferencesProvider.overrideWithValue(prefs),
         budgetServiceProvider.overrideWithValue(_StaticBudgetService(const [])),
         transactionServiceProvider
             .overrideWithValue(_StaticTransactionService()),
         behavioralInsightsProvider.overrideWith((ref) async => null),
+        insightsSummaryProvider.overrideWith((ref) async => null),
+        insightsCategoriesProvider.overrideWith((ref) async => const []),
+        insightsMerchantsProvider.overrideWith((ref) async => const []),
         alertsProvider.overrideWith((ref) async => [
               AppAlert(
                 id: 'repeated-regret-category-dining',
@@ -455,10 +531,14 @@ void main() {
       (tester) async {
     final container = ProviderContainer(
       overrides: [
+        sharedPreferencesProvider.overrideWithValue(prefs),
         budgetServiceProvider.overrideWithValue(_StaticBudgetService(const [])),
         transactionServiceProvider
             .overrideWithValue(_StaticTransactionService()),
         behavioralInsightsProvider.overrideWith((ref) async => null),
+        insightsSummaryProvider.overrideWith((ref) async => null),
+        insightsCategoriesProvider.overrideWith((ref) async => const []),
+        insightsMerchantsProvider.overrideWith((ref) async => const []),
         alertsProvider.overrideWith((ref) async => [
               AppAlert(
                 id: 'reflection-follow-up-tx-1',
