@@ -134,6 +134,7 @@ class _MascotCameo extends StatelessWidget {
 
     return SizedBox(
       width: 48,
+      height: 52,
       child: Stack(
         clipBehavior: Clip.none,
         children: [

@@ -1,5 +1,7 @@
 import 'package:conscia_app/core/utils/currency_formatter.dart';
+import 'package:conscia_app/models/behavioral_insights.dart';
 import 'package:conscia_app/models/insights_models.dart';
+import 'package:conscia_app/providers/behavioral_insights_provider.dart';
 import 'package:conscia_app/providers/insights_provider.dart';
 import 'package:conscia_app/providers/user_provider.dart';
 import 'package:conscia_app/screens/insights/category_detail_screen.dart';
@@ -45,6 +47,7 @@ void main() {
           userPreferencesProvider.overrideWithValue(
             (currency: 'PHP', locale: 'en_PH'),
           ),
+          behavioralInsightsProvider.overrideWith((ref) async => null),
           insightsSummaryProvider.overrideWith((ref) async => summary),
           insightsMerchantsProvider.overrideWith((ref) async => const []),
           insightsCategoriesProvider.overrideWith((ref) async => const []),
@@ -56,6 +59,71 @@ void main() {
 
     expect(find.text('£600'), findsNothing);
     expect(find.text(expected), findsOneWidget);
+  });
+
+  testWidgets('insights screen renders dynamic sections from the feed',
+      (tester) async {
+    final summary = InsightsSummary(
+      regrettedAmount: 1890,
+      regrettedCategory: 'Shopping',
+      avgRegretRate: 0.44,
+      patternCount: 3,
+      updatedAt: DateTime(2026, 5, 8),
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          userPreferencesProvider.overrideWithValue(
+            (currency: 'PHP', locale: 'en_PH'),
+          ),
+          behavioralInsightsProvider.overrideWith(
+            (ref) async => const BehavioralInsights(
+              mood: FinancialMood.balanced,
+              worthItPercentage: 71,
+              worthItCount: 5,
+              previousMonthWorthItCount: 2,
+              impulseeTrends: [
+                CategoryTrend(
+                  category: 'Shopping',
+                  regretRate: 0.62,
+                  transactionCount: 4,
+                  trend: TrendDirection.worsening,
+                ),
+              ],
+              budgetTrends: [
+                BudgetTrendInsight(
+                  category: 'Subscriptions',
+                  hasBudget: false,
+                  currencyCode: 'PHP',
+                  months: [1200, 1500, 1800],
+                  currentMonthSpend: 1800,
+                  insightLabel: 'Spending trending up',
+                  nudge: 'Add a budget for sharper insights',
+                ),
+              ],
+            ),
+          ),
+          insightsSummaryProvider.overrideWith((ref) async => summary),
+          insightsMerchantsProvider.overrideWith((ref) async => const []),
+          insightsCategoriesProvider.overrideWith((ref) async => const []),
+        ],
+        child: const MaterialApp(home: InsightsScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Insights'), findsOneWidget);
+    expect(find.text('This week'), findsWidgets);
+    expect(find.text('Budget trends'), findsOneWidget);
+    expect(find.text('Regret patterns'), findsOneWidget);
+    expect(find.text('Recent signals'), findsOneWidget);
+    expect(
+      find.text('Subscriptions has enough activity for a budget'),
+      findsOneWidget,
+    );
+    expect(find.text('Shopping is getting more impulsive'), findsOneWidget);
+    expect(find.text('Regret Patterns'), findsNothing);
   });
 
   testWidgets(
