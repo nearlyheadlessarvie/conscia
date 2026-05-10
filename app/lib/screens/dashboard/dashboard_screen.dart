@@ -14,12 +14,14 @@ import 'package:conscia_app/providers/usage_provider.dart';
 import 'package:conscia_app/screens/dashboard/widgets/budget_summary_card.dart';
 import 'package:conscia_app/screens/dashboard/widgets/in_app_alert_banner.dart';
 import 'package:conscia_app/screens/dashboard/widgets/budget_warning_banner.dart';
+import 'package:conscia_app/screens/dashboard/widgets/budget_trends_card.dart';
 import 'package:conscia_app/screens/dashboard/widgets/financial_mood_card.dart';
 import 'package:conscia_app/screens/dashboard/widgets/impulse_trends_card.dart';
 import 'package:conscia_app/screens/dashboard/widgets/regret_summary_card.dart';
 import 'package:conscia_app/screens/dashboard/widgets/recent_transaction_tile.dart';
 import 'package:conscia_app/screens/dashboard/widgets/regret_prompt_card.dart';
 import 'package:conscia_app/screens/dashboard/widgets/worth_it_counter_card.dart';
+import 'package:conscia_app/screens/budgets/widgets/budget_form_sheet.dart';
 import 'package:conscia_app/screens/transactions/widgets/transaction_tile.dart';
 import 'package:conscia_app/services/transaction_service.dart';
 import 'package:conscia_app/widgets/empty_state.dart';
@@ -151,6 +153,14 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                       highlightedAlert.type != 'budget_nudge')
                   ? null
                   : () {
+                      if (highlightedAlert.type == 'budget_nudge') {
+                        BudgetFormSheet.show(
+                          context,
+                          initialCategory: highlightedAlert.category,
+                        );
+                        return;
+                      }
+
                       ref
                           .read(dismissedAlertIdsProvider.notifier)
                           .dismiss(highlightedAlert.id);
@@ -212,6 +222,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                       previousMonthCount: insights.previousMonthWorthItCount,
                     ),
                     const SizedBox(height: 12),
+                    if (insights.budgetTrends.isNotEmpty)
+                      BudgetTrendsCard(trends: insights.budgetTrends),
+                    if (insights.budgetTrends.isNotEmpty)
+                      const SizedBox(height: 12),
                     if (insights.impulseeTrends.isNotEmpty)
                       ImpulseTrendsCard(trends: insights.impulseeTrends),
                     const SizedBox(height: 12),

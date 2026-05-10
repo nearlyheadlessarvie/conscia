@@ -35,29 +35,27 @@ public class TransactionRepository : DynamoRepository, ITransactionRepository
         OutboxEvent outboxEvent,
         CancellationToken ct = default)
     {
-        var transactItems = new List<TransactWriteItem>
-        {
-            new()
-            {
-                Put = new Put
-                {
-                    TableName = TableName,
-                    Item = ToItem(transaction)
-                }
-            },
-            new()
-            {
-                Put = new Put
-                {
-                    TableName = "OutboxEvents",
-                    Item = OutboxToItem(outboxEvent)
-                }
-            }
-        };
-
         await Dynamo.TransactWriteItemsAsync(new TransactWriteItemsRequest
         {
-            TransactItems = transactItems
+            TransactItems =
+            [
+                new()
+                {
+                    Put = new Put
+                    {
+                        TableName = TableName,
+                        Item = ToItem(transaction)
+                    }
+                },
+                new()
+                {
+                    Put = new Put
+                    {
+                        TableName = "OutboxEvents",
+                        Item = OutboxToItem(outboxEvent)
+                    }
+                }
+            ]
         }, ct);
 
         return transaction;
@@ -72,34 +70,73 @@ public class TransactionRepository : DynamoRepository, ITransactionRepository
         }, ct);
     }
 
+    public async Task UpdateWithOutboxAsync(
+        Transaction transaction,
+        OutboxEvent outboxEvent,
+        CancellationToken ct = default)
+    {
+        await Dynamo.TransactWriteItemsAsync(new TransactWriteItemsRequest
+        {
+            TransactItems =
+            [
+                new()
+                {
+                    Put = new Put
+                    {
+                        TableName = TableName,
+                        Item = ToItem(transaction)
+                    }
+                },
+                new()
+                {
+                    Put = new Put
+                    {
+                        TableName = "OutboxEvents",
+                        Item = OutboxToItem(outboxEvent)
+                    }
+                }
+            ]
+        }, ct);
+    }
+
+    public async Task DeleteAsync(Guid userId, Guid id, CancellationToken ct = default)
+    {
+        var existing = await GetByIdAsync(userId, id, ct)
+            ?? throw new InvalidOperationException($"Transaction {id} not found");
+
+        await Dynamo.DeleteItemAsync(new DeleteItemRequest
+        {
+            TableName = TableName,
+            Key = Key(DynamoKeys.User(existing.UserId), DynamoKeys.Transaction(existing.Date, id))
+        }, ct);
+    }
+
     public async Task DeleteWithOutboxAsync(Guid userId, Guid id, OutboxEvent outboxEvent, CancellationToken ct = default)
     {
         var existing = await GetByIdAsync(userId, id, ct)
             ?? throw new InvalidOperationException($"Transaction {id} not found");
 
-        var transactItems = new List<TransactWriteItem>
-        {
-            new()
-            {
-                Delete = new Delete
-                {
-                    TableName = TableName,
-                    Key = Key(DynamoKeys.User(existing.UserId), DynamoKeys.Transaction(existing.Date, id))
-                }
-            },
-            new()
-            {
-                Put = new Put
-                {
-                    TableName = "OutboxEvents",
-                    Item = OutboxToItem(outboxEvent)
-                }
-            }
-        };
-
         await Dynamo.TransactWriteItemsAsync(new TransactWriteItemsRequest
         {
-            TransactItems = transactItems
+            TransactItems =
+            [
+                new()
+                {
+                    Delete = new Delete
+                    {
+                        TableName = TableName,
+                        Key = Key(DynamoKeys.User(existing.UserId), DynamoKeys.Transaction(existing.Date, id))
+                    }
+                },
+                new()
+                {
+                    Put = new Put
+                    {
+                        TableName = "OutboxEvents",
+                        Item = OutboxToItem(outboxEvent)
+                    }
+                }
+            ]
         }, ct);
     }
 
@@ -412,9 +449,8 @@ public class TransactionRepository : DynamoRepository, ITransactionRepository
             out date);
     }
 
-    private static Dictionary<string, AttributeValue> OutboxToItem(OutboxEvent e)
-    {
-        return new Dictionary<string, AttributeValue>
+    private static Dictionary<string, AttributeValue> OutboxToItem(OutboxEvent e) =>
+        new()
         {
             ["PK"] = new(DynamoKeys.Outbox(e.AggregateId)),
             ["SK"] = new(DynamoKeys.EventCreatedAt(e.CreatedAt)),
@@ -431,5 +467,4 @@ public class TransactionRepository : DynamoRepository, ITransactionRepository
                     .ToString()
             }
         };
-    }
 }

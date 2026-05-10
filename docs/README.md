@@ -9,6 +9,15 @@
 
 ## 📚 Documentation Overview
 
+## 🎭 Story Demo Seed
+
+For a realistic emulator walkthrough across dashboard, budgets, insights, alerts, reflections, and recurring items, use the dedicated `story-demo` seed profile.
+
+Local setup:
+- Run `dotnet run --project tools/DynamoSetup` after a fresh Docker reset or whenever local Dynamo tables are missing.
+- Run `dotnet run --project tools/Seeder -- story-demo` to recreate the curated demo user and its linked product data.
+- Re-running the seed is safe for the demo user: it replaces only the `story-demo@example.com` relational slice and the matching user-scoped Dynamo records.
+
 ### Current Product Snapshot
 
 - Phases 1-3 are implemented in the current app branch, including dashboard insights, onboarding profiling, transaction-entry redesign, regret memory foundations, and the main shell refresh.

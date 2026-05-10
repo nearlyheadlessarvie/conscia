@@ -23,7 +23,7 @@ public class TransactionServiceTests
         _recurringScheduleServiceMock.Object);
 
     [Fact]
-    public async Task CreateAsync_CreatesTransactionWithOutbox()
+    public async Task CreateAsync_CreatesTransaction()
     {
         var userId = Guid.NewGuid();
         var dto = new CreateTransactionDto
@@ -36,7 +36,10 @@ public class TransactionServiceTests
             Date = DateTime.UtcNow
         };
 
-        _repoMock.Setup(r => r.AddWithOutboxAsync(It.IsAny<Transaction>(), It.IsAny<OutboxEvent>(), It.IsAny<CancellationToken>()))
+        _repoMock.Setup(r => r.AddWithOutboxAsync(
+                It.IsAny<Transaction>(),
+                It.IsAny<OutboxEvent>(),
+                It.IsAny<CancellationToken>()))
             .ReturnsAsync((Transaction t, OutboxEvent _, CancellationToken __) => t);
 
         var result = await _svc.CreateAsync(userId, dto);
@@ -49,7 +52,38 @@ public class TransactionServiceTests
 
         _repoMock.Verify(r => r.AddWithOutboxAsync(
             It.Is<Transaction>(t => t.UserId == userId),
-            It.Is<OutboxEvent>(e => e.EventType == OutboxEventType.TransactionCreated),
+            It.IsAny<OutboxEvent>(),
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task CreateAsync_WritesTransactionAndProjectionOutboxEvent()
+    {
+        var userId = Guid.NewGuid();
+        var transactionDate = new DateTime(2026, 05, 10, 0, 0, 0, DateTimeKind.Utc);
+        var dto = new CreateTransactionDto
+        {
+            Type = TransactionType.Expense,
+            Amount = 120m,
+            CurrencyCode = "PHP",
+            Category = "Dining",
+            Date = transactionDate
+        };
+
+        _repoMock.Setup(r => r.AddWithOutboxAsync(
+                It.IsAny<Transaction>(),
+                It.IsAny<OutboxEvent>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Transaction t, OutboxEvent _, CancellationToken __) => t);
+
+        await _svc.CreateAsync(userId, dto);
+
+        _repoMock.Verify(r => r.AddWithOutboxAsync(
+            It.Is<Transaction>(t => t.UserId == userId && t.Category == "Dining"),
+            It.Is<OutboxEvent>(e =>
+                e.EventType == OutboxEventType.TransactionCreated &&
+                e.Payload.Contains("\"Category\":\"Dining\"") &&
+                e.Payload.Contains("\"CurrencyCode\":\"PHP\"")),
             It.IsAny<CancellationToken>()), Times.Once);
     }
 
@@ -63,7 +97,10 @@ public class TransactionServiceTests
             Latitude = 40.7128, Longitude = -74.0060, PlaceName = "NYC Shop"
         };
 
-        _repoMock.Setup(r => r.AddWithOutboxAsync(It.IsAny<Transaction>(), It.IsAny<OutboxEvent>(), It.IsAny<CancellationToken>()))
+        _repoMock.Setup(r => r.AddWithOutboxAsync(
+                It.IsAny<Transaction>(),
+                It.IsAny<OutboxEvent>(),
+                It.IsAny<CancellationToken>()))
             .ReturnsAsync((Transaction t, OutboxEvent _, CancellationToken __) => t);
 
         var result = await _svc.CreateAsync(Guid.NewGuid(), dto);
@@ -104,7 +141,11 @@ public class TransactionServiceTests
         };
 
         _repoMock.Setup(r => r.GetByIdAsync(userId, txnId, It.IsAny<CancellationToken>())).ReturnsAsync(existing);
-        _repoMock.Setup(r => r.UpdateAsync(It.IsAny<Transaction>(), It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
+        _repoMock.Setup(r => r.UpdateWithOutboxAsync(
+                It.IsAny<Transaction>(),
+                It.IsAny<OutboxEvent>(),
+                It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
 
         var dto = new UpdateTransactionDto { Amount = 75m, Category = "Dining", Counterparty = "New Cafe" };
         var result = await _svc.UpdateAsync(userId, txnId, dto);
@@ -113,6 +154,46 @@ public class TransactionServiceTests
         Assert.Equal("USD", result.Amount.CurrencyCode);
         Assert.Equal("Dining", result.Category);
         Assert.Equal("New Cafe", result.Counterparty);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_WritesProjectionAwareUpdateEvent()
+    {
+        var userId = Guid.NewGuid();
+        var txnId = Guid.NewGuid();
+        var existing = new Transaction
+        {
+            Id = txnId,
+            UserId = userId,
+            Type = TransactionType.Expense,
+            Amount = new Money(50, "USD"),
+            Category = "Food",
+            Counterparty = "Old Cafe",
+            Date = new DateTime(2026, 05, 10, 0, 0, 0, DateTimeKind.Utc)
+        };
+
+        _repoMock.Setup(r => r.GetByIdAsync(userId, txnId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(existing);
+        _repoMock.Setup(r => r.UpdateWithOutboxAsync(
+                It.IsAny<Transaction>(),
+                It.IsAny<OutboxEvent>(),
+                It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        await _svc.UpdateAsync(userId, txnId, new UpdateTransactionDto
+        {
+            Amount = 75m,
+            Category = "Dining",
+            Date = new DateTime(2026, 06, 01, 0, 0, 0, DateTimeKind.Utc)
+        });
+
+        _repoMock.Verify(r => r.UpdateWithOutboxAsync(
+            It.Is<Transaction>(t => t.Category == "Dining" && t.Amount.Amount == 75m),
+            It.Is<OutboxEvent>(e =>
+                e.EventType == OutboxEventType.TransactionUpdated &&
+                e.Payload.Contains("\"PreviousCategory\":\"Food\"") &&
+                e.Payload.Contains("\"Category\":\"Dining\"")),
+            It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -126,7 +207,7 @@ public class TransactionServiceTests
     }
 
     [Fact]
-    public async Task DeleteAsync_CallsDeleteWithOutbox()
+    public async Task DeleteAsync_CallsDelete()
     {
         var userId = Guid.NewGuid();
         var txnId = Guid.NewGuid();
@@ -134,6 +215,39 @@ public class TransactionServiceTests
         {
             Id = txnId, UserId = userId, Type = TransactionType.Expense,
             Amount = new Money(50, "USD"), Category = "Food", Date = DateTime.UtcNow
+        };
+
+        _repoMock.Setup(r => r.GetByIdAsync(userId, txnId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(existing);
+        _repoMock.Setup(r => r.DeleteWithOutboxAsync(
+                userId,
+                txnId,
+                It.IsAny<OutboxEvent>(),
+                It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        await _svc.DeleteAsync(userId, txnId);
+
+        _repoMock.Verify(r => r.DeleteWithOutboxAsync(
+            userId,
+            txnId,
+            It.IsAny<OutboxEvent>(),
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task DeleteAsync_WritesProjectionAwareDeleteEvent()
+    {
+        var userId = Guid.NewGuid();
+        var txnId = Guid.NewGuid();
+        var existing = new Transaction
+        {
+            Id = txnId,
+            UserId = userId,
+            Type = TransactionType.Expense,
+            Amount = new Money(50, "USD"),
+            Category = "Food",
+            Date = new DateTime(2026, 05, 10, 0, 0, 0, DateTimeKind.Utc)
         };
 
         _repoMock.Setup(r => r.GetByIdAsync(userId, txnId, It.IsAny<CancellationToken>()))
@@ -146,8 +260,10 @@ public class TransactionServiceTests
         _repoMock.Verify(r => r.DeleteWithOutboxAsync(
             userId,
             txnId,
-            It.Is<OutboxEvent>(e => e.EventType == OutboxEventType.TransactionDeleted
-                && e.Payload.Contains("Food") && e.Payload.Contains("50")),
+            It.Is<OutboxEvent>(e =>
+                e.EventType == OutboxEventType.TransactionDeleted &&
+                e.Payload.Contains("\"PreviousCategory\":\"Food\"") &&
+                e.Payload.Contains("\"PreviousCurrencyCode\":\"USD\"")),
             It.IsAny<CancellationToken>()), Times.Once);
     }
 
@@ -201,7 +317,10 @@ public class TransactionServiceTests
 
         _fxMock.Setup(f => f.GetRateAsync("EUR", "USD", It.IsAny<CancellationToken>()))
             .ReturnsAsync(1.08m);
-        _repoMock.Setup(r => r.AddWithOutboxAsync(It.IsAny<Transaction>(), It.IsAny<OutboxEvent>(), It.IsAny<CancellationToken>()))
+        _repoMock.Setup(r => r.AddWithOutboxAsync(
+                It.IsAny<Transaction>(),
+                It.IsAny<OutboxEvent>(),
+                It.IsAny<CancellationToken>()))
             .ReturnsAsync((Transaction t, OutboxEvent _, CancellationToken __) => t);
 
         var result = await _svc.CreateAsync(userId, dto);
@@ -225,7 +344,10 @@ public class TransactionServiceTests
             Date = DateTime.UtcNow
         };
 
-        _repoMock.Setup(r => r.AddWithOutboxAsync(It.IsAny<Transaction>(), It.IsAny<OutboxEvent>(), It.IsAny<CancellationToken>()))
+        _repoMock.Setup(r => r.AddWithOutboxAsync(
+                It.IsAny<Transaction>(),
+                It.IsAny<OutboxEvent>(),
+                It.IsAny<CancellationToken>()))
             .ReturnsAsync((Transaction t, OutboxEvent _, CancellationToken __) => t);
 
         var result = await _svc.CreateAsync(userId, dto);
@@ -254,7 +376,10 @@ public class TransactionServiceTests
             }
         };
 
-        _repoMock.Setup(r => r.AddWithOutboxAsync(It.IsAny<Transaction>(), It.IsAny<OutboxEvent>(), It.IsAny<CancellationToken>()))
+        _repoMock.Setup(r => r.AddWithOutboxAsync(
+                It.IsAny<Transaction>(),
+                It.IsAny<OutboxEvent>(),
+                It.IsAny<CancellationToken>()))
             .ReturnsAsync((Transaction t, OutboxEvent _, CancellationToken __) => t);
         _recurringScheduleServiceMock
             .Setup(s => s.CreateAsync(userId, It.IsAny<CreateRecurringScheduleDto>(), It.IsAny<CancellationToken>()))

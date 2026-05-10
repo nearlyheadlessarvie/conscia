@@ -5,6 +5,17 @@ namespace Conscia.Api.Health;
 
 public class DynamoDbHealthCheck(IAmazonDynamoDB dynamoDb) : IHealthCheck
 {
+    private static readonly (string TableName, string[] RequiredIndexes)[] RequiredTables =
+    [
+        ("Transactions", ["GSI-UserId-Category-Date"]),
+        ("RecurringSchedules", []),
+        ("AIInteractions", ["GSI-TransactionId-Date"]),
+        ("WeeklyInsights", []),
+        ("PurchasePatterns", []),
+        ("InAppAlerts", ["GSI-Trigger-Date"]),
+        ("MonthlyCategorySpends", [])
+    ];
+
     public async Task<HealthCheckResult> CheckHealthAsync(
         HealthCheckContext context,
         CancellationToken cancellationToken = default)
@@ -14,7 +25,40 @@ public class DynamoDbHealthCheck(IAmazonDynamoDB dynamoDb) : IHealthCheck
             using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             cts.CancelAfter(TimeSpan.FromSeconds(5));
 
-            await dynamoDb.ListTablesAsync(cts.Token);
+            var response = await dynamoDb.ListTablesAsync(cts.Token);
+            var tableNames = response.TableNames.ToHashSet(StringComparer.Ordinal);
+
+            var missingTables = RequiredTables
+                .Where(required => !tableNames.Contains(required.TableName))
+                .Select(required => required.TableName)
+                .ToArray();
+
+            if (missingTables.Length > 0)
+            {
+                return HealthCheckResult.Unhealthy(
+                    $"DynamoDB is missing required tables: {string.Join(", ", missingTables)}.");
+            }
+
+            foreach (var (tableName, requiredIndexes) in RequiredTables.Where(t => t.RequiredIndexes.Length > 0))
+            {
+                var table = await dynamoDb.DescribeTableAsync(tableName, cts.Token);
+                var existingIndexes = table.Table.GlobalSecondaryIndexes?
+                    .Select(index => index.IndexName)
+                    .Where(indexName => !string.IsNullOrWhiteSpace(indexName))
+                    .ToHashSet(StringComparer.Ordinal)
+                    ?? [];
+
+                var missingIndexes = requiredIndexes
+                    .Where(requiredIndex => !existingIndexes.Contains(requiredIndex))
+                    .ToArray();
+
+                if (missingIndexes.Length > 0)
+                {
+                    return HealthCheckResult.Unhealthy(
+                        $"DynamoDB table '{tableName}' is missing required indexes: {string.Join(", ", missingIndexes)}.");
+                }
+            }
+
             return HealthCheckResult.Healthy();
         }
         catch (OperationCanceledException)
@@ -23,7 +67,7 @@ public class DynamoDbHealthCheck(IAmazonDynamoDB dynamoDb) : IHealthCheck
         }
         catch (Exception ex)
         {
-            return HealthCheckResult.Unhealthy("DynamoDB is unreachable.", ex);
+            return HealthCheckResult.Unhealthy("DynamoDB schema check failed.", ex);
         }
     }
 }

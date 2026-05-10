@@ -1,3 +1,4 @@
+using Conscia.Application.Models;
 using Conscia.Domain.Entities;
 using Conscia.Domain.Enums;
 
@@ -10,4 +11,5 @@ public class BehavioralInsights
     public int WorthItCount { get; set; }
     public int PreviousMonthWorthItCount { get; set; }
     public List<CategoryTrend> ImpulseeTrends { get; set; } = new();
+    public List<BudgetTrendInsight> BudgetTrends { get; set; } = new();
 }

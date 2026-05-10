@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Conscia.Application.Interfaces;
+using Conscia.Domain.Entities;
 using Conscia.Domain.Enums;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -44,10 +45,24 @@ public class OutboxProcessor : BackgroundService
         _logger.LogInformation("OutboxProcessor stopped");
     }
 
+    public async Task RepairProjectionAsync(
+        Guid userId,
+        IReadOnlyList<string> monthKeys,
+        CancellationToken ct = default)
+    {
+        using var scope = _scopeFactory.CreateScope();
+        var transactionRepository = scope.ServiceProvider.GetRequiredService<ITransactionRepository>();
+        var projectionRepository = scope.ServiceProvider.GetRequiredService<IMonthlyCategorySpendRepository>();
+
+        foreach (var monthKey in monthKeys)
+            await RepairMonthAsync(userId, monthKey, transactionRepository, projectionRepository, ct);
+    }
+
     private async Task ProcessBatchAsync(CancellationToken ct)
     {
         using var scope = _scopeFactory.CreateScope();
         var outboxRepo = scope.ServiceProvider.GetRequiredService<IOutboxEventRepository>();
+        var projectionRepo = scope.ServiceProvider.GetRequiredService<IMonthlyCategorySpendRepository>();
 
         var pending = await outboxRepo.GetPendingAsync(50, ct);
         if (pending.Count == 0) return;
@@ -67,7 +82,7 @@ public class OutboxProcessor : BackgroundService
                 }
 
                 _logger.LogInformation("Processing outbox event {EventId}: {EventType}", evt.Id, evt.EventType);
-                await DispatchEventAsync(evt.EventType, evt.Payload, ct);
+                await DispatchEventAsync(evt, projectionRepo, ct);
                 await outboxRepo.MarkProcessedAsync(evt, ct);
             }
             catch (Exception ex)
@@ -90,33 +105,201 @@ public class OutboxProcessor : BackgroundService
         }
     }
 
-    private Task DispatchEventAsync(
-        OutboxEventType eventType, string payload,
+    private async Task DispatchEventAsync(
+        OutboxEvent evt,
+        IMonthlyCategorySpendRepository projections,
         CancellationToken ct)
     {
-        using var doc = JsonDocument.Parse(payload);
-        _ = doc.RootElement;
-
-        switch (eventType)
+        switch (evt.EventType)
         {
             case OutboxEventType.TransactionCreated:
-                _logger.LogInformation("TransactionCreated event acknowledged (budget usage is computed on read)");
+                await ApplyCreatedAsync(evt, projections, ct);
                 break;
             case OutboxEventType.TransactionDeleted:
-            {
-                _logger.LogInformation("TransactionDeleted event acknowledged (budget usage is computed on read)");
+                await ApplyDeletedAsync(evt, projections, ct);
                 break;
-            }
             case OutboxEventType.TransactionUpdated:
-            {
-                _logger.LogInformation("TransactionUpdated event acknowledged (budget usage is computed on read)");
+                await ApplyUpdatedAsync(evt, projections, ct);
                 break;
-            }
             default:
-                _logger.LogWarning("Unknown outbox event type: {EventType}", eventType);
+                _logger.LogWarning("Unknown outbox event type: {EventType}", evt.EventType);
                 break;
         }
-
-        return Task.CompletedTask;
     }
+
+    private Task ApplyCreatedAsync(
+        OutboxEvent evt,
+        IMonthlyCategorySpendRepository projections,
+        CancellationToken ct)
+    {
+        var current = ParseCurrentSnapshot(evt.Payload);
+        return current is not null && current.Type == TransactionType.Expense
+            ? ApplyDeltaAsync(current, 1, projections, evt.Id, ct)
+            : Task.CompletedTask;
+    }
+
+    private Task ApplyDeletedAsync(
+        OutboxEvent evt,
+        IMonthlyCategorySpendRepository projections,
+        CancellationToken ct)
+    {
+        var previous = ParsePreviousSnapshot(evt.Payload);
+        return previous is not null && previous.Type == TransactionType.Expense
+            ? ApplyDeltaAsync(previous, -1, projections, evt.Id, ct)
+            : Task.CompletedTask;
+    }
+
+    private async Task ApplyUpdatedAsync(
+        OutboxEvent evt,
+        IMonthlyCategorySpendRepository projections,
+        CancellationToken ct)
+    {
+        var previous = ParsePreviousSnapshot(evt.Payload);
+        if (previous is not null && previous.Type == TransactionType.Expense)
+            await ApplyDeltaAsync(previous, -1, projections, evt.Id, ct);
+
+        var current = ParseCurrentSnapshot(evt.Payload);
+        if (current is not null && current.Type == TransactionType.Expense)
+            await ApplyDeltaAsync(current, 1, projections, evt.Id, ct);
+    }
+
+    private async Task ApplyDeltaAsync(
+        TransactionProjectionSnapshot snapshot,
+        int direction,
+        IMonthlyCategorySpendRepository projections,
+        Guid eventId,
+        CancellationToken ct)
+    {
+        var monthKey = snapshot.TransactionDate.ToString("yyyy-MM");
+        var normalizedCategory = NormalizeCategory(snapshot.Category);
+        var existing = (await projections.ListRecentMonthsAsync(snapshot.UserId, [monthKey], ct))
+            .FirstOrDefault(p => string.Equals(p.NormalizedCategory, normalizedCategory, StringComparison.Ordinal));
+
+        var currentAmount = existing?.TotalExpenseAmount ?? 0m;
+        var currentCount = existing?.TransactionCount ?? 0;
+        var updatedAmount = currentAmount + (snapshot.Amount * direction);
+        var updatedCount = currentCount + direction;
+
+        if (updatedAmount < 0m || updatedCount < 0)
+        {
+            _logger.LogWarning(
+                "Projection delta clamped for user {UserId}, category {Category}, month {MonthKey}, event {EventId}",
+                snapshot.UserId,
+                snapshot.Category,
+                monthKey,
+                eventId);
+            updatedAmount = Math.Max(0m, updatedAmount);
+            updatedCount = Math.Max(0, updatedCount);
+        }
+
+        await projections.UpsertAsync(new MonthlyCategorySpend
+        {
+            UserId = snapshot.UserId,
+            MonthKey = monthKey,
+            Category = existing?.Category ?? snapshot.Category,
+            NormalizedCategory = normalizedCategory,
+            CurrencyCode = existing?.CurrencyCode ?? snapshot.CurrencyCode,
+            TotalExpenseAmount = updatedAmount,
+            TransactionCount = updatedCount,
+            LastUpdatedAt = DateTime.UtcNow
+        }, ct);
+    }
+
+    private static TransactionProjectionSnapshot? ParseCurrentSnapshot(string payload)
+    {
+        using var doc = JsonDocument.Parse(payload);
+        var root = doc.RootElement;
+
+        if (!TryParseType(root, "Type", out var type)
+            || !root.TryGetProperty("Category", out var categoryElement)
+            || !root.TryGetProperty("Amount", out var amountElement)
+            || !root.TryGetProperty("CurrencyCode", out var currencyElement)
+            || !root.TryGetProperty("TransactionDate", out var dateElement)
+            || !root.TryGetProperty("UserId", out var userIdElement))
+        {
+            return null;
+        }
+
+        return new TransactionProjectionSnapshot(
+            Guid.Parse(userIdElement.GetString()!),
+            type,
+            categoryElement.GetString() ?? string.Empty,
+            amountElement.GetDecimal(),
+            currencyElement.GetString() ?? "USD",
+            dateElement.GetDateTime());
+    }
+
+    private static TransactionProjectionSnapshot? ParsePreviousSnapshot(string payload)
+    {
+        using var doc = JsonDocument.Parse(payload);
+        var root = doc.RootElement;
+
+        if (!TryParseType(root, "PreviousType", out var type)
+            || !root.TryGetProperty("PreviousCategory", out var categoryElement)
+            || !root.TryGetProperty("PreviousAmount", out var amountElement)
+            || !root.TryGetProperty("PreviousCurrencyCode", out var currencyElement)
+            || !root.TryGetProperty("PreviousTransactionDate", out var dateElement)
+            || !root.TryGetProperty("UserId", out var userIdElement))
+        {
+            return null;
+        }
+
+        return new TransactionProjectionSnapshot(
+            Guid.Parse(userIdElement.GetString()!),
+            type,
+            categoryElement.GetString() ?? string.Empty,
+            amountElement.GetDecimal(),
+            currencyElement.GetString() ?? "USD",
+            dateElement.GetDateTime());
+    }
+
+    private static bool TryParseType(JsonElement root, string propertyName, out TransactionType type)
+    {
+        type = default;
+        return root.TryGetProperty(propertyName, out var typeElement)
+            && Enum.TryParse(typeElement.GetString(), out type);
+    }
+
+    private static string NormalizeCategory(string category) =>
+        category.Trim().ToLowerInvariant();
+
+    private async Task RepairMonthAsync(
+        Guid userId,
+        string monthKey,
+        ITransactionRepository transactionRepository,
+        IMonthlyCategorySpendRepository projectionRepository,
+        CancellationToken ct)
+    {
+        var monthStart = DateTime.SpecifyKind(
+            DateTime.ParseExact(monthKey + "-01", "yyyy-MM-dd", null),
+            DateTimeKind.Utc);
+        var monthEnd = monthStart.AddMonths(1).AddTicks(-1);
+
+        var totals = (await transactionRepository.GetByUserIdAndDateRangeAsync(userId, monthStart, monthEnd, ct))
+            .Where(transaction => transaction.Type == TransactionType.Expense)
+            .GroupBy(transaction => NormalizeCategory(transaction.Category))
+            .Select(group => new MonthlyCategorySpend
+            {
+                UserId = userId,
+                MonthKey = monthKey,
+                Category = group.First().Category,
+                NormalizedCategory = group.Key,
+                CurrencyCode = group.First().Amount.CurrencyCode,
+                TotalExpenseAmount = group.Sum(transaction => transaction.Amount.Amount),
+                TransactionCount = group.Count(),
+                LastUpdatedAt = DateTime.UtcNow
+            })
+            .ToList();
+
+        foreach (var total in totals)
+            await projectionRepository.UpsertAsync(total, ct);
+    }
+
+    private sealed record TransactionProjectionSnapshot(
+        Guid UserId,
+        TransactionType Type,
+        string Category,
+        decimal Amount,
+        string CurrencyCode,
+        DateTime TransactionDate);
 }

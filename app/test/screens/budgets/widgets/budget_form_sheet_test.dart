@@ -1,6 +1,7 @@
 import 'package:conscia_app/providers/budget_providers.dart';
 import 'package:conscia_app/providers/subscription_provider.dart';
 import 'package:conscia_app/providers/user_provider.dart';
+import 'package:conscia_app/providers/usage_provider.dart';
 import 'package:conscia_app/screens/budgets/widgets/budget_form_sheet.dart';
 import 'package:conscia_app/services/budget_service.dart';
 import 'package:conscia_app/services/subscription_service.dart';
@@ -9,6 +10,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class _StaticBudgetService extends BudgetService {
   _StaticBudgetService() : super(Dio());
@@ -20,11 +22,16 @@ class _StaticBudgetService extends BudgetService {
 Future<void> _pumpBudgetFormSheet(
   WidgetTester tester, {
   required bool isPremium,
+  String? initialCategory,
 }) async {
+  SharedPreferences.setMockInitialValues({});
+  final prefs = await SharedPreferences.getInstance();
+
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
         budgetServiceProvider.overrideWithValue(_StaticBudgetService()),
+        sharedPreferencesProvider.overrideWithValue(prefs),
         subscriptionProvider.overrideWith(
           (ref) async => SubscriptionStatus(
             tier: isPremium ? 'premium' : 'free',
@@ -42,9 +49,9 @@ Future<void> _pumpBudgetFormSheet(
           ),
         ),
       ],
-      child: const MaterialApp(
+      child: MaterialApp(
         home: Scaffold(
-          body: BudgetFormSheet(),
+          body: BudgetFormSheet(initialCategory: initialCategory),
         ),
       ),
     ),
@@ -54,26 +61,29 @@ Future<void> _pumpBudgetFormSheet(
 }
 
 void main() {
-  testWidgets('budget form category chips stay in a horizontal rail', (
+  testWidgets('budget form surfaces a preselected category clearly', (
     tester,
   ) async {
-    await _pumpBudgetFormSheet(tester, isPremium: true);
+    await _pumpBudgetFormSheet(
+      tester,
+      isPremium: true,
+      initialCategory: 'Subscriptions',
+    );
 
-    final groceriesY = tester.getCenter(find.text('Groceries')).dy;
-    final diningY = tester.getCenter(find.text('Dining')).dy;
-    final transportY = tester.getCenter(find.text('Transport')).dy;
-
-    expect((groceriesY - diningY).abs(), lessThan(8));
-    expect((groceriesY - transportY).abs(), lessThan(8));
+    expect(find.text('Subscriptions'), findsOneWidget);
+    expect(find.widgetWithText(InputChip, 'Subscriptions'), findsOneWidget);
   });
 
   testWidgets('budget form hides upgrade-only categories for free users',
       (tester) async {
     await _pumpBudgetFormSheet(tester, isPremium: false);
 
-    expect(find.text('Groceries'), findsOneWidget);
-    expect(find.text('Dining'), findsOneWidget);
-    expect(find.text('Transport'), findsOneWidget);
+    await tester.tap(find.text('All categories'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Groceries'), findsWidgets);
+    expect(find.text('Dining'), findsWidgets);
+    expect(find.text('Transport'), findsWidgets);
     expect(find.text('Travel'), findsNothing);
     expect(find.text('Salary'), findsNothing);
   });
@@ -81,6 +91,9 @@ void main() {
   testWidgets('budget form shows all expense categories for premium users',
       (tester) async {
     await _pumpBudgetFormSheet(tester, isPremium: true);
+
+    await tester.tap(find.text('All categories'));
+    await tester.pumpAndSettle();
 
     expect(find.text('Travel'), findsOneWidget);
     expect(find.text('Salary'), findsNothing);

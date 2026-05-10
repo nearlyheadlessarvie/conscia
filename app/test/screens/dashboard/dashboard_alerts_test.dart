@@ -1,13 +1,18 @@
 import 'package:conscia_app/providers/alert_provider.dart';
 import 'package:conscia_app/providers/behavioral_insights_provider.dart';
+import 'package:conscia_app/models/behavioral_insights.dart';
 import 'package:conscia_app/providers/budget_providers.dart';
+import 'package:conscia_app/providers/subscription_provider.dart';
 import 'package:conscia_app/providers/transaction_providers.dart';
+import 'package:conscia_app/providers/user_provider.dart';
 import 'package:conscia_app/core/routing/app_router.dart';
 import 'package:conscia_app/screens/dashboard/dashboard_screen.dart';
 import 'package:conscia_app/screens/dashboard/widgets/recent_transaction_tile.dart';
 import 'package:conscia_app/screens/dashboard/widgets/regret_prompt_card.dart';
 import 'package:conscia_app/services/budget_service.dart';
+import 'package:conscia_app/services/subscription_service.dart';
 import 'package:conscia_app/services/transaction_service.dart';
+import 'package:conscia_app/services/user_service.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -49,6 +54,20 @@ class _LocalAlertsTestNotifier extends LocalAlertsNotifier {
     state = alerts;
   }
 }
+
+final _testUser = UserProfile(
+  id: 'user-1',
+  email: 'test@example.com',
+  currencyCode: 'PHP',
+  locale: 'en_PH',
+  createdAt: DateTime.utc(2026, 5, 1),
+  hasCompletedOnboarding: true,
+);
+
+const _testSubscription = SubscriptionStatus(
+  tier: 'free',
+  isPremium: false,
+);
 
 Widget _buildApp(ProviderContainer container) {
   final router = GoRouter(
@@ -161,6 +180,56 @@ void main() {
     expect(headerFinder.hitTestable(), findsOneWidget);
   });
 
+  testWidgets('dashboard shows budget trends card when behavioral insights include trends',
+      (tester) async {
+    final container = ProviderContainer(
+      overrides: [
+        budgetServiceProvider.overrideWithValue(_StaticBudgetService(const [])),
+        transactionServiceProvider
+            .overrideWithValue(_StaticTransactionService()),
+        behavioralInsightsProvider.overrideWith((ref) async => const BehavioralInsights(
+              mood: FinancialMood.balanced,
+              worthItPercentage: 72,
+              worthItCount: 9,
+              previousMonthWorthItCount: 7,
+              impulseeTrends: [],
+              budgetTrends: [
+                BudgetTrendInsight(
+                  category: 'Dining',
+                  hasBudget: true,
+                  currencyCode: 'PHP',
+                  months: [50, 60, 75],
+                  currentMonthSpend: 750,
+                  currentMonthPercentUsed: 75,
+                  insightLabel: 'Budget usage trending up',
+                ),
+                BudgetTrendInsight(
+                  category: 'Subscriptions',
+                  hasBudget: false,
+                  currencyCode: 'PHP',
+                  months: [100, 120, 140],
+                  currentMonthSpend: 140,
+                  insightLabel: 'Spending trending up',
+                  nudge: 'Add a budget for sharper insights',
+                ),
+              ],
+            )),
+        localAlertsProvider.overrideWith(
+          (ref) => _LocalAlertsTestNotifier(const []),
+        ),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    await tester.pumpWidget(_buildApp(container));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Budget trends'), findsOneWidget);
+    expect(find.text('Dining'), findsOneWidget);
+    expect(find.text('Subscriptions'), findsOneWidget);
+    expect(find.text('Add a budget for sharper insights'), findsOneWidget);
+  });
+
   testWidgets('dashboard surfaces local budget nudges with a budget CTA',
       (tester) async {
     final container = ProviderContainer(
@@ -169,6 +238,8 @@ void main() {
         transactionServiceProvider
             .overrideWithValue(_StaticTransactionService()),
         behavioralInsightsProvider.overrideWith((ref) async => null),
+        currentUserProvider.overrideWith((ref) async => _testUser),
+        subscriptionProvider.overrideWith((ref) async => _testSubscription),
         localAlertsProvider.overrideWith(
           (ref) => _LocalAlertsTestNotifier(
             [
@@ -178,6 +249,7 @@ void main() {
                 title: 'No budget for Dining yet',
                 message:
                     'You logged an expense in Dining without a matching budget.',
+                category: 'Dining',
                 isDismissed: false,
                 createdAt: DateTime(2026, 5, 7),
               ),
@@ -197,7 +269,17 @@ void main() {
     await tester.tap(find.text('Add budget'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Budgets placeholder'), findsOneWidget);
+    expect(find.text('New Budget'), findsOneWidget);
+    expect(find.text('Budgets placeholder'), findsNothing);
+
+    await tester.enterText(find.byType(TextField), '500');
+    await tester.pump();
+
+    final createBudgetButton = tester.widget<FilledButton>(
+      find.widgetWithText(FilledButton, 'Create Budget'),
+    );
+    expect(createBudgetButton.onPressed, isNotNull);
+    expect(container.read(activeAlertsProvider), hasLength(1));
   });
 
   testWidgets('dashboard can dismiss a local budget nudge', (tester) async {
