@@ -6,6 +6,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 
 class _StaticTransactionService extends TransactionService {
   _StaticTransactionService(this.transactions) : super(Dio());
@@ -61,6 +62,45 @@ Future<void> _pumpTransactionList(
 }
 
 void main() {
+  testWidgets('transaction list exposes add action in the header', (
+    tester,
+  ) async {
+    final router = GoRouter(
+      routes: [
+        GoRoute(
+          path: '/',
+          builder: (_, __) => const TransactionListScreen(),
+        ),
+        GoRoute(
+          path: '/transactions/add',
+          builder: (_, __) => const Scaffold(
+            body: Text('Add transaction screen'),
+          ),
+        ),
+      ],
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          transactionServiceProvider.overrideWithValue(
+            _StaticTransactionService(const []),
+          ),
+        ],
+        child: MaterialApp.router(routerConfig: router),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byTooltip('Add transaction'), findsOneWidget);
+    expect(find.byType(FloatingActionButton), findsNothing);
+
+    await tester.tap(find.byTooltip('Add transaction'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Add transaction screen'), findsOneWidget);
+  });
+
   testWidgets('selected transaction filters stay compact without overflow', (
     tester,
   ) async {

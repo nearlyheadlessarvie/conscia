@@ -60,7 +60,8 @@ class _MainShellState extends ConsumerState<MainShell> {
   }
 
   bool _showSharedAddFab(String location) {
-    return !location.startsWith('/assistant') &&
+    return !location.startsWith('/transactions') &&
+        !location.startsWith('/assistant') &&
         !location.startsWith('/settings');
   }
 

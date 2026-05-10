@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../core/routing/app_router.dart';
 import '../../core/theme/app_colors.dart';
 import '../../providers/transaction_providers.dart';
 import '../../services/transaction_service.dart';
@@ -59,7 +61,16 @@ class _TransactionListScreenState extends ConsumerState<TransactionListScreen> {
       ..sort();
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Transactions')),
+      appBar: AppBar(
+        title: const Text('Transactions'),
+        actions: [
+          IconButton(
+            tooltip: 'Add transaction',
+            icon: const Icon(Icons.add),
+            onPressed: () => context.push(AppRoutes.addTransaction),
+          ),
+        ],
+      ),
       body: DecoratedBox(
         decoration: BoxDecoration(
           gradient: LinearGradient(

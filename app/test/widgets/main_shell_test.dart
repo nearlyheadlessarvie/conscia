@@ -112,8 +112,11 @@ void main() {
     expect(scanBottom.dy, greaterThan(navigationBarPosition.dy));
   });
 
-  testWidgets('MainShell hides the shared add FAB on assistant and settings on mobile',
+  testWidgets('MainShell hides the shared add FAB on transactions, assistant, and settings on mobile',
       (tester) async {
+    await _pumpShell(tester, initialLocation: '/transactions');
+    expect(find.byType(FloatingActionButton), findsNothing);
+
     await _pumpShell(tester, initialLocation: '/assistant');
     expect(find.byType(FloatingActionButton), findsNothing);
 
@@ -121,9 +124,17 @@ void main() {
     expect(find.byType(FloatingActionButton), findsNothing);
   });
 
-  testWidgets('MainShell hides the navigation rail add FAB on assistant and settings',
+  testWidgets('MainShell hides the navigation rail add FAB on transactions, assistant, and settings',
       (tester) async {
     const wideSize = Size(1200, 800);
+
+    await _pumpShell(
+      tester,
+      initialLocation: '/transactions',
+      windowSize: wideSize,
+    );
+    expect(find.byType(NavigationRail), findsOneWidget);
+    expect(find.byType(FloatingActionButton), findsNothing);
 
     await _pumpShell(
       tester,
