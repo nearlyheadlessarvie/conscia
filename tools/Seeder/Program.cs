@@ -1,13 +1,15 @@
-using System.Text;
-using System.Text.Json;
-using Amazon;
 using Amazon.DynamoDBv2;
-using Amazon.DynamoDBv2.Model;
 using Amazon.Runtime;
 using Amazon.S3;
-using Amazon.S3.Model;
 using Conscia.Infrastructure.Persistence;
+using Conscia.Tools.Seeder.Profiles;
+using Conscia.Tools.Seeder.Story;
 using Microsoft.EntityFrameworkCore;
+
+var profile = SeedProfileParser.Parse(args);
+
+Console.WriteLine("=== Conscia Seeder ===\n");
+Console.WriteLine($"[Seeder] Profile: {profile}");
 
 var dynamoConfig = new AmazonDynamoDBConfig
 {
@@ -29,8 +31,15 @@ var dbOptions = new DbContextOptionsBuilder<ConsciaDbContext>()
     .Options;
 using var db = new ConsciaDbContext(dbOptions);
 
-Console.WriteLine("=== Conscia Seeder ===\n");
-
 Console.WriteLine("[RDS] Ensuring database is created...");
 await db.Database.EnsureCreatedAsync();
 
+switch (profile)
+{
+    case SeedProfile.Default:
+        Console.WriteLine("[Seeder] Default profile not yet expanded in this task.");
+        break;
+    case SeedProfile.StoryDemo:
+        await StoryDemoProfile.RunAsync(db, dynamo, s3, CancellationToken.None);
+        break;
+}
