@@ -90,10 +90,13 @@ class FinancialMoodCard extends StatelessWidget {
               moodColor.withValues(alpha: 0.05),
             ],
           ),
-          border: Border.all(
-            color: moodColor.withValues(alpha: 0.3),
-            width: 1,
-          ),
+          boxShadow: [
+            BoxShadow(
+              color: moodColor.withValues(alpha: 0.08),
+              blurRadius: 18,
+              offset: const Offset(0, 4),
+            ),
+          ],
         ),
         padding: const EdgeInsets.all(16),
         child: Column(

@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 
 import '../../../models/insights_models.dart';
 import '../../../providers/insights_provider.dart';
+import '../../../providers/user_provider.dart';
+import '../../insights/widgets/insights_formatting.dart';
 
 class RegretSummaryCard extends ConsumerWidget {
   const RegretSummaryCard({super.key});
@@ -11,21 +13,36 @@ class RegretSummaryCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final summaryAsync = ref.watch(insightsSummaryProvider);
+    final prefs = ref.watch(userPreferencesProvider);
 
     return summaryAsync.when(
       loading: () => const SizedBox.shrink(),
       error: (_, __) => const SizedBox.shrink(),
       data: (summary) {
         if (summary == null) return const SizedBox.shrink();
-        return _buildCard(context, summary);
+        return _buildCard(
+          context,
+          summary,
+          currencyCode: prefs.currency,
+          locale: prefs.locale,
+        );
       },
     );
   }
 
-  Widget _buildCard(BuildContext context, InsightsSummary summary) {
+  Widget _buildCard(
+    BuildContext context,
+    InsightsSummary summary, {
+    required String currencyCode,
+    required String? locale,
+  }) {
     final colors = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
-    const currency = '£';
+    final regretText = formatInsightCurrency(
+      summary.regrettedAmount,
+      currencyCode: currencyCode,
+      locale: locale,
+    );
 
     return Card(
       child: InkWell(
@@ -50,7 +67,7 @@ class RegretSummaryCard extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '$currency${summary.regrettedAmount.toStringAsFixed(0)} regretted on ${summary.regrettedCategory}',
+                      '$regretText regretted on ${summary.regrettedCategory}',
                       style: textTheme.bodyMedium?.copyWith(
                         fontWeight: FontWeight.w600,
                       ),
