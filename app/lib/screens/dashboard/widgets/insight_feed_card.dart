@@ -8,10 +8,12 @@ class InsightFeedCard extends StatelessWidget {
     super.key,
     required this.item,
     this.onDismiss,
+    this.enableNavigation = true,
   });
 
   final InsightFeedItem item;
   final VoidCallback? onDismiss;
+  final bool enableNavigation;
 
   @override
   Widget build(BuildContext context) {
@@ -22,7 +24,7 @@ class InsightFeedCard extends StatelessWidget {
     return Card(
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
-        onTap: () => context.push(item.route),
+        onTap: enableNavigation ? () => context.push(item.route) : null,
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Row(

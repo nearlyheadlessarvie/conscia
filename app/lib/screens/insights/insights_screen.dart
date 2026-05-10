@@ -119,7 +119,10 @@ class _InsightFeedSection extends StatelessWidget {
       child: Column(
         children: [
           for (final item in items) ...[
-            InsightFeedCard(item: item),
+            InsightFeedCard(
+              item: item,
+              enableNavigation: item.route != '/insights',
+            ),
             if (item != items.last) const SizedBox(height: 12),
           ],
         ],

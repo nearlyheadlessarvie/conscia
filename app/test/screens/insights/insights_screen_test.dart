@@ -124,6 +124,11 @@ void main() {
     );
     expect(find.text('Shopping is getting more impulsive'), findsOneWidget);
     expect(find.text('Regret Patterns'), findsNothing);
+
+    await tester.tap(find.text('Your financial mood is balanced'));
+    await tester.pump();
+
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets(
