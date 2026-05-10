@@ -65,9 +65,8 @@ List<InsightFeedItem> _budgetTrendItems(
 ) {
   return trends
       .where(
-        (trend) =>
-            !trend.hasBudget || (trend.currentMonthPercentUsed ?? 0) >= 80,
-      )
+    (trend) => !trend.hasBudget || (trend.currentMonthPercentUsed ?? 0) >= 80,
+  )
       .map((trend) {
     if (!trend.hasBudget) {
       final amount = CurrencyFormatter.format(
@@ -80,8 +79,8 @@ List<InsightFeedItem> _budgetTrendItems(
         kind: InsightFeedKind.budgetTrend,
         priority: 100,
         title: '${trend.category} has enough activity for a budget',
-        body:
-            trend.nudge ?? 'Add a budget so Conscia can make this trend more useful.',
+        body: trend.nudge ??
+            'Add a budget so Conscia can make this trend more useful.',
         metric: amount,
         caption: 'No budget yet',
         section: InsightFeedSection.budgetTrends,
@@ -132,8 +131,7 @@ List<InsightFeedItem> _impulseTrendItems(List<CategoryTrend> trends) {
 
 InsightFeedItem _weeklyMoodItem(BehavioralInsights insights) {
   final mood = _moodLabel(insights.mood);
-  final isPositive =
-      insights.mood == FinancialMood.confident ||
+  final isPositive = insights.mood == FinancialMood.confident ||
       insights.mood == FinancialMood.balanced;
   return InsightFeedItem(
     id: 'weekly-mood-${insights.mood.name}',

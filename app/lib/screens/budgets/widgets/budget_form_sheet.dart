@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/constants/generated/app_constants.g.dart';
 import '../../../providers/budget_providers.dart';
 import '../../../providers/subscription_provider.dart';
 import '../../../services/budget_service.dart';

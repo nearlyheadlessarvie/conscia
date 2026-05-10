@@ -116,242 +116,244 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       child: CustomScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
         slivers: [
-        SliverAppBar(
-          floating: true,
-          pinned: true,
-          title: Text(
-            'Conscia',
-            style: GoogleFonts.poppins(
-              textStyle: textTheme.titleLarge,
-              color: colors.primary,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          actions: [
-            IconButton(
-              icon: const Icon(Icons.notifications_outlined),
-              onPressed: () {},
-            ),
-          ],
-        ),
-        if (overBudgetCount > 0 && !_bannerDismissed)
-          SliverToBoxAdapter(
-            child: BudgetWarningBanner(
-              overBudgetCount: overBudgetCount,
-              onDismiss: () => setState(() => _bannerDismissed = true),
-            ),
-          ),
-        if (highlightedAlert != null)
-          SliverToBoxAdapter(
-            child: InAppAlertBanner(
-              title: highlightedAlert.title,
-              message: highlightedAlert.message,
-              actionLabel: highlightedAlert.actionLabel ??
-                  (highlightedAlert.type == 'budget_nudge' ? 'Add budget' : null),
-              onAction: (highlightedAlert.actionRoute == null &&
-                      highlightedAlert.type != 'budget_nudge')
-                  ? null
-                  : () {
-                      if (highlightedAlert.type == 'budget_nudge') {
-                        BudgetFormSheet.show(
-                          context,
-                          initialCategory: highlightedAlert.category,
-                        );
-                        return;
-                      }
-
-                      ref
-                          .read(dismissedAlertIdsProvider.notifier)
-                          .dismiss(highlightedAlert.id);
-                      if (highlightedAlert.type == 'ReflectionFollowUp' &&
-                          highlightedAlert.transactionId != null) {
-                        context.push(
-                          AppRoutes.transactionDetail(
-                            highlightedAlert.transactionId!,
-                            autoReflect: true,
-                          ),
-                        );
-                        return;
-                      }
-                      context.push(
-                        highlightedAlert.actionRoute ?? AppRoutes.budgets,
-                      );
-                    },
-              onDismiss: () => ref
-                  .read(dismissedAlertIdsProvider.notifier)
-                  .dismiss(highlightedAlert.id),
-            ),
-          ),
-        ...insightsState.when<List<Widget>>(
-          loading: () => [
-            SliverToBoxAdapter(
-              child: _buildSectionHeader(context, 'Your Insights'),
-            ),
-            const SliverPadding(
-              padding: EdgeInsets.symmetric(horizontal: 16),
-              sliver: SliverToBoxAdapter(
-                child: InsightSkeletonSection(),
+          SliverAppBar(
+            floating: true,
+            pinned: true,
+            title: Text(
+              'Conscia',
+              style: GoogleFonts.poppins(
+                textStyle: textTheme.titleLarge,
+                color: colors.primary,
+                fontWeight: FontWeight.w600,
               ),
             ),
-          ],
-          data: (items) {
-            if (items.isEmpty) return <Widget>[];
-            return [
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.notifications_outlined),
+                onPressed: () {},
+              ),
+            ],
+          ),
+          if (overBudgetCount > 0 && !_bannerDismissed)
+            SliverToBoxAdapter(
+              child: BudgetWarningBanner(
+                overBudgetCount: overBudgetCount,
+                onDismiss: () => setState(() => _bannerDismissed = true),
+              ),
+            ),
+          if (highlightedAlert != null)
+            SliverToBoxAdapter(
+              child: InAppAlertBanner(
+                title: highlightedAlert.title,
+                message: highlightedAlert.message,
+                actionLabel: highlightedAlert.actionLabel ??
+                    (highlightedAlert.type == 'budget_nudge'
+                        ? 'Add budget'
+                        : null),
+                onAction: (highlightedAlert.actionRoute == null &&
+                        highlightedAlert.type != 'budget_nudge')
+                    ? null
+                    : () {
+                        if (highlightedAlert.type == 'budget_nudge') {
+                          BudgetFormSheet.show(
+                            context,
+                            initialCategory: highlightedAlert.category,
+                          );
+                          return;
+                        }
+
+                        ref
+                            .read(dismissedAlertIdsProvider.notifier)
+                            .dismiss(highlightedAlert.id);
+                        if (highlightedAlert.type == 'ReflectionFollowUp' &&
+                            highlightedAlert.transactionId != null) {
+                          context.push(
+                            AppRoutes.transactionDetail(
+                              highlightedAlert.transactionId!,
+                              autoReflect: true,
+                            ),
+                          );
+                          return;
+                        }
+                        context.push(
+                          highlightedAlert.actionRoute ?? AppRoutes.budgets,
+                        );
+                      },
+                onDismiss: () => ref
+                    .read(dismissedAlertIdsProvider.notifier)
+                    .dismiss(highlightedAlert.id),
+              ),
+            ),
+          ...insightsState.when<List<Widget>>(
+            loading: () => [
               SliverToBoxAdapter(
                 child: _buildSectionHeader(context, 'Your Insights'),
               ),
-              SliverPadding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                sliver: SliverList.separated(
-                  itemCount: items.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 12),
+              const SliverPadding(
+                padding: EdgeInsets.symmetric(horizontal: 16),
+                sliver: SliverToBoxAdapter(
+                  child: InsightSkeletonSection(),
+                ),
+              ),
+            ],
+            data: (items) {
+              if (items.isEmpty) return <Widget>[];
+              return [
+                SliverToBoxAdapter(
+                  child: _buildSectionHeader(context, 'Your Insights'),
+                ),
+                SliverPadding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  sliver: SliverList.separated(
+                    itemCount: items.length,
+                    separatorBuilder: (_, __) => const SizedBox(height: 12),
+                    itemBuilder: (context, index) {
+                      final item = items[index];
+                      return InsightFeedCard(
+                        item: item,
+                        onDismiss: item.dismissible
+                            ? () => ref
+                                .read(insightDismissalsProvider.notifier)
+                                .dismiss(item.id)
+                            : null,
+                      );
+                    },
+                  ),
+                ),
+              ];
+            },
+            error: (_, __) => <Widget>[],
+          ),
+          SliverToBoxAdapter(
+            child: _buildSectionHeader(context, 'Budgets'),
+          ),
+          if (budgetState.isLoading && budgets.isEmpty)
+            SliverToBoxAdapter(
+              child: SizedBox(
+                height: 160,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  itemCount: 3,
+                  separatorBuilder: (_, __) => const SizedBox(width: 12),
+                  itemBuilder: (_, __) => const BudgetSummarySkeletonCard(),
+                ),
+              ),
+            )
+          else if (budgets.isEmpty)
+            SliverToBoxAdapter(
+              child: EmptyState(
+                icon: Icons.account_balance_wallet_outlined,
+                title: 'No budgets yet',
+                subtitle: 'Set up budgets to track your spending limits.',
+                actionLabel: 'Add Budget',
+                onAction: () => context.push(AppRoutes.budgets),
+              ),
+            )
+          else
+            SliverToBoxAdapter(
+              child: SizedBox(
+                height: 160,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  itemCount: budgets.length,
+                  separatorBuilder: (_, __) => const SizedBox(width: 12),
                   itemBuilder: (context, index) {
-                    final item = items[index];
-                    return InsightFeedCard(
-                      item: item,
-                      onDismiss: item.dismissible
-                          ? () => ref
-                              .read(insightDismissalsProvider.notifier)
-                              .dismiss(item.id)
-                          : null,
+                    final b = budgets[index];
+                    return BudgetSummaryCard(
+                      categoryBadge: TransactionTile.badgeFor(
+                        b.category,
+                        size: 16,
+                        filled: false,
+                      ),
+                      categoryName: b.category,
+                      spent: b.spent,
+                      limit: b.monthlyLimit,
+                      currencyCode: b.currencyCode,
                     );
                   },
                 ),
               ),
-            ];
-          },
-          error: (_, __) => <Widget>[],
-        ),
-        SliverToBoxAdapter(
-          child: _buildSectionHeader(context, 'Budgets'),
-        ),
-        if (budgetState.isLoading && budgets.isEmpty)
-          SliverToBoxAdapter(
-            child: SizedBox(
-              height: 160,
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                itemCount: 3,
-                separatorBuilder: (_, __) => const SizedBox(width: 12),
-                itemBuilder: (_, __) => const BudgetSummarySkeletonCard(),
-              ),
             ),
-          )
-        else if (budgets.isEmpty)
-          SliverToBoxAdapter(
-            child: EmptyState(
-              icon: Icons.account_balance_wallet_outlined,
-              title: 'No budgets yet',
-              subtitle: 'Set up budgets to track your spending limits.',
-              actionLabel: 'Add Budget',
-              onAction: () => context.push(AppRoutes.budgets),
+          if (regretPrompts.isNotEmpty) ...[
+            SliverToBoxAdapter(
+              child: _buildSectionHeader(context, 'Reflect'),
             ),
-          )
-        else
-          SliverToBoxAdapter(
-            child: SizedBox(
-              height: 160,
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                itemCount: budgets.length,
-                separatorBuilder: (_, __) => const SizedBox(width: 12),
+            SliverPadding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              sliver: SliverList.builder(
+                itemCount: regretPrompts.length,
                 itemBuilder: (context, index) {
-                  final b = budgets[index];
-                  return BudgetSummaryCard(
-                    categoryBadge: TransactionTile.badgeFor(
-                      b.category,
-                      size: 16,
-                      filled: false,
+                  final tx = regretPrompts[index];
+                  final displayCounterparty =
+                      tx.description.isNotEmpty ? tx.description : 'Unknown';
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: RegretPromptCard(
+                      categoryBadge: TransactionTile.badgeFor(
+                        tx.category,
+                        size: 16,
+                        filled: false,
+                      ),
+                      counterparty: displayCounterparty,
+                      amount: tx.amount,
+                      currencyCode: tx.currencyCode,
+                      date: tx.date,
+                      onWorthIt: () => _recordReflection(tx, 'worth_it'),
+                      onNotSure: () => _recordReflection(tx, 'not_sure'),
+                      onRegret: () => _recordReflection(tx, 'regret'),
+                      onDismiss: () =>
+                          setState(() => _dismissedPrompts.add(tx.id)),
                     ),
-                    categoryName: b.category,
-                    spent: b.spent,
-                    limit: b.monthlyLimit,
-                    currencyCode: b.currencyCode,
                   );
                 },
               ),
             ),
-          ),
-        if (regretPrompts.isNotEmpty) ...[
+          ],
           SliverToBoxAdapter(
-            child: _buildSectionHeader(context, 'Reflect'),
+            child: _buildSectionHeader(context, 'Recent Transactions'),
           ),
-          SliverPadding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            sliver: SliverList.builder(
-              itemCount: regretPrompts.length,
+          if (txState.isLoading && transactions.isEmpty)
+            SliverList.builder(
+              itemCount: 5,
+              itemBuilder: (_, __) => const SkeletonListTile(),
+            )
+          else if (transactions.isEmpty)
+            SliverToBoxAdapter(
+              child: EmptyState(
+                icon: Icons.receipt_long_outlined,
+                title: 'No transactions yet',
+                subtitle: 'Add your first transaction to get started.',
+                actionLabel: 'Add Transaction',
+                onAction: () => context.push(AppRoutes.addTransaction),
+              ),
+            )
+          else
+            SliverList.builder(
+              itemCount: recentTransactions.length,
               itemBuilder: (context, index) {
-                final tx = regretPrompts[index];
+                final t = recentTransactions[index];
                 final displayCounterparty =
-                    tx.description.isNotEmpty ? tx.description : 'Unknown';
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: RegretPromptCard(
-                    categoryBadge: TransactionTile.badgeFor(
-                      tx.category,
-                      size: 16,
-                      filled: false,
-                    ),
-                    counterparty: displayCounterparty,
-                    amount: tx.amount,
-                    currencyCode: tx.currencyCode,
-                    date: tx.date,
-                    onWorthIt: () => _recordReflection(tx, 'worth_it'),
-                    onNotSure: () => _recordReflection(tx, 'not_sure'),
-                    onRegret: () => _recordReflection(tx, 'regret'),
-                    onDismiss: () =>
-                        setState(() => _dismissedPrompts.add(tx.id)),
+                    t.description.isNotEmpty ? t.description : 'Unknown';
+                return RecentTransactionTile(
+                  id: t.id,
+                  categoryBadge: TransactionTile.badgeFor(
+                    t.category,
+                    size: 16,
+                    filled: false,
                   ),
+                  counterparty: displayCounterparty,
+                  category: t.category,
+                  date: t.date,
+                  amount: t.amount,
+                  isIncome: t.type == 'income',
+                  currencyCode: t.currencyCode,
+                  regretLevel: t.regretLevel,
                 );
               },
             ),
-          ),
-        ],
-        SliverToBoxAdapter(
-          child: _buildSectionHeader(context, 'Recent Transactions'),
-        ),
-        if (txState.isLoading && transactions.isEmpty)
-          SliverList.builder(
-            itemCount: 5,
-            itemBuilder: (_, __) => const SkeletonListTile(),
-          )
-        else if (transactions.isEmpty)
-          SliverToBoxAdapter(
-            child: EmptyState(
-              icon: Icons.receipt_long_outlined,
-              title: 'No transactions yet',
-              subtitle: 'Add your first transaction to get started.',
-              actionLabel: 'Add Transaction',
-              onAction: () => context.push(AppRoutes.addTransaction),
-            ),
-          )
-        else
-          SliverList.builder(
-            itemCount: recentTransactions.length,
-            itemBuilder: (context, index) {
-              final t = recentTransactions[index];
-              final displayCounterparty =
-                  t.description.isNotEmpty ? t.description : 'Unknown';
-              return RecentTransactionTile(
-                id: t.id,
-                categoryBadge: TransactionTile.badgeFor(
-                  t.category,
-                  size: 16,
-                  filled: false,
-                ),
-                counterparty: displayCounterparty,
-                category: t.category,
-                date: t.date,
-                amount: t.amount,
-                isIncome: t.type == 'income',
-                currencyCode: t.currencyCode,
-                regretLevel: t.regretLevel,
-              );
-            },
-          ),
-        const SliverPadding(padding: EdgeInsets.only(bottom: 80)),
+          const SliverPadding(padding: EdgeInsets.only(bottom: 80)),
         ],
       ),
     );

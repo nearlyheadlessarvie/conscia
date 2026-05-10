@@ -233,7 +233,8 @@ void main() {
     expect(headerFinder.hitTestable(), findsOneWidget);
   });
 
-  testWidgets('dashboard shows budget trends card when behavioral insights include trends',
+  testWidgets(
+      'dashboard shows budget trends card when behavioral insights include trends',
       (tester) async {
     final container = ProviderContainer(
       overrides: [
@@ -241,33 +242,34 @@ void main() {
         budgetServiceProvider.overrideWithValue(_StaticBudgetService(const [])),
         transactionServiceProvider
             .overrideWithValue(_StaticTransactionService()),
-        behavioralInsightsProvider.overrideWith((ref) async => const BehavioralInsights(
-              mood: FinancialMood.balanced,
-              worthItPercentage: 72,
-              worthItCount: 9,
-              previousMonthWorthItCount: 7,
-              impulseeTrends: [],
-              budgetTrends: [
-                BudgetTrendInsight(
-                  category: 'Dining',
-                  hasBudget: true,
-                  currencyCode: 'PHP',
-                  months: [50, 60, 75],
-                  currentMonthSpend: 750,
-                  currentMonthPercentUsed: 75,
-                  insightLabel: 'Budget usage trending up',
-                ),
-                BudgetTrendInsight(
-                  category: 'Subscriptions',
-                  hasBudget: false,
-                  currencyCode: 'PHP',
-                  months: [100, 120, 140],
-                  currentMonthSpend: 140,
-                  insightLabel: 'Spending trending up',
-                  nudge: 'Add a budget for sharper insights',
-                ),
-              ],
-            )),
+        behavioralInsightsProvider
+            .overrideWith((ref) async => const BehavioralInsights(
+                  mood: FinancialMood.balanced,
+                  worthItPercentage: 72,
+                  worthItCount: 9,
+                  previousMonthWorthItCount: 7,
+                  impulseeTrends: [],
+                  budgetTrends: [
+                    BudgetTrendInsight(
+                      category: 'Dining',
+                      hasBudget: true,
+                      currencyCode: 'PHP',
+                      months: [50, 60, 75],
+                      currentMonthSpend: 750,
+                      currentMonthPercentUsed: 75,
+                      insightLabel: 'Budget usage trending up',
+                    ),
+                    BudgetTrendInsight(
+                      category: 'Subscriptions',
+                      hasBudget: false,
+                      currencyCode: 'PHP',
+                      months: [100, 120, 140],
+                      currentMonthSpend: 140,
+                      insightLabel: 'Spending trending up',
+                      nudge: 'Add a budget for sharper insights',
+                    ),
+                  ],
+                )),
         insightsSummaryProvider.overrideWith((ref) async => null),
         insightsCategoriesProvider.overrideWith((ref) async => const []),
         insightsMerchantsProvider.overrideWith((ref) async => const []),
@@ -291,7 +293,8 @@ void main() {
     expect(find.text('Budget trends'), findsNothing);
   });
 
-  testWidgets('dashboard insight card can be dismissed locally', (tester) async {
+  testWidgets('dashboard insight card can be dismissed locally',
+      (tester) async {
     final container = ProviderContainer(
       overrides: [
         sharedPreferencesProvider.overrideWithValue(prefs),
@@ -544,7 +547,8 @@ void main() {
                 id: 'reflection-follow-up-tx-1',
                 type: 'ReflectionFollowUp',
                 title: 'This purchase still deserves a second look',
-                message: 'A reflection can help you spot what was really going on.',
+                message:
+                    'A reflection can help you spot what was really going on.',
                 priority: 50,
                 actionLabel: 'Reflect now',
                 actionRoute: AppRoutes.transactionDetail('tx-1'),
@@ -566,7 +570,8 @@ void main() {
     await tester.tap(find.text('Reflect now'));
     await tester.pumpAndSettle();
 
-    expect(find.text('detail:/transactions/tx-1?autoReflect=1'), findsOneWidget);
+    expect(
+        find.text('detail:/transactions/tx-1?autoReflect=1'), findsOneWidget);
     expect(
       container.read(dismissedAlertIdsProvider),
       contains('reflection-follow-up-tx-1'),

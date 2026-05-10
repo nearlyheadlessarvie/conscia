@@ -77,8 +77,7 @@ class InsightsScreen extends ConsumerWidget {
                 title: 'Regret patterns',
                 subtitle:
                     'The repeat signals worth noticing before the next purchase.',
-                items:
-                    sections[InsightFeedSection.regretPatterns] ?? const [],
+                items: sections[InsightFeedSection.regretPatterns] ?? const [],
               ),
               _MerchantSpotlightSection(merchantsAsync: merchantsAsync),
               _CategoryTrendSection(

@@ -73,8 +73,10 @@ void main() {
     );
     addTearDown(container.dispose);
 
-    final firstItems = await container.read(dashboardInsightFeedProvider.future);
-    expect(firstItems.map((item) => item.id), contains('weekly-mood-confident'));
+    final firstItems =
+        await container.read(dashboardInsightFeedProvider.future);
+    expect(
+        firstItems.map((item) => item.id), contains('weekly-mood-confident'));
 
     await container
         .read(insightDismissalsProvider.notifier)

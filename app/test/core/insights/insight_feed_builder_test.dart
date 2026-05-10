@@ -61,7 +61,8 @@ void main() {
       contains('budget-unbudgeted-subscriptions'),
     );
     expect(items.map((item) => item.id), contains('regret-summary-shopping'));
-    expect(items.map((item) => item.id), contains('impulse-shopping-worsening'));
+    expect(
+        items.map((item) => item.id), contains('impulse-shopping-worsening'));
     expect(items.first.id, 'budget-unbudgeted-subscriptions');
     expect(items.first.kind, InsightFeedKind.budgetTrend);
     expect(items.first.mascot, InsightFeedMascot.both);
