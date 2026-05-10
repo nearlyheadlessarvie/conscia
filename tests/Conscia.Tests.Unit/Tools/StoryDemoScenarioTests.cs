@@ -26,6 +26,9 @@ public class StoryDemoScenarioTests
         Assert.Contains(scenario.Transactions, tx => tx.Category == "Subscriptions");
         Assert.DoesNotContain(scenario.Budgets, budget => budget.Category == "Subscriptions");
         Assert.Equal("story-demo-premium", scenario.Subscription.OriginalTransactionId);
+        Assert.Equal(2, scenario.WeeklyInsights.Count);
+        Assert.Contains(scenario.WeeklyInsights, insight => insight.WeekStartDate == new DateTime(2026, 05, 11, 0, 0, 0, DateTimeKind.Utc));
+        Assert.Contains(scenario.WeeklyInsights, insight => insight.WorthItCount == 3);
         Assert.True(scenario.MonthlyCategorySpends.Count >= 6);
     }
 
