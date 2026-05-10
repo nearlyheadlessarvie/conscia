@@ -22,11 +22,31 @@ public class MonthlyCategorySpendRepository : IMonthlyCategorySpendRepository
         }, ct);
     }
 
-    public Task<IReadOnlyList<MonthlyCategorySpend>> ListRecentMonthsAsync(
+    public async Task<IReadOnlyList<MonthlyCategorySpend>> ListRecentMonthsAsync(
         Guid userId,
         IReadOnlyList<string> monthKeys,
-        CancellationToken ct = default) =>
-        throw new NotImplementedException();
+        CancellationToken ct = default)
+    {
+        var results = new List<MonthlyCategorySpend>();
+
+        foreach (var monthKey in monthKeys)
+        {
+            var response = await _dynamo.QueryAsync(new QueryRequest
+            {
+                TableName = TableName,
+                KeyConditionExpression = "PK = :pk AND begins_with(SK, :prefix)",
+                ExpressionAttributeValues = new Dictionary<string, AttributeValue>
+                {
+                    [":pk"] = new($"USER#{userId}"),
+                    [":prefix"] = new($"MONTH#{monthKey}#CAT#")
+                }
+            }, ct);
+
+            results.AddRange(response.Items.Select(FromItem));
+        }
+
+        return results;
+    }
 
     private static Dictionary<string, AttributeValue> ToItem(MonthlyCategorySpend projection) =>
         new()
@@ -41,5 +61,18 @@ public class MonthlyCategorySpendRepository : IMonthlyCategorySpendRepository
             ["TotalExpenseAmount"] = new() { N = projection.TotalExpenseAmount.ToString("G", CultureInfo.InvariantCulture) },
             ["TransactionCount"] = new() { N = projection.TransactionCount.ToString(CultureInfo.InvariantCulture) },
             ["LastUpdatedAt"] = new(projection.LastUpdatedAt.ToString("O")),
+        };
+
+    private static MonthlyCategorySpend FromItem(Dictionary<string, AttributeValue> item) =>
+        new()
+        {
+            UserId = Guid.Parse(item["UserId"].S),
+            MonthKey = item["MonthKey"].S,
+            Category = item["Category"].S,
+            NormalizedCategory = item["NormalizedCategory"].S,
+            CurrencyCode = item["CurrencyCode"].S,
+            TotalExpenseAmount = decimal.Parse(item["TotalExpenseAmount"].N, CultureInfo.InvariantCulture),
+            TransactionCount = int.Parse(item["TransactionCount"].N, CultureInfo.InvariantCulture),
+            LastUpdatedAt = DateTime.Parse(item["LastUpdatedAt"].S, CultureInfo.InvariantCulture)
         };
 }

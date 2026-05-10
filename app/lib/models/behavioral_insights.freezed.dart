@@ -262,6 +262,8 @@ mixin _$BehavioralInsights {
   int get worthItCount => throw _privateConstructorUsedError;
   int get previousMonthWorthItCount => throw _privateConstructorUsedError;
   List<CategoryTrend> get impulseeTrends => throw _privateConstructorUsedError;
+  List<BudgetTrendInsight> get budgetTrends =>
+      throw _privateConstructorUsedError;
   String? get moodDescription => throw _privateConstructorUsedError;
 
   /// Serializes this BehavioralInsights to a JSON map.
@@ -286,6 +288,7 @@ abstract class $BehavioralInsightsCopyWith<$Res> {
       int worthItCount,
       int previousMonthWorthItCount,
       List<CategoryTrend> impulseeTrends,
+      List<BudgetTrendInsight> budgetTrends,
       String? moodDescription});
 }
 
@@ -309,6 +312,7 @@ class _$BehavioralInsightsCopyWithImpl<$Res, $Val extends BehavioralInsights>
     Object? worthItCount = null,
     Object? previousMonthWorthItCount = null,
     Object? impulseeTrends = null,
+    Object? budgetTrends = null,
     Object? moodDescription = freezed,
   }) {
     return _then(_value.copyWith(
@@ -332,6 +336,10 @@ class _$BehavioralInsightsCopyWithImpl<$Res, $Val extends BehavioralInsights>
           ? _value.impulseeTrends
           : impulseeTrends // ignore: cast_nullable_to_non_nullable
               as List<CategoryTrend>,
+      budgetTrends: null == budgetTrends
+          ? _value.budgetTrends
+          : budgetTrends // ignore: cast_nullable_to_non_nullable
+              as List<BudgetTrendInsight>,
       moodDescription: freezed == moodDescription
           ? _value.moodDescription
           : moodDescription // ignore: cast_nullable_to_non_nullable
@@ -354,6 +362,7 @@ abstract class _$$BehavioralInsightsImplCopyWith<$Res>
       int worthItCount,
       int previousMonthWorthItCount,
       List<CategoryTrend> impulseeTrends,
+      List<BudgetTrendInsight> budgetTrends,
       String? moodDescription});
 }
 
@@ -375,6 +384,7 @@ class __$$BehavioralInsightsImplCopyWithImpl<$Res>
     Object? worthItCount = null,
     Object? previousMonthWorthItCount = null,
     Object? impulseeTrends = null,
+    Object? budgetTrends = null,
     Object? moodDescription = freezed,
   }) {
     return _then(_$BehavioralInsightsImpl(
@@ -398,6 +408,10 @@ class __$$BehavioralInsightsImplCopyWithImpl<$Res>
           ? _value._impulseeTrends
           : impulseeTrends // ignore: cast_nullable_to_non_nullable
               as List<CategoryTrend>,
+      budgetTrends: null == budgetTrends
+          ? _value._budgetTrends
+          : budgetTrends // ignore: cast_nullable_to_non_nullable
+              as List<BudgetTrendInsight>,
       moodDescription: freezed == moodDescription
           ? _value.moodDescription
           : moodDescription // ignore: cast_nullable_to_non_nullable
@@ -415,8 +429,11 @@ class _$BehavioralInsightsImpl implements _BehavioralInsights {
       required this.worthItCount,
       required this.previousMonthWorthItCount,
       required final List<CategoryTrend> impulseeTrends,
+      final List<BudgetTrendInsight> budgetTrends =
+          const <BudgetTrendInsight>[],
       this.moodDescription})
-      : _impulseeTrends = impulseeTrends;
+      : _impulseeTrends = impulseeTrends,
+        _budgetTrends = budgetTrends;
 
   factory _$BehavioralInsightsImpl.fromJson(Map<String, dynamic> json) =>
       _$$BehavioralInsightsImplFromJson(json);
@@ -437,12 +454,21 @@ class _$BehavioralInsightsImpl implements _BehavioralInsights {
     return EqualUnmodifiableListView(_impulseeTrends);
   }
 
+  final List<BudgetTrendInsight> _budgetTrends;
+  @override
+  @JsonKey()
+  List<BudgetTrendInsight> get budgetTrends {
+    if (_budgetTrends is EqualUnmodifiableListView) return _budgetTrends;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableListView(_budgetTrends);
+  }
+
   @override
   final String? moodDescription;
 
   @override
   String toString() {
-    return 'BehavioralInsights(mood: $mood, worthItPercentage: $worthItPercentage, worthItCount: $worthItCount, previousMonthWorthItCount: $previousMonthWorthItCount, impulseeTrends: $impulseeTrends, moodDescription: $moodDescription)';
+    return 'BehavioralInsights(mood: $mood, worthItPercentage: $worthItPercentage, worthItCount: $worthItCount, previousMonthWorthItCount: $previousMonthWorthItCount, impulseeTrends: $impulseeTrends, budgetTrends: $budgetTrends, moodDescription: $moodDescription)';
   }
 
   @override
@@ -460,6 +486,8 @@ class _$BehavioralInsightsImpl implements _BehavioralInsights {
                 other.previousMonthWorthItCount == previousMonthWorthItCount) &&
             const DeepCollectionEquality()
                 .equals(other._impulseeTrends, _impulseeTrends) &&
+            const DeepCollectionEquality()
+                .equals(other._budgetTrends, _budgetTrends) &&
             (identical(other.moodDescription, moodDescription) ||
                 other.moodDescription == moodDescription));
   }
@@ -473,6 +501,7 @@ class _$BehavioralInsightsImpl implements _BehavioralInsights {
       worthItCount,
       previousMonthWorthItCount,
       const DeepCollectionEquality().hash(_impulseeTrends),
+      const DeepCollectionEquality().hash(_budgetTrends),
       moodDescription);
 
   /// Create a copy of BehavioralInsights
@@ -499,6 +528,7 @@ abstract class _BehavioralInsights implements BehavioralInsights {
       required final int worthItCount,
       required final int previousMonthWorthItCount,
       required final List<CategoryTrend> impulseeTrends,
+      final List<BudgetTrendInsight> budgetTrends,
       final String? moodDescription}) = _$BehavioralInsightsImpl;
 
   factory _BehavioralInsights.fromJson(Map<String, dynamic> json) =
@@ -515,6 +545,8 @@ abstract class _BehavioralInsights implements BehavioralInsights {
   @override
   List<CategoryTrend> get impulseeTrends;
   @override
+  List<BudgetTrendInsight> get budgetTrends;
+  @override
   String? get moodDescription;
 
   /// Create a copy of BehavioralInsights
@@ -522,5 +554,322 @@ abstract class _BehavioralInsights implements BehavioralInsights {
   @override
   @JsonKey(includeFromJson: false, includeToJson: false)
   _$$BehavioralInsightsImplCopyWith<_$BehavioralInsightsImpl> get copyWith =>
+      throw _privateConstructorUsedError;
+}
+
+BudgetTrendInsight _$BudgetTrendInsightFromJson(Map<String, dynamic> json) {
+  return _BudgetTrendInsight.fromJson(json);
+}
+
+/// @nodoc
+mixin _$BudgetTrendInsight {
+  String get category => throw _privateConstructorUsedError;
+  bool get hasBudget => throw _privateConstructorUsedError;
+  String get currencyCode => throw _privateConstructorUsedError;
+  List<double> get months => throw _privateConstructorUsedError;
+  double get currentMonthSpend => throw _privateConstructorUsedError;
+  double? get currentMonthPercentUsed => throw _privateConstructorUsedError;
+  String get insightLabel => throw _privateConstructorUsedError;
+  String? get nudge => throw _privateConstructorUsedError;
+
+  /// Serializes this BudgetTrendInsight to a JSON map.
+  Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
+
+  /// Create a copy of BudgetTrendInsight
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  $BudgetTrendInsightCopyWith<BudgetTrendInsight> get copyWith =>
+      throw _privateConstructorUsedError;
+}
+
+/// @nodoc
+abstract class $BudgetTrendInsightCopyWith<$Res> {
+  factory $BudgetTrendInsightCopyWith(
+          BudgetTrendInsight value, $Res Function(BudgetTrendInsight) then) =
+      _$BudgetTrendInsightCopyWithImpl<$Res, BudgetTrendInsight>;
+  @useResult
+  $Res call(
+      {String category,
+      bool hasBudget,
+      String currencyCode,
+      List<double> months,
+      double currentMonthSpend,
+      double? currentMonthPercentUsed,
+      String insightLabel,
+      String? nudge});
+}
+
+/// @nodoc
+class _$BudgetTrendInsightCopyWithImpl<$Res, $Val extends BudgetTrendInsight>
+    implements $BudgetTrendInsightCopyWith<$Res> {
+  _$BudgetTrendInsightCopyWithImpl(this._value, this._then);
+
+  // ignore: unused_field
+  final $Val _value;
+  // ignore: unused_field
+  final $Res Function($Val) _then;
+
+  /// Create a copy of BudgetTrendInsight
+  /// with the given fields replaced by the non-null parameter values.
+  @pragma('vm:prefer-inline')
+  @override
+  $Res call({
+    Object? category = null,
+    Object? hasBudget = null,
+    Object? currencyCode = null,
+    Object? months = null,
+    Object? currentMonthSpend = null,
+    Object? currentMonthPercentUsed = freezed,
+    Object? insightLabel = null,
+    Object? nudge = freezed,
+  }) {
+    return _then(_value.copyWith(
+      category: null == category
+          ? _value.category
+          : category // ignore: cast_nullable_to_non_nullable
+              as String,
+      hasBudget: null == hasBudget
+          ? _value.hasBudget
+          : hasBudget // ignore: cast_nullable_to_non_nullable
+              as bool,
+      currencyCode: null == currencyCode
+          ? _value.currencyCode
+          : currencyCode // ignore: cast_nullable_to_non_nullable
+              as String,
+      months: null == months
+          ? _value.months
+          : months // ignore: cast_nullable_to_non_nullable
+              as List<double>,
+      currentMonthSpend: null == currentMonthSpend
+          ? _value.currentMonthSpend
+          : currentMonthSpend // ignore: cast_nullable_to_non_nullable
+              as double,
+      currentMonthPercentUsed: freezed == currentMonthPercentUsed
+          ? _value.currentMonthPercentUsed
+          : currentMonthPercentUsed // ignore: cast_nullable_to_non_nullable
+              as double?,
+      insightLabel: null == insightLabel
+          ? _value.insightLabel
+          : insightLabel // ignore: cast_nullable_to_non_nullable
+              as String,
+      nudge: freezed == nudge
+          ? _value.nudge
+          : nudge // ignore: cast_nullable_to_non_nullable
+              as String?,
+    ) as $Val);
+  }
+}
+
+/// @nodoc
+abstract class _$$BudgetTrendInsightImplCopyWith<$Res>
+    implements $BudgetTrendInsightCopyWith<$Res> {
+  factory _$$BudgetTrendInsightImplCopyWith(_$BudgetTrendInsightImpl value,
+          $Res Function(_$BudgetTrendInsightImpl) then) =
+      __$$BudgetTrendInsightImplCopyWithImpl<$Res>;
+  @override
+  @useResult
+  $Res call(
+      {String category,
+      bool hasBudget,
+      String currencyCode,
+      List<double> months,
+      double currentMonthSpend,
+      double? currentMonthPercentUsed,
+      String insightLabel,
+      String? nudge});
+}
+
+/// @nodoc
+class __$$BudgetTrendInsightImplCopyWithImpl<$Res>
+    extends _$BudgetTrendInsightCopyWithImpl<$Res, _$BudgetTrendInsightImpl>
+    implements _$$BudgetTrendInsightImplCopyWith<$Res> {
+  __$$BudgetTrendInsightImplCopyWithImpl(_$BudgetTrendInsightImpl _value,
+      $Res Function(_$BudgetTrendInsightImpl) _then)
+      : super(_value, _then);
+
+  /// Create a copy of BudgetTrendInsight
+  /// with the given fields replaced by the non-null parameter values.
+  @pragma('vm:prefer-inline')
+  @override
+  $Res call({
+    Object? category = null,
+    Object? hasBudget = null,
+    Object? currencyCode = null,
+    Object? months = null,
+    Object? currentMonthSpend = null,
+    Object? currentMonthPercentUsed = freezed,
+    Object? insightLabel = null,
+    Object? nudge = freezed,
+  }) {
+    return _then(_$BudgetTrendInsightImpl(
+      category: null == category
+          ? _value.category
+          : category // ignore: cast_nullable_to_non_nullable
+              as String,
+      hasBudget: null == hasBudget
+          ? _value.hasBudget
+          : hasBudget // ignore: cast_nullable_to_non_nullable
+              as bool,
+      currencyCode: null == currencyCode
+          ? _value.currencyCode
+          : currencyCode // ignore: cast_nullable_to_non_nullable
+              as String,
+      months: null == months
+          ? _value._months
+          : months // ignore: cast_nullable_to_non_nullable
+              as List<double>,
+      currentMonthSpend: null == currentMonthSpend
+          ? _value.currentMonthSpend
+          : currentMonthSpend // ignore: cast_nullable_to_non_nullable
+              as double,
+      currentMonthPercentUsed: freezed == currentMonthPercentUsed
+          ? _value.currentMonthPercentUsed
+          : currentMonthPercentUsed // ignore: cast_nullable_to_non_nullable
+              as double?,
+      insightLabel: null == insightLabel
+          ? _value.insightLabel
+          : insightLabel // ignore: cast_nullable_to_non_nullable
+              as String,
+      nudge: freezed == nudge
+          ? _value.nudge
+          : nudge // ignore: cast_nullable_to_non_nullable
+              as String?,
+    ));
+  }
+}
+
+/// @nodoc
+@JsonSerializable()
+class _$BudgetTrendInsightImpl implements _BudgetTrendInsight {
+  const _$BudgetTrendInsightImpl(
+      {required this.category,
+      required this.hasBudget,
+      required this.currencyCode,
+      required final List<double> months,
+      required this.currentMonthSpend,
+      this.currentMonthPercentUsed,
+      required this.insightLabel,
+      this.nudge})
+      : _months = months;
+
+  factory _$BudgetTrendInsightImpl.fromJson(Map<String, dynamic> json) =>
+      _$$BudgetTrendInsightImplFromJson(json);
+
+  @override
+  final String category;
+  @override
+  final bool hasBudget;
+  @override
+  final String currencyCode;
+  final List<double> _months;
+  @override
+  List<double> get months {
+    if (_months is EqualUnmodifiableListView) return _months;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableListView(_months);
+  }
+
+  @override
+  final double currentMonthSpend;
+  @override
+  final double? currentMonthPercentUsed;
+  @override
+  final String insightLabel;
+  @override
+  final String? nudge;
+
+  @override
+  String toString() {
+    return 'BudgetTrendInsight(category: $category, hasBudget: $hasBudget, currencyCode: $currencyCode, months: $months, currentMonthSpend: $currentMonthSpend, currentMonthPercentUsed: $currentMonthPercentUsed, insightLabel: $insightLabel, nudge: $nudge)';
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is _$BudgetTrendInsightImpl &&
+            (identical(other.category, category) ||
+                other.category == category) &&
+            (identical(other.hasBudget, hasBudget) ||
+                other.hasBudget == hasBudget) &&
+            (identical(other.currencyCode, currencyCode) ||
+                other.currencyCode == currencyCode) &&
+            const DeepCollectionEquality().equals(other._months, _months) &&
+            (identical(other.currentMonthSpend, currentMonthSpend) ||
+                other.currentMonthSpend == currentMonthSpend) &&
+            (identical(
+                    other.currentMonthPercentUsed, currentMonthPercentUsed) ||
+                other.currentMonthPercentUsed == currentMonthPercentUsed) &&
+            (identical(other.insightLabel, insightLabel) ||
+                other.insightLabel == insightLabel) &&
+            (identical(other.nudge, nudge) || other.nudge == nudge));
+  }
+
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @override
+  int get hashCode => Object.hash(
+      runtimeType,
+      category,
+      hasBudget,
+      currencyCode,
+      const DeepCollectionEquality().hash(_months),
+      currentMonthSpend,
+      currentMonthPercentUsed,
+      insightLabel,
+      nudge);
+
+  /// Create a copy of BudgetTrendInsight
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @override
+  @pragma('vm:prefer-inline')
+  _$$BudgetTrendInsightImplCopyWith<_$BudgetTrendInsightImpl> get copyWith =>
+      __$$BudgetTrendInsightImplCopyWithImpl<_$BudgetTrendInsightImpl>(
+          this, _$identity);
+
+  @override
+  Map<String, dynamic> toJson() {
+    return _$$BudgetTrendInsightImplToJson(
+      this,
+    );
+  }
+}
+
+abstract class _BudgetTrendInsight implements BudgetTrendInsight {
+  const factory _BudgetTrendInsight(
+      {required final String category,
+      required final bool hasBudget,
+      required final String currencyCode,
+      required final List<double> months,
+      required final double currentMonthSpend,
+      final double? currentMonthPercentUsed,
+      required final String insightLabel,
+      final String? nudge}) = _$BudgetTrendInsightImpl;
+
+  factory _BudgetTrendInsight.fromJson(Map<String, dynamic> json) =
+      _$BudgetTrendInsightImpl.fromJson;
+
+  @override
+  String get category;
+  @override
+  bool get hasBudget;
+  @override
+  String get currencyCode;
+  @override
+  List<double> get months;
+  @override
+  double get currentMonthSpend;
+  @override
+  double? get currentMonthPercentUsed;
+  @override
+  String get insightLabel;
+  @override
+  String? get nudge;
+
+  /// Create a copy of BudgetTrendInsight
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  _$$BudgetTrendInsightImplCopyWith<_$BudgetTrendInsightImpl> get copyWith =>
       throw _privateConstructorUsedError;
 }

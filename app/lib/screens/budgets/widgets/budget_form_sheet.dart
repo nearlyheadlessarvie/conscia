@@ -1,30 +1,35 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/constants/category_icons.dart';
-import '../../../core/constants/category_visibility.dart';
 import '../../../core/constants/generated/app_constants.g.dart';
 import '../../../providers/budget_providers.dart';
 import '../../../providers/subscription_provider.dart';
 import '../../../services/budget_service.dart';
-import '../../../widgets/feed_card.dart';
+import '../../transactions/widgets/transaction_style_category_selector.dart';
 import '../../../widgets/currency_badge.dart';
 import '../../../widgets/screen_section.dart';
-import '../../../widgets/selection_chip_group.dart';
 import '../../../providers/user_provider.dart';
 
 class BudgetFormSheet extends ConsumerStatefulWidget {
   final Budget? existing;
+  final String? initialCategory;
 
-  const BudgetFormSheet({super.key, this.existing});
+  const BudgetFormSheet({super.key, this.existing, this.initialCategory});
 
-  static Future<void> show(BuildContext context, {Budget? existing}) {
+  static Future<void> show(
+    BuildContext context, {
+    Budget? existing,
+    String? initialCategory,
+  }) {
     return showModalBottomSheet(
       context: context,
       useRootNavigator: true,
       isScrollControlled: true,
       useSafeArea: true,
-      builder: (_) => BudgetFormSheet(existing: existing),
+      builder: (_) => BudgetFormSheet(
+        existing: existing,
+        initialCategory: initialCategory,
+      ),
     );
   }
 
@@ -44,7 +49,7 @@ class _BudgetFormSheetState extends ConsumerState<BudgetFormSheet> {
     _amountController = TextEditingController(
       text: widget.existing?.monthlyLimit.toStringAsFixed(2) ?? '',
     );
-    _selectedCategory = widget.existing?.category;
+    _selectedCategory = widget.existing?.category ?? widget.initialCategory;
   }
 
   @override
@@ -121,10 +126,6 @@ class _BudgetFormSheetState extends ConsumerState<BudgetFormSheet> {
         widget.existing?.currencyCode ?? user.value?.currencyCode ?? 'USD';
     final isPremium =
         ref.watch(subscriptionProvider).valueOrNull?.isPremium ?? false;
-    final visibleCategories = visibleBudgetCategories(
-      isPremium: isPremium,
-      categories: expenseCategories,
-    );
     return Padding(
       padding: EdgeInsets.only(bottom: bottomInset),
       child: SizedBox(
@@ -160,18 +161,15 @@ class _BudgetFormSheetState extends ConsumerState<BudgetFormSheet> {
                           ? 'Category cannot be changed once the budget exists.'
                           : 'Choose which spending category this budget should watch.',
                       compact: true,
-                      child: FeedCard(
-                        child: SelectionChipGroup(
-                          options: visibleCategories,
-                          value: _selectedCategory,
-                          scrollable: true,
-                          onSelected: _isEditing
-                              ? (_) {}
-                              : (v) => setState(() => _selectedCategory = v),
-                          labelBuilder: (option) => option,
-                          avatarBuilder: (option, selected) =>
-                              CategoryIcons.badge(option, size: 16),
-                        ),
+                      child: TransactionStyleCategorySelector(
+                        selectedCategory: _selectedCategory,
+                        isExpense: true,
+                        isPremium: isPremium,
+                        showHeader: false,
+                        onCategorySelected: _isEditing
+                            ? (_) {}
+                            : (value) =>
+                                setState(() => _selectedCategory = value),
                       ),
                     ),
                     ScreenSection(

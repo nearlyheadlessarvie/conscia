@@ -30,12 +30,72 @@ public class TransactionRepository : DynamoRepository, ITransactionRepository
         return transaction;
     }
 
+    public async Task<Transaction> AddWithOutboxAsync(
+        Transaction transaction,
+        OutboxEvent outboxEvent,
+        CancellationToken ct = default)
+    {
+        await Dynamo.TransactWriteItemsAsync(new TransactWriteItemsRequest
+        {
+            TransactItems =
+            [
+                new()
+                {
+                    Put = new Put
+                    {
+                        TableName = TableName,
+                        Item = ToItem(transaction)
+                    }
+                },
+                new()
+                {
+                    Put = new Put
+                    {
+                        TableName = "OutboxEvents",
+                        Item = OutboxToItem(outboxEvent)
+                    }
+                }
+            ]
+        }, ct);
+
+        return transaction;
+    }
+
     public async Task UpdateAsync(Transaction transaction, CancellationToken ct = default)
     {
         await Dynamo.PutItemAsync(new PutItemRequest
         {
             TableName = TableName,
             Item = ToItem(transaction)
+        }, ct);
+    }
+
+    public async Task UpdateWithOutboxAsync(
+        Transaction transaction,
+        OutboxEvent outboxEvent,
+        CancellationToken ct = default)
+    {
+        await Dynamo.TransactWriteItemsAsync(new TransactWriteItemsRequest
+        {
+            TransactItems =
+            [
+                new()
+                {
+                    Put = new Put
+                    {
+                        TableName = TableName,
+                        Item = ToItem(transaction)
+                    }
+                },
+                new()
+                {
+                    Put = new Put
+                    {
+                        TableName = "OutboxEvents",
+                        Item = OutboxToItem(outboxEvent)
+                    }
+                }
+            ]
         }, ct);
     }
 
@@ -48,6 +108,35 @@ public class TransactionRepository : DynamoRepository, ITransactionRepository
         {
             TableName = TableName,
             Key = Key(DynamoKeys.User(existing.UserId), DynamoKeys.Transaction(existing.Date, id))
+        }, ct);
+    }
+
+    public async Task DeleteWithOutboxAsync(Guid userId, Guid id, OutboxEvent outboxEvent, CancellationToken ct = default)
+    {
+        var existing = await GetByIdAsync(userId, id, ct)
+            ?? throw new InvalidOperationException($"Transaction {id} not found");
+
+        await Dynamo.TransactWriteItemsAsync(new TransactWriteItemsRequest
+        {
+            TransactItems =
+            [
+                new()
+                {
+                    Delete = new Delete
+                    {
+                        TableName = TableName,
+                        Key = Key(DynamoKeys.User(existing.UserId), DynamoKeys.Transaction(existing.Date, id))
+                    }
+                },
+                new()
+                {
+                    Put = new Put
+                    {
+                        TableName = "OutboxEvents",
+                        Item = OutboxToItem(outboxEvent)
+                    }
+                }
+            ]
         }, ct);
     }
 
@@ -359,4 +448,23 @@ public class TransactionRepository : DynamoRepository, ITransactionRepository
             DateTimeStyles.RoundtripKind,
             out date);
     }
+
+    private static Dictionary<string, AttributeValue> OutboxToItem(OutboxEvent e) =>
+        new()
+        {
+            ["PK"] = new(DynamoKeys.Outbox(e.AggregateId)),
+            ["SK"] = new(DynamoKeys.EventCreatedAt(e.CreatedAt)),
+            ["Id"] = new(e.Id.ToString()),
+            ["AggregateId"] = new(e.AggregateId.ToString()),
+            ["EventType"] = new(e.EventType.ToString()),
+            ["Payload"] = new(e.Payload),
+            ["CreatedAt"] = new(e.CreatedAt.ToString("O")),
+            ["Status"] = new("PENDING"),
+            ["TTL"] = new()
+            {
+                N = new DateTimeOffset(e.CreatedAt.AddDays(7))
+                    .ToUnixTimeSeconds()
+                    .ToString()
+            }
+        };
 }

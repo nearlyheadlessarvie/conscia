@@ -45,9 +45,27 @@ class BehavioralInsights with _$BehavioralInsights {
     required int worthItCount,
     required int previousMonthWorthItCount,
     required List<CategoryTrend> impulseeTrends,
+    @Default(<BudgetTrendInsight>[]) List<BudgetTrendInsight> budgetTrends,
     String? moodDescription,
   }) = _BehavioralInsights;
 
   factory BehavioralInsights.fromJson(Map<String, dynamic> json) =>
       _$BehavioralInsightsFromJson(json);
+}
+
+@freezed
+class BudgetTrendInsight with _$BudgetTrendInsight {
+  const factory BudgetTrendInsight({
+    required String category,
+    required bool hasBudget,
+    required String currencyCode,
+    required List<double> months,
+    required double currentMonthSpend,
+    double? currentMonthPercentUsed,
+    required String insightLabel,
+    String? nudge,
+  }) = _BudgetTrendInsight;
+
+  factory BudgetTrendInsight.fromJson(Map<String, dynamic> json) =>
+      _$BudgetTrendInsightFromJson(json);
 }

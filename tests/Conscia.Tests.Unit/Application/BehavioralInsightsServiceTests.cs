@@ -11,13 +11,23 @@ public class BehavioralInsightsServiceTests
 {
     private readonly Mock<IWeeklyInsightsRepository> _insightsRepositoryMock = new();
     private readonly Mock<ITransactionRepository> _transactionRepositoryMock = new();
+    private readonly Mock<IBudgetRepository> _budgetRepositoryMock = new();
+    private readonly Mock<IMonthlyCategorySpendRepository> _monthlyCategorySpendRepositoryMock = new();
     private readonly BehavioralInsightsService _service;
 
     public BehavioralInsightsServiceTests()
     {
         _service = new BehavioralInsightsService(
             _insightsRepositoryMock.Object,
-            _transactionRepositoryMock.Object);
+            _transactionRepositoryMock.Object,
+            _budgetRepositoryMock.Object,
+            _monthlyCategorySpendRepositoryMock.Object);
+        _budgetRepositoryMock
+            .Setup(x => x.ListByUserAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Array.Empty<Budget>());
+        _monthlyCategorySpendRepositoryMock
+            .Setup(x => x.ListRecentMonthsAsync(It.IsAny<Guid>(), It.IsAny<IReadOnlyList<string>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Array.Empty<MonthlyCategorySpend>());
     }
 
     [Fact]
@@ -65,6 +75,129 @@ public class BehavioralInsightsServiceTests
         Assert.Equal(8, result.WorthItCount);
         Assert.Single(result.ImpulseeTrends);
         Assert.Equal("Coffee", result.ImpulseeTrends[0].Category);
+    }
+
+    [Fact]
+    public async Task GetBehavioralInsightsAsync_AppendsBudgetTrends_ForBudgetedAndUnbudgetedCategories()
+    {
+        var userId = Guid.NewGuid();
+        var now = DateTime.UtcNow;
+        var latestInsights = new WeeklyInsights
+        {
+            UserId = userId,
+            WeekStartDate = now.AddDays(-7),
+            Mood = FinancialMood.Balanced,
+            WorthItPercentage = 72.0,
+            WorthItCount = 9,
+            TotalTransactionCount = 12,
+            ImpulseTrends = []
+        };
+
+        _insightsRepositoryMock
+            .Setup(x => x.GetLatestByUserIdAsync(userId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(latestInsights);
+        _insightsRepositoryMock
+            .Setup(x => x.GetByUserIdAndWeekAsync(userId, It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((WeeklyInsights?)null);
+        _budgetRepositoryMock
+            .Setup(x => x.ListByUserAsync(userId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(
+            [
+                new Budget
+                {
+                    Id = Guid.NewGuid(),
+                    UserId = userId,
+                    Category = "Dining",
+                    MonthlyLimit = 1000m,
+                    CurrencyCode = "PHP"
+                }
+            ]);
+        _monthlyCategorySpendRepositoryMock
+            .Setup(x => x.ListRecentMonthsAsync(userId, It.IsAny<IReadOnlyList<string>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(
+            [
+                new MonthlyCategorySpend
+                {
+                    UserId = userId,
+                    MonthKey = "2026-03",
+                    Category = "Dining",
+                    NormalizedCategory = "dining",
+                    CurrencyCode = "PHP",
+                    TotalExpenseAmount = 500m,
+                    TransactionCount = 2,
+                    LastUpdatedAt = now
+                },
+                new MonthlyCategorySpend
+                {
+                    UserId = userId,
+                    MonthKey = "2026-04",
+                    Category = "Dining",
+                    NormalizedCategory = "dining",
+                    CurrencyCode = "PHP",
+                    TotalExpenseAmount = 600m,
+                    TransactionCount = 3,
+                    LastUpdatedAt = now
+                },
+                new MonthlyCategorySpend
+                {
+                    UserId = userId,
+                    MonthKey = "2026-05",
+                    Category = "Dining",
+                    NormalizedCategory = "dining",
+                    CurrencyCode = "PHP",
+                    TotalExpenseAmount = 750m,
+                    TransactionCount = 4,
+                    LastUpdatedAt = now
+                },
+                new MonthlyCategorySpend
+                {
+                    UserId = userId,
+                    MonthKey = "2026-03",
+                    Category = "Subscriptions",
+                    NormalizedCategory = "subscriptions",
+                    CurrencyCode = "PHP",
+                    TotalExpenseAmount = 100m,
+                    TransactionCount = 1,
+                    LastUpdatedAt = now
+                },
+                new MonthlyCategorySpend
+                {
+                    UserId = userId,
+                    MonthKey = "2026-04",
+                    Category = "Subscriptions",
+                    NormalizedCategory = "subscriptions",
+                    CurrencyCode = "PHP",
+                    TotalExpenseAmount = 120m,
+                    TransactionCount = 1,
+                    LastUpdatedAt = now
+                },
+                new MonthlyCategorySpend
+                {
+                    UserId = userId,
+                    MonthKey = "2026-05",
+                    Category = "Subscriptions",
+                    NormalizedCategory = "subscriptions",
+                    CurrencyCode = "PHP",
+                    TotalExpenseAmount = 140m,
+                    TransactionCount = 1,
+                    LastUpdatedAt = now
+                }
+            ]);
+
+        var result = await _service.GetBehavioralInsightsAsync(userId);
+
+        Assert.NotNull(result);
+        Assert.Equal(2, result!.BudgetTrends.Count);
+
+        var dining = result.BudgetTrends.Single(trend => trend.Category == "Dining");
+        Assert.True(dining.HasBudget);
+        Assert.Equal([50m, 60m, 75m], dining.Months);
+        Assert.Equal(75m, dining.CurrentMonthPercentUsed);
+
+        var subscriptions = result.BudgetTrends.Single(trend => trend.Category == "Subscriptions");
+        Assert.False(subscriptions.HasBudget);
+        Assert.Equal([100m, 120m, 140m], subscriptions.Months);
+        Assert.Equal("Add a budget for sharper insights", subscriptions.Nudge);
     }
 
     [Fact]

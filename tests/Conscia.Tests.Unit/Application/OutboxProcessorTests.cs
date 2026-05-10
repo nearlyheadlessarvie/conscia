@@ -1,6 +1,7 @@
 using Conscia.Application.Interfaces;
 using Conscia.Domain.Entities;
 using Conscia.Domain.Enums;
+using Conscia.Domain.ValueObjects;
 using Conscia.Infrastructure.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -11,12 +12,16 @@ namespace Conscia.Tests.Unit.Application;
 public class OutboxProcessorTests
 {
     private readonly Mock<IOutboxEventRepository> _outboxRepoMock = new();
+    private readonly Mock<IMonthlyCategorySpendRepository> _projectionRepoMock = new();
+    private readonly Mock<ITransactionRepository> _transactionRepoMock = new();
     private readonly Mock<ILogger<OutboxProcessor>> _loggerMock = new();
 
     private OutboxProcessor CreateProcessor()
     {
         var services = new ServiceCollection();
         services.AddScoped(_ => _outboxRepoMock.Object);
+        services.AddScoped(_ => _projectionRepoMock.Object);
+        services.AddScoped(_ => _transactionRepoMock.Object);
         var sp = services.BuildServiceProvider();
         var scopeFactory = sp.GetRequiredService<IServiceScopeFactory>();
         return new OutboxProcessor(scopeFactory, _loggerMock.Object);
@@ -53,6 +58,11 @@ public class OutboxProcessorTests
             .ReturnsAsync(true);
         _outboxRepoMock.Setup(r => r.MarkProcessedAsync(It.IsAny<OutboxEvent>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
+        _projectionRepoMock.Setup(r => r.ListRecentMonthsAsync(
+                It.IsAny<Guid>(),
+                It.IsAny<IReadOnlyList<string>>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Array.Empty<MonthlyCategorySpend>());
 
         var processor = CreateProcessor();
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
@@ -72,9 +82,10 @@ public class OutboxProcessorTests
     }
 
     [Fact]
-    public async Task ProcessesTransactionCreatedWithoutBudgetMutation()
+    public async Task ProcessesTransactionCreatedEvent_UpdatesMonthlyProjection()
     {
         var eventId = Guid.NewGuid();
+        var userId = Guid.Parse("11111111-1111-1111-1111-111111111111");
 
         var events = new List<OutboxEvent>
         {
@@ -86,10 +97,12 @@ public class OutboxProcessorTests
                 Payload = System.Text.Json.JsonSerializer.Serialize(new
                 {
                     TransactionId = Guid.NewGuid(),
-                    UserId = Guid.NewGuid(),
-                    Amount = 10m,
-                    CurrencyCode = "USD",
-                    Category = "Travel"
+                    UserId = userId,
+                    Type = "Expense",
+                    Category = "Dining",
+                    Amount = 120m,
+                    CurrencyCode = "PHP",
+                    TransactionDate = DateTime.Parse("2026-05-10T00:00:00Z")
                 }),
                 CreatedAt = DateTime.UtcNow
             }
@@ -102,6 +115,11 @@ public class OutboxProcessorTests
             .ReturnsAsync(true);
         _outboxRepoMock.Setup(r => r.MarkProcessedAsync(It.IsAny<OutboxEvent>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
+        _projectionRepoMock.Setup(r => r.ListRecentMonthsAsync(
+                It.IsAny<Guid>(),
+                It.IsAny<IReadOnlyList<string>>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Array.Empty<MonthlyCategorySpend>());
 
         var processor = CreateProcessor();
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
@@ -118,6 +136,12 @@ public class OutboxProcessorTests
         }
 
         _outboxRepoMock.Verify(r => r.MarkProcessedAsync(It.Is<OutboxEvent>(e => e.Id == eventId), It.IsAny<CancellationToken>()), Times.AtLeastOnce);
+        _projectionRepoMock.Verify(r => r.UpsertAsync(
+            It.Is<MonthlyCategorySpend>(p =>
+                p.UserId == userId &&
+                p.MonthKey == "2026-05" &&
+                p.NormalizedCategory == "dining"),
+            It.IsAny<CancellationToken>()), Times.AtLeastOnce);
     }
 
     [Fact]
@@ -184,5 +208,42 @@ public class OutboxProcessorTests
         }
 
         _outboxRepoMock.Verify(r => r.MarkProcessedAsync(It.IsAny<OutboxEvent>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task RepairProjectionAsync_OverwritesDriftedMonthFromSourceTotals()
+    {
+        var userId = Guid.NewGuid();
+        var monthKey = "2026-05";
+        var monthStart = new DateTime(2026, 05, 01, 0, 0, 0, DateTimeKind.Utc);
+        var monthEnd = monthStart.AddMonths(1).AddTicks(-1);
+
+        _transactionRepoMock.Setup(r => r.GetByUserIdAndDateRangeAsync(userId, monthStart, monthEnd, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(
+            [
+                new Transaction
+                {
+                    Id = Guid.NewGuid(),
+                    UserId = userId,
+                    Type = TransactionType.Expense,
+                    Category = "Dining",
+                    Amount = new Money(1200m, "PHP"),
+                    Date = new DateTime(2026, 05, 10, 0, 0, 0, DateTimeKind.Utc)
+                }
+            ]);
+
+        var processor = CreateProcessor();
+
+        await processor.RepairProjectionAsync(userId, [monthKey], CancellationToken.None);
+
+        _projectionRepoMock.Verify(r => r.UpsertAsync(
+            It.Is<MonthlyCategorySpend>(p =>
+                p.UserId == userId &&
+                p.MonthKey == monthKey &&
+                p.Category == "Dining" &&
+                p.NormalizedCategory == "dining" &&
+                p.TotalExpenseAmount == 1200m &&
+                p.TransactionCount == 1),
+            It.IsAny<CancellationToken>()), Times.Once);
     }
 }

@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Conscia.Application.DTOs;
 using Conscia.Application.Interfaces;
 using Conscia.Application.Models;
@@ -60,7 +61,10 @@ public class TransactionService : ITransactionService
             };
         }
 
-        var result = await _repo.AddAsync(transaction, ct);
+        var result = await _repo.AddWithOutboxAsync(
+            transaction,
+            CreateTransactionCreatedEvent(transaction),
+            ct);
 
         if (dto.Recurring is not null && _recurringScheduleService is not null)
         {
@@ -109,6 +113,8 @@ public class TransactionService : ITransactionService
             throw new KeyNotFoundException($"Transaction {id} not found");
         }
 
+        var previous = CloneTransaction(existing);
+
         if (dto.Type.HasValue) existing.Type = dto.Type.Value;
         if (dto.Amount.HasValue && dto.CurrencyCode is not null)
             existing.Amount = new Money(dto.Amount.Value, dto.CurrencyCode);
@@ -118,7 +124,10 @@ public class TransactionService : ITransactionService
         if (dto.Counterparty is not null) existing.Counterparty = dto.Counterparty;
         if (dto.Date.HasValue) existing.Date = dto.Date.Value;
 
-        await _repo.UpdateAsync(existing, ct);
+        await _repo.UpdateWithOutboxAsync(
+            existing,
+            CreateTransactionUpdatedEvent(previous, existing),
+            ct);
         return existing;
     }
 
@@ -131,10 +140,99 @@ public class TransactionService : ITransactionService
             throw new KeyNotFoundException($"Transaction {id} not found");
         }
 
-        await _repo.DeleteAsync(userId, id, ct);
+        await _repo.DeleteWithOutboxAsync(userId, id, CreateTransactionDeletedEvent(existing), ct);
         _logger.LogInformation("Deleting transaction {TransactionId} for user {UserId}", id, userId);
     }
 
     public Task UpdateRegretLevelAsync(Guid userId, Guid id, RegretLevel level, CancellationToken ct = default) =>
         _repo.UpdateRegretLevelAsync(userId, id, level, ct);
+
+    private static OutboxEvent CreateTransactionCreatedEvent(Transaction transaction) =>
+        new()
+        {
+            Id = Guid.NewGuid(),
+            AggregateId = transaction.Id,
+            EventType = OutboxEventType.TransactionCreated,
+            Payload = JsonSerializer.Serialize(new
+            {
+                TransactionId = transaction.Id,
+                UserId = transaction.UserId,
+                Type = transaction.Type.ToString(),
+                Category = transaction.Category,
+                Amount = transaction.Amount.Amount,
+                CurrencyCode = transaction.Amount.CurrencyCode,
+                TransactionDate = transaction.Date
+            }),
+            CreatedAt = DateTime.UtcNow
+        };
+
+    private static OutboxEvent CreateTransactionDeletedEvent(Transaction transaction) =>
+        new()
+        {
+            Id = Guid.NewGuid(),
+            AggregateId = transaction.Id,
+            EventType = OutboxEventType.TransactionDeleted,
+            Payload = JsonSerializer.Serialize(new
+            {
+                TransactionId = transaction.Id,
+                UserId = transaction.UserId,
+                PreviousType = transaction.Type.ToString(),
+                PreviousCategory = transaction.Category,
+                PreviousAmount = transaction.Amount.Amount,
+                PreviousCurrencyCode = transaction.Amount.CurrencyCode,
+                PreviousTransactionDate = transaction.Date
+            }),
+            CreatedAt = DateTime.UtcNow
+        };
+
+    private static OutboxEvent CreateTransactionUpdatedEvent(Transaction previous, Transaction current) =>
+        new()
+        {
+            Id = Guid.NewGuid(),
+            AggregateId = previous.Id,
+            EventType = OutboxEventType.TransactionUpdated,
+            Payload = JsonSerializer.Serialize(new
+            {
+                TransactionId = previous.Id,
+                UserId = previous.UserId,
+                PreviousType = previous.Type.ToString(),
+                PreviousCategory = previous.Category,
+                PreviousAmount = previous.Amount.Amount,
+                PreviousCurrencyCode = previous.Amount.CurrencyCode,
+                PreviousTransactionDate = previous.Date,
+                Type = current.Type.ToString(),
+                Category = current.Category,
+                Amount = current.Amount.Amount,
+                CurrencyCode = current.Amount.CurrencyCode,
+                TransactionDate = current.Date
+            }),
+            CreatedAt = DateTime.UtcNow
+        };
+
+    private static Transaction CloneTransaction(Transaction transaction) =>
+        new()
+        {
+            Id = transaction.Id,
+            UserId = transaction.UserId,
+            Type = transaction.Type,
+            Amount = new Money(
+                transaction.Amount.Amount,
+                transaction.Amount.CurrencyCode,
+                transaction.Amount.ExchangeRateToBase),
+            Category = transaction.Category,
+            Counterparty = transaction.Counterparty,
+            Date = transaction.Date,
+            CreatedAt = transaction.CreatedAt,
+            RegretLevel = transaction.RegretLevel,
+            RecurringScheduleId = transaction.RecurringScheduleId,
+            RecurringOccurrenceDate = transaction.RecurringOccurrenceDate,
+            Location = transaction.Location is null
+                ? null
+                : new Location
+                {
+                    Latitude = transaction.Location.Latitude,
+                    Longitude = transaction.Location.Longitude,
+                    PlaceName = transaction.Location.PlaceName
+                }
+        };
 }

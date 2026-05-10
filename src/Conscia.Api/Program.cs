@@ -139,6 +139,8 @@ builder.Services.AddScoped<IAIInteractionRepository, AIInteractionRepository>();
 builder.Services.AddScoped<IWeeklyInsightsRepository, WeeklyInsightsRepository>();
 builder.Services.AddScoped<IPurchasePatternRepository, PurchasePatternRepository>();
 builder.Services.AddScoped<IInAppAlertRepository, InAppAlertRepository>();
+builder.Services.AddScoped<IOutboxEventRepository, OutboxEventRepository>();
+builder.Services.AddScoped<IMonthlyCategorySpendRepository, MonthlyCategorySpendRepository>();
 
 // --- Store Validation ---
 builder.Services.Configure<AppleStoreOptions>(builder.Configuration.GetSection(AppleStoreOptions.SectionName));
@@ -209,6 +211,7 @@ builder.Services.AddCors(options =>
 
 // --- Background Services ---
 builder.Services.AddHostedService<RecurringScheduleProcessor>();
+builder.Services.AddHostedService<OutboxProcessor>();
 
 // --- Auth ---
 var useMockAuth = builder.Configuration.GetValue<bool>("Auth:UseMock");
