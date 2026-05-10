@@ -26,6 +26,8 @@ public sealed class StoryDemoScenario
 
         var userId = Guid.Parse("7aa7aa7a-1111-4444-8888-111111111111");
         var monthStart = new DateTime(nowUtc.Year, nowUtc.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+        var currentWeekStart = GetStartOfWeek(nowUtc);
+        var previousWeekStart = currentWeekStart.AddDays(-7);
 
         var user = new User
         {
@@ -89,7 +91,7 @@ public sealed class StoryDemoScenario
             new()
             {
                 UserId = userId,
-                WeekStartDate = new DateTime(2026, 05, 04, 0, 0, 0, DateTimeKind.Utc),
+                WeekStartDate = currentWeekStart,
                 Mood = FinancialMood.Balanced,
                 WorthItPercentage = 71.43,
                 WorthItCount = 5,
@@ -99,6 +101,21 @@ public sealed class StoryDemoScenario
                     new CategoryTrend { Category = "Shopping", RegretRate = 0.60, TransactionCount = 5, Trend = TrendDirection.Worsening },
                     new CategoryTrend { Category = "Dining", RegretRate = 0.30, TransactionCount = 8, Trend = TrendDirection.Steady },
                     new CategoryTrend { Category = "Subscriptions", RegretRate = 0.10, TransactionCount = 3, Trend = TrendDirection.Improving }
+                ]
+            },
+            new()
+            {
+                UserId = userId,
+                WeekStartDate = previousWeekStart,
+                Mood = FinancialMood.Cautious,
+                WorthItPercentage = 57.14,
+                WorthItCount = 3,
+                TotalTransactionCount = 7,
+                ImpulseTrends =
+                [
+                    new CategoryTrend { Category = "Shopping", RegretRate = 0.72, TransactionCount = 4, Trend = TrendDirection.Worsening },
+                    new CategoryTrend { Category = "Dining", RegretRate = 0.42, TransactionCount = 6, Trend = TrendDirection.Steady },
+                    new CategoryTrend { Category = "Subscriptions", RegretRate = 0.20, TransactionCount = 2, Trend = TrendDirection.Steady }
                 ]
             }
         };
@@ -183,5 +200,11 @@ public sealed class StoryDemoScenario
             MonthlyCategorySpends = monthlyCategorySpends,
             Alerts = alerts
         };
+    }
+
+    private static DateTime GetStartOfWeek(DateTime date)
+    {
+        var diff = (7 + (date.DayOfWeek - DayOfWeek.Monday)) % 7;
+        return date.AddDays(-diff).Date;
     }
 }
