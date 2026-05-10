@@ -1,3 +1,4 @@
+import 'package:conscia_app/models/insight_feed_item.dart';
 import 'package:conscia_app/providers/alert_provider.dart';
 import 'package:conscia_app/providers/behavioral_insights_provider.dart';
 import 'package:conscia_app/models/behavioral_insights.dart';
@@ -7,6 +8,7 @@ import 'package:conscia_app/providers/transaction_providers.dart';
 import 'package:conscia_app/providers/user_provider.dart';
 import 'package:conscia_app/core/routing/app_router.dart';
 import 'package:conscia_app/screens/dashboard/dashboard_screen.dart';
+import 'package:conscia_app/screens/dashboard/widgets/insight_feed_card.dart';
 import 'package:conscia_app/screens/dashboard/widgets/recent_transaction_tile.dart';
 import 'package:conscia_app/screens/dashboard/widgets/regret_prompt_card.dart';
 import 'package:conscia_app/services/budget_service.dart';
@@ -138,6 +140,43 @@ void main() {
     );
 
     expect(find.text('Corner Bakery'), findsOneWidget);
+  });
+
+  testWidgets('insight feed card displays content and dismiss action',
+      (tester) async {
+    var dismissed = false;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: InsightFeedCard(
+            item: const InsightFeedItem(
+              id: 'weekly-mood-confident',
+              kind: InsightFeedKind.weeklyMood,
+              priority: 58,
+              title: 'Your financial mood is confident',
+              body: '90% of your decisions this week were reasoned.',
+              metric: '90%',
+              caption: 'This week',
+              section: InsightFeedSection.thisWeek,
+              tone: InsightFeedTone.positive,
+              mascot: InsightFeedMascot.angel,
+              mascotFrame: 'angel:4_win.png',
+            ),
+            onDismiss: () => dismissed = true,
+          ),
+        ),
+      ),
+    );
+
+    expect(find.text('Your financial mood is confident'), findsOneWidget);
+    expect(find.text('90%'), findsOneWidget);
+    expect(find.byTooltip('Dismiss insight'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Dismiss insight'));
+    await tester.pump();
+
+    expect(dismissed, isTrue);
   });
 
   testWidgets('dashboard header stays visible while scrolling', (tester) async {
