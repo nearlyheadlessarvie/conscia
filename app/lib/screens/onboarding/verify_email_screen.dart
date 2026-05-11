@@ -217,7 +217,10 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
                 ),
               ),
               TextButton(
-                onPressed: () => context.go(AppRoutes.signIn),
+                onPressed: () {
+                  ref.read(authProvider.notifier).cancelPendingConfirmation();
+                  context.go(AppRoutes.signIn);
+                },
                 child: const Text('Back to sign in'),
               ),
             ],

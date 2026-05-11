@@ -1,3 +1,4 @@
+import 'package:conscia_app/core/routing/app_router.dart';
 import 'package:conscia_app/providers/auth_provider.dart';
 import 'package:conscia_app/screens/onboarding/verify_email_screen.dart';
 import 'package:conscia_app/services/auth_service.dart';
@@ -6,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 
 class _FakeAuthService extends AuthService {
   _FakeAuthService() : super(Dio());
@@ -73,5 +75,48 @@ void main() {
     await tester.pump(const Duration(seconds: 60));
 
     expect(find.text('Resend code'), findsOneWidget);
+  });
+
+  testWidgets('back to sign in clears pending confirmation before routing', (
+    tester,
+  ) async {
+    final authNotifier = _TestAuthNotifier();
+    final router = GoRouter(
+      initialLocation: AppRoutes.verifyEmail,
+      redirect: (context, state) {
+        if (authNotifier.state.status == AuthStatus.pendingConfirmation &&
+            state.uri.path != AppRoutes.verifyEmail) {
+          return AppRoutes.verifyEmail;
+        }
+        return null;
+      },
+      routes: [
+        GoRoute(
+          path: AppRoutes.verifyEmail,
+          builder: (context, state) => const VerifyEmailScreen(),
+        ),
+        GoRoute(
+          path: AppRoutes.signIn,
+          builder: (context, state) => const Scaffold(
+            body: Text('Sign in screen'),
+          ),
+        ),
+      ],
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          authProvider.overrideWith((ref) => authNotifier),
+        ],
+        child: MaterialApp.router(routerConfig: router),
+      ),
+    );
+
+    await tester.tap(find.text('Back to sign in'));
+    await tester.pumpAndSettle();
+
+    expect(authNotifier.state.status, AuthStatus.unauthenticated);
+    expect(find.text('Sign in screen'), findsOneWidget);
   });
 }
