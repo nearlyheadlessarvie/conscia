@@ -1,5 +1,6 @@
 using Conscia.Application.Interfaces;
 using Conscia.Domain.Entities;
+using Conscia.Domain.Enums;
 using Conscia.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
@@ -16,6 +17,11 @@ public class BudgetRepository : IBudgetRepository
 
     public async Task<IReadOnlyList<Budget>> ListByUserAsync(Guid userId, CancellationToken ct = default) =>
         await _db.Budgets.Where(b => b.UserId == userId).ToListAsync(ct);
+
+    public async Task<IReadOnlyList<Budget>> ListByFamilySpaceAsync(Guid familySpaceId, CancellationToken ct = default) =>
+        await _db.Budgets
+            .Where(b => b.Scope == RecordScope.Family && b.FamilySpaceId == familySpaceId)
+            .ToListAsync(ct);
 
     public async Task<Budget> AddAsync(Budget budget, CancellationToken ct = default)
     {

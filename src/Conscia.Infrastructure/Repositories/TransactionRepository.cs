@@ -287,6 +287,44 @@ public class TransactionRepository : DynamoRepository, ITransactionRepository
         return response.Items.Select(FromItem).ToList();
     }
 
+    public async Task<IReadOnlyList<Transaction>> GetByFamilySpaceAndDateRangeAsync(
+        Guid familySpaceId,
+        DateTime from,
+        DateTime to,
+        CancellationToken ct = default)
+    {
+        var transactions = new List<Transaction>();
+        Dictionary<string, AttributeValue>? lastEvaluatedKey = null;
+
+        do
+        {
+            var response = await Dynamo.ScanAsync(new ScanRequest
+            {
+                TableName = TableName,
+                FilterExpression = "#scope = :scope AND FamilySpaceId = :familySpaceId AND #date BETWEEN :from AND :to",
+                ExpressionAttributeNames = new Dictionary<string, string>
+                {
+                    ["#scope"] = "Scope",
+                    ["#date"] = "Date"
+                },
+                ExpressionAttributeValues = new Dictionary<string, AttributeValue>
+                {
+                    [":scope"] = new(RecordScope.Family.ToString()),
+                    [":familySpaceId"] = new(familySpaceId.ToString()),
+                    [":from"] = new(from.ToString("O")),
+                    [":to"] = new(to.ToString("O"))
+                },
+                ExclusiveStartKey = lastEvaluatedKey
+            }, ct);
+
+            transactions.AddRange(response.Items.Select(FromItem));
+            lastEvaluatedKey = response.LastEvaluatedKey;
+        }
+        while (lastEvaluatedKey is { Count: > 0 });
+
+        return transactions;
+    }
+
     public async Task UpdateRegretLevelAsync(Guid userId, Guid id, RegretLevel level, CancellationToken ct = default)
     {
         var existing = await GetByIdAsync(userId, id, ct)

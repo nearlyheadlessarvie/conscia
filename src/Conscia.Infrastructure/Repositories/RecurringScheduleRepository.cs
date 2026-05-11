@@ -59,6 +59,37 @@ public class RecurringScheduleRepository : DynamoRepository, IRecurringScheduleR
         return response.Items.Select(FromItem).ToList();
     }
 
+    public async Task<IReadOnlyList<RecurringSchedule>> ListByFamilySpaceAsync(Guid familySpaceId, CancellationToken ct = default)
+    {
+        var schedules = new List<RecurringSchedule>();
+        Dictionary<string, AttributeValue>? lastEvaluatedKey = null;
+
+        do
+        {
+            var response = await Dynamo.ScanAsync(new ScanRequest
+            {
+                TableName = TableName,
+                FilterExpression = "#scope = :scope AND FamilySpaceId = :familySpaceId",
+                ExpressionAttributeNames = new Dictionary<string, string>
+                {
+                    ["#scope"] = "Scope"
+                },
+                ExpressionAttributeValues = new Dictionary<string, AttributeValue>
+                {
+                    [":scope"] = new(RecordScope.Family.ToString()),
+                    [":familySpaceId"] = new(familySpaceId.ToString())
+                },
+                ExclusiveStartKey = lastEvaluatedKey
+            }, ct);
+
+            schedules.AddRange(response.Items.Select(FromItem));
+            lastEvaluatedKey = response.LastEvaluatedKey;
+        }
+        while (lastEvaluatedKey is { Count: > 0 });
+
+        return schedules;
+    }
+
     public async Task UpdateAsync(RecurringSchedule schedule, CancellationToken ct = default)
     {
         await Dynamo.PutItemAsync(new PutItemRequest
