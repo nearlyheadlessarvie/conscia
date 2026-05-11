@@ -1,8 +1,8 @@
 # Conscia Enhancement Tasks Checklist
 
-**Status Overview:** Phases 1-3 implemented in the current app branch; recurring transactions are now shipped; Phases 4-8 remain planned
+**Status Overview:** Phases 1-3 implemented in the current app branch; recurring transactions are now shipped; Phase 5 is now MVP-scoped as Conscience Journey gamification; remaining Phase 4+ work is planned
 **Target Completion:** 16-20 weeks
-**Last Updated:** 2026-05-07
+**Last Updated:** 2026-05-11
 
 ---
 
@@ -338,88 +338,113 @@ Goal: Distinct, memorable personas
 
 ---
 
-## Phase 5: Gamification & Streaks (2 weeks)
+## Phase 5: Conscience Journey Gamification (2 weeks)
 
-Goal: Behavioral habit tracking and motivation
+Goal: Playful, mascot-led habit progression that rewards awareness, reflection, and intentional decisions without shame mechanics.
 
 ### Database Tasks
-- [ ] Create `AchievementProgress` table
-  - [ ] Schema: user_id, achievement_key, progress, unlocked_at
-  - [ ] Index: (user_id, achievement_key)
-  - [ ] Define achievement keys ("streak_7", "under_budget", "self_aware", "big_saver", "budget_master")
+- [ ] Create `ConscienceProgress` storage
+  - [ ] Schema: `user_id`, `xp_total`, `level_key`, `momentum_days`, `best_momentum_days`, `updated_at`
+  - [ ] Store current journey state separately from individual earned badges
+  - [ ] Use DynamoDB for MVP so writes can be event-style and low-cost
+
+- [ ] Create `ConscienceEvents` storage
+  - [ ] Schema: `user_id`, `event_id`, `event_type`, `source_id`, `xp_awarded`, `created_at`
+  - [ ] Enforce idempotency with `(user_id, event_type, source_id)` or equivalent keying
+  - [ ] Supported MVP event types: `reflection_completed`, `prepurchase_checked`, `budget_created_from_nudge`, `insight_reviewed`, `regret_pattern_reviewed`
+
+- [ ] Create `ConscienceBadgeProgress` storage
+  - [ ] Schema: `user_id`, `badge_key`, `progress`, `target`, `unlocked_at`
+  - [ ] Define MVP badge keys: `first_reflection`, `pause_before_purchase`, `budget_rescuer`, `regret_pattern_spotted`, `worth_it_week`
+
+- [ ] Create `ConscienceQuestProgress` storage
+  - [ ] Schema: `user_id`, `week_start`, `quest_key`, `progress`, `target`, `completed_at`, `xp_awarded`
+  - [ ] Keep quests weekly and deterministic for MVP
+  - [ ] Use user's locale/timezone later; start with server week boundary if timezone is unavailable
 
 ### Backend Tasks
-- [ ] Create `Conscia.Application/Services/AchievementService.cs`
-  - [ ] Implement `CheckAchievements(userId, transaction)` method
-  - [ ] Implement `GetCurrentStreak(userId)` method
-  - [ ] Implement `GetUserProgress(userId)` method
-  - [ ] Implement streak calculation logic
-  - [ ] Add unit tests
+- [ ] Create `Conscia.Application/Services/ConscienceJourneyService.cs`
+  - [ ] Implement `RecordEventAsync(userId, eventType, sourceId)` with idempotent XP awarding
+  - [ ] Implement `GetJourneyAsync(userId)` for dashboard/profile consumption
+  - [ ] Implement level calculation from `xp_total`
+  - [ ] Implement weekly quest progress updates
+  - [ ] Implement badge progress/unlock evaluation
+  - [ ] Add unit tests for XP, levels, idempotency, quest completion, badge unlocks
 
-- [ ] Create `Conscia.Infrastructure/Repositories/AchievementRepository.cs`
-  - [ ] Implement CRUD for achievement progress
-  - [ ] Add queries for user achievements
+- [ ] Create `Conscia.Infrastructure/Repositories/ConscienceJourneyRepository.cs`
+  - [ ] Read/write journey state
+  - [ ] Read/write event records
+  - [ ] Read/write badge progress
+  - [ ] Read/write weekly quest progress
 
-- [ ] Create backend endpoint `GET /api/v1/achievements`
-  - [ ] Return user's achievement progress
-  - [ ] Include unlocked achievements with dates
-  - [ ] Include current streaks
+- [ ] Create backend endpoint `GET /api/v1/conscience-journey`
+  - [ ] Return XP total, current level, next level threshold, momentum, active weekly quests, badge progress, and recent mascot moment
   - [ ] Add auth
   - [ ] Create integration test
 
-- [ ] Integrate achievement checking into transaction creation
-  - [ ] Call `AchievementService.CheckAchievements()` after transaction saved
-  - [ ] Update AchievementProgress table
-  - [ ] Handle unlocks atomically
+- [ ] Create backend endpoint `POST /api/v1/conscience-journey/events`
+  - [ ] Accept event type and source id from trusted app flows
+  - [ ] Reject unsupported event types
+  - [ ] Return updated journey state and any unlocks
+  - [ ] Add auth and idempotency tests
+
+- [ ] Wire MVP event sources
+  - [ ] Reflection completed after worth-it/not-sure/regret save
+  - [ ] Pre-purchase check completed after AI response
+  - [ ] Budget created from an unbudgeted category nudge
+  - [ ] Insight summary/card opened from dashboard
+  - [ ] Regret pattern detail opened from insights
 
 ### Frontend Tasks
-- [ ] Create `lib/models/achievement.dart`
-  - [ ] Define achievement data models
-  - [ ] Add Freezed + JSON serialization
+- [ ] Create `lib/models/conscience_journey.dart`
+  - [ ] Define journey, level, quest, badge, unlock, and mascot moment models
+  - [ ] Add JSON serialization following existing model patterns
 
-- [ ] Create `lib/providers/achievements_provider.dart`
-  - [ ] Fetch user achievements from backend
-  - [ ] Refresh after transaction creation
-  - [ ] Cache with 5-min TTL
+- [ ] Create `lib/services/conscience_journey_service.dart`
+  - [ ] Fetch journey state
+  - [ ] Record journey events from app flows
+  - [ ] Map backend errors through `AppError`
 
-- [ ] Create `lib/screens/dashboard/widgets/streak_counter_card.dart`
-  - [ ] Display current streak prominently
-  - [ ] Show personal best streak
-  - [ ] Add fire emoji and animation
-  - [ ] Link to achievements details
+- [ ] Create `lib/providers/conscience_journey_provider.dart`
+  - [ ] Fetch and cache journey state
+  - [ ] Expose helper methods to record events and refresh state
+  - [ ] Refresh after event-producing flows
 
-- [ ] Add achievement unlock modal
-  - [ ] `lib/widgets/achievement_unlock_modal.dart`
-  - [ ] Show on achievement unlock
-  - [ ] Display badge, name, description
-  - [ ] Add celebratory animation/confetti
-  - [ ] Offer share button
+- [ ] Create `lib/screens/dashboard/widgets/conscience_progress_card.dart`
+  - [ ] Show mascot, current level title, XP progress, momentum, and one active quest
+  - [ ] Link to journey details
+  - [ ] Keep placement near dashboard insights so it feels motivational, not decorative
 
-- [ ] Create `lib/screens/profile/achievements_screen.dart`
-  - [ ] Show all achievements
-  - [ ] Display unlocked with dates
-  - [ ] Show locked achievements with progress
-  - [ ] Add achievement descriptions
-  - [ ] Optional: sharing for unlocked achievements
+- [ ] Create `lib/screens/conscience/conscience_journey_screen.dart`
+  - [ ] Show current level, XP progress, weekly quests, unlocked badges, locked badge progress, and recent mascot moments
+  - [ ] Make future additions data-driven through metadata maps
 
-- [ ] Update dashboard layout
-  - [ ] Add streak counter card (prominent placement)
-  - [ ] Show above budgets or behavioral cards
+- [ ] Add unlock/moment UI
+  - [ ] Create `lib/widgets/conscience_unlock_sheet.dart`
+  - [ ] Show badge/level/quest completion moments after event recording
+  - [ ] Use angel/devil mascot art without confetti overload
 
-- [ ] Add achievement metadata
-  - [ ] `lib/core/constants/achievements.dart`
-  - [ ] Define achievement names, descriptions, icons
-  - [ ] Thresholds for each achievement
+- [ ] Add journey metadata
+  - [ ] `lib/core/constants/conscience_journey.dart`
+  - [ ] Define level keys, XP thresholds, badge names, quest labels, mascot copy, and icons
+  - [ ] Keep metadata centralized so new badges/quests are additive
 
 ### Testing & QA
-- [ ] Unit tests for AchievementService (streak logic)
-- [ ] Unit tests for achievement checking algorithm
-- [ ] Integration tests for endpoint
-- [ ] Widget tests for streak counter card
-- [ ] Widget tests for achievement modal
-- [ ] Manual testing: unlock achievements manually
-- [ ] Test edge cases (reset streak, back-to-back transactions)
-- [ ] Accessibility testing for modal and achievement screen
+- [ ] Unit tests for `ConscienceJourneyService`
+- [ ] Unit tests for idempotent XP awarding
+- [ ] Unit tests for level thresholds and weekly quest completion
+- [ ] Integration tests for journey fetch and event recording endpoints
+- [ ] Widget tests for dashboard progress card
+- [ ] Widget tests for journey screen and unlock sheet
+- [ ] Manual testing with `story-demo` seed: visible XP, active quests, unlocked badges, and mascot moments
+- [ ] Accessibility testing for progress bars, unlock sheet, mascot alt semantics, and reduced motion
+
+### Product Guardrails
+- [ ] Reward awareness and intentionality, not only spending less
+- [ ] Use "momentum" rather than punishing streak resets
+- [ ] Do not shame users for regret or missed quests
+- [ ] Keep social sharing out of MVP unless explicitly revisited
+- [ ] Ensure every new quest/badge can be added through centralized metadata and one backend event rule
 
 ---
 
@@ -687,7 +712,7 @@ Goal: Update messaging across app
 - Phase 2 depends on Phase 1 (some API endpoints can run in parallel)
 - Phase 3 depends on Phase 1 (transaction history needed for patterns)
 - Phase 4 is independent (can run in parallel with others)
-- Phase 5 depends on Phase 3 (achievement checking needs transaction logic)
+- Phase 5 depends on Phase 3 and current insights flows (journey events need reflections, pre-purchase checks, budget nudges, and regret pattern review sources)
 - Phase 6 depends on Phase 1 (digest needs insights)
 - Phase 7 depends on Phase 1 & 3 (needs insights and merchant data)
 - Phase 8 is independent (copy updates can happen anytime)
