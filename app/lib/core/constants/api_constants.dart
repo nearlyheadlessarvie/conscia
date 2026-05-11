@@ -50,6 +50,10 @@ class ApiConstants {
   static String insightsMerchantDetail(String merchant) =>
       'insights/merchants/$merchant';
 
+  // Conscience Journey
+  static const String conscienceJourney = 'conscience-journey';
+  static const String conscienceJourneyEvents = 'conscience-journey/events';
+
   // Suggestions
   static const String purchaseSuggestions = 'suggestions/purchases';
 
