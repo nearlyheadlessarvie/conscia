@@ -145,4 +145,54 @@ public static class DynamoKeys
     /// <returns></returns>
     public static string PurchasePatternMerchant(string merchant)
         => $"MER#{merchant.Trim().ToLowerInvariant()}";
+
+    /// <summary>
+    /// <c>PROGRESS</c> - Sort key for a user's Conscience Journey summary state.
+    /// </summary>
+    /// <returns></returns>
+    public static string ConscienceProgress()
+        => "PROGRESS";
+
+    /// <summary>
+    /// <c>EVENT#{eventType}#{sourceId}</c> - Sort key for idempotent Conscience Journey events.
+    /// </summary>
+    /// <param name="eventType"></param>
+    /// <param name="sourceId"></param>
+    /// <returns></returns>
+    public static string ConscienceEvent(string eventType, string sourceId)
+        => $"EVENT#{eventType}#{sourceId}";
+
+    /// <summary>
+    /// <c>BADGE#{badgeKey}</c> - Sort key for Conscience Journey badge progress.
+    /// </summary>
+    /// <param name="badgeKey"></param>
+    /// <returns></returns>
+    public static string ConscienceBadge(string badgeKey)
+        => $"BADGE#{badgeKey}";
+
+    /// <summary>
+    /// <c>QUEST#{weekStart:yyyy-MM-dd}#{questKey}</c> - Sort key for weekly quest progress.
+    /// </summary>
+    /// <param name="weekStart"></param>
+    /// <param name="questKey"></param>
+    /// <returns></returns>
+    public static string ConscienceQuest(DateOnly weekStart, string questKey)
+        => $"QUEST#{weekStart:yyyy-MM-dd}#{questKey}";
+
+    /// <summary>
+    /// <c>QUEST#{weekStart:yyyy-MM-dd}#</c> - Sort key prefix for a user's weekly quests.
+    /// </summary>
+    /// <param name="weekStart"></param>
+    /// <returns></returns>
+    public static string ConscienceQuestPrefix(DateOnly weekStart)
+        => $"QUEST#{weekStart:yyyy-MM-dd}#";
+
+    /// <summary>
+    /// <c>MOMENT#{createdAt:O}#{momentKey}</c> - Sort key for recent mascot moments.
+    /// </summary>
+    /// <param name="createdAt"></param>
+    /// <param name="momentKey"></param>
+    /// <returns></returns>
+    public static string ConscienceMoment(DateTime createdAt, string momentKey)
+        => $"MOMENT#{createdAt:O}#{momentKey}";
 }

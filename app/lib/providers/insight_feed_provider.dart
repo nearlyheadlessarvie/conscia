@@ -168,37 +168,34 @@ DashboardInsightSummary? _strongestBudgetTrend(
 
   final scored = trends
       .map((trend) {
-        final previousMonths = trend.months.take(trend.months.length - 1);
-        final previousAverage = previousMonths.isEmpty
-            ? 0.0
-            : previousMonths.reduce((a, b) => a + b) / previousMonths.length;
-        if (previousAverage <= 0) return null;
-
-        final delta =
-            (trend.currentMonthSpend - previousAverage) / previousAverage;
-        return (trend: trend, delta: delta);
+        final paceCopy = budgetTrendPaceCopy(trend);
+        if (paceCopy == null) return null;
+        return (trend: trend, paceCopy: paceCopy);
       })
-      .whereType<({BudgetTrendInsight trend, double delta})>()
-      .where((item) => item.delta.abs() >= 0.1)
+      .whereType<
+          ({
+            BudgetTrendInsight trend,
+            ({
+              String body,
+              double delta,
+              String summaryText,
+              String title
+            }) paceCopy
+          })>()
       .toList();
 
   if (scored.isEmpty) return null;
 
-  scored.sort((a, b) => b.delta.abs().compareTo(a.delta.abs()));
+  scored.sort(
+    (a, b) => b.paceCopy.delta.abs().compareTo(a.paceCopy.delta.abs()),
+  );
   final top = scored.first;
 
-  if (top.delta > 0) {
-    return DashboardInsightSummary(
-      text:
-          'You spent more on ${top.trend.category} than your recent 3-month pace.',
-      tone: InsightFeedTone.caution,
-    );
-  }
-
   return DashboardInsightSummary(
-    text:
-        'You are on track to spend less on ${top.trend.category} than your recent pace.',
-    tone: InsightFeedTone.positive,
+    text: top.paceCopy.summaryText,
+    tone: top.paceCopy.delta > 0
+        ? InsightFeedTone.caution
+        : InsightFeedTone.positive,
   );
 }
 

@@ -1,9 +1,9 @@
 # Conscia Enhancement Initiative - Master Documentation Index
 
-**Project Codename**: Duolingo for Financial Discipline  
-**Status**: Phases 1-3 Implemented | Phase 4+ Planned  
-**Timeline**: Original 8-phase roadmap retained for remaining work  
-**Last Updated**: 2026-05-07
+**Project Codename**: Duolingo for Financial Discipline
+**Status**: Phases 1-4 Implemented/Evolved | Conscience Journey Added to MVP Scope | Phase 5+ Planned
+**Timeline**: Original 8-phase roadmap retained for remaining work
+**Last Updated**: 2026-05-11
 
 ---
 
@@ -21,11 +21,14 @@ Local setup:
 
 ### Current Product Snapshot
 
-- Phases 1-3 are implemented in the current app branch, including dashboard insights, onboarding profiling, transaction-entry redesign, regret memory foundations, and the main shell refresh.
+- Phases 1-4 are implemented/evolved in the current app branch, including dashboard insights, onboarding profiling, transaction-entry redesign, regret memory foundations, the main shell refresh, and AI personality intensity.
 - Add Transaction and Pre-Purchase Assistant now share first-use `Smart location suggestions`, with a later Settings toggle for control.
 - Unbudgeted expense categories now create an in-app budget nudge with a direct path back to budget management.
 - Recurring expense and income schedules are now supported with weekly, monthly, and yearly cadence, optional end dates, automatic occurrence generation, and reminder alerts.
-- Phases 4-8 in the roadmap below are still planned work.
+- Device push delivery is planned as a selective, high-signal channel: weekly digest, important recurring reminders, high-severity budget/cooling-off alerts, and major Conscience Journey moments such as level-up. Quest progress should stay in-app/bell only.
+- Phase 4 AI Personality shipped as the broader AI Personality + Visual Refresh milestone: persona prompts, intensity-aware temperatures, persisted user preference, Settings control, and mascot-led AI surfaces.
+- Phase 5 is now MVP-scoped as Conscience Journey: a richer but modular gamification layer with XP, levels, weekly quests, badges, and mascot moments.
+- Other Phase 5+ roadmap items remain planned work.
 
 All documentation for the Conscia enhancement initiative is organized into 6 comprehensive documents. Start with your role below:
 
@@ -221,8 +224,8 @@ General Tasks (Throughout All Phases)
 | Dashboard Insights | implementation-plan.md §1 | implementation-tasks.md §1 | Implemented |
 | Friction Reduction | implementation-plan.md §4 | implementation-tasks.md §2 | Implemented / evolving |
 | Regret Memory | implementation-plan.md §5 | implementation-tasks.md §3 | Implemented / evolving |
-| AI Personality | implementation-plan.md §3 | implementation-tasks.md §4 | Planned |
-| Gamification | implementation-plan.md §8 | implementation-tasks.md §5 | Planned |
+| AI Personality | implementation-plan.md §3 | implementation-tasks.md §4 | Implemented / evolved |
+| Conscience Journey Gamification | implementation-plan.md §7.2, §8 | implementation-tasks.md §5 | MVP scope / planned |
 | Weekly Digest | implementation-plan.md §2 | implementation-tasks.md §6 | Planned |
 | Insights Tab | implementation-plan.md §1,5 | implementation-tasks.md §7 | Planned |
 | Positioning | implementation-plan.md §7 | implementation-tasks.md §8 | Planned |
@@ -244,7 +247,7 @@ General Tasks (Throughout All Phases)
 | Week 4-5 | Phase 2: Friction Reduction | implementation-tasks.md §2 |
 | Week 6-8 | Phase 3: Regret Memory | implementation-tasks.md §3 |
 | Week 9-10 | Phase 4: AI Personality | implementation-tasks.md §4 |
-| Week 11-12 | Phase 5: Gamification | implementation-tasks.md §5 |
+| Week 11-12 | Phase 5: Conscience Journey Gamification | implementation-tasks.md §5 |
 | Week 13-14 | Phase 6: Weekly Digest | implementation-tasks.md §6 |
 | Week 15-16 | Phase 7: Insights Tab | implementation-tasks.md §7 |
 | Week 17-18 | Phase 8: Positioning | implementation-tasks.md §8 |
@@ -288,14 +291,14 @@ General Tasks (Throughout All Phases)
 - **Project Manager**: README.md → implementation-tasks.md → implementation-plan.md
 
 ### "What's been completed?"
-**Answer**: The current branch has Phases 1-3 substantially implemented, with later phases still planned. See:
+**Answer**: The current branch has Phases 1-4 substantially implemented/evolved, with later phases still planned. See:
 - [phase-1-progress.md](phase-1-progress.md) for the original Phase 1 snapshot
 - [implementation-tasks.md](implementation-tasks.md) for the remaining roadmap
-- the current feature specs/plans in `docs/superpowers/` for recently delivered work such as onboarding profiling and location-aware assistance
+- the current feature specs/plans in `docs/superpowers/` for recently delivered work such as onboarding profiling, location-aware assistance, AI personality, and visual refresh
 
 ### "What's the next step?"
-**Answer**: The next roadmap phases are AI Personality, Gamification, Weekly Digest, Insights Tab, and Positioning. See:
-- [implementation-tasks.md](implementation-tasks.md) - Phases 4-8
+**Answer**: The next roadmap phases are Conscience Journey Gamification, Weekly Digest, Insights Tab, and Positioning. See:
+- [implementation-tasks.md](implementation-tasks.md) - Phases 5-8
 - [implementation-plan.md](implementation-plan.md) - product vision and sequencing
 - [QUICK_REFERENCE.md](QUICK_REFERENCE.md) - day-to-day implementation notes
 
@@ -332,7 +335,7 @@ General Tasks (Throughout All Phases)
 - [implementation-plan.md](implementation-plan.md) - Section 1.1-1.3 (feature details)
 
 ### "When does Phase 4 start?"
-**Answer**: Phases 1-3 are already implemented on the current branch. The next roadmap milestone is Phase 4: AI Personality. See:
+**Answer**: Phase 4 has already shipped/evolved into the AI Personality + Visual Refresh milestone. The next roadmap milestone is Phase 5: Conscience Journey Gamification. See:
 - [implementation-tasks.md](implementation-tasks.md) - Phase 4 section
 - [implementation-plan.md](implementation-plan.md) - Section 9 (Timeline)
 
@@ -406,7 +409,7 @@ General Tasks (Throughout All Phases)
 
 ---
 
-**Last Updated**: 2026-05-07  
-**Status**: Phases 1-3 Implemented  
-**Next Milestone**: Phase 4 AI Personality  
+**Last Updated**: 2026-05-11
+**Status**: Phases 1-4 Implemented/Evolved
+**Next Milestone**: MVP Conscience Journey
 **Total Project**: Original 8-phase roadmap remains the planning baseline

@@ -15,21 +15,24 @@ final pushNotificationServiceProvider =
     Provider<PushNotificationService>((ref) {
   final service = PushNotificationService(
     dio: ref.watch(dioProvider),
-    messaging: FirebaseMessaging.instance,
+    messagingFactory: () => FirebaseMessaging.instance,
   );
   ref.onDispose(service.dispose);
   return service;
 });
 
+typedef FirebaseMessagingFactory = FirebaseMessaging Function();
+
 class PushNotificationService {
   PushNotificationService({
     required Dio dio,
-    required FirebaseMessaging messaging,
+    required FirebaseMessagingFactory messagingFactory,
   })  : _dio = dio,
-        _messaging = messaging;
+        _messagingFactory = messagingFactory;
 
   final Dio _dio;
-  final FirebaseMessaging _messaging;
+  final FirebaseMessagingFactory _messagingFactory;
+  FirebaseMessaging? _messaging;
   StreamSubscription<String>? _tokenRefreshSubscription;
   bool _started = false;
 
@@ -41,7 +44,8 @@ class PushNotificationService {
     if (!initialized) return;
 
     try {
-      final settings = await _messaging.requestPermission(
+      final messaging = _messaging ??= _messagingFactory();
+      final settings = await messaging.requestPermission(
         alert: true,
         badge: true,
         sound: true,
@@ -49,10 +53,10 @@ class PushNotificationService {
 
       if (settings.authorizationStatus == AuthorizationStatus.denied) return;
 
-      final token = await _messaging.getToken();
+      final token = await messaging.getToken();
       await _registerToken(token);
 
-      _tokenRefreshSubscription ??= _messaging.onTokenRefresh.listen(
+      _tokenRefreshSubscription ??= messaging.onTokenRefresh.listen(
         (token) => unawaited(_registerToken(token)),
       );
     } catch (error) {

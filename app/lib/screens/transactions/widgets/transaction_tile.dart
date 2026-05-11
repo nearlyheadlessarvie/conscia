@@ -89,11 +89,7 @@ class TransactionTile extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         child: Row(
           children: [
-            CircleAvatar(
-              radius: 20,
-              backgroundColor: colors.primaryContainer,
-              child: badgeFor(category, size: 18, filled: false),
-            ),
+            badgeFor(category, size: 22, filled: false),
             const SizedBox(width: 12),
             Expanded(
               child: Column(

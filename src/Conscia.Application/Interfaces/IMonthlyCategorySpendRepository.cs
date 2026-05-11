@@ -10,4 +10,6 @@ public interface IMonthlyCategorySpendRepository
         Guid userId,
         IReadOnlyList<string> monthKeys,
         CancellationToken ct = default);
+
+    Task<IReadOnlyList<MonthlyCategorySpend>> ListByUserAsync(Guid userId, CancellationToken ct = default);
 }

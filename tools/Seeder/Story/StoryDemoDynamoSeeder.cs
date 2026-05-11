@@ -13,7 +13,8 @@ public static class StoryDemoDynamoSeeder
         "WeeklyInsights",
         "PurchasePatterns",
         "InAppAlerts",
-        "MonthlyCategorySpends"
+        "MonthlyCategorySpends",
+        "ConscienceJourney"
     ];
 
     public static async Task SeedAsync(
@@ -55,6 +56,21 @@ public static class StoryDemoDynamoSeeder
         var monthlyCategorySpendRepository = new MonthlyCategorySpendRepository(dynamo);
         foreach (var projection in scenario.MonthlyCategorySpends)
             await monthlyCategorySpendRepository.UpsertAsync(projection, ct);
+
+        var conscienceJourneyRepository = new ConscienceJourneyRepository(dynamo);
+        await conscienceJourneyRepository.UpsertProgressAsync(scenario.ConscienceProgress, ct);
+
+        foreach (var journeyEvent in scenario.ConscienceEvents)
+            await conscienceJourneyRepository.TryInsertEventAsync(journeyEvent, ct);
+
+        foreach (var badgeProgress in scenario.ConscienceBadgeProgress)
+            await conscienceJourneyRepository.UpsertBadgeProgressAsync(badgeProgress, ct);
+
+        foreach (var questProgress in scenario.ConscienceQuestProgress)
+            await conscienceJourneyRepository.UpsertQuestProgressAsync(questProgress, ct);
+
+        foreach (var mascotMoment in scenario.ConscienceMascotMoments)
+            await conscienceJourneyRepository.AddMascotMomentAsync(mascotMoment, ct);
     }
 
     private static async Task DeleteUserSliceAsync(

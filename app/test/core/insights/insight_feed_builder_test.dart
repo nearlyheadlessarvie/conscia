@@ -161,4 +161,39 @@ void main() {
       isNotEmpty,
     );
   });
+
+  test('budget trend detail explains the same 3-month pace as summary', () {
+    final items = buildInsightFeedItems(
+      behavioralInsights: const BehavioralInsights(
+        mood: FinancialMood.balanced,
+        worthItPercentage: 71,
+        worthItCount: 5,
+        previousMonthWorthItCount: 5,
+        impulseeTrends: [],
+        budgetTrends: [
+          BudgetTrendInsight(
+            category: 'Dining',
+            hasBudget: true,
+            currencyCode: 'PHP',
+            months: [52, 68, 85],
+            currentMonthSpend: 3400,
+            currentMonthPercentUsed: 85,
+            insightLabel: 'Budget usage trending up',
+          ),
+        ],
+      ),
+      summary: null,
+      categories: const [],
+      merchants: const [],
+      preferences: prefs,
+    );
+
+    final diningTrend =
+        items.singleWhere((item) => item.id == 'budget-usage-dining');
+
+    expect(diningTrend.title, contains('recent 3-month pace'));
+    expect(diningTrend.body, contains('3-month average'));
+    expect(diningTrend.body, contains('42% above'));
+    expect(diningTrend.body, isNot(contains('5626%')));
+  });
 }

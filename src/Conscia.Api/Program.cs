@@ -144,6 +144,7 @@ builder.Services.AddScoped<IInAppAlertRepository, InAppAlertRepository>();
 builder.Services.AddScoped<IPushDeviceTokenRepository, PushDeviceTokenRepository>();
 builder.Services.AddScoped<IOutboxEventRepository, OutboxEventRepository>();
 builder.Services.AddScoped<IMonthlyCategorySpendRepository, MonthlyCategorySpendRepository>();
+builder.Services.AddScoped<IConscienceJourneyRepository, ConscienceJourneyRepository>();
 
 // --- Store Validation ---
 builder.Services.Configure<AppleStoreOptions>(builder.Configuration.GetSection(AppleStoreOptions.SectionName));
@@ -164,6 +165,7 @@ builder.Services.AddScoped<IBehavioralInsightsService, BehavioralInsightsService
 builder.Services.AddScoped<IPurchaseSuggestionService, PurchaseSuggestionService>();
 builder.Services.AddScoped<IPurchasePatternService, PurchasePatternService>();
 builder.Services.AddScoped<IAlertService, AlertService>();
+builder.Services.AddScoped<IConscienceJourneyService, ConscienceJourneyService>();
 builder.Services.AddSingleton<IRecurringScheduleGenerator, RecurringScheduleGenerator>();
 builder.Services.AddScoped<ITriggerEvaluator, BudgetWarningEvaluator>();
 builder.Services.AddScoped<ITriggerEvaluator, CoolingOffSuggestionEvaluator>();
@@ -378,6 +380,7 @@ app.MapPushNotificationEndpoints().RequireRateLimiting("standard");
 app.MapReceiptEndpoints().RequireRateLimiting("standard");
 app.MapAIEndpoints().RequireRateLimiting("ai");
 app.MapInsightsEndpoints().RequireRateLimiting("standard");
+app.MapConscienceJourneyEndpoints().RequireRateLimiting("standard");
 app.MapSuggestionEndpoints().RequireRateLimiting("standard");
 app.MapExchangeRateEndpoints().RequireRateLimiting("standard");
 app.MapUtteranceEndpoints().RequireRateLimiting("ai");

@@ -76,6 +76,33 @@ public class StoryDemoScenarioTests
     }
 
     [Fact]
+    public void Build_CreatesConscienceJourneyDemoData()
+    {
+        var scenario = StoryDemoScenario.Build(DateTime.Parse("2026-05-11T00:00:00Z"));
+
+        Assert.Equal(scenario.User.Id, scenario.ConscienceProgress.UserId);
+        Assert.InRange(scenario.ConscienceProgress.XpTotal, 400, 999);
+        Assert.True(scenario.ConscienceProgress.MomentumDays > 0);
+        Assert.Contains(
+            scenario.ConscienceQuestProgress,
+            quest => quest.QuestKey == "reflect_three_purchases"
+                && quest.CompletedAt.HasValue
+                && quest.XpAwarded == 15);
+        Assert.Contains(
+            scenario.ConscienceBadgeProgress,
+            badge => badge.BadgeKey == "first_reflection" && badge.UnlockedAt.HasValue);
+        Assert.Contains(
+            scenario.ConscienceBadgeProgress,
+            badge => badge.BadgeKey == "budget_rescuer" && badge.Progress == 0);
+        Assert.Contains(
+            scenario.ConscienceMascotMoments,
+            moment => moment.Key == "pause_before_purchase" && moment.Persona == "both");
+        Assert.Contains(
+            scenario.ConscienceEvents,
+            evt => evt.EventType == "reflection_completed" && evt.SourceId == scenario.Transactions[0].Id.ToString());
+    }
+
+    [Fact]
     public async Task SeedAsync_ReplacesOnlyTheStoryDemoRelationalSlice()
     {
         var options = new DbContextOptionsBuilder<ConsciaDbContext>()

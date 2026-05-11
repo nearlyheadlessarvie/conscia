@@ -1,3 +1,5 @@
+using System.Globalization;
+
 namespace Conscia.AI.Prompts;
 
 public static class PromptTemplates
@@ -14,6 +16,7 @@ public static class PromptTemplates
             Your job is to make the exciting case for the purchase: joy, convenience, reward, identity, relief, or momentum.
             {{flowGuidance}}
             Keep responses to 2-3 sentences max.
+            If the user prompt includes a currency code, preserve that currency in any money references. Never assume USD.
             Be empathetic, never mocking, and never encourage obviously harmful financial behavior.
             Tone profile:
             - directness: {{profile.ImpulseDirectness}}
@@ -34,6 +37,7 @@ public static class PromptTemplates
             Your job is to protect the user's long-term interests with clarity, care, and financial perspective.
             {{flowGuidance}}
             Keep responses to 2-3 sentences max.
+            If the user prompt includes a currency code, preserve that currency in any money references. Never assume USD.
             Never shame the user or sound parental.
             Tone profile:
             - directness: {{profile.ReasonDirectness}}
@@ -54,6 +58,7 @@ public static class PromptTemplates
             Your role is to synthesize emotion and logic into a concise, human reflection that feels thoughtful rather than robotic.
             {{flowGuidance}}
             Keep responses to 2-3 sentences max.
+            If the user prompt includes a currency code, preserve that currency in any money references. Never assume USD.
             Be observant, calm, and emotionally intelligent.
             Tone profile:
             - directness: {{profile.ReflectionDirectness}}
@@ -72,7 +77,10 @@ public static class PromptTemplates
         var parts = new List<string> { "The user is considering a purchase:" };
 
         if (amount.HasValue && currency.Length > 0)
-            parts.Add($"- Amount: {amount:F2} {currency}");
+        {
+            parts.Add($"- Amount: {FormatPromptMoney(amount.Value, currency)}");
+            AddCurrencyRule(parts, currency);
+        }
         if (category.Length > 0)
             parts.Add($"- Category: {category}");
         if (budgetPercent.HasValue)
@@ -96,7 +104,10 @@ public static class PromptTemplates
         var parts = new List<string> { "The user wants to reflect on their recent spending:" };
 
         if (amount.HasValue && currency.Length > 0)
-            parts.Add($"- Recent spend: {amount:F2} {currency}");
+        {
+            parts.Add($"- Recent spend: {FormatPromptMoney(amount.Value, currency)}");
+            AddCurrencyRule(parts, currency);
+        }
         if (category.Length > 0)
             parts.Add($"- Category: {category}");
         if (budgetPercent.HasValue)
@@ -116,7 +127,7 @@ public static class PromptTemplates
         var parts = new List<string>();
 
         if (amount.HasValue && currency is not null)
-            parts.Add($"This is a {cat} purchase of {amount:F2} {currency}.");
+            parts.Add($"This is a {cat} purchase of {FormatPromptMoney(amount.Value, currency)}.");
 
         if (budgetPercent.HasValue)
         {
@@ -134,6 +145,18 @@ public static class PromptTemplates
         }
 
         return string.Join(" ", parts);
+    }
+
+    private static string FormatPromptMoney(decimal amount, string currency) =>
+        $"{currency.ToUpperInvariant()} {amount.ToString("F2", CultureInfo.InvariantCulture)}";
+
+    private static void AddCurrencyRule(List<string> parts, string currency)
+    {
+        var normalized = currency.ToUpperInvariant();
+        parts.Add(
+            normalized == "USD"
+                ? "- Currency rule: Use USD or $ when mentioning this money amount."
+                : $"- Currency rule: Use {normalized} when mentioning this money amount. Do not use USD or the $ symbol.");
     }
 
     private static IntensityProfile NormalizeIntensity(string? intensity) => intensity?.ToLowerInvariant() switch

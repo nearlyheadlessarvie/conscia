@@ -14,7 +14,8 @@ public class DynamoDbHealthCheck(IAmazonDynamoDB dynamoDb) : IHealthCheck
         ("PurchasePatterns", []),
         ("InAppAlerts", ["GSI-Trigger-Date"]),
         ("MonthlyCategorySpends", []),
-        ("PushDeviceTokens", [])
+        ("PushDeviceTokens", []),
+        ("ConscienceJourney", [])
     ];
 
     public async Task<HealthCheckResult> CheckHealthAsync(

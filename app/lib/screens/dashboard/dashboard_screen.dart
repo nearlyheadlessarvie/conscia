@@ -6,10 +6,12 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:conscia_app/core/constants/generated/app_constants.g.dart';
 import 'package:conscia_app/core/assets/mascot_sprite_sheet.dart';
 import 'package:conscia_app/core/routing/app_router.dart';
+import 'package:conscia_app/models/conscience_journey.dart';
 import 'package:conscia_app/models/insight_feed_item.dart';
 import 'package:conscia_app/providers/alert_provider.dart';
 import 'package:conscia_app/providers/behavioral_insights_provider.dart';
 import 'package:conscia_app/providers/budget_providers.dart';
+import 'package:conscia_app/providers/conscience_journey_provider.dart';
 import 'package:conscia_app/providers/insight_feed_provider.dart';
 import 'package:conscia_app/providers/subscription_provider.dart';
 import 'package:conscia_app/providers/transaction_providers.dart';
@@ -47,6 +49,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     ref.invalidate(insightFeedProvider);
     ref.invalidate(dashboardInsightFeedProvider);
     ref.invalidate(dashboardInsightSummaryProvider);
+    ref.invalidate(conscienceJourneyProvider);
   }
 
   Future<void> _recordReflection(Transaction tx, String feeling) async {
@@ -202,6 +205,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     final budgetState = ref.watch(budgetListProvider);
     final txState = ref.watch(transactionListProvider);
     final insightSummaryState = ref.watch(dashboardInsightSummaryProvider);
+    final journeyState = ref.watch(conscienceJourneyProvider);
     final alerts = ref.watch(activeAlertsProvider);
 
     final budgets = budgetState.budgets;
@@ -297,6 +301,34 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               ];
             },
             error: (_, __) => <Widget>[],
+          ),
+          ...journeyState.when<List<Widget>>(
+            loading: () => [
+              SliverToBoxAdapter(
+                child: _buildSectionHeader(context, 'Journey'),
+              ),
+              const SliverPadding(
+                padding: EdgeInsets.symmetric(horizontal: 16),
+                sliver: SliverToBoxAdapter(
+                  child: DashboardJourneySkeletonCard(),
+                ),
+              ),
+            ],
+            error: (_, __) => <Widget>[],
+            data: (journey) => [
+              SliverToBoxAdapter(
+                child: _buildSectionHeader(context, 'Journey'),
+              ),
+              SliverPadding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                sliver: SliverToBoxAdapter(
+                  child: _DashboardJourneyCard(
+                    journey: journey,
+                    onTap: () => context.push(AppRoutes.journey),
+                  ),
+                ),
+              ),
+            ],
           ),
           SliverToBoxAdapter(
             child: _buildSectionHeader(context, 'Budgets'),
@@ -441,6 +473,176 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         style: Theme.of(context).textTheme.titleMedium?.copyWith(
               fontWeight: FontWeight.w600,
             ),
+      ),
+    );
+  }
+}
+
+class _DashboardJourneyCard extends StatelessWidget {
+  const _DashboardJourneyCard({
+    required this.journey,
+    required this.onTap,
+  });
+
+  final ConscienceJourneySummary journey;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+    final nextLevel = journey.nextLevel;
+
+    return Card(
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(
+                    Icons.workspace_premium_rounded,
+                    color: colors.primary,
+                    size: 18,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Conscience Journey',
+                      style: textTheme.labelMedium?.copyWith(
+                        color: colors.onSurfaceVariant,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                  Icon(
+                    Icons.chevron_right_rounded,
+                    color: colors.onSurfaceVariant,
+                    size: 20,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  const _JourneyCardMascots(),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          journey.currentLevel.title,
+                          style: textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          nextLevel == null
+                              ? '${journey.xpTotal} XP earned'
+                              : '${journey.xpTotal} XP · ${journey.xpToNextLevel} to ${nextLevel.title}',
+                          style: textTheme.bodySmall?.copyWith(
+                            color: colors.onSurfaceVariant,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: [
+                            _JourneyMiniPill(
+                              label: '${journey.momentumDays}-day streak',
+                              icon: Icons.local_fire_department_rounded,
+                            ),
+                            _JourneyMiniPill(
+                              label:
+                                  '${_completedQuestCount(journey.weeklyQuests)}/${journey.weeklyQuests.length} quests',
+                              icon: Icons.flag_rounded,
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  static int _completedQuestCount(List<ConscienceQuest> quests) =>
+      quests.where((quest) => quest.isCompleted == true).length;
+}
+
+class _JourneyCardMascots extends StatelessWidget {
+  const _JourneyCardMascots();
+
+  @override
+  Widget build(BuildContext context) {
+    return const SizedBox(
+      width: 74,
+      height: 58,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Positioned(
+            left: 24,
+            child: MascotSpriteFrame(
+              atlas: angelMascotAtlas,
+              frameName: '4_win.png',
+              width: 54,
+            ),
+          ),
+          MascotSpriteFrame(
+            atlas: devilMascotAtlas,
+            frameName: '9_coin.png',
+            width: 54,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _JourneyMiniPill extends StatelessWidget {
+  const _JourneyMiniPill({
+    required this.label,
+    required this.icon,
+  });
+
+  final String label;
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
+      decoration: BoxDecoration(
+        color: colors.primaryContainer.withValues(alpha: 0.55),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: colors.primary),
+          const SizedBox(width: 5),
+          Text(
+            label,
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: colors.primary,
+                  fontWeight: FontWeight.w800,
+                ),
+          ),
+        ],
       ),
     );
   }
@@ -682,6 +884,12 @@ class _NotificationListTile extends StatelessWidget {
     switch (type) {
       case 'budget_nudge':
         return Icons.account_balance_wallet_rounded;
+      case 'journey_level_up':
+        return Icons.stairs_rounded;
+      case 'journey_badge':
+        return Icons.workspace_premium_rounded;
+      case 'journey_quest':
+        return Icons.flag_rounded;
       case 'ReflectionFollowUp':
         return Icons.psychology_alt_rounded;
       case 'recurring_transaction_created':
