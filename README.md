@@ -240,8 +240,15 @@ All configuration is managed via `appsettings.json` / `appsettings.Development.j
 | `Auth__MockSigningKey` | `super-secret-dev-key-...` | Signing key for mock JWTs |
 | `Auth__Cognito__UserPoolId` | — | Cognito user pool (prod only) |
 | `Auth__Cognito__ClientId` | — | Cognito client (prod only) |
+| `Auth__AppJwtSigningKey` | — | 32+ char secret used to issue app JWTs for native Google/Apple social sign-in |
+| `Auth__AppJwtIssuer` | `conscia-app` | Issuer for app JWTs |
+| `Auth__AppJwtAudience` | `conscia-api` | Audience for app JWTs |
+| `Auth__Google__ClientId` / `Auth__Google__ClientIds__0` | — | Allowed Google OAuth client ID(s) for native social sign-in |
+| `Auth__Apple__ClientId` | — | Allowed Apple token audience, usually the iOS bundle id |
 
 Production email/password auth uses Cognito email verification. Keep `Auth__UseMock=true` locally unless you have a Cognito user pool available; set it to `false` in deployed API environments so `/api/v1/auth/register` sends a confirmation code, `/api/v1/auth/confirm` verifies it, and login/refresh exchange Cognito tokens.
+
+Native Google/Apple social auth is intentionally not Cognito Hosted UI. Flutter uses the platform SDKs, sends provider identity tokens to the API, and the API verifies those tokens, creates/links a `UserIdentity`, creates a suppressed Cognito shadow user on first social sign-in, then returns app-signed JWTs. Production API auth accepts both Cognito JWTs and these app JWTs.
 
 ### Flutter App
 
@@ -252,13 +259,14 @@ Compile-time constants passed via `--dart-define`:
 | `MOCK_AUTH` | `true` | Use mock authentication (bypasses Cognito, creates local JWT) |
 | `API_BASE_URL` | `http://localhost:5248/api/v1` | Backend API base URL |
 | `PUSH_NOTIFICATIONS_ENABLED` | `false` | Enables Firebase Cloud Messaging token registration after the user signs in |
+| `GOOGLE_SERVER_CLIENT_ID` | empty | Google web/server OAuth client ID used by native Google sign-in to request an ID token |
 
 ```bash
 # Run with defaults (local dev)
 flutter run
 
 # Run against a deployed API with real auth
-flutter run --dart-define=MOCK_AUTH=false --dart-define=API_BASE_URL=https://api.getconscia.com/api/v1
+flutter run --dart-define=MOCK_AUTH=false --dart-define=API_BASE_URL=https://api.getconscia.com/api/v1 --dart-define=GOOGLE_SERVER_CLIENT_ID=<web-client-id>.apps.googleusercontent.com
 ```
 
 ### Device Push Notification Setup
@@ -304,9 +312,39 @@ Cost note: Firebase Cloud Messaging itself has no per-message charge. This scaff
 
 ## Social Authentication Setup
 
-The app supports Sign in with Google and Sign in with Apple. The Flutter UI and service code are already in place. Follow these steps to wire up the credentials and backend endpoints.
+The app supports native Sign in with Google and Sign in with Apple. This is **not** Cognito Hosted UI: the Flutter buttons use platform SDKs, then the API verifies the returned provider token and returns app JWTs. This keeps the iOS/Android auth experience native while still using Cognito for email/password auth and keeping a Cognito user record for social accounts.
 
 > **Mock auth is on by default.** During local development, `MOCK_AUTH=true` bypasses real OAuth entirely. You only need to follow these steps when you're ready to test real sign-in flows. See [Disabling Mock Auth](#disabling-mock-auth) at the end of this section.
+
+### Backend Requirements
+
+Set these in production API configuration or AWS/GitHub deployment secrets:
+
+```text
+Auth__UseMock=false
+Auth__Cognito__UserPoolId=<your Cognito user pool id>
+Auth__Cognito__ClientId=<your Cognito app client id>
+Auth__AppJwtSigningKey=<random 32+ char secret>
+Auth__AppJwtIssuer=conscia-app
+Auth__AppJwtAudience=conscia-api
+Auth__Google__ClientId=<Google web/server OAuth client id>
+Auth__Apple__ClientId=<iOS bundle id, for example com.conscia.app>
+```
+
+If you need multiple Google audiences, use array-style environment variables:
+
+```text
+Auth__Google__ClientIds__0=<web client id>
+Auth__Google__ClientIds__1=<ios client id>
+Auth__Google__ClientIds__2=<android client id>
+```
+
+The social endpoints are already present:
+
+- `POST /api/v1/auth/google` with `{ "idToken": "<Google ID token>" }`
+- `POST /api/v1/auth/apple` with `{ "identityToken": "<Apple identity token>", "authorizationCode": "<code>" }`
+
+On first social sign-in, the API creates or links the local `User`, stores `UserIdentity(provider, providerSub)`, creates a suppressed Cognito shadow user for operational consistency, and returns `{ accessToken, refreshToken, userId }`. New social users then enter onboarding because `HasCompletedOnboarding` defaults to `false`.
 
 ---
 
@@ -369,24 +407,15 @@ You need one client ID per platform. Go to **APIs & Services → Credentials →
 
 #### Step 4 — Pass the Web Client ID to the Flutter App
 
-Open `app/lib/services/auth_service.dart` and pass the Web client ID to `GoogleSignIn`:
+Pass the Web client ID at run/build time so `GoogleSignIn` can request an ID token for the backend:
 
-```dart
-final googleUser = await GoogleSignIn(
-  serverClientId: 'YOUR_WEB_CLIENT_ID.apps.googleusercontent.com',
-).signIn();
+```bash
+flutter run --dart-define=GOOGLE_SERVER_CLIENT_ID=YOUR_WEB_CLIENT_ID.apps.googleusercontent.com
 ```
 
-#### Step 5 — Implement the Backend Endpoint
+#### Step 5 — Configure Backend Audience
 
-Add `POST /api/v1/auth/google` to your .NET backend:
-
-- **Request body:** `{ "idToken": "<Google ID token from device>" }`
-- **What the backend does:**
-  1. Verify the `idToken` using Google's tokeninfo endpoint or the `google-auth-library`
-  2. Look up the user by Google subject ID (`sub` claim); create the account on first sign-in
-  3. Issue your own JWT access and refresh tokens
-- **Response:** `{ "accessToken": "...", "refreshToken": "...", "userId": "..." }`
+Set the Google web/server client ID as `Auth__Google__ClientId` (or include it in `Auth__Google__ClientIds__0`). The API validates Google ID tokens against Google's JWKS, issuer, and this configured audience before creating/linking the user.
 
 ---
 
@@ -405,16 +434,9 @@ Add `POST /api/v1/auth/google` to your .NET backend:
 2. Select the **Runner** target → **Signing & Capabilities** tab → click `+` → add **Sign in with Apple**.
 3. Xcode adds the entitlement automatically; no extra Flutter config is needed — the `sign_in_with_apple` package handles the rest.
 
-#### Step 3 — Implement the Backend Endpoint
+#### Step 3 — Configure Backend Audience
 
-Add `POST /api/v1/auth/apple` to your .NET backend:
-
-- **Request body:** `{ "identityToken": "<Apple identity token>", "authorizationCode": "<code>" }`
-- **What the backend does:**
-  1. Fetch Apple's public keys from `https://appleid.apple.com/auth/keys` and verify the `identityToken` JWT
-  2. Look up the user by Apple subject ID; create the account on first sign-in
-  3. Issue your own JWT access and refresh tokens
-- **Response:** `{ "accessToken": "...", "refreshToken": "...", "userId": "..." }`
+Set `Auth__Apple__ClientId` to the audience Apple places in the identity token. For the native iOS app this is usually the bundle id, such as `com.conscia.app`. The API validates Apple identity tokens against Apple's JWKS, issuer, and this configured audience before creating/linking the user.
 
 > **Important:** Apple only sends the user's name and email during the **first** sign-in. Store them immediately when you create the account — subsequent sign-ins will not include them.
 
