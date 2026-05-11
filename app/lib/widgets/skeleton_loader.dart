@@ -203,6 +203,60 @@ class BudgetSummarySkeletonCard extends StatelessWidget {
   }
 }
 
+class DashboardJourneySkeletonCard extends StatelessWidget {
+  const DashboardJourneySkeletonCard({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return const Card(
+      child: Padding(
+        padding: EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                SkeletonLoader(width: 18, height: 18, borderRadius: 6),
+                SizedBox(width: 8),
+                SkeletonLoader(height: 12, width: 120),
+                Spacer(),
+                SkeletonLoader(width: 20, height: 20, borderRadius: 10),
+              ],
+            ),
+            SizedBox(height: 12),
+            Row(
+              children: [
+                SkeletonLoader(width: 58, height: 58, borderRadius: 14),
+                SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      SkeletonLoader(height: 18, width: 150),
+                      SizedBox(height: 8),
+                      SkeletonLoader(height: 12, width: 210),
+                      SizedBox(height: 12),
+                      Row(
+                        children: [
+                          SkeletonLoader(
+                              width: 105, height: 26, borderRadius: 13),
+                          SizedBox(width: 8),
+                          SkeletonLoader(
+                              width: 86, height: 26, borderRadius: 13),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class BudgetListSkeletonCard extends StatelessWidget {
   const BudgetListSkeletonCard({super.key});
 

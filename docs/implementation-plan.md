@@ -754,7 +754,9 @@ New "Habits" section (or expand Dashboard) anchored by Conscience Journey:
 - [ ] Add story-demo seed data for XP, quests, badges, and mascot moments
 
 ### Phase 6: Weekly Digest (2 weeks)
-**Goal:** Email/push notifications with insights
+**Goal:** Push notifications with insights and high-signal reminders
+
+Push delivery should stay selective: send weekly digest, important recurring reminders, high-severity budget/cooling-off alerts, and potentially major Conscience Journey moments such as level-up. Keep quest progress in-app/bell only so gamification feels alive without becoming noisy.
 
 - [ ] Create weekly insights generation backend service
 - [ ] Set up Firebase Cloud Messaging integration (backend)

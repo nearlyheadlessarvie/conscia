@@ -628,7 +628,7 @@ void main() {
       aiService: aiService,
       locationService: _FakeLocationAssistanceService(permissionGranted: true),
       insightSummary: const DashboardInsightSummary(
-        text: 'You spent more on Dining than your recent 3-month pace.',
+        text: 'Dining is above your recent 3-month pace.',
         tone: InsightFeedTone.caution,
       ),
     );
@@ -656,7 +656,7 @@ void main() {
 
     expect(
       aiService.receivedInsightContext,
-      'You spent more on Dining than your recent 3-month pace.',
+      'Dining is above your recent 3-month pace.',
     );
   });
 

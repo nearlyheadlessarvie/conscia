@@ -192,7 +192,7 @@ public sealed class StoryDemoScenario
         var conscienceProgress = new ConscienceJourneyProgress
         {
             UserId = userId,
-            XpTotal = 385,
+            XpTotal = 485,
             MomentumDays = 6,
             BestMomentumDays = 9,
             LastMomentumDate = DateOnly.FromDateTime(nowUtc.Date),
@@ -202,9 +202,9 @@ public sealed class StoryDemoScenario
         var currentWeek = DateOnly.FromDateTime(currentWeekStart);
         var conscienceQuestProgress = new List<ConscienceQuestProgress>
         {
-            new() { UserId = userId, WeekStart = currentWeek, QuestKey = "reflect_three_purchases", Progress = 3, Target = 3, XpAwarded = 30, CompletedAt = nowUtc.AddHours(-8), UpdatedAt = nowUtc },
-            new() { UserId = userId, WeekStart = currentWeek, QuestKey = "check_before_purchase", Progress = 1, Target = 1, XpAwarded = 20, CompletedAt = nowUtc.AddHours(-5), UpdatedAt = nowUtc },
-            new() { UserId = userId, WeekStart = currentWeek, QuestKey = "review_regret_pattern", Progress = 1, Target = 1, XpAwarded = 25, CompletedAt = nowUtc.AddHours(-3), UpdatedAt = nowUtc }
+            new() { UserId = userId, WeekStart = currentWeek, QuestKey = "reflect_three_purchases", Progress = 3, Target = 3, XpAwarded = 15, CompletedAt = nowUtc.AddHours(-8), UpdatedAt = nowUtc },
+            new() { UserId = userId, WeekStart = currentWeek, QuestKey = "check_before_purchase", Progress = 1, Target = 1, XpAwarded = 10, CompletedAt = nowUtc.AddHours(-5), UpdatedAt = nowUtc },
+            new() { UserId = userId, WeekStart = currentWeek, QuestKey = "review_regret_pattern", Progress = 1, Target = 1, XpAwarded = 15, CompletedAt = nowUtc.AddHours(-3), UpdatedAt = nowUtc }
         };
 
         var conscienceBadgeProgress = new List<ConscienceBadgeProgress>

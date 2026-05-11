@@ -476,7 +476,14 @@ Goal: Playful, mascot-led habit progression that rewards awareness, reflection, 
 
 ## Phase 6: Weekly Digest (2 weeks)
 
-Goal: Email/push notifications with insights
+Goal: Push notifications with insights and high-signal reminders
+
+### Push Delivery Policy
+- [ ] Send device push for weekly digest
+- [ ] Send device push for important recurring reminders
+- [ ] Send device push for high-severity budget/cooling-off alerts
+- [ ] Consider device push for major Conscience Journey moments such as level-up
+- [ ] Keep quest progress in-app/bell only to avoid noisy notifications
 
 ### Backend Tasks
 - [ ] Set up Firebase Cloud Messaging (FCM)

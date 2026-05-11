@@ -55,6 +55,32 @@ List<InsightFeedItem> buildInsightFeedItems({
   return items;
 }
 
+({double delta, String summaryText, String title, String body})?
+    budgetTrendPaceCopy(BudgetTrendInsight trend) {
+  final previousMonths = trend.months.take(trend.months.length - 1);
+  final previousAverage = previousMonths.isEmpty
+      ? 0.0
+      : previousMonths.reduce((a, b) => a + b) / previousMonths.length;
+  if (previousAverage <= 0) return null;
+
+  final currentValue = trend.hasBudget
+      ? trend.currentMonthPercentUsed ?? trend.months.lastOrNull
+      : trend.currentMonthSpend;
+  if (currentValue == null) return null;
+
+  final delta = (currentValue - previousAverage) / previousAverage;
+  if (delta.abs() < 0.1) return null;
+
+  final direction = delta > 0 ? 'above' : 'below';
+  final percent = (delta.abs() * 100).round();
+  return (
+    delta: delta,
+    summaryText: '${trend.category} is $direction your recent 3-month pace.',
+    title: '${trend.category} is $direction your recent 3-month pace',
+    body: 'This month is $percent% $direction your 3-month average.',
+  );
+}
+
 List<InsightFeedItem> buildDashboardInsightItems(List<InsightFeedItem> items) {
   return items.where((item) => item.showOnDashboard).take(3).toList();
 }
@@ -94,12 +120,13 @@ List<InsightFeedItem> _budgetTrendItems(
     }
 
     final percent = trend.currentMonthPercentUsed?.round() ?? 0;
+    final paceCopy = budgetTrendPaceCopy(trend);
     return InsightFeedItem(
       id: 'budget-usage-${_slug(trend.category)}',
       kind: InsightFeedKind.budgetTrend,
       priority: percent >= 95 ? 96 : 88,
-      title: '${trend.category} is pacing high',
-      body: trend.insightLabel,
+      title: paceCopy?.title ?? '${trend.category} is pacing high',
+      body: paceCopy?.body ?? trend.insightLabel,
       metric: '$percent%',
       caption: 'Current monthly usage',
       section: InsightFeedSection.budgetTrends,

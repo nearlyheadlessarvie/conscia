@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/network/dio_client.dart';
 import '../models/conscience_journey.dart';
 import '../services/conscience_journey_service.dart';
+import 'alert_provider.dart';
 
 final conscienceJourneyServiceProvider =
     Provider<ConscienceJourneyService>((ref) {
@@ -12,6 +13,7 @@ final conscienceJourneyServiceProvider =
 final conscienceJourneyProvider =
     AsyncNotifierProvider<ConscienceJourneyNotifier, ConscienceJourneySummary>(
   ConscienceJourneyNotifier.new,
+  dependencies: [conscienceJourneyServiceProvider],
 );
 
 class ConscienceJourneyNotifier
@@ -31,6 +33,7 @@ class ConscienceJourneyNotifier
       sourceId: sourceId,
     );
     state = AsyncData(update.summary);
+    ref.read(localAlertsProvider.notifier).addJourneyUpdate(update);
     return update;
   }
 

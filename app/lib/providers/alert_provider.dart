@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/constants/api_constants.dart';
 import '../core/network/dio_client.dart';
+import '../models/conscience_journey.dart';
 import 'budget_providers.dart';
 
 class AppAlert {
@@ -100,6 +101,78 @@ class LocalAlertsNotifier extends StateNotifier<List<AppAlert>> {
     ];
   }
 
+  void addJourneyUpdate(ConscienceJourneyUpdate update) {
+    if (update.wasDuplicate) return;
+
+    final now = DateTime.now();
+    final alerts = <AppAlert>[];
+
+    if (update.leveledUp) {
+      alerts.add(
+        AppAlert(
+          id: 'journey-level-${update.summary.currentLevel.key}',
+          type: 'journey_level_up',
+          title: 'Level up: ${update.summary.currentLevel.title}',
+          message:
+              'Your conscience journey reached a new level. The mascots noticed.',
+          priority: 75,
+          actionLabel: 'View journey',
+          actionRoute: '/journey',
+          isDismissed: false,
+          createdAt: now,
+        ),
+      );
+    }
+
+    for (final badgeKey in update.unlockedBadgeKeys) {
+      final badge = _findBadge(update.summary.badges, badgeKey);
+      alerts.add(
+        AppAlert(
+          id: 'journey-badge-$badgeKey',
+          type: 'journey_badge',
+          title: 'Achievement unlocked',
+          message: badge == null
+              ? 'A new achievement joined your shelf.'
+              : '${badge.title}: ${badge.description}',
+          priority: 65,
+          actionLabel: 'View achievements',
+          actionRoute: '/journey',
+          isDismissed: false,
+          createdAt: now,
+        ),
+      );
+    }
+
+    for (final questKey in update.completedQuestKeys) {
+      final quest = _findQuest(update.summary.weeklyQuests, questKey);
+      alerts.add(
+        AppAlert(
+          id: 'journey-quest-$questKey',
+          type: 'journey_quest',
+          title: quest == null ? 'Quest complete' : 'Quest complete',
+          message: quest == null
+              ? 'One weekly quest is complete.'
+              : '${quest.title} earned +${quest.xpReward} XP.',
+          priority: 55,
+          actionLabel: 'View quests',
+          actionRoute: '/journey',
+          isDismissed: false,
+          createdAt: now,
+        ),
+      );
+    }
+
+    if (alerts.isEmpty) return;
+
+    final existingIds = state.map((alert) => alert.id).toSet();
+    final newAlerts = alerts
+        .where((alert) => !existingIds.contains(alert.id))
+        .toList(growable: false);
+    if (newAlerts.isEmpty) return;
+
+    state = [...newAlerts, ...state];
+  }
+
   void dismiss(String id) {
     state = [
       for (final alert in state)
@@ -121,6 +194,20 @@ class LocalAlertsNotifier extends StateNotifier<List<AppAlert>> {
         else
           alert,
     ];
+  }
+
+  ConscienceBadge? _findBadge(List<ConscienceBadge> badges, String key) {
+    for (final badge in badges) {
+      if (badge.key == key) return badge;
+    }
+    return null;
+  }
+
+  ConscienceQuest? _findQuest(List<ConscienceQuest> quests, String key) {
+    for (final quest in quests) {
+      if (quest.key == key) return quest;
+    }
+    return null;
   }
 }
 

@@ -25,6 +25,7 @@ Local setup:
 - Add Transaction and Pre-Purchase Assistant now share first-use `Smart location suggestions`, with a later Settings toggle for control.
 - Unbudgeted expense categories now create an in-app budget nudge with a direct path back to budget management.
 - Recurring expense and income schedules are now supported with weekly, monthly, and yearly cadence, optional end dates, automatic occurrence generation, and reminder alerts.
+- Device push delivery is planned as a selective, high-signal channel: weekly digest, important recurring reminders, high-severity budget/cooling-off alerts, and major Conscience Journey moments such as level-up. Quest progress should stay in-app/bell only.
 - Phase 4 AI Personality shipped as the broader AI Personality + Visual Refresh milestone: persona prompts, intensity-aware temperatures, persisted user preference, Settings control, and mascot-led AI surfaces.
 - Phase 5 is now MVP-scoped as Conscience Journey: a richer but modular gamification layer with XP, levels, weekly quests, badges, and mascot moments.
 - Other Phase 5+ roadmap items remain planned work.

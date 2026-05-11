@@ -3,7 +3,9 @@ import 'package:conscia_app/core/assets/mascot_sprite_sheet.dart';
 import 'package:conscia_app/providers/alert_provider.dart';
 import 'package:conscia_app/providers/behavioral_insights_provider.dart';
 import 'package:conscia_app/models/behavioral_insights.dart';
+import 'package:conscia_app/models/conscience_journey.dart';
 import 'package:conscia_app/providers/budget_providers.dart';
+import 'package:conscia_app/providers/conscience_journey_provider.dart';
 import 'package:conscia_app/providers/insight_feed_provider.dart';
 import 'package:conscia_app/providers/insights_provider.dart';
 import 'package:conscia_app/providers/subscription_provider.dart';
@@ -16,6 +18,7 @@ import 'package:conscia_app/screens/dashboard/widgets/insight_feed_card.dart';
 import 'package:conscia_app/screens/dashboard/widgets/recent_transaction_tile.dart';
 import 'package:conscia_app/screens/dashboard/widgets/regret_prompt_card.dart';
 import 'package:conscia_app/services/budget_service.dart';
+import 'package:conscia_app/services/conscience_journey_service.dart';
 import 'package:conscia_app/services/subscription_service.dart';
 import 'package:conscia_app/services/transaction_service.dart';
 import 'package:conscia_app/services/user_service.dart';
@@ -58,6 +61,21 @@ class _StaticTransactionService extends TransactionService {
   }
 }
 
+class _StaticConscienceJourneyService extends ConscienceJourneyService {
+  _StaticConscienceJourneyService() : super(Dio());
+
+  @override
+  Future<ConscienceJourneySummary> fetchJourney() async => _testJourneySummary;
+}
+
+class _PendingConscienceJourneyService extends ConscienceJourneyService {
+  _PendingConscienceJourneyService() : super(Dio());
+
+  @override
+  Future<ConscienceJourneySummary> fetchJourney() =>
+      Completer<ConscienceJourneySummary>().future;
+}
+
 class _LocalAlertsTestNotifier extends LocalAlertsNotifier {
   _LocalAlertsTestNotifier(List<AppAlert> alerts) : super() {
     state = alerts;
@@ -78,7 +96,32 @@ const _testSubscription = SubscriptionStatus(
   isPremium: false,
 );
 
-Widget _buildApp(ProviderContainer container) {
+const _testJourneySummary = ConscienceJourneySummary(
+  xpTotal: 0,
+  currentLevel: ConscienceLevel(
+    key: 'awakening',
+    title: 'Awakening',
+    requiredXp: 0,
+  ),
+  nextLevel: ConscienceLevel(
+    key: 'impulse_spotter',
+    title: 'Impulse Spotter',
+    requiredXp: 120,
+  ),
+  xpIntoLevel: 0,
+  xpToNextLevel: 120,
+  momentumDays: 0,
+  bestMomentumDays: 0,
+  weeklyQuests: [],
+  badges: [],
+);
+
+final _testJourneyService = _StaticConscienceJourneyService();
+
+Widget _buildApp(
+  ProviderContainer container, {
+  ConscienceJourneyService? journeyService,
+}) {
   final router = GoRouter(
     routes: [
       GoRoute(
@@ -110,23 +153,34 @@ Widget _buildApp(ProviderContainer container) {
 
   return UncontrolledProviderScope(
     container: container,
-    child: MaterialApp.router(routerConfig: router),
+    child: ProviderScope(
+      overrides: [
+        conscienceJourneyServiceProvider
+            .overrideWithValue(journeyService ?? _testJourneyService),
+      ],
+      child: MaterialApp.router(routerConfig: router),
+    ),
   );
 }
 
 Widget _buildNestedShellApp(ProviderContainer container) {
   return UncontrolledProviderScope(
     container: container,
-    child: MaterialApp(
-      home: Scaffold(
-        body: Navigator(
-          onGenerateRoute: (_) => MaterialPageRoute<void>(
-            builder: (_) => const DashboardScreen(),
+    child: ProviderScope(
+      overrides: [
+        conscienceJourneyServiceProvider.overrideWithValue(_testJourneyService),
+      ],
+      child: MaterialApp(
+        home: Scaffold(
+          body: Navigator(
+            onGenerateRoute: (_) => MaterialPageRoute<void>(
+              builder: (_) => const DashboardScreen(),
+            ),
           ),
-        ),
-        bottomNavigationBar: const SizedBox(
-          height: 72,
-          child: Center(child: Text('Shell nav')),
+          bottomNavigationBar: const SizedBox(
+            height: 72,
+            child: Center(child: Text('Shell nav')),
+          ),
         ),
       ),
     ),
@@ -279,11 +333,18 @@ void main() {
     );
     addTearDown(container.dispose);
 
-    await tester.pumpWidget(_buildApp(container));
+    await tester.pumpWidget(
+      _buildApp(
+        container,
+        journeyService: _PendingConscienceJourneyService(),
+      ),
+    );
     await tester.pump();
 
     expect(find.text('Your Insights'), findsOneWidget);
     expect(find.byType(DashboardInsightSummarySkeletonCard), findsOneWidget);
+    expect(find.text('Journey'), findsOneWidget);
+    expect(find.byType(DashboardJourneySkeletonCard), findsOneWidget);
     expect(find.byType(InsightSkeletonCard), findsNothing);
   });
 
@@ -339,7 +400,7 @@ void main() {
 
     expect(find.text('Your Insights'), findsOneWidget);
     expect(
-      find.text('You spent more on Dining than your recent 3-month pace.'),
+      find.text('Dining is above your recent 3-month pace.'),
       findsOneWidget,
     );
     expect(find.text('Subscriptions has enough activity for a budget'),
@@ -367,7 +428,7 @@ void main() {
                       category: 'Dining',
                       hasBudget: true,
                       currencyCode: 'PHP',
-                      months: [1800, 2100, 2400],
+                      months: [52, 68, 80],
                       currentMonthSpend: 3200,
                       currentMonthPercentUsed: 80,
                       insightLabel: 'Dining is trending higher',
@@ -388,18 +449,18 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(
-      find.text('You spent more on Dining than your recent 3-month pace.'),
+      find.text('Dining is above your recent 3-month pace.'),
       findsOneWidget,
     );
     expect(find.text('Summary'), findsOneWidget);
-    expect(find.byType(MascotSpriteFrame), findsOneWidget);
+    expect(find.byType(MascotSpriteFrame), findsWidgets);
     expect(find.text('Your financial mood is confident'), findsNothing);
     expect(find.text('More insights inside'), findsNothing);
-    expect(find.byIcon(Icons.chevron_right_rounded), findsOneWidget);
+    expect(find.byIcon(Icons.chevron_right_rounded), findsWidgets);
     expect(find.byTooltip('Dismiss insight'), findsNothing);
 
     await tester.tap(
-      find.text('You spent more on Dining than your recent 3-month pace.'),
+      find.text('Dining is above your recent 3-month pace.'),
     );
     await tester.pumpAndSettle();
 

@@ -30,6 +30,10 @@ public class TestWebAppFactory : WebApplicationFactory<Program>
     public Mock<IAIInteractionRepository> AIInteractionRepoMock { get; } = new();
     public Mock<IExchangeRateService> ExchangeRateServiceMock { get; } = new();
     public Mock<IConscienceJourneyService> ConscienceJourneyServiceMock { get; } = new();
+    public Mock<IConscienceJourneyRepository> ConscienceJourneyRepoMock { get; } = new();
+    public Mock<IWeeklyInsightsRepository> WeeklyInsightsRepoMock { get; } = new();
+    public Mock<IPurchasePatternRepository> PurchasePatternRepoMock { get; } = new();
+    public Mock<IMonthlyCategorySpendRepository> MonthlyCategorySpendRepoMock { get; } = new();
     private readonly string _dbName = $"ConsciaTest-{Guid.NewGuid()}";
 
     private const string SigningKey = "this-is-a-test-signing-key-at-least-32-chars!!";
@@ -58,6 +62,10 @@ public class TestWebAppFactory : WebApplicationFactory<Program>
             ReplaceService<IAIInteractionRepository>(services, AIInteractionRepoMock.Object);
             ReplaceService<IExchangeRateService>(services, ExchangeRateServiceMock.Object);
             ReplaceService<IConscienceJourneyService>(services, ConscienceJourneyServiceMock.Object);
+            ReplaceService<IConscienceJourneyRepository>(services, ConscienceJourneyRepoMock.Object);
+            ReplaceService<IWeeklyInsightsRepository>(services, WeeklyInsightsRepoMock.Object);
+            ReplaceService<IPurchasePatternRepository>(services, PurchasePatternRepoMock.Object);
+            ReplaceService<IMonthlyCategorySpendRepository>(services, MonthlyCategorySpendRepoMock.Object);
         });
 
         builder.UseSetting("Auth:UseMock", "true");

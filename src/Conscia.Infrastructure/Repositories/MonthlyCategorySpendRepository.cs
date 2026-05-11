@@ -48,6 +48,21 @@ public class MonthlyCategorySpendRepository : IMonthlyCategorySpendRepository
         return results;
     }
 
+    public async Task<IReadOnlyList<MonthlyCategorySpend>> ListByUserAsync(Guid userId, CancellationToken ct = default)
+    {
+        var response = await _dynamo.QueryAsync(new QueryRequest
+        {
+            TableName = TableName,
+            KeyConditionExpression = "PK = :pk",
+            ExpressionAttributeValues = new Dictionary<string, AttributeValue>
+            {
+                [":pk"] = new($"USER#{userId}")
+            }
+        }, ct);
+
+        return response.Items.Select(FromItem).ToList();
+    }
+
     private static Dictionary<string, AttributeValue> ToItem(MonthlyCategorySpend projection) =>
         new()
         {

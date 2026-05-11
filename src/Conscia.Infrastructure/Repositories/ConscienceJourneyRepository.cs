@@ -54,6 +54,15 @@ public class ConscienceJourneyRepository : DynamoRepository, IConscienceJourneyR
         }
     }
 
+    public async Task<IReadOnlyList<ConscienceJourneyEventRecord>> ListEventsAsync(
+        Guid userId,
+        int limit = 1000,
+        CancellationToken ct = default)
+    {
+        var response = await QueryByPrefixAsync(userId, "EVENT#", ct, limit);
+        return response.Items.Select(EventFromItem).ToList();
+    }
+
     public async Task<IReadOnlyList<ConscienceBadgeProgress>> GetBadgeProgressAsync(Guid userId, CancellationToken ct = default)
     {
         var response = await QueryByPrefixAsync(userId, "BADGE#", ct);
@@ -75,6 +84,15 @@ public class ConscienceJourneyRepository : DynamoRepository, IConscienceJourneyR
         CancellationToken ct = default)
     {
         var response = await QueryByPrefixAsync(userId, DynamoKeys.ConscienceQuestPrefix(weekStart), ct);
+        return response.Items.Select(QuestFromItem).ToList();
+    }
+
+    public async Task<IReadOnlyList<ConscienceQuestProgress>> ListQuestProgressAsync(
+        Guid userId,
+        int limit = 1000,
+        CancellationToken ct = default)
+    {
+        var response = await QueryByPrefixAsync(userId, "QUEST#", ct, limit);
         return response.Items.Select(QuestFromItem).ToList();
     }
 
@@ -105,6 +123,15 @@ public class ConscienceJourneyRepository : DynamoRepository, IConscienceJourneyR
         return response.Items.Count == 0 ? null : MascotMomentFromItem(response.Items[0]);
     }
 
+    public async Task<IReadOnlyList<ConscienceMascotMoment>> ListMascotMomentsAsync(
+        Guid userId,
+        int limit = 100,
+        CancellationToken ct = default)
+    {
+        var response = await QueryByPrefixAsync(userId, "MOMENT#", ct, limit, scanIndexForward: false);
+        return response.Items.Select(MascotMomentFromItem).ToList();
+    }
+
     public async Task AddMascotMomentAsync(ConscienceMascotMoment moment, CancellationToken ct = default)
     {
         await Dynamo.PutItemAsync(new PutItemRequest
@@ -114,9 +141,14 @@ public class ConscienceJourneyRepository : DynamoRepository, IConscienceJourneyR
         }, ct);
     }
 
-    private async Task<QueryResponse> QueryByPrefixAsync(Guid userId, string prefix, CancellationToken ct)
+    private async Task<QueryResponse> QueryByPrefixAsync(
+        Guid userId,
+        string prefix,
+        CancellationToken ct,
+        int? limit = null,
+        bool scanIndexForward = true)
     {
-        return await Dynamo.QueryAsync(new QueryRequest
+        var request = new QueryRequest
         {
             TableName = TableName,
             KeyConditionExpression = "PK = :pk AND begins_with(SK, :prefix)",
@@ -124,8 +156,14 @@ public class ConscienceJourneyRepository : DynamoRepository, IConscienceJourneyR
             {
                 [":pk"] = new(DynamoKeys.User(userId)),
                 [":prefix"] = new(prefix)
-            }
-        }, ct);
+            },
+            ScanIndexForward = scanIndexForward
+        };
+
+        if (limit.HasValue)
+            request.Limit = limit.Value;
+
+        return await Dynamo.QueryAsync(request, ct);
     }
 
     private static Dictionary<string, AttributeValue> ProgressToItem(ConscienceJourneyProgress progress)
@@ -170,6 +208,16 @@ public class ConscienceJourneyRepository : DynamoRepository, IConscienceJourneyR
             ["SourceId"] = new(record.SourceId),
             ["XpAwarded"] = Number(record.XpAwarded),
             ["CreatedAt"] = new(record.CreatedAt.ToString("O", CultureInfo.InvariantCulture))
+        };
+
+    private static ConscienceJourneyEventRecord EventFromItem(Dictionary<string, AttributeValue> item) =>
+        new()
+        {
+            UserId = Guid.Parse(item["UserId"].S),
+            EventType = item["EventType"].S,
+            SourceId = item["SourceId"].S,
+            XpAwarded = Int(item, "XpAwarded"),
+            CreatedAt = DateTime.Parse(item["CreatedAt"].S, CultureInfo.InvariantCulture)
         };
 
     private static Dictionary<string, AttributeValue> BadgeToItem(ConscienceBadgeProgress progress)

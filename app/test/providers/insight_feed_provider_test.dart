@@ -94,4 +94,35 @@ void main() {
       contains('weekly-mood-confident'),
     );
   });
+
+  test('dashboard summary mirrors budget trend detail framing', () {
+    final summary = buildDashboardInsightSummary(
+      behavioralInsights: const BehavioralInsights(
+        mood: FinancialMood.balanced,
+        worthItPercentage: 71,
+        worthItCount: 5,
+        previousMonthWorthItCount: 5,
+        impulseeTrends: [],
+        budgetTrends: [
+          BudgetTrendInsight(
+            category: 'Dining',
+            hasBudget: true,
+            currencyCode: 'PHP',
+            months: [52, 68, 85],
+            currentMonthSpend: 3400,
+            currentMonthPercentUsed: 85,
+            insightLabel: 'Budget usage trending up',
+          ),
+        ],
+      ),
+      summary: null,
+      categories: const [],
+      merchants: const [],
+    );
+
+    expect(
+      summary?.text,
+      'Dining is above your recent 3-month pace.',
+    );
+  });
 }

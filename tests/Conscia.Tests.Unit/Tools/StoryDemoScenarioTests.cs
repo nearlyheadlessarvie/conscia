@@ -81,13 +81,13 @@ public class StoryDemoScenarioTests
         var scenario = StoryDemoScenario.Build(DateTime.Parse("2026-05-11T00:00:00Z"));
 
         Assert.Equal(scenario.User.Id, scenario.ConscienceProgress.UserId);
-        Assert.True(scenario.ConscienceProgress.XpTotal >= 300);
+        Assert.InRange(scenario.ConscienceProgress.XpTotal, 400, 999);
         Assert.True(scenario.ConscienceProgress.MomentumDays > 0);
         Assert.Contains(
             scenario.ConscienceQuestProgress,
             quest => quest.QuestKey == "reflect_three_purchases"
                 && quest.CompletedAt.HasValue
-                && quest.XpAwarded > 0);
+                && quest.XpAwarded == 15);
         Assert.Contains(
             scenario.ConscienceBadgeProgress,
             badge => badge.BadgeKey == "first_reflection" && badge.UnlockedAt.HasValue);

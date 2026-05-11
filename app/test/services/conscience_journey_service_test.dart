@@ -89,15 +89,15 @@ Map<String, dynamic> _summaryJson({int xpTotal = 125}) => {
       'currentLevel': {
         'key': 'impulse_spotter',
         'title': 'Impulse Spotter',
-        'requiredXp': 100,
+        'requiredXp': 120,
       },
       'nextLevel': {
         'key': 'budget_guardian',
         'title': 'Budget Guardian',
-        'requiredXp': 300,
+        'requiredXp': 400,
       },
       'xpIntoLevel': 25,
-      'xpToNextLevel': 175,
+      'xpToNextLevel': 275,
       'momentumDays': 4,
       'bestMomentumDays': 6,
       'weeklyQuests': [
@@ -107,7 +107,7 @@ Map<String, dynamic> _summaryJson({int xpTotal = 125}) => {
           'description': 'Turn recent decisions into useful signal.',
           'progress': 1,
           'target': 3,
-          'xpReward': 30,
+          'xpReward': 15,
           'isCompleted': false,
           'completedAt': null,
         }

@@ -265,31 +265,40 @@ flutter run --dart-define=MOCK_AUTH=false --dart-define=API_BASE_URL=https://api
 
 Device push is scaffolded but intentionally disabled until Firebase credentials are ready. Today the app can request notification permission, read the Firebase Cloud Messaging token, and register it with `POST /api/v1/push/device-tokens`. The API stores tokens in DynamoDB table `PushDeviceTokens`; actual push delivery can be wired to Firebase Admin/FCM after credentials are available.
 
+Keep `PUSH_NOTIFICATIONS_ENABLED=false` for normal local web/dev runs. Browser/web push is not wired yet; the current scaffold is for Android/iOS device token registration.
+
 When Firebase is ready:
 
-1. Create a Firebase project and add Android/iOS apps. The current Android package id is `com.example.conscia_app`; update it before production if needed.
-2. Place Firebase config files locally:
+1. Create a Firebase project in the Firebase Console.
+2. Add Android and iOS apps using the real production package/bundle identifiers. The current Android package id is `com.example.conscia_app`; update it before production if needed.
+3. Download and place Firebase config files locally:
    ```text
    app/android/app/google-services.json
    app/ios/Runner/GoogleService-Info.plist
    ```
-   These files are gitignored.
-3. Configure native Firebase using FlutterFire:
+   These files are gitignored and should not be committed.
+4. Configure native Firebase using FlutterFire:
    ```bash
    cd app
    dart pub global activate flutterfire_cli
    flutterfire configure
    flutter pub get
    ```
-4. Run local Dynamo setup again so the token table exists:
+   This may generate `app/lib/firebase_options.dart`. Treat it as environment-specific unless we decide to standardize a committed non-secret Firebase client config.
+5. For iOS production push, configure APNs in Firebase:
+   - Apple Developer account → create an APNs Auth Key.
+   - Firebase Console → Project Settings → Cloud Messaging → upload the APNs key.
+6. Run local Dynamo setup again so the token table exists:
    ```bash
    dotnet run --project tools/DynamoSetup
    ```
-5. Enable push registration at runtime:
+7. Enable push registration at runtime on an Android/iOS device or emulator:
    ```bash
    cd app
    flutter run --dart-define=PUSH_NOTIFICATIONS_ENABLED=true
    ```
+8. For CI/builds, provide the Firebase config files as GitHub secrets and write them into the paths above during the mobile build job. Do not store them in source.
+9. For actual push delivery, add Firebase Admin credentials on the backend side. Store the service account JSON in AWS Secrets Manager or GitHub Actions secrets for deployment, then wire a server-side FCM sender that reads active `PushDeviceTokens` and sends the digest/alert payload.
 
 Cost note: Firebase Cloud Messaging itself has no per-message charge. This scaffold only adds tiny DynamoDB reads/writes for device-token registration. When we add server-side delivery, we can use the existing API/background jobs with Firebase Admin credentials, so there should be no new always-on infrastructure unless we later choose a dedicated worker.
 

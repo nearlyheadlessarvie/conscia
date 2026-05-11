@@ -22,7 +22,7 @@ public class ConscienceJourneyServiceTests
         Assert.Equal("awakening", result.Summary.CurrentLevel.Key);
         Assert.Equal("impulse_spotter", result.Summary.NextLevel?.Key);
         Assert.Equal(20, result.Summary.XpIntoLevel);
-        Assert.Equal(80, result.Summary.XpToNextLevel);
+        Assert.Equal(100, result.Summary.XpToNextLevel);
     }
 
     [Fact]
@@ -58,11 +58,11 @@ public class ConscienceJourneyServiceTests
         var result = await service.RecordEventAsync(userId, ConscienceEventTypes.PrePurchaseChecked, "check-1");
 
         Assert.True(result.LeveledUp);
-        Assert.Equal(135, result.Summary.XpTotal);
+        Assert.Equal(125, result.Summary.XpTotal);
         Assert.Equal("impulse_spotter", result.Summary.CurrentLevel.Key);
         Assert.Equal("budget_guardian", result.Summary.NextLevel?.Key);
-        Assert.Equal(35, result.Summary.XpIntoLevel);
-        Assert.Equal(165, result.Summary.XpToNextLevel);
+        Assert.Equal(5, result.Summary.XpIntoLevel);
+        Assert.Equal(275, result.Summary.XpToNextLevel);
     }
 
     [Fact]
@@ -75,9 +75,9 @@ public class ConscienceJourneyServiceTests
         var first = await service.RecordEventAsync(userId, ConscienceEventTypes.PrePurchaseChecked, "check-1");
         var second = await service.RecordEventAsync(userId, ConscienceEventTypes.PrePurchaseChecked, "check-2");
 
-        Assert.Equal(40, first.XpAwarded);
+        Assert.Equal(30, first.XpAwarded);
         Assert.Contains("check_before_purchase", first.CompletedQuestKeys);
-        Assert.Equal(60, second.Summary.XpTotal);
+        Assert.Equal(50, second.Summary.XpTotal);
         Assert.Equal(20, second.XpAwarded);
         Assert.DoesNotContain("check_before_purchase", second.CompletedQuestKeys);
     }
@@ -150,6 +150,18 @@ public class ConscienceJourneyServiceTests
             return Task.FromResult(true);
         }
 
+        public Task<IReadOnlyList<ConscienceJourneyEventRecord>> ListEventsAsync(
+            Guid userId,
+            int limit = 1000,
+            CancellationToken ct = default)
+        {
+            var events = Events
+                .Where(x => x.UserId == userId)
+                .Take(limit)
+                .ToList();
+            return Task.FromResult((IReadOnlyList<ConscienceJourneyEventRecord>)events);
+        }
+
         public Task<IReadOnlyList<ConscienceBadgeProgress>> GetBadgeProgressAsync(Guid userId, CancellationToken ct = default) =>
             Task.FromResult((IReadOnlyList<ConscienceBadgeProgress>)_badges.GetValueOrDefault(userId, []));
 
@@ -173,6 +185,17 @@ public class ConscienceJourneyServiceTests
             return Task.FromResult((IReadOnlyList<ConscienceQuestProgress>)quests);
         }
 
+        public Task<IReadOnlyList<ConscienceQuestProgress>> ListQuestProgressAsync(
+            Guid userId,
+            int limit = 1000,
+            CancellationToken ct = default)
+        {
+            var quests = _quests.GetValueOrDefault(userId, [])
+                .Take(limit)
+                .ToList();
+            return Task.FromResult((IReadOnlyList<ConscienceQuestProgress>)quests);
+        }
+
         public Task UpsertQuestProgressAsync(ConscienceQuestProgress progress, CancellationToken ct = default)
         {
             var items = _quests.GetValueOrDefault(progress.UserId) ?? [];
@@ -188,6 +211,18 @@ public class ConscienceJourneyServiceTests
                 .OrderByDescending(x => x.CreatedAt)
                 .FirstOrDefault();
             return Task.FromResult(moment);
+        }
+
+        public Task<IReadOnlyList<ConscienceMascotMoment>> ListMascotMomentsAsync(
+            Guid userId,
+            int limit = 100,
+            CancellationToken ct = default)
+        {
+            var moments = _moments.GetValueOrDefault(userId, [])
+                .OrderByDescending(x => x.CreatedAt)
+                .Take(limit)
+                .ToList();
+            return Task.FromResult((IReadOnlyList<ConscienceMascotMoment>)moments);
         }
 
         public Task AddMascotMomentAsync(ConscienceMascotMoment moment, CancellationToken ct = default)

@@ -33,10 +33,10 @@ public static class ConscienceJourneyRules
     public static readonly IReadOnlyList<ConscienceLevelRule> Levels =
     [
         new("awakening", "Awakening", 0),
-        new("impulse_spotter", "Impulse Spotter", 100),
-        new("budget_guardian", "Budget Guardian", 300),
-        new("conscience_captain", "Conscience Captain", 600),
-        new("money_monk", "Money Monk", 1000)
+        new("impulse_spotter", "Impulse Spotter", 120),
+        new("budget_guardian", "Budget Guardian", 400),
+        new("conscience_captain", "Conscience Captain", 1000),
+        new("money_monk", "Money Monk", 2200)
     ];
 
     public static readonly IReadOnlyList<ConscienceQuestRule> WeeklyQuests =
@@ -47,21 +47,21 @@ public static class ConscienceJourneyRules
             Description: "Turn recent decisions into useful signal.",
             EventType: ConscienceEventTypes.ReflectionCompleted,
             Target: 3,
-            XpReward: 30),
+            XpReward: 15),
         new(
             Key: "check_before_purchase",
             Title: "Check before 1 purchase",
             Description: "Pause with Conscia before spending.",
             EventType: ConscienceEventTypes.PrePurchaseChecked,
             Target: 1,
-            XpReward: 20),
+            XpReward: 10),
         new(
             Key: "review_regret_pattern",
             Title: "Review 1 regret pattern",
             Description: "Spot one repeat spending signal.",
             EventType: ConscienceEventTypes.RegretPatternReviewed,
             Target: 1,
-            XpReward: 25)
+            XpReward: 15)
     ];
 
     public static readonly IReadOnlyList<ConscienceBadgeRule> Badges =

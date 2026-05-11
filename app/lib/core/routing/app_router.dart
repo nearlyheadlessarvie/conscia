@@ -26,6 +26,7 @@ import '../../screens/settings/settings_screen.dart';
 import '../../screens/insights/category_detail_screen.dart';
 import '../../screens/insights/category_list_screen.dart';
 import '../../screens/insights/insights_screen.dart';
+import '../../screens/journey/conscience_journey_screen.dart';
 import '../../screens/insights/merchant_detail_screen.dart';
 import '../../screens/insights/merchant_list_screen.dart';
 import '../../screens/transactions/transaction_detail_screen.dart';
@@ -53,6 +54,7 @@ abstract class AppRoutes {
 
   static const assistant = '/assistant';
   static const insights = '/insights';
+  static const journey = '/journey';
 
   static const settings = '/settings';
   static const settingsProfile = '/settings/profile';
@@ -315,6 +317,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/insights',
         builder: (context, state) => const InsightsScreen(),
+      ),
+      GoRoute(
+        path: '/journey',
+        builder: (context, state) => const ConscienceJourneyScreen(),
       ),
       GoRoute(
         path: '/insights/merchants',
