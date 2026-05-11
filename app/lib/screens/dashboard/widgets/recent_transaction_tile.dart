@@ -50,10 +50,7 @@ class RecentTransactionTile extends StatelessWidget {
 
     return ListTile(
       onTap: () => context.push('/transactions/$id'),
-      leading: CircleAvatar(
-        backgroundColor: colors.primaryContainer,
-        child: categoryBadge,
-      ),
+      leading: categoryBadge,
       title: Text(counterparty, style: textTheme.titleSmall),
       subtitle: Text(
         '$category • $dateStr',
