@@ -3,6 +3,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Amazon;
 using Amazon.BedrockRuntime;
+using Amazon.CognitoIdentityProvider;
 using Amazon.DynamoDBv2;
 using Amazon.Lambda;
 using Amazon.Runtime;
@@ -109,6 +110,7 @@ else
     builder.Services.AddAWSService<IAmazonDynamoDB>();
     builder.Services.AddAWSService<IAmazonS3>();
     builder.Services.AddAWSService<IAmazonSQS>();
+    builder.Services.AddAWSService<IAmazonCognitoIdentityProvider>();
 }
 
 // --- EF Core + DB Repositories ---
@@ -239,12 +241,12 @@ if (useMockAuth)
 }
 else
 {
-    builder.Services.AddSingleton<IAuthService, CognitoAuthService>();
+    builder.Services.AddScoped<IAuthService, CognitoAuthService>();
 
     builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         .AddJwtBearer(options =>
         {
-            var region = builder.Configuration["AWS:Region"] ?? "us-east-1";
+            var region = builder.Configuration["AWS:Region"] ?? "ap-southeast-1";
             var userPoolId = builder.Configuration["Auth:Cognito:UserPoolId"]!;
             options.Authority = $"https://cognito-idp.{region}.amazonaws.com/{userPoolId}";
             options.TokenValidationParameters = new TokenValidationParameters

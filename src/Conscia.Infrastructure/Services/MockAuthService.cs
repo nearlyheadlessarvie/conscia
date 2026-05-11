@@ -23,6 +23,7 @@ public class MockAuthService : IAuthService
 
     public async Task<AuthResult> RegisterAsync(string email, string password, CancellationToken ct = default)
     {
+        email = NormalizeEmail(email);
         var existing = await _repo.GetByEmailAsync(email, ct);
         if (existing is not null)
             return new AuthResult { Success = false, Error = "User already exists" };
@@ -41,18 +42,77 @@ public class MockAuthService : IAuthService
             ProviderSub = email
         }, ct);
 
-        var token = GenerateToken(user.Id.ToString(), email, "Free");
         return new AuthResult
         {
             Success = true,
-            AccessToken = token,
-            RefreshToken = $"mock-refresh-{user.Id}",
-            UserId = user.Id.ToString()
+            RequiresConfirmation = true,
+            UserId = user.Id.ToString(),
+            Email = email
+        };
+    }
+
+    public async Task<AuthResult> ConfirmRegistrationAsync(string email, string confirmationCode, CancellationToken ct = default)
+    {
+        email = NormalizeEmail(email);
+        if (string.IsNullOrWhiteSpace(confirmationCode))
+        {
+            return new AuthResult
+            {
+                Success = false,
+                RequiresConfirmation = true,
+                Email = email,
+                Error = "Confirmation code is required"
+            };
+        }
+
+        var user = await _repo.GetByEmailAsync(email, ct);
+        if (user is null)
+        {
+            return new AuthResult
+            {
+                Success = false,
+                RequiresConfirmation = true,
+                Email = email,
+                Error = "User not found"
+            };
+        }
+
+        return new AuthResult
+        {
+            Success = true,
+            RequiresConfirmation = false,
+            UserId = user.Id.ToString(),
+            Email = email
+        };
+    }
+
+    public async Task<AuthResult> ResendConfirmationAsync(string email, CancellationToken ct = default)
+    {
+        email = NormalizeEmail(email);
+        var user = await _repo.GetByEmailAsync(email, ct);
+        if (user is null)
+        {
+            return new AuthResult
+            {
+                Success = false,
+                RequiresConfirmation = true,
+                Email = email,
+                Error = "User not found"
+            };
+        }
+
+        return new AuthResult
+        {
+            Success = true,
+            RequiresConfirmation = true,
+            UserId = user.Id.ToString(),
+            Email = email
         };
     }
 
     public async Task<AuthResult> LoginAsync(string email, string password, CancellationToken ct = default)
     {
+        email = NormalizeEmail(email);
         var user = await _repo.GetByEmailAsync(email, ct);
         if (user is null)
             return new AuthResult { Success = false, Error = "Invalid credentials" };
@@ -231,4 +291,6 @@ public class MockAuthService : IAuthService
             UserId = user.Id.ToString()
         };
     }
+
+    private static string NormalizeEmail(string email) => email.Trim().ToLowerInvariant();
 }

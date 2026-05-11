@@ -3,13 +3,56 @@ import 'package:conscia_app/services/auth_service.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class _FakeAuthService extends AuthService {
   _FakeAuthService(this._tokens) : super(Dio());
 
   final AuthTokens _tokens;
+  AuthRegistrationResult? registrationResult;
+  String? lastRegisteredEmail;
+  String? lastConfirmedEmail;
+  String? lastConfirmationCode;
+  String? lastResentEmail;
   String? lastRefreshToken;
   bool shouldFailRefresh = false;
+
+  @override
+  Future<AuthRegistrationResult> register(String email, String password) async {
+    lastRegisteredEmail = email;
+    return registrationResult ??
+        const AuthRegistrationResult(
+          success: true,
+          requiresConfirmation: true,
+          email: 'pending@example.com',
+          userId: 'pending-user',
+        );
+  }
+
+  @override
+  Future<AuthConfirmationResult> confirmRegistration(
+    String email,
+    String confirmationCode,
+  ) async {
+    lastConfirmedEmail = email;
+    lastConfirmationCode = confirmationCode;
+    return AuthConfirmationResult(success: true, email: email);
+  }
+
+  @override
+  Future<AuthConfirmationResult> resendConfirmation(String email) async {
+    lastResentEmail = email;
+    return AuthConfirmationResult(
+      success: true,
+      requiresConfirmation: true,
+      email: email,
+    );
+  }
+
+  @override
+  Future<AuthTokens> login(String email, String password) async {
+    return _tokens;
+  }
 
   @override
   Future<AuthTokens> refreshSession(String refreshToken) async {
@@ -28,8 +71,7 @@ class _FakeAuthService extends AuthService {
 }
 
 class _FakeSecureStorage extends FlutterSecureStorage {
-  _FakeSecureStorage([Map<String, String>? initial])
-      : _values = {...?initial};
+  _FakeSecureStorage([Map<String, String>? initial]) : _values = {...?initial};
 
   final Map<String, String> _values;
 
@@ -79,7 +121,89 @@ class _FakeSecureStorage extends FlutterSecureStorage {
 }
 
 void main() {
-  test('refreshSession updates tokens and keeps the session authenticated', () async {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
+  setUp(() {
+    SharedPreferences.setMockInitialValues({});
+  });
+
+  test('register requiring confirmation stores pending email without tokens',
+      () async {
+    final service = _FakeAuthService(
+      const AuthTokens(
+        accessToken: 'verified.access.token',
+        refreshToken: 'verified-refresh-token',
+        userId: 'user-1',
+      ),
+    )..registrationResult = const AuthRegistrationResult(
+        success: true,
+        requiresConfirmation: true,
+        email: 'new@example.com',
+        userId: 'pending-user',
+      );
+    final storage = _FakeSecureStorage();
+    final notifier = AuthNotifier(service, storage);
+
+    await notifier.register('new@example.com', 'SecureP@ss123');
+
+    expect(notifier.state.status, AuthStatus.pendingConfirmation);
+    expect(notifier.state.pendingEmail, 'new@example.com');
+    expect(notifier.state.accessToken, isNull);
+    expect(await storage.read(key: 'access_token'), isNull);
+  });
+
+  test(
+      'confirmRegistration verifies code then logs in with pending credentials',
+      () async {
+    final service = _FakeAuthService(
+      const AuthTokens(
+        accessToken: 'verified.access.token',
+        refreshToken: 'verified-refresh-token',
+        userId: 'user-1',
+      ),
+    )..registrationResult = const AuthRegistrationResult(
+        success: true,
+        requiresConfirmation: true,
+        email: 'new@example.com',
+        userId: 'pending-user',
+      );
+    final storage = _FakeSecureStorage();
+    final notifier = AuthNotifier(service, storage);
+
+    await notifier.register('new@example.com', 'SecureP@ss123');
+    await notifier.confirmRegistration('123456');
+
+    expect(service.lastConfirmedEmail, 'new@example.com');
+    expect(service.lastConfirmationCode, '123456');
+    expect(notifier.state.status, AuthStatus.authenticated);
+    expect(notifier.state.pendingEmail, isNull);
+    expect(notifier.state.accessToken, 'verified.access.token');
+    expect(await storage.read(key: 'access_token'), 'verified.access.token');
+  });
+
+  test('resendConfirmation uses pending email', () async {
+    final service = _FakeAuthService(
+      const AuthTokens(
+        accessToken: 'verified.access.token',
+        refreshToken: 'verified-refresh-token',
+        userId: 'user-1',
+      ),
+    )..registrationResult = const AuthRegistrationResult(
+        success: true,
+        requiresConfirmation: true,
+        email: 'new@example.com',
+        userId: 'pending-user',
+      );
+    final notifier = AuthNotifier(service, _FakeSecureStorage());
+
+    await notifier.register('new@example.com', 'SecureP@ss123');
+    await notifier.resendConfirmation();
+
+    expect(service.lastResentEmail, 'new@example.com');
+  });
+
+  test('refreshSession updates tokens and keeps the session authenticated',
+      () async {
     final service = _FakeAuthService(
       const AuthTokens(
         accessToken: 'new.access.token',
@@ -106,7 +230,8 @@ void main() {
     expect(await storage.read(key: 'refresh_token'), 'new-refresh-token');
   });
 
-  test('markSessionExpired clears tokens and exposes sessionExpired state', () async {
+  test('markSessionExpired clears tokens and exposes sessionExpired state',
+      () async {
     final notifier = AuthNotifier(
       _FakeAuthService(
         const AuthTokens(

@@ -52,8 +52,10 @@ class _FakeLocationAssistanceService extends LocationAssistanceService {
   Future<bool> requestPermission() async => false;
 
   @override
-  ({List<String> nearbyMerchants, List<String> likelyCategories})
-  getTransactionSuggestions() =>
+  ({
+    List<String> nearbyMerchants,
+    List<String> likelyCategories
+  }) getTransactionSuggestions() =>
       const (nearbyMerchants: <String>[], likelyCategories: <String>[]);
 }
 
@@ -215,7 +217,8 @@ void main() {
         findsOneWidget,
       );
 
-      final amountField = tester.widget<TextField>(find.byType(TextField).first);
+      final amountField =
+          tester.widget<TextField>(find.byType(TextField).first);
       expect(amountField.controller?.text, '600');
 
       final merchantField = tester.widget<TextField>(
@@ -257,5 +260,37 @@ void main() {
 
     expect(find.text('Session expired'), findsOneWidget);
     expect(find.text('Sign in again'), findsOneWidget);
+  });
+
+  testWidgets('pending confirmation auth state routes to verify email screen', (
+    tester,
+  ) async {
+    final fakeAuthNotifier = _TestAuthNotifier(
+      const AuthState(
+        status: AuthStatus.pendingConfirmation,
+        pendingEmail: 'new@example.com',
+      ),
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          authProvider.overrideWith((ref) => fakeAuthNotifier),
+        ],
+        child: Consumer(
+          builder: (context, ref, _) {
+            final router = ref.watch(appRouterProvider);
+            return MaterialApp.router(routerConfig: router);
+          },
+        ),
+      ),
+    );
+
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+
+    expect(find.text('Verify your email'), findsOneWidget);
+    expect(find.text('We sent a confirmation code to new@example.com.'),
+        findsOneWidget);
   });
 }

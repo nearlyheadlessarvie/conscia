@@ -7,7 +7,7 @@ namespace Conscia.Tests.Unit.Api;
 public class AuthEndpointTests
 {
     [Fact]
-    public async Task Register_ValidCredentials_Returns201()
+    public async Task Register_ValidCredentials_Returns202AndRequiresConfirmation()
     {
         await using var factory = new TestWebAppFactory();
         using var client = factory.CreateClient();
@@ -18,10 +18,58 @@ public class AuthEndpointTests
             password = "SecureP@ss123"
         });
 
-        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
         var body = await response.Content.ReadFromJsonAsync<Dictionary<string, object>>();
         Assert.NotNull(body);
-        Assert.True(body!.ContainsKey("accessToken"));
+        Assert.Equal("True", body!["requiresConfirmation"].ToString());
+        Assert.Equal("True", body["success"].ToString());
+        Assert.False(body.ContainsKey("accessToken"));
+    }
+
+    [Fact]
+    public async Task Confirm_ValidCode_Returns200()
+    {
+        await using var factory = new TestWebAppFactory();
+        using var client = factory.CreateClient();
+        var email = $"confirm-{Guid.NewGuid()}@example.com";
+
+        await client.PostAsJsonAsync("/api/v1/auth/register", new
+        {
+            email,
+            password = "SecureP@ss123"
+        });
+
+        var response = await client.PostAsJsonAsync("/api/v1/auth/confirm", new
+        {
+            email,
+            confirmationCode = "123456"
+        });
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<Dictionary<string, object>>();
+        Assert.NotNull(body);
+        Assert.Equal("True", body!["success"].ToString());
+    }
+
+    [Fact]
+    public async Task ResendConfirmation_ExistingUser_Returns200()
+    {
+        await using var factory = new TestWebAppFactory();
+        using var client = factory.CreateClient();
+        var email = $"resend-{Guid.NewGuid()}@example.com";
+
+        await client.PostAsJsonAsync("/api/v1/auth/register", new
+        {
+            email,
+            password = "SecureP@ss123"
+        });
+
+        var response = await client.PostAsJsonAsync("/api/v1/auth/resend-confirmation", new
+        {
+            email
+        });
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
 
     [Fact]
@@ -150,13 +198,19 @@ public class AuthEndpointTests
         using var client = factory.CreateClient();
         var email = $"refresh-{Guid.NewGuid()}@example.com";
 
-        var register = await client.PostAsJsonAsync("/api/v1/auth/register", new
+        await client.PostAsJsonAsync("/api/v1/auth/register", new
         {
             email,
             password = "password123"
         });
 
-        var loginBody = await register.Content.ReadFromJsonAsync<Dictionary<string, object>>();
+        var login = await client.PostAsJsonAsync("/api/v1/auth/login", new
+        {
+            email,
+            password = "password123"
+        });
+
+        var loginBody = await login.Content.ReadFromJsonAsync<Dictionary<string, object>>();
         Assert.NotNull(loginBody);
 
         var response = await client.PostAsJsonAsync("/api/v1/auth/refresh", new

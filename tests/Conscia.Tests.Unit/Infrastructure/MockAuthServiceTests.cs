@@ -41,14 +41,40 @@ public class MockAuthServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task Register_NewUser_ReturnsSuccess()
+    public async Task Register_NewUser_ReturnsSuccessAndRequiresConfirmation()
     {
         var result = await _auth.RegisterAsync("new@test.com", "password123");
 
         Assert.True(result.Success);
-        Assert.NotNull(result.AccessToken);
-        Assert.NotNull(result.RefreshToken);
+        Assert.True(result.RequiresConfirmation);
+        Assert.Equal("new@test.com", result.Email);
+        Assert.Null(result.AccessToken);
+        Assert.Null(result.RefreshToken);
         Assert.NotNull(result.UserId);
+    }
+
+    [Fact]
+    public async Task ConfirmRegistration_ExistingUserWithCode_ReturnsSuccess()
+    {
+        await _auth.RegisterAsync("confirm@test.com", "password123");
+
+        var result = await _auth.ConfirmRegistrationAsync("confirm@test.com", "123456");
+
+        Assert.True(result.Success);
+        Assert.False(result.RequiresConfirmation);
+        Assert.Equal("confirm@test.com", result.Email);
+    }
+
+    [Fact]
+    public async Task ResendConfirmation_ExistingUser_ReturnsSuccess()
+    {
+        await _auth.RegisterAsync("resend@test.com", "password123");
+
+        var result = await _auth.ResendConfirmationAsync("resend@test.com");
+
+        Assert.True(result.Success);
+        Assert.True(result.RequiresConfirmation);
+        Assert.Equal("resend@test.com", result.Email);
     }
 
     [Fact]
@@ -180,14 +206,15 @@ public class MockAuthServiceTests : IDisposable
     [Fact]
     public async Task Refresh_ValidRefreshToken_ReturnsFreshTokensForSameUser()
     {
-        var register = await _auth.RegisterAsync("refreshable@test.com", "pass");
+        await _auth.RegisterAsync("refreshable@test.com", "pass");
+        var login = await _auth.LoginAsync("refreshable@test.com", "pass");
 
-        var refresh = await _auth.RefreshAsync(register.RefreshToken!);
+        var refresh = await _auth.RefreshAsync(login.RefreshToken!);
 
         Assert.True(refresh.Success);
         Assert.NotNull(refresh.AccessToken);
         Assert.NotNull(refresh.RefreshToken);
-        Assert.Equal(register.UserId, refresh.UserId);
+        Assert.Equal(login.UserId, refresh.UserId);
     }
 
     [Fact]

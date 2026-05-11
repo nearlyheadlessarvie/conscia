@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../providers/auth_provider.dart';
-import '../../providers/user_provider.dart';
 
 class SignUpScreen extends ConsumerStatefulWidget {
   const SignUpScreen({super.key});
@@ -64,13 +63,6 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
             _emailController.text.trim(),
             _passwordController.text,
           );
-      final defaults = deviceDefaults();
-      try {
-        await ref.read(userServiceProvider).updateProfile(
-              preferredCurrency: defaults.currency,
-              locale: defaults.locale,
-            );
-      } catch (_) {}
     } catch (e) {
       if (!mounted) return;
       setState(() {

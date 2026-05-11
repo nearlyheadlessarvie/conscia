@@ -18,6 +18,8 @@ class ApiConstants {
 
   // Auth
   static const String register = 'auth/register';
+  static const String confirmRegistration = 'auth/confirm';
+  static const String resendConfirmation = 'auth/resend-confirmation';
   static const String login = 'auth/login';
   static const String refreshToken = 'auth/refresh';
   static const String logout = 'auth/logout';

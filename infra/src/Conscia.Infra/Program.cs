@@ -11,7 +11,7 @@ sealed class Program
         var env = new Amazon.CDK.Environment
         {
             Account = System.Environment.GetEnvironmentVariable("CDK_DEFAULT_ACCOUNT"),
-            Region = System.Environment.GetEnvironmentVariable("CDK_DEFAULT_REGION") ?? "us-east-1"
+            Region = System.Environment.GetEnvironmentVariable("CDK_DEFAULT_REGION") ?? "ap-southeast-1"
         };
 
         var network = new NetworkStack(app, "Conscia-Network", new StackProps { Env = env });
@@ -86,7 +86,7 @@ sealed class Program
         var cicd = new CiCdStack(app, "Conscia-CiCd", new CiCdStackProps
         {
             Env = env,
-            GitHubOrg = "your-org",
+            GitHubOrg = "nearlyheadlessarvie",
             GitHubRepo = "conscia"
         });
 

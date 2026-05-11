@@ -1,59 +1,324 @@
+using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
+using Amazon.CognitoIdentityProvider;
+using Amazon.CognitoIdentityProvider.Model;
 using Conscia.Application.Interfaces;
+using Conscia.Domain.Entities;
+using Conscia.Domain.Enums;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 
 namespace Conscia.Infrastructure.Services;
 
 /// <summary>
-/// AWS Cognito auth service — production implementation.
-/// Delegates to Cognito Essentials for register/login and JWKS validation for tokens.
-/// Stub until Phase 7 (CDK provisions Cognito User Pool).
+/// Production email/password auth backed by AWS Cognito.
 /// </summary>
 public class CognitoAuthService : IAuthService
 {
-    private readonly IConfiguration _config;
+    private readonly IAmazonCognitoIdentityProvider _cognito;
+    private readonly IUserRepository _users;
     private readonly ILogger<CognitoAuthService> _logger;
+    private readonly string _clientId;
 
-    public CognitoAuthService(IConfiguration config, ILogger<CognitoAuthService> logger)
+    public CognitoAuthService(
+        IConfiguration config,
+        IAmazonCognitoIdentityProvider cognito,
+        IUserRepository users,
+        ILogger<CognitoAuthService> logger)
     {
-        _config = config;
+        _cognito = cognito;
+        _users = users;
         _logger = logger;
+        _clientId = config["Auth:Cognito:ClientId"]
+            ?? throw new InvalidOperationException("Auth:Cognito:ClientId not configured");
     }
 
-    public Task<AuthResult> RegisterAsync(string email, string password, CancellationToken ct = default)
+    public async Task<AuthResult> RegisterAsync(string email, string password, CancellationToken ct = default)
     {
-        _logger.LogError("CognitoAuthService.RegisterAsync called but Cognito User Pool is not provisioned");
-        return Task.FromResult(new AuthResult { Success = false, Error = "Authentication service not configured. Cognito User Pool required." });
+        email = NormalizeEmail(email);
+
+        try
+        {
+            var response = await _cognito.SignUpAsync(new SignUpRequest
+            {
+                ClientId = _clientId,
+                Username = email,
+                Password = password,
+                UserAttributes =
+                [
+                    new AttributeType { Name = "email", Value = email }
+                ]
+            }, ct);
+
+            if (!Guid.TryParse(response.UserSub, out var userId))
+            {
+                _logger.LogError("Cognito returned a non-Guid sub for {Email}", email);
+                return new AuthResult { Success = false, Email = email, Error = "Authentication service returned an invalid user id" };
+            }
+
+            await EnsureLocalUserAsync(userId, email, AuthProvider.Email, email, ct);
+
+            return new AuthResult
+            {
+                Success = true,
+                RequiresConfirmation = response.UserConfirmed != true,
+                UserId = userId.ToString(),
+                Email = email
+            };
+        }
+        catch (UsernameExistsException)
+        {
+            return new AuthResult { Success = false, RequiresConfirmation = true, Email = email, Error = "User already exists" };
+        }
+        catch (InvalidPasswordException ex)
+        {
+            return new AuthResult { Success = false, RequiresConfirmation = true, Email = email, Error = ex.Message };
+        }
+        catch (InvalidParameterException ex)
+        {
+            return new AuthResult { Success = false, RequiresConfirmation = true, Email = email, Error = ex.Message };
+        }
+        catch (AmazonCognitoIdentityProviderException ex)
+        {
+            _logger.LogError(ex, "Cognito signup failed for {Email}", email);
+            return new AuthResult { Success = false, RequiresConfirmation = true, Email = email, Error = "Unable to register right now" };
+        }
     }
 
-    public Task<AuthResult> LoginAsync(string email, string password, CancellationToken ct = default)
+    public async Task<AuthResult> ConfirmRegistrationAsync(string email, string confirmationCode, CancellationToken ct = default)
     {
-        _logger.LogError("CognitoAuthService.LoginAsync called but Cognito User Pool is not provisioned");
-        return Task.FromResult(new AuthResult { Success = false, Error = "Authentication service not configured. Cognito User Pool required." });
+        email = NormalizeEmail(email);
+
+        try
+        {
+            await _cognito.ConfirmSignUpAsync(new ConfirmSignUpRequest
+            {
+                ClientId = _clientId,
+                Username = email,
+                ConfirmationCode = confirmationCode.Trim()
+            }, ct);
+
+            return new AuthResult
+            {
+                Success = true,
+                RequiresConfirmation = false,
+                Email = email
+            };
+        }
+        catch (CodeMismatchException)
+        {
+            return ConfirmationError(email, "Invalid confirmation code");
+        }
+        catch (ExpiredCodeException)
+        {
+            return ConfirmationError(email, "Confirmation code expired");
+        }
+        catch (UserNotFoundException)
+        {
+            return ConfirmationError(email, "User not found");
+        }
+        catch (AmazonCognitoIdentityProviderException ex)
+        {
+            _logger.LogError(ex, "Cognito confirmation failed for {Email}", email);
+            return ConfirmationError(email, "Unable to confirm email right now");
+        }
     }
 
-    public Task<AuthResult> RefreshAsync(string refreshToken, CancellationToken ct = default)
+    public async Task<AuthResult> ResendConfirmationAsync(string email, CancellationToken ct = default)
     {
-        _logger.LogError("CognitoAuthService.RefreshAsync called but Cognito token refresh is not configured");
-        return Task.FromResult(new AuthResult { Success = false, Error = "Authentication service not configured. Cognito refresh required." });
+        email = NormalizeEmail(email);
+
+        try
+        {
+            await _cognito.ResendConfirmationCodeAsync(new ResendConfirmationCodeRequest
+            {
+                ClientId = _clientId,
+                Username = email
+            }, ct);
+
+            return new AuthResult
+            {
+                Success = true,
+                RequiresConfirmation = true,
+                Email = email
+            };
+        }
+        catch (UserNotFoundException)
+        {
+            return ConfirmationError(email, "User not found");
+        }
+        catch (AmazonCognitoIdentityProviderException ex)
+        {
+            _logger.LogError(ex, "Cognito resend confirmation failed for {Email}", email);
+            return ConfirmationError(email, "Unable to resend confirmation code right now");
+        }
+    }
+
+    public async Task<AuthResult> LoginAsync(string email, string password, CancellationToken ct = default)
+    {
+        email = NormalizeEmail(email);
+
+        try
+        {
+            var response = await _cognito.InitiateAuthAsync(new InitiateAuthRequest
+            {
+                ClientId = _clientId,
+                AuthFlow = AuthFlowType.USER_PASSWORD_AUTH,
+                AuthParameters = new Dictionary<string, string>
+                {
+                    ["USERNAME"] = email,
+                    ["PASSWORD"] = password
+                }
+            }, ct);
+
+            return await TokensToAuthResultAsync(response.AuthenticationResult, email, ct);
+        }
+        catch (UserNotConfirmedException)
+        {
+            return new AuthResult
+            {
+                Success = false,
+                RequiresConfirmation = true,
+                Email = email,
+                Error = "Email confirmation required"
+            };
+        }
+        catch (NotAuthorizedException)
+        {
+            return new AuthResult { Success = false, Email = email, Error = "Invalid credentials" };
+        }
+        catch (UserNotFoundException)
+        {
+            return new AuthResult { Success = false, Email = email, Error = "Invalid credentials" };
+        }
+        catch (AmazonCognitoIdentityProviderException ex)
+        {
+            _logger.LogError(ex, "Cognito login failed for {Email}", email);
+            return new AuthResult { Success = false, Email = email, Error = "Unable to sign in right now" };
+        }
+    }
+
+    public async Task<AuthResult> RefreshAsync(string refreshToken, CancellationToken ct = default)
+    {
+        try
+        {
+            var response = await _cognito.InitiateAuthAsync(new InitiateAuthRequest
+            {
+                ClientId = _clientId,
+                AuthFlow = AuthFlowType.REFRESH_TOKEN_AUTH,
+                AuthParameters = new Dictionary<string, string>
+                {
+                    ["REFRESH_TOKEN"] = refreshToken
+                }
+            }, ct);
+
+            var result = await TokensToAuthResultAsync(response.AuthenticationResult, null, ct);
+            result.RefreshToken ??= refreshToken;
+            return result;
+        }
+        catch (AmazonCognitoIdentityProviderException ex)
+        {
+            _logger.LogWarning(ex, "Cognito refresh failed");
+            return new AuthResult { Success = false, Error = "Invalid refresh token" };
+        }
     }
 
     public Task<AuthResult> LoginWithGoogleAsync(string idToken, CancellationToken ct = default)
     {
-        _logger.LogError("CognitoAuthService.LoginWithGoogleAsync called but Cognito Identity Pool is not provisioned");
-        return Task.FromResult(new AuthResult { Success = false, Error = "Google sign-in not configured. Cognito Identity Pool required." });
+        return Task.FromResult(new AuthResult { Success = false, Error = "Google sign-in is not enabled yet" });
     }
 
     public Task<AuthResult> LoginWithAppleAsync(string identityToken, string? authorizationCode, CancellationToken ct = default)
     {
-        _logger.LogError("CognitoAuthService.LoginWithAppleAsync called but Cognito Identity Pool is not provisioned");
-        return Task.FromResult(new AuthResult { Success = false, Error = "Apple sign-in not configured. Cognito Identity Pool required." });
+        return Task.FromResult(new AuthResult { Success = false, Error = "Apple sign-in is not enabled yet" });
     }
 
     public Task<ClaimsPrincipal?> ValidateTokenAsync(string token, CancellationToken ct = default)
     {
-        _logger.LogError("CognitoAuthService.ValidateTokenAsync called but JWKS endpoint is not configured");
+        // JWT bearer middleware performs production token validation through Cognito JWKS.
         return Task.FromResult<ClaimsPrincipal?>(null);
     }
+
+    private async Task<AuthResult> TokensToAuthResultAsync(AuthenticationResultType tokens, string? emailFallback, CancellationToken ct)
+    {
+        var tokenForClaims = !string.IsNullOrWhiteSpace(tokens.IdToken)
+            ? tokens.IdToken
+            : tokens.AccessToken;
+        var (userId, email) = ReadClaims(tokenForClaims);
+        email ??= emailFallback;
+
+        if (userId is not null && email is not null)
+        {
+            await EnsureLocalUserAsync(userId.Value, email, AuthProvider.Email, email, ct);
+        }
+
+        return new AuthResult
+        {
+            Success = true,
+            AccessToken = tokens.AccessToken,
+            RefreshToken = tokens.RefreshToken,
+            UserId = userId?.ToString(),
+            Email = email
+        };
+    }
+
+    private async Task EnsureLocalUserAsync(Guid userId, string email, AuthProvider provider, string providerSub, CancellationToken ct)
+    {
+        var user = await _users.GetByIdAsync(userId, ct);
+        if (user is null)
+        {
+            user = await _users.GetByEmailAsync(email, ct);
+        }
+
+        if (user is null)
+        {
+            user = new User
+            {
+                Id = userId,
+                Email = email
+            };
+            await _users.AddAsync(user, ct);
+        }
+
+        var existingIdentity = await _users.GetByProviderAsync(provider, providerSub, ct);
+        if (existingIdentity is null)
+        {
+            await _users.AddIdentityAsync(new UserIdentity
+            {
+                Id = Guid.NewGuid(),
+                UserId = user.Id,
+                Provider = provider,
+                ProviderSub = providerSub
+            }, ct);
+        }
+    }
+
+    private static (Guid? UserId, string? Email) ReadClaims(string? token)
+    {
+        if (string.IsNullOrWhiteSpace(token))
+        {
+            return (null, null);
+        }
+
+        var jwt = new JwtSecurityTokenHandler().ReadJwtToken(token);
+        var sub = jwt.Claims.FirstOrDefault(c => c.Type == "sub")?.Value;
+        var email = jwt.Claims.FirstOrDefault(c => c.Type == "email" || c.Type == ClaimTypes.Email)?.Value;
+
+        return Guid.TryParse(sub, out var userId)
+            ? (userId, email)
+            : (null, email);
+    }
+
+    private static AuthResult ConfirmationError(string email, string error)
+    {
+        return new AuthResult
+        {
+            Success = false,
+            RequiresConfirmation = true,
+            Email = email,
+            Error = error
+        };
+    }
+
+    private static string NormalizeEmail(string email) => email.Trim().ToLowerInvariant();
 }
