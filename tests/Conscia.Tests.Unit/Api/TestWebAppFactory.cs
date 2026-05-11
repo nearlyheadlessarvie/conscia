@@ -29,6 +29,7 @@ public class TestWebAppFactory : WebApplicationFactory<Program>
     public Mock<IPushDeviceTokenRepository> PushDeviceTokenRepoMock { get; } = new();
     public Mock<IAIInteractionRepository> AIInteractionRepoMock { get; } = new();
     public Mock<IExchangeRateService> ExchangeRateServiceMock { get; } = new();
+    public Mock<IConscienceJourneyService> ConscienceJourneyServiceMock { get; } = new();
     private readonly string _dbName = $"ConsciaTest-{Guid.NewGuid()}";
 
     private const string SigningKey = "this-is-a-test-signing-key-at-least-32-chars!!";
@@ -56,6 +57,7 @@ public class TestWebAppFactory : WebApplicationFactory<Program>
             ReplaceService<IPushDeviceTokenRepository>(services, PushDeviceTokenRepoMock.Object);
             ReplaceService<IAIInteractionRepository>(services, AIInteractionRepoMock.Object);
             ReplaceService<IExchangeRateService>(services, ExchangeRateServiceMock.Object);
+            ReplaceService<IConscienceJourneyService>(services, ConscienceJourneyServiceMock.Object);
         });
 
         builder.UseSetting("Auth:UseMock", "true");

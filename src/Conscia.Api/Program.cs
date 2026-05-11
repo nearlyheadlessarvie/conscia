@@ -380,6 +380,7 @@ app.MapPushNotificationEndpoints().RequireRateLimiting("standard");
 app.MapReceiptEndpoints().RequireRateLimiting("standard");
 app.MapAIEndpoints().RequireRateLimiting("ai");
 app.MapInsightsEndpoints().RequireRateLimiting("standard");
+app.MapConscienceJourneyEndpoints().RequireRateLimiting("standard");
 app.MapSuggestionEndpoints().RequireRateLimiting("standard");
 app.MapExchangeRateEndpoints().RequireRateLimiting("standard");
 app.MapUtteranceEndpoints().RequireRateLimiting("ai");
