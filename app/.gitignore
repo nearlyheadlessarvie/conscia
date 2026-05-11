@@ -9,9 +9,6 @@ build/
 # Generated
 *.g.dart
 *.freezed.dart
-# Exception: model serialization outputs are committed for CI/analyze
-!lib/models/*.g.dart
-!lib/models/*.freezed.dart
 # Exception: the constants generator output is committed intentionally
 !lib/core/constants/generated/app_constants.g.dart
 *.gr.dart
