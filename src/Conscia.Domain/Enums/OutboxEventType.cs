@@ -4,5 +4,6 @@ public enum OutboxEventType
 {
     TransactionCreated,
     TransactionDeleted,
-    TransactionUpdated
+    TransactionUpdated,
+    FamilyInviteCreated
 }

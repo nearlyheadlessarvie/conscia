@@ -48,6 +48,29 @@ public static class FamilySpaceEndpoints
             }
         }).WithName("CreateFamilySpace");
 
+        group.MapPost("/invites", async (HttpContext ctx, CreateFamilyInviteDto dto, IFamilySpaceService svc) =>
+        {
+            try
+            {
+                var invite = await svc.InviteAsync(ctx.User.GetUserId(), dto.Email, dto.Role, ctx.RequestAborted);
+                return Results.Created($"/api/v1/family-space/invites/{invite.Id}", new
+                {
+                    invite.Id,
+                    invite.Email,
+                    Role = invite.Role.ToString(),
+                    invite.ExpiresAt
+                });
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Results.Json(new { error = ex.Message }, statusCode: StatusCodes.Status403Forbidden);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return Results.BadRequest(new { error = ex.Message });
+            }
+        }).WithName("CreateFamilyInvite");
+
         return group;
     }
 }

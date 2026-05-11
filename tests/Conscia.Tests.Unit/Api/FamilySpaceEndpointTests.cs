@@ -101,6 +101,55 @@ public class FamilySpaceEndpointTests
         Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
     }
 
+    [Fact]
+    public async Task CreateInvite_OwnerRequest_ReturnsCreatedInvite()
+    {
+        await using var factory = new TestWebAppFactory();
+        var inviteId = Guid.Parse("cccccccc-cccc-cccc-cccc-cccccccccccc");
+        factory.FamilySpaceServiceMock
+            .Setup(s => s.InviteAsync(UserId, "wife@example.com", FamilyMemberRole.Contributor, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new FamilyInvite
+            {
+                Id = inviteId,
+                FamilySpaceId = Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"),
+                Email = "wife@example.com",
+                Role = FamilyMemberRole.Contributor,
+                ExpiresAt = DateTime.UtcNow.AddDays(14)
+            });
+
+        var client = CreateAuthorizedClient(factory);
+        var response = await client.PostAsJsonAsync("/api/v1/family-space/invites", new
+        {
+            email = "wife@example.com",
+            role = "Contributor"
+        });
+
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        Assert.Equal($"/api/v1/family-space/invites/{inviteId}", response.Headers.Location?.ToString());
+
+        var json = await response.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal("wife@example.com", json.GetProperty("email").GetString());
+        Assert.Equal("Contributor", json.GetProperty("role").GetString());
+    }
+
+    [Fact]
+    public async Task CreateInvite_ContributorRequest_ReturnsForbidden()
+    {
+        await using var factory = new TestWebAppFactory();
+        factory.FamilySpaceServiceMock
+            .Setup(s => s.InviteAsync(It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<FamilyMemberRole>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new UnauthorizedAccessException("Only Family Space owners can invite members."));
+
+        var client = CreateAuthorizedClient(factory);
+        var response = await client.PostAsJsonAsync("/api/v1/family-space/invites", new
+        {
+            email = "wife@example.com",
+            role = "Contributor"
+        });
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
     private static HttpClient CreateAuthorizedClient(
         TestWebAppFactory factory,
         string tier = "Premium")
