@@ -165,6 +165,7 @@ builder.Services.AddScoped<IBehavioralInsightsService, BehavioralInsightsService
 builder.Services.AddScoped<IPurchaseSuggestionService, PurchaseSuggestionService>();
 builder.Services.AddScoped<IPurchasePatternService, PurchasePatternService>();
 builder.Services.AddScoped<IAlertService, AlertService>();
+builder.Services.AddScoped<IConscienceJourneyService, ConscienceJourneyService>();
 builder.Services.AddSingleton<IRecurringScheduleGenerator, RecurringScheduleGenerator>();
 builder.Services.AddScoped<ITriggerEvaluator, BudgetWarningEvaluator>();
 builder.Services.AddScoped<ITriggerEvaluator, CoolingOffSuggestionEvaluator>();
