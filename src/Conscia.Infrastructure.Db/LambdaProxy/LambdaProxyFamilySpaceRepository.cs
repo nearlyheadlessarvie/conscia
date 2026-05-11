@@ -21,6 +21,9 @@ public class LambdaProxyFamilySpaceRepository : LambdaProxyRepository, IFamilySp
     public Task<FamilySpace> CreateWithOwnerAsync(FamilySpace space, FamilyMember owner, CancellationToken ct = default) =>
         InvokeAsync<FamilySpace>("FamilySpace.CreateWithOwner", new { Space = space, Owner = owner }, ct);
 
+    public Task<FamilySpace> UpdateAsync(FamilySpace space, CancellationToken ct = default) =>
+        InvokeAsync<FamilySpace>("FamilySpace.Update", space, ct);
+
     public Task<FamilyInvite> AddInviteAsync(FamilyInvite invite, CancellationToken ct = default) =>
         InvokeAsync<FamilyInvite>("FamilySpace.AddInvite", invite, ct);
 

@@ -82,6 +82,58 @@ public class FamilySpaceServiceTests
     }
 
     [Fact]
+    public async Task UpdateAsync_OwnerRenamesFamilySpace()
+    {
+        var ownerId = Guid.NewGuid();
+        var familySpaceId = Guid.NewGuid();
+        var space = new FamilySpace
+        {
+            Id = familySpaceId,
+            Name = "Old Household",
+            CurrencyCode = "PHP",
+            CreatedByUserId = ownerId
+        };
+        _repo.Setup(r => r.GetMembershipByUserIdAsync(ownerId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new FamilyMember
+            {
+                UserId = ownerId,
+                FamilySpaceId = familySpaceId,
+                Role = FamilyMemberRole.Owner
+            });
+        _repo.Setup(r => r.GetByIdAsync(familySpaceId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(space);
+        _repo.Setup(r => r.UpdateAsync(It.IsAny<FamilySpace>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((FamilySpace updated, CancellationToken _) => updated);
+
+        var result = await CreateService().UpdateAsync(ownerId, "  Santos Family  ");
+
+        Assert.Equal("Santos Family", result.Name);
+        Assert.Equal("PHP", result.CurrencyCode);
+        Assert.Equal("Owner", result.Role);
+        _repo.Verify(r => r.UpdateAsync(
+            It.Is<FamilySpace>(s => s.Id == familySpaceId && s.Name == "Santos Family"),
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_NonOwnerCannotRenameFamilySpace()
+    {
+        var contributorId = Guid.NewGuid();
+        _repo.Setup(r => r.GetMembershipByUserIdAsync(contributorId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new FamilyMember
+            {
+                UserId = contributorId,
+                FamilySpaceId = Guid.NewGuid(),
+                Role = FamilyMemberRole.Contributor
+            });
+
+        var error = await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
+            CreateService().UpdateAsync(contributorId, "New Name"));
+
+        Assert.Equal("Only Family Space owners can edit household settings.", error.Message);
+    }
+
+    [Fact]
     public async Task InviteAsync_OwnerCreatesPendingInviteAndOutboxEvent()
     {
         var ownerId = Guid.NewGuid();

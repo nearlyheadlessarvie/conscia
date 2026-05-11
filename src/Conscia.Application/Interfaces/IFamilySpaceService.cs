@@ -7,6 +7,7 @@ namespace Conscia.Application.Interfaces;
 public interface IFamilySpaceService
 {
     Task<FamilySpace> CreateAsync(Guid userId, string name, string currencyCode, CancellationToken ct = default);
+    Task<FamilySpaceDto> UpdateAsync(Guid userId, string name, CancellationToken ct = default);
     Task<FamilySpaceDto?> GetCurrentAsync(Guid userId, CancellationToken ct = default);
     Task<FamilySpaceOverviewDto> GetOverviewAsync(Guid userId, CancellationToken ct = default);
     Task<FamilyInvite> InviteAsync(Guid inviterUserId, string email, FamilyMemberRole role, CancellationToken ct = default);

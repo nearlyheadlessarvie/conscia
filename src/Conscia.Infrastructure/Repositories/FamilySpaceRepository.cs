@@ -34,6 +34,13 @@ public class FamilySpaceRepository : IFamilySpaceRepository
         return space;
     }
 
+    public async Task<FamilySpace> UpdateAsync(FamilySpace space, CancellationToken ct = default)
+    {
+        _db.FamilySpaces.Update(space);
+        await _db.SaveChangesAsync(ct);
+        return space;
+    }
+
     public async Task<FamilyInvite> AddInviteAsync(FamilyInvite invite, CancellationToken ct = default)
     {
         invite.Email = NormalizeEmail(invite.Email);

@@ -94,6 +94,35 @@ public class FamilySpaceService : IFamilySpaceService
             membership.Role.ToString());
     }
 
+    public async Task<FamilySpaceDto> UpdateAsync(
+        Guid userId,
+        string name,
+        CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+            throw new InvalidOperationException("Family Space name is required.");
+
+        var member = await RequireMemberAsync(userId, ct);
+        if (member.Role != FamilyMemberRole.Owner)
+            throw new UnauthorizedAccessException("Only Family Space owners can edit household settings.");
+
+        var space = await _repository.GetByIdAsync(member.FamilySpaceId, ct)
+            ?? throw new InvalidOperationException("Family Space was not found.");
+
+        if (space.IsReadOnly)
+            throw new InvalidOperationException("Family Space is read-only while Premium is inactive.");
+
+        space.Name = name.Trim();
+        var updated = await _repository.UpdateAsync(space, ct);
+
+        return new FamilySpaceDto(
+            updated.Id,
+            updated.Name,
+            updated.CurrencyCode,
+            updated.IsReadOnly,
+            member.Role.ToString());
+    }
+
     public async Task<FamilySpaceOverviewDto> GetOverviewAsync(Guid userId, CancellationToken ct = default)
     {
         var member = await RequireMemberAsync(userId, ct);

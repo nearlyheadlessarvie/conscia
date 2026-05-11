@@ -102,6 +102,51 @@ public class FamilySpaceEndpointTests
     }
 
     [Fact]
+    public async Task UpdateFamilySpace_ValidOwnerRequest_ReturnsUpdatedSpace()
+    {
+        await using var factory = new TestWebAppFactory();
+        var familySpaceId = Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
+        factory.FamilySpaceServiceMock
+            .Setup(s => s.UpdateAsync(UserId, "Santos Family", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new FamilySpaceDto(
+                familySpaceId,
+                "Santos Family",
+                "PHP",
+                false,
+                FamilyMemberRole.Owner.ToString()));
+
+        var client = CreateAuthorizedClient(factory);
+        var response = await client.PatchAsJsonAsync("/api/v1/family-space", new
+        {
+            name = "Santos Family"
+        });
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        var json = await response.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal("Santos Family", json.GetProperty("name").GetString());
+        Assert.Equal("PHP", json.GetProperty("currencyCode").GetString());
+        Assert.Equal("Owner", json.GetProperty("role").GetString());
+    }
+
+    [Fact]
+    public async Task UpdateFamilySpace_NonOwner_ReturnsForbidden()
+    {
+        await using var factory = new TestWebAppFactory();
+        factory.FamilySpaceServiceMock
+            .Setup(s => s.UpdateAsync(UserId, "Santos Family", It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new UnauthorizedAccessException("Only Family Space owners can edit household settings."));
+
+        var client = CreateAuthorizedClient(factory);
+        var response = await client.PatchAsJsonAsync("/api/v1/family-space", new
+        {
+            name = "Santos Family"
+        });
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Fact]
     public async Task CreateInvite_OwnerRequest_ReturnsCreatedInvite()
     {
         await using var factory = new TestWebAppFactory();

@@ -4,6 +4,8 @@ namespace Conscia.Application.DTOs;
 
 public record CreateFamilySpaceDto(string Name, string CurrencyCode);
 
+public record UpdateFamilySpaceDto(string Name);
+
 public record FamilySpaceDto(
     Guid Id,
     string Name,
