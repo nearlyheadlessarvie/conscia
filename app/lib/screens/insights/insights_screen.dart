@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../models/insight_feed_item.dart';
 import '../../models/insights_models.dart';
+import '../../providers/budget_providers.dart';
 import '../../providers/insight_feed_provider.dart';
 import '../../providers/insights_provider.dart';
 import '../../providers/user_provider.dart';
@@ -114,26 +115,71 @@ class _InsightFeedSection extends StatelessWidget {
   Widget build(BuildContext context) {
     if (items.isEmpty) return const SizedBox.shrink();
 
-    return ScreenSection(
-      title: title,
-      subtitle: subtitle,
-      child: Column(
-        children: [
-          for (final item in items) ...[
-            InsightFeedCard(
-              item: item,
-              enableNavigation: item.route != '/insights',
-              onTap: item.budgetCategory == null
-                  ? null
-                  : () => BudgetFormSheet.show(
-                        context,
-                        initialCategory: item.budgetCategory,
-                      ),
-            ),
-            if (item != items.last) const SizedBox(height: 12),
-          ],
-        ],
-      ),
+    return Consumer(
+      builder: (context, ref, _) {
+        final budgetCategories = ref
+            .watch(budgetListProvider)
+            .budgets
+            .map((budget) => budget.category.trim().toLowerCase())
+            .toSet();
+        final currentItems = [
+          for (final item in items)
+            _currentBudgetAction(item, budgetCategories),
+        ];
+
+        return ScreenSection(
+          title: title,
+          subtitle: subtitle,
+          child: Column(
+            children: [
+              for (final item in currentItems) ...[
+                InsightFeedCard(
+                  item: item,
+                  enableNavigation: item.route != '/insights',
+                  onTap: item.budgetCategory == null
+                      ? null
+                      : () => BudgetFormSheet.show(
+                            context,
+                            initialCategory: item.budgetCategory,
+                          ),
+                ),
+                if (item != currentItems.last) const SizedBox(height: 12),
+              ],
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  InsightFeedItem _currentBudgetAction(
+    InsightFeedItem item,
+    Set<String> budgetCategories,
+  ) {
+    final budgetCategory = item.budgetCategory;
+    if (budgetCategory == null) return item;
+
+    final hasCurrentBudget = budgetCategories.contains(
+      budgetCategory.trim().toLowerCase(),
+    );
+    if (!hasCurrentBudget) return item;
+
+    return InsightFeedItem(
+      id: item.id,
+      kind: item.kind,
+      priority: item.priority,
+      title: item.title,
+      body: item.body,
+      metric: item.metric,
+      route: item.route,
+      section: item.section,
+      tone: item.tone,
+      mascot: item.mascot,
+      mascotFrame: item.mascotFrame,
+      expiresKey: item.expiresKey,
+      interaction: InsightFeedInteraction.none,
+      dismissible: item.dismissible,
+      showOnDashboard: item.showOnDashboard,
     );
   }
 }
