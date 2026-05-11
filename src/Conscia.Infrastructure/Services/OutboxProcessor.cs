@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Conscia.Application.Interfaces;
+using Conscia.Application.Models;
 using Conscia.Domain.Entities;
 using Conscia.Domain.Enums;
 using Microsoft.Extensions.DependencyInjection;
@@ -58,11 +59,14 @@ public class OutboxProcessor : BackgroundService
             await RepairMonthAsync(userId, monthKey, transactionRepository, projectionRepository, ct);
     }
 
-    private async Task ProcessBatchAsync(CancellationToken ct)
+    public async Task ProcessBatchAsync(CancellationToken ct)
     {
         using var scope = _scopeFactory.CreateScope();
         var outboxRepo = scope.ServiceProvider.GetRequiredService<IOutboxEventRepository>();
         var projectionRepo = scope.ServiceProvider.GetRequiredService<IMonthlyCategorySpendRepository>();
+        var userRepo = scope.ServiceProvider.GetRequiredService<IUserRepository>();
+        var alertRepo = scope.ServiceProvider.GetRequiredService<IInAppAlertRepository>();
+        var pushSender = scope.ServiceProvider.GetRequiredService<IPushNotificationSender>();
 
         var pending = await outboxRepo.GetPendingAsync(50, ct);
         if (pending.Count == 0) return;
@@ -82,7 +86,7 @@ public class OutboxProcessor : BackgroundService
                 }
 
                 _logger.LogInformation("Processing outbox event {EventId}: {EventType}", evt.Id, evt.EventType);
-                await DispatchEventAsync(evt, projectionRepo, ct);
+                await DispatchEventAsync(evt, projectionRepo, userRepo, alertRepo, pushSender, ct);
                 await outboxRepo.MarkProcessedAsync(evt, ct);
             }
             catch (Exception ex)
@@ -108,6 +112,9 @@ public class OutboxProcessor : BackgroundService
     private async Task DispatchEventAsync(
         OutboxEvent evt,
         IMonthlyCategorySpendRepository projections,
+        IUserRepository users,
+        IInAppAlertRepository alerts,
+        IPushNotificationSender pushSender,
         CancellationToken ct)
     {
         switch (evt.EventType)
@@ -121,9 +128,64 @@ public class OutboxProcessor : BackgroundService
             case OutboxEventType.TransactionUpdated:
                 await ApplyUpdatedAsync(evt, projections, ct);
                 break;
+            case OutboxEventType.FamilyInviteCreated:
+                await ApplyFamilyInviteCreatedAsync(evt, users, alerts, pushSender, ct);
+                break;
             default:
                 _logger.LogWarning("Unknown outbox event type: {EventType}", evt.EventType);
                 break;
+        }
+    }
+
+    private async Task ApplyFamilyInviteCreatedAsync(
+        OutboxEvent evt,
+        IUserRepository users,
+        IInAppAlertRepository alerts,
+        IPushNotificationSender pushSender,
+        CancellationToken ct)
+    {
+        var invite = ParseFamilyInvite(evt.Payload);
+        if (invite is null)
+        {
+            _logger.LogWarning("Family invite outbox event {EventId} has an invalid payload", evt.Id);
+            return;
+        }
+
+        var user = await users.GetByEmailAsync(invite.Email, ct);
+        if (user is null)
+        {
+            _logger.LogInformation(
+                "Family invite {InviteId} targets unregistered email {Email}; skipping in-app and device notification",
+                invite.InviteId,
+                invite.Email);
+            return;
+        }
+
+        const string title = "Family invite";
+        var body = $"You were invited to {invite.FamilySpaceName}.";
+        const string route = "/family-space/invites";
+
+        await alerts.AddAsync(new InAppAlert
+        {
+            AlertKey = $"family-invite:{invite.InviteId}",
+            UserId = user.Id,
+            TriggerName = "family_invite_created",
+            Title = title,
+            Message = body,
+            Priority = 60,
+            ActionLabel = "Review invite",
+            ActionRoute = route,
+            CreatedAt = DateTime.UtcNow,
+            TTL = new DateTimeOffset(DateTime.UtcNow.AddDays(30)).ToUnixTimeSeconds()
+        }, ct);
+
+        try
+        {
+            await pushSender.SendToUserAsync(user.Id, title, body, route, ct);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            _logger.LogWarning(ex, "Best-effort push failed for family invite {InviteId}", invite.InviteId);
         }
     }
 
@@ -263,6 +325,30 @@ public class OutboxProcessor : BackgroundService
     private static string NormalizeCategory(string category) =>
         category.Trim().ToLowerInvariant();
 
+    private static FamilyInviteNotificationSnapshot? ParseFamilyInvite(string payload)
+    {
+        using var doc = JsonDocument.Parse(payload);
+        var root = doc.RootElement;
+
+        if (!root.TryGetProperty("InviteId", out var inviteIdElement)
+            || !Guid.TryParse(inviteIdElement.GetString(), out var inviteId)
+            || !root.TryGetProperty("Email", out var emailElement)
+            || string.IsNullOrWhiteSpace(emailElement.GetString()))
+        {
+            return null;
+        }
+
+        var familySpaceName = root.TryGetProperty("FamilySpaceName", out var nameElement)
+            && !string.IsNullOrWhiteSpace(nameElement.GetString())
+                ? nameElement.GetString()!
+                : "your Family Space";
+
+        return new FamilyInviteNotificationSnapshot(
+            inviteId,
+            emailElement.GetString()!.Trim().ToLowerInvariant(),
+            familySpaceName);
+    }
+
     private async Task RepairMonthAsync(
         Guid userId,
         string monthKey,
@@ -302,4 +388,9 @@ public class OutboxProcessor : BackgroundService
         decimal Amount,
         string CurrencyCode,
         DateTime TransactionDate);
+
+    private sealed record FamilyInviteNotificationSnapshot(
+        Guid InviteId,
+        string Email,
+        string FamilySpaceName);
 }

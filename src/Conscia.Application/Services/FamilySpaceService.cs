@@ -109,6 +109,7 @@ public class FamilySpaceService : IFamilySpaceService
         if (role == FamilyMemberRole.Owner)
             throw new InvalidOperationException("Invite members as Contributor or Viewer first, then promote after they join.");
 
+        var familySpace = await _repository.GetByIdAsync(inviter.FamilySpaceId, ct);
         var now = DateTime.UtcNow;
         var invite = new FamilyInvite
         {
@@ -122,7 +123,7 @@ public class FamilySpaceService : IFamilySpaceService
         };
 
         var result = await _repository.AddInviteAsync(invite, ct);
-        await _outboxEvents.AddAsync(CreateInviteCreatedEvent(result), ct);
+        await _outboxEvents.AddAsync(CreateInviteCreatedEvent(result, familySpace?.Name), ct);
         return result;
     }
 
@@ -354,7 +355,7 @@ public class FamilySpaceService : IFamilySpaceService
         schedule.SharedByUserId = sharedByUserId;
     }
 
-    private static OutboxEvent CreateInviteCreatedEvent(FamilyInvite invite) => new()
+    private static OutboxEvent CreateInviteCreatedEvent(FamilyInvite invite, string? familySpaceName) => new()
     {
         Id = Guid.NewGuid(),
         AggregateId = invite.Id,
@@ -366,6 +367,9 @@ public class FamilySpaceService : IFamilySpaceService
             Email = invite.Email,
             Role = invite.Role.ToString(),
             InvitedByUserId = invite.InvitedByUserId,
+            FamilySpaceName = string.IsNullOrWhiteSpace(familySpaceName)
+                ? "your Family Space"
+                : familySpaceName,
             ExpiresAt = invite.ExpiresAt
         }, OutboxJsonOptions),
         CreatedAt = DateTime.UtcNow

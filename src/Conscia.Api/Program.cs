@@ -167,6 +167,7 @@ builder.Services.AddScoped<IRecurringScheduleService, RecurringScheduleService>(
 builder.Services.AddScoped<ISubscriptionService, SubscriptionService>();
 builder.Services.AddScoped<IReceiptService, ReceiptService>();
 builder.Services.AddScoped<IFamilySpaceService, FamilySpaceService>();
+builder.Services.AddScoped<IPushNotificationSender, NoopPushNotificationSender>();
 builder.Services.AddScoped<IBehavioralInsightsService, BehavioralInsightsService>();
 builder.Services.AddScoped<IPurchaseSuggestionService, PurchaseSuggestionService>();
 builder.Services.AddScoped<IPurchasePatternService, PurchasePatternService>();

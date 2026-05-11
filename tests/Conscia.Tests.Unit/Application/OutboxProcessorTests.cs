@@ -14,6 +14,9 @@ public class OutboxProcessorTests
     private readonly Mock<IOutboxEventRepository> _outboxRepoMock = new();
     private readonly Mock<IMonthlyCategorySpendRepository> _projectionRepoMock = new();
     private readonly Mock<ITransactionRepository> _transactionRepoMock = new();
+    private readonly Mock<IUserRepository> _userRepoMock = new();
+    private readonly Mock<IInAppAlertRepository> _alertRepoMock = new();
+    private readonly Mock<IPushNotificationSender> _pushSenderMock = new();
     private readonly Mock<ILogger<OutboxProcessor>> _loggerMock = new();
 
     private OutboxProcessor CreateProcessor()
@@ -22,6 +25,9 @@ public class OutboxProcessorTests
         services.AddScoped(_ => _outboxRepoMock.Object);
         services.AddScoped(_ => _projectionRepoMock.Object);
         services.AddScoped(_ => _transactionRepoMock.Object);
+        services.AddScoped(_ => _userRepoMock.Object);
+        services.AddScoped(_ => _alertRepoMock.Object);
+        services.AddScoped(_ => _pushSenderMock.Object);
         var sp = services.BuildServiceProvider();
         var scopeFactory = sp.GetRequiredService<IServiceScopeFactory>();
         return new OutboxProcessor(scopeFactory, _loggerMock.Object);
@@ -245,5 +251,50 @@ public class OutboxProcessorTests
                 p.TotalExpenseAmount == 1200m &&
                 p.TransactionCount == 1),
             It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task ProcessBatchAsync_FamilyInviteCreated_NotifiesRegisteredInvitee()
+    {
+        var invitedUserId = Guid.NewGuid();
+        var inviteId = Guid.NewGuid();
+        var evt = new OutboxEvent
+        {
+            Id = Guid.NewGuid(),
+            AggregateId = inviteId,
+            EventType = OutboxEventType.FamilyInviteCreated,
+            Payload = System.Text.Json.JsonSerializer.Serialize(new
+            {
+                InviteId = inviteId,
+                Email = "wife@example.com",
+                FamilySpaceName = "Santos Household",
+                InvitedByUserId = Guid.NewGuid()
+            }),
+            CreatedAt = DateTime.UtcNow
+        };
+
+        _outboxRepoMock.Setup(r => r.GetPendingAsync(50, It.IsAny<CancellationToken>()))
+            .ReturnsAsync([evt]);
+        _outboxRepoMock.Setup(r => r.TryStartProcessingAsync(evt, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+        _userRepoMock.Setup(r => r.GetByEmailAsync("wife@example.com", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new User { Id = invitedUserId, Email = "wife@example.com" });
+
+        await CreateProcessor().ProcessBatchAsync(CancellationToken.None);
+
+        _alertRepoMock.Verify(r => r.AddAsync(
+            It.Is<Conscia.Application.Models.InAppAlert>(alert =>
+                alert.UserId == invitedUserId &&
+                alert.AlertKey == $"family-invite:{inviteId}" &&
+                alert.Title == "Family invite" &&
+                alert.ActionRoute == "/family-space/invites"),
+            It.IsAny<CancellationToken>()), Times.Once);
+        _pushSenderMock.Verify(s => s.SendToUserAsync(
+            invitedUserId,
+            "Family invite",
+            "You were invited to Santos Household.",
+            "/family-space/invites",
+            It.IsAny<CancellationToken>()), Times.Once);
+        _outboxRepoMock.Verify(r => r.MarkProcessedAsync(evt, It.IsAny<CancellationToken>()), Times.Once);
     }
 }
