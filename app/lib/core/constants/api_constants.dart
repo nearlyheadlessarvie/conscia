@@ -72,6 +72,7 @@ class ApiConstants {
 
   // Shared Conscia
   static const String familySpace = 'family-space';
+  static const String familyOverview = 'family-space/overview';
   static const String familyInvites = 'family-space/invites';
   static String familyInviteAccept(String id) =>
       'family-space/invites/$id/accept';

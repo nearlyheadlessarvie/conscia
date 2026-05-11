@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/constants/api_constants.dart';
 import '../core/network/dio_client.dart';
+import '../models/family_overview.dart';
 import '../models/family_import_preview.dart';
 import '../models/family_invite.dart';
 import '../models/family_space.dart';
@@ -14,6 +15,14 @@ final familySpaceProvider = FutureProvider<FamilySpace?>((ref) async {
 });
 
 final selectedScopeProvider = StateProvider<String>((ref) => 'personal');
+
+final familyOverviewProvider = FutureProvider<FamilyOverview>((ref) async {
+  final dio = ref.watch(dioProvider);
+  final response = await dio.get(ApiConstants.familyOverview);
+  return FamilyOverview.fromJson(
+    Map<String, dynamic>.from(response.data as Map),
+  );
+});
 
 final familyInvitesProvider = FutureProvider<List<FamilyInvite>>((ref) async {
   final dio = ref.watch(dioProvider);
@@ -48,6 +57,7 @@ class FamilySpaceActions {
     );
 
     _ref.invalidate(familySpaceProvider);
+    _ref.invalidate(familyOverviewProvider);
     return FamilySpace.fromJson(
         Map<String, dynamic>.from(response.data as Map));
   }
@@ -71,6 +81,7 @@ class FamilySpaceActions {
     await dio.post(ApiConstants.familyInviteAccept(inviteId));
     _ref.invalidate(familyInvitesProvider);
     _ref.invalidate(familySpaceProvider);
+    _ref.invalidate(familyOverviewProvider);
   }
 
   Future<void> declineInvite(String inviteId) async {
@@ -111,6 +122,7 @@ class FamilySpaceActions {
     );
 
     _ref.invalidate(familySpaceProvider);
+    _ref.invalidate(familyOverviewProvider);
     return (response.data as Map?)?['imported'] as int? ?? selections.length;
   }
 }

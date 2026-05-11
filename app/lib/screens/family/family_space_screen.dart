@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 
 import '../../core/routing/app_router.dart';
+import '../../models/family_overview.dart';
 import '../../models/family_space.dart';
 import '../../providers/family_space_provider.dart';
 import '../../widgets/feed_card.dart';
@@ -95,14 +97,15 @@ class _NoFamilySpaceView extends StatelessWidget {
   }
 }
 
-class _FamilySpaceOverview extends StatelessWidget {
+class _FamilySpaceOverview extends ConsumerWidget {
   const _FamilySpaceOverview({required this.space});
 
   final FamilySpace space;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final overview = ref.watch(familyOverviewProvider);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -137,6 +140,33 @@ class _FamilySpaceOverview extends StatelessWidget {
             ],
           ),
         ),
+        overview.when(
+          data: (data) => _FamilyOverviewDetails(overview: data),
+          loading: () => const Padding(
+            padding: EdgeInsets.only(top: 14),
+            child: Column(
+              children: [
+                SkeletonCard(),
+                SizedBox(height: 14),
+                SkeletonCard(),
+              ],
+            ),
+          ),
+          error: (_, __) => Padding(
+            padding: const EdgeInsets.only(top: 14),
+            child: FeedCard(
+              child: Row(
+                children: [
+                  const Expanded(child: Text('Unable to load shared activity')),
+                  OutlinedButton(
+                    onPressed: () => ref.invalidate(familyOverviewProvider),
+                    child: const Text('Retry'),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
         ScreenSection(
           title: 'Next steps',
           child: FeedCard(
@@ -165,6 +195,202 @@ class _FamilySpaceOverview extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _FamilyOverviewDetails extends StatelessWidget {
+  const _FamilyOverviewDetails({required this.overview});
+
+  final FamilyOverview overview;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        ScreenSection(
+          title: 'Shared budgets',
+          child: overview.budgets.isEmpty
+              ? const FeedCard(child: Text('No shared budgets yet.'))
+              : FeedCard(
+                  child: Column(
+                    children: overview.budgets
+                        .map((budget) => _BudgetOverviewRow(budget: budget))
+                        .toList(),
+                  ),
+                ),
+        ),
+        ScreenSection(
+          title: 'Recent family activity',
+          child: overview.recentActivity.isEmpty
+              ? const FeedCard(child: Text('No family activity yet.'))
+              : FeedCard(
+                  child: Column(
+                    children: overview.recentActivity
+                        .map((activity) =>
+                            _FamilyActivityRow(activity: activity))
+                        .toList(),
+                  ),
+                ),
+        ),
+        ScreenSection(
+          title: 'Recurring together',
+          child: overview.recurringItems.isEmpty
+              ? const FeedCard(child: Text('No shared recurring items yet.'))
+              : FeedCard(
+                  child: Column(
+                    children: overview.recurringItems
+                        .map((item) => _RecurringOverviewRow(item: item))
+                        .toList(),
+                  ),
+                ),
+        ),
+      ],
+    );
+  }
+}
+
+class _BudgetOverviewRow extends StatelessWidget {
+  const _BudgetOverviewRow({required this.budget});
+
+  final FamilyBudgetOverview budget;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        children: [
+          const _FamilyIcon(icon: Icons.account_balance_wallet_outlined),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(budget.category, style: theme.textTheme.titleSmall),
+                const SizedBox(height: 4),
+                Text(
+                  '${budget.currencyCode} ${_amount(budget.spentThisMonth)} / ${_amount(budget.monthlyLimit)}',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Text(
+            '${budget.usagePercent}%',
+            style: theme.textTheme.labelLarge?.copyWith(
+              color: theme.colorScheme.primary,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _FamilyActivityRow extends StatelessWidget {
+  const _FamilyActivityRow({required this.activity});
+
+  final FamilyActivity activity;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isExpense = activity.type.toLowerCase() == 'expense';
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        children: [
+          _FamilyIcon(
+            icon: isExpense
+                ? Icons.arrow_downward_rounded
+                : Icons.arrow_upward_rounded,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(activity.label, style: theme.textTheme.titleSmall),
+                const SizedBox(height: 4),
+                Text(
+                  '${activity.category} · ${DateFormat.MMMd().format(activity.date)}',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Text(
+            '${activity.currencyCode} ${_amount(activity.amount)}',
+            style: theme.textTheme.labelLarge?.copyWith(
+              color: isExpense ? Colors.red : Colors.green,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _RecurringOverviewRow extends StatelessWidget {
+  const _RecurringOverviewRow({required this.item});
+
+  final FamilyRecurringOverview item;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        children: [
+          const _FamilyIcon(icon: Icons.repeat_outlined),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(item.label, style: theme.textTheme.titleSmall),
+                const SizedBox(height: 4),
+                Text(
+                  '${item.cadence} · next ${DateFormat.MMMd().format(item.nextRunAt)}',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Text(
+            '${item.currencyCode} ${_amount(item.amount)}',
+            style: theme.textTheme.labelLarge,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _FamilyIcon extends StatelessWidget {
+  const _FamilyIcon({required this.icon});
+
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return CircleAvatar(
+      radius: 18,
+      backgroundColor: colors.primaryContainer.withValues(alpha: 0.45),
+      child: Icon(icon, size: 18, color: colors.primary),
     );
   }
 }
@@ -219,3 +445,5 @@ class _FamilyActionRow extends StatelessWidget {
     );
   }
 }
+
+String _amount(double value) => NumberFormat('#,##0.00').format(value);
