@@ -481,6 +481,7 @@ New compute:
 - Additional API endpoints for family space management.
 - Additional authorization checks on existing transaction, budget, recurring, insight, and AI endpoints.
 - Optional server-side FCM sender when push delivery is implemented.
+- CDK-managed Outbox Lambda updates for any async family events that should not run inline with the API request.
 
 No new MVP infrastructure should be required for:
 
@@ -491,6 +492,34 @@ No new MVP infrastructure should be required for:
 - Separate notification service
 - Separate family-ledger service
 - Event-driven settlement processor
+
+### Outbox Lambda infrastructure-as-code
+
+Async family workflows should use the existing CDK outbox infrastructure rather than a hosted background service.
+
+Existing baseline:
+
+- `infra/src/Conscia.Infra/OutboxStack.cs` defines `conscia-outbox-processor` as a .NET 8 ARM64 Lambda.
+- The Lambda is deployed from the outbox publish asset.
+- It runs inside the VPC with RDS connectivity.
+- It has read/write access to the `OutboxEvents` table.
+- It is already covered by infra tests in `infra/tests/Conscia.Infra.Tests/StackTests.cs`.
+
+Shared Conscia should extend this path for async work such as:
+
+- Sending family invite push notifications after the invite is persisted.
+- Generating family-related Journey events after shared actions.
+- Updating future family summary/projection records if we add cached family dashboards.
+- Running retryable side effects that should not block the user-facing API response.
+
+Rules:
+
+- Do not add another always-on `BackgroundService` for production family processing.
+- Do not add a second outbox processor stack unless there is a measured isolation need.
+- Add new outbox event types for family workflows and process them in the Lambda.
+- Keep API writes atomic with outbox event creation where possible.
+- Keep outbox side effects idempotent because Lambda retries can replay records.
+- Add/update CDK tests whenever the Outbox Lambda permissions, event sources, environment variables, or assets change.
 
 ### Cost posture
 
@@ -510,6 +539,7 @@ Cost controls:
 - Keep dashboard family summaries compact and paginated/drill-down for detail.
 - Default imports to current month and active recurring schedules.
 - Use existing alert/device-token infrastructure before adding new queues or workers.
+- Use the existing CDK-managed Outbox Lambda for retryable async side effects instead of API inline work or an always-on worker.
 - Do not add settlement; it would create more writes, more history, more notifications, and more support surface.
 - Track simple metrics: family spaces created, active members, family records shared, import batch size, family AI calls, invite notifications sent.
 
