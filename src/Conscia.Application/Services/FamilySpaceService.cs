@@ -1,4 +1,5 @@
 using Conscia.Application.Interfaces;
+using Conscia.Application.DTOs;
 using Conscia.Domain.Entities;
 using Conscia.Domain.Enums;
 using Microsoft.Extensions.Logging;
@@ -56,5 +57,23 @@ public class FamilySpaceService : IFamilySpaceService
 
         _logger.LogInformation("Creating Family Space {FamilySpaceId} for user {UserId}", space.Id, userId);
         return await _repository.CreateWithOwnerAsync(space, owner, ct);
+    }
+
+    public async Task<FamilySpaceDto?> GetCurrentAsync(Guid userId, CancellationToken ct = default)
+    {
+        var membership = await _repository.GetMembershipByUserIdAsync(userId, ct);
+        if (membership is null)
+            return null;
+
+        var space = await _repository.GetByIdAsync(membership.FamilySpaceId, ct);
+        if (space is null)
+            return null;
+
+        return new FamilySpaceDto(
+            space.Id,
+            space.Name,
+            space.CurrencyCode,
+            space.IsReadOnly,
+            membership.Role.ToString());
     }
 }

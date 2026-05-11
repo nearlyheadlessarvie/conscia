@@ -123,6 +123,7 @@ if (builder.Environment.IsDevelopment())
     builder.Services.AddScoped<IUserRepository, UserRepository>();
     builder.Services.AddScoped<IBudgetRepository, BudgetRepository>();
     builder.Services.AddScoped<IReceiptRepository, ReceiptRepository>();
+    builder.Services.AddScoped<IFamilySpaceRepository, FamilySpaceRepository>();
 }
 else
 {
@@ -135,6 +136,8 @@ else
         new LambdaProxyUserRepository(sp.GetRequiredService<IAmazonLambda>(), dbFunctionName));
     builder.Services.AddScoped<IReceiptRepository>(sp =>
         new LambdaProxyReceiptRepository(sp.GetRequiredService<IAmazonLambda>(), dbFunctionName));
+    builder.Services.AddScoped<IFamilySpaceRepository>(sp =>
+        new LambdaProxyFamilySpaceRepository(sp.GetRequiredService<IAmazonLambda>(), dbFunctionName));
 }
 builder.Services.AddScoped<ITransactionRepository, TransactionRepository>();
 builder.Services.AddScoped<IRecurringScheduleRepository, RecurringScheduleRepository>();
@@ -163,6 +166,7 @@ builder.Services.AddScoped<ITransactionService, TransactionService>();
 builder.Services.AddScoped<IRecurringScheduleService, RecurringScheduleService>();
 builder.Services.AddScoped<ISubscriptionService, SubscriptionService>();
 builder.Services.AddScoped<IReceiptService, ReceiptService>();
+builder.Services.AddScoped<IFamilySpaceService, FamilySpaceService>();
 builder.Services.AddScoped<IBehavioralInsightsService, BehavioralInsightsService>();
 builder.Services.AddScoped<IPurchaseSuggestionService, PurchaseSuggestionService>();
 builder.Services.AddScoped<IPurchasePatternService, PurchasePatternService>();
@@ -429,6 +433,7 @@ app.MapUserEndpoints().RequireRateLimiting("standard");
 app.MapTransactionEndpoints().RequireRateLimiting("standard");
 app.MapRecurringEndpoints().RequireRateLimiting("standard");
 app.MapBudgetEndpoints().RequireRateLimiting("standard");
+app.MapFamilySpaceEndpoints().RequireRateLimiting("standard");
 app.MapSubscriptionEndpoints().RequireRateLimiting("standard");
 app.MapAlertEndpoints().RequireRateLimiting("standard");
 app.MapPushNotificationEndpoints().RequireRateLimiting("standard");

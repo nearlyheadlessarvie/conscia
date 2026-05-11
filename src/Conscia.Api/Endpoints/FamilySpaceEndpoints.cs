@@ -1,0 +1,53 @@
+using Conscia.Api.Extensions;
+using Conscia.Application.DTOs;
+using Conscia.Application.Interfaces;
+
+namespace Conscia.Api.Endpoints;
+
+public static class FamilySpaceEndpoints
+{
+    public static RouteGroupBuilder MapFamilySpaceEndpoints(this IEndpointRouteBuilder routes)
+    {
+        var group = routes.MapGroup("/api/v1/family-space")
+            .RequireAuthorization()
+            .WithTags("Family Space");
+
+        group.MapGet("/", async (HttpContext ctx, IFamilySpaceService svc) =>
+        {
+            var current = await svc.GetCurrentAsync(ctx.User.GetUserId(), ctx.RequestAborted);
+            return current is null ? Results.NoContent() : Results.Ok(current);
+        }).WithName("GetCurrentFamilySpace");
+
+        group.MapPost("/", async (HttpContext ctx, CreateFamilySpaceDto dto, IFamilySpaceService svc) =>
+        {
+            if (string.IsNullOrWhiteSpace(dto.Name))
+                return Results.BadRequest(new { error = "Family Space name is required." });
+
+            if (string.IsNullOrWhiteSpace(dto.CurrencyCode) || dto.CurrencyCode.Trim().Length != 3)
+                return Results.BadRequest(new { error = "Currency code must be three letters." });
+
+            try
+            {
+                var userId = ctx.User.GetUserId();
+                var space = await svc.CreateAsync(userId, dto.Name, dto.CurrencyCode, ctx.RequestAborted);
+                return Results.Created($"/api/v1/family-space/{space.Id}", new
+                {
+                    space.Id,
+                    space.Name,
+                    space.CurrencyCode,
+                    space.IsReadOnly
+                });
+            }
+            catch (InvalidOperationException ex) when (ex.Message.Contains("Premium", StringComparison.OrdinalIgnoreCase))
+            {
+                return Results.Json(new { error = ex.Message, upgradeRequired = true }, statusCode: StatusCodes.Status403Forbidden);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return Results.Conflict(new { error = ex.Message });
+            }
+        }).WithName("CreateFamilySpace");
+
+        return group;
+    }
+}
