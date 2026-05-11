@@ -9,6 +9,7 @@ import '../../providers/alert_provider.dart';
 import '../../providers/budget_providers.dart';
 import '../../providers/category_recents_provider.dart';
 import '../../providers/exchange_rate_provider.dart';
+import '../../providers/family_space_provider.dart';
 import '../../providers/location_assistance_provider.dart';
 import '../../providers/subscription_provider.dart';
 import '../../providers/transaction_providers.dart';
@@ -19,6 +20,7 @@ import '../../widgets/amount_input_field.dart';
 import '../../widgets/hero_screen_scaffold.dart';
 import '../../widgets/location_assistance_prompt_sheet.dart';
 import '../../widgets/recurring_schedule_section.dart';
+import '../../widgets/scope_selector.dart';
 import '../../widgets/skeleton_loader.dart';
 import '../../widgets/smart_suggestions_card.dart';
 import 'widgets/transaction_style_category_selector.dart';
@@ -66,6 +68,7 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
   bool _recurringEnabled = false;
   String _recurringCadence = 'Monthly';
   DateTime? _recurringEndDate;
+  String _scope = 'personal';
 
   @override
   void initState() {
@@ -163,6 +166,8 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
 
     final userCurrency = ref.read(userPreferencesProvider).currency;
     final rateOverride = double.tryParse(_exchangeRateController.text);
+    final familySpace = ref.read(familySpaceProvider).valueOrNull;
+    final isFamilyScope = _scope == 'family' && familySpace != null;
 
     final dto = CreateTransactionDto(
       amount: double.parse(_amountController.text),
@@ -173,6 +178,8 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
       date: _selectedDate,
       baseCurrencyCode: userCurrency,
       exchangeRateOverride: rateOverride,
+      scope: isFamilyScope ? 'family' : 'personal',
+      familySpaceId: isFamilyScope ? familySpace.id : null,
       recurring: !_isEditing
           ? RecurringDraft(
               enabled: _recurringEnabled,
@@ -219,18 +226,23 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
       if (_isEditing) {
         ref.invalidate(transactionDetailProvider(widget.transactionId!));
       }
-      context.pop(savedTransaction);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            shouldAddBudgetNudge
-                ? '${_isEditing ? 'Transaction updated' : 'Transaction added!'} Budget nudge saved for ${_selectedCategory!}.'
-                : _isEditing
-                    ? 'Transaction updated'
-                    : 'Transaction added!',
+      final navigator = Navigator.of(context);
+      if (navigator.canPop()) {
+        navigator.pop(savedTransaction);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              shouldAddBudgetNudge
+                  ? '${_isEditing ? 'Transaction updated' : 'Transaction added!'} Budget nudge saved for ${_selectedCategory!}.'
+                  : _isEditing
+                      ? 'Transaction updated'
+                      : 'Transaction added!',
+            ),
           ),
-        ),
-      );
+        );
+      } else {
+        setState(() => _submitting = false);
+      }
     } catch (e, s) {
       if (!mounted) return;
       setState(() => _submitting = false);
@@ -295,6 +307,7 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
   Widget _buildForm(ColorScheme colors, TextTheme textTheme) {
     final isPremium =
         ref.watch(subscriptionProvider).valueOrNull?.isPremium ?? false;
+    final familySpace = ref.watch(familySpaceProvider).valueOrNull;
     final locationAssistance = ref.watch(locationAssistanceProvider);
     final suggestions = ref.watch(locationAssistanceSuggestionsProvider);
     final hasSuggestions = suggestions.nearbyMerchants.isNotEmpty ||
@@ -372,6 +385,36 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
             }),
           ),
           const SizedBox(height: 18),
+          if (!_isEditing && familySpace != null) ...[
+            Padding(
+              padding: const EdgeInsets.only(bottom: 18),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    'Scope',
+                    style: textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Choose whether this record stays personal or appears in ${familySpace.name}.',
+                    style: textTheme.bodySmall?.copyWith(
+                      color: colors.onSurfaceVariant,
+                      height: 1.35,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  ScopeSelector(
+                    value: _scope,
+                    familyEnabled: true,
+                    onChanged: (value) => setState(() => _scope = value),
+                  ),
+                ],
+              ),
+            ),
+          ],
           Consumer(
             builder: (context, ref, _) {
               final userCurrency = ref.watch(userPreferencesProvider).currency;

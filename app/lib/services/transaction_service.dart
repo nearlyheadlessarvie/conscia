@@ -36,8 +36,7 @@ class Transaction {
       amount: (json['amount'] as num).toDouble(),
       currencyCode: json['currencyCode'] as String? ?? 'USD',
       category: json['category'] as String,
-      description:
-          json['counterparty'] as String? ??
+      description: json['counterparty'] as String? ??
           json['merchant'] as String? ??
           json['description'] as String? ??
           '',
@@ -85,6 +84,8 @@ class CreateTransactionDto {
   final String? baseCurrencyCode;
   final double? exchangeRateOverride;
   final RecurringDraft? recurring;
+  final String scope;
+  final String? familySpaceId;
 
   const CreateTransactionDto({
     required this.amount,
@@ -96,6 +97,8 @@ class CreateTransactionDto {
     this.baseCurrencyCode,
     this.exchangeRateOverride,
     this.recurring,
+    this.scope = 'personal',
+    this.familySpaceId,
   });
 
   Map<String, dynamic> toJson() {
@@ -106,9 +109,17 @@ class CreateTransactionDto {
       'counterparty': counterparty,
       'type': _capitalizeType(type),
       'date': date.toIso8601String(),
+      'scope': _scopeForApi(scope),
     };
-    if (baseCurrencyCode != null) json['baseCurrencyCode'] = baseCurrencyCode;
-    if (exchangeRateOverride != null) json['exchangeRateOverride'] = exchangeRateOverride;
+    if (familySpaceId != null) {
+      json['familySpaceId'] = familySpaceId;
+    }
+    if (baseCurrencyCode != null) {
+      json['baseCurrencyCode'] = baseCurrencyCode;
+    }
+    if (exchangeRateOverride != null) {
+      json['exchangeRateOverride'] = exchangeRateOverride;
+    }
     if (recurring != null && recurring!.enabled) {
       json['recurring'] = recurring!.toJson();
     }
@@ -117,6 +128,9 @@ class CreateTransactionDto {
 
   static String _capitalizeType(String t) =>
       t.isEmpty ? t : '${t[0].toUpperCase()}${t.substring(1).toLowerCase()}';
+
+  static String _scopeForApi(String value) =>
+      value.toLowerCase() == 'family' ? 'Family' : 'Personal';
 }
 
 class TransactionService {
