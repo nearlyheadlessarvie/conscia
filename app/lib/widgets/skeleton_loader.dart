@@ -125,6 +125,50 @@ class InsightSkeletonSection extends StatelessWidget {
   }
 }
 
+class DashboardInsightSummarySkeletonCard extends StatelessWidget {
+  const DashboardInsightSummarySkeletonCard({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return const Card(
+      child: Padding(
+        padding: EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                SkeletonLoader(width: 18, height: 18, borderRadius: 6),
+                SizedBox(width: 8),
+                SkeletonLoader(height: 12, width: 72),
+                Spacer(),
+                SkeletonLoader(width: 20, height: 20, borderRadius: 10),
+              ],
+            ),
+            SizedBox(height: 10),
+            Row(
+              children: [
+                SkeletonLoader(width: 64, height: 64, borderRadius: 10),
+                SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      SkeletonLoader(height: 14),
+                      SizedBox(height: 8),
+                      SkeletonLoader(height: 14, width: 220),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class BudgetSummarySkeletonCard extends StatelessWidget {
   const BudgetSummarySkeletonCard({super.key});
 

@@ -99,6 +99,7 @@ class _TransactionDetailScreenState
       }
       if (!mounted) return;
       ref.invalidate(transactionListProvider);
+      ref.invalidate(filteredTransactionListProvider);
       context.pop();
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Transaction deleted')),
@@ -119,6 +120,7 @@ class _TransactionDetailScreenState
       await service.updateRegret(widget.transactionId, level);
       ref.invalidate(transactionDetailProvider(widget.transactionId));
       ref.invalidate(transactionListProvider);
+      ref.invalidate(filteredTransactionListProvider);
     } catch (_) {
       // Optimistic update — ignore errors silently
     }
@@ -144,6 +146,7 @@ class _TransactionDetailScreenState
       await service.updateRegret(widget.transactionId, _regretLevel ?? 1);
       ref.invalidate(transactionDetailProvider(widget.transactionId));
       ref.invalidate(transactionListProvider);
+      ref.invalidate(filteredTransactionListProvider);
     } catch (_) {
       // Best-effort
     }

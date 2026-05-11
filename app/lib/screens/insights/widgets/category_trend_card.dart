@@ -55,7 +55,7 @@ class CategoryTrendCard extends StatelessWidget {
               Icon(
                 Icons.chevron_right_rounded,
                 color: colors.onSurfaceVariant,
-                size: 18,
+                size: 20,
               ),
             ],
           ),

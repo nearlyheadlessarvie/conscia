@@ -1,8 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../models/insight_feed_item.dart';
+import '../../models/insights_models.dart';
+import '../../providers/insight_feed_provider.dart';
 import '../../providers/insights_provider.dart';
 import '../../providers/user_provider.dart';
+import '../budgets/widgets/budget_form_sheet.dart';
+import '../dashboard/widgets/insight_feed_card.dart';
 import '../../widgets/feed_card.dart';
 import '../../widgets/hero_screen_scaffold.dart';
 import '../../widgets/screen_section.dart';
@@ -18,88 +23,196 @@ class InsightsScreen extends ConsumerWidget {
     final summaryAsync = ref.watch(insightsSummaryProvider);
     final merchantsAsync = ref.watch(insightsMerchantsProvider);
     final categoriesAsync = ref.watch(insightsCategoriesProvider);
+    final feedSectionsAsync = ref.watch(insightFeedBySectionProvider);
     final prefs = ref.watch(userPreferencesProvider);
 
     return HeroScreenScaffold(
-      appBar: AppBar(title: const Text('Regret Patterns')),
-      child: summaryAsync.when(
+      appBar: AppBar(title: const Text('Insights')),
+      child: feedSectionsAsync.when(
         loading: () => const _CenteredState(
           child: CircularProgressIndicator(),
         ),
         error: (_, __) => const _InsightMessageCard(
           icon: Icons.auto_graph_rounded,
           title: 'Insights are taking a minute',
-          body: 'We could not load your regret patterns just now.',
+          body: 'We could not load your patterns just now.',
         ),
-        data: (summary) {
-          if (summary == null) {
+        data: (sections) {
+          final summary = summaryAsync.valueOrNull;
+          final hasAnyInsight =
+              sections.values.any((items) => items.isNotEmpty) ||
+                  summary != null;
+
+          if (!hasAnyInsight) {
             return const _InsightMessageCard(
               icon: Icons.timeline_rounded,
               title: 'Patterns show up after a little history',
               body:
-                  'Check back after your first week of tracking and Conscia will start surfacing your regret trends.',
+                  'Check back after your first week of tracking and Conscia will start surfacing your spending patterns.',
             );
           }
 
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _SummaryCard(
-                summary: summary,
+              _InsightFeedSection(
+                title: 'This week',
+                subtitle: 'The freshest read on how your money decisions feel.',
+                items: sections[InsightFeedSection.thisWeek] ?? const [],
+              ),
+              _InsightFeedSection(
+                title: 'Budget trends',
+                subtitle:
+                    'Where spending is pacing high or ready for a budget.',
+                items: sections[InsightFeedSection.budgetTrends] ?? const [],
+              ),
+              if (summary != null) ...[
+                _SummaryCard(
+                  summary: summary,
+                  currencyCode: prefs.currency,
+                  locale: prefs.locale,
+                ),
+                const SizedBox(height: 26),
+              ],
+              _InsightFeedSection(
+                title: 'Regret patterns',
+                subtitle:
+                    'The repeat signals worth noticing before the next purchase.',
+                items: sections[InsightFeedSection.regretPatterns] ?? const [],
+              ),
+              _MerchantSpotlightSection(merchantsAsync: merchantsAsync),
+              _CategoryTrendSection(
+                categoriesAsync: categoriesAsync,
                 currencyCode: prefs.currency,
                 locale: prefs.locale,
               ),
-              const SizedBox(height: 26),
-              ScreenSection(
-                title: 'Merchant spotlight',
-                subtitle:
-                    'The place most likely to nudge you into a purchase you later rethink.',
-                child: merchantsAsync.when(
-                  loading: () => const _InlineLoader(),
-                  error: (_, __) => const _SectionFallbackCard(
-                    message: 'Merchant trends are unavailable right now.',
-                  ),
-                  data: (merchants) {
-                    if (merchants.isEmpty) {
-                      return const _SectionFallbackCard(
-                        message:
-                            'Track a few more merchants and this spotlight will fill in automatically.',
-                      );
-                    }
-
-                    return MerchantSpotlightCard(merchant: merchants.first);
-                  },
-                ),
-              ),
-              ScreenSection(
-                title: 'Category trend',
-                subtitle:
-                    'Where your regret spend is stacking up fastest right now.',
-                child: categoriesAsync.when(
-                  loading: () => const _InlineLoader(),
-                  error: (_, __) => const _SectionFallbackCard(
-                    message: 'Category trends are unavailable right now.',
-                  ),
-                  data: (categories) {
-                    if (categories.isEmpty) {
-                      return const _SectionFallbackCard(
-                        message:
-                            'Track a few more purchases and category trends will start to emerge here.',
-                      );
-                    }
-
-                    return CategoryTrendCard(
-                      category: categories.first,
-                      currencyCode: prefs.currency,
-                      locale: prefs.locale,
-                    );
-                  },
-                ),
+              _InsightFeedSection(
+                title: 'Recent signals',
+                subtitle: 'Small changes that may deserve a pause.',
+                items: sections[InsightFeedSection.recentSignals] ?? const [],
               ),
             ],
           );
         },
       ),
+    );
+  }
+}
+
+class _InsightFeedSection extends StatelessWidget {
+  const _InsightFeedSection({
+    required this.title,
+    required this.subtitle,
+    required this.items,
+  });
+
+  final String title;
+  final String subtitle;
+  final List<InsightFeedItem> items;
+
+  @override
+  Widget build(BuildContext context) {
+    if (items.isEmpty) return const SizedBox.shrink();
+
+    return ScreenSection(
+      title: title,
+      subtitle: subtitle,
+      child: Column(
+        children: [
+          for (final item in items) ...[
+            InsightFeedCard(
+              item: item,
+              enableNavigation: item.route != '/insights',
+              onTap: item.budgetCategory == null
+                  ? null
+                  : () => BudgetFormSheet.show(
+                        context,
+                        initialCategory: item.budgetCategory,
+                      ),
+            ),
+            if (item != items.last) const SizedBox(height: 12),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _MerchantSpotlightSection extends StatelessWidget {
+  const _MerchantSpotlightSection({required this.merchantsAsync});
+
+  final AsyncValue<List<MerchantStat>> merchantsAsync;
+
+  @override
+  Widget build(BuildContext context) {
+    return merchantsAsync.when(
+      loading: () => const ScreenSection(
+        title: 'Merchant spotlight',
+        subtitle:
+            'The place most likely to nudge you into a purchase you later rethink.',
+        child: _InlineLoader(),
+      ),
+      error: (_, __) => const ScreenSection(
+        title: 'Merchant spotlight',
+        subtitle:
+            'The place most likely to nudge you into a purchase you later rethink.',
+        child: _SectionFallbackCard(
+          message: 'Merchant trends are unavailable right now.',
+        ),
+      ),
+      data: (merchants) {
+        if (merchants.isEmpty) return const SizedBox.shrink();
+
+        return ScreenSection(
+          title: 'Merchant spotlight',
+          subtitle:
+              'The place most likely to nudge you into a purchase you later rethink.',
+          child: MerchantSpotlightCard(merchant: merchants.first),
+        );
+      },
+    );
+  }
+}
+
+class _CategoryTrendSection extends StatelessWidget {
+  const _CategoryTrendSection({
+    required this.categoriesAsync,
+    required this.currencyCode,
+    required this.locale,
+  });
+
+  final AsyncValue<List<CategoryStat>> categoriesAsync;
+  final String currencyCode;
+  final String? locale;
+
+  @override
+  Widget build(BuildContext context) {
+    return categoriesAsync.when(
+      loading: () => const ScreenSection(
+        title: 'Category trend',
+        subtitle: 'Where your regret spend is stacking up fastest right now.',
+        child: _InlineLoader(),
+      ),
+      error: (_, __) => const ScreenSection(
+        title: 'Category trend',
+        subtitle: 'Where your regret spend is stacking up fastest right now.',
+        child: _SectionFallbackCard(
+          message: 'Category trends are unavailable right now.',
+        ),
+      ),
+      data: (categories) {
+        if (categories.isEmpty) return const SizedBox.shrink();
+
+        return ScreenSection(
+          title: 'Category trend',
+          subtitle: 'Where your regret spend is stacking up fastest right now.',
+          child: CategoryTrendCard(
+            category: categories.first,
+            currencyCode: currencyCode,
+            locale: locale,
+          ),
+        );
+      },
     );
   }
 }

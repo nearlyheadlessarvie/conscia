@@ -6,6 +6,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 
 class _StaticTransactionService extends TransactionService {
   _StaticTransactionService(this.transactions) : super(Dio());
@@ -61,6 +62,98 @@ Future<void> _pumpTransactionList(
 }
 
 void main() {
+  test('category filter only affects the transaction screen list provider',
+      () async {
+    final container = ProviderContainer(
+      overrides: [
+        transactionServiceProvider.overrideWithValue(
+          _StaticTransactionService([
+            Transaction(
+              id: 'tx-dining',
+              amount: 12,
+              currencyCode: 'USD',
+              category: 'Dining',
+              description: 'Cafe',
+              type: 'expense',
+              date: DateTime(2026, 5, 8),
+            ),
+            Transaction(
+              id: 'tx-bills',
+              amount: 40,
+              currencyCode: 'USD',
+              category: 'Bills',
+              description: 'Power',
+              type: 'expense',
+              date: DateTime(2026, 5, 7),
+            ),
+          ]),
+        ),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    await container.read(transactionListProvider.notifier).refresh();
+    expect(
+      container.read(transactionListProvider).transactions.map((tx) => tx.id),
+      containsAll(['tx-dining', 'tx-bills']),
+    );
+
+    container.read(categoryFilterProvider.notifier).state = 'Dining';
+    await container.read(filteredTransactionListProvider.notifier).refresh();
+
+    expect(
+      container
+          .read(filteredTransactionListProvider)
+          .transactions
+          .map((tx) => tx.id)
+          .toSet(),
+      {'tx-dining'},
+    );
+    expect(
+      container.read(transactionListProvider).transactions.map((tx) => tx.id),
+      containsAll(['tx-dining', 'tx-bills']),
+    );
+  });
+
+  testWidgets('transaction list exposes add action in the header', (
+    tester,
+  ) async {
+    final router = GoRouter(
+      routes: [
+        GoRoute(
+          path: '/',
+          builder: (_, __) => const TransactionListScreen(),
+        ),
+        GoRoute(
+          path: '/transactions/add',
+          builder: (_, __) => const Scaffold(
+            body: Text('Add transaction screen'),
+          ),
+        ),
+      ],
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          transactionServiceProvider.overrideWithValue(
+            _StaticTransactionService(const []),
+          ),
+        ],
+        child: MaterialApp.router(routerConfig: router),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byTooltip('Add transaction'), findsOneWidget);
+    expect(find.byType(FloatingActionButton), findsNothing);
+
+    await tester.tap(find.byTooltip('Add transaction'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Add transaction screen'), findsOneWidget);
+  });
+
   testWidgets('selected transaction filters stay compact without overflow', (
     tester,
   ) async {
@@ -88,16 +181,18 @@ void main() {
     await tester.pump();
 
     expect(tester.takeException(), isNull);
-    expect(find.byKey(const ValueKey('selection-chip-check-All')), findsNothing);
+    expect(
+        find.byKey(const ValueKey('selection-chip-check-All')), findsNothing);
   });
 
-  testWidgets('transaction filters stay visible while filtered list refreshes', (
+  testWidgets('transaction filters stay visible while filtered list refreshes',
+      (
     tester,
   ) async {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          transactionListProvider.overrideWith(
+          filteredTransactionListProvider.overrideWith(
             (ref) => _LoadingTransactionListNotifier('Gift'),
           ),
           categoryFilterProvider.overrideWith((ref) => 'Gift'),
@@ -109,7 +204,8 @@ void main() {
     await tester.pump();
 
     expect(find.text('Filters'), findsOneWidget);
-    expect(find.byKey(const ValueKey('selection-chip-button-Gift')), findsOneWidget);
+    expect(find.byKey(const ValueKey('selection-chip-button-Gift')),
+        findsOneWidget);
     expect(find.byType(SkeletonListTile), findsWidgets);
   });
 
@@ -149,15 +245,19 @@ void main() {
       ],
     );
 
-    final allY =
-        tester.getCenter(find.byKey(const ValueKey('selection-chip-button-All'))).dy;
-    final giftY =
-        tester.getCenter(find.byKey(const ValueKey('selection-chip-button-Gift'))).dy;
+    final allY = tester
+        .getCenter(find.byKey(const ValueKey('selection-chip-button-All')))
+        .dy;
+    final giftY = tester
+        .getCenter(find.byKey(const ValueKey('selection-chip-button-Gift')))
+        .dy;
     final groceriesY = tester
-        .getCenter(find.byKey(const ValueKey('selection-chip-button-Groceries')))
+        .getCenter(
+            find.byKey(const ValueKey('selection-chip-button-Groceries')))
         .dy;
     final subscriptionsY = tester
-        .getCenter(find.byKey(const ValueKey('selection-chip-button-Subscriptions')))
+        .getCenter(
+            find.byKey(const ValueKey('selection-chip-button-Subscriptions')))
         .dy;
 
     expect((allY - giftY).abs(), lessThan(8));

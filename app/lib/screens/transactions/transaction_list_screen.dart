@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../core/routing/app_router.dart';
 import '../../core/theme/app_colors.dart';
 import '../../providers/transaction_providers.dart';
 import '../../services/transaction_service.dart';
@@ -39,17 +41,17 @@ class _TransactionListScreenState extends ConsumerState<TransactionListScreen> {
   void _onScroll() {
     if (_scrollController.position.pixels >=
         _scrollController.position.maxScrollExtent - 200) {
-      ref.read(transactionListProvider.notifier).loadMore();
+      ref.read(filteredTransactionListProvider.notifier).loadMore();
     }
   }
 
   Future<void> _onRefresh() async {
-    await ref.read(transactionListProvider.notifier).refresh();
+    await ref.read(filteredTransactionListProvider.notifier).refresh();
   }
 
   @override
   Widget build(BuildContext context) {
-    final state = ref.watch(transactionListProvider);
+    final state = ref.watch(filteredTransactionListProvider);
     final selectedCategory = ref.watch(categoryFilterProvider);
 
     final categories = {
@@ -59,7 +61,16 @@ class _TransactionListScreenState extends ConsumerState<TransactionListScreen> {
       ..sort();
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Transactions')),
+      appBar: AppBar(
+        title: const Text('Transactions'),
+        actions: [
+          IconButton(
+            tooltip: 'Add transaction',
+            icon: const Icon(Icons.add),
+            onPressed: () => context.push(AppRoutes.addTransaction),
+          ),
+        ],
+      ),
       body: DecoratedBox(
         decoration: BoxDecoration(
           gradient: LinearGradient(
@@ -208,7 +219,9 @@ class _TransactionListScreenState extends ConsumerState<TransactionListScreen> {
                 padding: EdgeInsets.zero,
                 child: Column(
                   children: [
-                    for (var index = 0; index < groups[key]!.length; index++) ...[
+                    for (var index = 0;
+                        index < groups[key]!.length;
+                        index++) ...[
                       TransactionTile(
                         id: groups[key]![index].id,
                         isIncome: groups[key]![index].type == 'income',

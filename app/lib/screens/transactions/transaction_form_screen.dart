@@ -214,6 +214,7 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
       if (!mounted) return;
       _originalTransaction = savedTransaction;
       ref.invalidate(transactionListProvider);
+      ref.invalidate(filteredTransactionListProvider);
       if (_isEditing) {
         ref.invalidate(transactionDetailProvider(widget.transactionId!));
       }
@@ -430,7 +431,9 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
               },
             ),
           ),
-          if (!_isEditing && locationAssistance.isEnabled && hasSuggestions) ...[
+          if (!_isEditing &&
+              locationAssistance.isEnabled &&
+              hasSuggestions) ...[
             SmartSuggestionsCard(
               suggestions: suggestions,
               subtitle:
