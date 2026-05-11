@@ -56,7 +56,13 @@ public class CognitoAuthService : IAuthService
                 return new AuthResult { Success = false, Email = email, Error = "Authentication service returned an invalid user id" };
             }
 
-            await EnsureLocalUserAsync(userId, email, AuthProvider.Email, email, ct);
+            await EnsureLocalUserAsync(
+                userId,
+                email,
+                AuthProvider.Email,
+                email,
+                response.UserConfirmed == true,
+                ct);
 
             return new AuthResult
             {
@@ -97,6 +103,13 @@ public class CognitoAuthService : IAuthService
                 Username = email,
                 ConfirmationCode = confirmationCode.Trim()
             }, ct);
+
+            var user = await _users.GetByEmailAsync(email, ct);
+            if (user is not null && !user.EmailConfirmed)
+            {
+                user.EmailConfirmed = true;
+                await _users.UpdateAsync(user, ct);
+            }
 
             return new AuthResult
             {
@@ -259,7 +272,7 @@ public class CognitoAuthService : IAuthService
 
         if (userId is not null && email is not null)
         {
-            await EnsureLocalUserAsync(userId.Value, email, AuthProvider.Email, email, ct);
+            await EnsureLocalUserAsync(userId.Value, email, AuthProvider.Email, email, true, ct);
         }
 
         return new AuthResult
@@ -272,7 +285,13 @@ public class CognitoAuthService : IAuthService
         };
     }
 
-    private async Task EnsureLocalUserAsync(Guid userId, string email, AuthProvider provider, string providerSub, CancellationToken ct)
+    private async Task EnsureLocalUserAsync(
+        Guid userId,
+        string email,
+        AuthProvider provider,
+        string providerSub,
+        bool emailConfirmed,
+        CancellationToken ct)
     {
         var user = await _users.GetByIdAsync(userId, ct);
         if (user is null)
@@ -285,9 +304,15 @@ public class CognitoAuthService : IAuthService
             user = new User
             {
                 Id = userId,
-                Email = email
+                Email = email,
+                EmailConfirmed = emailConfirmed
             };
             await _users.AddAsync(user, ct);
+        }
+        else if (emailConfirmed && !user.EmailConfirmed)
+        {
+            user.EmailConfirmed = true;
+            await _users.UpdateAsync(user, ct);
         }
 
         var existingIdentity = await _users.GetByProviderAsync(provider, providerSub, ct);

@@ -1,5 +1,4 @@
 using System.IdentityModel.Tokens.Jwt;
-using System.Collections.Concurrent;
 using System.Security.Claims;
 using System.Text;
 using Conscia.Application.Interfaces;
@@ -12,8 +11,6 @@ namespace Conscia.Infrastructure.Services;
 
 public class MockAuthService : IAuthService
 {
-    private static readonly ConcurrentDictionary<string, bool> ConfirmedEmails = new();
-
     private readonly string _signingKey;
     private readonly IUserRepository _repo;
 
@@ -30,7 +27,7 @@ public class MockAuthService : IAuthService
         var existing = await _repo.GetByEmailAsync(email, ct);
         if (existing is not null)
         {
-            return IsConfirmed(email)
+            return existing.EmailConfirmed
                 ? new AuthResult
                 {
                     Success = false,
@@ -44,7 +41,8 @@ public class MockAuthService : IAuthService
         var user = new User
         {
             Id = Guid.NewGuid(),
-            Email = email
+            Email = email,
+            EmailConfirmed = false
         };
         await _repo.AddAsync(user, ct);
         await _repo.AddIdentityAsync(new UserIdentity
@@ -54,7 +52,6 @@ public class MockAuthService : IAuthService
             Provider = AuthProvider.Email,
             ProviderSub = email
         }, ct);
-        ConfirmedEmails[email] = false;
 
         return new AuthResult
         {
@@ -90,7 +87,8 @@ public class MockAuthService : IAuthService
                 Error = "User not found"
             };
         }
-        ConfirmedEmails[email] = true;
+        user.EmailConfirmed = true;
+        await _repo.UpdateAsync(user, ct);
 
         return new AuthResult
         {
@@ -132,7 +130,7 @@ public class MockAuthService : IAuthService
         if (user is null)
             return new AuthResult { Success = false, Error = "Invalid credentials" };
 
-        if (!IsConfirmed(email))
+        if (!user.EmailConfirmed)
         {
             return new AuthResult
             {
@@ -256,7 +254,8 @@ public class MockAuthService : IAuthService
         var user = new User
         {
             Id = Guid.Parse(id),
-            Email = email
+            Email = email,
+            EmailConfirmed = true
         };
         await _repo.AddAsync(user, ct);
         await _repo.AddIdentityAsync(new UserIdentity
@@ -266,7 +265,6 @@ public class MockAuthService : IAuthService
             Provider = AuthProvider.Email,
             ProviderSub = email
         }, ct);
-        ConfirmedEmails[email] = true;
     }
 
     private async Task<AuthResult> ResolveOrCreateSocialUser(
@@ -320,9 +318,4 @@ public class MockAuthService : IAuthService
     }
 
     private static string NormalizeEmail(string email) => email.Trim().ToLowerInvariant();
-
-    private static bool IsConfirmed(string email)
-    {
-        return !ConfirmedEmails.TryGetValue(email, out var confirmed) || confirmed;
-    }
 }

@@ -51,6 +51,9 @@ public class MockAuthServiceTests : IDisposable
         Assert.Null(result.AccessToken);
         Assert.Null(result.RefreshToken);
         Assert.NotNull(result.UserId);
+
+        var user = await _db.Users.SingleAsync(u => u.Email == "new@test.com");
+        Assert.False(user.EmailConfirmed);
     }
 
     [Fact]
@@ -63,6 +66,9 @@ public class MockAuthServiceTests : IDisposable
         Assert.True(result.Success);
         Assert.False(result.RequiresConfirmation);
         Assert.Equal("confirm@test.com", result.Email);
+
+        var user = await _db.Users.SingleAsync(u => u.Email == "confirm@test.com");
+        Assert.True(user.EmailConfirmed);
     }
 
     [Fact]
