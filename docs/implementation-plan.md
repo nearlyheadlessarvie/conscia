@@ -179,8 +179,11 @@ Still want to proceed?
 
 ## 3. Sharper AI Personality System
 
-### Current State
-Both personas (Impulse/Reason) feel similar in tone.
+### 2026-05-11 Status
+Implemented/evolved. Phase 4 shipped as AI Personality + Visual Refresh rather than a prompt-only pass. Conscia now persists a global AI personality intensity preference, applies intensity-aware prompts and temperatures across pre-purchase and reflection flows, and exposes the setting in Flutter Settings. The original loud/emojified Impulse direction was superseded by brand-safe playful contrast supported by the mascot-led visual language.
+
+### Original Current State
+Both personas (Impulse/Reason) felt similar in tone.
 
 ### Vision
 Make each persona distinct and memorable.
@@ -251,13 +254,15 @@ what will be different this time?
 - Help user develop awareness
 
 #### 3.4 Implementation
-- Update prompt templates in `Conscia.AI` project
-- Add temperature tweaking per persona:
-  - Impulse: 0.90-0.95 (higher creativity)
-  - Reason: 0.35-0.45 (lower randomness, focused)
-  - Neutral: 0.60-0.70 (balanced)
-- Test across 5+ purchase scenarios
-- Optional: Add "Personality Strength" slider in settings (mild, balanced, intense)
+- [x] Update prompt templates in `Conscia.AI` project
+- [x] Add intensity-aware temperature tweaking per persona:
+  - Impulse: `0.65`, `0.82`, `1.0`
+  - Reason: `0.18`, `0.28`, `0.42`
+  - Reflection: `0.2`, `0.34`, `0.5`
+- [x] Add "AI Personality Intensity" setting in Settings (mild, balanced, intense)
+- [x] Thread the setting through user profile APIs and AI contexts
+- [x] Add automated coverage for prompt templates, Bedrock/Ollama temperatures, and Flutter Settings updates
+- [ ] Formal live transcript review across 10+ purchase scenarios remains release QA
 
 ---
 
@@ -725,13 +730,15 @@ New "Habits" section (or expand Dashboard) anchored by Conscience Journey:
 ### Phase 4: AI Personality Refinement (1-2 weeks)
 **Goal:** Distinct, memorable personas
 
-- [ ] Update Impulse persona prompts (playful/tempting)
-- [ ] Update Reason persona prompts (firm/concise)
-- [ ] Update Neutral persona prompts (reflective)
-- [ ] Adjust temperature per persona
-- [ ] Test across 10+ purchase scenarios
-- [ ] Optional: Add personality strength slider in settings
-- [ ] UX review: Confirm tone differentiation
+**Status:** Implemented/evolved as AI Personality + Visual Refresh.
+
+- [x] Update Impulse persona prompts (playful/tempting, with safer guardrails than the original FOMO/emojis concept)
+- [x] Update Reason persona prompts (firm/concise)
+- [x] Update Neutral persona prompts into Reflection voice
+- [x] Adjust temperature per persona and intensity
+- [x] Add AI personality intensity setting in Settings
+- [x] UX/product review: Confirm tone differentiation direction
+- [ ] Formal live-model testing across 10+ purchase scenarios remains release QA
 
 ### Phase 5: Conscience Journey Gamification (2 weeks)
 **Goal:** Playful habit progression through XP, levels, weekly quests, badges, and mascot moments.

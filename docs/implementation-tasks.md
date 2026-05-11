@@ -1,6 +1,6 @@
 # Conscia Enhancement Tasks Checklist
 
-**Status Overview:** Phases 1-3 implemented in the current app branch; recurring transactions are now shipped; Phase 5 is now MVP-scoped as Conscience Journey gamification; remaining Phase 4+ work is planned
+**Status Overview:** Phases 1-4 implemented/evolved in the current app branch; recurring transactions are now shipped; Phase 5 is now MVP-scoped as Conscience Journey gamification; remaining Phase 5+ work is planned
 **Target Completion:** 16-20 weeks
 **Last Updated:** 2026-05-11
 
@@ -286,59 +286,80 @@ Goal: Use past regrets to influence future decisions
 
 Goal: Distinct, memorable personas
 
+**Status:** Implemented / evolved. The original prompt-only phase became the broader Phase 4 AI Personality + Visual Refresh work. The shipped implementation persists a global AI personality intensity preference, threads it into pre-purchase and reflection AI calls, centralizes persona prompt/temperature behavior in `Conscia.AI`, and exposes the setting in Flutter Settings. The older "add lots of emojis/FOMO" direction was superseded by safer, brand-fit playful contrast plus mascot-led visuals.
+
+### Delivered Since This Checklist Was Written
+- [x] Add global `AI Personality Intensity` setting: Mild, Balanced, Intense
+- [x] Persist `AiPersonalityIntensity` on the user profile with validation and API responses
+- [x] Thread AI intensity into pre-purchase and reflection AI contexts
+- [x] Centralize persona prompts in `PromptTemplates`
+- [x] Apply intensity-aware temperature mapping in `BaseAIService`
+- [x] Add unit coverage for prompt templates and Ollama/Bedrock temperature behavior
+- [x] Add Flutter settings coverage for changing AI personality intensity
+- [x] Evolve neutral persona into `Reflection` product voice
+- [x] Pair the personality work with the mascot/loader visual refresh for AI surfaces
+
 ### Backend Tasks
-- [ ] Update Impulse persona prompts
-  - [ ] Review current prompts in `Conscia.AI` project
-  - [ ] Increase emotional appeal and exclamation marks
-  - [ ] Add FOMO/reward language
-  - [ ] Add emojis to prompts
-  - [ ] Test with Ollama locally
+- [x] Update Impulse persona prompts
+  - [x] Review current prompts in `Conscia.AI` project
+  - [x] Make the upside more vivid, emotional, and playful
+  - [x] ~~Increase emotional appeal and exclamation marks~~ - Superseded by intensity-aware energy/directness rules
+  - [x] ~~Add FOMO/reward language~~ - Superseded by safer temptation framing with guardrails
+  - [x] ~~Add emojis to prompts~~ - Superseded by mascot-led visuals and non-theatrical prompt tone
+  - [x] Add Ollama unit coverage for intensity-aware temperatures
+  - [ ] Live local Ollama transcript review remains optional QA
 
-- [ ] Update Reason persona prompts
-  - [ ] Reduce verbosity
-  - [ ] Add direct commands ("Stop", "Skip this")
-  - [ ] Lead with numbers and budget impact
-  - [ ] Remove emotional language
-  - [ ] Test with Ollama locally
+- [x] Update Reason persona prompts
+  - [x] Reduce verbosity with 2-3 sentence max guidance
+  - [x] Add firmer challenge language through intensity profiles
+  - [x] Lead with financial perspective and budget impact in the user context
+  - [x] Keep tone factual and protective without shame
+  - [x] Add Bedrock/Ollama unit coverage for lower-temperature behavior
+  - [ ] Live local Ollama transcript review remains optional QA
 
-- [ ] Update Neutral/Reflection persona prompts
-  - [ ] Add Socratic questions
-  - [ ] Reference user's past regrets
-  - [ ] Focus on self-reflection
-  - [ ] Non-judgmental tone
-  - [ ] Test with Ollama locally
+- [x] Update Neutral/Reflection persona prompts
+  - [x] Reframe neutral voice as `Reflection`
+  - [x] Add introspective, bigger-picture guidance
+  - [x] Reference user's recent regrets through AI context
+  - [x] Focus on self-reflection and habit awareness
+  - [x] Keep non-judgmental tone
+  - [x] Add prompt template coverage
 
-- [ ] Adjust temperature values per persona
-  - [ ] Impulse: 0.90-0.95
-  - [ ] Reason: 0.35-0.45
-  - [ ] Neutral: 0.60-0.70
-  - [ ] Test for consistency
+- [x] Adjust temperature values per persona
+  - [x] Impulse: intensity-aware higher temperature (`0.65`, `0.82`, `1.0`)
+  - [x] Reason: intensity-aware lower temperature (`0.18`, `0.28`, `0.42`)
+  - [x] Reflection: intensity-aware balanced/low temperature (`0.2`, `0.34`, `0.5`)
+  - [x] Test for consistency with Bedrock and Ollama unit tests
 
-- [ ] Update `Conscia.AI/Services/BedrockAIService.cs` (if needed)
-  - [ ] Adjust temperature configurations
-  - [ ] Test with AWS Bedrock in dev/staging
+- [x] ~~Update `Conscia.AI/Services/BedrockAIService.cs` directly~~ - Superseded by provider-neutral handling in `BaseAIService`
+  - [x] Adjust temperature configurations in shared orchestration
+  - [ ] AWS Bedrock dev/staging transcript smoke test remains release QA
 
 ### Frontend/Testing
-- [ ] Manual testing: 10+ purchase scenarios
-  - [ ] Test each persona tone
-  - [ ] Verify tone differentiation
-  - [ ] Check for consistency across scenarios
+- [ ] Formal manual testing: 10+ purchase scenarios
+  - [ ] Test each persona tone with real model transcripts
+  - [ ] Verify tone differentiation across low/high intensity
+  - [ ] Check consistency across pre-purchase and reflection flows
   - [ ] Gather user feedback (A/B testing later)
 
-- [ ] Optional: Add personality strength slider
-  - [ ] `lib/screens/settings/settings_screen.dart` update
-  - [ ] "AI Personality Intensity" setting (Mild, Balanced, Intense)
-  - [ ] Store preference in user settings
-  - [ ] Adjust temperature based on slider
+- [x] Add personality strength slider/control
+  - [x] `lib/screens/settings/settings_screen.dart` update
+  - [x] "AI Personality Intensity" setting (Mild, Balanced, Intense)
+  - [x] Store preference in user settings
+  - [x] Adjust temperature based on slider/control
 
-- [ ] Create test cases for personality tones
-  - [ ] Entertainment vs Necessities
-  - [ ] Large purchases vs small impulses
-  - [ ] Time-of-day factors
+- [x] Create automated test cases for personality infrastructure
+  - [x] Prompt template persona coverage
+  - [x] Bedrock mild temperature coverage
+  - [x] Ollama intense temperature coverage
+  - [x] Flutter settings update coverage
+  - [ ] Scenario-level transcript assertions for entertainment vs necessities remain future QA
+  - [ ] Scenario-level transcript assertions for large purchases vs small impulses remain future QA
+  - [ ] Time-of-day factors remain future context work
 
 ### QA & Review
-- [ ] UX review: confirm tone differentiation is clear
-- [ ] Copy review: ensure no brand misalignment
+- [x] UX/product review: global intensity setting and mascot-led AI surfaces were accepted during emulator review
+- [x] Copy direction review: superseded manipulative FOMO/emojis with brand-safe playful contrast
 - [ ] A/B testing setup (optional, future)
 
 ---
@@ -716,7 +737,7 @@ Goal: Update messaging across app
 ### Dependencies
 - Phase 2 depends on Phase 1 (some API endpoints can run in parallel)
 - Phase 3 depends on Phase 1 (transaction history needed for patterns)
-- Phase 4 is independent (can run in parallel with others)
+- Phase 4 is implemented/evolved and was independent of the earlier phases
 - Phase 5 depends on Phase 3 and current insights flows (journey events need reflections, pre-purchase checks, budget nudges, and regret pattern review sources)
 - Phase 6 depends on Phase 1 (digest needs insights)
 - Phase 7 depends on Phase 1 & 3 (needs insights and merchant data)
