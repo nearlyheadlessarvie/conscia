@@ -150,6 +150,62 @@ public class FamilySpaceEndpointTests
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
 
+    [Fact]
+    public async Task PreviewImport_ContributorRequest_ReturnsPreview()
+    {
+        await using var factory = new TestWebAppFactory();
+        var familySpaceId = Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
+        var transactionId = Guid.Parse("dddddddd-dddd-dddd-dddd-dddddddddddd");
+        factory.FamilySpaceServiceMock
+            .Setup(s => s.PreviewImportAsync(UserId, It.IsAny<FamilyImportPreviewRequestDto>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new FamilyImportPreviewDto(
+                familySpaceId,
+                "These records will become visible to your Family Space.",
+                [
+                    new FamilyImportItemDto("transaction", transactionId, "Starbucks", "Dining", 280m, "PHP")
+                ]));
+
+        var client = CreateAuthorizedClient(factory);
+        var response = await client.PostAsJsonAsync("/api/v1/family-space/import-preview", new
+        {
+            includeTransactions = true,
+            includeBudgets = false,
+            includeRecurringSchedules = false,
+            from = "2026-05-01T00:00:00Z",
+            to = "2026-05-31T23:59:59Z",
+            categories = new[] { "Dining" }
+        });
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var json = await response.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal(familySpaceId, json.GetProperty("familySpaceId").GetGuid());
+        Assert.Single(json.GetProperty("items").EnumerateArray());
+    }
+
+    [Fact]
+    public async Task ImportRecords_ViewerRequest_ReturnsForbidden()
+    {
+        await using var factory = new TestWebAppFactory();
+        factory.FamilySpaceServiceMock
+            .Setup(s => s.ImportAsync(UserId, It.IsAny<FamilyImportRequestDto>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new UnauthorizedAccessException("Viewer cannot share records."));
+
+        var client = CreateAuthorizedClient(factory);
+        var response = await client.PostAsJsonAsync("/api/v1/family-space/import", new
+        {
+            items = new[]
+            {
+                new
+                {
+                    recordType = "transaction",
+                    recordId = Guid.Parse("dddddddd-dddd-dddd-dddd-dddddddddddd")
+                }
+            }
+        });
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
     private static HttpClient CreateAuthorizedClient(
         TestWebAppFactory factory,
         string tier = "Premium")
