@@ -62,6 +62,20 @@ class FamilySpaceActions {
         Map<String, dynamic>.from(response.data as Map));
   }
 
+  Future<FamilySpace> updateName(String name) async {
+    final dio = _ref.read(dioProvider);
+    final response = await dio.patch(
+      ApiConstants.familySpace,
+      data: {'name': name},
+    );
+
+    _ref.invalidate(familySpaceProvider);
+    _ref.invalidate(familyOverviewProvider);
+    return FamilySpace.fromJson(
+      Map<String, dynamic>.from(response.data as Map),
+    );
+  }
+
   Future<void> invite({
     required String email,
     required String role,
