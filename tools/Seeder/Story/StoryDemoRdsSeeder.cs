@@ -90,6 +90,9 @@ public static class StoryDemoRdsSeeder
 
     private static async Task EnsureSharedConsciaSchemaAsync(ConsciaDbContext db, CancellationToken ct)
     {
+        if (!db.Database.IsRelational())
+            return;
+
         // Story-demo databases may have been created through EnsureCreated before
         // Shared Conscia existed, so keep this profile self-healing for local demos.
         await db.Database.ExecuteSqlRawAsync(

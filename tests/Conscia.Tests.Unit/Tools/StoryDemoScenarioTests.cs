@@ -137,8 +137,14 @@ public class StoryDemoScenarioTests
 
         await StoryDemoRdsSeeder.SeedAsync(db, scenario, CancellationToken.None);
 
-        Assert.Equal(2, await db.Users.CountAsync());
+        Assert.Equal(
+            2 + scenario.AdditionalUsers.Count,
+            await db.Users.CountAsync());
         Assert.Equal(1, await db.Users.CountAsync(u => u.Email == scenario.User.Email));
+        foreach (var user in scenario.AdditionalUsers)
+        {
+            Assert.Equal(1, await db.Users.CountAsync(u => u.Email == user.Email));
+        }
         Assert.Equal(1, await db.UserIdentities.CountAsync(ui => ui.UserId == scenario.User.Id));
         Assert.Equal(1, await db.UserSubscriptions.CountAsync(us => us.UserId == scenario.User.Id));
         Assert.Equal(scenario.Budgets.Count, await db.Budgets.CountAsync(b => b.UserId == scenario.User.Id));
