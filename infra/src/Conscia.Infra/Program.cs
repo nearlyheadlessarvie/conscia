@@ -49,6 +49,7 @@ sealed class Program
             InAppAlertsTable = database.InAppAlertsTable,
             WeeklyInsightsTable = database.WeeklyInsightsTable,
             PurchasePatternsTable = database.PurchasePatternsTable,
+            PushDeviceTokensTable = database.PushDeviceTokensTable,
             AiQueue = ai.AiQueue,
             DbAccessLambda = dbAccess.DbAccessLambda
         });

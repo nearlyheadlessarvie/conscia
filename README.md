@@ -249,6 +249,7 @@ Compile-time constants passed via `--dart-define`:
 |----------|---------|-------------|
 | `MOCK_AUTH` | `true` | Use mock authentication (bypasses Cognito, creates local JWT) |
 | `API_BASE_URL` | `http://localhost:5248/api/v1` | Backend API base URL |
+| `PUSH_NOTIFICATIONS_ENABLED` | `false` | Enables Firebase Cloud Messaging token registration after the user signs in |
 
 ```bash
 # Run with defaults (local dev)
@@ -257,6 +258,38 @@ flutter run
 # Run against a deployed API with real auth
 flutter run --dart-define=MOCK_AUTH=false --dart-define=API_BASE_URL=https://api.getconscia.com/api/v1
 ```
+
+### Device Push Notification Setup
+
+Device push is scaffolded but intentionally disabled until Firebase credentials are ready. Today the app can request notification permission, read the Firebase Cloud Messaging token, and register it with `POST /api/v1/push/device-tokens`. The API stores tokens in DynamoDB table `PushDeviceTokens`; actual push delivery can be wired to Firebase Admin/FCM after credentials are available.
+
+When Firebase is ready:
+
+1. Create a Firebase project and add Android/iOS apps. The current Android package id is `com.example.conscia_app`; update it before production if needed.
+2. Place Firebase config files locally:
+   ```text
+   app/android/app/google-services.json
+   app/ios/Runner/GoogleService-Info.plist
+   ```
+   These files are gitignored.
+3. Configure native Firebase using FlutterFire:
+   ```bash
+   cd app
+   dart pub global activate flutterfire_cli
+   flutterfire configure
+   flutter pub get
+   ```
+4. Run local Dynamo setup again so the token table exists:
+   ```bash
+   dotnet run --project tools/DynamoSetup
+   ```
+5. Enable push registration at runtime:
+   ```bash
+   cd app
+   flutter run --dart-define=PUSH_NOTIFICATIONS_ENABLED=true
+   ```
+
+Cost note: Firebase Cloud Messaging itself has no per-message charge. This scaffold only adds tiny DynamoDB reads/writes for device-token registration. When we add server-side delivery, we can use the existing API/background jobs with Firebase Admin credentials, so there should be no new always-on infrastructure unless we later choose a dedicated worker.
 
 ## Social Authentication Setup
 
@@ -481,6 +514,12 @@ All endpoints (except Auth and health) require a Bearer JWT in the `Authorizatio
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
 | `GET` | `/api/v1/alerts` | Yes | List in-app alerts for current user |
+
+### Push Notifications
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| `POST` | `/api/v1/push/device-tokens` | Yes | Register or refresh the current device's Firebase Cloud Messaging token |
 
 ---
 

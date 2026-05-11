@@ -13,7 +13,8 @@ public class DynamoDbHealthCheck(IAmazonDynamoDB dynamoDb) : IHealthCheck
         ("WeeklyInsights", []),
         ("PurchasePatterns", []),
         ("InAppAlerts", ["GSI-Trigger-Date"]),
-        ("MonthlyCategorySpends", [])
+        ("MonthlyCategorySpends", []),
+        ("PushDeviceTokens", [])
     ];
 
     public async Task<HealthCheckResult> CheckHealthAsync(

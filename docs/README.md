@@ -11,12 +11,13 @@
 
 ## 🎭 Story Demo Seed
 
-For a realistic emulator walkthrough across dashboard, budgets, insights, alerts, reflections, and recurring items, use the dedicated `story-demo` seed profile.
+For a realistic emulator walkthrough across dashboard, budgets, insights, alerts, reflections, recurring items, and pre-purchase context, use the dedicated `story-demo` seed profile.
 
 Local setup:
 - Run `dotnet run --project tools/DynamoSetup` after a fresh Docker reset or whenever local Dynamo tables are missing.
 - Run `dotnet run --project tools/Seeder -- story-demo` to recreate the curated demo user and its linked product data.
 - Re-running the seed is safe for the demo user: it replaces only the `story-demo@example.com` relational slice and the matching user-scoped Dynamo records.
+- The story profile includes a premium demo user, 3-month transaction history, recurring schedules with generated occurrences, active notification-bell alerts, weekly insights, budget trends, regret patterns, and enough category/merchant context for pre-purchase assistant checks.
 
 ### Current Product Snapshot
 

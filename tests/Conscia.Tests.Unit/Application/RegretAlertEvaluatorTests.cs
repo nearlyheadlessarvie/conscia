@@ -176,13 +176,60 @@ public class RegretAlertEvaluatorTests
                 }
             });
 
-        var service = new AlertService(new[] { lowPriority.Object, highPriority.Object });
+        var alertRepo = new Mock<IInAppAlertRepository>();
+        alertRepo.Setup(x => x.GetByUserAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<InAppAlert>());
+        var service = new AlertService(new[] { lowPriority.Object, highPriority.Object }, alertRepo.Object);
 
         var alerts = await service.ListAlertsAsync(Guid.NewGuid());
 
         Assert.Collection(alerts,
             first => Assert.Equal("high", first.AlertKey),
             second => Assert.Equal("low", second.AlertKey));
+    }
+
+    [Fact]
+    public async Task AlertService_IncludesPersistedAlerts()
+    {
+        var userId = Guid.NewGuid();
+        var evaluator = new Mock<ITriggerEvaluator>();
+        evaluator.SetupGet(x => x.TriggerName).Returns("Computed");
+        evaluator.Setup(x => x.EvaluateAsync(userId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<InAppAlert>
+            {
+                new()
+                {
+                    AlertKey = "computed-alert",
+                    TriggerName = "Computed",
+                    Title = "Computed",
+                    Message = "Computed",
+                    Priority = 20,
+                    CreatedAt = new DateTime(2026, 5, 8, 10, 0, 0, DateTimeKind.Utc)
+                }
+            });
+
+        var alertRepo = new Mock<IInAppAlertRepository>();
+        alertRepo.Setup(x => x.GetByUserAsync(userId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<InAppAlert>
+            {
+                new()
+                {
+                    AlertKey = "seeded-alert",
+                    TriggerName = "budget_nudge",
+                    Title = "Seeded",
+                    Message = "Seeded",
+                    Priority = 60,
+                    CreatedAt = new DateTime(2026, 5, 8, 11, 0, 0, DateTimeKind.Utc)
+                }
+            });
+
+        var service = new AlertService(new[] { evaluator.Object }, alertRepo.Object);
+
+        var alerts = await service.ListAlertsAsync(userId);
+
+        Assert.Collection(alerts,
+            first => Assert.Equal("seeded-alert", first.AlertKey),
+            second => Assert.Equal("computed-alert", second.AlertKey));
     }
 
     private static Transaction Expense(string category, string counterparty, RegretLevel? regretLevel) =>

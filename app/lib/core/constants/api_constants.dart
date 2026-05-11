@@ -6,6 +6,11 @@ class ApiConstants {
     defaultValue: true,
   );
 
+  static const bool pushNotificationsEnabled = bool.fromEnvironment(
+    'PUSH_NOTIFICATIONS_ENABLED',
+    defaultValue: false,
+  );
+
   static const String baseUrl = String.fromEnvironment(
     'API_BASE_URL',
     defaultValue: 'http://localhost:5248/api/v1/',
@@ -37,9 +42,11 @@ class ApiConstants {
   // Regret Memory Insights
   static const String insightsSummary = 'insights/summary';
   static const String insightsCategories = 'insights/categories';
-  static String insightsCategoryDetail(String category) => 'insights/categories/$category';
+  static String insightsCategoryDetail(String category) =>
+      'insights/categories/$category';
   static const String insightsMerchants = 'insights/merchants';
-  static String insightsMerchantDetail(String merchant) => 'insights/merchants/$merchant';
+  static String insightsMerchantDetail(String merchant) =>
+      'insights/merchants/$merchant';
 
   // Suggestions
   static const String purchaseSuggestions = 'suggestions/purchases';
@@ -61,6 +68,9 @@ class ApiConstants {
   static const String alerts = 'alerts';
   static String alert(String id) => 'alerts/$id';
   static String alertDismiss(String id) => 'alerts/$id/dismiss';
+
+  // Device push notifications
+  static const String pushDeviceTokens = 'push/device-tokens';
 
   // Subscriptions
   static const String subscriptionStatus = 'subscriptions/status';

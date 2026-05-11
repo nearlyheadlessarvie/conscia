@@ -139,6 +139,7 @@ builder.Services.AddScoped<IAIInteractionRepository, AIInteractionRepository>();
 builder.Services.AddScoped<IWeeklyInsightsRepository, WeeklyInsightsRepository>();
 builder.Services.AddScoped<IPurchasePatternRepository, PurchasePatternRepository>();
 builder.Services.AddScoped<IInAppAlertRepository, InAppAlertRepository>();
+builder.Services.AddScoped<IPushDeviceTokenRepository, PushDeviceTokenRepository>();
 builder.Services.AddScoped<IOutboxEventRepository, OutboxEventRepository>();
 builder.Services.AddScoped<IMonthlyCategorySpendRepository, MonthlyCategorySpendRepository>();
 
@@ -371,6 +372,7 @@ app.MapRecurringEndpoints().RequireRateLimiting("standard");
 app.MapBudgetEndpoints().RequireRateLimiting("standard");
 app.MapSubscriptionEndpoints().RequireRateLimiting("standard");
 app.MapAlertEndpoints().RequireRateLimiting("standard");
+app.MapPushNotificationEndpoints().RequireRateLimiting("standard");
 app.MapReceiptEndpoints().RequireRateLimiting("standard");
 app.MapAIEndpoints().RequireRateLimiting("ai");
 app.MapInsightsEndpoints().RequireRateLimiting("standard");

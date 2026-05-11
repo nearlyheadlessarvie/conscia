@@ -17,6 +17,7 @@ public class OutboxStackProps : StackProps
     public required IVpc Vpc { get; set; }
     public required ISecurityGroup DbSecurityGroup { get; set; }
     public required IDatabaseInstance DbInstance { get; set; }
+    public string AssetPath { get; set; } = "../publish/outbox";
 }
 
 public class OutboxStack : Stack
@@ -42,7 +43,7 @@ public class OutboxStack : Stack
             FunctionName = "conscia-outbox-processor",
             Runtime = Runtime.DOTNET_8,
             Handler = "Conscia.OutboxProcessor",
-            Code = Code.FromAsset("../publish/outbox"),
+            Code = Code.FromAsset(props.AssetPath),
             MemorySize = 512,
             Timeout = Duration.Seconds(60),
             Architecture = Architecture.ARM_64,

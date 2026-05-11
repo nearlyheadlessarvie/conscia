@@ -7,6 +7,7 @@ import 'core/routing/app_router.dart';
 import 'core/theme/app_theme.dart';
 import 'providers/health_provider.dart';
 import 'providers/iap_provider.dart';
+import 'services/push_notification_service.dart';
 
 class ConsciaApp extends ConsumerWidget {
   const ConsciaApp({super.key});
@@ -19,21 +20,23 @@ class ConsciaApp extends ConsumerWidget {
     // deferred/pending purchases from interrupted flows.
     ref.watch(iapStatusProvider);
 
-    return MaterialApp.router(
-      title: 'Conscia',
-      debugShowCheckedModeBanner: false,
-      theme: AppTheme.light(),
-      darkTheme: AppTheme.dark(),
-      themeMode: ThemeMode.system,
-      routerConfig: router,
-      builder: (context, child) {
-        return Stack(
-          children: [
-            child ?? const SizedBox.shrink(),
-            const _OfflineBlocker(),
-          ],
-        );
-      },
+    return PushNotificationBootstrapper(
+      child: MaterialApp.router(
+        title: 'Conscia',
+        debugShowCheckedModeBanner: false,
+        theme: AppTheme.light(),
+        darkTheme: AppTheme.dark(),
+        themeMode: ThemeMode.system,
+        routerConfig: router,
+        builder: (context, child) {
+          return Stack(
+            children: [
+              child ?? const SizedBox.shrink(),
+              const _OfflineBlocker(),
+            ],
+          );
+        },
+      ),
     );
   }
 }

@@ -24,7 +24,8 @@ public class DynamoDbHealthCheckTests
                     "WeeklyInsights",
                     "PurchasePatterns",
                     "InAppAlerts",
-                    "MonthlyCategorySpends"
+                    "MonthlyCategorySpends",
+                    "PushDeviceTokens"
                 ]
             });
 
@@ -42,6 +43,8 @@ public class DynamoDbHealthCheckTests
             .ReturnsAsync(DescribeTableResponseFor("PurchasePatterns"));
         _dynamoMock.Setup(d => d.DescribeTableAsync("MonthlyCategorySpends", It.IsAny<CancellationToken>()))
             .ReturnsAsync(DescribeTableResponseFor("MonthlyCategorySpends"));
+        _dynamoMock.Setup(d => d.DescribeTableAsync("PushDeviceTokens", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(DescribeTableResponseFor("PushDeviceTokens"));
 
         var healthCheck = new DynamoDbHealthCheck(_dynamoMock.Object);
 
@@ -63,7 +66,8 @@ public class DynamoDbHealthCheckTests
                     "AIInteractions",
                     "WeeklyInsights",
                     "PurchasePatterns",
-                    "MonthlyCategorySpends"
+                    "MonthlyCategorySpends",
+                    "PushDeviceTokens"
                 ]
             });
 
@@ -89,7 +93,8 @@ public class DynamoDbHealthCheckTests
                     "WeeklyInsights",
                     "PurchasePatterns",
                     "InAppAlerts",
-                    "MonthlyCategorySpends"
+                    "MonthlyCategorySpends",
+                    "PushDeviceTokens"
                 ]
             });
 
@@ -107,6 +112,8 @@ public class DynamoDbHealthCheckTests
             .ReturnsAsync(DescribeTableResponseFor("PurchasePatterns"));
         _dynamoMock.Setup(d => d.DescribeTableAsync("MonthlyCategorySpends", It.IsAny<CancellationToken>()))
             .ReturnsAsync(DescribeTableResponseFor("MonthlyCategorySpends"));
+        _dynamoMock.Setup(d => d.DescribeTableAsync("PushDeviceTokens", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(DescribeTableResponseFor("PushDeviceTokens"));
 
         var healthCheck = new DynamoDbHealthCheck(_dynamoMock.Object);
 
@@ -129,7 +136,8 @@ public class DynamoDbHealthCheckTests
                     "AIInteractions",
                     "WeeklyInsights",
                     "PurchasePatterns",
-                    "InAppAlerts"
+                    "InAppAlerts",
+                    "PushDeviceTokens"
                 ]
             });
 

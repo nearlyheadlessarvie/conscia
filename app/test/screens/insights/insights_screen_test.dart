@@ -22,6 +22,23 @@ class _StaticBudgetService extends BudgetService {
   Future<List<Budget>> list() async => const [];
 }
 
+class _ExistingSubscriptionsBudgetService extends BudgetService {
+  _ExistingSubscriptionsBudgetService() : super(Dio());
+
+  @override
+  Future<List<Budget>> list() async => const [
+        Budget(
+          id: 'budget-subscriptions',
+          category: 'Subscriptions',
+          monthlyLimit: 2500,
+          spent: 1140,
+          currencyCode: 'PHP',
+          percentage: 45.6,
+          isOverBudget: false,
+        ),
+      ];
+}
+
 void main() {
   test('insights formatter falls back when locale is invalid', () {
     final formatted = formatInsightCurrency(
@@ -241,6 +258,54 @@ void main() {
       ),
       findsOneWidget,
     );
+  });
+
+  testWidgets('budget trend stops opening create form once budget exists',
+      (tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          userPreferencesProvider.overrideWithValue(
+            (currency: 'PHP', locale: 'en_PH'),
+          ),
+          budgetServiceProvider
+              .overrideWithValue(_ExistingSubscriptionsBudgetService()),
+          behavioralInsightsProvider.overrideWith(
+            (ref) async => const BehavioralInsights(
+              mood: FinancialMood.balanced,
+              worthItPercentage: 71,
+              worthItCount: 5,
+              previousMonthWorthItCount: 2,
+              impulseeTrends: [],
+              budgetTrends: [
+                BudgetTrendInsight(
+                  category: 'Subscriptions',
+                  hasBudget: false,
+                  currencyCode: 'PHP',
+                  months: [820, 980, 1140],
+                  currentMonthSpend: 1140,
+                  insightLabel: 'Spending trending up',
+                  nudge: 'Add a budget for sharper insights',
+                ),
+              ],
+            ),
+          ),
+          insightsSummaryProvider.overrideWith((ref) async => null),
+          insightsMerchantsProvider.overrideWith((ref) async => const []),
+          insightsCategoriesProvider.overrideWith((ref) async => const []),
+        ],
+        child: const MaterialApp(home: InsightsScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(
+      find.text('Subscriptions has enough activity for a budget'),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('New Budget'), findsNothing);
+    expect(find.text('+ No budget yet'), findsNothing);
   });
 
   testWidgets('regret summary card drills into the regretted category',

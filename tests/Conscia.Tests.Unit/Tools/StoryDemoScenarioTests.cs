@@ -33,6 +33,49 @@ public class StoryDemoScenarioTests
     }
 
     [Fact]
+    public void Build_CreatesRichThreeMonthWalkthroughData()
+    {
+        var scenario = StoryDemoScenario.Build(DateTime.Parse("2026-05-11T00:00:00Z"));
+
+        Assert.True(scenario.Transactions.Count >= 18);
+        Assert.True(scenario.Transactions.Select(tx => tx.Date.ToString("yyyy-MM")).Distinct().Count() >= 3);
+        Assert.Contains(scenario.Transactions, tx => tx.RecurringScheduleId.HasValue);
+        Assert.Contains(scenario.RecurringSchedules, schedule => schedule.Cadence == RecurringCadence.Weekly);
+        Assert.Contains(scenario.CategoryPatterns, pattern => pattern.Category == "Subscriptions");
+        Assert.Contains(scenario.MerchantPatterns, pattern => pattern.Merchant == "OpenAI");
+    }
+
+    [Fact]
+    public void Build_CreatesBothBudgetedAndUnbudgetedBudgetTrendExamples()
+    {
+        var scenario = StoryDemoScenario.Build(DateTime.Parse("2026-05-11T00:00:00Z"));
+
+        var diningBudget = Assert.Single(scenario.Budgets, budget => budget.Category == "Dining");
+        var diningCurrentMonth = Assert.Single(
+            scenario.MonthlyCategorySpends,
+            spend => spend.Category == "Dining" && spend.MonthKey == "2026-05");
+        var subscriptionsCurrentMonth = Assert.Single(
+            scenario.MonthlyCategorySpends,
+            spend => spend.Category == "Subscriptions" && spend.MonthKey == "2026-05");
+
+        Assert.True(diningCurrentMonth.TotalExpenseAmount / diningBudget.MonthlyLimit >= 0.80m);
+        Assert.DoesNotContain(scenario.Budgets, budget => budget.Category == "Subscriptions");
+        Assert.True(subscriptionsCurrentMonth.TotalExpenseAmount > 0m);
+    }
+
+    [Fact]
+    public void Build_CreatesAlertVarietyForNotificationDemo()
+    {
+        var scenario = StoryDemoScenario.Build(DateTime.Parse("2026-05-11T00:00:00Z"));
+
+        Assert.Contains(scenario.Alerts, alert => alert.TriggerName == "budget_nudge");
+        Assert.Contains(scenario.Alerts, alert => alert.TriggerName == "ReflectionFollowUp");
+        Assert.Contains(scenario.Alerts, alert => alert.TriggerName == "NotSureStreak");
+        Assert.Contains(scenario.Alerts, alert => alert.TriggerName == "CoolingOffSuggestion");
+        Assert.Contains(scenario.Alerts, alert => alert.TriggerName == "recurring_transaction_created");
+    }
+
+    [Fact]
     public async Task SeedAsync_ReplacesOnlyTheStoryDemoRelationalSlice()
     {
         var options = new DbContextOptionsBuilder<ConsciaDbContext>()
