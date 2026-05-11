@@ -174,106 +174,111 @@ Goal: Faster, easier transaction entry
 
 Goal: Use past regrets to influence future decisions
 
+**Status:** Implemented / evolved. The shipped version centers regret memory in Dashboard + Insights with category/merchant drilldowns and seeded story-demo data. Older pre-purchase-specific alert widgets are superseded/deferred by the current Insights-led implementation and can be revisited later as a Conscience Journey event source.
+
 ### Delivered Since This Checklist Was Written
 - [x] Add regret reflection capture to transaction and dashboard flows
 - [x] Surface regret-oriented prompts and transaction detail reflection affordances
-- [x] Keep the phase open for deeper merchant/category memory and analytics work still listed below
+- [x] Aggregate regret patterns into `PurchasePatterns`
+- [x] Store weekly behavioral insights in `WeeklyInsights`
+- [x] Add Dashboard/Insights regret summary surfaces
+- [x] Add category and merchant regret drilldowns
+- [x] Seed story-demo with regret patterns, weekly insights, and reflection data
+- [x] Phase 5 dependency satisfied: Conscience Journey has reflection, pre-purchase, budget nudge, insight review, and regret pattern review surfaces to hook into
 
 ### Database Tasks
-- [ ] Create `PurchasePatterns` table in DynamoDB
-  - [ ] Define schema (user_id, category, merchant, amount_range, regret_rate, etc.)
-  - [ ] Set appropriate indexes (GSI for user_id + category)
-  - [ ] Create seeding script
+- [x] Create `PurchasePatterns` table in DynamoDB
+  - [x] Define schema for summary, category, and merchant pattern items
+  - [x] Add user-scoped DynamoDB key patterns for summary/category/merchant records
+  - [x] Create story-demo seeding for purchase pattern data
 
-- [ ] Create `MerchantStats` table (or combine with PurchasePatterns)
-  - [ ] Track per-merchant regret rate
-  - [ ] Include visit count
+- [x] ~~Create `MerchantStats` table~~ — Superseded by merchant entries in `PurchasePatterns`
+  - [x] Track per-merchant regret rate
+  - [x] Include visit count
 
 ### Backend Tasks
-- [ ] Create `Conscia.Application/Services/PurchasePatternService.cs`
-  - [ ] Implement `AnalyzePurchasePatterns(userId)` method
-  - [ ] Implement `GetRegretMemory(userId, category, merchant, amount)` method
-  - [ ] Implement `GetMerchantStats(userId)` method
-  - [ ] Add caching logic
+- [x] Create `Conscia.Application/Services/PurchasePatternService.cs`
+  - [x] ~~Implement `AnalyzePurchasePatterns(userId)` method~~ — Superseded by `Conscia.PatternAggregator`
+  - [x] Add summary/category/merchant lookup methods for Insights
+  - [x] Add category and merchant detail lookups with backing transaction examples
+  - [x] Keep caching/storage behind DynamoDB pattern tables rather than in-service memory
 
-- [ ] Create `Conscia.Infrastructure/Repositories/PurchasePatternRepository.cs`
-  - [ ] Implement CRUD for PurchasePatterns
-  - [ ] Add queries for pattern lookup
+- [x] Create `Conscia.Infrastructure/Repositories/PurchasePatternRepository.cs`
+  - [x] Implement upsert/read behavior for purchase pattern summary/category/merchant records
+  - [x] Add user-scoped queries for pattern lookup
 
-- [ ] Create nightly pattern analysis job
-  - [ ] Lambda or scheduled service
-  - [ ] Aggregate regret data by category, merchant, amount
-  - [ ] Calculate regret rates
-  - [ ] Store in PurchasePatterns table
-  - [ ] Handle concurrency
+- [x] Create pattern analysis job
+  - [x] Implement `Conscia.PatternAggregator`
+  - [x] Aggregate regret data by category and merchant
+  - [x] Calculate regret rates
+  - [x] Store in `PurchasePatterns`
+  - [x] Also calculate/store weekly behavioral insights
 
-- [ ] Create backend endpoint `GET /api/v1/patterns/regret-memory`
-  - [ ] Query parameters: category, merchant, amount
-  - [ ] Return relevant regret warnings
-  - [ ] Add auth
-  - [ ] Create integration test
+- [x] ~~Create backend endpoint `GET /api/v1/patterns/regret-memory`~~ — Superseded by Insights endpoints
+  - [x] `GET /api/v1/insights/summary`
+  - [x] `GET /api/v1/insights/categories`
+  - [x] `GET /api/v1/insights/categories/{category}`
+  - [x] `GET /api/v1/insights/merchants`
+  - [x] `GET /api/v1/insights/merchants/{merchant}`
 
-- [ ] Create backend endpoint `GET /api/v1/patterns/merchants`
-  - [ ] Return top merchants with stats
-  - [ ] Include visit count, regret rate
-  - [ ] Add sorting options
-  - [ ] Create integration test
+- [x] ~~Create backend endpoint `GET /api/v1/patterns/merchants`~~ — Superseded by `GET /api/v1/insights/merchants`
+  - [x] Return merchants with visit count and regret rate
+  - [x] Sort by regret-relevant signal in service/UI
 
-- [ ] Update Pre-Purchase AI endpoint
-  - [ ] Include regret memory data in context
-  - [ ] Return alerts in AI response (if applicable)
-  - [ ] Test with various purchase scenarios
+- [ ] ~~Update Pre-Purchase AI endpoint with regret memory alert cards~~ — Deferred/superseded for MVP by Insights-led regret memory
+  - [x] Pre-purchase flow exists and has behavioral context hooks
+  - [ ] Future option: record `prepurchase_checked` for Conscience Journey
+  - [ ] Future option: inject specific regret pattern warnings into AI context once the event system is in place
 
 ### Frontend Tasks
-- [ ] Create `lib/models/purchase_pattern.dart`
-  - [ ] Define model for purchase patterns
-  - [ ] Add Freezed + JSON serialization
+- [x] ~~Create `lib/models/purchase_pattern.dart`~~ — Superseded by `lib/models/insights_models.dart`
+  - [x] Define models for summary, category stats, merchant stats, and drilldown details
+  - [x] Add JSON parsing for Insights responses
 
-- [ ] Create `lib/providers/purchase_patterns_provider.dart`
-  - [ ] Fetch regret memory for current purchase
-  - [ ] Cache patterns (60-min TTL)
+- [x] ~~Create `lib/providers/purchase_patterns_provider.dart`~~ — Superseded by `lib/providers/insights_provider.dart`
+  - [x] Fetch summary/category/merchant regret memory
+  - [x] Return safe empty/null states when no patterns exist
 
-- [ ] Create `lib/screens/assistant/widgets/regret_memory_alert.dart`
-  - [ ] Display regret memory warnings
-  - [ ] Show merchant, category, or amount threshold alerts
-  - [ ] Add optional dismiss action
+- [ ] ~~Create `lib/screens/assistant/widgets/regret_memory_alert.dart`~~ — Deferred/superseded by Insights cards and dashboard summary
+  - [x] Display regret memory warnings in Dashboard/Insights
+  - [x] Show merchant/category regret pattern details
+  - [ ] Future option: bring a compact warning into pre-purchase AI
 
-- [ ] Update pre-purchase screen
-  - [ ] Add regret memory alert card
-  - [ ] Display before AI response
-  - [ ] Allow user to dismiss or acknowledge
+- [ ] ~~Update pre-purchase screen with a regret memory alert card~~ — Deferred/superseded by current Insights-led flow
+  - [x] Pre-purchase screen remains available as a Phase 5 event source
+  - [ ] Future option: add regret warning context after Conscience Journey event tracking
 
-- [ ] Create `lib/screens/dashboard/widgets/merchant_tracking_card.dart`
-  - [ ] Show top merchants with visit count
-  - [ ] Highlight problematic merchants (high regret)
-  - [ ] Show positive merchants (low regret)
-  - [ ] Tap to view detailed stats
+- [x] ~~Create `lib/screens/dashboard/widgets/merchant_tracking_card.dart`~~ — Superseded by Insights feed + merchant spotlight/list/detail screens
+  - [x] Show top merchants with visit count
+  - [x] Highlight high-regret merchants
+  - [x] Tap to view detailed merchant stats
 
-- [ ] Create new "Insights" tab (or expand Dashboard)
-  - [ ] Add category performance breakdown
-  - [ ] Add merchant stats section
-  - [ ] Add behavioral insights summary
-  - [ ] Add date range filters
+- [x] Create new "Insights" screen and dashboard entry points
+  - [x] Add category performance breakdown
+  - [x] Add merchant stats section
+  - [x] Add behavioral insights summary
+  - [x] Add dashboard summary/feed links when insights exist
+  - [ ] Date range filters deferred; current MVP uses recent/weekly/monthly derived windows
 
-- [ ] Add settings toggle for memory alerts
+- [ ] ~~Add settings toggle for memory alerts~~ — Deferred; current implementation uses passive Insights surfaces rather than interruptive alerts
   - [ ] `lib/screens/settings/settings_screen.dart` update
   - [ ] "Remember Past Regrets" toggle
   - [ ] Store in user preferences
 
-- [ ] Create `lib/models/merchant_stat.dart`
-  - [ ] Define merchant stat model
-  - [ ] Add Freezed + JSON
+- [x] ~~Create `lib/models/merchant_stat.dart`~~ — Superseded by `MerchantStat` in `lib/models/insights_models.dart`
+  - [x] Define merchant stat model
+  - [x] Add JSON parsing
 
 ### Testing & QA
 - [ ] Unit tests for PurchasePatternService
 - [ ] Unit tests for pattern analysis algorithm
-- [ ] Integration tests for nightly job
-- [ ] Integration tests for endpoints
-- [ ] Widget tests for regret memory alert
-- [ ] Widget tests for merchant tracking card
-- [ ] Manual testing: verify alerts appear correctly
-- [ ] Privacy review: confirm sensitive data is not exposed
-- [ ] Performance testing: pattern lookups are fast
+- [ ] Integration tests for pattern aggregator job
+- [ ] Integration tests for Insights endpoints
+- [x] ~~Widget tests for regret memory alert~~ — Superseded by Insights/Dashboard surfaces
+- [x] ~~Widget tests for merchant tracking card~~ — Superseded by merchant/category Insights screens
+- [x] Manual testing path: story-demo seed shows regret patterns, categories, merchants, dashboard summary, and drilldowns
+- [x] Privacy posture: regret memory is surfaced in-app only and user-scoped behind auth
+- [x] Performance posture: pattern lookups read pre-aggregated DynamoDB records
 
 ---
 

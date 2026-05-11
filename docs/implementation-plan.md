@@ -337,7 +337,7 @@ Scan receipt QR code to auto-populate transaction.
 ## 5. Regret Memory System
 
 ### Current State
-Reflections stored in DB but not surfaced proactively to influence decisions.
+Implemented/evolved. Reflections are captured, regret patterns are aggregated into Dashboard/Insights, and category/merchant drilldowns now surface the user's regret memory. The original pre-purchase alert-card concept is deferred; the current MVP path uses Insights-led memory and keeps pre-purchase available as a future event/context hook.
 
 ### Vision
 "Last time you spent £150 on games, you marked it 'Not worth it'"—use history to reinforce behavior change.
@@ -365,6 +365,8 @@ user1 | coffee | Starbucks | £4-6 | 20% regret | 25 | 2026-05-03
 
 #### 5.2 Pre-Purchase Memory Alerts
 During pre-purchase assistant, surface relevant regret history.
+
+**Status:** Superseded/deferred for MVP. Regret memory currently surfaces through Dashboard + Insights summary/category/merchant cards. A compact pre-purchase warning can be added later using the same `PurchasePatterns` data and the Conscience Journey event system.
 
 **Alert Types:**
 
@@ -405,6 +407,8 @@ This decision is at 9:15 PM
 
 #### 5.3 Merchant Tracking
 Track spending patterns by merchant.
+
+**Status:** Implemented/evolved through the Insights merchant list and merchant detail screens rather than a standalone dashboard merchant card.
 
 **Dashboard Card:**
 ```
