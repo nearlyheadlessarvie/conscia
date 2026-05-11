@@ -246,7 +246,7 @@ else
     builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         .AddJwtBearer(options =>
         {
-            var region = builder.Configuration["AWS:Region"] ?? "us-east-1";
+            var region = builder.Configuration["AWS:Region"] ?? "ap-southeast-1";
             var userPoolId = builder.Configuration["Auth:Cognito:UserPoolId"]!;
             options.Authority = $"https://cognito-idp.{region}.amazonaws.com/{userPoolId}";
             options.TokenValidationParameters = new TokenValidationParameters

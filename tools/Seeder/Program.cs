@@ -14,7 +14,7 @@ Console.WriteLine($"[Seeder] Profile: {profile}");
 var dynamoConfig = new AmazonDynamoDBConfig
 {
     ServiceURL = "http://localhost:8000",
-    AuthenticationRegion = "us-east-1"
+    AuthenticationRegion = "ap-southeast-1"
 };
 var dynamo = new AmazonDynamoDBClient(new BasicAWSCredentials("local", "local"), dynamoConfig);
 
@@ -22,7 +22,7 @@ var s3Config = new AmazonS3Config
 {
     ServiceURL = "http://localhost:9000",
     ForcePathStyle = true,
-    AuthenticationRegion = "us-east-1"
+    AuthenticationRegion = "ap-southeast-1"
 };
 var s3 = new AmazonS3Client(new BasicAWSCredentials("minioadmin", "minioadmin"), s3Config);
 

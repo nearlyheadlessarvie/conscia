@@ -18,7 +18,7 @@ services.AddSingleton<IAmazonDynamoDB>(_ =>
     new AmazonDynamoDBClient(new AmazonDynamoDBConfig
     {
         RegionEndpoint = RegionEndpoint.GetBySystemName(
-            Environment.GetEnvironmentVariable("AWS_DEFAULT_REGION") ?? "us-east-1")
+            Environment.GetEnvironmentVariable("AWS_DEFAULT_REGION") ?? "ap-southeast-1")
     }));
 
 services.AddScoped<IPurchasePatternRepository, PurchasePatternRepository>();
