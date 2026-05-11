@@ -144,6 +144,7 @@ builder.Services.AddScoped<IInAppAlertRepository, InAppAlertRepository>();
 builder.Services.AddScoped<IPushDeviceTokenRepository, PushDeviceTokenRepository>();
 builder.Services.AddScoped<IOutboxEventRepository, OutboxEventRepository>();
 builder.Services.AddScoped<IMonthlyCategorySpendRepository, MonthlyCategorySpendRepository>();
+builder.Services.AddScoped<IConscienceJourneyRepository, ConscienceJourneyRepository>();
 
 // --- Store Validation ---
 builder.Services.Configure<AppleStoreOptions>(builder.Configuration.GetSection(AppleStoreOptions.SectionName));
