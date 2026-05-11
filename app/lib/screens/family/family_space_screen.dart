@@ -106,6 +106,9 @@ class _FamilySpaceOverview extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final overview = ref.watch(familyOverviewProvider);
+    final role = space.role.toLowerCase();
+    final canInvite = role == 'owner' && !space.isReadOnly;
+    final canContribute = role != 'viewer' && !space.isReadOnly;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -169,30 +172,73 @@ class _FamilySpaceOverview extends ConsumerWidget {
         ),
         ScreenSection(
           title: 'Next steps',
-          child: FeedCard(
-            child: Column(
-              children: [
-                _FamilyActionRow(
-                  icon: Icons.person_add_alt_1_outlined,
-                  title: 'Invite family',
-                  subtitle: 'Send an email invite that appears when they join.',
-                  onTap: () => context.push(AppRoutes.familyInvites),
+          child: !canInvite && !canContribute
+              ? const FeedCard(
+                  child: _ReadOnlyFamilySpaceNotice(),
+                )
+              : FeedCard(
+                  child: Column(
+                    children: [
+                      if (canInvite)
+                        _FamilyActionRow(
+                          icon: Icons.person_add_alt_1_outlined,
+                          title: 'Invite family',
+                          subtitle:
+                              'Send an email invite that appears when they join.',
+                          onTap: () => context.push(AppRoutes.familyInvites),
+                        ),
+                      if (canContribute) ...[
+                        _FamilyActionRow(
+                          icon: Icons.upload_file_outlined,
+                          title: 'Import personal records',
+                          subtitle:
+                              'Choose exactly what becomes visible to Family.',
+                          onTap: () => context.push(AppRoutes.familyImport),
+                        ),
+                        _FamilyActionRow(
+                          icon: Icons.repeat_outlined,
+                          title: 'Schedule contribution',
+                          subtitle:
+                              'Track recurring family contributions without salary details.',
+                          onTap: () =>
+                              context.push(AppRoutes.familyContribution),
+                        ),
+                      ],
+                    ],
+                  ),
                 ),
-                _FamilyActionRow(
-                  icon: Icons.upload_file_outlined,
-                  title: 'Import personal records',
-                  subtitle: 'Choose exactly what becomes visible to Family.',
-                  onTap: () => context.push(AppRoutes.familyImport),
+        ),
+      ],
+    );
+  }
+}
+
+class _ReadOnlyFamilySpaceNotice extends StatelessWidget {
+  const _ReadOnlyFamilySpaceNotice();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Icon(Icons.visibility_outlined),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('View-only access', style: theme.textTheme.titleSmall),
+              const SizedBox(height: 4),
+              Text(
+                'You can follow shared household activity, but only owners and contributors can add records.',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                  height: 1.3,
                 ),
-                _FamilyActionRow(
-                  icon: Icons.repeat_outlined,
-                  title: 'Schedule contribution',
-                  subtitle:
-                      'Track recurring family contributions without salary details.',
-                  onTap: () => context.push(AppRoutes.familyContribution),
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ],

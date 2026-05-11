@@ -76,4 +76,40 @@ void main() {
     expect(find.text('Recurring together'), findsOneWidget);
     expect(find.text('Home internet'), findsOneWidget);
   });
+
+  testWidgets('family space screen hides write actions for viewers', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          familySpaceProvider.overrideWith(
+            (ref) async => const FamilySpace(
+              id: 'family-1',
+              name: 'Santos Household',
+              currencyCode: 'PHP',
+              isReadOnly: false,
+              role: 'Viewer',
+            ),
+          ),
+          familyOverviewProvider.overrideWith(
+            (ref) async => const FamilyOverview(
+              familySpaceId: 'family-1',
+              budgets: [],
+              recentActivity: [],
+              recurringItems: [],
+            ),
+          ),
+        ],
+        child: const MaterialApp(home: FamilySpaceScreen()),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    expect(find.text('View-only access'), findsOneWidget);
+    expect(find.text('Invite family'), findsNothing);
+    expect(find.text('Import personal records'), findsNothing);
+    expect(find.text('Schedule contribution'), findsNothing);
+  });
 }
