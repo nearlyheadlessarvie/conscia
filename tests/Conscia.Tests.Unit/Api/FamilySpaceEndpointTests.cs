@@ -279,6 +279,57 @@ public class FamilySpaceEndpointTests
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
 
+    [Fact]
+    public async Task GetOverview_ReturnsFamilySnapshot()
+    {
+        await using var factory = new TestWebAppFactory();
+        var familySpaceId = Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
+        factory.FamilySpaceServiceMock
+            .Setup(s => s.GetOverviewAsync(UserId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new FamilySpaceOverviewDto(
+                familySpaceId,
+                [
+                    new FamilyBudgetOverviewDto(
+                        Guid.Parse("11111111-1111-1111-1111-111111111111"),
+                        "Dining",
+                        4000m,
+                        280m,
+                        7,
+                        "PHP")
+                ],
+                [
+                    new FamilyActivityDto(
+                        Guid.Parse("22222222-2222-2222-2222-222222222222"),
+                        "Starbucks",
+                        "Dining",
+                        "Expense",
+                        280m,
+                        "PHP",
+                        DateTime.Parse("2026-05-11T00:00:00Z"))
+                ],
+                [
+                    new FamilyRecurringOverviewDto(
+                        Guid.Parse("33333333-3333-3333-3333-333333333333"),
+                        "Home internet",
+                        "Bills",
+                        "Expense",
+                        2499m,
+                        "PHP",
+                        "Monthly",
+                        DateTime.Parse("2026-05-16T00:00:00Z"))
+                ]));
+
+        var client = CreateAuthorizedClient(factory);
+        var response = await client.GetAsync("/api/v1/family-space/overview");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var json = await response.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal(familySpaceId, json.GetProperty("familySpaceId").GetGuid());
+        Assert.Equal("Dining", json.GetProperty("budgets")[0].GetProperty("category").GetString());
+        Assert.Equal("Starbucks", json.GetProperty("recentActivity")[0].GetProperty("label").GetString());
+        Assert.Equal("Home internet", json.GetProperty("recurringItems")[0].GetProperty("label").GetString());
+    }
+
     private static HttpClient CreateAuthorizedClient(
         TestWebAppFactory factory,
         string tier = "Premium",

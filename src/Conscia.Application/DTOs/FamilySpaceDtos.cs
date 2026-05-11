@@ -21,3 +21,36 @@ public record FamilyInviteDto(
     string Role,
     DateTime CreatedAt,
     DateTime ExpiresAt);
+
+public record FamilySpaceOverviewDto(
+    Guid FamilySpaceId,
+    IReadOnlyList<FamilyBudgetOverviewDto> Budgets,
+    IReadOnlyList<FamilyActivityDto> RecentActivity,
+    IReadOnlyList<FamilyRecurringOverviewDto> RecurringItems);
+
+public record FamilyBudgetOverviewDto(
+    Guid Id,
+    string Category,
+    decimal MonthlyLimit,
+    decimal SpentThisMonth,
+    int UsagePercent,
+    string CurrencyCode);
+
+public record FamilyActivityDto(
+    Guid Id,
+    string Label,
+    string Category,
+    string Type,
+    decimal Amount,
+    string CurrencyCode,
+    DateTime Date);
+
+public record FamilyRecurringOverviewDto(
+    Guid Id,
+    string Label,
+    string Category,
+    string Type,
+    decimal Amount,
+    string CurrencyCode,
+    string Cadence,
+    DateTime NextRunAt);

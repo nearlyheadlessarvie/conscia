@@ -384,6 +384,107 @@ public class FamilySpaceServiceTests
             It.IsAny<CancellationToken>()), Times.Once);
     }
 
+    [Fact]
+    public async Task GetOverviewAsync_MemberReceivesSharedBudgetsActivityAndRecurringItems()
+    {
+        var userId = Guid.NewGuid();
+        var familySpaceId = Guid.NewGuid();
+        var now = DateTime.UtcNow;
+        _repo.Setup(r => r.GetMembershipByUserIdAsync(userId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new FamilyMember
+            {
+                UserId = userId,
+                FamilySpaceId = familySpaceId,
+                Role = FamilyMemberRole.Contributor
+            });
+        _budgets.Setup(r => r.ListByFamilySpaceAsync(familySpaceId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync([
+                new Budget
+                {
+                    Id = Guid.NewGuid(),
+                    UserId = Guid.NewGuid(),
+                    Category = "Dining",
+                    MonthlyLimit = 4000m,
+                    CurrencyCode = "PHP",
+                    Scope = RecordScope.Family,
+                    FamilySpaceId = familySpaceId
+                }
+            ]);
+        _transactions.Setup(r => r.GetByFamilySpaceAndDateRangeAsync(
+                familySpaceId,
+                It.IsAny<DateTime>(),
+                It.IsAny<DateTime>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync([
+                new Transaction
+                {
+                    Id = Guid.NewGuid(),
+                    UserId = Guid.NewGuid(),
+                    Type = TransactionType.Expense,
+                    Amount = new Money(280m, "PHP"),
+                    Category = "Dining",
+                    Counterparty = "Starbucks",
+                    Date = now.AddDays(-1),
+                    Scope = RecordScope.Family,
+                    FamilySpaceId = familySpaceId
+                },
+                new Transaction
+                {
+                    Id = Guid.NewGuid(),
+                    UserId = Guid.NewGuid(),
+                    Type = TransactionType.Income,
+                    Amount = new Money(15000m, "PHP"),
+                    Category = "Contribution",
+                    Counterparty = "Freelance Client",
+                    Date = now.AddDays(-2),
+                    Scope = RecordScope.Family,
+                    FamilySpaceId = familySpaceId
+                }
+            ]);
+        _recurringSchedules.Setup(r => r.ListByFamilySpaceAsync(familySpaceId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync([
+                new RecurringSchedule
+                {
+                    Id = Guid.NewGuid(),
+                    UserId = Guid.NewGuid(),
+                    Type = TransactionType.Expense,
+                    Amount = new Money(2499m, "PHP"),
+                    Category = "Bills",
+                    Counterparty = "Home internet",
+                    StartDate = now.AddMonths(-1),
+                    Cadence = RecurringCadence.Monthly,
+                    NextRunAt = now.AddDays(5),
+                    Scope = RecordScope.Family,
+                    FamilySpaceId = familySpaceId
+                }
+            ]);
+
+        var overview = await CreateService().GetOverviewAsync(userId);
+
+        Assert.Equal(familySpaceId, overview.FamilySpaceId);
+        var budget = Assert.Single(overview.Budgets);
+        Assert.Equal("Dining", budget.Category);
+        Assert.Equal(4000m, budget.MonthlyLimit);
+        Assert.Equal(280m, budget.SpentThisMonth);
+        Assert.Equal(7, budget.UsagePercent);
+        Assert.Equal(2, overview.RecentActivity.Count);
+        Assert.Equal("Starbucks", overview.RecentActivity[0].Label);
+        Assert.Equal("Home internet", Assert.Single(overview.RecurringItems).Label);
+    }
+
+    [Fact]
+    public async Task GetOverviewAsync_UserWithoutFamilyThrows()
+    {
+        var userId = Guid.NewGuid();
+        _repo.Setup(r => r.GetMembershipByUserIdAsync(userId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((FamilyMember?)null);
+
+        var error = await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
+            CreateService().GetOverviewAsync(userId));
+
+        Assert.Equal("You do not belong to a Family Space.", error.Message);
+    }
+
     private static bool PayloadHasEmail(string payload, string email)
     {
         using var document = JsonDocument.Parse(payload);

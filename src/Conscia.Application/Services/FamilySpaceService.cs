@@ -94,6 +94,77 @@ public class FamilySpaceService : IFamilySpaceService
             membership.Role.ToString());
     }
 
+    public async Task<FamilySpaceOverviewDto> GetOverviewAsync(Guid userId, CancellationToken ct = default)
+    {
+        var member = await RequireMemberAsync(userId, ct);
+        var now = DateTime.UtcNow;
+        var monthStart = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+        var monthEnd = monthStart.AddMonths(1).AddTicks(-1);
+
+        var budgets = await _budgets.ListByFamilySpaceAsync(member.FamilySpaceId, ct);
+        var transactions = await _transactions.GetByFamilySpaceAndDateRangeAsync(
+            member.FamilySpaceId,
+            monthStart,
+            monthEnd,
+            ct);
+        var recurring = await _recurringSchedules.ListByFamilySpaceAsync(member.FamilySpaceId, ct);
+
+        var expensesByCategory = transactions
+            .Where(t => t.Type == TransactionType.Expense)
+            .GroupBy(t => t.Category, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(
+                g => g.Key,
+                g => g.Sum(t => t.Amount.Amount),
+                StringComparer.OrdinalIgnoreCase);
+
+        return new FamilySpaceOverviewDto(
+            member.FamilySpaceId,
+            budgets
+                .OrderBy(b => b.Category)
+                .Select(b =>
+                {
+                    var spent = expensesByCategory.GetValueOrDefault(b.Category, 0m);
+                    var usagePercent = b.MonthlyLimit <= 0
+                        ? 0
+                        : (int)Math.Round(spent / b.MonthlyLimit * 100m, MidpointRounding.AwayFromZero);
+
+                    return new FamilyBudgetOverviewDto(
+                        b.Id,
+                        b.Category,
+                        b.MonthlyLimit,
+                        spent,
+                        usagePercent,
+                        b.CurrencyCode);
+                })
+                .ToList(),
+            transactions
+                .OrderByDescending(t => t.Date)
+                .Take(5)
+                .Select(t => new FamilyActivityDto(
+                    t.Id,
+                    string.IsNullOrWhiteSpace(t.Counterparty) ? t.Category : t.Counterparty,
+                    t.Category,
+                    t.Type.ToString(),
+                    t.Amount.Amount,
+                    t.Amount.CurrencyCode,
+                    t.Date))
+                .ToList(),
+            recurring
+                .Where(s => s.IsActive)
+                .OrderBy(s => s.NextRunAt)
+                .Take(5)
+                .Select(s => new FamilyRecurringOverviewDto(
+                    s.Id,
+                    string.IsNullOrWhiteSpace(s.Counterparty) ? $"{s.Category} recurring" : s.Counterparty,
+                    s.Category,
+                    s.Type.ToString(),
+                    s.Amount.Amount,
+                    s.Amount.CurrencyCode,
+                    s.Cadence.ToString(),
+                    s.NextRunAt))
+                .ToList());
+    }
+
     public async Task<FamilyInvite> InviteAsync(
         Guid inviterUserId,
         string email,
@@ -317,14 +388,17 @@ public class FamilySpaceService : IFamilySpaceService
 
     private async Task<FamilyMember> RequireContributorAsync(Guid userId, CancellationToken ct)
     {
-        var member = await _repository.GetMembershipByUserIdAsync(userId, ct)
-            ?? throw new UnauthorizedAccessException("You do not belong to a Family Space.");
+        var member = await RequireMemberAsync(userId, ct);
 
         if (member.Role == FamilyMemberRole.Viewer)
             throw new UnauthorizedAccessException("Viewer cannot share records.");
 
         return member;
     }
+
+    private async Task<FamilyMember> RequireMemberAsync(Guid userId, CancellationToken ct) =>
+        await _repository.GetMembershipByUserIdAsync(userId, ct)
+            ?? throw new UnauthorizedAccessException("You do not belong to a Family Space.");
 
     private static (DateTime From, DateTime To) ResolveImportDateRange(DateTime? from, DateTime? to)
     {

@@ -18,6 +18,19 @@ public static class FamilySpaceEndpoints
             return current is null ? Results.NoContent() : Results.Ok(current);
         }).WithName("GetCurrentFamilySpace");
 
+        group.MapGet("/overview", async (HttpContext ctx, IFamilySpaceService svc) =>
+        {
+            try
+            {
+                var overview = await svc.GetOverviewAsync(ctx.User.GetUserId(), ctx.RequestAborted);
+                return Results.Ok(overview);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Results.Json(new { error = ex.Message }, statusCode: StatusCodes.Status403Forbidden);
+            }
+        }).WithName("GetFamilySpaceOverview");
+
         group.MapPost("/", async (HttpContext ctx, CreateFamilySpaceDto dto, IFamilySpaceService svc) =>
         {
             if (string.IsNullOrWhiteSpace(dto.Name))

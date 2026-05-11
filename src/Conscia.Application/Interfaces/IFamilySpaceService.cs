@@ -8,6 +8,7 @@ public interface IFamilySpaceService
 {
     Task<FamilySpace> CreateAsync(Guid userId, string name, string currencyCode, CancellationToken ct = default);
     Task<FamilySpaceDto?> GetCurrentAsync(Guid userId, CancellationToken ct = default);
+    Task<FamilySpaceOverviewDto> GetOverviewAsync(Guid userId, CancellationToken ct = default);
     Task<FamilyInvite> InviteAsync(Guid inviterUserId, string email, FamilyMemberRole role, CancellationToken ct = default);
     Task<IReadOnlyList<FamilyInviteDto>> GetPendingInvitesAsync(string email, CancellationToken ct = default);
     Task<FamilyMember> AcceptInviteAsync(Guid userId, string email, Guid inviteId, CancellationToken ct = default);
