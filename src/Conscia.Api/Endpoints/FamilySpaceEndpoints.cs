@@ -71,6 +71,66 @@ public static class FamilySpaceEndpoints
             }
         }).WithName("CreateFamilyInvite");
 
+        group.MapGet("/invites", async (HttpContext ctx, IFamilySpaceService svc) =>
+        {
+            var email = ctx.User.GetEmail();
+            if (string.IsNullOrWhiteSpace(email))
+                return Results.BadRequest(new { error = "Email claim is required to find Family Space invites." });
+
+            var invites = await svc.GetPendingInvitesAsync(email, ctx.RequestAborted);
+            return Results.Ok(invites);
+        }).WithName("ListFamilyInvites");
+
+        group.MapPost("/invites/{inviteId:guid}/accept", async (HttpContext ctx, Guid inviteId, IFamilySpaceService svc) =>
+        {
+            try
+            {
+                var member = await svc.AcceptInviteAsync(
+                    ctx.User.GetUserId(),
+                    ctx.User.GetEmail(),
+                    inviteId,
+                    ctx.RequestAborted);
+
+                return Results.Ok(new
+                {
+                    member.Id,
+                    member.FamilySpaceId,
+                    Role = member.Role.ToString(),
+                    member.JoinedAt
+                });
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Results.Json(new { error = ex.Message }, statusCode: StatusCodes.Status403Forbidden);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return Results.BadRequest(new { error = ex.Message });
+            }
+        }).WithName("AcceptFamilyInvite");
+
+        group.MapPost("/invites/{inviteId:guid}/decline", async (HttpContext ctx, Guid inviteId, IFamilySpaceService svc) =>
+        {
+            try
+            {
+                await svc.DeclineInviteAsync(
+                    ctx.User.GetUserId(),
+                    ctx.User.GetEmail(),
+                    inviteId,
+                    ctx.RequestAborted);
+
+                return Results.NoContent();
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Results.Json(new { error = ex.Message }, statusCode: StatusCodes.Status403Forbidden);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return Results.BadRequest(new { error = ex.Message });
+            }
+        }).WithName("DeclineFamilyInvite");
+
         group.MapPost("/import-preview", async (HttpContext ctx, FamilyImportPreviewRequestDto dto, IFamilySpaceService svc) =>
         {
             try

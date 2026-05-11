@@ -12,3 +12,12 @@ public record FamilySpaceDto(
     string Role);
 
 public record CreateFamilyInviteDto(string Email, FamilyMemberRole Role);
+
+public record FamilyInviteDto(
+    Guid Id,
+    Guid FamilySpaceId,
+    string FamilySpaceName,
+    string Email,
+    string Role,
+    DateTime CreatedAt,
+    DateTime ExpiresAt);

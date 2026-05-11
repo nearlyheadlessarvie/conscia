@@ -30,6 +30,9 @@ public class LambdaProxyFamilySpaceRepository : LambdaProxyRepository, IFamilySp
     public Task<FamilyInvite?> GetActiveInviteByEmailAsync(string normalizedEmail, CancellationToken ct = default) =>
         InvokeAsync<FamilyInvite?>("FamilySpace.GetActiveInviteByEmail", new { Email = normalizedEmail }, ct);
 
+    public Task<IReadOnlyList<FamilyInvite>> ListActiveInvitesByEmailAsync(string normalizedEmail, CancellationToken ct = default) =>
+        InvokeAsync<IReadOnlyList<FamilyInvite>>("FamilySpace.ListActiveInvitesByEmail", new { Email = normalizedEmail }, ct);
+
     public Task<FamilyMember> AddMemberAsync(FamilyMember member, CancellationToken ct = default) =>
         InvokeAsync<FamilyMember>("FamilySpace.AddMember", member, ct);
 

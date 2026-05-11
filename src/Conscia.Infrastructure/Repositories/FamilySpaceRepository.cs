@@ -59,6 +59,22 @@ public class FamilySpaceRepository : IFamilySpaceRepository
             .FirstOrDefaultAsync(ct);
     }
 
+    public async Task<IReadOnlyList<FamilyInvite>> ListActiveInvitesByEmailAsync(
+        string normalizedEmail,
+        CancellationToken ct = default)
+    {
+        var email = NormalizeEmail(normalizedEmail);
+        var now = DateTime.UtcNow;
+
+        return await _db.FamilyInvites
+            .Where(x => x.Email == email
+                && x.AcceptedAt == null
+                && x.DeclinedAt == null
+                && x.ExpiresAt > now)
+            .OrderByDescending(x => x.CreatedAt)
+            .ToListAsync(ct);
+    }
+
     public async Task<FamilyMember> AddMemberAsync(FamilyMember member, CancellationToken ct = default)
     {
         await _db.FamilyMembers.AddAsync(member, ct);

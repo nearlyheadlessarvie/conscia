@@ -127,6 +127,29 @@ public class FamilySpaceService : IFamilySpaceService
         return result;
     }
 
+    public async Task<IReadOnlyList<FamilyInviteDto>> GetPendingInvitesAsync(
+        string email,
+        CancellationToken ct = default)
+    {
+        var invites = await _repository.ListActiveInvitesByEmailAsync(NormalizeEmail(email), ct);
+        var results = new List<FamilyInviteDto>(invites.Count);
+
+        foreach (var invite in invites)
+        {
+            var space = await _repository.GetByIdAsync(invite.FamilySpaceId, ct);
+            results.Add(new FamilyInviteDto(
+                invite.Id,
+                invite.FamilySpaceId,
+                space?.Name ?? "Family Space",
+                invite.Email,
+                invite.Role.ToString(),
+                invite.CreatedAt,
+                invite.ExpiresAt));
+        }
+
+        return results;
+    }
+
     public async Task<FamilyMember> AcceptInviteAsync(
         Guid userId,
         string email,

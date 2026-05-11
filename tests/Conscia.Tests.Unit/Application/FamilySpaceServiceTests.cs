@@ -162,6 +162,40 @@ public class FamilySpaceServiceTests
     }
 
     [Fact]
+    public async Task GetPendingInvitesAsync_ReturnsActiveInvitesWithFamilySpaceNames()
+    {
+        var familySpaceId = Guid.NewGuid();
+        var inviteId = Guid.NewGuid();
+        _repo.Setup(r => r.ListActiveInvitesByEmailAsync("wife@example.com", It.IsAny<CancellationToken>()))
+            .ReturnsAsync([
+                new FamilyInvite
+                {
+                    Id = inviteId,
+                    FamilySpaceId = familySpaceId,
+                    Email = "wife@example.com",
+                    Role = FamilyMemberRole.Contributor,
+                    CreatedAt = DateTime.UtcNow.AddDays(-1),
+                    ExpiresAt = DateTime.UtcNow.AddDays(13)
+                }
+            ]);
+        _repo.Setup(r => r.GetByIdAsync(familySpaceId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new FamilySpace
+            {
+                Id = familySpaceId,
+                Name = "Santos Household",
+                CurrencyCode = "PHP"
+            });
+
+        var invites = await CreateService().GetPendingInvitesAsync(" Wife@Example.com ");
+
+        var invite = Assert.Single(invites);
+        Assert.Equal(inviteId, invite.Id);
+        Assert.Equal("Santos Household", invite.FamilySpaceName);
+        Assert.Equal("Contributor", invite.Role);
+        _repo.Verify(r => r.ListActiveInvitesByEmailAsync("wife@example.com", It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
     public async Task PreviewImportAsync_ContributorPreviewsOnlyPersonalRecordsMatchingCategory()
     {
         var userId = Guid.NewGuid();

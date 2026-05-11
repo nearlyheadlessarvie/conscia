@@ -151,6 +151,79 @@ public class FamilySpaceEndpointTests
     }
 
     [Fact]
+    public async Task ListInvites_ReturnsPendingInvitesForSignedInEmail()
+    {
+        await using var factory = new TestWebAppFactory();
+        var inviteId = Guid.Parse("cccccccc-cccc-cccc-cccc-cccccccccccc");
+        factory.FamilySpaceServiceMock
+            .Setup(s => s.GetPendingInvitesAsync("alice@example.com", It.IsAny<CancellationToken>()))
+            .ReturnsAsync([
+                new FamilyInviteDto(
+                    inviteId,
+                    Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"),
+                    "Santos Household",
+                    "alice@example.com",
+                    "Contributor",
+                    DateTime.UtcNow.AddDays(-1),
+                    DateTime.UtcNow.AddDays(13))
+            ]);
+
+        var client = CreateAuthorizedClient(factory, email: "alice@example.com");
+        var response = await client.GetAsync("/api/v1/family-space/invites");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var json = await response.Content.ReadFromJsonAsync<JsonElement>();
+        var invite = Assert.Single(json.EnumerateArray());
+        Assert.Equal(inviteId, invite.GetProperty("id").GetGuid());
+        Assert.Equal("Santos Household", invite.GetProperty("familySpaceName").GetString());
+        Assert.Equal("Contributor", invite.GetProperty("role").GetString());
+    }
+
+    [Fact]
+    public async Task AcceptInvite_UsesSignedInEmailAndReturnsAcceptedMember()
+    {
+        await using var factory = new TestWebAppFactory();
+        var inviteId = Guid.Parse("cccccccc-cccc-cccc-cccc-cccccccccccc");
+        var familySpaceId = Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
+        factory.FamilySpaceServiceMock
+            .Setup(s => s.AcceptInviteAsync(UserId, "alice@example.com", inviteId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new FamilyMember
+            {
+                Id = Guid.Parse("eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee"),
+                FamilySpaceId = familySpaceId,
+                UserId = UserId,
+                Role = FamilyMemberRole.Contributor,
+                JoinedAt = DateTime.UtcNow
+            });
+
+        var client = CreateAuthorizedClient(factory, email: "alice@example.com");
+        var response = await client.PostAsync($"/api/v1/family-space/invites/{inviteId}/accept", null);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var json = await response.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal(familySpaceId, json.GetProperty("familySpaceId").GetGuid());
+        Assert.Equal("Contributor", json.GetProperty("role").GetString());
+    }
+
+    [Fact]
+    public async Task DeclineInvite_UsesSignedInEmailAndReturnsNoContent()
+    {
+        await using var factory = new TestWebAppFactory();
+        var inviteId = Guid.Parse("cccccccc-cccc-cccc-cccc-cccccccccccc");
+        factory.FamilySpaceServiceMock
+            .Setup(s => s.DeclineInviteAsync(UserId, "alice@example.com", inviteId, It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        var client = CreateAuthorizedClient(factory, email: "alice@example.com");
+        var response = await client.PostAsync($"/api/v1/family-space/invites/{inviteId}/decline", null);
+
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+        factory.FamilySpaceServiceMock.Verify(s =>
+            s.DeclineInviteAsync(UserId, "alice@example.com", inviteId, It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
     public async Task PreviewImport_ContributorRequest_ReturnsPreview()
     {
         await using var factory = new TestWebAppFactory();
@@ -208,11 +281,12 @@ public class FamilySpaceEndpointTests
 
     private static HttpClient CreateAuthorizedClient(
         TestWebAppFactory factory,
-        string tier = "Premium")
+        string tier = "Premium",
+        string email = "alice@example.com")
     {
         var client = factory.CreateClient();
         client.DefaultRequestHeaders.Authorization =
-            new AuthenticationHeaderValue("Bearer", factory.GenerateTestToken(UserId.ToString(), tier: tier));
+            new AuthenticationHeaderValue("Bearer", factory.GenerateTestToken(UserId.ToString(), email: email, tier: tier));
         return client;
     }
 }
