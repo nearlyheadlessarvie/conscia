@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../core/constants/app_icons.dart';
+import '../../core/errors/app_error.dart';
 import '../../providers/user_provider.dart';
 import '../../services/user_service.dart';
 import '../../widgets/hero_screen_scaffold.dart';
@@ -47,10 +48,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Profile saved')),
       );
-    } catch (e) {
+    } catch (e, s) {
       if (!mounted) return;
+      final error = AppError.from(e, stackTrace: s);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to save: $e')),
+        SnackBar(content: Text(error.userMessage)),
       );
     } finally {
       if (mounted) {
@@ -115,7 +117,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               const Divider(height: 32),
               ScreenSection(
                 title: 'Spending Style',
-                subtitle: 'Keep this aligned with how you naturally make tradeoffs.',
+                subtitle:
+                    'Keep this aligned with how you naturally make tradeoffs.',
                 child: Row(
                   children: [
                     _personalityCard(
@@ -147,13 +150,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: _incomeOptions
                       .map(
-                        (option) =>
-                            _incomeRow(
-                              colors,
-                              textTheme,
-                              option.$1,
-                              _incomeLabel(option.$1, formatter),
-                            ),
+                        (option) => _incomeRow(
+                          colors,
+                          textTheme,
+                          option.$1,
+                          _incomeLabel(option.$1, formatter),
+                        ),
                       )
                       .toList(),
                 ),

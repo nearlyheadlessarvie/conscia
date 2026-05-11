@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../core/errors/app_error.dart';
 import '../../core/network/api_exception.dart';
 import '../../core/routing/app_router.dart';
 import '../../core/utils/email_validator.dart';
@@ -16,7 +17,9 @@ String friendlySignInErrorMessage(
   Object error, {
   bool isPasswordSignIn = false,
 }) {
-  final apiError = switch (error) {
+  final appError = AppError.from(error);
+  final originalError = error is AppError ? error.originalError : error;
+  final apiError = switch (originalError) {
     ApiException apiException => apiException,
     DioException dioException => ApiException.fromDioException(dioException),
     _ => null,
@@ -24,12 +27,12 @@ String friendlySignInErrorMessage(
 
   if (apiError != null) {
     if (isPasswordSignIn && apiError.isUnauthorized) {
-      return 'Invalid username or password.';
+      return 'Invalid username or password. Reference: ${appError.referenceId}';
     }
-    return apiError.message;
+    return appError.userMessage;
   }
 
-  return 'Something went wrong. Please try again.';
+  return appError.userMessage;
 }
 
 class SignInScreen extends ConsumerStatefulWidget {

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../../core/errors/app_error.dart';
 import '../../core/routing/app_router.dart';
 import '../../core/network/dio_client.dart';
 import '../../providers/subscription_provider.dart';
@@ -55,11 +56,11 @@ class _ReceiptScannerScreenState extends ConsumerState<ReceiptScannerScreen> {
 
       if (!mounted) return;
       context.push('/receipts/$receiptId/review');
-    } on DioException catch (e) {
+    } on DioException catch (e, s) {
       if (!mounted) return;
+      final error = AppError.from(e, stackTrace: s);
       setState(() {
-        _error = e.response?.data?['error'] as String? ??
-            'Failed to scan receipt';
+        _error = error.userMessage;
       });
     } finally {
       if (mounted) setState(() => _uploading = false);
@@ -148,7 +149,8 @@ class _ReceiptScannerScreenState extends ConsumerState<ReceiptScannerScreen> {
                       ),
                       child: Row(
                         children: [
-                          Icon(Icons.error_outline, size: 18, color: colors.error),
+                          Icon(Icons.error_outline,
+                              size: 18, color: colors.error),
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(

@@ -3,6 +3,7 @@ import 'dart:math' as math;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../core/errors/app_error.dart';
 import '../core/network/dio_client.dart';
 import '../services/budget_service.dart';
 import '../services/transaction_service.dart';
@@ -50,8 +51,11 @@ class BudgetListNotifier extends StateNotifier<BudgetListState> {
     try {
       final budgets = await _service.list();
       state = state.copyWith(budgets: budgets, isLoading: false);
-    } catch (e) {
-      state = state.copyWith(isLoading: false, error: e.toString());
+    } catch (e, s) {
+      state = state.copyWith(
+        isLoading: false,
+        error: AppError.from(e, stackTrace: s).userMessage,
+      );
     }
   }
 
@@ -59,8 +63,9 @@ class BudgetListNotifier extends StateNotifier<BudgetListState> {
     try {
       final budget = await _service.create(dto);
       state = state.copyWith(budgets: [...state.budgets, budget]);
-    } catch (e) {
-      state = state.copyWith(error: e.toString());
+    } catch (e, s) {
+      state =
+          state.copyWith(error: AppError.from(e, stackTrace: s).userMessage);
     }
   }
 
@@ -70,8 +75,9 @@ class BudgetListNotifier extends StateNotifier<BudgetListState> {
       state = state.copyWith(
         budgets: state.budgets.map((b) => b.id == id ? updated : b).toList(),
       );
-    } catch (e) {
-      state = state.copyWith(error: e.toString());
+    } catch (e, s) {
+      state =
+          state.copyWith(error: AppError.from(e, stackTrace: s).userMessage);
     }
   }
 
@@ -81,8 +87,9 @@ class BudgetListNotifier extends StateNotifier<BudgetListState> {
       state = state.copyWith(
         budgets: state.budgets.where((b) => b.id != id).toList(),
       );
-    } catch (e) {
-      state = state.copyWith(error: e.toString());
+    } catch (e, s) {
+      state =
+          state.copyWith(error: AppError.from(e, stackTrace: s).userMessage);
     }
   }
 
@@ -160,8 +167,9 @@ class BudgetListNotifier extends StateNotifier<BudgetListState> {
     try {
       final budgets = await _service.list();
       state = state.copyWith(budgets: budgets, error: null);
-    } catch (e) {
-      state = state.copyWith(error: e.toString());
+    } catch (e, s) {
+      state =
+          state.copyWith(error: AppError.from(e, stackTrace: s).userMessage);
     }
   }
 

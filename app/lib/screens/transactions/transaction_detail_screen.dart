@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 
+import '../../core/errors/app_error.dart';
 import '../../core/utils/currency_formatter.dart';
 import '../../providers/alert_provider.dart';
 import '../../providers/ai_provider.dart';
@@ -104,11 +105,12 @@ class _TransactionDetailScreenState
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Transaction deleted')),
       );
-    } catch (e) {
+    } catch (e, s) {
       if (!mounted) return;
       setState(() => _deleting = false);
+      final error = AppError.from(e, stackTrace: s);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Delete failed: $e')),
+        SnackBar(content: Text(error.userMessage)),
       );
     }
   }
@@ -215,7 +217,7 @@ class _TransactionDetailScreenState
             SkeletonCard(),
           ],
         ),
-        error: (error, _) => Center(
+        error: (error, stackTrace) => Center(
           child: Padding(
             padding: const EdgeInsets.all(32),
             child: Column(
@@ -224,7 +226,10 @@ class _TransactionDetailScreenState
                 Icon(Icons.error_outline,
                     size: 64, color: Theme.of(context).colorScheme.error),
                 const SizedBox(height: 16),
-                Text(error.toString(), textAlign: TextAlign.center),
+                Text(
+                  AppError.from(error, stackTrace: stackTrace).userMessage,
+                  textAlign: TextAlign.center,
+                ),
                 const SizedBox(height: 24),
                 FilledButton.icon(
                   onPressed: () => ref.invalidate(
@@ -565,7 +570,7 @@ class _ReflectionSheetState extends ConsumerState<_ReflectionSheet> {
         _response = response;
         _loading = false;
       });
-    } on DioException catch (e) {
+    } on DioException catch (e, s) {
       if (!mounted) return;
       if (e.response?.statusCode == 403) {
         Navigator.of(context).pop();
@@ -578,14 +583,13 @@ class _ReflectionSheetState extends ConsumerState<_ReflectionSheet> {
       }
       setState(() {
         _loading = false;
-        _error = e.response?.data?['error'] as String? ??
-            'Failed to load reflection';
+        _error = AppError.from(e, stackTrace: s).userMessage;
       });
-    } catch (e) {
+    } catch (e, s) {
       if (!mounted) return;
       setState(() {
         _loading = false;
-        _error = e.toString();
+        _error = AppError.from(e, stackTrace: s).userMessage;
       });
     }
   }

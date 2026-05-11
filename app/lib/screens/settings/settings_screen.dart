@@ -10,6 +10,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/constants/api_constants.dart';
 import '../../core/constants/app_icons.dart';
+import '../../core/errors/app_error.dart';
 import '../../core/network/dio_client.dart';
 import '../../core/routing/app_router.dart';
 import '../../core/theme/app_colors.dart';
@@ -385,7 +386,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   title: Text(option.label),
                   subtitle: Text(option.description),
                   trailing: option.value == current.aiPersonalityIntensity
-                      ? Icon(Icons.check_circle, color: theme.colorScheme.primary)
+                      ? Icon(Icons.check_circle,
+                          color: theme.colorScheme.primary)
                       : const Icon(Icons.circle_outlined),
                   selected: option.value == current.aiPersonalityIntensity,
                   onTap: () async {
@@ -474,10 +476,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           pluginUnavailable: true,
         );
       }
-    } catch (e) {
+    } catch (e, s) {
       messenger.clearSnackBars();
+      final error = AppError.from(e, stackTrace: s);
       messenger.showSnackBar(
-        SnackBar(content: Text('Export failed: $e')),
+        SnackBar(content: Text(error.userMessage)),
       );
     }
   }
@@ -593,10 +596,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('Account deleted.')),
                 );
-              } catch (e) {
+              } catch (e, s) {
                 if (!context.mounted) return;
+                final error = AppError.from(e, stackTrace: s);
                 ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Failed to delete account: $e')),
+                  SnackBar(content: Text(error.userMessage)),
                 );
               }
             },
@@ -759,8 +763,9 @@ class _SettingsActionRow extends StatelessWidget {
                       Text(
                         subtitle!,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color:
-                                  Theme.of(context).colorScheme.onSurfaceVariant,
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurfaceVariant,
                               height: 1.35,
                             ),
                       ),
@@ -908,9 +913,10 @@ class _DevUpgradeTile extends ConsumerWidget {
       messenger.showSnackBar(
         const SnackBar(content: Text('Upgraded to Premium!')),
       );
-    } catch (e) {
+    } catch (e, s) {
+      final error = AppError.from(e, stackTrace: s);
       messenger.showSnackBar(
-        SnackBar(content: Text('Failed: $e')),
+        SnackBar(content: Text(error.userMessage)),
       );
     }
   }

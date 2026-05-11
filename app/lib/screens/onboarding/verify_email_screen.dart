@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/routing/app_router.dart';
+import '../../core/errors/app_error.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/user_provider.dart';
 
@@ -29,7 +30,7 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
   @override
   void initState() {
     super.initState();
-    _startResendCooldown();
+    _startInitialResendCooldown();
   }
 
   @override
@@ -61,11 +62,11 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
               locale: defaults.locale,
             );
       } catch (_) {}
-    } catch (e) {
+    } catch (e, s) {
       if (!mounted) return;
       setState(() {
         _isSubmitting = false;
-        _errorMessage = e.toString();
+        _errorMessage = AppError.from(e, stackTrace: s).userMessage;
       });
       return;
     }
@@ -86,11 +87,11 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
 
     try {
       await ref.read(authProvider.notifier).resendConfirmation();
-    } catch (e) {
+    } catch (e, s) {
       if (!mounted) return;
       setState(() {
         _isResending = false;
-        _errorMessage = e.toString();
+        _errorMessage = AppError.from(e, stackTrace: s).userMessage;
       });
       return;
     }
@@ -98,7 +99,7 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
     if (!mounted) return;
     setState(() {
       _isResending = false;
-      _startResendCooldown();
+      _startResendCooldown(_resendCooldown);
       _message = 'A fresh code is on its way.';
     });
   }
@@ -108,9 +109,24 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
     context.go(AppRoutes.signIn);
   }
 
-  void _startResendCooldown() {
+  Future<void> _startInitialResendCooldown() async {
+    final remaining = await ref
+        .read(authProvider.notifier)
+        .confirmationResendCooldownRemaining();
+    if (!mounted) return;
+    setState(() {
+      _startResendCooldown(
+        remaining > Duration.zero ? remaining : _resendCooldown,
+      );
+    });
+  }
+
+  void _startResendCooldown(Duration cooldown) {
     _resendCooldownTimer?.cancel();
-    _resendCooldownSeconds = _resendCooldown.inSeconds;
+    _resendCooldownSeconds = cooldown.inSeconds.clamp(
+      0,
+      _resendCooldown.inSeconds,
+    );
     _resendCooldownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (!mounted) {
         timer.cancel();

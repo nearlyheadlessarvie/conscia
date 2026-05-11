@@ -1,8 +1,10 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../core/constants/api_constants.dart';
+import '../core/errors/app_error.dart';
 import '../core/routing/app_router.dart';
 import '../services/auth_service.dart';
 
@@ -69,9 +71,13 @@ class AuthNotifier extends StateNotifier<AuthState> {
   final FlutterSecureStorage _storage;
   String? _pendingPassword;
 
+  static const confirmationResendCooldown = Duration(minutes: 1);
   static const _accessTokenKey = 'access_token';
   static const _refreshTokenKey = 'refresh_token';
   static const _userIdKey = 'user_id';
+  static const _pendingConfirmationEmailKey = 'pending_confirmation_email';
+  static const _confirmationCooldownKeyPrefix =
+      'confirmation_resend_allowed_at_ms';
 
   AuthNotifier(this._authService, this._storage) : super(const AuthState()) {
     _loadStoredTokens();
@@ -119,6 +125,10 @@ class AuthNotifier extends StateNotifier<AuthState> {
   }
 
   Future<void> login(String email, String password) async {
+    if (await _resumePendingConfirmationIfCoolingDown(email, password)) {
+      return;
+    }
+
     state = state.copyWith(isLoading: true, error: null);
     try {
       final tokens = await _authService.login(email, password);
@@ -133,47 +143,40 @@ class AuthNotifier extends StateNotifier<AuthState> {
         isLoading: false,
       );
     } on AuthConfirmationRequiredException catch (e) {
-      _pendingPassword = password;
       saveLastEmail(email);
-      state = state.copyWith(
-        status: AuthStatus.pendingConfirmation,
-        pendingEmail: e.email,
-        accessToken: null,
-        refreshToken: null,
-        userId: null,
-        isLoading: false,
-        error: null,
-      );
-    } catch (e) {
-      state = state.copyWith(isLoading: false, error: e.toString());
-      rethrow;
+      await _rememberPendingConfirmation(e.email, password: password);
+    } catch (e, s) {
+      final error = AppError.from(e, stackTrace: s);
+      state = state.copyWith(isLoading: false, error: error.userMessage);
+      throw error;
     }
   }
 
   Future<void> register(String email, String password) async {
+    if (await _resumePendingConfirmationIfCoolingDown(email, password)) {
+      return;
+    }
+
     state = state.copyWith(isLoading: true, error: null);
     try {
       final result = await _authService.register(email, password);
       saveLastEmail(email);
 
       if (result.requiresConfirmation) {
-        _pendingPassword = password;
-        state = state.copyWith(
-          status: AuthStatus.pendingConfirmation,
-          pendingEmail: result.email ?? email,
-          accessToken: null,
-          refreshToken: null,
+        await _rememberPendingConfirmation(
+          result.email ?? email,
+          password: password,
           userId: result.userId,
-          isLoading: false,
         );
         return;
       }
 
       final tokens = await _authService.login(email, password);
       await _setAuthenticated(tokens);
-    } catch (e) {
-      state = state.copyWith(isLoading: false, error: e.toString());
-      rethrow;
+    } catch (e, s) {
+      final error = AppError.from(e, stackTrace: s);
+      state = state.copyWith(isLoading: false, error: error.userMessage);
+      throw error;
     }
   }
 
@@ -189,6 +192,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       await _authService.confirmRegistration(email, confirmationCode);
 
       if (password == null) {
+        await _clearPendingConfirmation();
         state = state.copyWith(
           status: AuthStatus.unauthenticated,
           pendingEmail: null,
@@ -201,9 +205,10 @@ class AuthNotifier extends StateNotifier<AuthState> {
       final tokens = await _authService.login(email, password);
       _pendingPassword = null;
       await _setAuthenticated(tokens);
-    } catch (e) {
-      state = state.copyWith(isLoading: false, error: e.toString());
-      rethrow;
+    } catch (e, s) {
+      final error = AppError.from(e, stackTrace: s);
+      state = state.copyWith(isLoading: false, error: error.userMessage);
+      throw error;
     }
   }
 
@@ -216,16 +221,33 @@ class AuthNotifier extends StateNotifier<AuthState> {
     state = state.copyWith(isLoading: true, error: null);
     try {
       await _authService.resendConfirmation(email);
+      await _startConfirmationCooldown(email);
       state = state.copyWith(isLoading: false);
-    } catch (e) {
-      state = state.copyWith(isLoading: false, error: e.toString());
-      rethrow;
+    } catch (e, s) {
+      final error = AppError.from(e, stackTrace: s);
+      state = state.copyWith(isLoading: false, error: error.userMessage);
+      throw error;
     }
   }
 
   void cancelPendingConfirmation() {
     _pendingPassword = null;
     state = const AuthState();
+  }
+
+  Future<Duration> confirmationResendCooldownRemaining([String? email]) async {
+    final normalizedEmail = _normalizeEmail(
+      email ?? state.pendingEmail ?? await _storedPendingConfirmationEmail(),
+    );
+    if (normalizedEmail == null) return Duration.zero;
+
+    final prefs = await SharedPreferences.getInstance();
+    final allowedAtMs =
+        prefs.getInt(_confirmationCooldownKey(normalizedEmail)) ?? 0;
+    final remainingMs = allowedAtMs - DateTime.now().millisecondsSinceEpoch;
+    if (remainingMs <= 0) return Duration.zero;
+
+    return Duration(milliseconds: remainingMs);
   }
 
   Future<void> signInWithGoogle() async {
@@ -253,9 +275,10 @@ class AuthNotifier extends StateNotifier<AuthState> {
         userId: tokens.userId,
         isLoading: false,
       );
-    } catch (e) {
-      state = state.copyWith(isLoading: false, error: e.toString());
-      rethrow;
+    } catch (e, s) {
+      final error = AppError.from(e, stackTrace: s);
+      state = state.copyWith(isLoading: false, error: error.userMessage);
+      throw error;
     }
   }
 
@@ -284,9 +307,10 @@ class AuthNotifier extends StateNotifier<AuthState> {
         userId: tokens.userId,
         isLoading: false,
       );
-    } catch (e) {
-      state = state.copyWith(isLoading: false, error: e.toString());
-      rethrow;
+    } catch (e, s) {
+      final error = AppError.from(e, stackTrace: s);
+      state = state.copyWith(isLoading: false, error: error.userMessage);
+      throw error;
     }
   }
 
@@ -344,6 +368,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
   Future<void> _setAuthenticated(AuthTokens tokens) async {
     await _persistTokens(tokens);
+    await _clearPendingConfirmation();
     state = state.copyWith(
       status: AuthStatus.authenticated,
       accessToken: tokens.accessToken,
@@ -353,6 +378,84 @@ class AuthNotifier extends StateNotifier<AuthState> {
       isLoading: false,
       error: null,
     );
+  }
+
+  Future<bool> _resumePendingConfirmationIfCoolingDown(
+    String email,
+    String password,
+  ) async {
+    final normalizedEmail = _normalizeEmail(email);
+    if (normalizedEmail == null) return false;
+
+    final remaining =
+        await confirmationResendCooldownRemaining(normalizedEmail);
+    if (remaining <= Duration.zero) return false;
+
+    _pendingPassword = password;
+    saveLastEmail(normalizedEmail);
+    state = state.copyWith(
+      status: AuthStatus.pendingConfirmation,
+      pendingEmail: normalizedEmail,
+      accessToken: null,
+      refreshToken: null,
+      userId: null,
+      isLoading: false,
+      error: null,
+    );
+    return true;
+  }
+
+  Future<void> _rememberPendingConfirmation(
+    String email, {
+    String? password,
+    String? userId,
+  }) async {
+    final normalizedEmail = _normalizeEmail(email);
+    if (normalizedEmail == null) return;
+
+    _pendingPassword = password;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_pendingConfirmationEmailKey, normalizedEmail);
+    await _startConfirmationCooldown(normalizedEmail);
+
+    state = state.copyWith(
+      status: AuthStatus.pendingConfirmation,
+      pendingEmail: normalizedEmail,
+      accessToken: null,
+      refreshToken: null,
+      userId: userId,
+      isLoading: false,
+      error: null,
+    );
+  }
+
+  Future<void> _startConfirmationCooldown(String email) async {
+    final normalizedEmail = _normalizeEmail(email);
+    if (normalizedEmail == null) return;
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(
+      _confirmationCooldownKey(normalizedEmail),
+      DateTime.now().add(confirmationResendCooldown).millisecondsSinceEpoch,
+    );
+  }
+
+  Future<String?> _storedPendingConfirmationEmail() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_pendingConfirmationEmailKey);
+  }
+
+  Future<void> _clearPendingConfirmation() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_pendingConfirmationEmailKey);
+  }
+
+  static String _confirmationCooldownKey(String email) =>
+      '$_confirmationCooldownKeyPrefix:$email';
+
+  static String? _normalizeEmail(String? email) {
+    final trimmed = email?.trim().toLowerCase();
+    return trimmed == null || trimmed.isEmpty ? null : trimmed;
   }
 }
 

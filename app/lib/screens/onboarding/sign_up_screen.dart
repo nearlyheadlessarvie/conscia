@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:dio/dio.dart';
 
-import '../../core/network/api_exception.dart';
+import '../../core/errors/app_error.dart';
 import '../../core/utils/email_validator.dart';
 import '../../providers/auth_provider.dart';
 
@@ -65,13 +64,11 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
             _emailController.text.trim(),
             _passwordController.text,
           );
-    } catch (e) {
+    } catch (e, s) {
       if (!mounted) return;
       setState(() {
         _isLoading = false;
-        _errorMessage = e is DioException
-            ? ApiException.fromDioException(e).message
-            : e.toString();
+        _errorMessage = AppError.from(e, stackTrace: s).userMessage;
       });
       return;
     }

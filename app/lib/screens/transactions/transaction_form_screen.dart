@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/constants/app_icons.dart';
 import '../../core/constants/category_icons.dart';
+import '../../core/errors/app_error.dart';
 import '../../providers/alert_provider.dart';
 import '../../providers/budget_providers.dart';
 import '../../providers/category_recents_provider.dart';
@@ -230,11 +231,12 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
           ),
         ),
       );
-    } catch (e) {
+    } catch (e, s) {
       if (!mounted) return;
       setState(() => _submitting = false);
+      final error = AppError.from(e, stackTrace: s);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed: $e')),
+        SnackBar(content: Text(error.userMessage)),
       );
     }
   }

@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 
 import '../../core/constants/app_icons.dart';
 import '../../core/constants/category_icons.dart';
+import '../../core/errors/app_error.dart';
 import '../../core/routing/app_router.dart';
 import '../../providers/budget_providers.dart';
 import '../../providers/exchange_rate_provider.dart';
@@ -170,11 +171,12 @@ class _SuggestedBudgetsScreenState
       }
       if (!mounted) return;
       context.go(AppRoutes.aboutYou);
-    } catch (e) {
+    } catch (e, s) {
       if (!mounted) return;
       setState(() => _saving = false);
+      final error = AppError.from(e, stackTrace: s);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to create budgets: $e')),
+        SnackBar(content: Text(error.userMessage)),
       );
     }
   }

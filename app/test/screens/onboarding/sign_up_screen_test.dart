@@ -1,4 +1,5 @@
 import 'package:conscia_app/providers/auth_provider.dart';
+import 'package:conscia_app/core/errors/app_error.dart';
 import 'package:conscia_app/screens/onboarding/sign_up_screen.dart';
 import 'package:conscia_app/services/auth_service.dart';
 import 'package:dio/dio.dart';
@@ -6,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class _FailingAuthService extends AuthService {
   _FailingAuthService() : super(Dio());
@@ -39,6 +41,12 @@ class _FakeSecureStorage extends FlutterSecureStorage {
 }
 
 void main() {
+  setUp(() {
+    SharedPreferences.setMockInitialValues({});
+  });
+
+  tearDown(AppError.resetForTests);
+
   testWidgets('sign up screen does not show social auth buttons', (
     tester,
   ) async {
@@ -62,6 +70,10 @@ void main() {
     final authNotifier = AuthNotifier(
       _FailingAuthService(),
       _FakeSecureStorage(),
+    );
+    AppError.configure(
+      referenceIdFactory: () => 'SIGNUP01',
+      logger: (_) {},
     );
 
     await tester.pumpWidget(
@@ -89,10 +101,13 @@ void main() {
     );
 
     await tester.tap(find.widgetWithText(FilledButton, 'Create Account'));
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
 
     expect(
-        find.text('Account already exists. Please sign in.'), findsOneWidget);
+      find.text('Account already exists. Please sign in. Reference: SIGNUP01'),
+      findsOneWidget,
+    );
     expect(find.textContaining('DioException'), findsNothing);
   });
 }

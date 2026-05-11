@@ -15,11 +15,14 @@ class _FakeAuthService extends AuthService {
   String? lastConfirmationCode;
   String? lastResentEmail;
   String? lastRefreshToken;
+  int registerCount = 0;
+  int loginCount = 0;
   bool shouldFailRefresh = false;
   Object? loginError;
 
   @override
   Future<AuthRegistrationResult> register(String email, String password) async {
+    registerCount += 1;
     lastRegisteredEmail = email;
     return registrationResult ??
         const AuthRegistrationResult(
@@ -52,6 +55,7 @@ class _FakeAuthService extends AuthService {
 
   @override
   Future<AuthTokens> login(String email, String password) async {
+    loginCount += 1;
     final error = loginError;
     if (error != null) {
       throw error;
@@ -226,6 +230,58 @@ void main() {
     expect(notifier.state.status, AuthStatus.pendingConfirmation);
     expect(notifier.state.pendingEmail, 'new@example.com');
     expect(notifier.state.accessToken, isNull);
+    expect(await storage.read(key: 'access_token'), isNull);
+  });
+
+  test('register reopens pending confirmation locally during resend cooldown',
+      () async {
+    final service = _FakeAuthService(
+      const AuthTokens(
+        accessToken: 'verified.access.token',
+        refreshToken: 'verified-refresh-token',
+        userId: 'user-1',
+      ),
+    )..registrationResult = const AuthRegistrationResult(
+        success: true,
+        requiresConfirmation: true,
+        email: 'new@example.com',
+        userId: 'pending-user',
+      );
+    final notifier = AuthNotifier(service, _FakeSecureStorage());
+
+    await notifier.register('new@example.com', 'SecureP@ss123');
+    notifier.cancelPendingConfirmation();
+    await notifier.register('new@example.com', 'SecureP@ss123');
+
+    expect(service.registerCount, 1);
+    expect(notifier.state.status, AuthStatus.pendingConfirmation);
+    expect(notifier.state.pendingEmail, 'new@example.com');
+  });
+
+  test('login reopens pending confirmation locally during resend cooldown',
+      () async {
+    final service = _FakeAuthService(
+      const AuthTokens(
+        accessToken: 'verified.access.token',
+        refreshToken: 'verified-refresh-token',
+        userId: 'user-1',
+      ),
+    )..registrationResult = const AuthRegistrationResult(
+        success: true,
+        requiresConfirmation: true,
+        email: 'new@example.com',
+        userId: 'pending-user',
+      );
+    final storage = _FakeSecureStorage();
+    final notifier = AuthNotifier(service, storage);
+
+    await notifier.register('new@example.com', 'SecureP@ss123');
+    notifier.cancelPendingConfirmation();
+    await notifier.login('new@example.com', 'SecureP@ss123');
+
+    expect(service.loginCount, 0);
+    expect(notifier.state.status, AuthStatus.pendingConfirmation);
+    expect(notifier.state.pendingEmail, 'new@example.com');
     expect(await storage.read(key: 'access_token'), isNull);
   });
 

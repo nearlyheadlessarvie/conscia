@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../core/network/api_exception.dart';
+import '../core/errors/app_error.dart';
 import '../core/network/dio_client.dart';
 import '../models/health_status.dart';
 import '../services/health_service.dart';
@@ -88,27 +88,28 @@ class HealthStatusNotifier extends StateNotifier<HealthState> {
         lastChecked: DateTime.now(),
         checkHistory: history,
       );
-    } on DioException catch (e) {
-      final apiError = ApiException.fromDioException(e);
+    } on DioException catch (e, s) {
+      final error = AppError.from(e, stackTrace: s);
       final history = [...state.checkHistory, false];
       if (history.length > 20) {
         history.removeRange(0, history.length - 20);
       }
       state = state.copyWith(
         isLoading: false,
-        error: apiError.message,
+        error: error.userMessage,
         isOffline: _isOfflineError(e),
         lastChecked: DateTime.now(),
         checkHistory: history,
       );
-    } catch (e) {
+    } catch (e, s) {
+      final error = AppError.from(e, stackTrace: s);
       final history = [...state.checkHistory, false];
       if (history.length > 20) {
         history.removeRange(0, history.length - 20);
       }
       state = state.copyWith(
         isLoading: false,
-        error: e.toString(),
+        error: error.userMessage,
         isOffline: false,
         lastChecked: DateTime.now(),
         checkHistory: history,

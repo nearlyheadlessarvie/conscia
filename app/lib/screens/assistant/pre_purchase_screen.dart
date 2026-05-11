@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/routing/app_router.dart';
 import '../../core/constants/generated/app_constants.g.dart';
 import '../../core/constants/category_icons.dart';
+import '../../core/errors/app_error.dart';
 import '../../core/utils/currency_formatter.dart';
 import '../../core/utils/voice_input_parser.dart';
 import '../../providers/ai_provider.dart';
@@ -199,7 +200,7 @@ class _PrePurchaseScreenState extends ConsumerState<PrePurchaseScreen>
       _aiResponse = response;
       setState(() => _state = _ScreenState.response);
       _playEntrance();
-    } on DioException catch (e) {
+    } on DioException catch (e, s) {
       if (!mounted) return;
       if (e.response?.statusCode == 403) {
         setState(() => _state = _ScreenState.input);
@@ -213,13 +214,13 @@ class _PrePurchaseScreenState extends ConsumerState<PrePurchaseScreen>
       }
       setState(() {
         _state = _ScreenState.error;
-        _errorMessage = e.response?.data?['error'] as String? ?? e.toString();
+        _errorMessage = AppError.from(e, stackTrace: s).userMessage;
       });
-    } catch (e) {
+    } catch (e, s) {
       if (!mounted) return;
       setState(() {
         _state = _ScreenState.error;
-        _errorMessage = e.toString();
+        _errorMessage = AppError.from(e, stackTrace: s).userMessage;
       });
     }
   }
