@@ -2,6 +2,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/constants/api_constants.dart';
 import '../core/network/dio_client.dart';
+import '../models/family_import_preview.dart';
+import '../models/family_invite.dart';
 import '../models/family_space.dart';
 
 final familySpaceProvider = FutureProvider<FamilySpace?>((ref) async {
@@ -12,6 +14,16 @@ final familySpaceProvider = FutureProvider<FamilySpace?>((ref) async {
 });
 
 final selectedScopeProvider = StateProvider<String>((ref) => 'personal');
+
+final familyInvitesProvider = FutureProvider<List<FamilyInvite>>((ref) async {
+  final dio = ref.watch(dioProvider);
+  final response = await dio.get(ApiConstants.familyInvites);
+  final data = response.data as List<dynamic>? ?? [];
+  return data
+      .map((item) =>
+          FamilyInvite.fromJson(Map<String, dynamic>.from(item as Map)))
+      .toList();
+});
 
 final familySpaceActionsProvider = Provider<FamilySpaceActions>((ref) {
   return FamilySpaceActions(ref);
@@ -36,6 +48,69 @@ class FamilySpaceActions {
     );
 
     _ref.invalidate(familySpaceProvider);
-    return FamilySpace.fromJson(Map<String, dynamic>.from(response.data as Map));
+    return FamilySpace.fromJson(
+        Map<String, dynamic>.from(response.data as Map));
+  }
+
+  Future<void> invite({
+    required String email,
+    required String role,
+  }) async {
+    final dio = _ref.read(dioProvider);
+    await dio.post(
+      ApiConstants.familyInvites,
+      data: {
+        'email': email,
+        'role': role,
+      },
+    );
+  }
+
+  Future<void> acceptInvite(String inviteId) async {
+    final dio = _ref.read(dioProvider);
+    await dio.post(ApiConstants.familyInviteAccept(inviteId));
+    _ref.invalidate(familyInvitesProvider);
+    _ref.invalidate(familySpaceProvider);
+  }
+
+  Future<void> declineInvite(String inviteId) async {
+    final dio = _ref.read(dioProvider);
+    await dio.post(ApiConstants.familyInviteDecline(inviteId));
+    _ref.invalidate(familyInvitesProvider);
+  }
+
+  Future<FamilyImportPreview> previewImport({
+    required bool includeTransactions,
+    required bool includeBudgets,
+    required bool includeRecurringSchedules,
+    List<String> categories = const [],
+  }) async {
+    final dio = _ref.read(dioProvider);
+    final response = await dio.post(
+      ApiConstants.familyImportPreview,
+      data: {
+        'includeTransactions': includeTransactions,
+        'includeBudgets': includeBudgets,
+        'includeRecurringSchedules': includeRecurringSchedules,
+        'categories': categories,
+      },
+    );
+
+    return FamilyImportPreview.fromJson(
+      Map<String, dynamic>.from(response.data as Map),
+    );
+  }
+
+  Future<int> importRecords(List<FamilyImportSelection> selections) async {
+    final dio = _ref.read(dioProvider);
+    final response = await dio.post(
+      ApiConstants.familyImport,
+      data: {
+        'items': selections.map((selection) => selection.toJson()).toList(),
+      },
+    );
+
+    _ref.invalidate(familySpaceProvider);
+    return (response.data as Map?)?['imported'] as int? ?? selections.length;
   }
 }

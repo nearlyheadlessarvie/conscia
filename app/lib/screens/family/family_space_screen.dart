@@ -137,7 +137,7 @@ class _FamilySpaceOverview extends StatelessWidget {
             ],
           ),
         ),
-        const ScreenSection(
+        ScreenSection(
           title: 'Next steps',
           child: FeedCard(
             child: Column(
@@ -146,16 +146,19 @@ class _FamilySpaceOverview extends StatelessWidget {
                   icon: Icons.person_add_alt_1_outlined,
                   title: 'Invite family',
                   subtitle: 'Send an email invite that appears when they join.',
+                  onTap: () => context.push(AppRoutes.familyInvites),
                 ),
                 _FamilyActionRow(
                   icon: Icons.upload_file_outlined,
                   title: 'Import personal records',
                   subtitle: 'Choose exactly what becomes visible to Family.',
+                  onTap: () => context.push(AppRoutes.familyImport),
                 ),
-                _FamilyActionRow(
+                const _FamilyActionRow(
                   icon: Icons.repeat_outlined,
                   title: 'Schedule contribution',
-                  subtitle: 'Track recurring family contributions without salary details.',
+                  subtitle:
+                      'Track recurring family contributions without salary details.',
                 ),
               ],
             ),
@@ -171,40 +174,47 @@ class _FamilyActionRow extends StatelessWidget {
     required this.icon,
     required this.title,
     required this.subtitle,
+    this.onTap,
   });
 
   final IconData icon;
   final String title;
   final String subtitle;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 10),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title, style: theme.textTheme.titleSmall),
-                const SizedBox(height: 3),
-                Text(
-                  subtitle,
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
-                    height: 1.3,
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(18),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(icon),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title, style: theme.textTheme.titleSmall),
+                  const SizedBox(height: 3),
+                  Text(
+                    subtitle,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                      height: 1.3,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        ],
+            if (onTap != null) const Icon(Icons.chevron_right),
+          ],
+        ),
       ),
     );
   }

@@ -163,7 +163,7 @@ public class OutboxProcessor : BackgroundService
 
         const string title = "Family invite";
         var body = $"You were invited to {invite.FamilySpaceName}.";
-        const string route = "/family-space/invites";
+        const string route = "/settings/family-space/invites";
 
         await alerts.AddAsync(new InAppAlert
         {

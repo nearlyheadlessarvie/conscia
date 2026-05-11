@@ -287,13 +287,13 @@ public class OutboxProcessorTests
                 alert.UserId == invitedUserId &&
                 alert.AlertKey == $"family-invite:{inviteId}" &&
                 alert.Title == "Family invite" &&
-                alert.ActionRoute == "/family-space/invites"),
+                alert.ActionRoute == "/settings/family-space/invites"),
             It.IsAny<CancellationToken>()), Times.Once);
         _pushSenderMock.Verify(s => s.SendToUserAsync(
             invitedUserId,
             "Family invite",
             "You were invited to Santos Household.",
-            "/family-space/invites",
+            "/settings/family-space/invites",
             It.IsAny<CancellationToken>()), Times.Once);
         _outboxRepoMock.Verify(r => r.MarkProcessedAsync(evt, It.IsAny<CancellationToken>()), Times.Once);
     }

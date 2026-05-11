@@ -23,6 +23,8 @@ import '../../screens/receipts/receipt_scanner_screen.dart';
 import '../../screens/settings/service_status_screen.dart';
 import '../../screens/settings/profile_screen.dart';
 import '../../screens/settings/settings_screen.dart';
+import '../../screens/family/family_import_screen.dart';
+import '../../screens/family/family_invites_screen.dart';
 import '../../screens/family/family_setup_screen.dart';
 import '../../screens/family/family_space_screen.dart';
 import '../../screens/insights/category_detail_screen.dart';
@@ -64,6 +66,8 @@ abstract class AppRoutes {
   static const budgets = '/settings/budgets';
   static const familySpace = '/settings/family-space';
   static const familySetup = '/settings/family-space/setup';
+  static const familyInvites = '/settings/family-space/invites';
+  static const familyImport = '/settings/family-space/import';
 
   static const scan = '/scan';
   static String reviewReceipt(String id) => '/receipts/$id/review';
@@ -314,6 +318,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.familySetup,
         builder: (context, state) => const FamilySetupScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.familyInvites,
+        builder: (context, state) => const FamilyInvitesScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.familyImport,
+        builder: (context, state) => const FamilyImportScreen(),
       ),
       GoRoute(
         path: '/scan',

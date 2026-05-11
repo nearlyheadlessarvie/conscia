@@ -1,0 +1,41 @@
+import 'package:conscia_app/models/family_invite.dart';
+import 'package:conscia_app/providers/family_space_provider.dart';
+import 'package:conscia_app/screens/family/family_invites_screen.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
+
+void main() {
+  testWidgets('family invites screen shows pending invite actions', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          familyInvitesProvider.overrideWith(
+            (ref) async => [
+              FamilyInvite(
+                id: 'invite-1',
+                familySpaceId: 'family-1',
+                familySpaceName: 'Santos Household',
+                email: 'alice@example.com',
+                role: 'Contributor',
+                createdAt: DateTime(2026, 5, 1),
+                expiresAt: DateTime(2026, 5, 15),
+              ),
+            ],
+          ),
+        ],
+        child: const MaterialApp(home: FamilyInvitesScreen()),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    expect(find.text('Family invites'), findsWidgets);
+    expect(find.text('Santos Household'), findsOneWidget);
+    expect(find.text('Contributor'), findsOneWidget);
+    expect(find.widgetWithText(FilledButton, 'Accept'), findsOneWidget);
+    expect(find.widgetWithText(OutlinedButton, 'Decline'), findsOneWidget);
+  });
+}
