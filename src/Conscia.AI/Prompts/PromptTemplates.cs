@@ -69,10 +69,12 @@ public static class PromptTemplates
 
     public static string BuildPrePurchaseUserPrompt(
         decimal? amount, string? currency, string? category,
-        decimal? budgetPercent, int recentRegrets, int spendingFreq)
+        decimal? budgetPercent, int recentRegrets, int spendingFreq,
+        string? contextScope = null, string? familyContextSummary = null, string? insightContext = null)
     {
         currency = PromptSanitizer.Sanitize(currency, 10);
         category = PromptSanitizer.Sanitize(category, 100);
+        contextScope = PromptSanitizer.Sanitize(contextScope, 20);
 
         var parts = new List<string> { "The user is considering a purchase:" };
 
@@ -89,6 +91,12 @@ public static class PromptTemplates
             parts.Add($"- Recent regretted purchases: {recentRegrets}");
         if (spendingFreq > 0)
             parts.Add($"- Purchases this week: {spendingFreq}");
+        if (string.Equals(contextScope, "family", StringComparison.OrdinalIgnoreCase))
+            parts.Add("- Advice scope: Family Space. Consider household impact, shared budgets, and recurring obligations.");
+        if (!string.IsNullOrWhiteSpace(familyContextSummary))
+            parts.Add(PromptSanitizer.Sanitize(familyContextSummary, 1000));
+        if (!string.IsNullOrWhiteSpace(insightContext))
+            parts.Add($"- Recent insight summary: {PromptSanitizer.Sanitize(insightContext, 500)}");
 
         parts.Add("\nRespond in character with your perspective on this purchase.");
         return string.Join("\n", parts);

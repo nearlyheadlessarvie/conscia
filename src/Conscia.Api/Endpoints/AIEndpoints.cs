@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Globalization;
 using Conscia.Api.Extensions;
 using Conscia.Api.Telemetry;
 using Conscia.Application.Constants;
@@ -28,6 +29,10 @@ public static class AIEndpoints
             IAIInteractionRepository aiRepo,
             ISubscriptionService subSvc,
             IUserService userService,
+            IFamilySpaceRepository familySpaces,
+            IBudgetRepository budgetRepository,
+            ITransactionRepository transactionRepository,
+            IRecurringScheduleRepository recurringRepository,
             IValidator<PrePurchaseRequestDto> validator) =>
         {
             using var activity = ConsciaActivitySources.AI.StartActivity("PrePurchaseAdvice");
@@ -43,6 +48,24 @@ public static class AIEndpoints
 
             var userId = ctx.User.GetUserId();
             var user = await userService.GetByIdAsync(userId, ctx.RequestAborted);
+            var contextScope = NormalizeContextScope(dto.ContextScope);
+            string? familyContextSummary = null;
+
+            if (contextScope == "family")
+            {
+                var membership = await familySpaces.GetMembershipByUserIdAsync(userId, ctx.RequestAborted);
+                if (membership is null)
+                    return Results.Json(
+                        new { error = "Family advice requires a Family Space." },
+                        statusCode: StatusCodes.Status403Forbidden);
+
+                familyContextSummary = await BuildFamilyContextSummaryAsync(
+                    membership.FamilySpaceId,
+                    budgetRepository,
+                    transactionRepository,
+                    recurringRepository,
+                    ctx.RequestAborted);
+            }
 
             var isPremium = await subSvc.IsPremiumAsync(userId, ctx.RequestAborted);
             if (!isPremium)
@@ -76,7 +99,10 @@ public static class AIEndpoints
                 BudgetPercentUsed = budgetPercent,
                 RecentRegrets = recentRegrets,
                 SpendingFrequencyThisWeek = spendingThisWeek,
-                AiPersonalityIntensity = user?.AiPersonalityIntensity ?? "balanced"
+                AiPersonalityIntensity = user?.AiPersonalityIntensity ?? "balanced",
+                ContextScope = contextScope,
+                FamilyContextSummary = familyContextSummary,
+                InsightContext = dto.InsightContext
             };
 
             var response = await aiService.GeneratePrePurchaseResponseAsync(context, ctx.RequestAborted);
@@ -194,4 +220,58 @@ public static class AIEndpoints
 
         return group;
     }
+
+    private static string NormalizeContextScope(string? contextScope) =>
+        string.Equals(contextScope, "family", StringComparison.OrdinalIgnoreCase)
+            ? "family"
+            : "personal";
+
+    private static async Task<string> BuildFamilyContextSummaryAsync(
+        Guid familySpaceId,
+        IBudgetRepository budgetRepository,
+        ITransactionRepository transactionRepository,
+        IRecurringScheduleRepository recurringRepository,
+        CancellationToken ct)
+    {
+        var now = DateTime.UtcNow;
+        var monthStart = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+        var monthEnd = monthStart.AddMonths(1).AddTicks(-1);
+
+        var budgets = await budgetRepository.ListByFamilySpaceAsync(familySpaceId, ct);
+        var transactions = await transactionRepository.GetByFamilySpaceAndDateRangeAsync(familySpaceId, monthStart, monthEnd, ct);
+        var recurring = await recurringRepository.ListByFamilySpaceAsync(familySpaceId, ct);
+
+        var expenses = transactions
+            .Where(t => t.Type == TransactionType.Expense)
+            .GroupBy(t => t.Amount.CurrencyCode)
+            .Select(g => FormatMoney(g.Sum(t => t.Amount.Amount), g.Key))
+            .DefaultIfEmpty("none")
+            .ToList();
+        var contributions = transactions
+            .Where(t => t.Type == TransactionType.Income)
+            .GroupBy(t => t.Amount.CurrencyCode)
+            .Select(g => FormatMoney(g.Sum(t => t.Amount.Amount), g.Key))
+            .DefaultIfEmpty("none")
+            .ToList();
+        var activeRecurring = recurring.Where(r => r.IsActive).ToList();
+
+        return string.Join('\n', new[]
+        {
+            "Family context:",
+            $"- Shared budget categories: {FormatList(budgets.Select(b => b.Category).Distinct(StringComparer.OrdinalIgnoreCase))}",
+            $"- Current month family expenses total: {string.Join(", ", expenses)}",
+            $"- Current month family contributions total: {string.Join(", ", contributions)}",
+            $"- Active family recurring obligations: {activeRecurring.Count}",
+            $"- Active family recurring categories: {FormatList(activeRecurring.Select(r => r.Category).Distinct(StringComparer.OrdinalIgnoreCase))}"
+        });
+    }
+
+    private static string FormatList(IEnumerable<string> values)
+    {
+        var list = values.Where(v => !string.IsNullOrWhiteSpace(v)).Take(8).ToList();
+        return list.Count == 0 ? "none" : string.Join(", ", list);
+    }
+
+    private static string FormatMoney(decimal amount, string currencyCode) =>
+        $"{currencyCode.ToUpperInvariant()} {amount.ToString("F2", CultureInfo.InvariantCulture)}";
 }

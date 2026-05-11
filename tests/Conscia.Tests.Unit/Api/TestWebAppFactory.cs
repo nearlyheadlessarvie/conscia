@@ -23,6 +23,10 @@ public class TestWebAppFactory : WebApplicationFactory<Program>
     public Mock<ITransactionService> TransactionServiceMock { get; } = new();
     public Mock<IRecurringScheduleService> RecurringScheduleServiceMock { get; } = new();
     public Mock<IFamilySpaceService> FamilySpaceServiceMock { get; } = new();
+    public Mock<IFamilySpaceRepository> FamilySpaceRepoMock { get; } = new();
+    public Mock<IBudgetRepository> BudgetRepoMock { get; } = new();
+    public Mock<ITransactionRepository> TransactionRepoMock { get; } = new();
+    public Mock<IRecurringScheduleRepository> RecurringScheduleRepoMock { get; } = new();
     public Mock<ISubscriptionService> SubscriptionServiceMock { get; } = new();
     public Mock<IAIService> AIServiceMock { get; } = new();
     public Mock<IInAppAlertRepository> AlertRepoMock { get; } = new();
@@ -56,6 +60,10 @@ public class TestWebAppFactory : WebApplicationFactory<Program>
             ReplaceService<ITransactionService>(services, TransactionServiceMock.Object);
             ReplaceService<IRecurringScheduleService>(services, RecurringScheduleServiceMock.Object);
             ReplaceService<IFamilySpaceService>(services, FamilySpaceServiceMock.Object);
+            ReplaceService<IFamilySpaceRepository>(services, FamilySpaceRepoMock.Object);
+            ReplaceService<IBudgetRepository>(services, BudgetRepoMock.Object);
+            ReplaceService<ITransactionRepository>(services, TransactionRepoMock.Object);
+            ReplaceService<IRecurringScheduleRepository>(services, RecurringScheduleRepoMock.Object);
             ReplaceService<ISubscriptionService>(services, SubscriptionServiceMock.Object);
             ReplaceService<IAIService>(services, AIServiceMock.Object);
             ReplaceService<IInAppAlertRepository>(services, AlertRepoMock.Object);

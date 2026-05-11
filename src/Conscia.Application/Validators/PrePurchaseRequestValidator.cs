@@ -23,5 +23,11 @@ public class PrePurchaseRequestValidator : AbstractValidator<PrePurchaseRequestD
         RuleFor(x => x.Category)
             .NotEmpty()
             .MaximumLength(100);
+
+        RuleFor(x => x.ContextScope)
+            .Must(scope =>
+                string.Equals(scope, "personal", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(scope, "family", StringComparison.OrdinalIgnoreCase))
+            .WithMessage("Context scope must be personal or family");
     }
 }

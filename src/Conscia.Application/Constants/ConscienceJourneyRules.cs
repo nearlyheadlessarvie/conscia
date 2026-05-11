@@ -7,6 +7,12 @@ public static class ConscienceEventTypes
     public const string BudgetCreatedFromNudge = "budget_created_from_nudge";
     public const string InsightReviewed = "insight_reviewed";
     public const string RegretPatternReviewed = "regret_pattern_reviewed";
+    public const string FamilyInviteSent = "family_invite_sent";
+    public const string FamilyInviteAccepted = "family_invite_accepted";
+    public const string FamilyExpenseAdded = "family_expense_added";
+    public const string FamilyContributionAdded = "family_contribution_added";
+    public const string FamilyImportCompleted = "family_import_completed";
+    public const string FamilyPurchaseChecked = "family_purchase_checked";
 }
 
 public static class ConscienceJourneyRules
@@ -17,7 +23,13 @@ public static class ConscienceJourneyRules
         ConscienceEventTypes.PrePurchaseChecked,
         ConscienceEventTypes.BudgetCreatedFromNudge,
         ConscienceEventTypes.InsightReviewed,
-        ConscienceEventTypes.RegretPatternReviewed
+        ConscienceEventTypes.RegretPatternReviewed,
+        ConscienceEventTypes.FamilyInviteSent,
+        ConscienceEventTypes.FamilyInviteAccepted,
+        ConscienceEventTypes.FamilyExpenseAdded,
+        ConscienceEventTypes.FamilyContributionAdded,
+        ConscienceEventTypes.FamilyImportCompleted,
+        ConscienceEventTypes.FamilyPurchaseChecked
     ];
 
     public static readonly IReadOnlyDictionary<string, int> XpByEventType =
@@ -27,7 +39,13 @@ public static class ConscienceJourneyRules
             [ConscienceEventTypes.PrePurchaseChecked] = 20,
             [ConscienceEventTypes.BudgetCreatedFromNudge] = 35,
             [ConscienceEventTypes.InsightReviewed] = 10,
-            [ConscienceEventTypes.RegretPatternReviewed] = 25
+            [ConscienceEventTypes.RegretPatternReviewed] = 25,
+            [ConscienceEventTypes.FamilyInviteSent] = 15,
+            [ConscienceEventTypes.FamilyInviteAccepted] = 20,
+            [ConscienceEventTypes.FamilyExpenseAdded] = 10,
+            [ConscienceEventTypes.FamilyContributionAdded] = 15,
+            [ConscienceEventTypes.FamilyImportCompleted] = 25,
+            [ConscienceEventTypes.FamilyPurchaseChecked] = 20
         };
 
     public static readonly IReadOnlyList<ConscienceLevelRule> Levels =
@@ -60,6 +78,20 @@ public static class ConscienceJourneyRules
             Title: "Review 1 regret pattern",
             Description: "Spot one repeat spending signal.",
             EventType: ConscienceEventTypes.RegretPatternReviewed,
+            Target: 1,
+            XpReward: 15),
+        new(
+            Key: "send_family_invite",
+            Title: "Invite 1 family member",
+            Description: "Start planning with someone in your household.",
+            EventType: ConscienceEventTypes.FamilyInviteSent,
+            Target: 1,
+            XpReward: 10),
+        new(
+            Key: "add_family_contribution",
+            Title: "Add 1 family contribution",
+            Description: "Track support without exposing exact salary.",
+            EventType: ConscienceEventTypes.FamilyContributionAdded,
             Target: 1,
             XpReward: 15)
     ];
@@ -95,7 +127,25 @@ public static class ConscienceJourneyRules
             Title: "Worth-It Week",
             Description: "Built a week of reflective spending awareness.",
             EventType: ConscienceEventTypes.ReflectionCompleted,
-            Target: 5)
+            Target: 5),
+        new(
+            Key: "family_founder",
+            Title: "Family Founder",
+            Description: "Sent your first Family Space invite.",
+            EventType: ConscienceEventTypes.FamilyInviteSent,
+            Target: 1),
+        new(
+            Key: "household_contributor",
+            Title: "Household Contributor",
+            Description: "Added your first family contribution.",
+            EventType: ConscienceEventTypes.FamilyContributionAdded,
+            Target: 1),
+        new(
+            Key: "family_planner",
+            Title: "Family Planner",
+            Description: "Shared records into Family Space intentionally.",
+            EventType: ConscienceEventTypes.FamilyImportCompleted,
+            Target: 1)
     ];
 
     public static readonly IReadOnlyList<ConscienceMascotMomentRule> MascotMoments =

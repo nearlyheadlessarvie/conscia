@@ -77,4 +77,135 @@ public class AIEndpointTests : IClassFixture<TestWebAppFactory>
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
+
+    [Fact]
+    public async Task PrePurchase_FamilyContextWithoutMembership_ReturnsForbidden()
+    {
+        _factory.FamilySpaceRepoMock
+            .Setup(r => r.GetMembershipByUserIdAsync(UserId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((FamilyMember?)null);
+
+        var response = await _client.PostAsJsonAsync("/api/v1/ai/pre-purchase", new
+        {
+            description = "Dinner delivery",
+            amount = 1200,
+            currencyCode = "PHP",
+            category = "Dining",
+            contextScope = "family"
+        });
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        _factory.AIServiceMock.Verify(
+            s => s.GeneratePrePurchaseResponseAsync(It.IsAny<AIContext>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task PrePurchase_FamilyContext_SendsCompactFamilySummary()
+    {
+        var familySpaceId = Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
+        AIContext? capturedContext = null;
+        _factory.FamilySpaceRepoMock
+            .Setup(r => r.GetMembershipByUserIdAsync(UserId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new FamilyMember
+            {
+                UserId = UserId,
+                FamilySpaceId = familySpaceId,
+                Role = FamilyMemberRole.Contributor
+            });
+        _factory.BudgetRepoMock
+            .Setup(r => r.ListByFamilySpaceAsync(familySpaceId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync([
+                new Budget
+                {
+                    Id = Guid.NewGuid(),
+                    UserId = UserId,
+                    Category = "Dining",
+                    MonthlyLimit = 4000m,
+                    CurrencyCode = "PHP",
+                    Scope = RecordScope.Family,
+                    FamilySpaceId = familySpaceId
+                }
+            ]);
+        _factory.TransactionRepoMock
+            .Setup(r => r.GetByFamilySpaceAndDateRangeAsync(
+                familySpaceId,
+                It.IsAny<DateTime>(),
+                It.IsAny<DateTime>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync([
+                new Transaction
+                {
+                    Id = Guid.NewGuid(),
+                    UserId = UserId,
+                    Type = TransactionType.Expense,
+                    Amount = new Money(1200m, "PHP"),
+                    Category = "Dining",
+                    Date = DateTime.UtcNow,
+                    Scope = RecordScope.Family,
+                    FamilySpaceId = familySpaceId
+                },
+                new Transaction
+                {
+                    Id = Guid.NewGuid(),
+                    UserId = UserId,
+                    Type = TransactionType.Income,
+                    Amount = new Money(15000m, "PHP"),
+                    Category = "Contribution",
+                    Date = DateTime.UtcNow,
+                    Scope = RecordScope.Family,
+                    FamilySpaceId = familySpaceId
+                }
+            ]);
+        _factory.RecurringScheduleRepoMock
+            .Setup(r => r.ListByFamilySpaceAsync(familySpaceId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync([
+                new RecurringSchedule
+                {
+                    Id = Guid.NewGuid(),
+                    UserId = UserId,
+                    Type = TransactionType.Expense,
+                    Amount = new Money(2500m, "PHP"),
+                    Category = "Bills",
+                    StartDate = DateTime.UtcNow,
+                    NextRunAt = DateTime.UtcNow,
+                    Cadence = RecurringCadence.Monthly,
+                    IsActive = true,
+                    Scope = RecordScope.Family,
+                    FamilySpaceId = familySpaceId
+                }
+            ]);
+        _factory.BudgetServiceMock
+            .Setup(s => s.ListStatusesByUserAsync(UserId, null, It.IsAny<CancellationToken>()))
+            .ReturnsAsync([]);
+        _factory.TransactionServiceMock
+            .Setup(s => s.ListAsync(UserId, 1, 100, null, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PagedResult<Transaction> { Items = [], Page = 1, PageSize = 100, TotalCount = 0 });
+        _factory.AIServiceMock
+            .Setup(s => s.GeneratePrePurchaseResponseAsync(It.IsAny<AIContext>(), It.IsAny<CancellationToken>()))
+            .Callback<AIContext, CancellationToken>((context, _) => capturedContext = context)
+            .ReturnsAsync(new AIResponse
+            {
+                DevilMessage = "Family treat?",
+                AngelMessage = "Check the household plan.",
+                NeutralMessage = "Family context included."
+            });
+
+        var response = await _client.PostAsJsonAsync("/api/v1/ai/pre-purchase", new
+        {
+            description = "Dinner delivery",
+            amount = 1200,
+            currencyCode = "PHP",
+            category = "Dining",
+            contextScope = "family"
+        });
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.NotNull(capturedContext);
+        Assert.Equal("family", capturedContext!.ContextScope);
+        Assert.Contains("Family context:", capturedContext.FamilyContextSummary);
+        Assert.Contains("family expenses total: PHP 1200.00", capturedContext.FamilyContextSummary);
+        Assert.Contains("family contributions total: PHP 15000.00", capturedContext.FamilyContextSummary);
+        Assert.Contains("Active family recurring obligations: 1", capturedContext.FamilyContextSummary);
+    }
 }
