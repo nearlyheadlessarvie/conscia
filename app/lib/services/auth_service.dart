@@ -160,7 +160,11 @@ class AuthService {
   }
 
   Future<AuthTokens> signInWithGoogle() async {
-    final googleUser = await GoogleSignIn().signIn();
+    final googleUser = await GoogleSignIn(
+      serverClientId: ApiConstants.googleServerClientId.isEmpty
+          ? null
+          : ApiConstants.googleServerClientId,
+    ).signIn();
     if (googleUser == null) throw Exception('Google sign-in cancelled');
     final googleAuth = await googleUser.authentication;
     final response = await _dio.post(
