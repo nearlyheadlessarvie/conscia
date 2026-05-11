@@ -24,18 +24,97 @@ class AuthTokens {
   }
 }
 
+class AuthRegistrationResult {
+  final bool success;
+  final bool requiresConfirmation;
+  final String? email;
+  final String? userId;
+
+  const AuthRegistrationResult({
+    required this.success,
+    required this.requiresConfirmation,
+    this.email,
+    this.userId,
+  });
+
+  factory AuthRegistrationResult.fromJson(Map<String, dynamic> json) {
+    return AuthRegistrationResult(
+      success: json['success'] as bool? ?? true,
+      requiresConfirmation: json['requiresConfirmation'] as bool? ?? false,
+      email: json['email'] as String?,
+      userId: json['userId'] as String?,
+    );
+  }
+}
+
+class AuthConfirmationResult {
+  final bool success;
+  final bool requiresConfirmation;
+  final String? email;
+  final String? userId;
+
+  const AuthConfirmationResult({
+    required this.success,
+    this.requiresConfirmation = false,
+    this.email,
+    this.userId,
+  });
+
+  factory AuthConfirmationResult.fromJson(Map<String, dynamic> json) {
+    return AuthConfirmationResult(
+      success: json['success'] as bool? ?? true,
+      requiresConfirmation: json['requiresConfirmation'] as bool? ?? false,
+      email: json['email'] as String?,
+      userId: json['userId'] as String?,
+    );
+  }
+}
+
 class AuthService {
   final Dio _dio;
 
   AuthService(this._dio);
 
-  Future<AuthTokens> register(String email, String password) async {
+  Future<AuthRegistrationResult> register(String email, String password) async {
     try {
       final response = await _dio.post(
         ApiConstants.register,
         data: {'email': email, 'password': password},
       );
-      return AuthTokens.fromJson(response.data as Map<String, dynamic>);
+      return AuthRegistrationResult.fromJson(
+        response.data as Map<String, dynamic>,
+      );
+    } on DioException {
+      rethrow;
+    }
+  }
+
+  Future<AuthConfirmationResult> confirmRegistration(
+    String email,
+    String confirmationCode,
+  ) async {
+    try {
+      final response = await _dio.post(
+        ApiConstants.confirmRegistration,
+        data: {'email': email, 'confirmationCode': confirmationCode},
+      );
+      return AuthConfirmationResult.fromJson(
+        response.data as Map<String, dynamic>,
+      );
+    } on DioException {
+      rethrow;
+    }
+  }
+
+  Future<AuthConfirmationResult> resendConfirmation(String email) async {
+    try {
+      final response = await _dio.post(
+        ApiConstants.resendConfirmation,
+        data: {'email': email},
+      );
+      return AuthConfirmationResult.fromJson(
+        response.data as Map<String, dynamic>,
+      );
     } on DioException {
       rethrow;
     }

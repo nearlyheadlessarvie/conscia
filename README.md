@@ -241,6 +241,8 @@ All configuration is managed via `appsettings.json` / `appsettings.Development.j
 | `Auth__Cognito__UserPoolId` | — | Cognito user pool (prod only) |
 | `Auth__Cognito__ClientId` | — | Cognito client (prod only) |
 
+Production email/password auth uses Cognito email verification. Keep `Auth__UseMock=true` locally unless you have a Cognito user pool available; set it to `false` in deployed API environments so `/api/v1/auth/register` sends a confirmation code, `/api/v1/auth/confirm` verifies it, and login/refresh exchange Cognito tokens.
+
 ### Flutter App
 
 Compile-time constants passed via `--dart-define`:
@@ -454,7 +456,9 @@ All endpoints (except Auth and health) require a Bearer JWT in the `Authorizatio
 
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
-| `POST` | `/api/v1/auth/register` | No | Register with email/password |
+| `POST` | `/api/v1/auth/register` | No | Register with email/password and request email confirmation |
+| `POST` | `/api/v1/auth/confirm` | No | Confirm registration with the email verification code |
+| `POST` | `/api/v1/auth/resend-confirmation` | No | Resend the email verification code |
 | `POST` | `/api/v1/auth/login` | No | Authenticate with email/password |
 | `POST` | `/api/v1/auth/google` | No | Sign in with Google (ID token) |
 | `POST` | `/api/v1/auth/apple` | No | Sign in with Apple (identity token) |

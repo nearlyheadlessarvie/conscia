@@ -6,7 +6,12 @@ import '../core/constants/api_constants.dart';
 import '../core/routing/app_router.dart';
 import '../services/auth_service.dart';
 
-enum AuthStatus { unauthenticated, authenticated, sessionExpired }
+enum AuthStatus {
+  unauthenticated,
+  pendingConfirmation,
+  authenticated,
+  sessionExpired,
+}
 
 const _unset = Object();
 
@@ -15,6 +20,7 @@ class AuthState {
   final String? accessToken;
   final String? refreshToken;
   final String? userId;
+  final String? pendingEmail;
   final bool isLoading;
   final String? error;
 
@@ -23,6 +29,7 @@ class AuthState {
     this.accessToken,
     this.refreshToken,
     this.userId,
+    this.pendingEmail,
     this.isLoading = false,
     this.error,
   });
@@ -35,6 +42,7 @@ class AuthState {
     Object? accessToken = _unset,
     Object? refreshToken = _unset,
     Object? userId = _unset,
+    Object? pendingEmail = _unset,
     bool? isLoading,
     Object? error = _unset,
   }) {
@@ -46,9 +54,10 @@ class AuthState {
       refreshToken: identical(refreshToken, _unset)
           ? this.refreshToken
           : refreshToken as String?,
-      userId: identical(userId, _unset)
-          ? this.userId
-          : userId as String?,
+      userId: identical(userId, _unset) ? this.userId : userId as String?,
+      pendingEmail: identical(pendingEmail, _unset)
+          ? this.pendingEmail
+          : pendingEmail as String?,
       isLoading: isLoading ?? this.isLoading,
       error: identical(error, _unset) ? this.error : error as String?,
     );
@@ -58,6 +67,7 @@ class AuthState {
 class AuthNotifier extends StateNotifier<AuthState> {
   final AuthService _authService;
   final FlutterSecureStorage _storage;
+  String? _pendingPassword;
 
   static const _accessTokenKey = 'access_token';
   static const _refreshTokenKey = 'refresh_token';
@@ -119,6 +129,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
         accessToken: tokens.accessToken,
         refreshToken: tokens.refreshToken,
         userId: tokens.userId,
+        pendingEmail: null,
         isLoading: false,
       );
     } catch (e) {
@@ -130,16 +141,70 @@ class AuthNotifier extends StateNotifier<AuthState> {
   Future<void> register(String email, String password) async {
     state = state.copyWith(isLoading: true, error: null);
     try {
-      final tokens = await _authService.register(email, password);
-      await _persistTokens(tokens);
+      final result = await _authService.register(email, password);
       saveLastEmail(email);
-      state = state.copyWith(
-        status: AuthStatus.authenticated,
-        accessToken: tokens.accessToken,
-        refreshToken: tokens.refreshToken,
-        userId: tokens.userId,
-        isLoading: false,
-      );
+
+      if (result.requiresConfirmation) {
+        _pendingPassword = password;
+        state = state.copyWith(
+          status: AuthStatus.pendingConfirmation,
+          pendingEmail: result.email ?? email,
+          accessToken: null,
+          refreshToken: null,
+          userId: result.userId,
+          isLoading: false,
+        );
+        return;
+      }
+
+      final tokens = await _authService.login(email, password);
+      await _setAuthenticated(tokens);
+    } catch (e) {
+      state = state.copyWith(isLoading: false, error: e.toString());
+      rethrow;
+    }
+  }
+
+  Future<void> confirmRegistration(String confirmationCode) async {
+    final email = state.pendingEmail;
+    final password = _pendingPassword;
+    if (email == null || email.isEmpty) {
+      throw Exception('No pending email confirmation');
+    }
+
+    state = state.copyWith(isLoading: true, error: null);
+    try {
+      await _authService.confirmRegistration(email, confirmationCode);
+
+      if (password == null) {
+        state = state.copyWith(
+          status: AuthStatus.unauthenticated,
+          pendingEmail: null,
+          userId: null,
+          isLoading: false,
+        );
+        return;
+      }
+
+      final tokens = await _authService.login(email, password);
+      _pendingPassword = null;
+      await _setAuthenticated(tokens);
+    } catch (e) {
+      state = state.copyWith(isLoading: false, error: e.toString());
+      rethrow;
+    }
+  }
+
+  Future<void> resendConfirmation() async {
+    final email = state.pendingEmail;
+    if (email == null || email.isEmpty) {
+      throw Exception('No pending email confirmation');
+    }
+
+    state = state.copyWith(isLoading: true, error: null);
+    try {
+      await _authService.resendConfirmation(email);
+      state = state.copyWith(isLoading: false);
     } catch (e) {
       state = state.copyWith(isLoading: false, error: e.toString());
       rethrow;
@@ -150,7 +215,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
     state = state.copyWith(isLoading: true, error: null);
     try {
       if (ApiConstants.useMockAuth) {
-        final tokens = await _authService.login('google_user@gmail.com', 'mock');
+        final tokens =
+            await _authService.login('google_user@gmail.com', 'mock');
         await _persistTokens(tokens);
         state = state.copyWith(
           status: AuthStatus.authenticated,
@@ -180,7 +246,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
     state = state.copyWith(isLoading: true, error: null);
     try {
       if (ApiConstants.useMockAuth) {
-        final tokens = await _authService.login('apple_user@privaterelay.appleid.com', 'mock');
+        final tokens = await _authService.login(
+            'apple_user@privaterelay.appleid.com', 'mock');
         await _persistTokens(tokens);
         state = state.copyWith(
           status: AuthStatus.authenticated,
@@ -210,11 +277,13 @@ class AuthNotifier extends StateNotifier<AuthState> {
     await _storage.delete(key: _accessTokenKey);
     await _storage.delete(key: _refreshTokenKey);
     await _storage.delete(key: _userIdKey);
+    _pendingPassword = null;
     state = const AuthState();
   }
 
   Future<bool> refreshSession() async {
-    final refreshToken = state.refreshToken ?? await _storage.read(key: _refreshTokenKey);
+    final refreshToken =
+        state.refreshToken ?? await _storage.read(key: _refreshTokenKey);
     if (refreshToken == null || refreshToken.isEmpty) {
       await markSessionExpired();
       return false;
@@ -228,6 +297,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
         accessToken: tokens.accessToken,
         refreshToken: tokens.refreshToken,
         userId: tokens.userId,
+        pendingEmail: null,
         isLoading: false,
         error: null,
       );
@@ -242,6 +312,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
     await _storage.delete(key: _accessTokenKey);
     await _storage.delete(key: _refreshTokenKey);
     await _storage.delete(key: _userIdKey);
+    _pendingPassword = null;
     state = const AuthState(
       status: AuthStatus.sessionExpired,
       error: 'Session expired',
@@ -252,6 +323,19 @@ class AuthNotifier extends StateNotifier<AuthState> {
     await _storage.write(key: _accessTokenKey, value: tokens.accessToken);
     await _storage.write(key: _refreshTokenKey, value: tokens.refreshToken);
     await _storage.write(key: _userIdKey, value: tokens.userId);
+  }
+
+  Future<void> _setAuthenticated(AuthTokens tokens) async {
+    await _persistTokens(tokens);
+    state = state.copyWith(
+      status: AuthStatus.authenticated,
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken,
+      userId: tokens.userId,
+      pendingEmail: null,
+      isLoading: false,
+      error: null,
+    );
   }
 }
 

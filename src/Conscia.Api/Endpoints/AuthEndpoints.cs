@@ -15,9 +15,37 @@ public static class AuthEndpoints
 
             var result = await auth.RegisterAsync(req.Email, req.Password, ctx.RequestAborted);
             return result.Success
-                ? Results.Created("/api/v1/users/me", new { result.AccessToken, result.RefreshToken, result.UserId })
+                ? Results.Accepted(
+                    "/api/v1/auth/confirm",
+                    new { result.Success, result.RequiresConfirmation, result.Email, result.UserId })
                 : Results.BadRequest(new { result.Error });
         }).WithName("Register").RequireRateLimiting("auth");
+
+        group.MapPost("/confirm", async (HttpContext ctx, ConfirmRegistrationRequest req, IAuthService auth) =>
+        {
+            if (string.IsNullOrWhiteSpace(req.Email) || string.IsNullOrWhiteSpace(req.ConfirmationCode))
+                return Results.BadRequest(new { error = "Email and confirmation code are required" });
+
+            var result = await auth.ConfirmRegistrationAsync(
+                req.Email,
+                req.ConfirmationCode,
+                ctx.RequestAborted);
+
+            return result.Success
+                ? Results.Ok(new { result.Success, result.Email, result.UserId })
+                : Results.BadRequest(new { result.Error, result.RequiresConfirmation });
+        }).WithName("ConfirmRegistration").RequireRateLimiting("auth");
+
+        group.MapPost("/resend-confirmation", async (HttpContext ctx, ResendConfirmationRequest req, IAuthService auth) =>
+        {
+            if (string.IsNullOrWhiteSpace(req.Email))
+                return Results.BadRequest(new { error = "Email is required" });
+
+            var result = await auth.ResendConfirmationAsync(req.Email, ctx.RequestAborted);
+            return result.Success
+                ? Results.Ok(new { result.Success, result.RequiresConfirmation, result.Email })
+                : Results.BadRequest(new { result.Error });
+        }).WithName("ResendConfirmation").RequireRateLimiting("auth");
 
         group.MapPost("/login", async (HttpContext ctx, LoginRequest req, IAuthService auth) =>
         {
@@ -68,6 +96,8 @@ public static class AuthEndpoints
 }
 
 public record RegisterRequest(string Email, string Password);
+public record ConfirmRegistrationRequest(string Email, string ConfirmationCode);
+public record ResendConfirmationRequest(string Email);
 public record LoginRequest(string Email, string Password);
 public record RefreshRequest(string RefreshToken);
 public record GoogleLoginRequest(string IdToken);
