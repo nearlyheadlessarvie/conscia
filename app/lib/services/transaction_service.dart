@@ -14,6 +14,8 @@ class Transaction {
   final int? regretLevel;
   final String? recurringScheduleId;
   final DateTime? recurringOccurrenceDate;
+  final String scope;
+  final String? familySpaceId;
 
   const Transaction({
     required this.id,
@@ -26,6 +28,8 @@ class Transaction {
     this.regretLevel,
     this.recurringScheduleId,
     this.recurringOccurrenceDate,
+    this.scope = 'personal',
+    this.familySpaceId,
   });
 
   bool get isRecurring => recurringScheduleId != null;
@@ -47,6 +51,8 @@ class Transaction {
       recurringOccurrenceDate: json['recurringOccurrenceDate'] != null
           ? DateTime.parse(json['recurringOccurrenceDate'] as String)
           : null,
+      scope: _parseScope(json['scope']),
+      familySpaceId: json['familySpaceId'] as String?,
     );
   }
 
@@ -55,6 +61,11 @@ class Transaction {
     if (value is int) return value;
     const map = {'WorthIt': 0, 'NotSure': 1, 'Regret': 2};
     return map[value as String];
+  }
+
+  static String _parseScope(dynamic value) {
+    if (value is! String) return 'personal';
+    return value.toLowerCase() == 'family' ? 'family' : 'personal';
   }
 }
 

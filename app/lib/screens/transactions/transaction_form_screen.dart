@@ -142,6 +142,7 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
         _selectedCategory = tx.category;
         _counterpartyController.text = tx.description;
         _selectedDate = tx.date;
+        _scope = tx.scope;
       });
     } catch (_) {}
   }
@@ -167,7 +168,9 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
     final userCurrency = ref.read(userPreferencesProvider).currency;
     final rateOverride = double.tryParse(_exchangeRateController.text);
     final familySpace = ref.read(familySpaceProvider).valueOrNull;
-    final isFamilyScope = _scope == 'family' && familySpace != null;
+    final familySpaceId =
+        familySpace?.id ?? _originalTransaction?.familySpaceId;
+    final isFamilyScope = _scope == 'family' && familySpaceId != null;
 
     final dto = CreateTransactionDto(
       amount: double.parse(_amountController.text),
@@ -179,7 +182,7 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
       baseCurrencyCode: userCurrency,
       exchangeRateOverride: rateOverride,
       scope: isFamilyScope ? 'family' : 'personal',
-      familySpaceId: isFamilyScope ? familySpace.id : null,
+      familySpaceId: isFamilyScope ? familySpaceId : null,
       recurring: !_isEditing
           ? RecurringDraft(
               enabled: _recurringEnabled,
@@ -385,7 +388,7 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
             }),
           ),
           const SizedBox(height: 18),
-          if (!_isEditing && familySpace != null) ...[
+          if (familySpace != null) ...[
             Padding(
               padding: const EdgeInsets.only(bottom: 18),
               child: Column(

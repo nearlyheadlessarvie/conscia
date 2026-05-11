@@ -47,7 +47,9 @@ class _FakeLocationAssistanceService extends LocationAssistanceService {
 }
 
 class _RecordingTransactionService extends TransactionService {
-  _RecordingTransactionService() : super(Dio());
+  _RecordingTransactionService({this.editTransaction}) : super(Dio());
+
+  final Transaction? editTransaction;
 
   CreateTransactionDto? lastCreated;
   CreateTransactionDto? lastUpdated;
@@ -63,6 +65,8 @@ class _RecordingTransactionService extends TransactionService {
       description: dto.counterparty,
       type: dto.type,
       date: dto.date,
+      scope: dto.scope,
+      familySpaceId: dto.familySpaceId,
       recurringScheduleId: dto.recurring?.enabled == true ? 'schedule-1' : null,
       recurringOccurrenceDate: dto.recurring?.enabled == true ? dto.date : null,
     );
@@ -70,6 +74,8 @@ class _RecordingTransactionService extends TransactionService {
 
   @override
   Future<Transaction> getById(String id) async {
+    if (editTransaction != null) return editTransaction!;
+
     return Transaction(
       id: id,
       amount: 14.75,
@@ -92,6 +98,8 @@ class _RecordingTransactionService extends TransactionService {
       description: dto.counterparty,
       type: dto.type,
       date: dto.date,
+      scope: dto.scope,
+      familySpaceId: dto.familySpaceId,
       recurringScheduleId: dto.recurring?.enabled == true ? 'schedule-1' : null,
       recurringOccurrenceDate: dto.recurring?.enabled == true ? dto.date : null,
     );
@@ -148,6 +156,7 @@ Future<ProviderContainer> _pumpTransactionForm(
   SharedPreferences? prefs,
   LocationAssistanceService? locationService,
   TransactionService? transactionService,
+  String? transactionId,
   List<Budget> budgets = const [],
   FamilySpace? familySpace,
   bool locationSuggestionsEnabled = false,
@@ -200,16 +209,21 @@ Future<ProviderContainer> _pumpTransactionForm(
   );
   addTearDown(container.dispose);
 
-  await tester.pumpWidget(_buildTransactionFormApp(container));
+  await tester.pumpWidget(
+    _buildTransactionFormApp(container, transactionId: transactionId),
+  );
 
   return container;
 }
 
-Widget _buildTransactionFormApp(ProviderContainer container) {
+Widget _buildTransactionFormApp(
+  ProviderContainer container, {
+  String? transactionId,
+}) {
   return UncontrolledProviderScope(
     container: container,
-    child: const MaterialApp(
-      home: TransactionFormScreen(),
+    child: MaterialApp(
+      home: TransactionFormScreen(transactionId: transactionId),
     ),
   );
 }
@@ -278,6 +292,23 @@ void main() {
     });
 
     expect(tx.description, 'ACME Corp');
+  });
+
+  test('transaction json reads scope and family space id', () {
+    final tx = Transaction.fromJson({
+      'id': 'tx-1',
+      'amount': 2460,
+      'currencyCode': 'PHP',
+      'category': 'Dining',
+      'counterparty': 'Manam',
+      'type': 'Expense',
+      'date': '2026-05-03T00:00:00Z',
+      'scope': 'Family',
+      'familySpaceId': 'family-1',
+    });
+
+    expect(tx.scope, 'family');
+    expect(tx.familySpaceId, 'family-1');
   });
 
   test('create transaction dto serializes counterparty', () {
@@ -787,6 +818,49 @@ void main() {
 
     expect(transactionService.lastCreated?.scope, 'family');
     expect(transactionService.lastCreated?.familySpaceId, 'family-1');
+  });
+
+  testWidgets('edit form shows and preserves family transaction scope', (
+    tester,
+  ) async {
+    final transactionService = _RecordingTransactionService(
+      editTransaction: Transaction(
+        id: 'tx-family',
+        amount: 2460,
+        currencyCode: 'PHP',
+        category: 'Dining',
+        description: 'Manam',
+        type: 'expense',
+        date: DateTime(2026, 5, 3),
+        scope: 'family',
+        familySpaceId: 'family-1',
+      ),
+    );
+
+    await _pumpTransactionForm(
+      tester,
+      transactionService: transactionService,
+      transactionId: 'tx-family',
+      familySpace: const FamilySpace(
+        id: 'family-1',
+        name: 'Santos Household',
+        currencyCode: 'PHP',
+        isReadOnly: false,
+        role: 'Contributor',
+      ),
+    );
+
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 250));
+
+    expect(find.text('Scope'), findsOneWidget);
+    expect(find.textContaining('Santos Household'), findsOneWidget);
+
+    await tester.tap(find.text('Update Transaction'));
+    await tester.pump();
+
+    expect(transactionService.lastUpdated?.scope, 'family');
+    expect(transactionService.lastUpdated?.familySpaceId, 'family-1');
   });
 
   testWidgets('saving a budgeted expense updates budget usage immediately', (
