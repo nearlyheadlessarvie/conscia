@@ -46,6 +46,24 @@ public class StoryDemoScenarioTests
     }
 
     [Fact]
+    public void Build_CreatesBothBudgetedAndUnbudgetedBudgetTrendExamples()
+    {
+        var scenario = StoryDemoScenario.Build(DateTime.Parse("2026-05-11T00:00:00Z"));
+
+        var diningBudget = Assert.Single(scenario.Budgets, budget => budget.Category == "Dining");
+        var diningCurrentMonth = Assert.Single(
+            scenario.MonthlyCategorySpends,
+            spend => spend.Category == "Dining" && spend.MonthKey == "2026-05");
+        var subscriptionsCurrentMonth = Assert.Single(
+            scenario.MonthlyCategorySpends,
+            spend => spend.Category == "Subscriptions" && spend.MonthKey == "2026-05");
+
+        Assert.True(diningCurrentMonth.TotalExpenseAmount / diningBudget.MonthlyLimit >= 0.80m);
+        Assert.DoesNotContain(scenario.Budgets, budget => budget.Category == "Subscriptions");
+        Assert.True(subscriptionsCurrentMonth.TotalExpenseAmount > 0m);
+    }
+
+    [Fact]
     public void Build_CreatesAlertVarietyForNotificationDemo()
     {
         var scenario = StoryDemoScenario.Build(DateTime.Parse("2026-05-11T00:00:00Z"));

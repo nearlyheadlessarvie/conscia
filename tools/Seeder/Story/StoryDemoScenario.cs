@@ -167,7 +167,7 @@ public sealed class StoryDemoScenario
         {
             new() { UserId = userId, MonthKey = "2026-03", Category = "Dining", NormalizedCategory = "dining", CurrencyCode = "PHP", TotalExpenseAmount = 2100m, TransactionCount = 7, LastUpdatedAt = nowUtc },
             new() { UserId = userId, MonthKey = "2026-04", Category = "Dining", NormalizedCategory = "dining", CurrencyCode = "PHP", TotalExpenseAmount = 2650m, TransactionCount = 8, LastUpdatedAt = nowUtc },
-            new() { UserId = userId, MonthKey = "2026-05", Category = "Dining", NormalizedCategory = "dining", CurrencyCode = "PHP", TotalExpenseAmount = 3180m, TransactionCount = 9, LastUpdatedAt = nowUtc },
+            new() { UserId = userId, MonthKey = "2026-05", Category = "Dining", NormalizedCategory = "dining", CurrencyCode = "PHP", TotalExpenseAmount = 3400m, TransactionCount = 9, LastUpdatedAt = nowUtc },
             new() { UserId = userId, MonthKey = "2026-03", Category = "Subscriptions", NormalizedCategory = "subscriptions", CurrencyCode = "PHP", TotalExpenseAmount = 820m, TransactionCount = 2, LastUpdatedAt = nowUtc },
             new() { UserId = userId, MonthKey = "2026-04", Category = "Subscriptions", NormalizedCategory = "subscriptions", CurrencyCode = "PHP", TotalExpenseAmount = 980m, TransactionCount = 3, LastUpdatedAt = nowUtc },
             new() { UserId = userId, MonthKey = "2026-05", Category = "Subscriptions", NormalizedCategory = "subscriptions", CurrencyCode = "PHP", TotalExpenseAmount = 1140m, TransactionCount = 3, LastUpdatedAt = nowUtc }
