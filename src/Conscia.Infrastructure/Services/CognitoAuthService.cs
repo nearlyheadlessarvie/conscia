@@ -68,7 +68,7 @@ public class CognitoAuthService : IAuthService
         }
         catch (UsernameExistsException)
         {
-            return new AuthResult { Success = false, RequiresConfirmation = true, Email = email, Error = "User already exists" };
+            return await ResendForExistingRegistrationAsync(email, ct);
         }
         catch (InvalidPasswordException ex)
         {
@@ -146,6 +146,16 @@ public class CognitoAuthService : IAuthService
         catch (UserNotFoundException)
         {
             return ConfirmationError(email, "User not found");
+        }
+        catch (InvalidParameterException ex) when (ex.Message.Contains("confirm", StringComparison.OrdinalIgnoreCase))
+        {
+            return new AuthResult
+            {
+                Success = false,
+                RequiresConfirmation = false,
+                Email = email,
+                Error = "Account already exists. Please sign in."
+            };
         }
         catch (AmazonCognitoIdentityProviderException ex)
         {
@@ -318,6 +328,22 @@ public class CognitoAuthService : IAuthService
             Email = email,
             Error = error
         };
+    }
+
+    private async Task<AuthResult> ResendForExistingRegistrationAsync(string email, CancellationToken ct)
+    {
+        var resend = await ResendConfirmationAsync(email, ct);
+        if (resend.Success)
+        {
+            return new AuthResult
+            {
+                Success = true,
+                RequiresConfirmation = true,
+                Email = email
+            };
+        }
+
+        return resend;
     }
 
     private static string NormalizeEmail(string email) => email.Trim().ToLowerInvariant();

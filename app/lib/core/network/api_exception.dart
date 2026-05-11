@@ -8,6 +8,23 @@ class ApiException implements Exception {
   });
 
   factory ApiException.fromDioException(DioException error) {
+    ApiException fromResponse() {
+      final statusCode = error.response?.statusCode;
+      final data = error.response?.data;
+      final message = data is Map
+          ? (data['message'] as String?) ??
+              (data['error'] as String?) ??
+              'Request failed'
+          : 'Request failed';
+      final errorCode = data is Map ? data['error'] as String? : null;
+
+      return ApiException(
+        message: message,
+        statusCode: statusCode,
+        errorCode: errorCode,
+      );
+    }
+
     switch (error.type) {
       case DioExceptionType.connectionTimeout:
       case DioExceptionType.sendTimeout:
@@ -16,24 +33,15 @@ class ApiException implements Exception {
       case DioExceptionType.connectionError:
         return const ApiException(message: 'No internet connection');
       case DioExceptionType.badResponse:
-        final statusCode = error.response?.statusCode;
-        final data = error.response?.data;
-        final message = data is Map<String, dynamic>
-            ? (data['message'] as String?) ?? 'Request failed'
-            : 'Request failed';
-        final errorCode = data is Map<String, dynamic>
-            ? data['error'] as String?
-            : null;
-        return ApiException(
-          message: message,
-          statusCode: statusCode,
-          errorCode: errorCode,
-        );
+        return fromResponse();
       case DioExceptionType.cancel:
         return const ApiException(message: 'Request cancelled');
       case DioExceptionType.badCertificate:
         return const ApiException(message: 'Invalid certificate');
       case DioExceptionType.unknown:
+        if (error.response != null) {
+          return fromResponse();
+        }
         return ApiException(
           message: error.message ?? 'An unexpected error occurred',
         );

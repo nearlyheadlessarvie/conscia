@@ -45,7 +45,7 @@ class _TestAuthNotifier extends AuthNotifier {
 }
 
 void main() {
-  testWidgets('resend code is disabled for one minute after sending', (
+  testWidgets('resend code is disabled for one minute when screen opens', (
     tester,
   ) async {
     final authNotifier = _TestAuthNotifier();
@@ -61,20 +61,22 @@ void main() {
       ),
     );
 
-    await tester.tap(find.text('Resend code'));
-    await tester.pump();
-
-    expect(authNotifier.resendCount, 1);
     expect(find.text('Resend in 60s'), findsOneWidget);
 
     await tester.tap(find.text('Resend in 60s'));
     await tester.pump();
 
-    expect(authNotifier.resendCount, 1);
+    expect(authNotifier.resendCount, 0);
 
     await tester.pump(const Duration(seconds: 60));
 
     expect(find.text('Resend code'), findsOneWidget);
+
+    await tester.tap(find.text('Resend code'));
+    await tester.pump();
+
+    expect(authNotifier.resendCount, 1);
+    expect(find.text('Resend in 60s'), findsOneWidget);
   });
 
   testWidgets('back to sign in clears pending confirmation before routing', (

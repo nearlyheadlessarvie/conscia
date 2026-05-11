@@ -27,6 +27,12 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
   String? _errorMessage;
 
   @override
+  void initState() {
+    super.initState();
+    _startResendCooldown();
+  }
+
+  @override
   void dispose() {
     _resendCooldownTimer?.cancel();
     _codeController.dispose();

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:dio/dio.dart';
 
+import '../../core/network/api_exception.dart';
 import '../../core/utils/email_validator.dart';
 import '../../providers/auth_provider.dart';
 
@@ -67,7 +69,9 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
       if (!mounted) return;
       setState(() {
         _isLoading = false;
-        _errorMessage = e.toString();
+        _errorMessage = e is DioException
+            ? ApiException.fromDioException(e).message
+            : e.toString();
       });
       return;
     }
