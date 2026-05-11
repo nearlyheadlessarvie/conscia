@@ -1,4 +1,5 @@
 using Conscia.Application.Interfaces;
+using Conscia.Application.DTOs;
 using Conscia.Application.Models;
 using Conscia.Domain.Entities;
 using Conscia.Domain.Enums;
@@ -22,20 +23,29 @@ public class BudgetService : IBudgetService
         _logger = logger;
     }
 
-    public async Task<Budget> CreateAsync(Guid userId, string category, decimal monthlyLimit, string currencyCode, CancellationToken ct = default)
+    public Task<Budget> CreateAsync(Guid userId, string category, decimal monthlyLimit, string currencyCode, CancellationToken ct = default) =>
+        CreateAsync(userId, new CreateBudgetDto
+        {
+            Category = category,
+            MonthlyLimit = monthlyLimit,
+            CurrencyCode = currencyCode
+        }, ct);
+
+    public async Task<Budget> CreateAsync(Guid userId, CreateBudgetDto dto, CancellationToken ct = default)
     {
         var budget = new Budget
         {
             Id = Guid.NewGuid(),
             UserId = userId,
-            Category = category,
-            MonthlyLimit = monthlyLimit,
-            CurrencyCode = currencyCode
+            Category = dto.Category,
+            MonthlyLimit = dto.MonthlyLimit,
+            CurrencyCode = dto.CurrencyCode
         };
+        ApplyScope(budget, userId, dto.Scope, dto.FamilySpaceId);
 
         var result = await _repo.AddAsync(budget, ct);
         _logger.LogInformation("Creating budget {BudgetId} for user {UserId}, category {Category}",
-            budget.Id, userId, category);
+            budget.Id, userId, dto.Category);
         return result;
     }
 
@@ -109,6 +119,23 @@ public class BudgetService : IBudgetService
             throw new UnauthorizedAccessException("Budget does not belong to this user");
 
         await _repo.DeleteAsync(id, ct);
+    }
+
+    private static void ApplyScope(Budget budget, Guid userId, RecordScope scope, Guid? familySpaceId)
+    {
+        budget.Scope = scope;
+        if (scope == RecordScope.Family)
+        {
+            budget.FamilySpaceId = familySpaceId
+                ?? throw new InvalidOperationException("Family Space is required for family budgets.");
+            budget.SharedByUserId = userId;
+            budget.SharedAt ??= DateTime.UtcNow;
+            return;
+        }
+
+        budget.FamilySpaceId = null;
+        budget.SharedByUserId = null;
+        budget.SharedAt = null;
     }
 
     private async Task<Dictionary<string, decimal>> GetMonthlyExpenseTotalsByCategoryAsync(

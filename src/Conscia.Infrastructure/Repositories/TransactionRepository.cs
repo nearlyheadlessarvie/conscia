@@ -323,6 +323,7 @@ public class TransactionRepository : DynamoRepository, ITransactionRepository
             ["Category"] = new(t.Category),
             ["Date"] = new(t.Date.ToString("O")),
             ["CreatedAt"] = new(t.CreatedAt.ToString("O")),
+            ["Scope"] = new(t.Scope.ToString()),
 
             // GSI SUPPORT
             ["GSI1SK"] = new(DynamoKeys.TransactionSortKey(t.Category, t.Date))
@@ -351,6 +352,15 @@ public class TransactionRepository : DynamoRepository, ITransactionRepository
 
         if (t.RecurringOccurrenceDate.HasValue)
             item["RecurringOccurrenceDate"] = new(t.RecurringOccurrenceDate.Value.ToString("O"));
+
+        if (t.FamilySpaceId.HasValue)
+            item["FamilySpaceId"] = new(t.FamilySpaceId.Value.ToString());
+
+        if (t.SharedAt.HasValue)
+            item["SharedAt"] = new(t.SharedAt.Value.ToString("O"));
+
+        if (t.SharedByUserId.HasValue)
+            item["SharedByUserId"] = new(t.SharedByUserId.Value.ToString());
 
         return item;
     }
@@ -385,6 +395,21 @@ public class TransactionRepository : DynamoRepository, ITransactionRepository
             RecurringOccurrenceDate = item.TryGetValue("RecurringOccurrenceDate", out var recurringOccurrenceDate)
                 && DateTime.TryParse(recurringOccurrenceDate.S, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var occurrenceDate)
                     ? occurrenceDate
+                    : null,
+            Scope = item.TryGetValue("Scope", out var scope)
+                ? Enum.Parse<RecordScope>(scope.S)
+                : RecordScope.Personal,
+            FamilySpaceId = item.TryGetValue("FamilySpaceId", out var familySpaceId)
+                && Guid.TryParse(familySpaceId.S, out var parsedFamilySpaceId)
+                    ? parsedFamilySpaceId
+                    : null,
+            SharedAt = item.TryGetValue("SharedAt", out var sharedAt)
+                && DateTime.TryParse(sharedAt.S, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var parsedSharedAt)
+                    ? parsedSharedAt
+                    : null,
+            SharedByUserId = item.TryGetValue("SharedByUserId", out var sharedByUserId)
+                && Guid.TryParse(sharedByUserId.S, out var parsedSharedByUserId)
+                    ? parsedSharedByUserId
                     : null,
             CreatedAt = DateTime.Parse(item["CreatedAt"].S, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind)
         };

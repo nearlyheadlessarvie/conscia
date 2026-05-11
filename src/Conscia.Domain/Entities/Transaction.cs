@@ -16,6 +16,10 @@ public class Transaction
     public RegretLevel? RegretLevel { get; set; }
     public Guid? RecurringScheduleId { get; set; }
     public DateTime? RecurringOccurrenceDate { get; set; }
+    public RecordScope Scope { get; set; } = RecordScope.Personal;
+    public Guid? FamilySpaceId { get; set; }
+    public DateTime? SharedAt { get; set; }
+    public Guid? SharedByUserId { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }
 

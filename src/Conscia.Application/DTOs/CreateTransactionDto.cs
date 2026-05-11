@@ -19,4 +19,6 @@ public class CreateTransactionDto
     /// <summary>Client-provided rate override. When set, skips API fetch.</summary>
     public decimal? ExchangeRateOverride { get; set; }
     public RecurringOptionsDto? Recurring { get; set; }
+    public RecordScope Scope { get; set; } = RecordScope.Personal;
+    public Guid? FamilySpaceId { get; set; }
 }

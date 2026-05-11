@@ -10,4 +10,6 @@ public class UpdateTransactionDto
     public string? Category { get; set; }
     public string? Counterparty { get; set; }
     public DateTime? Date { get; set; }
+    public RecordScope? Scope { get; set; }
+    public Guid? FamilySpaceId { get; set; }
 }

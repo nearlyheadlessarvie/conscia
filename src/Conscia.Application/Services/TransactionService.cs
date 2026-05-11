@@ -50,6 +50,7 @@ public class TransactionService : ITransactionService
             Date = dto.Date,
             CreatedAt = DateTime.UtcNow
         };
+        ApplyScope(transaction, userId, dto.Scope, dto.FamilySpaceId);
 
         if (dto.Latitude.HasValue && dto.Longitude.HasValue)
         {
@@ -78,6 +79,8 @@ public class TransactionService : ITransactionService
                 StartDate = dto.Recurring.StartDate ?? dto.Date,
                 Cadence = dto.Recurring.Cadence,
                 EndDate = dto.Recurring.EndDate,
+                Scope = dto.Scope,
+                FamilySpaceId = dto.FamilySpaceId,
             }, ct);
         }
 
@@ -123,6 +126,8 @@ public class TransactionService : ITransactionService
         if (dto.Category is not null) existing.Category = dto.Category;
         if (dto.Counterparty is not null) existing.Counterparty = dto.Counterparty;
         if (dto.Date.HasValue) existing.Date = dto.Date.Value;
+        if (dto.Scope.HasValue)
+            ApplyScope(existing, userId, dto.Scope.Value, dto.FamilySpaceId);
 
         await _repo.UpdateWithOutboxAsync(
             existing,
@@ -161,7 +166,11 @@ public class TransactionService : ITransactionService
                 Category = transaction.Category,
                 Amount = transaction.Amount.Amount,
                 CurrencyCode = transaction.Amount.CurrencyCode,
-                TransactionDate = transaction.Date
+                TransactionDate = transaction.Date,
+                Scope = transaction.Scope.ToString(),
+                transaction.FamilySpaceId,
+                transaction.SharedByUserId,
+                transaction.SharedAt
             }),
             CreatedAt = DateTime.UtcNow
         };
@@ -204,7 +213,13 @@ public class TransactionService : ITransactionService
                 Category = current.Category,
                 Amount = current.Amount.Amount,
                 CurrencyCode = current.Amount.CurrencyCode,
-                TransactionDate = current.Date
+                TransactionDate = current.Date,
+                PreviousScope = previous.Scope.ToString(),
+                PreviousFamilySpaceId = previous.FamilySpaceId,
+                Scope = current.Scope.ToString(),
+                current.FamilySpaceId,
+                current.SharedByUserId,
+                current.SharedAt
             }),
             CreatedAt = DateTime.UtcNow
         };
@@ -226,6 +241,10 @@ public class TransactionService : ITransactionService
             RegretLevel = transaction.RegretLevel,
             RecurringScheduleId = transaction.RecurringScheduleId,
             RecurringOccurrenceDate = transaction.RecurringOccurrenceDate,
+            Scope = transaction.Scope,
+            FamilySpaceId = transaction.FamilySpaceId,
+            SharedAt = transaction.SharedAt,
+            SharedByUserId = transaction.SharedByUserId,
             Location = transaction.Location is null
                 ? null
                 : new Location
@@ -235,4 +254,21 @@ public class TransactionService : ITransactionService
                     PlaceName = transaction.Location.PlaceName
                 }
         };
+
+    private static void ApplyScope(Transaction transaction, Guid userId, RecordScope scope, Guid? familySpaceId)
+    {
+        transaction.Scope = scope;
+        if (scope == RecordScope.Family)
+        {
+            transaction.FamilySpaceId = familySpaceId
+                ?? throw new InvalidOperationException("Family Space is required for family transactions.");
+            transaction.SharedByUserId = userId;
+            transaction.SharedAt ??= DateTime.UtcNow;
+            return;
+        }
+
+        transaction.FamilySpaceId = null;
+        transaction.SharedByUserId = null;
+        transaction.SharedAt = null;
+    }
 }

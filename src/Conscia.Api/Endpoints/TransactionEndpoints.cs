@@ -48,7 +48,11 @@ public static class TransactionEndpoints
                 txn.CreatedAt,
                 txn.RecurringScheduleId,
                 txn.RecurringOccurrenceDate,
-                IsRecurring = txn.RecurringScheduleId is not null
+                IsRecurring = txn.RecurringScheduleId is not null,
+                txn.Scope,
+                txn.FamilySpaceId,
+                txn.SharedAt,
+                txn.SharedByUserId
             });
         }).WithName("CreateTransaction");
 
@@ -79,7 +83,11 @@ public static class TransactionEndpoints
                     RegretLevel = t.RegretLevel?.ToString(),
                     t.RecurringScheduleId,
                     t.RecurringOccurrenceDate,
-                    IsRecurring = t.RecurringScheduleId is not null
+                    IsRecurring = t.RecurringScheduleId is not null,
+                    t.Scope,
+                    t.FamilySpaceId,
+                    t.SharedAt,
+                    t.SharedByUserId
                 })
             });
         }).WithName("ListTransactions");
@@ -109,7 +117,11 @@ public static class TransactionEndpoints
                 txn.CreatedAt,
                 txn.RecurringScheduleId,
                 txn.RecurringOccurrenceDate,
-                IsRecurring = txn.RecurringScheduleId is not null
+                IsRecurring = txn.RecurringScheduleId is not null,
+                txn.Scope,
+                txn.FamilySpaceId,
+                txn.SharedAt,
+                txn.SharedByUserId
             });
         }).WithName("GetTransaction");
 
@@ -137,7 +149,11 @@ public static class TransactionEndpoints
                 txn.Date,
                 txn.RecurringScheduleId,
                 txn.RecurringOccurrenceDate,
-                IsRecurring = txn.RecurringScheduleId is not null
+                IsRecurring = txn.RecurringScheduleId is not null,
+                txn.Scope,
+                txn.FamilySpaceId,
+                txn.SharedAt,
+                txn.SharedByUserId
             });
         }).WithName("UpdateTransaction");
 

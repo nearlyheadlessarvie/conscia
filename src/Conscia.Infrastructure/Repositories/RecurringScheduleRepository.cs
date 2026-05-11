@@ -111,6 +111,7 @@ public class RecurringScheduleRepository : DynamoRepository, IRecurringScheduleR
             ["IsActive"] = new() { BOOL = schedule.IsActive },
             ["CreatedAt"] = new(schedule.CreatedAt.ToString("O")),
             ["UpdatedAt"] = new(schedule.UpdatedAt.ToString("O")),
+            ["Scope"] = new(schedule.Scope.ToString()),
         };
 
         if (schedule.Counterparty is not null)
@@ -121,6 +122,15 @@ public class RecurringScheduleRepository : DynamoRepository, IRecurringScheduleR
 
         if (schedule.LastGeneratedAt.HasValue)
             item["LastGeneratedAt"] = new(schedule.LastGeneratedAt.Value.ToString("O"));
+
+        if (schedule.FamilySpaceId.HasValue)
+            item["FamilySpaceId"] = new(schedule.FamilySpaceId.Value.ToString());
+
+        if (schedule.SharedAt.HasValue)
+            item["SharedAt"] = new(schedule.SharedAt.Value.ToString("O"));
+
+        if (schedule.SharedByUserId.HasValue)
+            item["SharedByUserId"] = new(schedule.SharedByUserId.Value.ToString());
 
         if (schedule.Amount.ExchangeRateToBase.HasValue)
             item["ExchangeRateToBase"] = new()
@@ -157,6 +167,21 @@ public class RecurringScheduleRepository : DynamoRepository, IRecurringScheduleR
             LastGeneratedAt = item.TryGetValue("LastGeneratedAt", out var lastGeneratedAt)
                 ? DateTime.Parse(lastGeneratedAt.S, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind)
                 : null,
+            Scope = item.TryGetValue("Scope", out var scope)
+                ? Enum.Parse<RecordScope>(scope.S)
+                : RecordScope.Personal,
+            FamilySpaceId = item.TryGetValue("FamilySpaceId", out var familySpaceId)
+                && Guid.TryParse(familySpaceId.S, out var parsedFamilySpaceId)
+                    ? parsedFamilySpaceId
+                    : null,
+            SharedAt = item.TryGetValue("SharedAt", out var sharedAt)
+                && DateTime.TryParse(sharedAt.S, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var parsedSharedAt)
+                    ? parsedSharedAt
+                    : null,
+            SharedByUserId = item.TryGetValue("SharedByUserId", out var sharedByUserId)
+                && Guid.TryParse(sharedByUserId.S, out var parsedSharedByUserId)
+                    ? parsedSharedByUserId
+                    : null,
         };
     }
 }

@@ -1,11 +1,13 @@
 using Conscia.Domain.Entities;
 using Conscia.Application.Models;
+using Conscia.Application.DTOs;
 
 namespace Conscia.Application.Interfaces;
 
 public interface IBudgetService
 {
     Task<Budget> CreateAsync(Guid userId, string category, decimal monthlyLimit, string currencyCode, CancellationToken ct = default);
+    Task<Budget> CreateAsync(Guid userId, CreateBudgetDto dto, CancellationToken ct = default);
     Task<Budget?> GetByIdAsync(Guid userId, Guid id, CancellationToken ct = default);
     Task<IReadOnlyList<Budget>> ListByUserAsync(Guid userId, CancellationToken ct = default);
     Task<BudgetStatus?> GetStatusByIdAsync(Guid userId, Guid id, DateTime? now = null, CancellationToken ct = default);

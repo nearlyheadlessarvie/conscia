@@ -16,6 +16,10 @@ public class RecurringScheduleResponseDto
     public DateTime NextRunAt { get; set; }
     public DateTime? EndDate { get; set; }
     public bool IsActive { get; set; }
+    public string Scope { get; set; } = "Personal";
+    public Guid? FamilySpaceId { get; set; }
+    public DateTime? SharedAt { get; set; }
+    public Guid? SharedByUserId { get; set; }
 
     public static RecurringScheduleResponseDto From(RecurringSchedule schedule) =>
         new()
@@ -32,5 +36,9 @@ public class RecurringScheduleResponseDto
             NextRunAt = schedule.NextRunAt,
             EndDate = schedule.EndDate,
             IsActive = schedule.IsActive,
+            Scope = schedule.Scope.ToString(),
+            FamilySpaceId = schedule.FamilySpaceId,
+            SharedAt = schedule.SharedAt,
+            SharedByUserId = schedule.SharedByUserId
         };
 }

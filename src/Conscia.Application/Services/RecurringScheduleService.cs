@@ -1,6 +1,7 @@
 using Conscia.Application.DTOs;
 using Conscia.Application.Interfaces;
 using Conscia.Domain.Entities;
+using Conscia.Domain.Enums;
 using Conscia.Domain.ValueObjects;
 using Microsoft.Extensions.Logging;
 
@@ -37,6 +38,7 @@ public class RecurringScheduleService : IRecurringScheduleService
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow,
         };
+        ApplyScope(schedule, userId, dto.Scope, dto.FamilySpaceId);
 
         _logger.LogInformation("Creating recurring schedule {ScheduleId} for user {UserId}", schedule.Id, userId);
         return await _repo.AddAsync(schedule, ct);
@@ -65,6 +67,8 @@ public class RecurringScheduleService : IRecurringScheduleService
         if (dto.Cadence.HasValue) schedule.Cadence = dto.Cadence.Value;
         if (dto.EndDate.HasValue || dto.StartDate.HasValue) schedule.EndDate = dto.EndDate;
         if (dto.IsActive.HasValue) schedule.IsActive = dto.IsActive.Value;
+        if (dto.Scope.HasValue)
+            ApplyScope(schedule, userId, dto.Scope.Value, dto.FamilySpaceId);
 
         schedule.UpdatedAt = DateTime.UtcNow;
         await _repo.UpdateAsync(schedule, ct);
@@ -73,4 +77,21 @@ public class RecurringScheduleService : IRecurringScheduleService
 
     public Task DeleteAsync(Guid userId, Guid id, CancellationToken ct = default) =>
         _repo.DeleteAsync(userId, id, ct);
+
+    private static void ApplyScope(RecurringSchedule schedule, Guid userId, RecordScope scope, Guid? familySpaceId)
+    {
+        schedule.Scope = scope;
+        if (scope == RecordScope.Family)
+        {
+            schedule.FamilySpaceId = familySpaceId
+                ?? throw new InvalidOperationException("Family Space is required for family recurring schedules.");
+            schedule.SharedByUserId = userId;
+            schedule.SharedAt ??= DateTime.UtcNow;
+            return;
+        }
+
+        schedule.FamilySpaceId = null;
+        schedule.SharedByUserId = null;
+        schedule.SharedAt = null;
+    }
 }

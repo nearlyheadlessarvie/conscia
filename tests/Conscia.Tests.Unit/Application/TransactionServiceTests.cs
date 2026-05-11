@@ -409,4 +409,39 @@ public class TransactionServiceTests
                 r.Counterparty == "Netflix"),
             It.IsAny<CancellationToken>()), Times.Once);
     }
+
+    [Fact]
+    public async Task CreateAsync_FamilyScope_AddsFamilyMetadataToTransactionAndOutboxPayload()
+    {
+        var userId = Guid.NewGuid();
+        var familySpaceId = Guid.NewGuid();
+        var dto = new CreateTransactionDto
+        {
+            Type = TransactionType.Expense,
+            Amount = 280m,
+            CurrencyCode = "PHP",
+            Category = "Dining",
+            Counterparty = "Starbucks",
+            Date = DateTime.UtcNow,
+            Scope = RecordScope.Family,
+            FamilySpaceId = familySpaceId
+        };
+        OutboxEvent? capturedEvent = null;
+
+        _repoMock.Setup(r => r.AddWithOutboxAsync(
+                It.IsAny<Transaction>(),
+                It.IsAny<OutboxEvent>(),
+                It.IsAny<CancellationToken>()))
+            .Callback<Transaction, OutboxEvent, CancellationToken>((_, evt, _) => capturedEvent = evt)
+            .ReturnsAsync((Transaction t, OutboxEvent _, CancellationToken __) => t);
+
+        var result = await _svc.CreateAsync(userId, dto);
+
+        Assert.Equal(RecordScope.Family, result.Scope);
+        Assert.Equal(familySpaceId, result.FamilySpaceId);
+        Assert.Equal(userId, result.SharedByUserId);
+        Assert.NotNull(result.SharedAt);
+        Assert.Contains("\"Scope\":\"Family\"", capturedEvent!.Payload);
+        Assert.Contains(familySpaceId.ToString(), capturedEvent.Payload);
+    }
 }

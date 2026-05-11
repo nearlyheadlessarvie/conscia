@@ -1,4 +1,5 @@
 using Conscia.Application.Interfaces;
+using Conscia.Application.DTOs;
 using Conscia.Domain.Enums;
 using Conscia.Domain.ValueObjects;
 using Conscia.Application.Services;
@@ -33,6 +34,29 @@ public class BudgetServiceTests
         Assert.Equal(500m, result.MonthlyLimit);
         Assert.Equal("USD", result.CurrencyCode);
         Assert.NotEqual(Guid.Empty, result.Id);
+    }
+
+    [Fact]
+    public async Task CreateAsync_FamilyScope_AddsFamilyMetadataToBudget()
+    {
+        var userId = Guid.NewGuid();
+        var familySpaceId = Guid.NewGuid();
+        _repoMock.Setup(r => r.AddAsync(It.IsAny<Budget>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Budget b, CancellationToken _) => b);
+
+        var result = await _svc.CreateAsync(userId, new CreateBudgetDto
+        {
+            Category = "Groceries",
+            MonthlyLimit = 12000m,
+            CurrencyCode = "PHP",
+            Scope = RecordScope.Family,
+            FamilySpaceId = familySpaceId
+        });
+
+        Assert.Equal(RecordScope.Family, result.Scope);
+        Assert.Equal(familySpaceId, result.FamilySpaceId);
+        Assert.Equal(userId, result.SharedByUserId);
+        Assert.NotNull(result.SharedAt);
     }
 
     [Fact]
