@@ -64,10 +64,7 @@ class RegretPromptCard extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  CircleAvatar(
-                    backgroundColor: colors.primaryContainer,
-                    child: categoryBadge,
-                  ),
+                  categoryBadge,
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(
