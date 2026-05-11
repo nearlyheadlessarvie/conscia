@@ -132,6 +132,18 @@ class AuthNotifier extends StateNotifier<AuthState> {
         pendingEmail: null,
         isLoading: false,
       );
+    } on AuthConfirmationRequiredException catch (e) {
+      _pendingPassword = password;
+      saveLastEmail(email);
+      state = state.copyWith(
+        status: AuthStatus.pendingConfirmation,
+        pendingEmail: e.email,
+        accessToken: null,
+        refreshToken: null,
+        userId: null,
+        isLoading: false,
+        error: null,
+      );
     } catch (e) {
       state = state.copyWith(isLoading: false, error: e.toString());
       rethrow;

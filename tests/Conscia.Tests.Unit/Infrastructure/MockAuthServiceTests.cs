@@ -93,14 +93,41 @@ public class MockAuthServiceTests : IDisposable
         await _auth.RegisterAsync("dup@test.com", "pass1");
         var result = await _auth.RegisterAsync("dup@test.com", "pass2");
 
+        Assert.True(result.Success);
+        Assert.True(result.RequiresConfirmation);
+        Assert.Equal("dup@test.com", result.Email);
+    }
+
+    [Fact]
+    public async Task Register_DuplicateConfirmedEmail_ReturnsSignInError()
+    {
+        await _auth.RegisterAsync("confirmed-dup@test.com", "pass1");
+        await _auth.ConfirmRegistrationAsync("confirmed-dup@test.com", "123456");
+
+        var result = await _auth.RegisterAsync("confirmed-dup@test.com", "pass2");
+
         Assert.False(result.Success);
-        Assert.Equal("User already exists", result.Error);
+        Assert.False(result.RequiresConfirmation);
+        Assert.Equal("Account already exists. Please sign in.", result.Error);
+    }
+
+    [Fact]
+    public async Task Login_UnconfirmedUser_ReturnsRequiresConfirmation()
+    {
+        await _auth.RegisterAsync("pending-login@test.com", "mypass");
+
+        var result = await _auth.LoginAsync("pending-login@test.com", "mypass");
+
+        Assert.False(result.Success);
+        Assert.True(result.RequiresConfirmation);
+        Assert.Equal("Email confirmation required", result.Error);
     }
 
     [Fact]
     public async Task Login_ValidCredentials_ReturnsToken()
     {
         await _auth.RegisterAsync("login@test.com", "mypass");
+        await _auth.ConfirmRegistrationAsync("login@test.com", "123456");
         var result = await _auth.LoginAsync("login@test.com", "mypass");
 
         Assert.True(result.Success);
@@ -120,6 +147,7 @@ public class MockAuthServiceTests : IDisposable
     public async Task ValidateToken_ValidToken_ReturnsPrincipal()
     {
         await _auth.RegisterAsync("validate@test.com", "pass");
+        await _auth.ConfirmRegistrationAsync("validate@test.com", "123456");
         var loginResult = await _auth.LoginAsync("validate@test.com", "pass");
 
         var principal = await _auth.ValidateTokenAsync(loginResult.AccessToken!);
@@ -207,6 +235,7 @@ public class MockAuthServiceTests : IDisposable
     public async Task Refresh_ValidRefreshToken_ReturnsFreshTokensForSameUser()
     {
         await _auth.RegisterAsync("refreshable@test.com", "pass");
+        await _auth.ConfirmRegistrationAsync("refreshable@test.com", "123456");
         var login = await _auth.LoginAsync("refreshable@test.com", "pass");
 
         var refresh = await _auth.RefreshAsync(login.RefreshToken!);

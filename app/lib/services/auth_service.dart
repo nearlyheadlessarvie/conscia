@@ -24,6 +24,15 @@ class AuthTokens {
   }
 }
 
+class AuthConfirmationRequiredException implements Exception {
+  final String email;
+
+  const AuthConfirmationRequiredException({required this.email});
+
+  @override
+  String toString() => 'Email confirmation required';
+}
+
 class AuthRegistrationResult {
   final bool success;
   final bool requiresConfirmation;
@@ -127,7 +136,13 @@ class AuthService {
         data: {'email': email, 'password': password},
       );
       return AuthTokens.fromJson(response.data as Map<String, dynamic>);
-    } on DioException {
+    } on DioException catch (error) {
+      final data = error.response?.data;
+      if (data is Map && data['requiresConfirmation'] == true) {
+        throw AuthConfirmationRequiredException(
+          email: (data['email'] as String?) ?? email,
+        );
+      }
       rethrow;
     }
   }

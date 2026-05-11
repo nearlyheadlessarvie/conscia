@@ -1,4 +1,5 @@
 using System.IdentityModel.Tokens.Jwt;
+using System.Collections.Concurrent;
 using System.Security.Claims;
 using System.Text;
 using Conscia.Application.Interfaces;
@@ -11,6 +12,8 @@ namespace Conscia.Infrastructure.Services;
 
 public class MockAuthService : IAuthService
 {
+    private static readonly ConcurrentDictionary<string, bool> ConfirmedEmails = new();
+
     private readonly string _signingKey;
     private readonly IUserRepository _repo;
 
@@ -26,7 +29,17 @@ public class MockAuthService : IAuthService
         email = NormalizeEmail(email);
         var existing = await _repo.GetByEmailAsync(email, ct);
         if (existing is not null)
-            return new AuthResult { Success = false, Error = "User already exists" };
+        {
+            return IsConfirmed(email)
+                ? new AuthResult
+                {
+                    Success = false,
+                    RequiresConfirmation = false,
+                    Email = email,
+                    Error = "Account already exists. Please sign in."
+                }
+                : await ResendConfirmationAsync(email, ct);
+        }
 
         var user = new User
         {
@@ -41,6 +54,7 @@ public class MockAuthService : IAuthService
             Provider = AuthProvider.Email,
             ProviderSub = email
         }, ct);
+        ConfirmedEmails[email] = false;
 
         return new AuthResult
         {
@@ -76,6 +90,7 @@ public class MockAuthService : IAuthService
                 Error = "User not found"
             };
         }
+        ConfirmedEmails[email] = true;
 
         return new AuthResult
         {
@@ -116,6 +131,17 @@ public class MockAuthService : IAuthService
         var user = await _repo.GetByEmailAsync(email, ct);
         if (user is null)
             return new AuthResult { Success = false, Error = "Invalid credentials" };
+
+        if (!IsConfirmed(email))
+        {
+            return new AuthResult
+            {
+                Success = false,
+                RequiresConfirmation = true,
+                Email = email,
+                Error = "Email confirmation required"
+            };
+        }
 
         var token = GenerateToken(user.Id.ToString(), email, "Free");
         return new AuthResult
@@ -240,6 +266,7 @@ public class MockAuthService : IAuthService
             Provider = AuthProvider.Email,
             ProviderSub = email
         }, ct);
+        ConfirmedEmails[email] = true;
     }
 
     private async Task<AuthResult> ResolveOrCreateSocialUser(
@@ -293,4 +320,9 @@ public class MockAuthService : IAuthService
     }
 
     private static string NormalizeEmail(string email) => email.Trim().ToLowerInvariant();
+
+    private static bool IsConfirmed(string email)
+    {
+        return !ConfirmedEmails.TryGetValue(email, out var confirmed) || confirmed;
+    }
 }

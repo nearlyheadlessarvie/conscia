@@ -16,6 +16,7 @@ class _FakeAuthService extends AuthService {
   String? lastResentEmail;
   String? lastRefreshToken;
   bool shouldFailRefresh = false;
+  Object? loginError;
 
   @override
   Future<AuthRegistrationResult> register(String email, String password) async {
@@ -51,6 +52,10 @@ class _FakeAuthService extends AuthService {
 
   @override
   Future<AuthTokens> login(String email, String password) async {
+    final error = loginError;
+    if (error != null) {
+      throw error;
+    }
     return _tokens;
   }
 
@@ -200,6 +205,28 @@ void main() {
     await notifier.resendConfirmation();
 
     expect(service.lastResentEmail, 'new@example.com');
+  });
+
+  test('login requiring confirmation stores pending email without tokens',
+      () async {
+    final service = _FakeAuthService(
+      const AuthTokens(
+        accessToken: 'verified.access.token',
+        refreshToken: 'verified-refresh-token',
+        userId: 'user-1',
+      ),
+    )..loginError = const AuthConfirmationRequiredException(
+        email: 'new@example.com',
+      );
+    final storage = _FakeSecureStorage();
+    final notifier = AuthNotifier(service, storage);
+
+    await notifier.login('new@example.com', 'SecureP@ss123');
+
+    expect(notifier.state.status, AuthStatus.pendingConfirmation);
+    expect(notifier.state.pendingEmail, 'new@example.com');
+    expect(notifier.state.accessToken, isNull);
+    expect(await storage.read(key: 'access_token'), isNull);
   });
 
   test('refreshSession updates tokens and keeps the session authenticated',
