@@ -211,6 +211,11 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
   }
 
+  void cancelPendingConfirmation() {
+    _pendingPassword = null;
+    state = const AuthState();
+  }
+
   Future<void> signInWithGoogle() async {
     state = state.copyWith(isLoading: true, error: null);
     try {

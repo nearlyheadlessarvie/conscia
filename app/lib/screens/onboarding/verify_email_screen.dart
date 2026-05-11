@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -14,14 +16,19 @@ class VerifyEmailScreen extends ConsumerStatefulWidget {
 }
 
 class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
+  static const _resendCooldown = Duration(minutes: 1);
+
   final _codeController = TextEditingController();
   bool _isSubmitting = false;
   bool _isResending = false;
+  int _resendCooldownSeconds = 0;
+  Timer? _resendCooldownTimer;
   String? _message;
   String? _errorMessage;
 
   @override
   void dispose() {
+    _resendCooldownTimer?.cancel();
     _codeController.dispose();
     super.dispose();
   }
@@ -63,6 +70,8 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
   }
 
   Future<void> _resend() async {
+    if (_isResending || _resendCooldownSeconds > 0) return;
+
     setState(() {
       _isResending = true;
       _errorMessage = null;
@@ -83,7 +92,32 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
     if (!mounted) return;
     setState(() {
       _isResending = false;
+      _startResendCooldown();
       _message = 'A fresh code is on its way.';
+    });
+  }
+
+  void _returnToSignIn() {
+    ref.read(authProvider.notifier).cancelPendingConfirmation();
+    context.go(AppRoutes.signIn);
+  }
+
+  void _startResendCooldown() {
+    _resendCooldownTimer?.cancel();
+    _resendCooldownSeconds = _resendCooldown.inSeconds;
+    _resendCooldownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+
+      setState(() {
+        _resendCooldownSeconds -= 1;
+        if (_resendCooldownSeconds <= 0) {
+          _resendCooldownSeconds = 0;
+          timer.cancel();
+        }
+      });
     });
   }
 
@@ -94,7 +128,7 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        leading: const BackButton(),
+        leading: BackButton(onPressed: _returnToSignIn),
         backgroundColor: Colors.transparent,
         elevation: 0,
       ),
@@ -181,13 +215,14 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
               ),
               const SizedBox(height: 16),
               TextButton(
-                onPressed: _isResending ? null : _resend,
+                onPressed:
+                    _isResending || _resendCooldownSeconds > 0 ? null : _resend,
                 child: Text(
-                  _isResending ? 'Sending...' : 'Resend code',
+                  _resendButtonLabel,
                 ),
               ),
               TextButton(
-                onPressed: () => context.go(AppRoutes.signIn),
+                onPressed: _returnToSignIn,
                 child: const Text('Back to sign in'),
               ),
             ],
@@ -195,5 +230,13 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
         ),
       ),
     );
+  }
+
+  String get _resendButtonLabel {
+    if (_isResending) return 'Sending...';
+    if (_resendCooldownSeconds > 0) {
+      return 'Resend in ${_resendCooldownSeconds}s';
+    }
+    return 'Resend code';
   }
 }

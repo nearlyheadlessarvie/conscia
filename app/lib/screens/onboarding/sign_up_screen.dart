@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/utils/email_validator.dart';
 import '../../providers/auth_provider.dart';
 
 class SignUpScreen extends ConsumerStatefulWidget {
@@ -32,8 +33,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
 
   String? _validateEmail(String? value) {
     if (value == null || value.isEmpty) return 'Email is required';
-    final emailRegex = RegExp(r'^[\w\-.+]+@[\w\-]+\.[\w\-]{2,}$');
-    if (!emailRegex.hasMatch(value)) return 'Enter a valid email';
+    if (!isValidEmailAddress(value)) return 'Enter a valid email';
     return null;
   }
 

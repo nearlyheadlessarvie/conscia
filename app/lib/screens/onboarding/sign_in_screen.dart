@@ -9,6 +9,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/network/api_exception.dart';
 import '../../core/routing/app_router.dart';
+import '../../core/utils/email_validator.dart';
 import '../../providers/auth_provider.dart';
 
 String friendlySignInErrorMessage(
@@ -122,8 +123,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
 
   String? _validateEmail(String? value) {
     if (value == null || value.isEmpty) return 'Email is required';
-    final emailRegex = RegExp(r'^[\w\-.+]+@[\w\-]+\.[\w\-]{2,}$');
-    if (!emailRegex.hasMatch(value)) return 'Enter a valid email';
+    if (!isValidEmailAddress(value)) return 'Enter a valid email';
     return null;
   }
 
