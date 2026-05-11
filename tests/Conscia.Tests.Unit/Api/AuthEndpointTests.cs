@@ -82,6 +82,7 @@ public class AuthEndpointTests
         {
             var auth = scope.ServiceProvider.GetRequiredService<IAuthService>();
             await auth.RegisterAsync(email, "password123");
+            await auth.ConfirmRegistrationAsync(email, "123456");
         }
 
         using var client = factory.CreateClient();
@@ -93,6 +94,31 @@ public class AuthEndpointTests
         });
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Login_UnconfirmedEmail_Returns409AndRequiresConfirmation()
+    {
+        await using var factory = new TestWebAppFactory();
+        using var client = factory.CreateClient();
+        var email = $"pending-login-{Guid.NewGuid()}@example.com";
+
+        await client.PostAsJsonAsync("/api/v1/auth/register", new
+        {
+            email,
+            password = "password123"
+        });
+
+        var response = await client.PostAsJsonAsync("/api/v1/auth/login", new
+        {
+            email,
+            password = "password123"
+        });
+
+        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<Dictionary<string, object>>();
+        Assert.NotNull(body);
+        Assert.Equal("True", body!["requiresConfirmation"].ToString());
     }
 
     [Fact]
@@ -202,6 +228,11 @@ public class AuthEndpointTests
         {
             email,
             password = "password123"
+        });
+        await client.PostAsJsonAsync("/api/v1/auth/confirm", new
+        {
+            email,
+            confirmationCode = "123456"
         });
 
         var login = await client.PostAsJsonAsync("/api/v1/auth/login", new

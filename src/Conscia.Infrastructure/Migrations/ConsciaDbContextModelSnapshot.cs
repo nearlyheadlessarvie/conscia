@@ -114,6 +114,11 @@ namespace Conscia.Infrastructure.Migrations
                         .HasMaxLength(256)
                         .HasColumnType("character varying(256)");
 
+                    b.Property<bool>("EmailConfirmed")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true);
+
                     b.Property<bool>("HasCompletedOnboarding")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("boolean")

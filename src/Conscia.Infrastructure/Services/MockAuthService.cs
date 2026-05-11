@@ -26,12 +26,23 @@ public class MockAuthService : IAuthService
         email = NormalizeEmail(email);
         var existing = await _repo.GetByEmailAsync(email, ct);
         if (existing is not null)
-            return new AuthResult { Success = false, Error = "User already exists" };
+        {
+            return existing.EmailConfirmed
+                ? new AuthResult
+                {
+                    Success = false,
+                    RequiresConfirmation = false,
+                    Email = email,
+                    Error = "Account already exists. Please sign in."
+                }
+                : await ResendConfirmationAsync(email, ct);
+        }
 
         var user = new User
         {
             Id = Guid.NewGuid(),
-            Email = email
+            Email = email,
+            EmailConfirmed = false
         };
         await _repo.AddAsync(user, ct);
         await _repo.AddIdentityAsync(new UserIdentity
@@ -76,6 +87,8 @@ public class MockAuthService : IAuthService
                 Error = "User not found"
             };
         }
+        user.EmailConfirmed = true;
+        await _repo.UpdateAsync(user, ct);
 
         return new AuthResult
         {
@@ -116,6 +129,17 @@ public class MockAuthService : IAuthService
         var user = await _repo.GetByEmailAsync(email, ct);
         if (user is null)
             return new AuthResult { Success = false, Error = "Invalid credentials" };
+
+        if (!user.EmailConfirmed)
+        {
+            return new AuthResult
+            {
+                Success = false,
+                RequiresConfirmation = true,
+                Email = email,
+                Error = "Email confirmation required"
+            };
+        }
 
         var token = GenerateToken(user.Id.ToString(), email, "Free");
         return new AuthResult
@@ -230,7 +254,8 @@ public class MockAuthService : IAuthService
         var user = new User
         {
             Id = Guid.Parse(id),
-            Email = email
+            Email = email,
+            EmailConfirmed = true
         };
         await _repo.AddAsync(user, ct);
         await _repo.AddIdentityAsync(new UserIdentity

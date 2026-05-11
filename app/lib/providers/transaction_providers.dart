@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../core/errors/app_error.dart';
 import '../core/network/dio_client.dart';
 import '../services/transaction_service.dart';
 
@@ -77,8 +78,11 @@ class TransactionListNotifier extends StateNotifier<TransactionListState> {
         hasMore: result.hasMore,
         currentPage: nextPage,
       );
-    } catch (e) {
-      state = state.copyWith(isLoading: false, error: e.toString());
+    } catch (e, s) {
+      state = state.copyWith(
+        isLoading: false,
+        error: AppError.from(e, stackTrace: s).userMessage,
+      );
     }
   }
 
@@ -104,5 +108,9 @@ final filteredTransactionListProvider =
 final transactionDetailProvider =
     FutureProvider.family<Transaction, String>((ref, id) async {
   final service = ref.watch(transactionServiceProvider);
-  return service.getById(id);
+  try {
+    return await service.getById(id);
+  } catch (e, s) {
+    throw AppError.from(e, stackTrace: s);
+  }
 });

@@ -1,5 +1,6 @@
 using Amazon.CognitoIdentityProvider;
 using Amazon.CognitoIdentityProvider.Model;
+using Conscia.Domain.Entities;
 using Conscia.Domain.Enums;
 using Conscia.Infrastructure.Persistence;
 using Conscia.Infrastructure.Repositories;
@@ -73,6 +74,7 @@ public class CognitoAuthServiceTests : IDisposable
         var user = await _db.Users.SingleAsync();
         Assert.Equal(userSub, user.Id);
         Assert.Equal("new@example.com", user.Email);
+        Assert.False(user.EmailConfirmed);
 
         var identity = await _db.UserIdentities.SingleAsync();
         Assert.Equal(AuthProvider.Email, identity.Provider);
@@ -81,8 +83,43 @@ public class CognitoAuthServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task RegisterAsync_ExistingUnconfirmedUser_ResendsConfirmationAndReturnsPending()
+    {
+        _cognito
+            .Setup(c => c.SignUpAsync(
+                It.Is<SignUpRequest>(r =>
+                    r.ClientId == "client-123" &&
+                    r.Username == "new@example.com"),
+                It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new UsernameExistsException("User already exists"));
+
+        _cognito
+            .Setup(c => c.ResendConfirmationCodeAsync(
+                It.Is<ResendConfirmationCodeRequest>(r =>
+                    r.ClientId == "client-123" &&
+                    r.Username == "new@example.com"),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ResendConfirmationCodeResponse());
+
+        var result = await _auth.RegisterAsync(" New@Example.com ", "SecureP@ss123");
+
+        Assert.True(result.Success);
+        Assert.True(result.RequiresConfirmation);
+        Assert.Equal("new@example.com", result.Email);
+    }
+
+    [Fact]
     public async Task ConfirmRegistrationAsync_ValidCode_ConfirmsCognitoUser()
     {
+        var user = new User
+        {
+            Id = Guid.NewGuid(),
+            Email = "new@example.com",
+            EmailConfirmed = false
+        };
+        _db.Users.Add(user);
+        await _db.SaveChangesAsync();
+
         _cognito
             .Setup(c => c.ConfirmSignUpAsync(
                 It.Is<ConfirmSignUpRequest>(r =>
@@ -97,6 +134,9 @@ public class CognitoAuthServiceTests : IDisposable
         Assert.True(result.Success);
         Assert.False(result.RequiresConfirmation);
         Assert.Equal("new@example.com", result.Email);
+
+        var updatedUser = await _db.Users.SingleAsync(u => u.Email == "new@example.com");
+        Assert.True(updatedUser.EmailConfirmed);
     }
 
     [Fact]

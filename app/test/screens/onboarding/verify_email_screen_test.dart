@@ -42,10 +42,15 @@ class _TestAuthNotifier extends AuthNotifier {
   Future<void> resendConfirmation() async {
     resendCount += 1;
   }
+
+  @override
+  Future<Duration> confirmationResendCooldownRemaining([String? email]) async {
+    return const Duration(minutes: 1);
+  }
 }
 
 void main() {
-  testWidgets('resend code is disabled for one minute after sending', (
+  testWidgets('resend code is disabled for one minute when screen opens', (
     tester,
   ) async {
     final authNotifier = _TestAuthNotifier();
@@ -61,20 +66,26 @@ void main() {
       ),
     );
 
-    await tester.tap(find.text('Resend code'));
+    await tester.pump();
     await tester.pump();
 
-    expect(authNotifier.resendCount, 1);
-    expect(find.text('Resend in 60s'), findsOneWidget);
+    final resendCooldownButton = find.textContaining('Resend in');
+    expect(resendCooldownButton, findsOneWidget);
 
-    await tester.tap(find.text('Resend in 60s'));
+    await tester.tap(resendCooldownButton);
     await tester.pump();
 
-    expect(authNotifier.resendCount, 1);
+    expect(authNotifier.resendCount, 0);
 
     await tester.pump(const Duration(seconds: 60));
 
     expect(find.text('Resend code'), findsOneWidget);
+
+    await tester.tap(find.text('Resend code'));
+    await tester.pump();
+
+    expect(authNotifier.resendCount, 1);
+    expect(find.textContaining('Resend in'), findsOneWidget);
   });
 
   testWidgets('back to sign in clears pending confirmation before routing', (

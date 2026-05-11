@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/errors/app_error.dart';
 import '../../core/network/dio_client.dart';
 import '../../core/utils/currency_formatter.dart';
 import '../../providers/subscription_provider.dart';
@@ -85,12 +86,12 @@ class _ReceiptReviewScreenState extends ConsumerState<ReceiptReviewScreen> {
           ..clear()
           ..addAll(items);
       });
-    } on DioException catch (e) {
+    } on DioException catch (e, s) {
       if (!mounted) return;
+      final error = AppError.from(e, stackTrace: s);
       setState(() {
         _loading = false;
-        _error =
-            e.response?.data?['error'] as String? ?? 'Failed to load receipt';
+        _error = error.userMessage;
       });
     }
   }
@@ -130,12 +131,12 @@ class _ReceiptReviewScreenState extends ConsumerState<ReceiptReviewScreen> {
           content: Text('Receipt confirmed and transaction saved!'),
         ),
       );
-    } on DioException catch (e) {
+    } on DioException catch (e, s) {
       if (!mounted) return;
+      final error = AppError.from(e, stackTrace: s);
       setState(() {
         _submitting = false;
-        _error = e.response?.data?['error'] as String? ??
-            'Failed to confirm receipt';
+        _error = error.userMessage;
       });
     }
   }
@@ -261,7 +262,8 @@ class _ReceiptReviewScreenState extends ConsumerState<ReceiptReviewScreen> {
         ),
         ScreenSection(
           title: 'Transaction details',
-          subtitle: 'Sanity-check the extracted merchant, amount, and category.',
+          subtitle:
+              'Sanity-check the extracted merchant, amount, and category.',
           compact: true,
           child: FeedCard(
             child: Column(
@@ -319,7 +321,8 @@ class _ReceiptReviewScreenState extends ConsumerState<ReceiptReviewScreen> {
         if (_lineItems.isNotEmpty)
           ScreenSection(
             title: 'Extracted items',
-            subtitle: 'Review the line items the scan picked up from the receipt.',
+            subtitle:
+                'Review the line items the scan picked up from the receipt.',
             compact: true,
             trailing: Text(
               '${_lineItems.length} items',

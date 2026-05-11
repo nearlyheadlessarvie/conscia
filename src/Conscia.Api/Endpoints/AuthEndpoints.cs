@@ -53,8 +53,13 @@ public static class AuthEndpoints
                 return Results.BadRequest(new { error = "Email and password are required" });
 
             var result = await auth.LoginAsync(req.Email, req.Password, ctx.RequestAborted);
-            return result.Success
-                ? Results.Ok(new { result.AccessToken, result.RefreshToken, result.UserId })
+            if (result.Success)
+                return Results.Ok(new { result.AccessToken, result.RefreshToken, result.UserId });
+
+            return result.RequiresConfirmation
+                ? Results.Json(
+                    new { result.Error, result.RequiresConfirmation, result.Email },
+                    statusCode: StatusCodes.Status409Conflict)
                 : Results.Json(new { error = "Invalid email or password" }, statusCode: 401);
         }).WithName("Login").RequireRateLimiting("auth");
 

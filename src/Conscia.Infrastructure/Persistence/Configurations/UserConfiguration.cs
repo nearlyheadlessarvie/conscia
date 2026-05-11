@@ -16,6 +16,9 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
             .IsRequired()
             .HasMaxLength(256);
 
+        builder.Property(u => u.EmailConfirmed)
+            .HasDefaultValue(true);
+
         builder.Property(u => u.PreferredCurrency)
             .IsRequired()
             .HasMaxLength(3);

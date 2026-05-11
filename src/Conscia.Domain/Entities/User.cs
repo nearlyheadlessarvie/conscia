@@ -4,6 +4,7 @@ public class User
 {
     public Guid Id { get; set; }
     public string Email { get; set; } = string.Empty;
+    public bool EmailConfirmed { get; set; } = true;
     public string PreferredCurrency { get; set; } = "USD";
     public string Locale { get; set; } = "en-US";
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
