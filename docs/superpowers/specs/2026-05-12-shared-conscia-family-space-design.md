@@ -463,6 +463,88 @@ Constraints:
 - At least one Owner per Family Space.
 - Invited email must be normalized.
 
+## Infrastructure Cost Insights
+
+Shared Conscia should reuse the existing serverless architecture and avoid adding always-on infrastructure for MVP.
+
+### Expected incremental infrastructure
+
+New storage:
+
+- Relational tables for `FamilySpace`, `FamilyMember`, and `FamilyInvite`.
+- Added scope/family fields on shared-capable records.
+- In-app invite notifications using the existing alerts table/pattern.
+- Existing device-token table for push recipients.
+
+New compute:
+
+- Additional API endpoints for family space management.
+- Additional authorization checks on existing transaction, budget, recurring, insight, and AI endpoints.
+- Optional server-side FCM sender when push delivery is implemented.
+
+No new MVP infrastructure should be required for:
+
+- Redis
+- ECS
+- Always-on workers
+- WebSockets
+- Separate notification service
+- Separate family-ledger service
+- Event-driven settlement processor
+
+### Cost posture
+
+The MVP should be low incremental cost because it mostly adds small metadata rows and extra reads/writes around actions users already take.
+
+Cost drivers to watch:
+
+- Family dashboard fan-out queries if every screen reads many member records separately.
+- Import preview queries over large personal histories.
+- Family-mode AI calls if we add too much household context or trigger them automatically.
+- Push notification delivery loops if they query device tokens one user at a time without batching.
+- Extra DynamoDB global secondary indexes if every new access pattern becomes its own index.
+
+Cost controls:
+
+- Keep Family Space limited to one space per user for MVP.
+- Keep dashboard family summaries compact and paginated/drill-down for detail.
+- Default imports to current month and active recurring schedules.
+- Use existing alert/device-token infrastructure before adding new queues or workers.
+- Do not add settlement; it would create more writes, more history, more notifications, and more support surface.
+- Track simple metrics: family spaces created, active members, family records shared, import batch size, family AI calls, invite notifications sent.
+
+### Push delivery cost note
+
+Firebase Cloud Messaging itself is currently a no-cost Firebase product, but sending pushes still requires backend work and some AWS usage.
+
+MVP behavior:
+
+- Bell/in-app invite notification is required.
+- Device push is best effort once FCM sending exists.
+- Do not create a dedicated always-on push service for invites.
+- Prefer sending push from the API or an existing background path unless volume proves otherwise.
+
+### AI cost note
+
+Family-mode pre-purchase advice can become the most expensive part if used casually.
+
+Rules:
+
+- Only call AI when the user explicitly asks for Family advice.
+- Build compact family context summaries server-side.
+- Do not send full family transaction history to the model.
+- Reuse existing insights/budget/cashflow summaries where possible.
+
+### Release cost checklist
+
+Before implementation ships:
+
+- Estimate request/read/write volume using AWS Pricing Calculator.
+- Add CloudWatch metrics or structured logs for family endpoint request count.
+- Add a dashboard or saved Cost Explorer view filtered to the API, DynamoDB tables, Lambda functions, and FCM sender path.
+- Set budget alerts for unexpected DynamoDB read/write growth.
+- Document whether FCM sending is enabled or in-app-only for the release.
+
 ## API Surface Sketch
 
 Suggested endpoints:
