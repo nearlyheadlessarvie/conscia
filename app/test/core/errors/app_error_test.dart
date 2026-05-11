@@ -32,7 +32,7 @@ void main() {
     expect(logged.single.referenceId, 'REF12345');
   });
 
-  test('keeps safe API validation messages with reference id', () {
+  test('keeps safe API validation messages without reference id', () {
     AppError.configure(
       referenceIdFactory: () => 'VAL12345',
       logger: (_) {},
@@ -50,7 +50,7 @@ void main() {
 
     expect(
       AppError.from(error).userMessage,
-      'Account already exists. Please sign in. Reference: VAL12345',
+      'Account already exists. Please sign in.',
     );
   });
 
