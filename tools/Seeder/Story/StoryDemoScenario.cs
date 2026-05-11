@@ -1,4 +1,5 @@
 using Conscia.Application.Models;
+using Conscia.Application.Constants;
 using Conscia.Domain.Entities;
 using Conscia.Domain.Enums;
 using Conscia.Domain.ValueObjects;
@@ -18,6 +19,11 @@ public sealed class StoryDemoScenario
     public required IReadOnlyList<CategoryPattern> CategoryPatterns { get; init; }
     public required IReadOnlyList<MerchantPattern> MerchantPatterns { get; init; }
     public required IReadOnlyList<MonthlyCategorySpend> MonthlyCategorySpends { get; init; }
+    public required ConscienceJourneyProgress ConscienceProgress { get; init; }
+    public required IReadOnlyList<ConscienceJourneyEventRecord> ConscienceEvents { get; init; }
+    public required IReadOnlyList<ConscienceBadgeProgress> ConscienceBadgeProgress { get; init; }
+    public required IReadOnlyList<ConscienceQuestProgress> ConscienceQuestProgress { get; init; }
+    public required IReadOnlyList<ConscienceMascotMoment> ConscienceMascotMoments { get; init; }
     public required IReadOnlyList<InAppAlert> Alerts { get; init; }
 
     public static StoryDemoScenario Build(DateTime nowUtc)
@@ -173,6 +179,74 @@ public sealed class StoryDemoScenario
             new() { UserId = userId, MonthKey = "2026-05", Category = "Subscriptions", NormalizedCategory = "subscriptions", CurrencyCode = "PHP", TotalExpenseAmount = 1140m, TransactionCount = 3, LastUpdatedAt = nowUtc }
         };
 
+        var conscienceEvents = new List<ConscienceJourneyEventRecord>
+        {
+            new() { UserId = userId, EventType = ConscienceEventTypes.ReflectionCompleted, SourceId = transactions[0].Id.ToString(), XpAwarded = 20, CreatedAt = nowUtc.AddDays(-2).AddHours(1) },
+            new() { UserId = userId, EventType = ConscienceEventTypes.ReflectionCompleted, SourceId = transactions[2].Id.ToString(), XpAwarded = 20, CreatedAt = nowUtc.AddDays(-6).AddHours(1) },
+            new() { UserId = userId, EventType = ConscienceEventTypes.ReflectionCompleted, SourceId = transactions[3].Id.ToString(), XpAwarded = 20, CreatedAt = nowUtc.AddDays(-10).AddHours(1) },
+            new() { UserId = userId, EventType = ConscienceEventTypes.PrePurchaseChecked, SourceId = "prepurchase:dining:test-001", XpAwarded = 20, CreatedAt = nowUtc.AddHours(-5) },
+            new() { UserId = userId, EventType = ConscienceEventTypes.InsightReviewed, SourceId = $"insights:{DateOnly.FromDateTime(currentWeekStart):yyyy-MM-dd}", XpAwarded = 10, CreatedAt = nowUtc.AddHours(-4) },
+            new() { UserId = userId, EventType = ConscienceEventTypes.RegretPatternReviewed, SourceId = "pattern:shopping:2026-05", XpAwarded = 25, CreatedAt = nowUtc.AddHours(-3) }
+        };
+
+        var conscienceProgress = new ConscienceJourneyProgress
+        {
+            UserId = userId,
+            XpTotal = 385,
+            MomentumDays = 6,
+            BestMomentumDays = 9,
+            LastMomentumDate = DateOnly.FromDateTime(nowUtc.Date),
+            UpdatedAt = nowUtc
+        };
+
+        var currentWeek = DateOnly.FromDateTime(currentWeekStart);
+        var conscienceQuestProgress = new List<ConscienceQuestProgress>
+        {
+            new() { UserId = userId, WeekStart = currentWeek, QuestKey = "reflect_three_purchases", Progress = 3, Target = 3, XpAwarded = 30, CompletedAt = nowUtc.AddHours(-8), UpdatedAt = nowUtc },
+            new() { UserId = userId, WeekStart = currentWeek, QuestKey = "check_before_purchase", Progress = 1, Target = 1, XpAwarded = 20, CompletedAt = nowUtc.AddHours(-5), UpdatedAt = nowUtc },
+            new() { UserId = userId, WeekStart = currentWeek, QuestKey = "review_regret_pattern", Progress = 1, Target = 1, XpAwarded = 25, CompletedAt = nowUtc.AddHours(-3), UpdatedAt = nowUtc }
+        };
+
+        var conscienceBadgeProgress = new List<ConscienceBadgeProgress>
+        {
+            new() { UserId = userId, BadgeKey = "first_reflection", Progress = 1, Target = 1, UnlockedAt = nowUtc.AddDays(-10).AddHours(1), UpdatedAt = nowUtc },
+            new() { UserId = userId, BadgeKey = "pause_before_purchase", Progress = 1, Target = 1, UnlockedAt = nowUtc.AddHours(-5), UpdatedAt = nowUtc },
+            new() { UserId = userId, BadgeKey = "budget_rescuer", Progress = 0, Target = 1, UpdatedAt = nowUtc },
+            new() { UserId = userId, BadgeKey = "regret_pattern_spotted", Progress = 1, Target = 1, UnlockedAt = nowUtc.AddHours(-3), UpdatedAt = nowUtc },
+            new() { UserId = userId, BadgeKey = "worth_it_week", Progress = 3, Target = 5, UpdatedAt = nowUtc }
+        };
+
+        var conscienceMascotMoments = new List<ConscienceMascotMoment>
+        {
+            new()
+            {
+                UserId = userId,
+                Key = "pause_before_purchase",
+                Persona = "both",
+                Title = "You paused before buying.",
+                Message = "Impulse and Reason both got a seat at the table.",
+                CreatedAt = nowUtc.AddHours(-5)
+            },
+            new()
+            {
+                UserId = userId,
+                Key = "regret_pattern_spotted",
+                Persona = "devil",
+                Title = "Pattern spotted.",
+                Message = "The little devil has been detected. Suspiciously charming, still useful.",
+                CreatedAt = nowUtc.AddHours(-3)
+            },
+            new()
+            {
+                UserId = userId,
+                Key = "first_reflection",
+                Persona = "angel",
+                Title = "That is a real conscience rep.",
+                Message = "One reflection logged. Tiny halo gains, big awareness energy.",
+                CreatedAt = nowUtc.AddDays(-10).AddHours(1)
+            }
+        };
+
         var alerts = new List<InAppAlert>
         {
             new()
@@ -267,6 +341,11 @@ public sealed class StoryDemoScenario
             CategoryPatterns = categoryPatterns,
             MerchantPatterns = merchantPatterns,
             MonthlyCategorySpends = monthlyCategorySpends,
+            ConscienceProgress = conscienceProgress,
+            ConscienceEvents = conscienceEvents,
+            ConscienceBadgeProgress = conscienceBadgeProgress,
+            ConscienceQuestProgress = conscienceQuestProgress,
+            ConscienceMascotMoments = conscienceMascotMoments,
             Alerts = alerts
         };
     }
