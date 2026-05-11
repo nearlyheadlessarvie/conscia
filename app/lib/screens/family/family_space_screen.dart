@@ -184,11 +184,12 @@ class _FamilySpaceOverview extends ConsumerWidget {
                   subtitle: 'Choose exactly what becomes visible to Family.',
                   onTap: () => context.push(AppRoutes.familyImport),
                 ),
-                const _FamilyActionRow(
+                _FamilyActionRow(
                   icon: Icons.repeat_outlined,
                   title: 'Schedule contribution',
                   subtitle:
                       'Track recurring family contributions without salary details.',
+                  onTap: () => context.push(AppRoutes.familyContribution),
                 ),
               ],
             ),
