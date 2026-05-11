@@ -15,17 +15,20 @@ public class TransactionService : ITransactionService
     private readonly IExchangeRateService _exchangeRateService;
     private readonly ILogger<TransactionService> _logger;
     private readonly IRecurringScheduleService? _recurringScheduleService;
+    private readonly IFamilySpaceRepository _familySpaces;
 
     public TransactionService(
         ITransactionRepository repo,
         IExchangeRateService exchangeRateService,
         ILogger<TransactionService> logger,
-        IRecurringScheduleService? recurringScheduleService = null)
+        IRecurringScheduleService? recurringScheduleService,
+        IFamilySpaceRepository familySpaces)
     {
         _repo = repo;
         _exchangeRateService = exchangeRateService;
         _logger = logger;
         _recurringScheduleService = recurringScheduleService;
+        _familySpaces = familySpaces;
     }
 
     public async Task<Transaction> CreateAsync(Guid userId, CreateTransactionDto dto, CancellationToken ct = default)
@@ -50,6 +53,7 @@ public class TransactionService : ITransactionService
             Date = dto.Date,
             CreatedAt = DateTime.UtcNow
         };
+        await EnsureCanWriteFamilyRecordAsync(userId, dto.Scope, dto.FamilySpaceId, "family transactions", ct);
         ApplyScope(transaction, userId, dto.Scope, dto.FamilySpaceId);
 
         if (dto.Latitude.HasValue && dto.Longitude.HasValue)
@@ -127,7 +131,10 @@ public class TransactionService : ITransactionService
         if (dto.Counterparty is not null) existing.Counterparty = dto.Counterparty;
         if (dto.Date.HasValue) existing.Date = dto.Date.Value;
         if (dto.Scope.HasValue)
+        {
+            await EnsureCanWriteFamilyRecordAsync(userId, dto.Scope.Value, dto.FamilySpaceId, "family transactions", ct);
             ApplyScope(existing, userId, dto.Scope.Value, dto.FamilySpaceId);
+        }
 
         await _repo.UpdateWithOutboxAsync(
             existing,
@@ -270,5 +277,28 @@ public class TransactionService : ITransactionService
         transaction.FamilySpaceId = null;
         transaction.SharedByUserId = null;
         transaction.SharedAt = null;
+    }
+
+    private async Task EnsureCanWriteFamilyRecordAsync(
+        Guid userId,
+        RecordScope scope,
+        Guid? familySpaceId,
+        string recordLabel,
+        CancellationToken ct)
+    {
+        if (scope != RecordScope.Family)
+            return;
+
+        if (!familySpaceId.HasValue)
+            throw new InvalidOperationException($"Family Space is required for {recordLabel}.");
+
+        var member = await _familySpaces.GetMembershipByUserIdAsync(userId, ct)
+            ?? throw new UnauthorizedAccessException("You do not belong to a Family Space.");
+
+        if (member.FamilySpaceId != familySpaceId.Value)
+            throw new UnauthorizedAccessException("You do not belong to that Family Space.");
+
+        if (member.Role == FamilyMemberRole.Viewer)
+            throw new UnauthorizedAccessException("Viewer cannot create Family Space records.");
     }
 }

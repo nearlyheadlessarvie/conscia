@@ -14,13 +14,15 @@ public class TransactionServiceTests
     private readonly Mock<ITransactionRepository> _repoMock = new();
     private readonly Mock<IExchangeRateService> _fxMock = new();
     private readonly Mock<IRecurringScheduleService> _recurringScheduleServiceMock = new();
+    private readonly Mock<IFamilySpaceRepository> _familyRepoMock = new();
     private readonly TransactionService _svc;
 
     public TransactionServiceTests() => _svc = new TransactionService(
         _repoMock.Object,
         _fxMock.Object,
         NullLogger<TransactionService>.Instance,
-        _recurringScheduleServiceMock.Object);
+        _recurringScheduleServiceMock.Object,
+        _familyRepoMock.Object);
 
     [Fact]
     public async Task CreateAsync_CreatesTransaction()
@@ -428,6 +430,13 @@ public class TransactionServiceTests
         };
         OutboxEvent? capturedEvent = null;
 
+        _familyRepoMock.Setup(r => r.GetMembershipByUserIdAsync(userId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new FamilyMember
+            {
+                UserId = userId,
+                FamilySpaceId = familySpaceId,
+                Role = FamilyMemberRole.Contributor
+            });
         _repoMock.Setup(r => r.AddWithOutboxAsync(
                 It.IsAny<Transaction>(),
                 It.IsAny<OutboxEvent>(),
@@ -443,5 +452,37 @@ public class TransactionServiceTests
         Assert.NotNull(result.SharedAt);
         Assert.Contains("\"Scope\":\"Family\"", capturedEvent!.Payload);
         Assert.Contains(familySpaceId.ToString(), capturedEvent.Payload);
+    }
+
+    [Fact]
+    public async Task CreateAsync_FamilyScopeRejectsUserOutsideFamilySpace()
+    {
+        var userId = Guid.NewGuid();
+        var familySpaceId = Guid.NewGuid();
+        _familyRepoMock.Setup(r => r.GetMembershipByUserIdAsync(userId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new FamilyMember
+            {
+                UserId = userId,
+                FamilySpaceId = Guid.NewGuid(),
+                Role = FamilyMemberRole.Contributor
+            });
+
+        var error = await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
+            _svc.CreateAsync(userId, new CreateTransactionDto
+            {
+                Type = TransactionType.Expense,
+                Amount = 280m,
+                CurrencyCode = "PHP",
+                Category = "Dining",
+                Date = DateTime.UtcNow,
+                Scope = RecordScope.Family,
+                FamilySpaceId = familySpaceId
+            }));
+
+        Assert.Equal("You do not belong to that Family Space.", error.Message);
+        _repoMock.Verify(r => r.AddWithOutboxAsync(
+            It.IsAny<Transaction>(),
+            It.IsAny<OutboxEvent>(),
+            It.IsAny<CancellationToken>()), Times.Never);
     }
 }

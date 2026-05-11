@@ -12,15 +12,18 @@ public class BudgetService : IBudgetService
     private readonly IBudgetRepository _repo;
     private readonly ITransactionRepository _transactionRepo;
     private readonly ILogger<BudgetService> _logger;
+    private readonly IFamilySpaceRepository _familySpaces;
 
     public BudgetService(
         IBudgetRepository repo,
         ITransactionRepository transactionRepo,
-        ILogger<BudgetService> logger)
+        ILogger<BudgetService> logger,
+        IFamilySpaceRepository familySpaces)
     {
         _repo = repo;
         _transactionRepo = transactionRepo;
         _logger = logger;
+        _familySpaces = familySpaces;
     }
 
     public Task<Budget> CreateAsync(Guid userId, string category, decimal monthlyLimit, string currencyCode, CancellationToken ct = default) =>
@@ -41,6 +44,7 @@ public class BudgetService : IBudgetService
             MonthlyLimit = dto.MonthlyLimit,
             CurrencyCode = dto.CurrencyCode
         };
+        await EnsureCanWriteFamilyRecordAsync(userId, dto.Scope, dto.FamilySpaceId, ct);
         ApplyScope(budget, userId, dto.Scope, dto.FamilySpaceId);
 
         var result = await _repo.AddAsync(budget, ct);
@@ -136,6 +140,28 @@ public class BudgetService : IBudgetService
         budget.FamilySpaceId = null;
         budget.SharedByUserId = null;
         budget.SharedAt = null;
+    }
+
+    private async Task EnsureCanWriteFamilyRecordAsync(
+        Guid userId,
+        RecordScope scope,
+        Guid? familySpaceId,
+        CancellationToken ct)
+    {
+        if (scope != RecordScope.Family)
+            return;
+
+        if (!familySpaceId.HasValue)
+            throw new InvalidOperationException("Family Space is required for family budgets.");
+
+        var member = await _familySpaces.GetMembershipByUserIdAsync(userId, ct)
+            ?? throw new UnauthorizedAccessException("You do not belong to a Family Space.");
+
+        if (member.FamilySpaceId != familySpaceId.Value)
+            throw new UnauthorizedAccessException("You do not belong to that Family Space.");
+
+        if (member.Role == FamilyMemberRole.Viewer)
+            throw new UnauthorizedAccessException("Viewer cannot create Family Space records.");
     }
 
     private async Task<Dictionary<string, decimal>> GetMonthlyExpenseTotalsByCategoryAsync(

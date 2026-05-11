@@ -11,11 +11,18 @@ namespace Conscia.Tests.Unit.Application;
 public class RecurringScheduleServiceTests
 {
     private readonly Mock<IRecurringScheduleRepository> _repoMock = new();
+    private readonly Mock<IFamilySpaceRepository> _familyRepoMock = new();
+
+    private RecurringScheduleService CreateService() =>
+        new(
+            _repoMock.Object,
+            NullLogger<RecurringScheduleService>.Instance,
+            _familyRepoMock.Object);
 
     [Fact]
     public async Task CreateAsync_SetsNextRunAtToStartDate()
     {
-        var service = new RecurringScheduleService(_repoMock.Object, NullLogger<RecurringScheduleService>.Instance);
+        var service = CreateService();
         var userId = Guid.NewGuid();
         var startDate = new DateTime(2026, 05, 31, 0, 0, 0, DateTimeKind.Utc);
         var dto = new CreateRecurringScheduleDto
@@ -43,9 +50,16 @@ public class RecurringScheduleServiceTests
     [Fact]
     public async Task CreateAsync_FamilyScope_AddsFamilyMetadataToSchedule()
     {
-        var service = new RecurringScheduleService(_repoMock.Object, NullLogger<RecurringScheduleService>.Instance);
+        var service = CreateService();
         var userId = Guid.NewGuid();
         var familySpaceId = Guid.NewGuid();
+        _familyRepoMock.Setup(r => r.GetMembershipByUserIdAsync(userId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new FamilyMember
+            {
+                UserId = userId,
+                FamilySpaceId = familySpaceId,
+                Role = FamilyMemberRole.Contributor
+            });
         var dto = new CreateRecurringScheduleDto
         {
             Type = TransactionType.Income,
@@ -69,5 +83,30 @@ public class RecurringScheduleServiceTests
         Assert.Equal(familySpaceId, created.FamilySpaceId);
         Assert.Equal(userId, created.SharedByUserId);
         Assert.NotNull(created.SharedAt);
+    }
+
+    [Fact]
+    public async Task CreateAsync_FamilyScopeRejectsMissingMembership()
+    {
+        var service = CreateService();
+        var userId = Guid.NewGuid();
+        _familyRepoMock.Setup(r => r.GetMembershipByUserIdAsync(userId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((FamilyMember?)null);
+
+        var error = await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
+            service.CreateAsync(userId, new CreateRecurringScheduleDto
+            {
+                Type = TransactionType.Income,
+                Amount = 15000m,
+                CurrencyCode = "PHP",
+                Category = "Family Contribution",
+                StartDate = DateTime.UtcNow,
+                Cadence = RecurringCadence.Monthly,
+                Scope = RecordScope.Family,
+                FamilySpaceId = Guid.NewGuid()
+            }));
+
+        Assert.Equal("You do not belong to a Family Space.", error.Message);
+        _repoMock.Verify(r => r.AddAsync(It.IsAny<RecurringSchedule>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 }
