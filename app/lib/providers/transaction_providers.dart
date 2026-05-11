@@ -91,6 +91,12 @@ class TransactionListNotifier extends StateNotifier<TransactionListState> {
 final transactionListProvider =
     StateNotifierProvider<TransactionListNotifier, TransactionListState>((ref) {
   final service = ref.watch(transactionServiceProvider);
+  return TransactionListNotifier(service, null);
+});
+
+final filteredTransactionListProvider =
+    StateNotifierProvider<TransactionListNotifier, TransactionListState>((ref) {
+  final service = ref.watch(transactionServiceProvider);
   final category = ref.watch(categoryFilterProvider);
   return TransactionListNotifier(service, category);
 });

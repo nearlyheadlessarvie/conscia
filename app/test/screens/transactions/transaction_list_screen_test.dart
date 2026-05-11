@@ -62,6 +62,59 @@ Future<void> _pumpTransactionList(
 }
 
 void main() {
+  test('category filter only affects the transaction screen list provider',
+      () async {
+    final container = ProviderContainer(
+      overrides: [
+        transactionServiceProvider.overrideWithValue(
+          _StaticTransactionService([
+            Transaction(
+              id: 'tx-dining',
+              amount: 12,
+              currencyCode: 'USD',
+              category: 'Dining',
+              description: 'Cafe',
+              type: 'expense',
+              date: DateTime(2026, 5, 8),
+            ),
+            Transaction(
+              id: 'tx-bills',
+              amount: 40,
+              currencyCode: 'USD',
+              category: 'Bills',
+              description: 'Power',
+              type: 'expense',
+              date: DateTime(2026, 5, 7),
+            ),
+          ]),
+        ),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    await container.read(transactionListProvider.notifier).refresh();
+    expect(
+      container.read(transactionListProvider).transactions.map((tx) => tx.id),
+      containsAll(['tx-dining', 'tx-bills']),
+    );
+
+    container.read(categoryFilterProvider.notifier).state = 'Dining';
+    await container.read(filteredTransactionListProvider.notifier).refresh();
+
+    expect(
+      container
+          .read(filteredTransactionListProvider)
+          .transactions
+          .map((tx) => tx.id)
+          .toSet(),
+      {'tx-dining'},
+    );
+    expect(
+      container.read(transactionListProvider).transactions.map((tx) => tx.id),
+      containsAll(['tx-dining', 'tx-bills']),
+    );
+  });
+
   testWidgets('transaction list exposes add action in the header', (
     tester,
   ) async {
@@ -128,16 +181,18 @@ void main() {
     await tester.pump();
 
     expect(tester.takeException(), isNull);
-    expect(find.byKey(const ValueKey('selection-chip-check-All')), findsNothing);
+    expect(
+        find.byKey(const ValueKey('selection-chip-check-All')), findsNothing);
   });
 
-  testWidgets('transaction filters stay visible while filtered list refreshes', (
+  testWidgets('transaction filters stay visible while filtered list refreshes',
+      (
     tester,
   ) async {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          transactionListProvider.overrideWith(
+          filteredTransactionListProvider.overrideWith(
             (ref) => _LoadingTransactionListNotifier('Gift'),
           ),
           categoryFilterProvider.overrideWith((ref) => 'Gift'),
@@ -149,7 +204,8 @@ void main() {
     await tester.pump();
 
     expect(find.text('Filters'), findsOneWidget);
-    expect(find.byKey(const ValueKey('selection-chip-button-Gift')), findsOneWidget);
+    expect(find.byKey(const ValueKey('selection-chip-button-Gift')),
+        findsOneWidget);
     expect(find.byType(SkeletonListTile), findsWidgets);
   });
 
@@ -189,15 +245,19 @@ void main() {
       ],
     );
 
-    final allY =
-        tester.getCenter(find.byKey(const ValueKey('selection-chip-button-All'))).dy;
-    final giftY =
-        tester.getCenter(find.byKey(const ValueKey('selection-chip-button-Gift'))).dy;
+    final allY = tester
+        .getCenter(find.byKey(const ValueKey('selection-chip-button-All')))
+        .dy;
+    final giftY = tester
+        .getCenter(find.byKey(const ValueKey('selection-chip-button-Gift')))
+        .dy;
     final groceriesY = tester
-        .getCenter(find.byKey(const ValueKey('selection-chip-button-Groceries')))
+        .getCenter(
+            find.byKey(const ValueKey('selection-chip-button-Groceries')))
         .dy;
     final subscriptionsY = tester
-        .getCenter(find.byKey(const ValueKey('selection-chip-button-Subscriptions')))
+        .getCenter(
+            find.byKey(const ValueKey('selection-chip-button-Subscriptions')))
         .dy;
 
     expect((allY - giftY).abs(), lessThan(8));

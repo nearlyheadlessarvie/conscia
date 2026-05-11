@@ -87,6 +87,9 @@ List<InsightFeedItem> _budgetTrendItems(
         tone: InsightFeedTone.caution,
         mascot: InsightFeedMascot.both,
         mascotFrame: 'angel:8_shield.png|devil:9_coin.png',
+        budgetCategory: trend.category,
+        interaction: InsightFeedInteraction.action,
+        interactionLabel: 'Add budget',
       );
     }
 
@@ -103,6 +106,8 @@ List<InsightFeedItem> _budgetTrendItems(
       tone: percent >= 95 ? InsightFeedTone.urgent : InsightFeedTone.caution,
       mascot: InsightFeedMascot.devil,
       mascotFrame: 'devil:8_whisper.png',
+      interaction: InsightFeedInteraction.drillDown,
+      interactionLabel: 'View trend',
     );
   }).toList();
 }
@@ -124,6 +129,8 @@ List<InsightFeedItem> _impulseTrendItems(List<CategoryTrend> trends) {
           tone: InsightFeedTone.caution,
           mascot: InsightFeedMascot.devil,
           mascotFrame: 'devil:8_whisper.png',
+          interaction: InsightFeedInteraction.drillDown,
+          interactionLabel: 'View pattern',
         ),
       )
       .toList();
@@ -185,11 +192,14 @@ InsightFeedItem _regretSummaryItem(
     body: 'Tap to see the pattern behind this spending.',
     metric: '${(summary.avgRegretRate * 100).round()}%',
     caption: '${summary.patternCount} patterns',
-    route: '/insights',
+    route:
+        '/insights/categories/${Uri.encodeComponent(summary.regrettedCategory)}',
     section: InsightFeedSection.regretPatterns,
     tone: InsightFeedTone.urgent,
     mascot: InsightFeedMascot.devil,
     mascotFrame: 'devil:14_frustrated.png',
+    interaction: InsightFeedInteraction.drillDown,
+    interactionLabel: 'View pattern',
   );
 }
 
@@ -215,6 +225,8 @@ InsightFeedItem _categoryRegretItem(
     tone: InsightFeedTone.urgent,
     mascot: InsightFeedMascot.devil,
     mascotFrame: 'devil:14_frustrated.png',
+    interaction: InsightFeedInteraction.drillDown,
+    interactionLabel: 'View pattern',
   );
 }
 
@@ -233,6 +245,8 @@ InsightFeedItem _merchantPatternItem(MerchantStat merchant) {
     tone: InsightFeedTone.caution,
     mascot: InsightFeedMascot.devil,
     mascotFrame: 'devil:9_coin.png',
+    interaction: InsightFeedInteraction.drillDown,
+    interactionLabel: 'View merchant',
   );
 }
 

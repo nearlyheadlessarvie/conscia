@@ -1,7 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/insights/insight_feed_builder.dart';
+import '../models/behavioral_insights.dart';
 import '../models/insight_feed_item.dart';
+import '../models/insights_models.dart';
 import 'behavioral_insights_provider.dart';
 import 'insights_provider.dart';
 import 'usage_provider.dart';
@@ -62,6 +64,31 @@ final dashboardInsightFeedProvider =
   );
 });
 
+class DashboardInsightSummary {
+  const DashboardInsightSummary({
+    required this.text,
+    required this.tone,
+  });
+
+  final String text;
+  final InsightFeedTone tone;
+}
+
+final dashboardInsightSummaryProvider =
+    FutureProvider<DashboardInsightSummary?>((ref) async {
+  final behavioralInsights = await ref.watch(behavioralInsightsProvider.future);
+  final summary = await ref.watch(insightsSummaryProvider.future);
+  final categories = await ref.watch(insightsCategoriesProvider.future);
+  final merchants = await ref.watch(insightsMerchantsProvider.future);
+
+  return buildDashboardInsightSummary(
+    behavioralInsights: behavioralInsights,
+    summary: summary,
+    categories: categories,
+    merchants: merchants,
+  );
+});
+
 final insightFeedBySectionProvider =
     FutureProvider<Map<InsightFeedSection, List<InsightFeedItem>>>((ref) async {
   final items = await ref.watch(insightFeedProvider.future);
@@ -70,3 +97,120 @@ final insightFeedBySectionProvider =
       section: items.where((item) => item.section == section).toList(),
   };
 });
+
+DashboardInsightSummary? buildDashboardInsightSummary({
+  required BehavioralInsights? behavioralInsights,
+  required InsightsSummary? summary,
+  required List<CategoryStat> categories,
+  required List<MerchantStat> merchants,
+}) {
+  final budgetTrend = _strongestBudgetTrend(behavioralInsights?.budgetTrends);
+  if (budgetTrend != null) return budgetTrend;
+
+  if (behavioralInsights != null &&
+      behavioralInsights.worthItCount >
+          behavioralInsights.previousMonthWorthItCount) {
+    return const DashboardInsightSummary(
+      text: 'More of your decisions are feeling worth it than last month.',
+      tone: InsightFeedTone.positive,
+    );
+  }
+
+  if (summary != null && summary.regrettedAmount > 0) {
+    return DashboardInsightSummary(
+      text:
+          '${summary.regrettedCategory} is carrying your strongest regret signal right now.',
+      tone: InsightFeedTone.urgent,
+    );
+  }
+
+  if (merchants.isNotEmpty) {
+    final ranked = [...merchants]
+      ..sort((a, b) => b.regretRate.compareTo(a.regretRate));
+    final top = ranked.first;
+    if (top.regretCount > 0) {
+      return DashboardInsightSummary(
+        text: '${top.merchant} keeps showing up in regret patterns.',
+        tone: InsightFeedTone.caution,
+      );
+    }
+  }
+
+  if (categories.isNotEmpty) {
+    final ranked = [...categories]
+      ..sort((a, b) => b.regretRate.compareTo(a.regretRate));
+    final top = ranked.first;
+    if (top.regretRate > 0) {
+      return DashboardInsightSummary(
+        text: '${top.category} deserves a closer look before your next spend.',
+        tone: InsightFeedTone.caution,
+      );
+    }
+  }
+
+  if (behavioralInsights != null) {
+    return DashboardInsightSummary(
+      text: _moodSummary(behavioralInsights.mood),
+      tone: behavioralInsights.mood == FinancialMood.confident ||
+              behavioralInsights.mood == FinancialMood.balanced
+          ? InsightFeedTone.positive
+          : InsightFeedTone.caution,
+    );
+  }
+
+  return null;
+}
+
+DashboardInsightSummary? _strongestBudgetTrend(
+  List<BudgetTrendInsight>? trends,
+) {
+  if (trends == null || trends.isEmpty) return null;
+
+  final scored = trends
+      .map((trend) {
+        final previousMonths = trend.months.take(trend.months.length - 1);
+        final previousAverage = previousMonths.isEmpty
+            ? 0.0
+            : previousMonths.reduce((a, b) => a + b) / previousMonths.length;
+        if (previousAverage <= 0) return null;
+
+        final delta =
+            (trend.currentMonthSpend - previousAverage) / previousAverage;
+        return (trend: trend, delta: delta);
+      })
+      .whereType<({BudgetTrendInsight trend, double delta})>()
+      .where((item) => item.delta.abs() >= 0.1)
+      .toList();
+
+  if (scored.isEmpty) return null;
+
+  scored.sort((a, b) => b.delta.abs().compareTo(a.delta.abs()));
+  final top = scored.first;
+
+  if (top.delta > 0) {
+    return DashboardInsightSummary(
+      text:
+          'You spent more on ${top.trend.category} than your recent 3-month pace.',
+      tone: InsightFeedTone.caution,
+    );
+  }
+
+  return DashboardInsightSummary(
+    text:
+        'You are on track to spend less on ${top.trend.category} than your recent pace.',
+    tone: InsightFeedTone.positive,
+  );
+}
+
+String _moodSummary(FinancialMood mood) {
+  switch (mood) {
+    case FinancialMood.confident:
+      return 'Your money decisions are looking confident this week.';
+    case FinancialMood.balanced:
+      return 'Your money decisions are looking balanced this week.';
+    case FinancialMood.cautious:
+      return 'Your recent decisions suggest a little extra caution is helping.';
+    case FinancialMood.impulsive:
+      return 'Your recent decisions may need a stronger pause before spending.';
+  }
+}

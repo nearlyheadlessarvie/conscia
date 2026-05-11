@@ -9,6 +9,7 @@ import '../../core/constants/category_icons.dart';
 import '../../core/utils/currency_formatter.dart';
 import '../../core/utils/voice_input_parser.dart';
 import '../../providers/ai_provider.dart';
+import '../../providers/insight_feed_provider.dart';
 import '../../providers/category_recents_provider.dart';
 import '../../providers/location_assistance_provider.dart';
 import '../../providers/subscription_provider.dart';
@@ -178,11 +179,19 @@ class _PrePurchaseScreenState extends ConsumerState<PrePurchaseScreen>
 
     try {
       final aiService = ref.read(aiServiceProvider);
+      String? insightContext;
+      try {
+        insightContext =
+            (await ref.read(dashboardInsightSummaryProvider.future))?.text;
+      } catch (_) {
+        insightContext = null;
+      }
       final response = await aiService.prePurchase(
         description: _descriptionController.text,
         amount: double.parse(_amountController.text),
         currencyCode: _currencyCode,
         category: _selectedCategory!,
+        insightContext: insightContext,
       );
 
       if (!mounted) return;

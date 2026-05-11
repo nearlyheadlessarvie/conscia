@@ -50,6 +50,7 @@ abstract class AppRoutes {
   static String editTransaction(String id) => '/transactions/$id/edit';
 
   static const assistant = '/assistant';
+  static const insights = '/insights';
 
   static const settings = '/settings';
   static const settingsProfile = '/settings/profile';
@@ -98,14 +99,17 @@ class _RouterRefreshListenable extends ChangeNotifier {
   void refresh() => notifyListeners();
 }
 
-final hasOnboardedProvider = FutureProvider<bool>((ref) => hasCompletedOnboarding());
+final hasOnboardedProvider =
+    FutureProvider<bool>((ref) => hasCompletedOnboarding());
 
 final appRouterProvider = Provider<GoRouter>((ref) {
   final listenable = _RouterRefreshListenable();
   ref.onDispose(listenable.dispose);
   ref.listen<AuthState>(authProvider, (_, __) => listenable.refresh());
-  ref.listen<AsyncValue<bool>>(hasOnboardedProvider, (_, __) => listenable.refresh());
-  ref.listen<AsyncValue<UserProfile>>(currentUserProvider, (_, __) => listenable.refresh());
+  ref.listen<AsyncValue<bool>>(
+      hasOnboardedProvider, (_, __) => listenable.refresh());
+  ref.listen<AsyncValue<UserProfile>>(
+      currentUserProvider, (_, __) => listenable.refresh());
 
   return GoRouter(
     initialLocation: AppRoutes.home,
@@ -193,7 +197,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             builder: (context, state) {
               final extra = _routeStringExtras(state.extra);
               return SuggestedBudgetsScreen(
-                spendingPersonality: extra?['spendingPersonality'] ?? 'balanced',
+                spendingPersonality:
+                    extra?['spendingPersonality'] ?? 'balanced',
                 incomeRange: extra?['incomeRange'] ?? 'mid',
               );
             },
@@ -257,8 +262,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: '/transactions/:id',
         builder: (context, state) {
           final id = state.pathParameters['id']!;
-          final autoReflect =
-              state.uri.queryParameters['autoReflect'] == '1';
+          final autoReflect = state.uri.queryParameters['autoReflect'] == '1';
           return TransactionDetailScreen(
             transactionId: id,
             autoReflect: autoReflect,

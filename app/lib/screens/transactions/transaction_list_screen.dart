@@ -41,17 +41,17 @@ class _TransactionListScreenState extends ConsumerState<TransactionListScreen> {
   void _onScroll() {
     if (_scrollController.position.pixels >=
         _scrollController.position.maxScrollExtent - 200) {
-      ref.read(transactionListProvider.notifier).loadMore();
+      ref.read(filteredTransactionListProvider.notifier).loadMore();
     }
   }
 
   Future<void> _onRefresh() async {
-    await ref.read(transactionListProvider.notifier).refresh();
+    await ref.read(filteredTransactionListProvider.notifier).refresh();
   }
 
   @override
   Widget build(BuildContext context) {
-    final state = ref.watch(transactionListProvider);
+    final state = ref.watch(filteredTransactionListProvider);
     final selectedCategory = ref.watch(categoryFilterProvider);
 
     final categories = {
@@ -219,7 +219,9 @@ class _TransactionListScreenState extends ConsumerState<TransactionListScreen> {
                 padding: EdgeInsets.zero,
                 child: Column(
                   children: [
-                    for (var index = 0; index < groups[key]!.length; index++) ...[
+                    for (var index = 0;
+                        index < groups[key]!.length;
+                        index++) ...[
                       TransactionTile(
                         id: groups[key]![index].id,
                         isIncome: groups[key]![index].type == 'income',

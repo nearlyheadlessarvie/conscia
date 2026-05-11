@@ -6,6 +6,7 @@ import '../../models/insights_models.dart';
 import '../../providers/insight_feed_provider.dart';
 import '../../providers/insights_provider.dart';
 import '../../providers/user_provider.dart';
+import '../budgets/widgets/budget_form_sheet.dart';
 import '../dashboard/widgets/insight_feed_card.dart';
 import '../../widgets/feed_card.dart';
 import '../../widgets/hero_screen_scaffold.dart';
@@ -122,6 +123,12 @@ class _InsightFeedSection extends StatelessWidget {
             InsightFeedCard(
               item: item,
               enableNavigation: item.route != '/insights',
+              onTap: item.budgetCategory == null
+                  ? null
+                  : () => BudgetFormSheet.show(
+                        context,
+                        initialCategory: item.budgetCategory,
+                      ),
             ),
             if (item != items.last) const SizedBox(height: 12),
           ],

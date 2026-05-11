@@ -2,14 +2,25 @@ import 'package:conscia_app/core/utils/currency_formatter.dart';
 import 'package:conscia_app/models/behavioral_insights.dart';
 import 'package:conscia_app/models/insights_models.dart';
 import 'package:conscia_app/providers/behavioral_insights_provider.dart';
+import 'package:conscia_app/providers/budget_providers.dart';
 import 'package:conscia_app/providers/insights_provider.dart';
 import 'package:conscia_app/providers/user_provider.dart';
 import 'package:conscia_app/screens/insights/category_detail_screen.dart';
 import 'package:conscia_app/screens/insights/insights_screen.dart';
 import 'package:conscia_app/screens/insights/widgets/insights_formatting.dart';
+import 'package:conscia_app/services/budget_service.dart';
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
+
+class _StaticBudgetService extends BudgetService {
+  _StaticBudgetService() : super(Dio());
+
+  @override
+  Future<List<Budget>> list() async => const [];
+}
 
 void main() {
   test('insights formatter falls back when locale is invalid', () {
@@ -105,7 +116,17 @@ void main() {
             ),
           ),
           insightsSummaryProvider.overrideWith((ref) async => summary),
-          insightsMerchantsProvider.overrideWith((ref) async => const []),
+          insightsMerchantsProvider.overrideWith(
+            (ref) async => const [
+              MerchantStat(
+                merchant: 'OpenAI',
+                visitCount: 3,
+                regretCount: 2,
+                regretRate: 0.67,
+                lastVisitDate: '2026-05-10',
+              ),
+            ],
+          ),
           insightsCategoriesProvider.overrideWith((ref) async => const []),
         ],
         child: const MaterialApp(home: InsightsScreen()),
@@ -123,12 +144,161 @@ void main() {
       findsOneWidget,
     );
     expect(find.text('Shopping is getting more impulsive'), findsOneWidget);
+    expect(find.text('+ No budget yet'), findsOneWidget);
+    expect(find.text('No budget yet'), findsNothing);
+    expect(find.byTooltip('Add budget'), findsNothing);
+    expect(find.text('View merchant'), findsNothing);
+    expect(find.byIcon(Icons.chevron_right_rounded), findsWidgets);
     expect(find.text('Regret Patterns'), findsNothing);
 
     await tester.tap(find.text('Your financial mood is balanced'));
     await tester.pump();
 
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('static insight cards do not show action or drill-down cues',
+      (tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          userPreferencesProvider.overrideWithValue(
+            (currency: 'PHP', locale: 'en_PH'),
+          ),
+          behavioralInsightsProvider.overrideWith(
+            (ref) async => const BehavioralInsights(
+              mood: FinancialMood.balanced,
+              worthItPercentage: 71,
+              worthItCount: 5,
+              previousMonthWorthItCount: 2,
+              impulseeTrends: [],
+              budgetTrends: [],
+            ),
+          ),
+          insightsSummaryProvider.overrideWith((ref) async => null),
+          insightsMerchantsProvider.overrideWith((ref) async => const []),
+          insightsCategoriesProvider.overrideWith((ref) async => const []),
+        ],
+        child: const MaterialApp(home: InsightsScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Your financial mood is balanced'), findsOneWidget);
+    expect(find.text('Add budget'), findsNothing);
+    expect(find.text('View pattern'), findsNothing);
+    expect(find.byIcon(Icons.chevron_right_rounded), findsNothing);
+  });
+
+  testWidgets('unbudgeted budget trend opens create budget with category',
+      (tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          userPreferencesProvider.overrideWithValue(
+            (currency: 'PHP', locale: 'en_PH'),
+          ),
+          budgetServiceProvider.overrideWithValue(_StaticBudgetService()),
+          behavioralInsightsProvider.overrideWith(
+            (ref) async => const BehavioralInsights(
+              mood: FinancialMood.balanced,
+              worthItPercentage: 71,
+              worthItCount: 5,
+              previousMonthWorthItCount: 2,
+              impulseeTrends: [],
+              budgetTrends: [
+                BudgetTrendInsight(
+                  category: 'Subscriptions',
+                  hasBudget: false,
+                  currencyCode: 'PHP',
+                  months: [1200, 1500, 1800],
+                  currentMonthSpend: 1800,
+                  insightLabel: 'Spending trending up',
+                  nudge: 'Add a budget for sharper insights',
+                ),
+              ],
+            ),
+          ),
+          insightsSummaryProvider.overrideWith((ref) async => null),
+          insightsMerchantsProvider.overrideWith((ref) async => const []),
+          insightsCategoriesProvider.overrideWith((ref) async => const []),
+        ],
+        child: const MaterialApp(home: InsightsScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(
+      find.text('Subscriptions has enough activity for a budget'),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('New Budget'), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byType(InputChip),
+        matching: find.text('Subscriptions'),
+      ),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('regret summary card drills into the regretted category',
+      (tester) async {
+    final router = GoRouter(
+      routes: [
+        GoRoute(
+          path: '/',
+          builder: (_, __) => const InsightsScreen(),
+        ),
+        GoRoute(
+          path: '/insights/categories/:category',
+          builder: (_, state) => Scaffold(
+            body: Text('category:${state.pathParameters['category']}'),
+          ),
+        ),
+      ],
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          userPreferencesProvider.overrideWithValue(
+            (currency: 'PHP', locale: 'en_PH'),
+          ),
+          behavioralInsightsProvider.overrideWith(
+            (ref) async => const BehavioralInsights(
+              mood: FinancialMood.balanced,
+              worthItPercentage: 71,
+              worthItCount: 5,
+              previousMonthWorthItCount: 2,
+              impulseeTrends: [],
+              budgetTrends: [],
+            ),
+          ),
+          insightsSummaryProvider.overrideWith(
+            (ref) async => InsightsSummary(
+              regrettedAmount: 1890,
+              regrettedCategory: 'Shopping',
+              avgRegretRate: 0.33,
+              patternCount: 4,
+              updatedAt: DateTime(2026, 5, 8),
+            ),
+          ),
+          insightsMerchantsProvider.overrideWith((ref) async => const []),
+          insightsCategoriesProvider.overrideWith((ref) async => const []),
+        ],
+        child: MaterialApp.router(routerConfig: router),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final regretCard = find.textContaining('regretted on Shopping');
+    await tester.ensureVisible(regretCard);
+    await tester.tap(regretCard);
+    await tester.pumpAndSettle();
+
+    expect(find.text('category:Shopping'), findsOneWidget);
   });
 
   testWidgets(

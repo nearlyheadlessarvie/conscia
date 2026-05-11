@@ -41,9 +41,12 @@ class AIResponse {
   factory AIResponse.fromJson(Map<String, dynamic> json) {
     final budgetJson = json['budget'] as Map<String, dynamic>?;
     return AIResponse(
-      impulse: json['devilMessage'] as String? ?? json['impulse'] as String? ?? '',
-      reason: json['angelMessage'] as String? ?? json['reason'] as String? ?? '',
-      neutral: json['neutralMessage'] as String? ?? json['neutral'] as String? ?? '',
+      impulse:
+          json['devilMessage'] as String? ?? json['impulse'] as String? ?? '',
+      reason:
+          json['angelMessage'] as String? ?? json['reason'] as String? ?? '',
+      neutral:
+          json['neutralMessage'] as String? ?? json['neutral'] as String? ?? '',
       budget: budgetJson != null ? AIBudgetContext.fromJson(budgetJson) : null,
     );
   }
@@ -59,6 +62,7 @@ class AIService {
     required double amount,
     required String currencyCode,
     required String category,
+    String? insightContext,
   }) async {
     try {
       final response = await _dio.post(
@@ -68,6 +72,8 @@ class AIService {
           'amount': amount,
           'currencyCode': currencyCode,
           'category': category,
+          if (insightContext != null && insightContext.trim().isNotEmpty)
+            'insightContext': insightContext.trim(),
         },
       );
       return AIResponse.fromJson(response.data as Map<String, dynamic>);

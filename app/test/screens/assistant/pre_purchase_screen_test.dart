@@ -1,4 +1,6 @@
 import 'package:conscia_app/providers/category_frequency_provider.dart';
+import 'package:conscia_app/models/insight_feed_item.dart';
+import 'package:conscia_app/providers/insight_feed_provider.dart';
 import 'package:conscia_app/providers/subscription_provider.dart';
 import 'package:conscia_app/providers/usage_provider.dart';
 import 'package:conscia_app/providers/user_provider.dart';
@@ -57,6 +59,7 @@ class _FakeAIService extends AIService {
 
   final AIResponse response;
   final Duration delay;
+  String? receivedInsightContext;
 
   @override
   Future<AIResponse> prePurchase({
@@ -64,7 +67,9 @@ class _FakeAIService extends AIService {
     required double amount,
     required String currencyCode,
     required String category,
+    String? insightContext,
   }) async {
+    receivedInsightContext = insightContext;
     if (delay > Duration.zero) {
       await Future<void>.delayed(delay);
     }
@@ -221,6 +226,7 @@ Future<void> _pumpPrePurchaseRouterApp(
   String currencyCode = 'USD',
   String locale = 'en_US',
   bool locationSuggestionsEnabled = false,
+  DashboardInsightSummary? insightSummary,
 }) async {
   SharedPreferences.setMockInitialValues({
     'location_suggestions_enabled': true,
@@ -276,6 +282,9 @@ Future<void> _pumpPrePurchaseRouterApp(
         userServiceProvider.overrideWithValue(_FakeUserService()),
         locationAssistanceServiceProvider.overrideWithValue(locationService),
         aiServiceProvider.overrideWithValue(aiService),
+        dashboardInsightSummaryProvider.overrideWith(
+          (ref) async => insightSummary,
+        ),
       ],
       child: MaterialApp.router(routerConfig: router),
     ),
@@ -599,6 +608,53 @@ void main() {
         matching: find.text('Groceries'),
       ),
       findsOneWidget,
+    );
+  });
+
+  testWidgets('pre-purchase sends dashboard insight summary as AI context',
+      (tester) async {
+    final aiService = _FakeAIService(
+      response: const AIResponse(
+        impulse: 'Treat yourself.',
+        reason: 'Check your recent trend.',
+        neutral: 'You can decide.',
+      ),
+    );
+
+    await _pumpPrePurchaseRouterApp(
+      tester,
+      aiService: aiService,
+      locationService: _FakeLocationAssistanceService(permissionGranted: true),
+      insightSummary: const DashboardInsightSummary(
+        text: 'You spent more on Dining than your recent 3-month pace.',
+        tone: InsightFeedTone.caution,
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is TextField &&
+            widget.decoration?.labelText == 'What are you thinking of buying?',
+      ),
+      'Starbucks coffee',
+    );
+    await tester.enterText(find.byType(TextField).at(1), '600');
+    await tester.ensureVisible(find.widgetWithText(FilterChip, 'Dining'));
+    await tester.tap(find.widgetWithText(FilterChip, 'Dining'));
+    await tester.pumpAndSettle();
+
+    await tester.ensureVisible(find.text('Ask Conscia'));
+    await tester.tap(find.text('Ask Conscia'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 700));
+    await tester.pumpAndSettle();
+
+    expect(
+      aiService.receivedInsightContext,
+      'You spent more on Dining than your recent 3-month pace.',
     );
   });
 

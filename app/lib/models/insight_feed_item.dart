@@ -28,6 +28,12 @@ enum InsightFeedMascot {
   both,
 }
 
+enum InsightFeedInteraction {
+  none,
+  action,
+  drillDown,
+}
+
 class InsightFeedItem {
   const InsightFeedItem({
     required this.id,
@@ -43,6 +49,9 @@ class InsightFeedItem {
     this.route = '/insights',
     this.mascotFrame,
     this.expiresKey,
+    this.budgetCategory,
+    this.interaction = InsightFeedInteraction.none,
+    this.interactionLabel,
     this.dismissible = true,
     this.showOnDashboard = true,
   });
@@ -60,6 +69,9 @@ class InsightFeedItem {
   final InsightFeedMascot mascot;
   final String? mascotFrame;
   final String? expiresKey;
+  final String? budgetCategory;
+  final InsightFeedInteraction interaction;
+  final String? interactionLabel;
   final bool dismissible;
   final bool showOnDashboard;
 }
