@@ -310,6 +310,23 @@ When Firebase is ready:
 
 Cost note: Firebase Cloud Messaging itself has no per-message charge. This scaffold only adds tiny DynamoDB reads/writes for device-token registration. When we add server-side delivery, we can use the existing API/background jobs with Firebase Admin credentials, so there should be no new always-on infrastructure unless we later choose a dedicated worker.
 
+### Shared Conscia Setup
+
+Shared Conscia uses relational Family Space tables for membership/invites and the existing record stores for explicitly shared transactions, budgets, and recurring schedules.
+
+Production requirements:
+- Run the Family Space EF migrations before enabling the feature.
+- Keep Family Space creation Premium-only; invited contributors/viewers can participate without separate subscriptions.
+- Deploy the existing Outbox Lambda stack so family invite events can create in-app alerts and future device notifications.
+- Enable server-side FCM credentials only when real device push delivery is ready; until then the no-op push sender keeps invite notifications in-app only.
+- Set DynamoDB read/write budget alerts after release because family import and family AI context add extra record lookups.
+
+Privacy model:
+- Personal records never become Family records automatically.
+- Users explicitly import/share selected records.
+- Hidden salary is represented as contribution records or recurring contribution schedules, not exact salary disclosure.
+- No settlement or who-owes-whom workflow is part of MVP.
+
 ## Social Authentication Setup
 
 The app supports native Sign in with Google and Sign in with Apple. This is **not** Cognito Hosted UI: the Flutter buttons use platform SDKs, then the API verifies the returned provider token and returns app JWTs. This keeps the iOS/Android auth experience native while still using Cognito for email/password auth and keeping a Cognito user record for social accounts.
