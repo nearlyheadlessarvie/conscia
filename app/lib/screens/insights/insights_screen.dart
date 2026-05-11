@@ -124,8 +124,12 @@ class _InsightFeedSection extends StatelessWidget {
             .toSet();
         final currentItems = [
           for (final item in items)
-            _currentBudgetAction(item, budgetCategories),
+            if (_currentBudgetAction(item, budgetCategories)
+                case final currentItem?)
+              currentItem,
         ];
+
+        if (currentItems.isEmpty) return const SizedBox.shrink();
 
         return ScreenSection(
           title: title,
@@ -152,7 +156,7 @@ class _InsightFeedSection extends StatelessWidget {
     );
   }
 
-  InsightFeedItem _currentBudgetAction(
+  InsightFeedItem? _currentBudgetAction(
     InsightFeedItem item,
     Set<String> budgetCategories,
   ) {
@@ -164,23 +168,7 @@ class _InsightFeedSection extends StatelessWidget {
     );
     if (!hasCurrentBudget) return item;
 
-    return InsightFeedItem(
-      id: item.id,
-      kind: item.kind,
-      priority: item.priority,
-      title: item.title,
-      body: item.body,
-      metric: item.metric,
-      route: item.route,
-      section: item.section,
-      tone: item.tone,
-      mascot: item.mascot,
-      mascotFrame: item.mascotFrame,
-      expiresKey: item.expiresKey,
-      interaction: InsightFeedInteraction.none,
-      dismissible: item.dismissible,
-      showOnDashboard: item.showOnDashboard,
-    );
+    return null;
   }
 }
 

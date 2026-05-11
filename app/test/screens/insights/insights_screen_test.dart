@@ -260,7 +260,7 @@ void main() {
     );
   });
 
-  testWidgets('budget trend stops opening create form once budget exists',
+  testWidgets('budget trend nudge disappears once budget exists',
       (tester) async {
     await tester.pumpWidget(
       ProviderScope(
@@ -299,13 +299,13 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(
-      find.text('Subscriptions has enough activity for a budget'),
-    );
-    await tester.pumpAndSettle();
-
     expect(find.text('New Budget'), findsNothing);
     expect(find.text('+ No budget yet'), findsNothing);
+    expect(
+      find.text('Subscriptions has enough activity for a budget'),
+      findsNothing,
+    );
+    expect(find.text('Add a budget for sharper insights'), findsNothing);
   });
 
   testWidgets('regret summary card drills into the regretted category',
