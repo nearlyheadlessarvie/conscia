@@ -13,6 +13,7 @@ public class DbAccessStackProps : StackProps
     public required ISecurityGroup DbSecurityGroup { get; set; }
     public required IDatabaseInstance DbInstance { get; set; }
     public required ISecret DbPasswordSecret { get; set; }
+    public string AssetPath { get; set; } = "../publish/db-access";
 }
 
 public class DbAccessStack : Stack
@@ -38,7 +39,7 @@ public class DbAccessStack : Stack
             FunctionName = "conscia-db-access",
             Runtime = Runtime.DOTNET_8,
             Handler = "Conscia.DbAccess",
-            Code = Code.FromAsset("../publish/db-access"),
+            Code = Code.FromAsset(props.AssetPath),
             MemorySize = 512,
             Timeout = Duration.Seconds(30),
             Architecture = Architecture.ARM_64,

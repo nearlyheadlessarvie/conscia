@@ -24,6 +24,7 @@ public class ComputeStackProps : StackProps
     public required ITable PushDeviceTokensTable { get; set; }
     public required IQueue AiQueue { get; set; }
     public required IFunction DbAccessLambda { get; set; }
+    public string ApiAssetPath { get; set; } = "../publish/api";
 }
 
 public class ComputeStack : Stack
@@ -38,7 +39,7 @@ public class ComputeStack : Stack
             FunctionName = "conscia-api",
             Runtime = Runtime.DOTNET_8,
             Handler = "Conscia.Api",
-            Code = Code.FromAsset("../publish/api"),
+            Code = Code.FromAsset(props.ApiAssetPath),
             MemorySize = 1024,
             Timeout = Duration.Seconds(30),
             Architecture = Architecture.ARM_64,

@@ -201,7 +201,8 @@ public class StackTests
             Vpc = network.Vpc,
             DbSecurityGroup = network.DbSecurityGroup,
             DbInstance = database.DbInstance,
-            DbPasswordSecret = database.DbPasswordSecret
+            DbPasswordSecret = database.DbPasswordSecret,
+            AssetPath = CreateAssetStub("db-access")
         });
 
         var stack = new ComputeStack(app, "C", new ComputeStackProps
@@ -218,7 +219,8 @@ public class StackTests
             PurchasePatternsTable = database.PurchasePatternsTable,
             PushDeviceTokensTable = database.PushDeviceTokensTable,
             AiQueue = ai.AiQueue,
-            DbAccessLambda = dbAccess.DbAccessLambda
+            DbAccessLambda = dbAccess.DbAccessLambda,
+            ApiAssetPath = CreateAssetStub("api")
         });
 
         Assert.NotNull(stack.ApiLambda);
@@ -244,7 +246,8 @@ public class StackTests
             Vpc = network.Vpc,
             DbSecurityGroup = network.DbSecurityGroup,
             DbInstance = database.DbInstance,
-            DbPasswordSecret = database.DbPasswordSecret
+            DbPasswordSecret = database.DbPasswordSecret,
+            AssetPath = CreateAssetStub("db-access")
         });
 
         Assert.NotNull(stack.DbAccessLambda);
@@ -270,7 +273,8 @@ public class StackTests
             DbPasswordSecret = database.DbPasswordSecret,
             Vpc = network.Vpc,
             DbSecurityGroup = network.DbSecurityGroup,
-            DbInstance = database.DbInstance
+            DbInstance = database.DbInstance,
+            AssetPath = CreateAssetStub("outbox")
         });
 
         Assert.NotNull(stack.OutboxLambda);
@@ -324,5 +328,13 @@ public class StackTests
         });
         var template = Template.FromStack(stack);
         template.ResourceCountIs("AWS::Logs::LogGroup", 3);
+    }
+
+    private static string CreateAssetStub(string name)
+    {
+        var path = Path.Combine(Path.GetTempPath(), "conscia-infra-tests", name);
+        Directory.CreateDirectory(path);
+        File.WriteAllText(Path.Combine(path, "placeholder.txt"), name);
+        return path;
     }
 }
