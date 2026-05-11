@@ -1,4 +1,5 @@
 import 'package:conscia_app/models/family_invite.dart';
+import 'package:conscia_app/models/family_space.dart';
 import 'package:conscia_app/providers/family_space_provider.dart';
 import 'package:conscia_app/screens/family/family_invites_screen.dart';
 import 'package:flutter/material.dart';
@@ -25,6 +26,7 @@ void main() {
               ),
             ],
           ),
+          familySpaceProvider.overrideWith((ref) async => null),
         ],
         child: const MaterialApp(home: FamilyInvitesScreen()),
       ),
@@ -37,5 +39,33 @@ void main() {
     expect(find.text('Contributor'), findsOneWidget);
     expect(find.widgetWithText(FilledButton, 'Accept'), findsOneWidget);
     expect(find.widgetWithText(OutlinedButton, 'Decline'), findsOneWidget);
+  });
+
+  testWidgets('family invites screen shows owner send-invite form', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          familyInvitesProvider.overrideWith((ref) async => []),
+          familySpaceProvider.overrideWith(
+            (ref) async => const FamilySpace(
+              id: 'family-1',
+              name: 'Santos Household',
+              currencyCode: 'PHP',
+              isReadOnly: false,
+              role: 'Owner',
+            ),
+          ),
+        ],
+        child: const MaterialApp(home: FamilyInvitesScreen()),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    expect(find.text('Invite someone'), findsOneWidget);
+    expect(find.widgetWithText(TextField, 'Email'), findsOneWidget);
+    expect(find.widgetWithText(FilledButton, 'Send invite'), findsOneWidget);
   });
 }

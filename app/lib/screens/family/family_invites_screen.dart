@@ -14,16 +14,27 @@ class FamilyInvitesScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final invites = ref.watch(familyInvitesProvider);
+    final familySpace = ref.watch(familySpaceProvider);
 
     return HeroScreenScaffold(
       appBar: AppBar(title: const Text('Family invites')),
       child: invites.when(
-        data: (items) => items.isEmpty
-            ? const _EmptyInvites()
-            : Column(
-                children:
-                    items.map((invite) => _InviteCard(invite: invite)).toList(),
-              ),
+        data: (items) {
+          final canInvite = familySpace.valueOrNull?.role == 'Owner';
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (canInvite) ...[
+                const _InviteComposer(),
+                const SizedBox(height: 16),
+              ],
+              if (items.isEmpty)
+                const _EmptyInvites()
+              else
+                ...items.map((invite) => _InviteCard(invite: invite)),
+            ],
+          );
+        },
         loading: () => const Column(
           children: [
             SkeletonCard(),
@@ -47,6 +58,109 @@ class FamilyInvitesScreen extends ConsumerWidget {
         ),
       ),
     );
+  }
+}
+
+class _InviteComposer extends ConsumerStatefulWidget {
+  const _InviteComposer();
+
+  @override
+  ConsumerState<_InviteComposer> createState() => _InviteComposerState();
+}
+
+class _InviteComposerState extends ConsumerState<_InviteComposer> {
+  final _emailController = TextEditingController();
+  var _role = 'Contributor';
+  bool _isSubmitting = false;
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return FeedCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Invite someone', style: theme.textTheme.titleMedium),
+          const SizedBox(height: 6),
+          Text(
+            'They can join once they register with the invited email.',
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: 14),
+          TextField(
+            controller: _emailController,
+            keyboardType: TextInputType.emailAddress,
+            decoration: const InputDecoration(
+              labelText: 'Email',
+              prefixIcon: Icon(Icons.mail_outline),
+            ),
+          ),
+          const SizedBox(height: 12),
+          DropdownButtonFormField<String>(
+            initialValue: _role,
+            decoration: const InputDecoration(
+              labelText: 'Role',
+              prefixIcon: Icon(Icons.admin_panel_settings_outlined),
+            ),
+            items: const [
+              DropdownMenuItem(
+                value: 'Contributor',
+                child: Text('Contributor'),
+              ),
+              DropdownMenuItem(
+                value: 'Viewer',
+                child: Text('Viewer'),
+              ),
+            ],
+            onChanged: (value) {
+              if (value != null) setState(() => _role = value);
+            },
+          ),
+          const SizedBox(height: 14),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton(
+              onPressed: _isSubmitting ? null : _submit,
+              child: Text(_isSubmitting ? 'Sending...' : 'Send invite'),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _submit() async {
+    final email = _emailController.text.trim();
+    if (email.isEmpty) return;
+
+    setState(() => _isSubmitting = true);
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await ref.read(familySpaceActionsProvider).invite(
+            email: email,
+            role: _role,
+          );
+      if (!mounted) return;
+      _emailController.clear();
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Family invite sent.')),
+      );
+    } catch (e, s) {
+      if (!mounted) return;
+      final error = AppError.from(e, stackTrace: s);
+      messenger.showSnackBar(SnackBar(content: Text(error.userMessage)));
+    } finally {
+      if (mounted) setState(() => _isSubmitting = false);
+    }
   }
 }
 
