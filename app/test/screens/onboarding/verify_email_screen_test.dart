@@ -119,4 +119,47 @@ void main() {
     expect(authNotifier.state.status, AuthStatus.unauthenticated);
     expect(find.text('Sign in screen'), findsOneWidget);
   });
+
+  testWidgets('app bar back clears pending confirmation before routing', (
+    tester,
+  ) async {
+    final authNotifier = _TestAuthNotifier();
+    final router = GoRouter(
+      initialLocation: AppRoutes.verifyEmail,
+      redirect: (context, state) {
+        if (authNotifier.state.status == AuthStatus.pendingConfirmation &&
+            state.uri.path != AppRoutes.verifyEmail) {
+          return AppRoutes.verifyEmail;
+        }
+        return null;
+      },
+      routes: [
+        GoRoute(
+          path: AppRoutes.verifyEmail,
+          builder: (context, state) => const VerifyEmailScreen(),
+        ),
+        GoRoute(
+          path: AppRoutes.signIn,
+          builder: (context, state) => const Scaffold(
+            body: Text('Sign in screen'),
+          ),
+        ),
+      ],
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          authProvider.overrideWith((ref) => authNotifier),
+        ],
+        child: MaterialApp.router(routerConfig: router),
+      ),
+    );
+
+    await tester.tap(find.byType(BackButton));
+    await tester.pumpAndSettle();
+
+    expect(authNotifier.state.status, AuthStatus.unauthenticated);
+    expect(find.text('Sign in screen'), findsOneWidget);
+  });
 }

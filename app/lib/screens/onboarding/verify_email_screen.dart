@@ -97,6 +97,11 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
     });
   }
 
+  void _returnToSignIn() {
+    ref.read(authProvider.notifier).cancelPendingConfirmation();
+    context.go(AppRoutes.signIn);
+  }
+
   void _startResendCooldown() {
     _resendCooldownTimer?.cancel();
     _resendCooldownSeconds = _resendCooldown.inSeconds;
@@ -123,7 +128,7 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        leading: const BackButton(),
+        leading: BackButton(onPressed: _returnToSignIn),
         backgroundColor: Colors.transparent,
         elevation: 0,
       ),
@@ -217,10 +222,7 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
                 ),
               ),
               TextButton(
-                onPressed: () {
-                  ref.read(authProvider.notifier).cancelPendingConfirmation();
-                  context.go(AppRoutes.signIn);
-                },
+                onPressed: _returnToSignIn,
                 child: const Text('Back to sign in'),
               ),
             ],
