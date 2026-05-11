@@ -24,6 +24,7 @@ public class DatabaseStack : Stack
     public ITable InAppAlertsTable { get; }
     public ITable WeeklyInsightsTable { get; }
     public ITable PurchasePatternsTable { get; }
+    public ITable PushDeviceTokensTable { get; }
 
     public DatabaseStack(Construct scope, string id, DatabaseStackProps props)
         : base(scope, id, props)
@@ -137,6 +138,12 @@ public class DatabaseStack : Stack
 
         PurchasePatternsTable = CreateTable(
             "PurchasePatterns",
+            "PK",
+            "SK"
+        );
+
+        PushDeviceTokensTable = CreateTable(
+            "PushDeviceTokens",
             "PK",
             "SK"
         );

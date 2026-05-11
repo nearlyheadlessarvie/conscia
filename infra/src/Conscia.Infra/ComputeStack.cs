@@ -21,6 +21,7 @@ public class ComputeStackProps : StackProps
     public required ITable InAppAlertsTable { get; set; }
     public required ITable WeeklyInsightsTable { get; set; }
     public required ITable PurchasePatternsTable { get; set; }
+    public required ITable PushDeviceTokensTable { get; set; }
     public required IQueue AiQueue { get; set; }
     public required IFunction DbAccessLambda { get; set; }
 }
@@ -54,6 +55,7 @@ public class ComputeStack : Stack
                 ["AWS__DynamoDB__InAppAlertsTable"] = props.InAppAlertsTable.TableName,
                 ["AWS__DynamoDB__WeeklyInsightsTable"] = props.WeeklyInsightsTable.TableName,
                 ["AWS__DynamoDB__PurchasePatternsTable"] = props.PurchasePatternsTable.TableName,
+                ["AWS__DynamoDB__PushDeviceTokensTable"] = props.PushDeviceTokensTable.TableName,
                 ["AWS__Lambda__DbAccessFunctionName"] = props.DbAccessLambda.FunctionName
             },
             Tracing = Tracing.ACTIVE
@@ -104,6 +106,7 @@ public class ComputeStack : Stack
         props.InAppAlertsTable.GrantReadWriteData(ApiLambda);
         props.WeeklyInsightsTable.GrantReadWriteData(ApiLambda);
         props.PurchasePatternsTable.GrantReadWriteData(ApiLambda);
+        props.PushDeviceTokensTable.GrantReadWriteData(ApiLambda);
         props.ReceiptBucket.GrantReadWrite(ApiLambda);
         props.AiQueue.GrantSendMessages(ApiLambda);
         props.DbAccessLambda.GrantInvoke(ApiLambda);

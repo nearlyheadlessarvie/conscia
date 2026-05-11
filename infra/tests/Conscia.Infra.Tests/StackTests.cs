@@ -80,10 +80,10 @@ public class StackTests
     }
 
     [Fact]
-    public void DatabaseStack_CreatesSixDynamoDbTables()
+    public void DatabaseStack_CreatesSevenDynamoDbTables()
     {
         var template = CreateDatabaseTemplate();
-        template.ResourceCountIs("AWS::DynamoDB::Table", 6);
+        template.ResourceCountIs("AWS::DynamoDB::Table", 7);
     }
 
     [Fact]
@@ -105,7 +105,7 @@ public class StackTests
     {
         var template = CreateDatabaseTemplate();
         var tables = template.FindResources("AWS::DynamoDB::Table");
-        Assert.Equal(6, tables.Count);
+        Assert.Equal(7, tables.Count);
 
         foreach (var (_, resource) in tables)
         {
@@ -214,6 +214,9 @@ public class StackTests
             AiInteractionsTable = database.AiInteractionsTable,
             OutboxEventsTable = database.OutboxEventsTable,
             InAppAlertsTable = database.InAppAlertsTable,
+            WeeklyInsightsTable = database.WeeklyInsightsTable,
+            PurchasePatternsTable = database.PurchasePatternsTable,
+            PushDeviceTokensTable = database.PushDeviceTokensTable,
             AiQueue = ai.AiQueue,
             DbAccessLambda = dbAccess.DbAccessLambda
         });

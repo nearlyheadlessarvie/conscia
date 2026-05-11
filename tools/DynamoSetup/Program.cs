@@ -210,6 +210,23 @@ var tables = new (string Name, CreateTableRequest Request)[]
         BillingMode = BillingMode.PAY_PER_REQUEST
     }),
 
+    // ---------------- PUSH DEVICE TOKENS ----------------
+    ("PushDeviceTokens", new CreateTableRequest
+    {
+        TableName = "PushDeviceTokens",
+        KeySchema =
+        [
+            new("PK", KeyType.HASH),
+            new("SK", KeyType.RANGE)
+        ],
+        AttributeDefinitions =
+        [
+            new("PK", ScalarAttributeType.S),
+            new("SK", ScalarAttributeType.S)
+        ],
+        BillingMode = BillingMode.PAY_PER_REQUEST
+    }),
+
 };
 
 var existingTables = await client.ListTablesAsync();
