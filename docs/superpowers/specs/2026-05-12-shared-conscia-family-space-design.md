@@ -1,7 +1,7 @@
 # Shared Conscia Family Space Design
 
-**Date:** 2026-05-12  
-**Status:** Approved for MVP planning  
+**Date:** 2026-05-12
+**Status:** Approved for MVP planning
 **Feature:** Family sharing between registered Conscia users
 
 ## Goal
