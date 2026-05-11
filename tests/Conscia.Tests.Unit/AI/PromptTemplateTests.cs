@@ -9,12 +9,34 @@ public class PromptTemplateTests
     {
         var result = PromptTemplates.BuildPrePurchaseUserPrompt(49.99m, "USD", "Food", 72m, 3, 5);
 
-        Assert.Contains("49.99 USD", result);
+        Assert.Contains("USD 49.99", result);
         Assert.Contains("Food", result);
         Assert.Contains("72%", result);
         Assert.Contains("3", result);
         Assert.Contains("5", result);
         Assert.Contains("considering a purchase", result);
+    }
+
+    [Fact]
+    public void BuildPrePurchaseUserPrompt_WithNonUsdCurrency_InstructsModelToPreserveCurrency()
+    {
+        var result = PromptTemplates.BuildPrePurchaseUserPrompt(1000m, "PHP", "Dining", 7m, 0, 0);
+
+        Assert.Contains("PHP 1000.00", result);
+        Assert.Contains("Use PHP", result);
+        Assert.Contains("Do not use USD", result);
+        Assert.Contains("Do not use USD or the $ symbol", result);
+    }
+
+    [Fact]
+    public void BuildReflectionUserPrompt_WithNonUsdCurrency_InstructsModelToPreserveCurrency()
+    {
+        var result = PromptTemplates.BuildReflectionUserPrompt(1890m, "PHP", "Shopping", 35m, 2);
+
+        Assert.Contains("PHP 1890.00", result);
+        Assert.Contains("Use PHP", result);
+        Assert.Contains("Do not use USD", result);
+        Assert.Contains("Do not use USD or the $ symbol", result);
     }
 
     [Fact]
@@ -33,7 +55,7 @@ public class PromptTemplateTests
     {
         var result = PromptTemplates.BuildReflectionUserPrompt(120m, "EUR", "Entertainment", 85m, 2);
 
-        Assert.Contains("120.00 EUR", result);
+        Assert.Contains("EUR 120.00", result);
         Assert.Contains("Entertainment", result);
         Assert.Contains("85%", result);
         Assert.Contains("2", result);

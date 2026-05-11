@@ -60,6 +60,7 @@ class _FakeAIService extends AIService {
   final AIResponse response;
   final Duration delay;
   String? receivedInsightContext;
+  String? receivedCurrencyCode;
 
   @override
   Future<AIResponse> prePurchase({
@@ -70,6 +71,7 @@ class _FakeAIService extends AIService {
     String? insightContext,
   }) async {
     receivedInsightContext = insightContext;
+    receivedCurrencyCode = currencyCode;
     if (delay > Duration.zero) {
       await Future<void>.delayed(delay);
     }
@@ -661,21 +663,23 @@ void main() {
   testWidgets(
       'pre-purchase response summary formats the selected currency consistently',
       (tester) async {
-    await _pumpPrePurchaseRouterApp(
-      tester,
-      aiService: _FakeAIService(
-        response: const AIResponse(
-          impulse: 'Treat yourself.',
-          reason: 'Check your budget.',
-          neutral: 'You can decide.',
-          budget: AIBudgetContext(
-            monthlyLimit: 16706.49,
-            currentSpend: 0,
-            percentUsed: 0,
-            isOverBudget: false,
-          ),
+    final aiService = _FakeAIService(
+      response: const AIResponse(
+        impulse: 'Treat yourself.',
+        reason: 'Check your budget.',
+        neutral: 'You can decide.',
+        budget: AIBudgetContext(
+          monthlyLimit: 16706.49,
+          currentSpend: 0,
+          percentUsed: 0,
+          isOverBudget: false,
         ),
       ),
+    );
+
+    await _pumpPrePurchaseRouterApp(
+      tester,
+      aiService: aiService,
       locationService: _FakeLocationAssistanceService(
         permissionGranted: true,
         suggestions: const (
@@ -725,6 +729,7 @@ void main() {
     );
 
     expect(find.textContaining('\$600 PHP'), findsNothing);
+    expect(aiService.receivedCurrencyCode, 'PHP');
     expect(find.text(formatted), findsOneWidget);
     expect(find.textContaining('\$0.00 / \$16706.49'), findsNothing);
     expect(find.text(spentFormatted), findsOneWidget);
