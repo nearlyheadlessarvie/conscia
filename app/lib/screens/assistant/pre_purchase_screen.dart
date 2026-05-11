@@ -10,6 +10,7 @@ import '../../core/errors/app_error.dart';
 import '../../core/utils/currency_formatter.dart';
 import '../../core/utils/voice_input_parser.dart';
 import '../../providers/ai_provider.dart';
+import '../../providers/family_space_provider.dart';
 import '../../providers/insight_feed_provider.dart';
 import '../../providers/category_recents_provider.dart';
 import '../../providers/location_assistance_provider.dart';
@@ -24,6 +25,7 @@ import '../../widgets/location_assistance_prompt_sheet.dart';
 import '../../widgets/premium_upgrade_dialog.dart';
 import '../../widgets/screen_section.dart';
 import '../../widgets/smart_suggestions_card.dart';
+import '../../widgets/scope_selector.dart';
 import '../transactions/widgets/transaction_style_category_selector.dart';
 import '../transactions/widgets/voice_input_button.dart';
 import 'widgets/ai_message_bubble.dart';
@@ -52,6 +54,7 @@ class _PrePurchaseScreenState extends ConsumerState<PrePurchaseScreen>
   String _currencyCode = 'USD';
   bool _currencyManuallyChanged = false;
   String? _selectedCategory;
+  String _selectedContextScope = 'personal';
 
   // Animations for response bubbles
   late AnimationController _devilAnim;
@@ -193,6 +196,7 @@ class _PrePurchaseScreenState extends ConsumerState<PrePurchaseScreen>
         currencyCode: _currencyCode,
         category: _selectedCategory!,
         insightContext: insightContext,
+        contextScope: _selectedContextScope,
       );
 
       if (!mounted) return;
@@ -246,6 +250,7 @@ class _PrePurchaseScreenState extends ConsumerState<PrePurchaseScreen>
       _currencyManuallyChanged = false;
       _currencyCode = ref.read(userPreferencesProvider).currency;
       _selectedCategory = null;
+      _selectedContextScope = 'personal';
       _aiResponse = null;
       _errorMessage = null;
       _state = _ScreenState.input;
@@ -302,8 +307,15 @@ class _PrePurchaseScreenState extends ConsumerState<PrePurchaseScreen>
         ref.watch(subscriptionProvider).valueOrNull?.isPremium ?? false;
     final locationAssistance = ref.watch(locationAssistanceProvider);
     final suggestions = ref.watch(locationAssistanceSuggestionsProvider);
+    final familySpace = ref.watch(familySpaceProvider).valueOrNull;
     final hasSuggestions = suggestions.nearbyMerchants.isNotEmpty ||
         suggestions.likelyCategories.isNotEmpty;
+
+    if (familySpace == null && _selectedContextScope != 'personal') {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) setState(() => _selectedContextScope = 'personal');
+      });
+    }
 
     return HeroScreenScaffold(
       padding: const EdgeInsets.fromLTRB(16, 20, 16, 12),
@@ -365,6 +377,22 @@ class _PrePurchaseScreenState extends ConsumerState<PrePurchaseScreen>
             }),
           ),
           const SizedBox(height: 16),
+
+          if (familySpace != null) ...[
+            ScreenSection(
+              title: 'Advice scope',
+              subtitle:
+                  'Use Family when this purchase affects shared budgets or household plans.',
+              compact: true,
+              child: ScopeSelector(
+                value: _selectedContextScope,
+                familyEnabled: true,
+                onChanged: (scope) =>
+                    setState(() => _selectedContextScope = scope),
+              ),
+            ),
+            const SizedBox(height: 16),
+          ],
 
           ScreenSection(
             title: 'Category',
@@ -439,6 +467,25 @@ class _PrePurchaseScreenState extends ConsumerState<PrePurchaseScreen>
       child: Column(
         children: [
           _buildSummaryCard(),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: Chip(
+                label: Text(
+                  _selectedContextScope == 'family'
+                      ? 'Family advice'
+                      : 'Personal advice',
+                ),
+                avatar: Icon(
+                  _selectedContextScope == 'family'
+                      ? Icons.diversity_3_outlined
+                      : Icons.person_outline,
+                  size: 18,
+                ),
+              ),
+            ),
+          ),
           const SizedBox(height: 16),
           SlideTransition(
             position: Tween<Offset>(

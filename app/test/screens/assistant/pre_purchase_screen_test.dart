@@ -1,5 +1,7 @@
 import 'package:conscia_app/providers/category_frequency_provider.dart';
+import 'package:conscia_app/models/family_space.dart';
 import 'package:conscia_app/models/insight_feed_item.dart';
+import 'package:conscia_app/providers/family_space_provider.dart';
 import 'package:conscia_app/providers/insight_feed_provider.dart';
 import 'package:conscia_app/providers/subscription_provider.dart';
 import 'package:conscia_app/providers/usage_provider.dart';
@@ -61,6 +63,7 @@ class _FakeAIService extends AIService {
   final Duration delay;
   String? receivedInsightContext;
   String? receivedCurrencyCode;
+  String? receivedContextScope;
 
   @override
   Future<AIResponse> prePurchase({
@@ -69,9 +72,11 @@ class _FakeAIService extends AIService {
     required String currencyCode,
     required String category,
     String? insightContext,
+    String contextScope = 'personal',
   }) async {
     receivedInsightContext = insightContext;
     receivedCurrencyCode = currencyCode;
+    receivedContextScope = contextScope;
     if (delay > Duration.zero) {
       await Future<void>.delayed(delay);
     }
@@ -148,6 +153,7 @@ Future<void> _pumpPrePurchaseScreen(
         ),
         sharedPreferencesProvider.overrideWithValue(resolvedPrefs),
         userServiceProvider.overrideWithValue(_FakeUserService()),
+        familySpaceProvider.overrideWith((ref) async => null),
         locationAssistanceServiceProvider.overrideWithValue(
           locationService ??
               _FakeLocationAssistanceService(permissionGranted: true),
@@ -211,6 +217,7 @@ Future<Widget> buildPrePurchaseAppForTier(
       ),
       sharedPreferencesProvider.overrideWithValue(prefs),
       userServiceProvider.overrideWithValue(_FakeUserService()),
+      familySpaceProvider.overrideWith((ref) async => null),
       locationAssistanceServiceProvider.overrideWithValue(
         _FakeLocationAssistanceService(permissionGranted: true),
       ),
@@ -229,6 +236,7 @@ Future<void> _pumpPrePurchaseRouterApp(
   String locale = 'en_US',
   bool locationSuggestionsEnabled = false,
   DashboardInsightSummary? insightSummary,
+  FamilySpace? familySpace,
 }) async {
   SharedPreferences.setMockInitialValues({
     'location_suggestions_enabled': true,
@@ -284,6 +292,7 @@ Future<void> _pumpPrePurchaseRouterApp(
         userServiceProvider.overrideWithValue(_FakeUserService()),
         locationAssistanceServiceProvider.overrideWithValue(locationService),
         aiServiceProvider.overrideWithValue(aiService),
+        familySpaceProvider.overrideWith((ref) async => familySpace),
         dashboardInsightSummaryProvider.overrideWith(
           (ref) async => insightSummary,
         ),
@@ -658,6 +667,57 @@ void main() {
       aiService.receivedInsightContext,
       'Dining is above your recent 3-month pace.',
     );
+  });
+
+  testWidgets('pre-purchase can send family context when family space exists',
+      (tester) async {
+    final aiService = _FakeAIService(
+      response: const AIResponse(
+        impulse: 'Family treat?',
+        reason: 'Check the household plan.',
+        neutral: 'This is family advice.',
+      ),
+    );
+
+    await _pumpPrePurchaseRouterApp(
+      tester,
+      aiService: aiService,
+      locationService: _FakeLocationAssistanceService(permissionGranted: true),
+      familySpace: const FamilySpace(
+        id: 'family-1',
+        name: 'Santos Household',
+        currencyCode: 'PHP',
+        isReadOnly: false,
+        role: 'Contributor',
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    await tester.ensureVisible(find.text('Family'));
+    await tester.tap(find.text('Family'));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is TextField &&
+            widget.decoration?.labelText == 'What are you thinking of buying?',
+      ),
+      'Dinner delivery',
+    );
+    await tester.enterText(find.byType(TextField).at(1), '1200');
+    await tester.ensureVisible(find.widgetWithText(FilterChip, 'Dining'));
+    await tester.tap(find.widgetWithText(FilterChip, 'Dining'));
+    await tester.pumpAndSettle();
+
+    await tester.ensureVisible(find.text('Ask Conscia'));
+    await tester.tap(find.text('Ask Conscia'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 700));
+    await tester.pumpAndSettle();
+
+    expect(aiService.receivedContextScope, 'family');
+    expect(find.text('Family advice'), findsOneWidget);
   });
 
   testWidgets(
