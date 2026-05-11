@@ -58,8 +58,7 @@ class Budget {
       monthlyLimit: nextLimit,
       spent: nextSpent,
       currencyCode: currencyCode ?? this.currencyCode,
-      percentage:
-          percentage ?? (nextLimit > 0 ? nextSpent / nextLimit : 0),
+      percentage: percentage ?? (nextLimit > 0 ? nextSpent / nextLimit : 0),
       isOverBudget: isOverBudget ?? nextSpent > nextLimit,
     );
   }
@@ -69,18 +68,29 @@ class CreateBudgetDto {
   final String category;
   final double monthlyLimit;
   final String currencyCode;
+  final String scope;
+  final String? familySpaceId;
 
   const CreateBudgetDto({
     required this.category,
     required this.monthlyLimit,
     required this.currencyCode,
+    this.scope = 'personal',
+    this.familySpaceId,
   });
 
-  Map<String, dynamic> toJson() => {
-        'category': category,
-        'monthlyLimit': monthlyLimit,
-        'currencyCode': currencyCode,
-      };
+  Map<String, dynamic> toJson() {
+    final json = <String, dynamic>{
+      'category': category,
+      'monthlyLimit': monthlyLimit,
+      'currencyCode': currencyCode,
+      'scope': scope.toLowerCase() == 'family' ? 'Family' : 'Personal',
+    };
+    if (familySpaceId != null) {
+      json['familySpaceId'] = familySpaceId;
+    }
+    return json;
+  }
 }
 
 class BudgetService {
