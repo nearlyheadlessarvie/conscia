@@ -223,10 +223,20 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ScreenSection(
             title: 'Budgets',
             child: FeedCard(
-              child: _SettingsActionRow(
-                leading: const Icon(Icons.pie_chart_outline),
-                title: 'Manage Budgets',
-                onTap: () => context.push(AppRoutes.budgets),
+              child: Column(
+                children: [
+                  _SettingsActionRow(
+                    leading: const Icon(Icons.pie_chart_outline),
+                    title: 'Manage Budgets',
+                    onTap: () => context.push(AppRoutes.budgets),
+                  ),
+                  _SettingsActionRow(
+                    leading: const Icon(Icons.diversity_3_outlined),
+                    title: 'Shared Conscia',
+                    subtitle: 'Create or manage your Family Space',
+                    onTap: () => context.push(AppRoutes.familySpace),
+                  ),
+                ],
               ),
             ),
           ),
