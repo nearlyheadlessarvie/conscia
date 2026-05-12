@@ -54,6 +54,13 @@ const _aiIntensityOptions = <({
   ),
 ];
 
+const _regionFormatLabels = <String, String>{
+  'en_US': 'Philippines / US',
+  'de_DE': 'European',
+  'fr_FR': 'French / Swiss',
+  'en_IN': 'Indian',
+};
+
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
 
@@ -201,8 +208,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   ),
                   _SettingsActionRow(
                     leading: const Icon(Icons.language),
-                    title: 'Region / Number Format',
-                    subtitle: userPreferences.locale,
+                    title: 'Currency & Region Format',
+                    subtitle:
+                        '${userPreferences.currency} · ${_regionFormatLabels[userPreferences.locale] ?? 'Philippines / US'} format',
                     onTap: () => _showLocalePicker(context, ref),
                   ),
                   if (_biometricSupported)

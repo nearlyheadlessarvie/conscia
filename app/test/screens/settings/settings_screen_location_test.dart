@@ -181,7 +181,7 @@ void main() {
     );
   });
 
-  testWidgets('settings can change region and number format', (tester) async {
+  testWidgets('settings can change region format', (tester) async {
     SharedPreferences.setMockInitialValues({});
     final prefs = await SharedPreferences.getInstance();
     final locationService =
@@ -197,18 +197,18 @@ void main() {
 
     await tester.pumpAndSettle();
 
-    await tester.ensureVisible(find.text('Region / Number Format'));
+    await tester.ensureVisible(find.text('Currency & Region Format'));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Region / Number Format'));
+    await tester.tap(find.text('Currency & Region Format'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Number Format'), findsOneWidget);
+    expect(find.text('Region Format'), findsOneWidget);
 
-    await tester.tap(find.text('English (UK)'));
+    await tester.tap(find.text('European'));
     await tester.pumpAndSettle();
 
-    expect(userService.lastLocale, 'en_GB');
+    expect(userService.lastLocale, 'de_DE');
   });
 
   testWidgets('settings can change ai personality intensity', (tester) async {
