@@ -66,7 +66,12 @@ namespace Conscia.Infrastructure.Migrations
                     b.HasIndex("UserId");
 
                     b.HasIndex("UserId", "Category")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasFilter("\"Scope\" = 'Personal'");
+
+                    b.HasIndex("FamilySpaceId", "Category")
+                        .IsUnique()
+                        .HasFilter("\"Scope\" = 'Family'");
 
                     b.ToTable("budgets", (string)null);
                 });

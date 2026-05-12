@@ -141,6 +141,14 @@ public static class StoryDemoRdsSeeder
             CREATE UNIQUE INDEX IF NOT EXISTS "IX_family_members_FamilySpaceId_UserId" ON family_members ("FamilySpaceId", "UserId");
             CREATE INDEX IF NOT EXISTS "IX_family_invites_Email" ON family_invites ("Email");
             CREATE INDEX IF NOT EXISTS "IX_family_invites_FamilySpaceId_Email" ON family_invites ("FamilySpaceId", "Email");
+
+            DROP INDEX IF EXISTS "IX_budgets_UserId_Category";
+            CREATE UNIQUE INDEX IF NOT EXISTS "IX_budgets_UserId_Category"
+                ON budgets ("UserId", "Category")
+                WHERE "Scope" = 'Personal';
+            CREATE UNIQUE INDEX IF NOT EXISTS "IX_budgets_FamilySpaceId_Category"
+                ON budgets ("FamilySpaceId", "Category")
+                WHERE "Scope" = 'Family';
             """,
             ct);
     }
