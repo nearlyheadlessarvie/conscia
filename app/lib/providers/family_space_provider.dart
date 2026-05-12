@@ -64,7 +64,7 @@ class FamilySpaceActions {
 
   Future<FamilySpace> updateName(String name) async {
     final dio = _ref.read(dioProvider);
-    final response = await dio.patch(
+    final response = await dio.put(
       ApiConstants.familySpace,
       data: {'name': name},
     );

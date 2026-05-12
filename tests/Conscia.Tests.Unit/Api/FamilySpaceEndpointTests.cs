@@ -130,6 +130,34 @@ public class FamilySpaceEndpointTests
     }
 
     [Fact]
+    public async Task UpdateFamilySpace_PutRequest_ReturnsUpdatedSpace()
+    {
+        await using var factory = new TestWebAppFactory();
+        var familySpaceId = Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
+        factory.FamilySpaceServiceMock
+            .Setup(s => s.UpdateAsync(UserId, "Santos Family", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new FamilySpaceDto(
+                familySpaceId,
+                "Santos Family",
+                "PHP",
+                false,
+                FamilyMemberRole.Owner.ToString()));
+
+        var client = CreateAuthorizedClient(factory);
+        var response = await client.PutAsJsonAsync("/api/v1/family-space", new
+        {
+            name = "Santos Family"
+        });
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        var json = await response.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal("Santos Family", json.GetProperty("name").GetString());
+        Assert.Equal("PHP", json.GetProperty("currencyCode").GetString());
+        Assert.Equal("Owner", json.GetProperty("role").GetString());
+    }
+
+    [Fact]
     public async Task UpdateFamilySpace_NonOwner_ReturnsForbidden()
     {
         await using var factory = new TestWebAppFactory();

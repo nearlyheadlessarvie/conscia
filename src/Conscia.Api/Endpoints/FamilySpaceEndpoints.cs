@@ -61,25 +61,8 @@ public static class FamilySpaceEndpoints
             }
         }).WithName("CreateFamilySpace");
 
-        group.MapPatch("/", async (HttpContext ctx, UpdateFamilySpaceDto dto, IFamilySpaceService svc) =>
-        {
-            if (string.IsNullOrWhiteSpace(dto.Name))
-                return Results.BadRequest(new { error = "Family Space name is required." });
-
-            try
-            {
-                var space = await svc.UpdateAsync(ctx.User.GetUserId(), dto.Name, ctx.RequestAborted);
-                return Results.Ok(space);
-            }
-            catch (UnauthorizedAccessException ex)
-            {
-                return Results.Json(new { error = ex.Message }, statusCode: StatusCodes.Status403Forbidden);
-            }
-            catch (InvalidOperationException ex)
-            {
-                return Results.BadRequest(new { error = ex.Message });
-            }
-        }).WithName("UpdateFamilySpace");
+        group.MapPatch("/", UpdateFamilySpaceAsync).WithName("PatchFamilySpace");
+        group.MapPut("/", UpdateFamilySpaceAsync).WithName("UpdateFamilySpace");
 
         group.MapPost("/invites", async (HttpContext ctx, CreateFamilyInviteDto dto, IFamilySpaceService svc) =>
         {
@@ -199,5 +182,28 @@ public static class FamilySpaceEndpoints
         }).WithName("ImportFamilyRecords");
 
         return group;
+    }
+
+    private static async Task<IResult> UpdateFamilySpaceAsync(
+        HttpContext ctx,
+        UpdateFamilySpaceDto dto,
+        IFamilySpaceService svc)
+    {
+        if (string.IsNullOrWhiteSpace(dto.Name))
+            return Results.BadRequest(new { error = "Family Space name is required." });
+
+        try
+        {
+            var space = await svc.UpdateAsync(ctx.User.GetUserId(), dto.Name, ctx.RequestAborted);
+            return Results.Ok(space);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return Results.Json(new { error = ex.Message }, statusCode: StatusCodes.Status403Forbidden);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return Results.BadRequest(new { error = ex.Message });
+        }
     }
 }
