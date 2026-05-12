@@ -113,6 +113,26 @@ void main() {
     expect(scanRect.height, greaterThan(48));
   });
 
+  testWidgets('MainShell uses a circular active highlight for side tabs',
+      (tester) async {
+    await _pumpShell(tester);
+
+    final activeHomeItem = find.byKey(const ValueKey('floating-dock-item-0'));
+    expect(activeHomeItem, findsOneWidget);
+
+    final activeDecoration = tester
+        .widgetList<AnimatedContainer>(
+          find.descendant(
+            of: activeHomeItem,
+            matching: find.byType(AnimatedContainer),
+          ),
+        )
+        .single
+        .decoration as BoxDecoration;
+
+    expect(activeDecoration.shape, BoxShape.circle);
+  });
+
   testWidgets('MainShell does not show a shared add FAB on mobile',
       (tester) async {
     await _pumpShell(tester);

@@ -109,20 +109,26 @@ class _DockIconButton extends StatelessWidget {
         key: ValueKey('floating-dock-item-$index'),
         borderRadius: BorderRadius.circular(999),
         onTap: () => onTap(index),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 180),
-          curve: Curves.easeOut,
-          width: 52,
-          height: 32,
-          decoration: BoxDecoration(
-            color: selected ? colors.navySoft : Colors.transparent,
-            borderRadius: BorderRadius.circular(999),
-          ),
-          alignment: Alignment.center,
-          child: Icon(
-            selected ? activeIcon : icon,
-            size: 20,
-            color: selected ? colors.deepNavy : colors.softInk,
+        child: SizedBox(
+          width: 44,
+          height: 44,
+          child: Center(
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 180),
+              curve: Curves.easeOut,
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: selected ? colors.navySoft : Colors.transparent,
+                shape: BoxShape.circle,
+              ),
+              alignment: Alignment.center,
+              child: Icon(
+                selected ? activeIcon : icon,
+                size: 20,
+                color: selected ? colors.deepNavy : colors.softInk,
+              ),
+            ),
           ),
         ),
       ),
