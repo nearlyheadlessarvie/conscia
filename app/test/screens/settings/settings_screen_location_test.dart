@@ -300,15 +300,19 @@ void main() {
         tester.getTopLeft(find.text('Smart location suggestions')).dy;
     expect(aiTop, lessThan(smartLocationTop));
 
-    await tester.ensureVisible(find.text('Manage Budgets'));
+    await tester.ensureVisible(find.text('Budgets'));
     await tester.pumpAndSettle();
 
     expect(find.text('Budgets & Categories'), findsOneWidget);
     final planningTop = tester.getTopLeft(find.text('Budgets & Categories')).dy;
     final categoriesTop = tester.getTopLeft(find.text('Categories')).dy;
-    final budgetsTop = tester.getTopLeft(find.text('Manage Budgets')).dy;
+    final budgetsTop = tester.getTopLeft(find.text('Budgets')).dy;
 
     expect(categoriesTop, greaterThan(planningTop));
     expect(budgetsTop, greaterThan(categoriesTop));
+    expect(
+      find.text('Create and tune monthly caps for spending categories'),
+      findsOneWidget,
+    );
   });
 }

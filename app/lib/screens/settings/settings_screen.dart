@@ -263,7 +263,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   ),
                   _SettingsActionRow(
                     leading: const Icon(Icons.pie_chart_outline),
-                    title: 'Manage Budgets',
+                    title: 'Budgets',
+                    subtitle:
+                        'Create and tune monthly caps for spending categories',
                     onTap: () => context.push(AppRoutes.budgets),
                   ),
                 ],
