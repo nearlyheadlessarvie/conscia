@@ -145,7 +145,10 @@ class _FamilySpaceOverview extends ConsumerWidget {
           ),
         ),
         overview.when(
-          data: (data) => _FamilyOverviewDetails(overview: data),
+          data: (data) => Padding(
+            padding: const EdgeInsets.only(top: 18),
+            child: _FamilyOverviewDetails(overview: data),
+          ),
           loading: () => const Padding(
             padding: EdgeInsets.only(top: 14),
             child: Column(
