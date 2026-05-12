@@ -50,6 +50,28 @@ class _TestAuthNotifier extends AuthNotifier {
 }
 
 void main() {
+  testWidgets('mock auth verification explains any local code works', (
+    tester,
+  ) async {
+    final authNotifier = _TestAuthNotifier();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          authProvider.overrideWith((ref) => authNotifier),
+        ],
+        child: const MaterialApp(
+          home: VerifyEmailScreen(),
+        ),
+      ),
+    );
+
+    expect(
+      find.text('Local dev: no email was sent. Enter any code to continue.'),
+      findsOneWidget,
+    );
+  });
+
   testWidgets('resend code is disabled for one minute when screen opens', (
     tester,
   ) async {

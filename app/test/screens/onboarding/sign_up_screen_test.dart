@@ -105,9 +105,10 @@ void main() {
     await tester.pump(const Duration(milliseconds: 300));
 
     expect(
-      find.text('Account already exists. Please sign in. Reference: SIGNUP01'),
+      find.text('Account already exists. Please sign in.'),
       findsOneWidget,
     );
+    expect(find.textContaining('Reference: SIGNUP01'), findsNothing);
     expect(find.textContaining('DioException'), findsNothing);
   });
 }

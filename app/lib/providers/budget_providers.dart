@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/errors/app_error.dart';
 import '../core/network/dio_client.dart';
+import 'auth_provider.dart';
 import '../services/budget_service.dart';
 import '../services/transaction_service.dart';
 
@@ -237,7 +238,10 @@ class BudgetFormNotifier extends StateNotifier<BudgetFormState> {
 
 final budgetFormProvider =
     StateNotifierProvider<BudgetFormNotifier, BudgetFormState>(
-  (_) => BudgetFormNotifier(),
+  (ref) {
+    ref.watch(authCacheScopeProvider);
+    return BudgetFormNotifier();
+  },
 );
 
 final hasBudgetForCategoryProvider =

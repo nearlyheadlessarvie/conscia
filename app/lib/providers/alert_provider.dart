@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/constants/api_constants.dart';
 import '../core/network/dio_client.dart';
 import '../models/conscience_journey.dart';
+import 'auth_provider.dart';
 import 'budget_providers.dart';
 
 class AppAlert {
@@ -213,7 +214,10 @@ class LocalAlertsNotifier extends StateNotifier<List<AppAlert>> {
 
 final localAlertsProvider =
     StateNotifierProvider<LocalAlertsNotifier, List<AppAlert>>(
-  (_) => LocalAlertsNotifier(),
+  (ref) {
+    ref.watch(authCacheScopeProvider);
+    return LocalAlertsNotifier();
+  },
 );
 
 class DismissedAlertIdsNotifier extends StateNotifier<Set<String>> {
@@ -226,7 +230,10 @@ class DismissedAlertIdsNotifier extends StateNotifier<Set<String>> {
 
 final dismissedAlertIdsProvider =
     StateNotifierProvider<DismissedAlertIdsNotifier, Set<String>>(
-  (_) => DismissedAlertIdsNotifier(),
+  (ref) {
+    ref.watch(authCacheScopeProvider);
+    return DismissedAlertIdsNotifier();
+  },
 );
 
 final activeAlertsProvider = Provider<List<AppAlert>>((ref) {

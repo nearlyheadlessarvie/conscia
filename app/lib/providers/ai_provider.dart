@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/network/dio_client.dart';
 import '../services/ai_service.dart';
+import 'auth_provider.dart';
 
 final aiServiceProvider = Provider<AIService>((ref) {
   return AIService(ref.watch(dioProvider));
@@ -50,7 +51,10 @@ class PrePurchaseFormNotifier extends StateNotifier<PrePurchaseFormState> {
 
 final prePurchaseFormProvider =
     StateNotifierProvider<PrePurchaseFormNotifier, PrePurchaseFormState>(
-  (_) => PrePurchaseFormNotifier(),
+  (ref) {
+    ref.watch(authCacheScopeProvider);
+    return PrePurchaseFormNotifier();
+  },
 );
 
 final prePurchaseResponseProvider =

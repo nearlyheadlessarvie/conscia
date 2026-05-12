@@ -2,13 +2,17 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/errors/app_error.dart';
 import '../core/network/dio_client.dart';
+import 'auth_provider.dart';
 import '../services/transaction_service.dart';
 
 final transactionServiceProvider = Provider<TransactionService>((ref) {
   return TransactionService(ref.watch(dioProvider));
 });
 
-final categoryFilterProvider = StateProvider<String?>((_) => null);
+final categoryFilterProvider = StateProvider<String?>((ref) {
+  ref.watch(authCacheScopeProvider);
+  return null;
+});
 
 class TransactionListState {
   final List<Transaction> transactions;

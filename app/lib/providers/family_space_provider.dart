@@ -6,6 +6,7 @@ import '../models/family_overview.dart';
 import '../models/family_invite.dart';
 import '../models/family_member.dart';
 import '../models/family_space.dart';
+import 'auth_provider.dart';
 
 final familySpaceProvider = FutureProvider<FamilySpace?>((ref) async {
   final dio = ref.watch(dioProvider);
@@ -14,7 +15,10 @@ final familySpaceProvider = FutureProvider<FamilySpace?>((ref) async {
   return FamilySpace.fromJson(Map<String, dynamic>.from(response.data as Map));
 });
 
-final selectedScopeProvider = StateProvider<String>((ref) => 'personal');
+final selectedScopeProvider = StateProvider<String>((ref) {
+  ref.watch(authCacheScopeProvider);
+  return 'personal';
+});
 
 final familyOverviewProvider = FutureProvider<FamilyOverview>((ref) async {
   final dio = ref.watch(dioProvider);

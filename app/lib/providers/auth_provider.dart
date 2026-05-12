@@ -487,3 +487,12 @@ final authProvider = StateNotifierProvider<AuthNotifier, AuthState>((ref) {
     ref.watch(secureStorageProvider),
   );
 });
+
+final authCacheScopeProvider = Provider<String>((ref) {
+  final auth = ref.watch(authProvider);
+  return [
+    auth.status.name,
+    auth.userId ?? '',
+    auth.pendingEmail ?? '',
+  ].join(':');
+});
