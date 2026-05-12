@@ -35,7 +35,6 @@ Each user keeps their own Personal Conscia account. A Premium user can create on
 Supported shared record types:
 
 - Family expenses
-- Family contribution income records
 - Family budgets
 - Family recurring schedules
 - Family-mode AI/pre-purchase context
@@ -110,7 +109,6 @@ Contributor can:
 
 - View Family Space records and insights.
 - Add shared expenses.
-- Add Family Contribution records.
 - Add shared budgets.
 - Add shared recurring schedules.
 - Edit or delete shared records they created.
@@ -157,31 +155,16 @@ Behavior:
 
 This avoids duplicate records, disappearing personal history, and double counting.
 
-## Income And Family Contributions
+## Income Privacy
 
 MVP should avoid exact salary disclosure by default.
 
-Primary income flow:
-
-- Actual salary can stay private in Personal.
-- A user creates a **Family Contribution** record for the amount they choose to contribute to household planning.
-- Family cashflow uses Family Contributions, not hidden private salary.
-- Other members see contribution amounts, not the user's exact personal income.
-
-Examples:
-
-- One-time contribution: `Family Contribution +₱20,000 for May household expenses`
-- Recurring contribution: `Family Contribution +₱45,000 monthly`
-- Two monthly contribution schedules can represent semi-monthly paydays if the existing recurrence model does not support twice-monthly cadence yet.
-
 Rules:
 
-- Contributions can be one-time or recurring.
-- The creator can edit/delete their own contribution records and schedules.
-- Owner can manage all family contribution records and schedules.
-- Family-mode AI and family cashflow can use expected upcoming recurring contributions.
-
-Exact salary sharing can be considered later, but MVP should guide users toward contribution records.
+- Actual salary can stay private in Personal.
+- Family Space should not require users to publish salary or contribution schedules.
+- Family cashflow should start from explicitly marked Family transactions and Family budgets only.
+- Exact income sharing can be considered later as a separate, opt-in design.
 
 ## Expenses
 
@@ -228,7 +211,6 @@ Family recurring schedules include:
 - Insurance
 - School fees
 - Shared subscriptions
-- Family contributions
 
 Rules:
 
@@ -306,7 +288,6 @@ Personal advice uses:
 Family advice uses:
 
 - Family budgets.
-- Family contributions.
 - Family expenses.
 - Family recurring schedules.
 - Family trends.
@@ -329,7 +310,6 @@ Examples:
 - Invite a family member.
 - Accept a Family Space invite.
 - Add a family expense.
-- Add a Family Contribution.
 - Create a shared recurring schedule.
 - Review a family budget trend.
 - Check with Conscia before a family purchase.
@@ -400,10 +380,6 @@ Fields to add to shared-capable records:
 - `Visibility` or `Scope`
 - `SharedAt`
 - `SharedByUserId`
-
-Potential entities or fields for contribution modeling:
-
-- Use `Transaction` with a Family Contribution category and Family scope for MVP.
 
 Sketch:
 
@@ -643,7 +619,6 @@ Add a Shared Conscia story-demo household later:
 - Optional Viewer account.
 - Shared family budget.
 - Shared recurring utility/subscription.
-- Family Contribution schedule.
 - Manually-created family transaction with Family badge.
 - Pending invite.
 - Family invite bell notification.
@@ -653,7 +628,5 @@ Add a Shared Conscia story-demo household later:
 ## MVP Implementation Decisions
 
 - Shared-capable records should have both `FamilySpaceId` and an explicit `Scope` enum. `FamilySpaceId` connects the record to the household; `Scope` keeps UI and authorization code readable.
-- Family Contribution should be represented as an income transaction with Family scope and a reserved `Family Contribution` category for MVP.
-- Semi-monthly contributions can be represented as two monthly recurring schedules for MVP. Do not expand the recurrence engine only for this feature.
 - Owner Premium lapse uses a 14-day grace period. After that, Family Space is read-only until the owner renews Premium or transfers ownership to another Premium member.
 - Navigation entry points should be Settings as the durable management home, plus a subtle Dashboard card for Premium users who have not created a Family Space yet.

@@ -1653,7 +1653,7 @@ Family prompt context must include only compact summaries:
 ```text
 Family context:
 - Shared monthly budget statuses by category.
-- Current month family contributions total.
+- Current month family income total.
 - Current month family expenses total.
 - Active family recurring obligations count and total.
 - Recent family insight summary.
@@ -1669,14 +1669,12 @@ Add event types in `ConscienceJourneyRules`:
 ["family_invite_sent"] = 15,
 ["family_invite_accepted"] = 20,
 ["family_expense_added"] = 10,
-["family_contribution_added"] = 15,
 ["family_purchase_checked"] = 20
 ```
 
 Add badges:
 
 - `family_founder`
-- `household_contributor`
 - `family_planner`
 
 - [ ] **Step 5: Add Flutter Personal/Family toggle in pre-purchase**
@@ -1732,9 +1730,8 @@ Seed:
 - Family Space: `Santos Household`
 - Family Dining budget
 - Family Groceries budget
-- Family Contribution recurring schedule
 - Internet recurring schedule
-- Imported transaction with Family badge
+- Manually-created transaction with Family badge
 - Pending invite notification
 - Family Journey quest progress
 
@@ -1743,7 +1740,7 @@ Seed:
 In `docs/README.md`, update story-demo section with:
 
 ```markdown
-- Shared Conscia demo data: a Premium Family Space owner, contributor spouse, viewer relative, shared budgets, shared recurring obligations, a family contribution, an imported shared record, and invite notification examples.
+- Shared Conscia demo data: a Premium Family Space owner, contributor spouse, viewer relative, shared budgets, household activity, family Journey progress, and invite notification examples.
 ```
 
 - [ ] **Step 3: Add release setup notes**

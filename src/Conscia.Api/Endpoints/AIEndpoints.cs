@@ -247,7 +247,7 @@ public static class AIEndpoints
             .Select(g => FormatMoney(g.Sum(t => t.Amount.Amount), g.Key))
             .DefaultIfEmpty("none")
             .ToList();
-        var contributions = transactions
+        var income = transactions
             .Where(t => t.Type == TransactionType.Income)
             .GroupBy(t => t.Amount.CurrencyCode)
             .Select(g => FormatMoney(g.Sum(t => t.Amount.Amount), g.Key))
@@ -260,7 +260,7 @@ public static class AIEndpoints
             "Family context:",
             $"- Shared budget categories: {FormatList(budgets.Select(b => b.Category).Distinct(StringComparer.OrdinalIgnoreCase))}",
             $"- Current month family expenses total: {string.Join(", ", expenses)}",
-            $"- Current month family contributions total: {string.Join(", ", contributions)}",
+            $"- Current month family income total: {string.Join(", ", income)}",
             $"- Active family recurring obligations: {activeRecurring.Count}",
             $"- Active family recurring categories: {FormatList(activeRecurring.Select(r => r.Category).Distinct(StringComparer.OrdinalIgnoreCase))}"
         });

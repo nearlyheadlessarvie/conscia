@@ -205,7 +205,7 @@ public class AIEndpointTests : IClassFixture<TestWebAppFactory>
         Assert.Equal("family", capturedContext!.ContextScope);
         Assert.Contains("Family context:", capturedContext.FamilyContextSummary);
         Assert.Contains("family expenses total: PHP 1200.00", capturedContext.FamilyContextSummary);
-        Assert.Contains("family contributions total: PHP 15000.00", capturedContext.FamilyContextSummary);
+        Assert.Contains("family income total: PHP 15000.00", capturedContext.FamilyContextSummary);
         Assert.Contains("Active family recurring obligations: 1", capturedContext.FamilyContextSummary);
     }
 }

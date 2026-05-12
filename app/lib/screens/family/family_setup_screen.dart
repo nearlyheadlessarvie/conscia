@@ -53,7 +53,7 @@ class _FamilySetupScreenState extends ConsumerState<FamilySetupScreen> {
             ),
             const SizedBox(height: 8),
             Text(
-              'Import only the budgets, transactions, and recurring contributions you choose. Salary can stay hidden while contribution records stay useful.',
+              'Records stay personal unless you mark them as Family. Start clean, then share only the household spending that belongs there.',
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
                 height: 1.35,

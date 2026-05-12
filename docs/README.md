@@ -18,7 +18,7 @@ Local setup:
 - Run `dotnet run --project tools/Seeder -- story-demo` to recreate the curated demo user and its linked product data.
 - Re-running the seed is safe for the demo user: it replaces only the `story-demo@example.com` relational slice and the matching user-scoped Dynamo records.
 - The story profile includes a premium demo user, 3-month transaction history, recurring schedules with generated occurrences, active notification-bell alerts, weekly insights, budget trends, regret patterns, and enough category/merchant context for pre-purchase assistant checks.
-- Shared Conscia demo data includes a Premium Family Space owner, contributor spouse, viewer relative, shared budgets, shared recurring obligations, a family contribution, imported shared records, family Journey progress, and pending invite examples.
+- Shared Conscia demo data includes a Premium Family Space owner, contributor spouse, viewer relative, shared budgets, household activity, family Journey progress, and pending invite examples.
 
 ### Current Product Snapshot
 
@@ -27,7 +27,7 @@ Local setup:
 - Unbudgeted expense categories now create an in-app budget nudge with a direct path back to budget management.
 - Recurring expense and income schedules are now supported with weekly, monthly, and yearly cadence, optional end dates, automatic occurrence generation, and reminder alerts.
 - Device push delivery is planned as a selective, high-signal channel: weekly digest, important recurring reminders, high-severity budget/cooling-off alerts, and major Conscience Journey moments such as level-up. Quest progress should stay in-app/bell only.
-- Shared Conscia is MVP-scoped as a Premium-created Family Space: invited contributors/viewers can participate free, records stay personal until explicitly imported/shared, and salary privacy is preserved through contribution-only records.
+- Shared Conscia is MVP-scoped as a Premium-created Family Space: invited contributors/viewers can participate free, records stay personal unless explicitly marked as Family, and settlement/reimbursement flows are intentionally out of scope.
 - Phase 4 AI Personality shipped as the broader AI Personality + Visual Refresh milestone: persona prompts, intensity-aware temperatures, persisted user preference, Settings control, and mascot-led AI surfaces.
 - Phase 5 is now MVP-scoped as Conscience Journey: a richer but modular gamification layer with XP, levels, weekly quests, badges, and mascot moments.
 - Other Phase 5+ roadmap items remain planned work.

@@ -62,11 +62,11 @@ public class RecurringScheduleServiceTests
             });
         var dto = new CreateRecurringScheduleDto
         {
-            Type = TransactionType.Income,
-            Amount = 15000m,
+            Type = TransactionType.Expense,
+            Amount = 1899m,
             CurrencyCode = "PHP",
-            Category = "Family Contribution",
-            Counterparty = "Payroll",
+            Category = "Bills",
+            Counterparty = "Home internet",
             StartDate = new DateTime(2026, 05, 31, 0, 0, 0, DateTimeKind.Utc),
             Cadence = RecurringCadence.Monthly,
             Scope = RecordScope.Family,
@@ -96,10 +96,10 @@ public class RecurringScheduleServiceTests
         var error = await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
             service.CreateAsync(userId, new CreateRecurringScheduleDto
             {
-                Type = TransactionType.Income,
-                Amount = 15000m,
+                Type = TransactionType.Expense,
+                Amount = 1899m,
                 CurrencyCode = "PHP",
-                Category = "Family Contribution",
+                Category = "Bills",
                 StartDate = DateTime.UtcNow,
                 Cadence = RecurringCadence.Monthly,
                 Scope = RecordScope.Family,

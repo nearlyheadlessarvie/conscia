@@ -10,7 +10,6 @@ public static class ConscienceEventTypes
     public const string FamilyInviteSent = "family_invite_sent";
     public const string FamilyInviteAccepted = "family_invite_accepted";
     public const string FamilyExpenseAdded = "family_expense_added";
-    public const string FamilyContributionAdded = "family_contribution_added";
     public const string FamilyPurchaseChecked = "family_purchase_checked";
 }
 
@@ -26,7 +25,6 @@ public static class ConscienceJourneyRules
         ConscienceEventTypes.FamilyInviteSent,
         ConscienceEventTypes.FamilyInviteAccepted,
         ConscienceEventTypes.FamilyExpenseAdded,
-        ConscienceEventTypes.FamilyContributionAdded,
         ConscienceEventTypes.FamilyPurchaseChecked
     ];
 
@@ -41,7 +39,6 @@ public static class ConscienceJourneyRules
             [ConscienceEventTypes.FamilyInviteSent] = 15,
             [ConscienceEventTypes.FamilyInviteAccepted] = 20,
             [ConscienceEventTypes.FamilyExpenseAdded] = 10,
-            [ConscienceEventTypes.FamilyContributionAdded] = 15,
             [ConscienceEventTypes.FamilyPurchaseChecked] = 20
         };
 
@@ -85,10 +82,10 @@ public static class ConscienceJourneyRules
             Target: 1,
             XpReward: 10),
         new(
-            Key: "add_family_contribution",
-            Title: "Add 1 family contribution",
-            Description: "Track support without exposing exact salary.",
-            EventType: ConscienceEventTypes.FamilyContributionAdded,
+            Key: "add_family_expense",
+            Title: "Add 1 family expense",
+            Description: "Keep shared spending visible to the household.",
+            EventType: ConscienceEventTypes.FamilyExpenseAdded,
             Target: 1,
             XpReward: 15)
     ];
@@ -130,12 +127,6 @@ public static class ConscienceJourneyRules
             Title: "Family Founder",
             Description: "Sent your first Family Space invite.",
             EventType: ConscienceEventTypes.FamilyInviteSent,
-            Target: 1),
-        new(
-            Key: "household_contributor",
-            Title: "Household Contributor",
-            Description: "Added your first family contribution.",
-            EventType: ConscienceEventTypes.FamilyContributionAdded,
             Target: 1),
         new(
             Key: "family_planner",

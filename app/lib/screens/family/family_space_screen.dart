@@ -67,7 +67,7 @@ class _NoFamilySpaceView extends StatelessWidget {
             style: theme.textTheme.titleLarge),
         const SizedBox(height: 8),
         Text(
-          'Create one household space, invite family members, then explicitly import the records you want to share.',
+          'Create one household space, invite family members, then share only records you explicitly mark as Family.',
           style: theme.textTheme.bodyMedium?.copyWith(
             color: theme.colorScheme.onSurfaceVariant,
             height: 1.35,
@@ -81,7 +81,7 @@ class _NoFamilySpaceView extends StatelessWidget {
               Icon(AppIcons.family, size: 36),
               const SizedBox(height: 12),
               Text(
-                'Shared budgets, recurring contributions, and family-aware insights.',
+                'Shared budgets, household activity, and family-aware insights.',
                 style: theme.textTheme.titleMedium,
               ),
               const SizedBox(height: 14),

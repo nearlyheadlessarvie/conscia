@@ -66,7 +66,7 @@ class _NoFamilySpaceSettingsView extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         Text(
-          'Shared Conscia is where family budgets, contributions, and explicitly shared records live.',
+          'Shared Conscia is where family budgets and explicitly shared household records live.',
           style: theme.textTheme.bodyMedium?.copyWith(
             color: theme.colorScheme.onSurfaceVariant,
             height: 1.35,
@@ -106,8 +106,6 @@ class _FamilySpaceSettingsView extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final role = space.role.toLowerCase();
     final canManage = role == 'owner' && !space.isReadOnly;
-    final canContribute = role != 'viewer' && !space.isReadOnly;
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -162,16 +160,6 @@ class _FamilySpaceSettingsView extends ConsumerWidget {
                     title: 'Invites',
                     subtitle: 'Invite registered family members by email.',
                     onTap: () => context.push(AppRoutes.familyInvites),
-                  ),
-                ],
-                if (canContribute) ...[
-                  const Divider(height: 24),
-                  _SettingsRow(
-                    icon: Icons.repeat_outlined,
-                    title: 'Schedule contribution',
-                    subtitle:
-                        'Track recurring household contributions without salary details.',
-                    onTap: () => context.push(AppRoutes.familyContribution),
                   ),
                 ],
               ],

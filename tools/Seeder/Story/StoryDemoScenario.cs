@@ -188,7 +188,6 @@ public sealed class StoryDemoScenario
             new() { Id = Guid.Parse("7aa7aa7a-1111-4444-8888-500000000001"), UserId = userId, Type = TransactionType.Expense, Category = "Subscriptions", Counterparty = "Netflix", Amount = new Money(549m, "PHP"), Cadence = RecurringCadence.Monthly, StartDate = nowUtc.AddMonths(-3), NextRunAt = nowUtc.AddDays(5), IsActive = true, CreatedAt = nowUtc.AddMonths(-3), UpdatedAt = nowUtc },
             new() { Id = Guid.Parse("7aa7aa7a-1111-4444-8888-500000000002"), UserId = userId, Type = TransactionType.Expense, Category = "Bills", Counterparty = "Globe", Amount = new Money(1499m, "PHP"), Cadence = RecurringCadence.Monthly, StartDate = nowUtc.AddMonths(-3), NextRunAt = nowUtc.AddDays(8), IsActive = true, CreatedAt = nowUtc.AddMonths(-3), UpdatedAt = nowUtc },
             new() { Id = Guid.Parse("7aa7aa7a-1111-4444-8888-500000000003"), UserId = userId, Type = TransactionType.Income, Category = "Salary", Counterparty = "Freelance Client", Amount = new Money(3500m, "PHP"), Cadence = RecurringCadence.Weekly, StartDate = nowUtc.AddMonths(-1), NextRunAt = nowUtc.AddDays(4), IsActive = true, CreatedAt = nowUtc.AddMonths(-1), UpdatedAt = nowUtc, LastGeneratedAt = nowUtc.AddDays(-3) },
-            new() { Id = Guid.Parse("7aa7aa7a-1111-4444-8888-500000000004"), UserId = spouseId, Type = TransactionType.Income, Category = "Contribution", Counterparty = "Household contribution", Amount = new Money(15000m, "PHP"), Cadence = RecurringCadence.Monthly, StartDate = monthStart, NextRunAt = monthStart.AddMonths(1), IsActive = true, CreatedAt = monthStart, UpdatedAt = nowUtc, Scope = RecordScope.Family, FamilySpaceId = familySpaceId, SharedAt = monthStart, SharedByUserId = spouseId },
             new() { Id = Guid.Parse("7aa7aa7a-1111-4444-8888-500000000005"), UserId = userId, Type = TransactionType.Expense, Category = "Bills", Counterparty = "Home internet", Amount = new Money(1899m, "PHP"), Cadence = RecurringCadence.Monthly, StartDate = monthStart, NextRunAt = monthStart.AddMonths(1).AddDays(4), IsActive = true, CreatedAt = monthStart, UpdatedAt = nowUtc, Scope = RecordScope.Family, FamilySpaceId = familySpaceId, SharedAt = monthStart, SharedByUserId = userId }
         };
 
@@ -196,7 +195,6 @@ public sealed class StoryDemoScenario
         [
             new() { Id = Guid.Parse("7aa7aa7a-1111-4444-8888-400000000019"), UserId = userId, Type = TransactionType.Income, Category = "Salary", Counterparty = "Freelance Client", Amount = new Money(3500m, "PHP"), Date = nowUtc.AddDays(-3), RecurringScheduleId = recurringSchedules[2].Id, RecurringOccurrenceDate = nowUtc.AddDays(-3), CreatedAt = nowUtc.AddDays(-3) },
             new() { Id = Guid.Parse("7aa7aa7a-1111-4444-8888-400000000020"), UserId = userId, Type = TransactionType.Expense, Category = "Subscriptions", Counterparty = "Netflix", Amount = new Money(549m, "PHP"), Date = nowUtc.AddMonths(-1).AddDays(-20), RegretLevel = RegretLevel.WorthIt, RecurringScheduleId = recurringSchedules[0].Id, RecurringOccurrenceDate = nowUtc.AddMonths(-1).AddDays(-20), CreatedAt = nowUtc.AddMonths(-1).AddDays(-20) },
-            new() { Id = Guid.Parse("7aa7aa7a-1111-4444-8888-400000000021"), UserId = spouseId, Type = TransactionType.Income, Category = "Contribution", Counterparty = "Household contribution", Amount = new Money(15000m, "PHP"), Date = monthStart.AddDays(1), RecurringScheduleId = recurringSchedules[3].Id, RecurringOccurrenceDate = monthStart.AddDays(1), CreatedAt = monthStart.AddDays(1), Scope = RecordScope.Family, FamilySpaceId = familySpaceId, SharedAt = monthStart.AddDays(1), SharedByUserId = spouseId },
             new() { Id = Guid.Parse("7aa7aa7a-1111-4444-8888-400000000022"), UserId = userId, Type = TransactionType.Expense, Category = "Groceries", Counterparty = "Landers", Amount = new Money(3840m, "PHP"), Date = nowUtc.AddDays(-5), RegretLevel = RegretLevel.WorthIt, CreatedAt = nowUtc.AddDays(-5), Scope = RecordScope.Family, FamilySpaceId = familySpaceId, SharedAt = nowUtc.AddDays(-5), SharedByUserId = userId },
             new() { Id = Guid.Parse("7aa7aa7a-1111-4444-8888-400000000023"), UserId = userId, Type = TransactionType.Expense, Category = "Dining", Counterparty = "Manam", Amount = new Money(2460m, "PHP"), Date = nowUtc.AddDays(-8), RegretLevel = RegretLevel.WorthIt, CreatedAt = nowUtc.AddDays(-8), Scope = RecordScope.Family, FamilySpaceId = familySpaceId, SharedAt = nowUtc.AddDays(-8), SharedByUserId = userId }
         ]);
@@ -277,8 +275,7 @@ public sealed class StoryDemoScenario
             new() { UserId = userId, EventType = ConscienceEventTypes.PrePurchaseChecked, SourceId = "prepurchase:dining:test-001", XpAwarded = 20, CreatedAt = nowUtc.AddHours(-5) },
             new() { UserId = userId, EventType = ConscienceEventTypes.InsightReviewed, SourceId = $"insights:{DateOnly.FromDateTime(currentWeekStart):yyyy-MM-dd}", XpAwarded = 10, CreatedAt = nowUtc.AddHours(-4) },
             new() { UserId = userId, EventType = ConscienceEventTypes.RegretPatternReviewed, SourceId = "pattern:shopping:2026-05", XpAwarded = 25, CreatedAt = nowUtc.AddHours(-3) },
-            new() { UserId = userId, EventType = ConscienceEventTypes.FamilyInviteSent, SourceId = familyInvites[0].Id.ToString(), XpAwarded = 15, CreatedAt = nowUtc.AddDays(-1) },
-            new() { UserId = spouseId, EventType = ConscienceEventTypes.FamilyContributionAdded, SourceId = recurringSchedules[3].Id.ToString(), XpAwarded = 15, CreatedAt = monthStart.AddDays(1) }
+            new() { UserId = userId, EventType = ConscienceEventTypes.FamilyInviteSent, SourceId = familyInvites[0].Id.ToString(), XpAwarded = 15, CreatedAt = nowUtc.AddDays(-1) }
         };
 
         var conscienceProgress = new ConscienceJourneyProgress
@@ -298,7 +295,7 @@ public sealed class StoryDemoScenario
             new() { UserId = userId, WeekStart = currentWeek, QuestKey = "check_before_purchase", Progress = 1, Target = 1, XpAwarded = 10, CompletedAt = nowUtc.AddHours(-5), UpdatedAt = nowUtc },
             new() { UserId = userId, WeekStart = currentWeek, QuestKey = "review_regret_pattern", Progress = 1, Target = 1, XpAwarded = 15, CompletedAt = nowUtc.AddHours(-3), UpdatedAt = nowUtc },
             new() { UserId = userId, WeekStart = currentWeek, QuestKey = "send_family_invite", Progress = 1, Target = 1, XpAwarded = 10, CompletedAt = nowUtc.AddDays(-1), UpdatedAt = nowUtc },
-            new() { UserId = userId, WeekStart = currentWeek, QuestKey = "add_family_contribution", Progress = 1, Target = 1, XpAwarded = 15, CompletedAt = monthStart.AddDays(1), UpdatedAt = nowUtc }
+            new() { UserId = userId, WeekStart = currentWeek, QuestKey = "add_family_expense", Progress = 1, Target = 1, XpAwarded = 15, CompletedAt = nowUtc.AddDays(-5), UpdatedAt = nowUtc }
         };
 
         var conscienceBadgeProgress = new List<ConscienceBadgeProgress>
@@ -309,7 +306,6 @@ public sealed class StoryDemoScenario
             new() { UserId = userId, BadgeKey = "regret_pattern_spotted", Progress = 1, Target = 1, UnlockedAt = nowUtc.AddHours(-3), UpdatedAt = nowUtc },
             new() { UserId = userId, BadgeKey = "worth_it_week", Progress = 3, Target = 5, UpdatedAt = nowUtc },
             new() { UserId = userId, BadgeKey = "family_founder", Progress = 1, Target = 1, UnlockedAt = nowUtc.AddDays(-1), UpdatedAt = nowUtc },
-            new() { UserId = spouseId, BadgeKey = "household_contributor", Progress = 1, Target = 1, UnlockedAt = monthStart.AddDays(1), UpdatedAt = nowUtc },
             new() { UserId = userId, BadgeKey = "family_planner", Progress = 1, Target = 1, UnlockedAt = nowUtc.AddDays(-8), UpdatedAt = nowUtc }
         };
 

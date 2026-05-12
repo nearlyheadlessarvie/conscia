@@ -57,7 +57,7 @@ void main() {
         findsOneWidget);
     expect(find.text('Invited someone into a family space.'), findsOneWidget);
     expect(find.text('Invite a family member.'), findsOneWidget);
-    expect(find.text('Add a household contribution.'), findsOneWidget);
+    expect(find.text('Add a household contribution.'), findsNothing);
     expect(find.text('Mystery achievements'), findsOneWidget);
     expect(find.text('Mascot moments'), findsOneWidget);
   });

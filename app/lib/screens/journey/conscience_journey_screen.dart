@@ -461,7 +461,6 @@ class _JourneyGuideSheet extends StatelessWidget {
     'Reviewed a regret pattern before it repeated.',
     'Built a week of reflective spending awareness.',
     'Invited someone into a family space.',
-    'Added a household contribution without exposing exact salary.',
   ];
 
   static const _questHints = [
@@ -492,10 +491,6 @@ class _JourneyGuideSheet extends StatelessWidget {
     _GuideQuest(
       'Invite a family member.',
       'Helps a household coordinate without mixing up identities.',
-    ),
-    _GuideQuest(
-      'Add a household contribution.',
-      'Keeps shared plans funded while exact salary can stay private.',
     ),
     _GuideQuest(
       'Check a family purchase first.',

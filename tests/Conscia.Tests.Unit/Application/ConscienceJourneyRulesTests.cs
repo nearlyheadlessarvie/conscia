@@ -89,7 +89,6 @@ public class ConscienceJourneyRulesTests
             ConscienceEventTypes.FamilyInviteSent,
             ConscienceEventTypes.FamilyInviteAccepted,
             ConscienceEventTypes.FamilyExpenseAdded,
-            ConscienceEventTypes.FamilyContributionAdded,
             ConscienceEventTypes.FamilyPurchaseChecked
         };
 
@@ -107,9 +106,8 @@ public class ConscienceJourneyRulesTests
         var quests = ConscienceJourneyRules.WeeklyQuests.Select(q => q.Key).ToHashSet();
 
         Assert.Contains("family_founder", badges);
-        Assert.Contains("household_contributor", badges);
         Assert.Contains("family_planner", badges);
         Assert.Contains("send_family_invite", quests);
-        Assert.Contains("add_family_contribution", quests);
+        Assert.Contains("add_family_expense", quests);
     }
 }
