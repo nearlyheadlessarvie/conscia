@@ -163,7 +163,7 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
             message:
                 'Changes how numbers and dates are shown. App language stays in English.',
             tone: InlineNoticeTone.info,
-            icon: const Icon(Icons.info_outline_rounded),
+            icon: Icon(Icons.info_outline_rounded),
           ),
           const SizedBox(height: 16),
           Card(
