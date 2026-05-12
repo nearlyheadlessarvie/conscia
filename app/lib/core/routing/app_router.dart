@@ -21,6 +21,7 @@ import '../../screens/onboarding/verify_email_screen.dart';
 import '../../screens/receipts/receipt_review_screen.dart';
 import '../../screens/receipts/receipt_scanner_screen.dart';
 import '../../screens/settings/service_status_screen.dart';
+import '../../screens/settings/category_management_screen.dart';
 import '../../screens/settings/profile_screen.dart';
 import '../../screens/settings/settings_screen.dart';
 import '../../screens/family/family_invites_screen.dart';
@@ -63,6 +64,7 @@ abstract class AppRoutes {
 
   static const settings = '/settings';
   static const settingsProfile = '/settings/profile';
+  static const categories = '/settings/categories';
   static const serviceStatus = '/settings/status';
   static const budgets = '/settings/budgets';
   static const familyOverview = '/family';
@@ -304,6 +306,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/settings/profile',
         builder: (context, state) => const ProfileScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.categories,
+        builder: (context, state) => const CategoryManagementScreen(),
       ),
       GoRoute(
         path: '/settings/status',

@@ -246,6 +246,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       orElse: () => null,
                     ),
                   ),
+                  _SettingsActionRow(
+                    leading: const Icon(Icons.category_outlined),
+                    title: 'Categories',
+                    subtitle: 'Manage labels used by transactions and budgets',
+                    onTap: () => context.push(AppRoutes.categories),
+                  ),
                 ],
               ),
             ),

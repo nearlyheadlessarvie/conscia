@@ -70,6 +70,10 @@ class ApiConstants {
   static String budget(String id) => 'budgets/$id';
   static const String budgetOverview = 'budgets/overview';
 
+  // Categories
+  static const String categories = 'categories';
+  static String category(String id) => 'categories/$id';
+
   // Shared Conscia
   static const String familySpace = 'family-space';
   static const String familyOverview = 'family-space/overview';
