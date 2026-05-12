@@ -84,27 +84,35 @@ class AuthNotifier extends StateNotifier<AuthState> {
   }
 
   Future<void> _loadStoredTokens() async {
-    final accessToken = await _storage.read(key: _accessTokenKey);
-    final refreshToken = await _storage.read(key: _refreshTokenKey);
-    final userId = await _storage.read(key: _userIdKey);
+    try {
+      final accessToken = await _storage.read(key: _accessTokenKey);
+      final refreshToken = await _storage.read(key: _refreshTokenKey);
+      final userId = await _storage.read(key: _userIdKey);
 
-    if (accessToken == null || refreshToken == null || userId == null) return;
+      if (accessToken == null || refreshToken == null || userId == null) {
+        return;
+      }
 
-    // Reject tokens that aren't valid JWTs (e.g. stale mock_access_token_*)
-    final parts = accessToken.split('.');
-    if (parts.length != 3) {
-      await _storage.delete(key: _accessTokenKey);
-      await _storage.delete(key: _refreshTokenKey);
-      await _storage.delete(key: _userIdKey);
+      // Reject tokens that aren't valid JWTs (e.g. stale mock_access_token_*)
+      final parts = accessToken.split('.');
+      if (parts.length != 3) {
+        await _storage.delete(key: _accessTokenKey);
+        await _storage.delete(key: _refreshTokenKey);
+        await _storage.delete(key: _userIdKey);
+        return;
+      }
+
+      state = state.copyWith(
+        status: AuthStatus.authenticated,
+        accessToken: accessToken,
+        refreshToken: refreshToken,
+        userId: userId,
+      );
+    } catch (_) {
+      // Tests and rare platform startup races can make secure storage
+      // unavailable. Stay signed out instead of surfacing an async crash.
       return;
     }
-
-    state = state.copyWith(
-      status: AuthStatus.authenticated,
-      accessToken: accessToken,
-      refreshToken: refreshToken,
-      userId: userId,
-    );
   }
 
   Future<void> loginWithStoredToken() async {
