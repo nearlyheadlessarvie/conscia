@@ -16,6 +16,4 @@ public interface IFamilySpaceService
     Task<FamilyMember> AcceptInviteAsync(Guid userId, string email, Guid inviteId, CancellationToken ct = default);
     Task DeclineInviteAsync(Guid userId, string email, Guid inviteId, CancellationToken ct = default);
     Task CancelInviteAsync(Guid userId, Guid inviteId, CancellationToken ct = default);
-    Task<FamilyImportPreviewDto> PreviewImportAsync(Guid userId, FamilyImportPreviewRequestDto request, CancellationToken ct = default);
-    Task<int> ImportAsync(Guid userId, FamilyImportRequestDto request, CancellationToken ct = default);
 }

@@ -64,6 +64,6 @@ void main() {
     expect(find.text('Edit'), findsNothing);
     expect(find.byIcon(Icons.edit_outlined), findsNothing);
     expect(find.text('Invites'), findsNothing);
-    expect(find.text('Import personal records'), findsOneWidget);
+    expect(find.text('Import personal records'), findsNothing);
   });
 }

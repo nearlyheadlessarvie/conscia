@@ -167,13 +167,6 @@ class _FamilySpaceSettingsView extends ConsumerWidget {
                 if (canContribute) ...[
                   const Divider(height: 24),
                   _SettingsRow(
-                    icon: Icons.upload_file_outlined,
-                    title: 'Import personal records',
-                    subtitle: 'Choose exactly what becomes visible to Family.',
-                    onTap: () => context.push(AppRoutes.familyImport),
-                  ),
-                  const Divider(height: 24),
-                  _SettingsRow(
                     icon: Icons.repeat_outlined,
                     title: 'Schedule contribution',
                     subtitle:

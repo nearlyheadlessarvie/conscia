@@ -90,7 +90,6 @@ public class ConscienceJourneyRulesTests
             ConscienceEventTypes.FamilyInviteAccepted,
             ConscienceEventTypes.FamilyExpenseAdded,
             ConscienceEventTypes.FamilyContributionAdded,
-            ConscienceEventTypes.FamilyImportCompleted,
             ConscienceEventTypes.FamilyPurchaseChecked
         };
 

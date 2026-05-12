@@ -38,7 +38,6 @@ Supported shared record types:
 - Family contribution income records
 - Family budgets
 - Family recurring schedules
-- Family imports from existing personal records
 - Family-mode AI/pre-purchase context
 - Family-related Journey quests and achievements
 
@@ -50,6 +49,7 @@ Out of scope for MVP:
 - Payment requests
 - Reimbursement tracking
 - Settlement calculations
+- Bulk import of existing personal records
 - Shared Premium entitlement for every member
 - Anonymous or guest members
 - Silent import of existing personal history
@@ -103,7 +103,6 @@ Owner can:
 - Transfer ownership.
 - Delete the Family Space.
 - Create, edit, and delete any shared household record.
-- Import their own personal records into the Family Space.
 
 ### Contributor
 
@@ -115,7 +114,6 @@ Contributor can:
 - Add shared budgets.
 - Add shared recurring schedules.
 - Edit or delete shared records they created.
-- Import their own personal records into the Family Space.
 
 Contributor cannot:
 
@@ -134,7 +132,6 @@ Viewer can:
 Viewer cannot:
 
 - Add shared records.
-- Import personal records.
 - Edit or delete shared records.
 - Manage members.
 
@@ -241,27 +238,23 @@ Rules:
 - Contributor can edit/delete schedules they created.
 - Owner can edit/delete all Family schedules.
 
-## Import Existing Records
+## Existing Personal Records
 
-Existing personal records can be imported into Family Space, but import must be explicit and previewed.
+MVP does not include bulk import.
 
-Import flow:
+Existing personal records stay personal unless the user edits an individual supported record and explicitly changes its scope to Family.
 
-1. Choose record types: transactions, budgets, recurring schedules.
-2. Filter by date/category. Default should favor current month and active recurring schedules.
-3. Preview exactly what will become visible to the Family Space.
-4. Confirm with a privacy warning.
-5. Mark selected records as Family. Do not duplicate them.
+Rules:
 
-Required warning:
+- Do not provide a bulk import screen.
+- Do not import personal budgets into Family Space.
+- Do not import recurring schedules in bulk.
+- Do not duplicate records into Family Space.
+- Keep attribution visible on any individual record that is explicitly shared later.
 
-> These records will become visible to your Family Space. They stay in your Personal timeline with a Family badge.
+Reason:
 
-Imported records keep attribution:
-
-- Added by original creator
-- Imported by current user
-- Shared timestamp
+Bulk import creates confusing edge cases around budget ownership, recurring schedules, insights, double counting, and privacy. Family Space should start clean and grow from intentionally-created shared records.
 
 ## No Settlement Rule
 
@@ -338,7 +331,6 @@ Examples:
 - Add a family expense.
 - Add a Family Contribution.
 - Create a shared recurring schedule.
-- Import the first household record.
 - Review a family budget trend.
 - Check with Conscia before a family purchase.
 
@@ -528,7 +520,6 @@ The MVP should be low incremental cost because it mostly adds small metadata row
 Cost drivers to watch:
 
 - Family dashboard fan-out queries if every screen reads many member records separately.
-- Import preview queries over large personal histories.
 - Family-mode AI calls if we add too much household context or trigger them automatically.
 - Push notification delivery loops if they query device tokens one user at a time without batching.
 - Extra DynamoDB global secondary indexes if every new access pattern becomes its own index.
@@ -537,11 +528,10 @@ Cost controls:
 
 - Keep Family Space limited to one space per user for MVP.
 - Keep dashboard family summaries compact and paginated/drill-down for detail.
-- Default imports to current month and active recurring schedules.
 - Use existing alert/device-token infrastructure before adding new queues or workers.
 - Use the existing CDK-managed Outbox Lambda for retryable async side effects instead of API inline work or an always-on worker.
 - Do not add settlement; it would create more writes, more history, more notifications, and more support surface.
-- Track simple metrics: family spaces created, active members, family records shared, import batch size, family AI calls, invite notifications sent.
+- Track simple metrics: family spaces created, active members, family records shared, family AI calls, invite notifications sent.
 
 ### Push delivery cost note
 
@@ -589,8 +579,6 @@ Suggested endpoints:
 - `POST /api/v1/family-space/invites/{id}/decline`
 - `PATCH /api/v1/family-space/members/{id}/role`
 - `DELETE /api/v1/family-space/members/{id}`
-- `POST /api/v1/family-space/import-preview`
-- `POST /api/v1/family-space/import`
 
 Existing list endpoints should get an explicit scope filter where appropriate:
 
@@ -625,7 +613,6 @@ Backend tests:
 - Last Owner cannot leave without transfer/delete.
 - Contributor can edit own shared records but not others.
 - Viewer cannot create or edit shared records.
-- Import marks records as Family without duplicating.
 - Family queries only return records from the caller's Family Space.
 - Personal queries do not expose other members' records.
 - Family invite creates in-app notification.
@@ -635,7 +622,6 @@ Flutter tests:
 - Family Space setup flow.
 - Invite flow.
 - Pending invite notification card.
-- Import preview warning.
 - Personal/Family context toggle.
 - Family badges on shared records.
 - Family-mode pre-purchase context.
@@ -658,7 +644,7 @@ Add a Shared Conscia story-demo household later:
 - Shared family budget.
 - Shared recurring utility/subscription.
 - Family Contribution schedule.
-- Imported personal record with Family badge.
+- Manually-created family transaction with Family badge.
 - Pending invite.
 - Family invite bell notification.
 - Family-related Journey quest.

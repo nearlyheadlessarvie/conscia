@@ -8,6 +8,8 @@
 
 **Tech Stack:** .NET 8 minimal APIs, EF Core/PostgreSQL for users/family metadata, DynamoDB for transactions/alerts/outbox, Flutter/Riverpod for app UX, AWS CDK for Lambda/outbox infrastructure, Firebase Cloud Messaging for later device push delivery.
 
+**MVP simplification update:** Bulk import was removed after planning review. Family Space starts from intentionally-created Family records or explicit per-record scope edits. Do not build import preview/import endpoints, DTOs, or UI.
+
 ---
 
 ## Scope And Delivery Strategy
@@ -17,11 +19,10 @@ Shared Conscia is too large for one safe code dump. Implement it as stacked PRs 
 1. Family domain and membership foundation.
 2. Family invite API and in-app notifications.
 3. Scope fields on budgets, transactions, and recurring schedules.
-4. Family import preview/import.
-5. Family UI shell and Personal/Family context.
-6. Family-mode AI and Journey events.
-7. Outbox Lambda family events and push delivery hook.
-8. Story-demo seed, docs, and release cost guardrails.
+4. Family UI shell and Personal/Family context.
+5. Family-mode AI and Journey events.
+6. Outbox Lambda family events and push delivery hook.
+7. Story-demo seed, docs, and release cost guardrails.
 
 Do not implement settlement, who-owes-whom, payment requests, child approvals, or multiple family spaces.
 
@@ -42,7 +43,6 @@ Do not implement settlement, who-owes-whom, payment requests, child approvals, o
 ### Backend Application
 
 - Create `src/Conscia.Application/DTOs/FamilySpaceDtos.cs`
-- Create `src/Conscia.Application/DTOs/FamilyImportDtos.cs`
 - Create `src/Conscia.Application/Interfaces/IFamilySpaceRepository.cs`
 - Create `src/Conscia.Application/Interfaces/IFamilySpaceService.cs`
 - Create `src/Conscia.Application/Services/FamilySpaceService.cs`
@@ -1141,7 +1141,11 @@ git commit -m "feat: add personal and family record scope"
 
 ---
 
-## Task 5: Family Import Preview And Import
+## Task 5: Superseded - Family Import Preview And Import
+
+**Status:** Superseded for MVP. Do not implement.
+
+Family import was removed because it creates confusing ownership, budget, recurring-schedule, privacy, and insight edge cases. Existing personal records stay personal unless the user explicitly changes a supported individual record to Family. The historical steps below are retained only as context for why this was cut.
 
 **Files:**
 - Create: `src/Conscia.Application/DTOs/FamilyImportDtos.cs`
@@ -1666,7 +1670,6 @@ Add event types in `ConscienceJourneyRules`:
 ["family_invite_accepted"] = 20,
 ["family_expense_added"] = 10,
 ["family_contribution_added"] = 15,
-["family_import_completed"] = 25,
 ["family_purchase_checked"] = 20
 ```
 

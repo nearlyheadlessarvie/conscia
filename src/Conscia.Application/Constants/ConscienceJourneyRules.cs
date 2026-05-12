@@ -11,7 +11,6 @@ public static class ConscienceEventTypes
     public const string FamilyInviteAccepted = "family_invite_accepted";
     public const string FamilyExpenseAdded = "family_expense_added";
     public const string FamilyContributionAdded = "family_contribution_added";
-    public const string FamilyImportCompleted = "family_import_completed";
     public const string FamilyPurchaseChecked = "family_purchase_checked";
 }
 
@@ -28,7 +27,6 @@ public static class ConscienceJourneyRules
         ConscienceEventTypes.FamilyInviteAccepted,
         ConscienceEventTypes.FamilyExpenseAdded,
         ConscienceEventTypes.FamilyContributionAdded,
-        ConscienceEventTypes.FamilyImportCompleted,
         ConscienceEventTypes.FamilyPurchaseChecked
     ];
 
@@ -44,7 +42,6 @@ public static class ConscienceJourneyRules
             [ConscienceEventTypes.FamilyInviteAccepted] = 20,
             [ConscienceEventTypes.FamilyExpenseAdded] = 10,
             [ConscienceEventTypes.FamilyContributionAdded] = 15,
-            [ConscienceEventTypes.FamilyImportCompleted] = 25,
             [ConscienceEventTypes.FamilyPurchaseChecked] = 20
         };
 
@@ -143,8 +140,8 @@ public static class ConscienceJourneyRules
         new(
             Key: "family_planner",
             Title: "Family Planner",
-            Description: "Shared records into Family Space intentionally.",
-            EventType: ConscienceEventTypes.FamilyImportCompleted,
+            Description: "Recorded your first shared family expense.",
+            EventType: ConscienceEventTypes.FamilyExpenseAdded,
             Target: 1)
     ];
 

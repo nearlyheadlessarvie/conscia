@@ -24,7 +24,6 @@ import '../../screens/settings/service_status_screen.dart';
 import '../../screens/settings/profile_screen.dart';
 import '../../screens/settings/settings_screen.dart';
 import '../../screens/family/family_contribution_screen.dart';
-import '../../screens/family/family_import_screen.dart';
 import '../../screens/family/family_invites_screen.dart';
 import '../../screens/family/family_setup_screen.dart';
 import '../../screens/family/family_space_screen.dart';
@@ -70,7 +69,6 @@ abstract class AppRoutes {
   static const familySpace = '/settings/family-space';
   static const familySetup = '/settings/family-space/setup';
   static const familyInvites = '/settings/family-space/invites';
-  static const familyImport = '/settings/family-space/import';
   static const familyContribution = '/settings/family-space/contribution';
 
   static const scan = '/scan';
@@ -330,10 +328,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.familyInvites,
         builder: (context, state) => const FamilyInvitesScreen(),
-      ),
-      GoRoute(
-        path: AppRoutes.familyImport,
-        builder: (context, state) => const FamilyImportScreen(),
       ),
       GoRoute(
         path: AppRoutes.familyContribution,

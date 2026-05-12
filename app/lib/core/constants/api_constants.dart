@@ -80,8 +80,6 @@ class ApiConstants {
       'family-space/invites/$id/accept';
   static String familyInviteDecline(String id) =>
       'family-space/invites/$id/decline';
-  static const String familyImportPreview = 'family-space/import-preview';
-  static const String familyImport = 'family-space/import';
 
   // AI Assistant
   static const String aiAdvice = 'ai/pre-purchase';

@@ -1,4 +1,3 @@
-import 'package:conscia_app/models/family_import_preview.dart';
 import 'package:conscia_app/models/family_invite.dart';
 import 'package:conscia_app/models/family_space.dart';
 import 'package:conscia_app/providers/family_space_provider.dart';
@@ -177,25 +176,10 @@ class _RecordingFamilySpaceActions implements FamilySpaceActions {
   Future<void> declineInvite(String inviteId) async {}
 
   @override
-  Future<int> importRecords(List<FamilyImportSelection> selections) {
-    throw UnimplementedError();
-  }
-
-  @override
   Future<void> invite({
     required String email,
     required String role,
   }) async {}
-
-  @override
-  Future<FamilyImportPreview> previewImport({
-    required bool includeTransactions,
-    required bool includeBudgets,
-    required bool includeRecurringSchedules,
-    List<String> categories = const [],
-  }) {
-    throw UnimplementedError();
-  }
 
   @override
   Future<FamilySpace> updateName(String name) {

@@ -10,8 +10,6 @@ namespace Conscia.Application.Services;
 public class FamilySpaceService : IFamilySpaceService
 {
     private static readonly JsonSerializerOptions OutboxJsonOptions = new(JsonSerializerDefaults.Web);
-    private const string ImportWarning =
-        "These records will become visible to your Family Space. They stay in your Personal timeline with a Family badge.";
 
     private readonly IFamilySpaceRepository _repository;
     private readonly ISubscriptionService _subscriptions;
@@ -321,113 +319,6 @@ public class FamilySpaceService : IFamilySpaceService
         await _repository.DeleteInviteAsync(inviteId, ct);
     }
 
-    public async Task<FamilyImportPreviewDto> PreviewImportAsync(
-        Guid userId,
-        FamilyImportPreviewRequestDto request,
-        CancellationToken ct = default)
-    {
-        var member = await RequireContributorAsync(userId, ct);
-        var categories = CreateCategoryFilter(request.Categories);
-        var items = new List<FamilyImportItemDto>();
-        var (from, to) = ResolveImportDateRange(request.From, request.To);
-
-        if (request.IncludeTransactions)
-        {
-            var transactions = await _transactions.GetByUserIdAndDateRangeAsync(userId, from, to, ct);
-            items.AddRange(transactions
-                .Where(t => t.Scope == RecordScope.Personal && MatchesCategory(t.Category, categories))
-                .Select(t => new FamilyImportItemDto(
-                    "transaction",
-                    t.Id,
-                    string.IsNullOrWhiteSpace(t.Counterparty) ? t.Category : t.Counterparty,
-                    t.Category,
-                    t.Amount.Amount,
-                    t.Amount.CurrencyCode)));
-        }
-
-        if (request.IncludeBudgets)
-        {
-            var budgets = await _budgets.ListByUserAsync(userId, ct);
-            items.AddRange(budgets
-                .Where(b => b.Scope == RecordScope.Personal && MatchesCategory(b.Category, categories))
-                .Select(b => new FamilyImportItemDto(
-                    "budget",
-                    b.Id,
-                    $"{b.Category} budget",
-                    b.Category,
-                    b.MonthlyLimit,
-                    b.CurrencyCode)));
-        }
-
-        if (request.IncludeRecurringSchedules)
-        {
-            var schedules = await _recurringSchedules.ListAsync(userId, ct);
-            items.AddRange(schedules
-                .Where(s => s.Scope == RecordScope.Personal && MatchesCategory(s.Category, categories))
-                .Select(s => new FamilyImportItemDto(
-                    "recurringSchedule",
-                    s.Id,
-                    string.IsNullOrWhiteSpace(s.Counterparty) ? $"{s.Category} recurring" : s.Counterparty,
-                    s.Category,
-                    s.Amount.Amount,
-                    s.Amount.CurrencyCode)));
-        }
-
-        return new FamilyImportPreviewDto(member.FamilySpaceId, ImportWarning, items);
-    }
-
-    public async Task<int> ImportAsync(
-        Guid userId,
-        FamilyImportRequestDto request,
-        CancellationToken ct = default)
-    {
-        var member = await RequireContributorAsync(userId, ct);
-        var imported = 0;
-
-        foreach (var item in request.Items)
-        {
-            if (string.Equals(item.RecordType, "transaction", StringComparison.OrdinalIgnoreCase))
-            {
-                var transaction = await _transactions.GetByIdAsync(userId, item.RecordId, ct)
-                    ?? throw new InvalidOperationException("Transaction was not found.");
-                EnsurePersonalRecord(transaction.Scope, "Transaction");
-                ShareRecord(transaction, member, userId);
-                await _transactions.UpdateAsync(transaction, ct);
-                imported++;
-                continue;
-            }
-
-            if (string.Equals(item.RecordType, "budget", StringComparison.OrdinalIgnoreCase))
-            {
-                var budget = await _budgets.GetByIdAsync(item.RecordId, ct)
-                    ?? throw new InvalidOperationException("Budget was not found.");
-                if (budget.UserId != userId)
-                    throw new UnauthorizedAccessException("Budget belongs to a different user.");
-
-                EnsurePersonalRecord(budget.Scope, "Budget");
-                ShareRecord(budget, member, userId);
-                await _budgets.UpdateAsync(budget, ct);
-                imported++;
-                continue;
-            }
-
-            if (string.Equals(item.RecordType, "recurringSchedule", StringComparison.OrdinalIgnoreCase))
-            {
-                var schedule = await _recurringSchedules.GetByIdAsync(userId, item.RecordId, ct)
-                    ?? throw new InvalidOperationException("Recurring schedule was not found.");
-                EnsurePersonalRecord(schedule.Scope, "Recurring schedule");
-                ShareRecord(schedule, member, userId);
-                await _recurringSchedules.UpdateAsync(schedule, ct);
-                imported++;
-                continue;
-            }
-
-            throw new InvalidOperationException($"Unsupported import record type '{item.RecordType}'.");
-        }
-
-        return imported;
-    }
-
     private async Task<FamilyInvite> RequireUsableInviteAsync(
         Guid inviteId,
         string email,
@@ -446,16 +337,6 @@ public class FamilySpaceService : IFamilySpaceService
         return invite;
     }
 
-    private async Task<FamilyMember> RequireContributorAsync(Guid userId, CancellationToken ct)
-    {
-        var member = await RequireMemberAsync(userId, ct);
-
-        if (member.Role == FamilyMemberRole.Viewer)
-            throw new UnauthorizedAccessException("Viewer cannot share records.");
-
-        return member;
-    }
-
     private async Task<FamilyMember> RequireOwnerAsync(Guid userId, CancellationToken ct)
     {
         var member = await RequireMemberAsync(userId, ct);
@@ -469,58 +350,6 @@ public class FamilySpaceService : IFamilySpaceService
     private async Task<FamilyMember> RequireMemberAsync(Guid userId, CancellationToken ct) =>
         await _repository.GetMembershipByUserIdAsync(userId, ct)
             ?? throw new UnauthorizedAccessException("You do not belong to a Family Space.");
-
-    private static (DateTime From, DateTime To) ResolveImportDateRange(DateTime? from, DateTime? to)
-    {
-        if (from.HasValue && to.HasValue)
-            return (from.Value, to.Value);
-
-        var now = DateTime.UtcNow;
-        var monthStart = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc);
-        var monthEnd = monthStart.AddMonths(1).AddTicks(-1);
-        return (from ?? monthStart, to ?? monthEnd);
-    }
-
-    private static HashSet<string> CreateCategoryFilter(IReadOnlyList<string>? categories) =>
-        categories is { Count: > 0 }
-            ? categories
-                .Where(c => !string.IsNullOrWhiteSpace(c))
-                .Select(c => c.Trim())
-                .ToHashSet(StringComparer.OrdinalIgnoreCase)
-            : [];
-
-    private static bool MatchesCategory(string category, HashSet<string> categories) =>
-        categories.Count == 0 || categories.Contains(category);
-
-    private static void EnsurePersonalRecord(RecordScope scope, string label)
-    {
-        if (scope != RecordScope.Personal)
-            throw new InvalidOperationException($"{label} is already shared with a Family Space.");
-    }
-
-    private static void ShareRecord(Transaction transaction, FamilyMember member, Guid sharedByUserId)
-    {
-        transaction.Scope = RecordScope.Family;
-        transaction.FamilySpaceId = member.FamilySpaceId;
-        transaction.SharedAt = DateTime.UtcNow;
-        transaction.SharedByUserId = sharedByUserId;
-    }
-
-    private static void ShareRecord(Budget budget, FamilyMember member, Guid sharedByUserId)
-    {
-        budget.Scope = RecordScope.Family;
-        budget.FamilySpaceId = member.FamilySpaceId;
-        budget.SharedAt = DateTime.UtcNow;
-        budget.SharedByUserId = sharedByUserId;
-    }
-
-    private static void ShareRecord(RecurringSchedule schedule, FamilyMember member, Guid sharedByUserId)
-    {
-        schedule.Scope = RecordScope.Family;
-        schedule.FamilySpaceId = member.FamilySpaceId;
-        schedule.SharedAt = DateTime.UtcNow;
-        schedule.SharedByUserId = sharedByUserId;
-    }
 
     private static OutboxEvent CreateInviteCreatedEvent(FamilyInvite invite, string? familySpaceName) => new()
     {

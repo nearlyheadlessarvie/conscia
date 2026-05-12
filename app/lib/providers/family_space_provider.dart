@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/constants/api_constants.dart';
 import '../core/network/dio_client.dart';
 import '../models/family_overview.dart';
-import '../models/family_import_preview.dart';
 import '../models/family_invite.dart';
 import '../models/family_space.dart';
 
@@ -122,39 +121,4 @@ class FamilySpaceActions {
     _ref.invalidate(familyOutgoingInvitesProvider);
   }
 
-  Future<FamilyImportPreview> previewImport({
-    required bool includeTransactions,
-    required bool includeBudgets,
-    required bool includeRecurringSchedules,
-    List<String> categories = const [],
-  }) async {
-    final dio = _ref.read(dioProvider);
-    final response = await dio.post(
-      ApiConstants.familyImportPreview,
-      data: {
-        'includeTransactions': includeTransactions,
-        'includeBudgets': includeBudgets,
-        'includeRecurringSchedules': includeRecurringSchedules,
-        'categories': categories,
-      },
-    );
-
-    return FamilyImportPreview.fromJson(
-      Map<String, dynamic>.from(response.data as Map),
-    );
-  }
-
-  Future<int> importRecords(List<FamilyImportSelection> selections) async {
-    final dio = _ref.read(dioProvider);
-    final response = await dio.post(
-      ApiConstants.familyImport,
-      data: {
-        'items': selections.map((selection) => selection.toJson()).toList(),
-      },
-    );
-
-    _ref.invalidate(familySpaceProvider);
-    _ref.invalidate(familyOverviewProvider);
-    return (response.data as Map?)?['imported'] as int? ?? selections.length;
-  }
 }

@@ -177,40 +177,6 @@ public static class FamilySpaceEndpoints
             }
         }).WithName("DeclineFamilyInvite");
 
-        group.MapPost("/import-preview", async (HttpContext ctx, FamilyImportPreviewRequestDto dto, IFamilySpaceService svc) =>
-        {
-            try
-            {
-                var preview = await svc.PreviewImportAsync(ctx.User.GetUserId(), dto, ctx.RequestAborted);
-                return Results.Ok(preview);
-            }
-            catch (UnauthorizedAccessException ex)
-            {
-                return Results.Json(new { error = ex.Message }, statusCode: StatusCodes.Status403Forbidden);
-            }
-            catch (InvalidOperationException ex)
-            {
-                return Results.BadRequest(new { error = ex.Message });
-            }
-        }).WithName("PreviewFamilyImport");
-
-        group.MapPost("/import", async (HttpContext ctx, FamilyImportRequestDto dto, IFamilySpaceService svc) =>
-        {
-            try
-            {
-                var count = await svc.ImportAsync(ctx.User.GetUserId(), dto, ctx.RequestAborted);
-                return Results.Ok(new { imported = count });
-            }
-            catch (UnauthorizedAccessException ex)
-            {
-                return Results.Json(new { error = ex.Message }, statusCode: StatusCodes.Status403Forbidden);
-            }
-            catch (InvalidOperationException ex)
-            {
-                return Results.BadRequest(new { error = ex.Message });
-            }
-        }).WithName("ImportFamilyRecords");
-
         return group;
     }
 
