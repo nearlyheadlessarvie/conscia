@@ -7,8 +7,6 @@ import '../constants/api_constants.dart';
 const _tokenKey = 'access_token';
 
 final dioProvider = Provider<Dio>((ref) {
-  ref.watch(authCacheScopeProvider);
-
   final dio = Dio(
     BaseOptions(
       baseUrl: ApiConstants.baseUrl,
@@ -27,11 +25,30 @@ final dioProvider = Provider<Dio>((ref) {
   dio.interceptors.add(
     InterceptorsWrapper(
       onRequest: (options, handler) async {
-        final token = await storage.read(key: _tokenKey);
-        if (token != null) {
+        final authState = ref.read(authProvider);
+        final token =
+            await storage.read(key: _tokenKey) ?? authState.accessToken;
+        if (token != null && token.isNotEmpty) {
           options.headers['Authorization'] = 'Bearer $token';
+          return handler.next(options);
         }
-        return handler.next(options);
+
+        if (_isPublicRequest(options) || authState.isAuthenticated) {
+          return handler.next(options);
+        }
+
+        return handler.reject(
+          DioException(
+            requestOptions: options,
+            response: Response(
+              requestOptions: options,
+              statusCode: 401,
+              data: const {'message': 'Session ended'},
+            ),
+            type: DioExceptionType.badResponse,
+            error: 'Cannot send authenticated request after logout.',
+          ),
+        );
       },
       onError: (error, handler) async {
         final request = error.requestOptions;
@@ -82,3 +99,8 @@ final dioProvider = Provider<Dio>((ref) {
 
   return dio;
 });
+
+bool _isPublicRequest(RequestOptions options) {
+  final path = options.uri.path;
+  return path == '/health' || path.startsWith('/health/');
+}

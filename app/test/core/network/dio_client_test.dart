@@ -89,12 +89,15 @@ class _TestAuthNotifier extends AuthNotifier {
 }
 
 class _UnauthorizedAdapter implements HttpClientAdapter {
+  int fetchCount = 0;
+
   @override
   Future<ResponseBody> fetch(
     RequestOptions options,
     Stream<Uint8List>? requestStream,
     Future<void>? cancelFuture,
   ) async {
+    fetchCount += 1;
     return ResponseBody.fromString(
       '{"message":"Unauthorized"}',
       401,
@@ -108,8 +111,31 @@ class _UnauthorizedAdapter implements HttpClientAdapter {
   void close({bool force = false}) {}
 }
 
+class _OkAdapter implements HttpClientAdapter {
+  int fetchCount = 0;
+
+  @override
+  Future<ResponseBody> fetch(
+    RequestOptions options,
+    Stream<Uint8List>? requestStream,
+    Future<void>? cancelFuture,
+  ) async {
+    fetchCount += 1;
+    return ResponseBody.fromString(
+      '{"status":"Healthy","checks":[]}',
+      200,
+      headers: {
+        Headers.contentTypeHeader: [Headers.jsonContentType],
+      },
+    );
+  }
+
+  @override
+  void close({bool force = false}) {}
+}
+
 void main() {
-  test('dioProvider rebuilds when the authenticated user changes', () {
+  test('dioProvider stays stable when auth state changes', () {
     final authNotifier = _TestAuthNotifier(
       const AuthState(
         status: AuthStatus.authenticated,
@@ -134,7 +160,7 @@ void main() {
 
     final secondClient = container.read(dioProvider);
 
-    expect(secondClient, isNot(same(firstClient)));
+    expect(secondClient, same(firstClient));
   });
 
   test('does not mark session expired when a stale request fails after logout',
@@ -156,8 +182,8 @@ void main() {
     addTearDown(container.dispose);
 
     await authNotifier.logout();
-    final dio = container.read(dioProvider)
-      ..httpClientAdapter = _UnauthorizedAdapter();
+    final adapter = _UnauthorizedAdapter();
+    final dio = container.read(dioProvider)..httpClientAdapter = adapter;
 
     await expectLater(
       dio.get<dynamic>('/transactions'),
@@ -167,5 +193,34 @@ void main() {
     expect(authNotifier.state.status, AuthStatus.unauthenticated);
     expect(authNotifier.refreshSessionCount, 0);
     expect(authNotifier.markSessionExpiredCount, 0);
+    expect(adapter.fetchCount, 0);
+  });
+
+  test('allows health requests to reach the network adapter after logout',
+      () async {
+    final authNotifier = _TestAuthNotifier(
+      const AuthState(
+        status: AuthStatus.authenticated,
+        accessToken: 'old-token',
+        refreshToken: 'old-refresh-token',
+        userId: 'user-1',
+      ),
+    );
+    final container = ProviderContainer(
+      overrides: [
+        authProvider.overrideWith((ref) => authNotifier),
+        secureStorageProvider.overrideWithValue(_FakeSecureStorage()),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    await authNotifier.logout();
+    final adapter = _OkAdapter();
+    final dio = container.read(dioProvider)..httpClientAdapter = adapter;
+
+    final response = await dio.get<dynamic>('http://localhost:5248/health');
+
+    expect(response.statusCode, 200);
+    expect(adapter.fetchCount, 1);
   });
 }
