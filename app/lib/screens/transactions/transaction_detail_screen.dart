@@ -260,6 +260,27 @@ class _TransactionDetailScreenState
     });
   }
 
+  bool _isCurrentTransactionRoute(String? route) {
+    if (route == null || route.isEmpty) return false;
+
+    final uri = Uri.tryParse(route);
+    final path = uri?.path ?? route.split('?').first;
+    final normalizedPath =
+        path.endsWith('/') ? path.substring(0, path.length - 1) : path;
+
+    return normalizedPath == '/transactions/${widget.transactionId}';
+  }
+
+  bool _shouldHideContextualAlertAction(AppAlert alert) {
+    if (alert.type == 'ReflectionFollowUp') return false;
+
+    final isViewTransactionAction =
+        alert.actionLabel?.trim().toLowerCase() == 'view transaction';
+    return isViewTransactionAction &&
+        (alert.transactionId == widget.transactionId ||
+            _isCurrentTransactionRoute(alert.actionRoute));
+  }
+
   Widget _buildContent(Transaction tx, List<AppAlert> alerts) {
     final colors = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
@@ -366,25 +387,35 @@ class _TransactionDetailScreenState
           ),
           const SizedBox(height: 24),
           if (contextualAlert != null) ...[
-            InAppAlertBanner(
-              title: contextualAlert.title,
-              message: contextualAlert.message,
-              actionLabel: contextualAlert.actionLabel,
-              onAction: () {
-                final alert = contextualAlert!;
-                if (alert.transactionId == widget.transactionId &&
-                    alert.type == 'ReflectionFollowUp') {
-                  _askAiReflection(dismissFollowUpAlert: true);
-                  return;
-                }
-                final route = alert.actionRoute;
-                if (route != null) {
-                  context.push(route);
-                }
+            Builder(
+              builder: (_) {
+                final actionLabel =
+                    _shouldHideContextualAlertAction(contextualAlert!)
+                        ? null
+                        : contextualAlert.actionLabel;
+                return InAppAlertBanner(
+                  title: contextualAlert.title,
+                  message: contextualAlert.message,
+                  actionLabel: actionLabel,
+                  onAction: actionLabel == null
+                      ? null
+                      : () {
+                          final alert = contextualAlert!;
+                          if (alert.transactionId == widget.transactionId &&
+                              alert.type == 'ReflectionFollowUp') {
+                            _askAiReflection(dismissFollowUpAlert: true);
+                            return;
+                          }
+                          final route = alert.actionRoute;
+                          if (route != null) {
+                            context.push(route);
+                          }
+                        },
+                  onDismiss: () => ref
+                      .read(dismissedAlertIdsProvider.notifier)
+                      .dismiss(contextualAlert!.id),
+                );
               },
-              onDismiss: () => ref
-                  .read(dismissedAlertIdsProvider.notifier)
-                  .dismiss(contextualAlert!.id),
             ),
             const SizedBox(height: 16),
           ],
