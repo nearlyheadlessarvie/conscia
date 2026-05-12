@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../core/theme/app_colors.dart';
 
@@ -8,31 +9,49 @@ class FloatingLabelTextField extends StatefulWidget {
     required this.controller,
     required this.label,
     this.focusNode,
+    this.prefix,
     this.keyboardType,
     this.textInputAction,
     this.onChanged,
+    this.onTap,
     this.obscureText = false,
     this.errorText,
     this.enabled = true,
+    this.readOnly = false,
     this.trailing,
     this.maxLines = 1,
     this.minLines,
     this.autofillHints,
+    this.textAlign = TextAlign.start,
+    this.inputFormatters,
+    this.maxLength,
+    this.counterText,
+    this.enableSuggestions = true,
+    this.autocorrect = true,
   });
 
   final TextEditingController controller;
   final String label;
   final FocusNode? focusNode;
+  final Widget? prefix;
   final TextInputType? keyboardType;
   final TextInputAction? textInputAction;
   final ValueChanged<String>? onChanged;
+  final VoidCallback? onTap;
   final bool obscureText;
   final String? errorText;
   final bool enabled;
+  final bool readOnly;
   final Widget? trailing;
   final int maxLines;
   final int? minLines;
   final Iterable<String>? autofillHints;
+  final TextAlign textAlign;
+  final List<TextInputFormatter>? inputFormatters;
+  final int? maxLength;
+  final String? counterText;
+  final bool enableSuggestions;
+  final bool autocorrect;
 
   @override
   State<FloatingLabelTextField> createState() => _FloatingLabelTextFieldState();
@@ -148,8 +167,8 @@ class _FloatingLabelTextFieldState extends State<FloatingLabelTextField> {
           ),
           Padding(
             padding: EdgeInsets.fromLTRB(
-              14,
-              _isRaised ? 22 : 22,
+              widget.prefix == null ? 14 : 48,
+              22,
               widget.trailing == null ? 14 : 48,
               8,
             ),
@@ -159,16 +178,23 @@ class _FloatingLabelTextFieldState extends State<FloatingLabelTextField> {
               keyboardType: widget.keyboardType,
               textInputAction: widget.textInputAction,
               onChanged: widget.onChanged,
+              onTap: widget.onTap,
               obscureText: widget.obscureText,
               enabled: widget.enabled,
+              readOnly: widget.readOnly,
               maxLines: widget.maxLines,
               minLines: widget.minLines,
               autofillHints: widget.autofillHints,
+              textAlign: widget.textAlign,
+              inputFormatters: widget.inputFormatters,
+              maxLength: widget.maxLength,
+              enableSuggestions: widget.enableSuggestions,
+              autocorrect: widget.autocorrect,
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: colors.ink,
                 fontWeight: FontWeight.w500,
               ),
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 isDense: true,
                 border: InputBorder.none,
                 enabledBorder: InputBorder.none,
@@ -178,9 +204,17 @@ class _FloatingLabelTextFieldState extends State<FloatingLabelTextField> {
                 focusedErrorBorder: InputBorder.none,
                 filled: false,
                 contentPadding: EdgeInsets.zero,
+                counterText: widget.counterText,
               ),
             ),
           ),
+          if (widget.prefix != null)
+            Positioned(
+              left: 14,
+              top: 0,
+              bottom: 0,
+              child: Center(child: widget.prefix!),
+            ),
           if (widget.trailing != null)
             Positioned(
               right: 14,

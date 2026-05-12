@@ -121,6 +121,29 @@ void main() {
     expect(find.textContaining('Free tier:'), findsNothing);
   });
 
+  testWidgets('setup screen describes locale as region format', (tester) async {
+    final userService = _RecordingUserService();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          userServiceProvider.overrideWithValue(userService),
+        ],
+        child: const MaterialApp(
+          home: SetupScreen(),
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    expect(find.text('Region Format'), findsOneWidget);
+    expect(
+      find.textContaining('App language stays in English'),
+      findsOneWidget,
+    );
+  });
+
   testWidgets(
     'setup screen defaults to the device currency and shows it first in the picker',
     (tester) async {
@@ -149,14 +172,9 @@ void main() {
 
       await tester.pumpAndSettle();
 
-      final currencyTile = tester.widget<ListTile>(
-        find.widgetWithText(ListTile, 'Currency'),
-      );
-      final currencySubtitle = currencyTile.subtitle! as Text;
+      expect(find.text('PHP'), findsWidgets);
 
-      expect(currencySubtitle.data, 'PHP');
-
-      await tester.tap(find.text('Currency'));
+      await tester.tap(find.byType(TextField).first);
       await tester.pumpAndSettle();
 
       final currencyTiles = tester

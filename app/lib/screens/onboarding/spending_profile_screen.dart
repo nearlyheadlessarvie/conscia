@@ -8,6 +8,7 @@ import '../../core/routing/app_router.dart';
 import '../../providers/user_provider.dart';
 import '../../widgets/hero_screen_scaffold.dart';
 import '../../widgets/screen_section.dart';
+import '../../widgets/selection_card_group.dart';
 
 class SpendingProfileScreen extends ConsumerStatefulWidget {
   final String? initialCurrencyCode;
@@ -130,26 +131,26 @@ class _SpendingProfileScreenState extends ConsumerState<SpendingProfileScreen> {
             title: 'Spending style',
             subtitle:
                 'Choose the one that feels closest to your default spending instinct.',
-            child: Row(
-              children: [
-                _personalityCard(
-                  context,
-                  value: 'saver',
-                  label: 'Saver',
-                ),
-                const SizedBox(width: 8),
-                _personalityCard(
-                  context,
-                  value: 'balanced',
-                  label: 'Balanced',
-                ),
-                const SizedBox(width: 8),
-                _personalityCard(
-                  context,
-                  value: 'free_spender',
-                  label: 'Free spender',
-                ),
-              ],
+            child: SelectionCardGroup<String>(
+              value: _personality,
+              options: const ['saver', 'balanced', 'free_spender'],
+              semantics: SelectionCardSemantics.radio,
+              titleBuilder: (option) => switch (option) {
+                'saver' => 'Saver',
+                'free_spender' => 'Free spender',
+                _ => 'Balanced',
+              },
+              subtitleBuilder: (option) => switch (option) {
+                'saver' => 'Careful, deliberate, goal-focused',
+                'free_spender' => 'Live in the moment, worry later',
+                _ => 'Mix of saving and enjoying money',
+              },
+              leadingBuilder: (option, selected) => AppIcons.spendingStyleBadge(
+                option,
+                size: 24,
+                selected: selected,
+              ),
+              onChanged: (value) => setState(() => _personality = value),
             ),
           ),
           ScreenSection(
@@ -180,16 +181,19 @@ class _SpendingProfileScreenState extends ConsumerState<SpendingProfileScreen> {
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
-                          color: selected ? colors.primary : colors.outlineVariant,
+                          color:
+                              selected ? colors.primary : colors.outlineVariant,
                           width: selected ? 2 : 1,
                         ),
-                        color: selected ? colors.primaryContainer : colors.surface,
+                        color:
+                            selected ? colors.primaryContainer : colors.surface,
                       ),
                       child: Row(
                         children: [
                           Expanded(child: Text(label)),
                           if (selected)
-                            Icon(AppIcons.check, size: 18, color: colors.primary),
+                            Icon(AppIcons.check,
+                                size: 18, color: colors.primary),
                         ],
                       ),
                     ),
@@ -199,50 +203,6 @@ class _SpendingProfileScreenState extends ConsumerState<SpendingProfileScreen> {
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _personalityCard(
-    BuildContext context, {
-    required String value,
-    required String label,
-  }) {
-    final colors = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
-    final selected = _personality == value;
-
-    return Expanded(
-      child: GestureDetector(
-        onTap: () => setState(() => _personality = value),
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 10),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(
-              color: selected ? colors.primary : colors.outlineVariant,
-              width: selected ? 2 : 1,
-            ),
-            color: selected ? colors.primaryContainer : colors.surface,
-          ),
-          child: Column(
-            children: [
-              AppIcons.spendingStyleBadge(
-                value,
-                size: 24,
-                selected: selected,
-              ),
-              const SizedBox(height: 6),
-              Text(
-                label,
-                textAlign: TextAlign.center,
-                style: textTheme.labelMedium?.copyWith(
-                  fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-                ),
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }

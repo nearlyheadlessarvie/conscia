@@ -5,8 +5,9 @@ import 'package:intl/intl.dart';
 
 import 'package:conscia_app/providers/user_provider.dart';
 import 'package:conscia_app/widgets/currency_picker_sheet.dart';
-import 'package:conscia_app/widgets/feed_card.dart';
+import 'package:conscia_app/widgets/floating_label_text_field.dart';
 import 'package:conscia_app/widgets/hero_screen_scaffold.dart';
+import 'package:conscia_app/widgets/inline_notice.dart';
 import 'package:conscia_app/widgets/locale_picker_sheet.dart';
 import 'package:conscia_app/widgets/screen_section.dart';
 
@@ -21,6 +22,15 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
   late String _currencyCode;
   late String _locale;
   late String _deviceCurrencyCode;
+  late final TextEditingController _currencyController;
+  late final TextEditingController _localeController;
+
+  static const _regionLabels = {
+    'en_US': 'Philippines / US',
+    'de_DE': 'European',
+    'fr_FR': 'French / Swiss',
+    'en_IN': 'Indian',
+  };
 
   @override
   void initState() {
@@ -29,6 +39,15 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
     _locale = defaults.locale;
     _currencyCode = defaults.currency;
     _deviceCurrencyCode = defaults.currency;
+    _currencyController = TextEditingController(text: _currencyCode);
+    _localeController = TextEditingController(text: _localeName());
+  }
+
+  @override
+  void dispose() {
+    _currencyController.dispose();
+    _localeController.dispose();
+    super.dispose();
   }
 
   String _formattedSample() {
@@ -41,19 +60,7 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
   }
 
   String _localeName() {
-    final display = {
-      'en_US': 'English (US)',
-      'en_GB': 'English (UK)',
-      'es_MX': 'Español (México)',
-      'es_ES': 'Español (España)',
-      'fr_FR': 'Français',
-      'de_DE': 'Deutsch',
-      'pt_BR': 'Português (Brasil)',
-      'ja_JP': '日本語',
-      'zh_CN': '中文 (简体)',
-      'ko_KR': '한국어',
-    };
-    return display[_locale] ?? _locale;
+    return _regionLabels[_locale] ?? 'Philippines / US';
   }
 
   void _openCurrencyPicker() {
@@ -62,7 +69,10 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
       selectedCode: _currencyCode,
       priorityCode: _deviceCurrencyCode,
       isPremium: true,
-      onSelected: (code) => setState(() => _currencyCode = code),
+      onSelected: (code) => setState(() {
+        _currencyCode = code;
+        _currencyController.text = code;
+      }),
     );
   }
 
@@ -70,7 +80,10 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
     LocalePickerSheet.show(
       context,
       selectedLocale: _locale,
-      onSelected: (locale) => setState(() => _locale = locale),
+      onSelected: (locale) => setState(() {
+        _locale = locale;
+        _localeController.text = _localeName();
+      }),
     );
   }
 
@@ -122,47 +135,52 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
           ScreenSection(
             title: 'Your defaults',
             subtitle:
-                'Pick the currency and number format that should feel native from the very first screen.',
+                'Pick the currency and region format that should feel native from the very first screen.',
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                ListTile(
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    side: BorderSide(color: colors.outlineVariant),
-                  ),
-                  leading: const Icon(Icons.monetization_on_outlined),
-                  title: const Text('Currency'),
-                  subtitle: Text(_currencyCode),
-                  trailing: const Icon(Icons.chevron_right),
+                FloatingLabelTextField(
+                  controller: _currencyController,
+                  label: 'Currency',
+                  prefix: const Icon(Icons.monetization_on_outlined),
+                  readOnly: true,
                   onTap: _openCurrencyPicker,
+                  trailing: const Icon(Icons.expand_more_rounded),
                 ),
                 const SizedBox(height: 16),
-                ListTile(
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    side: BorderSide(color: colors.outlineVariant),
-                  ),
-                  leading: const Icon(Icons.language),
-                  title: const Text('Region'),
-                  subtitle: Text(_localeName()),
-                  trailing: const Icon(Icons.chevron_right),
+                FloatingLabelTextField(
+                  controller: _localeController,
+                  label: 'Region Format',
+                  prefix: const Icon(Icons.language),
+                  readOnly: true,
                   onTap: _openLocalePicker,
+                  trailing: const Icon(Icons.expand_more_rounded),
                 ),
               ],
             ),
           ),
-          FeedCard(
-            child: Column(
-              children: [
-                Text('Preview', style: textTheme.labelMedium),
-                const SizedBox(height: 8),
-                Text(
-                  _formattedSample(),
-                  style: textTheme.headlineLarge?.copyWith(
-                    color: colors.primary,
+          InlineNotice(
+            message:
+                'Changes how numbers and dates are shown. App language stays in English.',
+            tone: InlineNoticeTone.info,
+            icon: const Icon(Icons.info_outline_rounded),
+          ),
+          const SizedBox(height: 16),
+          const Card(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+              child: Column(
+                children: [
+                  Text('Preview', style: textTheme.labelMedium),
+                  const SizedBox(height: 8),
+                  Text(
+                    _formattedSample(),
+                    style: textTheme.headlineLarge?.copyWith(
+                      color: colors.primary,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ],

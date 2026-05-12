@@ -1,14 +1,17 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/constants/api_constants.dart';
-import '../../core/routing/app_router.dart';
 import '../../core/errors/app_error.dart';
+import '../../core/routing/app_router.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/user_provider.dart';
+import '../../widgets/floating_label_text_field.dart';
+import '../../widgets/inline_notice.dart';
 
 class VerifyEmailScreen extends ConsumerStatefulWidget {
   const VerifyEmailScreen({super.key});
@@ -211,47 +214,36 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
               ],
               const SizedBox(height: 32),
               if (_errorMessage != null) ...[
-                MaterialBanner(
-                  content: Text(_errorMessage!),
-                  backgroundColor: colors.errorContainer,
-                  leading: Icon(Icons.error, color: colors.error),
-                  actions: [
-                    TextButton(
-                      onPressed: () => setState(() => _errorMessage = null),
-                      child: const Text('Dismiss'),
-                    ),
-                  ],
+                InlineNotice(
+                  message: _errorMessage!,
+                  tone: InlineNoticeTone.error,
+                  icon: const Icon(Icons.lock_outline_rounded),
                 ),
                 const SizedBox(height: 16),
               ],
               if (_message != null) ...[
-                MaterialBanner(
-                  content: Text(_message!),
-                  backgroundColor: colors.secondaryContainer,
-                  leading: Icon(Icons.mark_email_read_outlined,
-                      color: colors.secondary),
-                  actions: [
-                    TextButton(
-                      onPressed: () => setState(() => _message = null),
-                      child: const Text('Dismiss'),
-                    ),
-                  ],
+                InlineNotice(
+                  message: _message!,
+                  tone: InlineNoticeTone.info,
+                  icon: const Icon(Icons.mark_email_read_outlined),
                 ),
                 const SizedBox(height: 16),
               ],
-              TextField(
+              FloatingLabelTextField(
                 controller: _codeController,
+                label: 'Verification code',
+                prefix: const Icon(Icons.verified_user_outlined),
                 keyboardType: TextInputType.number,
                 textInputAction: TextInputAction.done,
                 autofillHints: const [AutofillHints.oneTimeCode],
                 maxLength: 6,
-                onSubmitted: (_) => _confirm(),
-                decoration: const InputDecoration(
-                  labelText: 'Verification code',
-                  prefixIcon: Icon(Icons.verified_user_outlined),
-                  border: OutlineInputBorder(),
-                  counterText: '',
-                ),
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                counterText: '',
+                onChanged: (_) {
+                  if (_errorMessage != null) {
+                    setState(() => _errorMessage = null);
+                  }
+                },
               ),
               const SizedBox(height: 32),
               SizedBox(

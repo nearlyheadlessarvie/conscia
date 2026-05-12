@@ -5,6 +5,8 @@ import 'package:go_router/go_router.dart';
 import '../../core/errors/app_error.dart';
 import '../../core/utils/email_validator.dart';
 import '../../providers/auth_provider.dart';
+import '../../widgets/floating_label_text_field.dart';
+import '../../widgets/inline_notice.dart';
 
 class SignUpScreen extends ConsumerStatefulWidget {
   const SignUpScreen({super.key});
@@ -23,6 +25,9 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
   bool _obscureConfirm = true;
   bool _isLoading = false;
   String? _errorMessage;
+  String? _emailFieldError;
+  String? _passwordFieldError;
+  String? _confirmPasswordFieldError;
 
   @override
   void dispose() {
@@ -51,12 +56,43 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
     return null;
   }
 
+  void _clearInlineErrors() {
+    if (_errorMessage != null ||
+        _emailFieldError != null ||
+        _passwordFieldError != null ||
+        _confirmPasswordFieldError != null) {
+      setState(() {
+        _errorMessage = null;
+        _emailFieldError = null;
+        _passwordFieldError = null;
+        _confirmPasswordFieldError = null;
+      });
+    }
+  }
+
   Future<void> _submit() async {
-    if (!_formKey.currentState!.validate()) return;
+    final emailError = _validateEmail(_emailController.text.trim());
+    final passwordError = _validatePassword(_passwordController.text);
+    final confirmPasswordError =
+        _validateConfirmPassword(_confirmPasswordController.text);
+    if (emailError != null ||
+        passwordError != null ||
+        confirmPasswordError != null) {
+      setState(() {
+        _emailFieldError = emailError;
+        _passwordFieldError = passwordError;
+        _confirmPasswordFieldError = confirmPasswordError;
+        _errorMessage = null;
+      });
+      return;
+    }
 
     setState(() {
       _isLoading = true;
       _errorMessage = null;
+      _emailFieldError = null;
+      _passwordFieldError = null;
+      _confirmPasswordFieldError = null;
     });
 
     try {
@@ -107,16 +143,10 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
               ),
               const SizedBox(height: 32),
               if (_errorMessage != null) ...[
-                MaterialBanner(
-                  content: Text(_errorMessage!),
-                  backgroundColor: colors.errorContainer,
-                  leading: Icon(Icons.error, color: colors.error),
-                  actions: [
-                    TextButton(
-                      onPressed: () => setState(() => _errorMessage = null),
-                      child: const Text('Dismiss'),
-                    ),
-                  ],
+                InlineNotice(
+                  message: _errorMessage!,
+                  tone: InlineNoticeTone.error,
+                  icon: const Icon(Icons.lock_outline_rounded),
                 ),
                 const SizedBox(height: 16),
               ],
@@ -124,59 +154,63 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                 key: _formKey,
                 child: Column(
                   children: [
-                    TextFormField(
+                    FloatingLabelTextField(
                       controller: _emailController,
+                      label: 'Email',
+                      prefix: const Icon(Icons.email_outlined),
                       keyboardType: TextInputType.emailAddress,
                       textInputAction: TextInputAction.next,
-                      validator: _validateEmail,
-                      decoration: const InputDecoration(
-                        labelText: 'Email',
-                        prefixIcon: Icon(Icons.email_outlined),
-                        border: OutlineInputBorder(),
-                      ),
+                      onChanged: (_) => _clearInlineErrors(),
+                      errorText: _emailFieldError,
+                      autofillHints: const [AutofillHints.email],
                     ),
                     const SizedBox(height: 16),
-                    TextFormField(
+                    FloatingLabelTextField(
                       controller: _passwordController,
+                      label: 'Password',
+                      prefix: const Icon(Icons.lock_outline),
                       obscureText: _obscurePassword,
                       textInputAction: TextInputAction.next,
-                      validator: _validatePassword,
-                      decoration: InputDecoration(
-                        labelText: 'Password',
-                        prefixIcon: const Icon(Icons.lock_outlined),
-                        border: const OutlineInputBorder(),
-                        suffixIcon: IconButton(
-                          icon: Icon(
-                            _obscurePassword
-                                ? Icons.visibility_outlined
-                                : Icons.visibility_off_outlined,
-                          ),
-                          onPressed: () => setState(
-                            () => _obscurePassword = !_obscurePassword,
-                          ),
+                      onChanged: (_) => _clearInlineErrors(),
+                      errorText: _passwordFieldError,
+                      enableSuggestions: false,
+                      autocorrect: false,
+                      trailing: IconButton(
+                        icon: Icon(
+                          _obscurePassword
+                              ? Icons.visibility_outlined
+                              : Icons.visibility_off_outlined,
+                          color: _obscurePassword
+                              ? Theme.of(context).colorScheme.onSurfaceVariant
+                              : Theme.of(context).colorScheme.primary,
+                        ),
+                        onPressed: () => setState(
+                          () => _obscurePassword = !_obscurePassword,
                         ),
                       ),
                     ),
                     const SizedBox(height: 16),
-                    TextFormField(
+                    FloatingLabelTextField(
                       controller: _confirmPasswordController,
+                      label: 'Confirm Password',
+                      prefix: const Icon(Icons.lock_outline),
                       obscureText: _obscureConfirm,
                       textInputAction: TextInputAction.done,
-                      validator: _validateConfirmPassword,
-                      onFieldSubmitted: (_) => _submit(),
-                      decoration: InputDecoration(
-                        labelText: 'Confirm Password',
-                        prefixIcon: const Icon(Icons.lock_outlined),
-                        border: const OutlineInputBorder(),
-                        suffixIcon: IconButton(
-                          icon: Icon(
-                            _obscureConfirm
-                                ? Icons.visibility_outlined
-                                : Icons.visibility_off_outlined,
-                          ),
-                          onPressed: () => setState(
-                            () => _obscureConfirm = !_obscureConfirm,
-                          ),
+                      onChanged: (_) => _clearInlineErrors(),
+                      errorText: _confirmPasswordFieldError,
+                      enableSuggestions: false,
+                      autocorrect: false,
+                      trailing: IconButton(
+                        icon: Icon(
+                          _obscureConfirm
+                              ? Icons.visibility_outlined
+                              : Icons.visibility_off_outlined,
+                          color: _obscureConfirm
+                              ? Theme.of(context).colorScheme.onSurfaceVariant
+                              : Theme.of(context).colorScheme.primary,
+                        ),
+                        onPressed: () => setState(
+                          () => _obscureConfirm = !_obscureConfirm,
                         ),
                       ),
                     ),

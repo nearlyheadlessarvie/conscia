@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../core/theme/app_colors.dart';
+import 'grouped_list_card.dart';
+
 class LocalePickerSheet {
   LocalePickerSheet._();
 
@@ -40,16 +43,10 @@ class _LocalePickerBody extends StatelessWidget {
   });
 
   static const _locales = [
-    ('en_US', 'English (US)', '1,234.56'),
-    ('en_GB', 'English (UK)', '1,234.56'),
-    ('es_MX', 'Español (México)', '1,234.56'),
-    ('es_ES', 'Español (España)', '1.234,56'),
-    ('fr_FR', 'Français', '1 234,56'),
-    ('de_DE', 'Deutsch', '1.234,56'),
-    ('pt_BR', 'Português (Brasil)', '1.234,56'),
-    ('ja_JP', '日本語', '1,234'),
-    ('zh_CN', '中文 (简体)', '1,234.56'),
-    ('ko_KR', '한국어', '1,234'),
+    ('en_US', 'Philippines / US', '1,234,567.89'),
+    ('de_DE', 'European', '1.234.567,89'),
+    ('fr_FR', 'French / Swiss', '1 234 567,89'),
+    ('en_IN', 'Indian', '12,34,567.89'),
   ];
 
   @override
@@ -70,33 +67,73 @@ class _LocalePickerBody extends StatelessWidget {
         ),
         const SizedBox(height: 16),
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Text(
-            'Number Format',
-            style: textTheme.titleLarge,
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Region Format',
+                style: textTheme.titleLarge,
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'Changes how numbers and dates are shown. App language stays in English.',
+                style: textTheme.bodySmall?.copyWith(
+                  color: textTheme.bodySmall?.color?.withValues(alpha: 0.8),
+                ),
+              ),
+            ],
           ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 14),
         Expanded(
-          child: ListView.builder(
+          child: ListView(
             controller: scrollController,
-            itemCount: _locales.length,
-            itemBuilder: (context, index) {
-              final locale = _locales[index];
-              final isSelected = locale.$1 == selectedLocale;
-
-              return ListTile(
-                title: Text(locale.$2),
-                subtitle: Text('Preview: ${locale.$3}'),
-                trailing: isSelected
-                    ? Icon(Icons.check, color: colors.primary)
-                    : null,
-                onTap: () {
-                  onSelected(locale.$1);
-                  Navigator.of(context).pop();
-                },
-              );
-            },
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+            children: [
+              GroupedListCard(
+                children: _locales.map((locale) {
+                  final isSelected = locale.$1 == selectedLocale;
+                  return InkWell(
+                    onTap: () {
+                      onSelected(locale.$1);
+                      Navigator.of(context).pop();
+                    },
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(locale.$2, style: textTheme.titleSmall),
+                                const SizedBox(height: 4),
+                                Text(
+                                  locale.$3,
+                                  style: textTheme.bodySmall?.copyWith(
+                                    color: Theme.of(context).appColors.mutedInk,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          if (isSelected)
+                            Text(
+                              '✓',
+                              style: textTheme.titleMedium?.copyWith(
+                                color: Theme.of(context).appColors.deepNavy,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+            ],
           ),
         ),
       ],
