@@ -2,6 +2,22 @@ import 'package:flutter/material.dart';
 
 class AppColors extends ThemeExtension<AppColors> {
   const AppColors({
+    required this.deepNavy,
+    required this.navySoft,
+    required this.amber,
+    required this.amberSoft,
+    required this.paper,
+    required this.ink,
+    required this.mutedInk,
+    required this.softInk,
+    required this.border,
+    required this.incomeSoft,
+    required this.expenseSoft,
+    required this.angelSoft,
+    required this.devilSoft,
+    required this.family,
+    required this.familySoft,
+    required this.frostedFill,
     required this.income,
     required this.expense,
     required this.pageTop,
@@ -25,6 +41,22 @@ class AppColors extends ThemeExtension<AppColors> {
     required this.budgetDanger,
   });
 
+  final Color deepNavy;
+  final Color navySoft;
+  final Color amber;
+  final Color amberSoft;
+  final Color paper;
+  final Color ink;
+  final Color mutedInk;
+  final Color softInk;
+  final Color border;
+  final Color incomeSoft;
+  final Color expenseSoft;
+  final Color angelSoft;
+  final Color devilSoft;
+  final Color family;
+  final Color familySoft;
+  final Color frostedFill;
   final Color income;
   final Color expense;
   final Color pageTop;
@@ -48,15 +80,31 @@ class AppColors extends ThemeExtension<AppColors> {
   final Color budgetDanger;
 
   static const light = AppColors(
+    deepNavy: Color(0xFF18245C),
+    navySoft: Color(0xFFE9EDFF),
+    amber: Color(0xFFFFB300),
+    amberSoft: Color(0xFFFFF2C8),
+    paper: Color(0xFFFFFDF8),
+    ink: Color(0xFF171421),
+    mutedInk: Color(0xFF6F687A),
+    softInk: Color(0xFF9B94A8),
+    border: Color(0xFFE1E3EF),
+    incomeSoft: Color(0xFFE5F7EC),
+    expenseSoft: Color(0xFFFFE5E2),
+    angelSoft: Color(0xFFE0F7FA),
+    devilSoft: Color(0xFFFFF3E0),
+    family: Color(0xFF35509C),
+    familySoft: Color(0xFFE8EDFF),
+    frostedFill: Color(0x14767680),
     income: Color(0xFF4CAF50),
     expense: Color(0xFFE53935),
-    pageTop: Color(0xFFF7F8FF),
-    pageBottom: Color(0xFFFFFFFF),
+    pageTop: Color(0xFFFFFDF8),
+    pageBottom: Color(0xFFFFFDF8),
     surfaceRaised: Color(0xFFFFFFFF),
     surfaceMuted: Color(0xFFF7F8FB),
-    sectionBorder: Color(0xFFE4E7F2),
-    heroTint: Color(0xFFEEF1FF),
-    devilBg: Color(0xFFFFF8E1),
+    sectionBorder: Color(0xFFE1E3EF),
+    heroTint: Color(0xFFE9EDFF),
+    devilBg: Color(0xFFFFF3E0),
     devilAccent: Color(0xFFE65100),
     devilText: Color(0xFF3E2723),
     angelBg: Color(0xFFE0F7FA),
@@ -72,6 +120,22 @@ class AppColors extends ThemeExtension<AppColors> {
   );
 
   static const dark = AppColors(
+    deepNavy: Color(0xFF7986CB),
+    navySoft: Color(0xFF2B376F),
+    amber: Color(0xFFFFD54F),
+    amberSoft: Color(0xFF5A4A16),
+    paper: Color(0xFF0D1117),
+    ink: Color(0xFFE6E1E5),
+    mutedInk: Color(0xFFC0B9CE),
+    softInk: Color(0xFF9B94A8),
+    border: Color(0xFF334155),
+    incomeSoft: Color(0xFF173A24),
+    expenseSoft: Color(0xFF492522),
+    angelSoft: Color(0xFF0D3B47),
+    devilSoft: Color(0xFF4A2C14),
+    family: Color(0xFF9AA9E8),
+    familySoft: Color(0xFF1D294F),
+    frostedFill: Color(0x1F767680),
     income: Color(0xFF81C784),
     expense: Color(0xFFEF9A9A),
     pageTop: Color(0xFF0E1525),
@@ -97,6 +161,22 @@ class AppColors extends ThemeExtension<AppColors> {
 
   @override
   AppColors copyWith({
+    Color? deepNavy,
+    Color? navySoft,
+    Color? amber,
+    Color? amberSoft,
+    Color? paper,
+    Color? ink,
+    Color? mutedInk,
+    Color? softInk,
+    Color? border,
+    Color? incomeSoft,
+    Color? expenseSoft,
+    Color? angelSoft,
+    Color? devilSoft,
+    Color? family,
+    Color? familySoft,
+    Color? frostedFill,
     Color? income,
     Color? expense,
     Color? pageTop,
@@ -120,6 +200,22 @@ class AppColors extends ThemeExtension<AppColors> {
     Color? budgetDanger,
   }) {
     return AppColors(
+      deepNavy: deepNavy ?? this.deepNavy,
+      navySoft: navySoft ?? this.navySoft,
+      amber: amber ?? this.amber,
+      amberSoft: amberSoft ?? this.amberSoft,
+      paper: paper ?? this.paper,
+      ink: ink ?? this.ink,
+      mutedInk: mutedInk ?? this.mutedInk,
+      softInk: softInk ?? this.softInk,
+      border: border ?? this.border,
+      incomeSoft: incomeSoft ?? this.incomeSoft,
+      expenseSoft: expenseSoft ?? this.expenseSoft,
+      angelSoft: angelSoft ?? this.angelSoft,
+      devilSoft: devilSoft ?? this.devilSoft,
+      family: family ?? this.family,
+      familySoft: familySoft ?? this.familySoft,
+      frostedFill: frostedFill ?? this.frostedFill,
       income: income ?? this.income,
       expense: expense ?? this.expense,
       pageTop: pageTop ?? this.pageTop,
@@ -148,6 +244,22 @@ class AppColors extends ThemeExtension<AppColors> {
   AppColors lerp(ThemeExtension<AppColors>? other, double t) {
     if (other is! AppColors) return this;
     return AppColors(
+      deepNavy: Color.lerp(deepNavy, other.deepNavy, t)!,
+      navySoft: Color.lerp(navySoft, other.navySoft, t)!,
+      amber: Color.lerp(amber, other.amber, t)!,
+      amberSoft: Color.lerp(amberSoft, other.amberSoft, t)!,
+      paper: Color.lerp(paper, other.paper, t)!,
+      ink: Color.lerp(ink, other.ink, t)!,
+      mutedInk: Color.lerp(mutedInk, other.mutedInk, t)!,
+      softInk: Color.lerp(softInk, other.softInk, t)!,
+      border: Color.lerp(border, other.border, t)!,
+      incomeSoft: Color.lerp(incomeSoft, other.incomeSoft, t)!,
+      expenseSoft: Color.lerp(expenseSoft, other.expenseSoft, t)!,
+      angelSoft: Color.lerp(angelSoft, other.angelSoft, t)!,
+      devilSoft: Color.lerp(devilSoft, other.devilSoft, t)!,
+      family: Color.lerp(family, other.family, t)!,
+      familySoft: Color.lerp(familySoft, other.familySoft, t)!,
+      frostedFill: Color.lerp(frostedFill, other.frostedFill, t)!,
       income: Color.lerp(income, other.income, t)!,
       expense: Color.lerp(expense, other.expense, t)!,
       pageTop: Color.lerp(pageTop, other.pageTop, t)!,

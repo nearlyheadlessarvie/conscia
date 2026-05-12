@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -84,47 +86,41 @@ Future<void> _pumpShell(
 }
 
 void main() {
-  testWidgets('MainShell shows five navigation destinations and add FAB',
+  testWidgets('MainShell renders floating dock without text labels',
       (tester) async {
     await _pumpShell(tester);
 
-    expect(find.text('Home'), findsOneWidget);
-    expect(find.text('Transactions'), findsOneWidget);
-    expect(find.text('Scan'), findsOneWidget);
-    expect(find.text('Assistant'), findsOneWidget);
-    expect(find.text('Settings'), findsOneWidget);
-    expect(find.byType(FloatingActionButton), findsOneWidget);
+    expect(find.text('Home'), findsNothing);
+    expect(find.text('Transactions'), findsNothing);
+    expect(find.text('Scan'), findsNothing);
+    expect(find.text('Assistant'), findsNothing);
+    expect(find.text('Settings'), findsNothing);
+    expect(find.byKey(const ValueKey('floating-dock-nav')), findsOneWidget);
   });
 
-  testWidgets('MainShell renders an emphasized raised scan action on mobile',
+  testWidgets('MainShell keeps the scan action centered and emphasized',
       (tester) async {
     await _pumpShell(tester);
 
-    final raisedScanButton =
-        find.byKey(const ValueKey('main-shell-scan-button'));
-    expect(raisedScanButton, findsOneWidget);
+    final scanAction = find.byKey(const ValueKey('floating-dock-scan-action'));
+    expect(scanAction, findsOneWidget);
 
-    final scanPosition = tester.getTopLeft(raisedScanButton);
-    final navigationBarPosition = tester.getTopLeft(find.byType(NavigationBar));
-    final scanBottom = tester.getBottomLeft(raisedScanButton);
+    final dockRect =
+        tester.getRect(find.byKey(const ValueKey('floating-dock-nav')));
+    final scanRect = tester.getRect(scanAction);
 
-    expect(scanPosition.dy, lessThan(navigationBarPosition.dy));
-    expect(scanBottom.dy, greaterThan(navigationBarPosition.dy));
+    expect(scanRect.center.dx, closeTo(dockRect.center.dx, 1));
+    expect(scanRect.height, greaterThan(48));
   });
 
-  testWidgets('MainShell hides the shared add FAB on transactions, assistant, and settings on mobile',
+  testWidgets('MainShell does not show a shared add FAB on mobile',
       (tester) async {
-    await _pumpShell(tester, initialLocation: '/transactions');
-    expect(find.byType(FloatingActionButton), findsNothing);
-
-    await _pumpShell(tester, initialLocation: '/assistant');
-    expect(find.byType(FloatingActionButton), findsNothing);
-
-    await _pumpShell(tester, initialLocation: '/settings');
+    await _pumpShell(tester);
     expect(find.byType(FloatingActionButton), findsNothing);
   });
 
-  testWidgets('MainShell hides the navigation rail add FAB on transactions, assistant, and settings',
+  testWidgets(
+      'MainShell hides the navigation rail add FAB on transactions, assistant, and settings',
       (tester) async {
     const wideSize = Size(1200, 800);
 
@@ -166,7 +162,16 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Open sheet'));
+    final context = tester.element(find.byType(MainShell));
+    unawaited(
+      showModalBottomSheet<void>(
+        context: context,
+        builder: (_) => const SizedBox(
+          height: 120,
+          child: Center(child: Text('Sheet content')),
+        ),
+      ),
+    );
     await tester.pumpAndSettle();
 
     expect(find.text('Sheet content'), findsOneWidget);

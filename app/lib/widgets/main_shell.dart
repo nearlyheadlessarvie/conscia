@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../core/constants/app_icons.dart';
+import 'floating_dock_nav.dart';
 
 class MainShell extends ConsumerStatefulWidget {
   final Widget child;
@@ -116,54 +117,10 @@ class _MainShellState extends ConsumerState<MainShell> {
 
     return Scaffold(
       body: widget.child,
-      floatingActionButton: showSharedAddFab
-          ? FloatingActionButton(
-              onPressed: () => context.push('/transactions/add'),
-              child: Icon(AppIcons.add),
-            )
-          : null,
-      bottomNavigationBar: SizedBox(
-        height: 96,
-        child: Stack(
-          clipBehavior: Clip.none,
-          alignment: Alignment.topCenter,
-          children: [
-            Positioned.fill(
-              top: 10,
-              child: NavigationBar(
-                height: 80,
-                selectedIndex: currentIndex,
-                onDestinationSelected: (i) {
-                  if (i == _mobileScanIndex) return;
-                  _onDestinationSelected(context, i);
-                },
-                destinations: _tabs
-                    .map(
-                      (t) => t.label == 'Scan'
-                          ? const NavigationDestination(
-                              icon: SizedBox.shrink(),
-                              selectedIcon: SizedBox.shrink(),
-                              label: '',
-                            )
-                          : NavigationDestination(
-                              icon: Icon(t.icon),
-                              selectedIcon: Icon(t.activeIcon),
-                              label: t.label,
-                            ),
-                    )
-                    .toList(),
-              ),
-            ),
-            Positioned(
-              top: -8,
-              child: _RaisedScanButton(
-                key: const ValueKey('main-shell-scan-button'),
-                isSelected: currentIndex == _mobileScanIndex,
-                onTap: () => _onDestinationSelected(context, _mobileScanIndex),
-              ),
-            ),
-          ],
-        ),
+      bottomNavigationBar: FloatingDockNav(
+        currentIndex: currentIndex,
+        onDestinationSelected: (index) =>
+            _onDestinationSelected(context, index),
       ),
     );
   }
@@ -174,73 +131,5 @@ class _MainShellState extends ConsumerState<MainShell> {
       return;
     }
     context.go(_tabs[index].path);
-  }
-}
-
-class _RaisedScanButton extends StatelessWidget {
-  final bool isSelected;
-  final VoidCallback onTap;
-
-  const _RaisedScanButton({
-    super.key,
-    required this.isSelected,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(36),
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.only(top: 4),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              AnimatedContainer(
-                duration: const Duration(milliseconds: 180),
-                width: 64,
-                height: 64,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: isSelected
-                      ? colorScheme.primary
-                      : colorScheme.primaryContainer,
-                  boxShadow: [
-                    BoxShadow(
-                      color: colorScheme.shadow.withValues(alpha: 0.18),
-                      blurRadius: 18,
-                      offset: const Offset(0, 6),
-                    ),
-                  ],
-                  border: Border.all(
-                    color: colorScheme.surface,
-                    width: 4,
-                  ),
-                ),
-                child: Icon(
-                  AppIcons.scan,
-                  size: 28,
-                  color: isSelected
-                      ? colorScheme.onPrimary
-                      : colorScheme.onPrimaryContainer,
-                ),
-              ),
-              const SizedBox(height: 1),
-              Text(
-                'Scan',
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
   }
 }
