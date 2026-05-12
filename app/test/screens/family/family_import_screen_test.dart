@@ -12,15 +12,16 @@ void main() {
     );
 
     expect(find.text('Import personal records'), findsWidgets);
-    expect(
-      find.text('Nothing is shared until you preview and choose records.'),
-      findsOneWidget,
-    );
+    expect(find.text('Choose what to share'), findsOneWidget);
+    expect(find.text('Nothing is shared until you import selected records.'),
+        findsOneWidget);
+    expect(find.text('Record types'), findsOneWidget);
+    expect(find.text('Categories to include'), findsOneWidget);
     expect(
         find.widgetWithText(FilledButton, 'Preview records'), findsOneWidget);
   });
 
-  testWidgets('family import item can be selected', (
+  testWidgets('family import preview shows selection summary and item rows', (
     tester,
   ) async {
     await tester.pumpWidget(
@@ -50,6 +51,8 @@ void main() {
 
     expect(find.text('Dining budget'), findsOneWidget);
     expect(find.text('PHP 4,000.00'), findsOneWidget);
+    expect(find.text('0 of 1 selected'), findsOneWidget);
+    expect(find.text('Select all'), findsOneWidget);
     expect(find.byType(Checkbox), findsOneWidget);
   });
 }
