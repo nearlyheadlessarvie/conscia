@@ -13,6 +13,7 @@ public class ConsciaDbContext : DbContext
     public DbSet<FamilySpace> FamilySpaces => Set<FamilySpace>();
     public DbSet<FamilyMember> FamilyMembers => Set<FamilyMember>();
     public DbSet<FamilyInvite> FamilyInvites => Set<FamilyInvite>();
+    public DbSet<ManagedCategory> ManagedCategories => Set<ManagedCategory>();
     public DbSet<Budget> Budgets => Set<Budget>();
     public DbSet<Receipt> Receipts => Set<Receipt>();
 

@@ -182,6 +182,73 @@ namespace Conscia.Infrastructure.Migrations
                     b.ToTable("family_spaces", (string)null);
                 });
 
+            modelBuilder.Entity("Conscia.Domain.Entities.ManagedCategory", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ColorKey")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("FamilySpaceId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("IconKey")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)");
+
+                    b.Property<bool>("IsArchived")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsDefault")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("NormalizedName")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
+
+                    b.Property<string>("Scope")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FamilySpaceId");
+
+                    b.HasIndex("FamilySpaceId", "Type", "NormalizedName");
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("UserId", "Scope", "Type", "NormalizedName");
+
+                    b.ToTable("managed_categories", (string)null);
+                });
+
             modelBuilder.Entity("Conscia.Domain.Entities.Receipt", b =>
                 {
                     b.Property<Guid>("Id")
