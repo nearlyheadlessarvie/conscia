@@ -15,6 +15,7 @@ class ScopeSelector extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SegmentedButton<String>(
+      expandedInsets: EdgeInsets.zero,
       segments: const [
         ButtonSegment(
           value: 'personal',
