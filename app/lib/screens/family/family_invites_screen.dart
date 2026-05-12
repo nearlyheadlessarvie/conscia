@@ -188,7 +188,10 @@ class _OutgoingInvitesSection extends StatelessWidget {
         if (invites.isEmpty)
           const _EmptyOutgoingInvites()
         else
-          ...invites.map((invite) => _OutgoingInviteCard(invite: invite)),
+          for (final invite in invites) ...[
+            _OutgoingInviteCard(invite: invite),
+            if (invite != invites.last) const SizedBox(height: 12),
+          ],
       ],
     );
   }
@@ -246,31 +249,77 @@ class _OutgoingInviteCardState extends ConsumerState<_OutgoingInviteCard> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final colors = theme.colorScheme;
 
     return FeedCard(
-      child: Row(
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.mark_email_unread_outlined),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(widget.invite.email, style: theme.textTheme.titleMedium),
-                const SizedBox(height: 4),
-                Text(
-                  '${widget.invite.role} · expires ${_formatInviteDate(widget.invite.expiresAt)}',
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              CircleAvatar(
+                radius: 20,
+                backgroundColor:
+                    colors.primaryContainer.withValues(alpha: 0.48),
+                child: Icon(
+                  Icons.mark_email_unread_outlined,
+                  size: 20,
+                  color: colors.primary,
                 ),
-                const SizedBox(height: 10),
-                TextButton(
-                  onPressed: _isSubmitting ? null : _cancel,
-                  child: Text(_isSubmitting ? 'Cancelling...' : 'Cancel invite'),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      widget.invite.email,
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        _InvitePill(
+                          label: widget.invite.role,
+                          icon: Icons.admin_panel_settings_outlined,
+                        ),
+                        _InvitePill(
+                          label:
+                              'Expires ${_formatInviteDate(widget.invite.expiresAt)}',
+                          icon: Icons.schedule_outlined,
+                          quiet: true,
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
-              ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Align(
+            alignment: Alignment.centerRight,
+            child: OutlinedButton.icon(
+              onPressed: _isSubmitting ? null : _cancel,
+              icon: _isSubmitting
+                  ? const SizedBox(
+                      width: 14,
+                      height: 14,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.close, size: 16),
+              label: Text(_isSubmitting ? 'Cancelling...' : 'Cancel invite'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: colors.error,
+                side: BorderSide(color: colors.error.withValues(alpha: 0.34)),
+                minimumSize: const Size(0, 38),
+                padding: const EdgeInsets.symmetric(horizontal: 14),
+              ),
             ),
           ),
         ],
@@ -296,6 +345,49 @@ class _OutgoingInviteCardState extends ConsumerState<_OutgoingInviteCard> {
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }
+  }
+}
+
+class _InvitePill extends StatelessWidget {
+  const _InvitePill({
+    required this.label,
+    required this.icon,
+    this.quiet = false,
+  });
+
+  final String label;
+  final IconData icon;
+  final bool quiet;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final Color background =
+        quiet ? colors.surfaceContainerHighest : colors.primaryContainer;
+    final Color foreground =
+        quiet ? colors.onSurfaceVariant : colors.primary;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      decoration: BoxDecoration(
+        color: background.withValues(alpha: quiet ? 0.58 : 0.72),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: foreground),
+          const SizedBox(width: 5),
+          Text(
+            label,
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: foreground,
+                  fontWeight: FontWeight.w700,
+                ),
+          ),
+        ],
+      ),
+    );
   }
 }
 

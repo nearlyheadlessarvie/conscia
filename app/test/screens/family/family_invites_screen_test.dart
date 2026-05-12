@@ -114,9 +114,9 @@ void main() {
 
     expect(find.text('Invites you sent'), findsOneWidget);
     expect(find.text('wife@example.com'), findsOneWidget);
-    expect(find.widgetWithText(TextButton, 'Cancel invite'), findsOneWidget);
+    expect(find.widgetWithText(OutlinedButton, 'Cancel invite'), findsOneWidget);
 
-    await tester.tap(find.widgetWithText(TextButton, 'Cancel invite'));
+    await tester.tap(find.widgetWithText(OutlinedButton, 'Cancel invite'));
     await tester.pumpAndSettle();
 
     expect(actions.cancelledInviteIds, ['invite-outgoing']);
