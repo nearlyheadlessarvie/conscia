@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../core/constants/app_icons.dart';
 import '../../core/routing/app_router.dart';
 import '../../models/family_overview.dart';
 import '../../models/family_space.dart';
@@ -77,7 +78,7 @@ class _NoFamilySpaceView extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Icon(Icons.diversity_3_outlined, size: 36),
+              Icon(AppIcons.family, size: 36),
               const SizedBox(height: 12),
               Text(
                 'Shared budgets, recurring contributions, and family-aware insights.',

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/constants/app_icons.dart';
 import '../../core/errors/app_error.dart';
 import '../../models/family_invite.dart';
 import '../../providers/family_space_provider.dart';
@@ -222,7 +223,7 @@ class _InviteCardState extends ConsumerState<_InviteCard> {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const CircleAvatar(child: Icon(Icons.diversity_3_outlined)),
+              CircleAvatar(child: Icon(AppIcons.family)),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(

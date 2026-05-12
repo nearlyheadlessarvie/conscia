@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../core/constants/app_icons.dart';
+
 class ScopeSelector extends StatelessWidget {
   const ScopeSelector({
     super.key,
@@ -16,16 +18,16 @@ class ScopeSelector extends StatelessWidget {
   Widget build(BuildContext context) {
     return SegmentedButton<String>(
       expandedInsets: EdgeInsets.zero,
-      segments: const [
+      segments: [
         ButtonSegment(
           value: 'personal',
-          label: Text('Personal'),
-          icon: Icon(Icons.person_outline),
+          label: const Text('Personal'),
+          icon: Icon(AppIcons.person),
         ),
         ButtonSegment(
           value: 'family',
-          label: Text('Family'),
-          icon: Icon(Icons.diversity_3_outlined),
+          label: const Text('Family'),
+          icon: Icon(AppIcons.family),
         ),
       ],
       selected: {familyEnabled ? value : 'personal'},

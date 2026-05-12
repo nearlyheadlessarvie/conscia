@@ -9,7 +9,6 @@ final transactionServiceProvider = Provider<TransactionService>((ref) {
 });
 
 final categoryFilterProvider = StateProvider<String?>((_) => null);
-final familyTransactionViewProvider = StateProvider<bool>((_) => false);
 
 class TransactionListState {
   final List<Transaction> transactions;
@@ -109,9 +108,7 @@ final filteredTransactionListProvider =
     StateNotifierProvider<TransactionListNotifier, TransactionListState>((ref) {
   final service = ref.watch(transactionServiceProvider);
   final category = ref.watch(categoryFilterProvider);
-  final familyView = ref.watch(familyTransactionViewProvider);
-  return TransactionListNotifier(
-      service, category, familyView ? 'family' : null);
+  return TransactionListNotifier(service, category);
 });
 
 final transactionDetailProvider =

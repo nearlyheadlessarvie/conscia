@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/constants/app_icons.dart';
 import '../../core/routing/app_router.dart';
 import '../../models/family_space.dart';
 import '../../providers/family_space_provider.dart';
@@ -76,7 +77,7 @@ class _NoFamilySpaceSettingsView extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Icon(Icons.diversity_3_outlined, size: 34),
+              Icon(AppIcons.family, size: 34),
               const SizedBox(height: 12),
               Text(
                 'Start with one household space. Nothing personal is shared unless you choose it.',

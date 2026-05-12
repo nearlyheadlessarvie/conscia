@@ -331,7 +331,7 @@ void main() {
     );
   });
 
-  testWidgets('family view requests family scope and hides row family badge', (
+  testWidgets('transaction list does not expose a family-only filter toggle', (
     tester,
   ) async {
     final service = _StaticTransactionService([
@@ -372,14 +372,7 @@ void main() {
     expect(
         find.byKey(const ValueKey('family-transaction-badge')), findsOneWidget);
     expect(service.lastScope, isNull);
-
-    await tester.tap(find.byTooltip('Show family transactions'));
-    await tester.pumpAndSettle();
-
-    expect(service.lastScope, 'family');
-    expect(find.text('Grab'), findsNothing);
-    expect(find.text('Manam'), findsOneWidget);
-    expect(
-        find.byKey(const ValueKey('family-transaction-badge')), findsNothing);
+    expect(find.byTooltip('Show family transactions'), findsNothing);
+    expect(find.byTooltip('Show all transactions'), findsNothing);
   });
 }

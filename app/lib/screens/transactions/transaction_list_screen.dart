@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/routing/app_router.dart';
-import '../../core/constants/app_icons.dart';
 import '../../core/theme/app_colors.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/transaction_providers.dart';
@@ -55,7 +54,6 @@ class _TransactionListScreenState extends ConsumerState<TransactionListScreen> {
   Widget build(BuildContext context) {
     final state = ref.watch(filteredTransactionListProvider);
     final selectedCategory = ref.watch(categoryFilterProvider);
-    final familyView = ref.watch(familyTransactionViewProvider);
 
     final categories = {
       if (selectedCategory != null) selectedCategory,
@@ -65,15 +63,6 @@ class _TransactionListScreenState extends ConsumerState<TransactionListScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        leading: IconButton(
-          tooltip:
-              familyView ? 'Show all transactions' : 'Show family transactions',
-          icon: Icon(familyView ? AppIcons.transactions : AppIcons.family),
-          onPressed: () {
-            ref.read(familyTransactionViewProvider.notifier).state =
-                !familyView;
-          },
-        ),
         title: const Text('Transactions'),
         actions: [
           IconButton(
@@ -142,9 +131,7 @@ class _TransactionListScreenState extends ConsumerState<TransactionListScreen> {
           padding: const EdgeInsets.fromLTRB(16, 20, 16, 12),
           child: ScreenSection(
             title: 'Filters',
-            subtitle: ref.watch(familyTransactionViewProvider)
-                ? 'Viewing shared family records by spending category.'
-                : 'Jump between your most recent spending categories.',
+            subtitle: 'Jump between your most recent spending categories.',
             compact: true,
             child: SelectionChipGroup(
               options: ['All', ...categories],
@@ -247,8 +234,6 @@ class _TransactionListScreenState extends ConsumerState<TransactionListScreen> {
                         regretLevel: groups[key]![index].regretLevel,
                         isRecurring: groups[key]![index].isRecurring,
                         isFamily: groups[key]![index].isFamily,
-                        hideFamilyBadge:
-                            ref.watch(familyTransactionViewProvider),
                         sharedByUserId: groups[key]![index].sharedByUserId,
                         sharedByInitials: groups[key]![index].sharedByInitials,
                         currentUserId: ref.watch(authProvider).userId,

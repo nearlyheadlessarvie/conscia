@@ -240,7 +240,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               child: Column(
                 children: [
                   _SettingsActionRow(
-                    leading: const Icon(Icons.diversity_3_outlined),
+                    leading: Icon(AppIcons.family),
                     title: 'Family Space settings',
                     subtitle: 'Household name, invites, imports',
                     onTap: () => context.push(AppRoutes.familySpace),

@@ -1,8 +1,13 @@
+import 'package:conscia_app/core/constants/app_icons.dart';
 import 'package:conscia_app/widgets/scope_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  test('uses the shared diversity icon for family scope', () {
+    expect(AppIcons.family, Icons.diversity_3_outlined);
+  });
+
   testWidgets('fills the available width with balanced segments', (
     tester,
   ) async {

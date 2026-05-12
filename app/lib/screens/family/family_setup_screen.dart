@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/constants/app_icons.dart';
 import '../../core/errors/app_error.dart';
 import '../../core/routing/app_router.dart';
 import '../../providers/family_space_provider.dart';
@@ -64,9 +65,9 @@ class _FamilySetupScreenState extends ConsumerState<FamilySetupScreen> {
                 children: [
                   TextFormField(
                     controller: _nameController,
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       labelText: 'Family Space name',
-                      prefixIcon: Icon(Icons.diversity_3_outlined),
+                      prefixIcon: Icon(AppIcons.family),
                     ),
                     textInputAction: TextInputAction.next,
                     validator: (value) =>

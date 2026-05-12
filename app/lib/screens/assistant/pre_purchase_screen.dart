@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/routing/app_router.dart';
+import '../../core/constants/app_icons.dart';
 import '../../core/constants/generated/app_constants.g.dart';
 import '../../core/constants/category_icons.dart';
 import '../../core/errors/app_error.dart';
@@ -479,8 +480,8 @@ class _PrePurchaseScreenState extends ConsumerState<PrePurchaseScreen>
                 ),
                 avatar: Icon(
                   _selectedContextScope == 'family'
-                      ? Icons.diversity_3_outlined
-                      : Icons.person_outline,
+                      ? AppIcons.family
+                      : AppIcons.person,
                   size: 18,
                 ),
               ),
