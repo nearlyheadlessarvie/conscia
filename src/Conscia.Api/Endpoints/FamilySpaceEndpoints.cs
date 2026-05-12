@@ -97,6 +97,36 @@ public static class FamilySpaceEndpoints
             return Results.Ok(invites);
         }).WithName("ListFamilyInvites");
 
+        group.MapGet("/invites/outgoing", async (HttpContext ctx, IFamilySpaceService svc) =>
+        {
+            try
+            {
+                var invites = await svc.GetOutgoingInvitesAsync(ctx.User.GetUserId(), ctx.RequestAborted);
+                return Results.Ok(invites);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Results.Json(new { error = ex.Message }, statusCode: StatusCodes.Status403Forbidden);
+            }
+        }).WithName("ListOutgoingFamilyInvites");
+
+        group.MapDelete("/invites/{inviteId:guid}", async (HttpContext ctx, Guid inviteId, IFamilySpaceService svc) =>
+        {
+            try
+            {
+                await svc.CancelInviteAsync(ctx.User.GetUserId(), inviteId, ctx.RequestAborted);
+                return Results.NoContent();
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Results.Json(new { error = ex.Message }, statusCode: StatusCodes.Status403Forbidden);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return Results.BadRequest(new { error = ex.Message });
+            }
+        }).WithName("CancelFamilyInvite");
+
         group.MapPost("/invites/{inviteId:guid}/accept", async (HttpContext ctx, Guid inviteId, IFamilySpaceService svc) =>
         {
             try

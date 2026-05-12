@@ -13,8 +13,10 @@ public interface IFamilySpaceRepository
     Task<FamilyInvite?> GetInviteAsync(Guid inviteId, CancellationToken ct = default);
     Task<FamilyInvite?> GetActiveInviteByEmailAsync(string normalizedEmail, CancellationToken ct = default);
     Task<IReadOnlyList<FamilyInvite>> ListActiveInvitesByEmailAsync(string normalizedEmail, CancellationToken ct = default);
+    Task<IReadOnlyList<FamilyInvite>> ListActiveInvitesByFamilySpaceAsync(Guid familySpaceId, CancellationToken ct = default);
     Task<FamilyMember> AddMemberAsync(FamilyMember member, CancellationToken ct = default);
     Task UpdateInviteAsync(FamilyInvite invite, CancellationToken ct = default);
+    Task DeleteInviteAsync(Guid inviteId, CancellationToken ct = default);
     Task UpdateMemberAsync(FamilyMember member, CancellationToken ct = default);
     Task DeleteMemberAsync(Guid memberId, CancellationToken ct = default);
 }

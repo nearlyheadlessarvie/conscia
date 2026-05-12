@@ -248,6 +248,94 @@ public class FamilySpaceServiceTests
     }
 
     [Fact]
+    public async Task GetOutgoingInvitesAsync_OwnerReceivesActiveFamilyInvites()
+    {
+        var ownerId = Guid.NewGuid();
+        var familySpaceId = Guid.NewGuid();
+        var inviteId = Guid.NewGuid();
+        _repo.Setup(r => r.GetMembershipByUserIdAsync(ownerId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new FamilyMember
+            {
+                UserId = ownerId,
+                FamilySpaceId = familySpaceId,
+                Role = FamilyMemberRole.Owner
+            });
+        _repo.Setup(r => r.GetByIdAsync(familySpaceId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new FamilySpace
+            {
+                Id = familySpaceId,
+                Name = "Santos Household",
+                CurrencyCode = "PHP"
+            });
+        _repo.Setup(r => r.ListActiveInvitesByFamilySpaceAsync(familySpaceId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync([
+                new FamilyInvite
+                {
+                    Id = inviteId,
+                    FamilySpaceId = familySpaceId,
+                    Email = "wife@example.com",
+                    Role = FamilyMemberRole.Contributor,
+                    CreatedAt = DateTime.UtcNow.AddDays(-1),
+                    ExpiresAt = DateTime.UtcNow.AddDays(13)
+                }
+            ]);
+
+        var invites = await CreateService().GetOutgoingInvitesAsync(ownerId);
+
+        var invite = Assert.Single(invites);
+        Assert.Equal(inviteId, invite.Id);
+        Assert.Equal("Santos Household", invite.FamilySpaceName);
+        Assert.Equal("wife@example.com", invite.Email);
+        Assert.Equal("Contributor", invite.Role);
+    }
+
+    [Fact]
+    public async Task GetOutgoingInvitesAsync_ContributorCannotListOutgoingInvites()
+    {
+        var contributorId = Guid.NewGuid();
+        _repo.Setup(r => r.GetMembershipByUserIdAsync(contributorId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new FamilyMember
+            {
+                UserId = contributorId,
+                FamilySpaceId = Guid.NewGuid(),
+                Role = FamilyMemberRole.Contributor
+            });
+
+        var error = await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
+            CreateService().GetOutgoingInvitesAsync(contributorId));
+
+        Assert.Equal("Only Family Space owners can manage invites.", error.Message);
+    }
+
+    [Fact]
+    public async Task CancelInviteAsync_OwnerDeletesActiveInviteForTheirFamily()
+    {
+        var ownerId = Guid.NewGuid();
+        var familySpaceId = Guid.NewGuid();
+        var inviteId = Guid.NewGuid();
+        _repo.Setup(r => r.GetMembershipByUserIdAsync(ownerId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new FamilyMember
+            {
+                UserId = ownerId,
+                FamilySpaceId = familySpaceId,
+                Role = FamilyMemberRole.Owner
+            });
+        _repo.Setup(r => r.GetInviteAsync(inviteId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new FamilyInvite
+            {
+                Id = inviteId,
+                FamilySpaceId = familySpaceId,
+                Email = "wife@example.com",
+                Role = FamilyMemberRole.Contributor,
+                ExpiresAt = DateTime.UtcNow.AddDays(1)
+            });
+
+        await CreateService().CancelInviteAsync(ownerId, inviteId);
+
+        _repo.Verify(r => r.DeleteInviteAsync(inviteId, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
     public async Task PreviewImportAsync_ContributorPreviewsOnlyPersonalRecordsMatchingCategory()
     {
         var userId = Guid.NewGuid();

@@ -253,6 +253,67 @@ public class FamilySpaceEndpointTests
     }
 
     [Fact]
+    public async Task ListOutgoingInvites_OwnerRequest_ReturnsOutstandingInvites()
+    {
+        await using var factory = new TestWebAppFactory();
+        var inviteId = Guid.Parse("cccccccc-cccc-cccc-cccc-cccccccccccc");
+        factory.FamilySpaceServiceMock
+            .Setup(s => s.GetOutgoingInvitesAsync(UserId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync([
+                new FamilyInviteDto(
+                    inviteId,
+                    Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"),
+                    "Santos Household",
+                    "wife@example.com",
+                    "Contributor",
+                    DateTime.UtcNow.AddDays(-1),
+                    DateTime.UtcNow.AddDays(13))
+            ]);
+
+        var client = CreateAuthorizedClient(factory);
+        var response = await client.GetAsync("/api/v1/family-space/invites/outgoing");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var json = await response.Content.ReadFromJsonAsync<JsonElement>();
+        var invite = Assert.Single(json.EnumerateArray());
+        Assert.Equal(inviteId, invite.GetProperty("id").GetGuid());
+        Assert.Equal("wife@example.com", invite.GetProperty("email").GetString());
+        Assert.Equal("Contributor", invite.GetProperty("role").GetString());
+    }
+
+    [Fact]
+    public async Task ListOutgoingInvites_NonOwner_ReturnsForbidden()
+    {
+        await using var factory = new TestWebAppFactory();
+        factory.FamilySpaceServiceMock
+            .Setup(s => s.GetOutgoingInvitesAsync(UserId, It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new UnauthorizedAccessException("Only Family Space owners can manage invites."));
+
+        var client = CreateAuthorizedClient(factory);
+        var response = await client.GetAsync("/api/v1/family-space/invites/outgoing");
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task CancelInvite_OwnerRequest_ReturnsNoContent()
+    {
+        await using var factory = new TestWebAppFactory();
+        var inviteId = Guid.Parse("cccccccc-cccc-cccc-cccc-cccccccccccc");
+        factory.FamilySpaceServiceMock
+            .Setup(s => s.CancelInviteAsync(UserId, inviteId, It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        var client = CreateAuthorizedClient(factory);
+        var response = await client.DeleteAsync($"/api/v1/family-space/invites/{inviteId}");
+
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+        factory.FamilySpaceServiceMock.Verify(s =>
+            s.CancelInviteAsync(UserId, inviteId, It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
     public async Task AcceptInvite_UsesSignedInEmailAndReturnsAcceptedMember()
     {
         await using var factory = new TestWebAppFactory();

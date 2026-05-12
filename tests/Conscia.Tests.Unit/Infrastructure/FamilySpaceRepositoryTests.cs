@@ -92,4 +92,66 @@ public class FamilySpaceRepositoryTests : EfCoreTestBase
         Assert.Equal(latest.Id, result!.Id);
         Assert.Equal(FamilyMemberRole.Viewer, result.Role);
     }
+
+    [Fact]
+    public async Task ListActiveInvitesByFamilySpaceAsync_ReturnsOnlyOutstandingInvitesForFamily()
+    {
+        var familySpaceId = Guid.NewGuid();
+        var otherFamilySpaceId = Guid.NewGuid();
+        var active = await _repo.AddInviteAsync(new FamilyInvite
+        {
+            Id = Guid.NewGuid(),
+            FamilySpaceId = familySpaceId,
+            Email = "wife@example.com",
+            Role = FamilyMemberRole.Contributor,
+            InvitedByUserId = Guid.NewGuid(),
+            CreatedAt = DateTime.UtcNow.AddDays(-1),
+            ExpiresAt = DateTime.UtcNow.AddDays(5)
+        });
+        await _repo.AddInviteAsync(new FamilyInvite
+        {
+            Id = Guid.NewGuid(),
+            FamilySpaceId = familySpaceId,
+            Email = "accepted@example.com",
+            Role = FamilyMemberRole.Viewer,
+            InvitedByUserId = Guid.NewGuid(),
+            CreatedAt = DateTime.UtcNow,
+            ExpiresAt = DateTime.UtcNow.AddDays(5),
+            AcceptedAt = DateTime.UtcNow
+        });
+        await _repo.AddInviteAsync(new FamilyInvite
+        {
+            Id = Guid.NewGuid(),
+            FamilySpaceId = otherFamilySpaceId,
+            Email = "other@example.com",
+            Role = FamilyMemberRole.Contributor,
+            InvitedByUserId = Guid.NewGuid(),
+            CreatedAt = DateTime.UtcNow,
+            ExpiresAt = DateTime.UtcNow.AddDays(5)
+        });
+
+        var invites = await _repo.ListActiveInvitesByFamilySpaceAsync(familySpaceId);
+
+        var invite = Assert.Single(invites);
+        Assert.Equal(active.Id, invite.Id);
+    }
+
+    [Fact]
+    public async Task DeleteInviteAsync_RemovesInvite()
+    {
+        var invite = await _repo.AddInviteAsync(new FamilyInvite
+        {
+            Id = Guid.NewGuid(),
+            FamilySpaceId = Guid.NewGuid(),
+            Email = "wife@example.com",
+            Role = FamilyMemberRole.Contributor,
+            InvitedByUserId = Guid.NewGuid(),
+            CreatedAt = DateTime.UtcNow,
+            ExpiresAt = DateTime.UtcNow.AddDays(5)
+        });
+
+        await _repo.DeleteInviteAsync(invite.Id);
+
+        Assert.Null(await _repo.GetInviteAsync(invite.Id));
+    }
 }

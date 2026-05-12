@@ -250,6 +250,19 @@ public class FamilySpaceService : IFamilySpaceService
         return results;
     }
 
+    public async Task<IReadOnlyList<FamilyInviteDto>> GetOutgoingInvitesAsync(
+        Guid userId,
+        CancellationToken ct = default)
+    {
+        var owner = await RequireOwnerAsync(userId, ct);
+        var familySpace = await _repository.GetByIdAsync(owner.FamilySpaceId, ct);
+        var invites = await _repository.ListActiveInvitesByFamilySpaceAsync(owner.FamilySpaceId, ct);
+
+        return invites
+            .Select(invite => ToInviteDto(invite, familySpace?.Name))
+            .ToList();
+    }
+
     public async Task<FamilyMember> AcceptInviteAsync(
         Guid userId,
         string email,
@@ -288,6 +301,24 @@ public class FamilySpaceService : IFamilySpaceService
         var invite = await RequireUsableInviteAsync(inviteId, email, ct);
         invite.DeclinedAt = DateTime.UtcNow;
         await _repository.UpdateInviteAsync(invite, ct);
+    }
+
+    public async Task CancelInviteAsync(
+        Guid userId,
+        Guid inviteId,
+        CancellationToken ct = default)
+    {
+        var owner = await RequireOwnerAsync(userId, ct);
+        var invite = await _repository.GetInviteAsync(inviteId, ct)
+            ?? throw new InvalidOperationException("Family invite was not found.");
+
+        if (invite.FamilySpaceId != owner.FamilySpaceId)
+            throw new UnauthorizedAccessException("Only Family Space owners can manage invites.");
+
+        if (invite.AcceptedAt is not null || invite.DeclinedAt is not null)
+            throw new InvalidOperationException("Family invite is no longer pending.");
+
+        await _repository.DeleteInviteAsync(inviteId, ct);
     }
 
     public async Task<FamilyImportPreviewDto> PreviewImportAsync(
@@ -425,6 +456,16 @@ public class FamilySpaceService : IFamilySpaceService
         return member;
     }
 
+    private async Task<FamilyMember> RequireOwnerAsync(Guid userId, CancellationToken ct)
+    {
+        var member = await RequireMemberAsync(userId, ct);
+
+        if (member.Role != FamilyMemberRole.Owner)
+            throw new UnauthorizedAccessException("Only Family Space owners can manage invites.");
+
+        return member;
+    }
+
     private async Task<FamilyMember> RequireMemberAsync(Guid userId, CancellationToken ct) =>
         await _repository.GetMembershipByUserIdAsync(userId, ct)
             ?? throw new UnauthorizedAccessException("You do not belong to a Family Space.");
@@ -500,6 +541,16 @@ public class FamilySpaceService : IFamilySpaceService
         }, OutboxJsonOptions),
         CreatedAt = DateTime.UtcNow
     };
+
+    private static FamilyInviteDto ToInviteDto(FamilyInvite invite, string? familySpaceName) =>
+        new(
+            invite.Id,
+            invite.FamilySpaceId,
+            string.IsNullOrWhiteSpace(familySpaceName) ? "Family Space" : familySpaceName,
+            invite.Email,
+            invite.Role.ToString(),
+            invite.CreatedAt,
+            invite.ExpiresAt);
 
     private static string NormalizeEmail(string email)
     {
