@@ -73,8 +73,8 @@ void main() {
     expect(find.text('PHP 280.00 / 4,000.00'), findsOneWidget);
     expect(find.text('Recent family activity'), findsOneWidget);
     expect(find.text('Starbucks'), findsOneWidget);
-    expect(find.text('Recurring together'), findsOneWidget);
-    expect(find.text('Home internet'), findsOneWidget);
+    expect(find.text('Recurring together'), findsNothing);
+    expect(find.text('Home internet'), findsNothing);
     expect(find.text('Next steps'), findsNothing);
     expect(find.text('Invite family'), findsNothing);
     expect(find.text('Import personal records'), findsNothing);

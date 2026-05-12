@@ -210,18 +210,6 @@ class _FamilyOverviewDetails extends StatelessWidget {
                   ),
                 ),
         ),
-        ScreenSection(
-          title: 'Recurring together',
-          child: overview.recurringItems.isEmpty
-              ? const FeedCard(child: Text('No shared recurring items yet.'))
-              : FeedCard(
-                  child: Column(
-                    children: overview.recurringItems
-                        .map((item) => _RecurringOverviewRow(item: item))
-                        .toList(),
-                  ),
-                ),
-        ),
       ],
     );
   }
@@ -309,46 +297,6 @@ class _FamilyActivityRow extends StatelessWidget {
             style: theme.textTheme.labelLarge?.copyWith(
               color: isExpense ? Colors.red : Colors.green,
             ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _RecurringOverviewRow extends StatelessWidget {
-  const _RecurringOverviewRow({required this.item});
-
-  final FamilyRecurringOverview item;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Row(
-        children: [
-          const _FamilyIcon(icon: Icons.repeat_outlined),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(item.label, style: theme.textTheme.titleSmall),
-                const SizedBox(height: 4),
-                Text(
-                  '${item.cadence} · next ${DateFormat.MMMd().format(item.nextRunAt)}',
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Text(
-            '${item.currencyCode} ${_amount(item.amount)}',
-            style: theme.textTheme.labelLarge,
           ),
         ],
       ),
