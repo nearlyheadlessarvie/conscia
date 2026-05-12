@@ -109,6 +109,7 @@ class _FloatingLabelTextFieldState extends State<FloatingLabelTextField> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colors = theme.appColors;
+    final leadingInset = widget.prefix == null ? 14.0 : 48.0;
     final isFocused = _focusNode.hasFocus;
     final backgroundColor = _hasError
         ? theme.colorScheme.surface
@@ -145,7 +146,7 @@ class _FloatingLabelTextFieldState extends State<FloatingLabelTextField> {
           AnimatedPositioned(
             duration: const Duration(milliseconds: 160),
             curve: Curves.easeOut,
-            left: 14,
+            left: leadingInset,
             top: _isRaised ? 8 : 15,
             child: AnimatedDefaultTextStyle(
               duration: const Duration(milliseconds: 160),
@@ -167,7 +168,7 @@ class _FloatingLabelTextFieldState extends State<FloatingLabelTextField> {
           ),
           Padding(
             padding: EdgeInsets.fromLTRB(
-              widget.prefix == null ? 14 : 48,
+              leadingInset,
               22,
               widget.trailing == null ? 14 : 48,
               8,
