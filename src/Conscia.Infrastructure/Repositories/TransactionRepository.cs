@@ -63,10 +63,9 @@ public class TransactionRepository : DynamoRepository, ITransactionRepository
 
     public async Task UpdateAsync(Transaction transaction, CancellationToken ct = default)
     {
-        await Dynamo.PutItemAsync(new PutItemRequest
+        await Dynamo.TransactWriteItemsAsync(new TransactWriteItemsRequest
         {
-            TableName = TableName,
-            Item = ToItem(transaction)
+            TransactItems = await BuildReplaceTransactionWritesAsync(transaction, ct)
         }, ct);
     }
 
@@ -77,25 +76,7 @@ public class TransactionRepository : DynamoRepository, ITransactionRepository
     {
         await Dynamo.TransactWriteItemsAsync(new TransactWriteItemsRequest
         {
-            TransactItems =
-            [
-                new()
-                {
-                    Put = new Put
-                    {
-                        TableName = TableName,
-                        Item = ToItem(transaction)
-                    }
-                },
-                new()
-                {
-                    Put = new Put
-                    {
-                        TableName = "OutboxEvents",
-                        Item = OutboxToItem(outboxEvent)
-                    }
-                }
-            ]
+            TransactItems = await BuildReplaceTransactionWritesAsync(transaction, ct, outboxEvent)
         }, ct);
     }
 
@@ -345,6 +326,91 @@ public class TransactionRepository : DynamoRepository, ITransactionRepository
     }
 
     // ---------------- MAPPERS ----------------
+
+    private async Task<List<TransactWriteItem>> BuildReplaceTransactionWritesAsync(
+        Transaction transaction,
+        CancellationToken ct,
+        OutboxEvent? outboxEvent = null)
+    {
+        var transactionItem = ToItem(transaction);
+        var currentKey = Key(transactionItem["PK"].S, transactionItem["SK"].S);
+        var existingKeys = await QueryKeysByTransactionIdAsync(transaction.UserId, transaction.Id, ct);
+
+        var writes = new List<TransactWriteItem>();
+        writes.AddRange(existingKeys
+            .Where(key => !IsSameKey(key, currentKey))
+            .Select(key => new TransactWriteItem
+            {
+                Delete = new Delete
+                {
+                    TableName = TableName,
+                    Key = key
+                }
+            }));
+
+        writes.Add(new TransactWriteItem
+        {
+            Put = new Put
+            {
+                TableName = TableName,
+                Item = transactionItem
+            }
+        });
+
+        if (outboxEvent is not null)
+        {
+            writes.Add(new TransactWriteItem
+            {
+                Put = new Put
+                {
+                    TableName = "OutboxEvents",
+                    Item = OutboxToItem(outboxEvent)
+                }
+            });
+        }
+
+        return writes;
+    }
+
+    private async Task<List<Dictionary<string, AttributeValue>>> QueryKeysByTransactionIdAsync(
+        Guid userId,
+        Guid transactionId,
+        CancellationToken ct)
+    {
+        var keys = new List<Dictionary<string, AttributeValue>>();
+        Dictionary<string, AttributeValue>? lastEvaluatedKey = null;
+
+        do
+        {
+            var response = await Dynamo.QueryAsync(new QueryRequest
+            {
+                TableName = TableName,
+                KeyConditionExpression = "PK = :pk",
+                FilterExpression = "Id = :id",
+                ProjectionExpression = "PK, SK",
+                ExpressionAttributeValues = new Dictionary<string, AttributeValue>
+                {
+                    [":pk"] = new(DynamoKeys.User(userId)),
+                    [":id"] = new(transactionId.ToString())
+                },
+                ExclusiveStartKey = lastEvaluatedKey
+            }, ct);
+
+            keys.AddRange(response.Items
+                .Where(item => item.ContainsKey("PK") && item.ContainsKey("SK"))
+                .Select(item => Key(item["PK"].S, item["SK"].S)));
+
+            lastEvaluatedKey = response.LastEvaluatedKey;
+        }
+        while (lastEvaluatedKey is { Count: > 0 });
+
+        return keys;
+    }
+
+    private static bool IsSameKey(
+        Dictionary<string, AttributeValue> left,
+        Dictionary<string, AttributeValue> right) =>
+        left["PK"].S == right["PK"].S && left["SK"].S == right["SK"].S;
 
     private static Dictionary<string, AttributeValue> ToItem(Transaction t)
     {
