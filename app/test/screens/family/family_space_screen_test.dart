@@ -75,9 +75,13 @@ void main() {
     expect(find.text('Starbucks'), findsOneWidget);
     expect(find.text('Recurring together'), findsOneWidget);
     expect(find.text('Home internet'), findsOneWidget);
+    expect(find.text('Next steps'), findsNothing);
+    expect(find.text('Invite family'), findsNothing);
+    expect(find.text('Import personal records'), findsNothing);
+    expect(find.text('Schedule contribution'), findsNothing);
   });
 
-  testWidgets('family space screen hides write actions for viewers', (
+  testWidgets('family space screen keeps overview read-only for viewers', (
     tester,
   ) async {
     await tester.pumpWidget(
@@ -107,7 +111,8 @@ void main() {
 
     await tester.pumpAndSettle();
 
-    expect(find.text('View-only access'), findsOneWidget);
+    expect(find.text('Next steps'), findsNothing);
+    expect(find.text('View-only access'), findsNothing);
     expect(find.text('Invite family'), findsNothing);
     expect(find.text('Import personal records'), findsNothing);
     expect(find.text('Schedule contribution'), findsNothing);
