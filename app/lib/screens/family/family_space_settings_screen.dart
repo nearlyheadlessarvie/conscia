@@ -121,7 +121,7 @@ class _FamilySpaceSettingsView extends ConsumerWidget {
                   icon: Icons.home_outlined,
                   title: 'Household name',
                   subtitle: space.name,
-                  actionLabel: canManage ? 'Edit' : null,
+                  actionIcon: canManage ? Icons.edit_outlined : null,
                   onTap: canManage
                       ? () => _RenameFamilySpaceSheet.show(
                             context,
@@ -317,14 +317,14 @@ class _SettingsRow extends StatelessWidget {
     required this.icon,
     required this.title,
     required this.subtitle,
-    this.actionLabel,
+    this.actionIcon,
     this.onTap,
   });
 
   final IconData icon;
   final String title;
   final String subtitle;
-  final String? actionLabel;
+  final IconData? actionIcon;
   final VoidCallback? onTap;
 
   @override
@@ -370,16 +370,22 @@ class _SettingsRow extends StatelessWidget {
                 ],
               ),
             ),
-            if (actionLabel != null)
-              Text(
-                actionLabel!,
-                style: theme.textTheme.labelLarge?.copyWith(
-                  color: colors.primary,
-                  fontWeight: FontWeight.w900,
+            if (actionIcon != null)
+              IconButton(
+                onPressed: onTap,
+                icon: Icon(actionIcon),
+                color: colors.primary,
+                tooltip: 'Edit household name',
+                visualDensity: VisualDensity.compact,
+                style: IconButton.styleFrom(
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 ),
               )
             else if (onTap != null)
-              Icon(Icons.chevron_right, color: colors.onSurfaceVariant),
+              Icon(
+                Icons.chevron_right,
+                color: colors.onSurfaceVariant,
+              ),
           ],
         ),
       ),

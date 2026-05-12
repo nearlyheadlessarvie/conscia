@@ -31,7 +31,8 @@ void main() {
     expect(find.text('Household'), findsOneWidget);
     expect(find.text('Household name'), findsOneWidget);
     expect(find.text('Santos Household'), findsOneWidget);
-    expect(find.text('Edit'), findsOneWidget);
+    expect(find.text('Edit'), findsNothing);
+    expect(find.byIcon(Icons.edit_outlined), findsOneWidget);
     expect(find.text('Manage'), findsOneWidget);
     expect(find.text('Invites'), findsOneWidget);
     expect(find.text('Recent family activity'), findsNothing);
@@ -61,6 +62,7 @@ void main() {
 
     expect(find.text('Household name'), findsOneWidget);
     expect(find.text('Edit'), findsNothing);
+    expect(find.byIcon(Icons.edit_outlined), findsNothing);
     expect(find.text('Invites'), findsNothing);
     expect(find.text('Import personal records'), findsOneWidget);
   });
