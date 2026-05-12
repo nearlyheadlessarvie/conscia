@@ -341,20 +341,17 @@ class _ImportTypeCard extends StatelessWidget {
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(12),
         onTap: onTap,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 160),
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
           decoration: BoxDecoration(
-            color: selected
-                ? colors.primaryContainer.withValues(alpha: 0.55)
-                : colors.surfaceContainerHighest.withValues(alpha: 0.55),
-            borderRadius: BorderRadius.circular(20),
+            color: selected ? colors.primaryContainer : colors.surface,
+            borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: selected
-                  ? colors.primary.withValues(alpha: 0.38)
-                  : colors.outlineVariant,
+              color: selected ? colors.primary : colors.outlineVariant,
+              width: selected ? 2 : 1,
             ),
           ),
           child: Column(
