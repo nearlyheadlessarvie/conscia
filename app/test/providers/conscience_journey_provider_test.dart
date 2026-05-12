@@ -1,5 +1,6 @@
 import 'package:conscia_app/models/conscience_journey.dart';
 import 'package:conscia_app/providers/alert_provider.dart';
+import 'package:conscia_app/providers/auth_provider.dart';
 import 'package:conscia_app/providers/budget_providers.dart';
 import 'package:conscia_app/providers/conscience_journey_provider.dart';
 import 'package:conscia_app/services/budget_service.dart';
@@ -13,6 +14,7 @@ void main() {
     final service = _FakeConscienceJourneyService();
     final container = ProviderContainer(
       overrides: [
+        authCacheScopeProvider.overrideWithValue('test-user'),
         conscienceJourneyServiceProvider.overrideWithValue(service),
       ],
     );
@@ -35,6 +37,7 @@ void main() {
     final service = _FakeConscienceJourneyService();
     final container = ProviderContainer(
       overrides: [
+        authCacheScopeProvider.overrideWithValue('test-user'),
         conscienceJourneyServiceProvider.overrideWithValue(service),
         budgetServiceProvider.overrideWithValue(_StaticBudgetService()),
         alertsProvider.overrideWith((ref) async => const []),
