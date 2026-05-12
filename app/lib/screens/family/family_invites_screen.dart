@@ -35,7 +35,8 @@ class FamilyInvitesScreen extends ConsumerWidget {
                   loading: () => const SkeletonCard(),
                   error: (_, __) => _InviteErrorCard(
                     message: 'Unable to load sent invites',
-                    onRetry: () => ref.invalidate(familyOutgoingInvitesProvider),
+                    onRetry: () =>
+                        ref.invalidate(familyOutgoingInvitesProvider),
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -186,49 +187,16 @@ class _OutgoingInvitesSection extends StatelessWidget {
         Text('Invites you sent', style: theme.textTheme.titleMedium),
         const SizedBox(height: 10),
         if (invites.isEmpty)
-          const _EmptyOutgoingInvites()
+          const _CompactInviteEmptyState(
+            icon: Icons.outgoing_mail,
+            message: 'No sent invites right now.',
+          )
         else
           for (final invite in invites) ...[
             _OutgoingInviteCard(invite: invite),
-            if (invite != invites.last) const SizedBox(height: 12),
+            if (invite != invites.last) const SizedBox(height: 10),
           ],
       ],
-    );
-  }
-}
-
-class _EmptyOutgoingInvites extends StatelessWidget {
-  const _EmptyOutgoingInvites();
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return FeedCard(
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Icon(Icons.outgoing_mail),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('No outstanding invites',
-                    style: theme.textTheme.titleMedium),
-                const SizedBox(height: 4),
-                Text(
-                  'Sent invites that have not been accepted will show up here.',
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
-                    height: 1.3,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
     );
   }
 }
@@ -252,6 +220,7 @@ class _OutgoingInviteCardState extends ConsumerState<_OutgoingInviteCard> {
     final colors = theme.colorScheme;
 
     return FeedCard(
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -279,7 +248,7 @@ class _OutgoingInviteCardState extends ConsumerState<_OutgoingInviteCard> {
                         fontWeight: FontWeight.w700,
                       ),
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 7),
                     Wrap(
                       spacing: 8,
                       runSpacing: 8,
@@ -301,7 +270,7 @@ class _OutgoingInviteCardState extends ConsumerState<_OutgoingInviteCard> {
               ),
             ],
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 10),
           Align(
             alignment: Alignment.centerRight,
             child: OutlinedButton.icon(
@@ -317,8 +286,9 @@ class _OutgoingInviteCardState extends ConsumerState<_OutgoingInviteCard> {
               style: OutlinedButton.styleFrom(
                 foregroundColor: colors.error,
                 side: BorderSide(color: colors.error.withValues(alpha: 0.34)),
-                minimumSize: const Size(0, 38),
-                padding: const EdgeInsets.symmetric(horizontal: 14),
+                minimumSize: const Size(0, 34),
+                padding: const EdgeInsets.symmetric(horizontal: 13),
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
               ),
             ),
           ),
@@ -331,9 +301,7 @@ class _OutgoingInviteCardState extends ConsumerState<_OutgoingInviteCard> {
     setState(() => _isSubmitting = true);
     final messenger = ScaffoldMessenger.of(context);
     try {
-      await ref
-          .read(familySpaceActionsProvider)
-          .cancelInvite(widget.invite.id);
+      await ref.read(familySpaceActionsProvider).cancelInvite(widget.invite.id);
       if (!mounted) return;
       messenger.showSnackBar(
         const SnackBar(content: Text('Family invite cancelled.')),
@@ -364,8 +332,7 @@ class _InvitePill extends StatelessWidget {
     final colors = Theme.of(context).colorScheme;
     final Color background =
         quiet ? colors.surfaceContainerHighest : colors.primaryContainer;
-    final Color foreground =
-        quiet ? colors.onSurfaceVariant : colors.primary;
+    final Color foreground = quiet ? colors.onSurfaceVariant : colors.primary;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
@@ -391,39 +358,48 @@ class _InvitePill extends StatelessWidget {
   }
 }
 
-class _EmptyInvites extends StatelessWidget {
-  const _EmptyInvites();
+class _CompactInviteEmptyState extends StatelessWidget {
+  const _CompactInviteEmptyState({
+    required this.icon,
+    required this.message,
+  });
+
+  final IconData icon;
+  final String message;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final colors = theme.colorScheme;
 
-    return FeedCard(
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.mark_email_read_outlined),
-          const SizedBox(width: 12),
+          Icon(icon, size: 18, color: colors.onSurfaceVariant),
+          const SizedBox(width: 8),
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('No pending invites', style: theme.textTheme.titleMedium),
-                const SizedBox(height: 4),
-                Text(
-                  'Family Space invites for your email will show up here.',
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
-                    height: 1.3,
-                  ),
-                ),
-              ],
+            child: Text(
+              message,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: colors.onSurfaceVariant,
+              ),
             ),
           ),
         ],
       ),
     );
   }
+}
+
+class _EmptyInvites extends StatelessWidget {
+  const _EmptyInvites();
+
+  @override
+  Widget build(BuildContext context) => const _CompactInviteEmptyState(
+        icon: Icons.mark_email_read_outlined,
+        message: 'No pending invites right now.',
+      );
 }
 
 class _InviteErrorCard extends StatelessWidget {

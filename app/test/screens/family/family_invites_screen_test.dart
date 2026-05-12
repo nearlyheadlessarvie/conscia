@@ -73,6 +73,36 @@ void main() {
     expect(find.widgetWithText(FilledButton, 'Send invite'), findsOneWidget);
   });
 
+  testWidgets('empty invite sections use compact helper text', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          familyInvitesProvider.overrideWith((ref) async => []),
+          familyOutgoingInvitesProvider.overrideWith((ref) async => []),
+          familySpaceProvider.overrideWith(
+            (ref) async => const FamilySpace(
+              id: 'family-1',
+              name: 'Santos Household',
+              currencyCode: 'PHP',
+              isReadOnly: false,
+              role: 'Owner',
+            ),
+          ),
+        ],
+        child: const MaterialApp(home: FamilyInvitesScreen()),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    expect(find.text('No sent invites right now.'), findsOneWidget);
+    expect(find.text('No pending invites right now.'), findsOneWidget);
+    expect(find.text('No outstanding invites'), findsNothing);
+    expect(find.text('No pending invites'), findsNothing);
+  });
+
   testWidgets('owner sees outgoing invites and can cancel one', (
     tester,
   ) async {
@@ -114,7 +144,8 @@ void main() {
 
     expect(find.text('Invites you sent'), findsOneWidget);
     expect(find.text('wife@example.com'), findsOneWidget);
-    expect(find.widgetWithText(OutlinedButton, 'Cancel invite'), findsOneWidget);
+    expect(
+        find.widgetWithText(OutlinedButton, 'Cancel invite'), findsOneWidget);
 
     await tester.tap(find.widgetWithText(OutlinedButton, 'Cancel invite'));
     await tester.pumpAndSettle();
