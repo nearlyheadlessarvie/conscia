@@ -36,10 +36,14 @@ public class TransactionEndpointTests : IClassFixture<TestWebAppFactory>
             .Callback<Guid, CreateTransactionDto, CancellationToken>((_, dto, _) => capturedDto = dto)
             .ReturnsAsync(new Transaction
             {
-                Id = txnId, UserId = UserId, Type = TransactionType.Expense,
-                Amount = new Money(42.50m, "USD"), Category = "Food",
+                Id = txnId,
+                UserId = UserId,
+                Type = TransactionType.Expense,
+                Amount = new Money(42.50m, "USD"),
+                Category = "Food",
                 Counterparty = "Corner Cafe",
-                Date = DateTime.UtcNow, CreatedAt = DateTime.UtcNow
+                Date = DateTime.UtcNow,
+                CreatedAt = DateTime.UtcNow
             });
 
         var response = await _client.PostAsJsonAsync("/api/v1/transactions", new
@@ -81,7 +85,9 @@ public class TransactionEndpointTests : IClassFixture<TestWebAppFactory>
                         Counterparty = "Corner Cafe"
                     }
                 },
-                Page = 1, PageSize = 20, TotalCount = 1
+                Page = 1,
+                PageSize = 20,
+                TotalCount = 1
             });
 
         var response = await _client.GetAsync("/api/v1/transactions");
@@ -91,6 +97,51 @@ public class TransactionEndpointTests : IClassFixture<TestWebAppFactory>
         var firstItem = body.RootElement.GetProperty("items")[0];
         Assert.Equal("Corner Cafe", firstItem.GetProperty("counterparty").GetString());
         Assert.False(firstItem.TryGetProperty("merchant", out _));
+    }
+
+    [Fact]
+    public async Task ListTransactions_FamilyScopeUsesFamilyList()
+    {
+        var familySpaceId = Guid.NewGuid();
+        _factory.TransactionServiceMock
+            .Setup(s => s.ListFamilyAsync(UserId, 1, 20, null, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PagedResult<Transaction>
+            {
+                Items = new List<Transaction>
+                {
+                    new()
+                    {
+                        Id = Guid.NewGuid(),
+                        Type = TransactionType.Expense,
+                        Amount = new Money(2460, "PHP"),
+                        Category = "Dining",
+                        Counterparty = "Manam",
+                        Scope = RecordScope.Family,
+                        FamilySpaceId = familySpaceId,
+                        SharedByUserId = Guid.NewGuid(),
+                        Date = DateTime.UtcNow
+                    }
+                },
+                Page = 1,
+                PageSize = 20,
+                TotalCount = 1
+            });
+
+        var response = await _client.GetAsync("/api/v1/transactions?scope=family");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        _factory.TransactionServiceMock.Verify(s => s.ListFamilyAsync(
+            UserId,
+            1,
+            20,
+            null,
+            It.IsAny<CancellationToken>()), Times.Once);
+
+        using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        var firstItem = body.RootElement.GetProperty("items")[0];
+        Assert.Equal("family", firstItem.GetProperty("scope").GetString());
+        Assert.Equal(familySpaceId.ToString(), firstItem.GetProperty("familySpaceId").GetString());
+        Assert.True(firstItem.TryGetProperty("sharedByUserId", out _));
     }
 
     [Fact]

@@ -9,6 +9,7 @@ final transactionServiceProvider = Provider<TransactionService>((ref) {
 });
 
 final categoryFilterProvider = StateProvider<String?>((_) => null);
+final familyTransactionViewProvider = StateProvider<bool>((_) => false);
 
 class TransactionListState {
   final List<Transaction> transactions;
@@ -45,15 +46,20 @@ class TransactionListState {
 class TransactionListNotifier extends StateNotifier<TransactionListState> {
   final TransactionService? _service;
   final String? _categoryFilter;
+  final String? _scopeFilter;
 
-  TransactionListNotifier(this._service, this._categoryFilter)
-      : super(const TransactionListState()) {
+  TransactionListNotifier(
+    this._service,
+    this._categoryFilter, [
+    this._scopeFilter,
+  ]) : super(const TransactionListState()) {
     loadMore();
   }
 
   TransactionListNotifier.fromList(List<Transaction> txs)
       : _service = null,
         _categoryFilter = null,
+        _scopeFilter = null,
         super(TransactionListState(
           transactions: txs,
           isLoading: false,
@@ -71,6 +77,7 @@ class TransactionListNotifier extends StateNotifier<TransactionListState> {
       final result = await service.list(
         page: nextPage,
         category: _categoryFilter,
+        scope: _scopeFilter,
       );
       state = state.copyWith(
         transactions: [...state.transactions, ...result.items],
@@ -102,7 +109,9 @@ final filteredTransactionListProvider =
     StateNotifierProvider<TransactionListNotifier, TransactionListState>((ref) {
   final service = ref.watch(transactionServiceProvider);
   final category = ref.watch(categoryFilterProvider);
-  return TransactionListNotifier(service, category);
+  final familyView = ref.watch(familyTransactionViewProvider);
+  return TransactionListNotifier(
+      service, category, familyView ? 'family' : null);
 });
 
 final transactionDetailProvider =

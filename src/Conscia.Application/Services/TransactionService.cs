@@ -111,6 +111,47 @@ public class TransactionService : ITransactionService
         };
     }
 
+    public async Task<PagedResult<Transaction>> ListFamilyAsync(
+        Guid userId, int page, int pageSize, string? category = null, CancellationToken ct = default)
+    {
+        var member = await _familySpaces.GetMembershipByUserIdAsync(userId, ct);
+        if (member is null)
+        {
+            return new PagedResult<Transaction>
+            {
+                Items = Array.Empty<Transaction>(),
+                Page = page,
+                PageSize = pageSize,
+                TotalCount = 0
+            };
+        }
+
+        var now = DateTime.UtcNow;
+        var items = await _repo.GetByFamilySpaceAndDateRangeAsync(
+            member.FamilySpaceId,
+            now.AddYears(-2),
+            now.AddYears(1),
+            ct);
+
+        var filtered = items
+            .Where(t => string.IsNullOrWhiteSpace(category) || NormalizeFamilyCategory(t.Category) == category)
+            .OrderByDescending(t => t.Date)
+            .ToList();
+
+        var pageItems = filtered
+            .Skip(Math.Max(page - 1, 0) * pageSize)
+            .Take(pageSize)
+            .ToList();
+
+        return new PagedResult<Transaction>
+        {
+            Items = pageItems,
+            Page = page,
+            PageSize = pageSize,
+            TotalCount = filtered.Count
+        };
+    }
+
     public async Task<Transaction> UpdateAsync(Guid userId, Guid id, UpdateTransactionDto dto, CancellationToken ct = default)
     {
         var existing = await _repo.GetByIdAsync(userId, id, ct);
@@ -261,6 +302,11 @@ public class TransactionService : ITransactionService
                     PlaceName = transaction.Location.PlaceName
                 }
         };
+
+    private static string NormalizeFamilyCategory(string category) =>
+        category.StartsWith("Family ", StringComparison.OrdinalIgnoreCase)
+            ? category["Family ".Length..]
+            : category;
 
     private static void ApplyScope(Transaction transaction, Guid userId, RecordScope scope, Guid? familySpaceId)
     {

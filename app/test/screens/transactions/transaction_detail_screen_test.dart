@@ -2,7 +2,9 @@ import 'package:conscia_app/providers/transaction_providers.dart';
 import 'package:conscia_app/providers/budget_providers.dart';
 import 'package:conscia_app/providers/alert_provider.dart';
 import 'package:conscia_app/providers/ai_provider.dart';
+import 'package:conscia_app/providers/auth_provider.dart';
 import 'package:conscia_app/screens/transactions/transaction_detail_screen.dart';
+import 'package:conscia_app/services/auth_service.dart';
 import 'package:conscia_app/services/ai_service.dart';
 import 'package:conscia_app/services/budget_service.dart';
 import 'package:conscia_app/services/transaction_service.dart';
@@ -10,6 +12,7 @@ import 'package:conscia_app/widgets/conscience_mark.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
@@ -384,6 +387,50 @@ void main() {
     expect(find.text('Recurring transaction'), findsOneWidget);
   });
 
+  testWidgets('detail screen tags family transactions and other sharers', (
+    tester,
+  ) async {
+    final transaction = Transaction(
+      id: 'tx-family-detail',
+      amount: 2460,
+      currencyCode: 'PHP',
+      category: 'Dining',
+      description: 'Manam',
+      type: 'expense',
+      date: DateTime(2026, 5, 3),
+      scope: 'family',
+      familySpaceId: 'family-1',
+      sharedByUserId: 'spouse-user-id',
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          authProvider.overrideWith(
+            (ref) => _TestAuthNotifier(
+              const AuthState(
+                status: AuthStatus.authenticated,
+                userId: 'current-user-id',
+              ),
+            ),
+          ),
+          transactionDetailProvider
+              .overrideWith((ref, id) async => transaction),
+        ],
+        child: const MaterialApp(
+          home: TransactionDetailScreen(transactionId: 'tx-family-detail'),
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    expect(
+        find.byKey(const ValueKey('family-transaction-badge')), findsOneWidget);
+    expect(find.byKey(const ValueKey('transaction-sharer-avatar')),
+        findsOneWidget);
+  });
+
   testWidgets(
       'auto reflect entry suppresses follow-up banner and opens reflection flow',
       (tester) async {
@@ -441,4 +488,28 @@ void main() {
     await tester.pump(const Duration(seconds: 5));
     await tester.pumpAndSettle();
   });
+}
+
+class _TestAuthNotifier extends AuthNotifier {
+  _TestAuthNotifier(AuthState initialState)
+      : super(AuthService(Dio()), _FakeSecureStorage()) {
+    state = initialState;
+  }
+}
+
+class _FakeSecureStorage extends FlutterSecureStorage {
+  _FakeSecureStorage();
+
+  @override
+  Future<String?> read({
+    required String key,
+    AppleOptions? iOptions,
+    AndroidOptions? aOptions,
+    LinuxOptions? lOptions,
+    WebOptions? webOptions,
+    WindowsOptions? wOptions,
+    AppleOptions? mOptions,
+  }) async {
+    return null;
+  }
 }

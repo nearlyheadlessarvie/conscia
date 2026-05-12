@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 
 import '../../../core/constants/category_icons.dart';
 import '../../../core/utils/currency_formatter.dart';
+import '../../../widgets/family_badge.dart';
 import '../../../widgets/recurring_badge.dart';
 
 class TransactionTile extends StatelessWidget {
@@ -16,6 +17,11 @@ class TransactionTile extends StatelessWidget {
   final DateTime date;
   final int? regretLevel;
   final bool isRecurring;
+  final bool isFamily;
+  final bool hideFamilyBadge;
+  final String? sharedByUserId;
+  final String? currentUserId;
+  final String? sharedByInitials;
 
   const TransactionTile({
     super.key,
@@ -28,6 +34,11 @@ class TransactionTile extends StatelessWidget {
     required this.date,
     this.regretLevel,
     this.isRecurring = false,
+    this.isFamily = false,
+    this.hideFamilyBadge = false,
+    this.sharedByUserId,
+    this.currentUserId,
+    this.sharedByInitials,
   });
 
   static IconData iconFor(String category) =>
@@ -70,6 +81,31 @@ class TransactionTile extends StatelessWidget {
     return 'Regret';
   }
 
+  String get _displayCategory {
+    if (isFamily && category.startsWith('Family ')) {
+      return category.substring('Family '.length);
+    }
+    return category;
+  }
+
+  bool get _showSharerAvatar =>
+      sharedByUserId != null &&
+      sharedByUserId!.isNotEmpty &&
+      sharedByUserId != currentUserId;
+
+  String get _sharerInitials {
+    final explicit = sharedByInitials?.trim();
+    if (explicit != null && explicit.isNotEmpty) {
+      return explicit.length <= 2
+          ? explicit.toUpperCase()
+          : explicit.substring(0, 2).toUpperCase();
+    }
+
+    final compactId = sharedByUserId?.replaceAll('-', '') ?? '';
+    if (compactId.length >= 2) return compactId.substring(0, 2).toUpperCase();
+    return '?';
+  }
+
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
@@ -89,7 +125,7 @@ class TransactionTile extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         child: Row(
           children: [
-            badgeFor(category, size: 22, filled: false),
+            badgeFor(_displayCategory, size: 22, filled: false),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
@@ -103,14 +139,38 @@ class TransactionTile extends StatelessWidget {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    '$category · $dateStr',
+                    '$_displayCategory · $dateStr',
                     style: textTheme.bodySmall?.copyWith(
                       color: colors.onSurfaceVariant,
                     ),
                   ),
-                  if (isRecurring) ...[
+                  if (isRecurring ||
+                      (isFamily && !hideFamilyBadge) ||
+                      _showSharerAvatar) ...[
                     const SizedBox(height: 6),
-                    const RecurringBadge(compact: true),
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 4,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        if (isRecurring) const RecurringBadge(compact: true),
+                        if (isFamily && !hideFamilyBadge)
+                          const FamilyBadge(compact: true),
+                        if (_showSharerAvatar)
+                          CircleAvatar(
+                            key: const ValueKey('transaction-sharer-avatar'),
+                            radius: 10,
+                            backgroundColor: colors.tertiaryContainer,
+                            child: Text(
+                              _sharerInitials,
+                              style: textTheme.labelSmall?.copyWith(
+                                color: colors.onTertiaryContainer,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
                   ],
                 ],
               ),

@@ -70,7 +70,7 @@ class CategoryIcons {
     ),
     'Coffee': const _CategorySpec(
       material: Icons.coffee_rounded,
-      cupertino: Icons.coffee_rounded,
+      cupertino: CupertinoIcons.drop_fill,
       accent: Color(0xFF7B4B2A),
       tint: Color(0xFFF7EBDD),
     ),

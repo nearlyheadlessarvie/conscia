@@ -16,6 +16,9 @@ class Transaction {
   final DateTime? recurringOccurrenceDate;
   final String scope;
   final String? familySpaceId;
+  final String? sharedByUserId;
+  final String? sharedByInitials;
+  final String? sharedByDisplayName;
 
   const Transaction({
     required this.id,
@@ -30,9 +33,13 @@ class Transaction {
     this.recurringOccurrenceDate,
     this.scope = 'personal',
     this.familySpaceId,
+    this.sharedByUserId,
+    this.sharedByInitials,
+    this.sharedByDisplayName,
   });
 
   bool get isRecurring => recurringScheduleId != null;
+  bool get isFamily => scope == 'family';
 
   factory Transaction.fromJson(Map<String, dynamic> json) {
     return Transaction(
@@ -53,6 +60,9 @@ class Transaction {
           : null,
       scope: _parseScope(json['scope']),
       familySpaceId: json['familySpaceId'] as String?,
+      sharedByUserId: json['sharedByUserId'] as String?,
+      sharedByInitials: json['sharedByInitials'] as String?,
+      sharedByDisplayName: json['sharedByDisplayName'] as String?,
     );
   }
 
@@ -153,6 +163,7 @@ class TransactionService {
     int page = 1,
     int pageSize = 20,
     String? category,
+    String? scope,
   }) async {
     try {
       final response = await _dio.get(
@@ -161,6 +172,7 @@ class TransactionService {
           'page': page,
           'pageSize': pageSize,
           if (category != null) 'category': category,
+          if (scope != null) 'scope': scope,
         },
       );
       final data = response.data as Map<String, dynamic>;

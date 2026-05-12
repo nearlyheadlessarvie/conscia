@@ -61,10 +61,13 @@ public static class TransactionEndpoints
             ITransactionService svc,
             int page = 1,
             int pageSize = 20,
-            string? category = null) =>
+            string? category = null,
+            string? scope = null) =>
         {
             var userId = ctx.User.GetUserId();
-            var result = await svc.ListAsync(userId, page, pageSize, category, ctx.RequestAborted);
+            var result = string.Equals(scope, "family", StringComparison.OrdinalIgnoreCase)
+                ? await svc.ListFamilyAsync(userId, page, pageSize, category, ctx.RequestAborted)
+                : await svc.ListAsync(userId, page, pageSize, category, ctx.RequestAborted);
             return Results.Ok(new
             {
                 result.Page,
