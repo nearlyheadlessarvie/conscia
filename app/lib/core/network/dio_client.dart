@@ -1,6 +1,5 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import '../../providers/auth_provider.dart';
 import '../constants/api_constants.dart';
@@ -8,6 +7,8 @@ import '../constants/api_constants.dart';
 const _tokenKey = 'access_token';
 
 final dioProvider = Provider<Dio>((ref) {
+  ref.watch(authCacheScopeProvider);
+
   final dio = Dio(
     BaseOptions(
       baseUrl: ApiConstants.baseUrl,
@@ -20,7 +21,7 @@ final dioProvider = Provider<Dio>((ref) {
     ),
   );
 
-  const storage = FlutterSecureStorage();
+  final storage = ref.watch(secureStorageProvider);
   Future<bool>? refreshInFlight;
 
   dio.interceptors.add(
@@ -36,7 +37,12 @@ final dioProvider = Provider<Dio>((ref) {
         final request = error.requestOptions;
         final isUnauthorized = error.response?.statusCode == 401;
         final alreadyRetried = request.extra['authRetried'] == true;
-        final isRefreshRequest = request.path.endsWith(ApiConstants.refreshToken);
+        final isRefreshRequest =
+            request.path.endsWith(ApiConstants.refreshToken);
+
+        if (isUnauthorized && !ref.read(authProvider).isAuthenticated) {
+          return handler.next(error);
+        }
 
         if (isUnauthorized && !alreadyRetried && !isRefreshRequest) {
           refreshInFlight ??= ref.read(authProvider.notifier).refreshSession();

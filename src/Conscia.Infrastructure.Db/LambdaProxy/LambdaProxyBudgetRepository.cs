@@ -15,6 +15,9 @@ public class LambdaProxyBudgetRepository : LambdaProxyRepository, IBudgetReposit
     public Task<IReadOnlyList<Budget>> ListByUserAsync(Guid userId, CancellationToken ct = default) =>
         InvokeAsync<IReadOnlyList<Budget>>("Budget.ListByUser", new { UserId = userId }, ct);
 
+    public Task<IReadOnlyList<Budget>> ListByFamilySpaceAsync(Guid familySpaceId, CancellationToken ct = default) =>
+        InvokeAsync<IReadOnlyList<Budget>>("Budget.ListByFamilySpace", new { FamilySpaceId = familySpaceId }, ct);
+
     public Task<Budget> AddAsync(Budget budget, CancellationToken ct = default) =>
         InvokeAsync<Budget>("Budget.Add", budget, ct);
 

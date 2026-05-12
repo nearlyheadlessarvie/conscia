@@ -13,6 +13,8 @@ public class CreateRecurringScheduleDto
     public DateTime StartDate { get; set; }
     public RecurringCadence Cadence { get; set; }
     public DateTime? EndDate { get; set; }
+    public RecordScope Scope { get; set; } = RecordScope.Personal;
+    public Guid? FamilySpaceId { get; set; }
 }
 
 public class RecurringOptionsDto

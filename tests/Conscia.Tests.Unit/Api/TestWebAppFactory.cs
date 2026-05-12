@@ -22,6 +22,13 @@ public class TestWebAppFactory : WebApplicationFactory<Program>
     public Mock<IBudgetService> BudgetServiceMock { get; } = new();
     public Mock<ITransactionService> TransactionServiceMock { get; } = new();
     public Mock<IRecurringScheduleService> RecurringScheduleServiceMock { get; } = new();
+    public Mock<IFamilySpaceService> FamilySpaceServiceMock { get; } = new();
+    public Mock<ICategoryService> CategoryServiceMock { get; } = new();
+    public Mock<IFamilySpaceRepository> FamilySpaceRepoMock { get; } = new();
+    public Mock<ICategoryRepository> CategoryRepoMock { get; } = new();
+    public Mock<IBudgetRepository> BudgetRepoMock { get; } = new();
+    public Mock<ITransactionRepository> TransactionRepoMock { get; } = new();
+    public Mock<IRecurringScheduleRepository> RecurringScheduleRepoMock { get; } = new();
     public Mock<ISubscriptionService> SubscriptionServiceMock { get; } = new();
     public Mock<IAIService> AIServiceMock { get; } = new();
     public Mock<IInAppAlertRepository> AlertRepoMock { get; } = new();
@@ -54,6 +61,13 @@ public class TestWebAppFactory : WebApplicationFactory<Program>
             ReplaceService<IBudgetService>(services, BudgetServiceMock.Object);
             ReplaceService<ITransactionService>(services, TransactionServiceMock.Object);
             ReplaceService<IRecurringScheduleService>(services, RecurringScheduleServiceMock.Object);
+            ReplaceService<IFamilySpaceService>(services, FamilySpaceServiceMock.Object);
+            ReplaceService<ICategoryService>(services, CategoryServiceMock.Object);
+            ReplaceService<IFamilySpaceRepository>(services, FamilySpaceRepoMock.Object);
+            ReplaceService<ICategoryRepository>(services, CategoryRepoMock.Object);
+            ReplaceService<IBudgetRepository>(services, BudgetRepoMock.Object);
+            ReplaceService<ITransactionRepository>(services, TransactionRepoMock.Object);
+            ReplaceService<IRecurringScheduleRepository>(services, RecurringScheduleRepoMock.Object);
             ReplaceService<ISubscriptionService>(services, SubscriptionServiceMock.Object);
             ReplaceService<IAIService>(services, AIServiceMock.Object);
             ReplaceService<IInAppAlertRepository>(services, AlertRepoMock.Object);

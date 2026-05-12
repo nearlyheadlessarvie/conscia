@@ -93,10 +93,7 @@ abstract class AppIcons {
         material: Icons.people,
         cupertino: CupertinoIcons.person_2,
       );
-  static IconData get family => adaptive(
-        material: Icons.family_restroom,
-        cupertino: CupertinoIcons.person_3,
-      );
+  static IconData get family => Icons.diversity_3_outlined;
   static IconData get sharedHome =>
       adaptive(material: Icons.home, cupertino: CupertinoIcons.house);
 
@@ -186,8 +183,8 @@ abstract class AppIcons {
             tint: Color(0xFFECEFff),
           ),
         'family' => const _ProfileIconSpec(
-            material: Icons.family_restroom_rounded,
-            cupertino: CupertinoIcons.person_3_fill,
+            material: Icons.diversity_3_outlined,
+            cupertino: Icons.diversity_3_outlined,
             accent: Color(0xFF35509C),
             tint: Color(0xFFEAF0FF),
           ),

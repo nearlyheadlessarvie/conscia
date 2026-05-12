@@ -3,6 +3,7 @@ using Conscia.Tools.Seeder.Story;
 using Microsoft.EntityFrameworkCore;
 using Conscia.Infrastructure.Persistence;
 using Conscia.Domain.Entities;
+using Conscia.Domain.Enums;
 
 namespace Conscia.Tests.Unit.Tools;
 
@@ -46,11 +47,25 @@ public class StoryDemoScenarioTests
     }
 
     [Fact]
+    public void Build_UsesScopeInsteadOfFamilyPrefixedCategories()
+    {
+        var scenario = StoryDemoScenario.Build(DateTime.Parse("2026-05-11T00:00:00Z"));
+
+        Assert.DoesNotContain(scenario.Budgets, budget => budget.Category.StartsWith("Family "));
+        Assert.DoesNotContain(scenario.Transactions, tx => tx.Category.StartsWith("Family "));
+        Assert.Contains(
+            scenario.Transactions,
+            tx => tx.Category == "Dining" && tx.Scope == RecordScope.Family);
+    }
+
+    [Fact]
     public void Build_CreatesBothBudgetedAndUnbudgetedBudgetTrendExamples()
     {
         var scenario = StoryDemoScenario.Build(DateTime.Parse("2026-05-11T00:00:00Z"));
 
-        var diningBudget = Assert.Single(scenario.Budgets, budget => budget.Category == "Dining");
+        var diningBudget = Assert.Single(
+            scenario.Budgets,
+            budget => budget.Category == "Dining" && budget.Scope == RecordScope.Personal);
         var diningCurrentMonth = Assert.Single(
             scenario.MonthlyCategorySpends,
             spend => spend.Category == "Dining" && spend.MonthKey == "2026-05");
@@ -137,8 +152,14 @@ public class StoryDemoScenarioTests
 
         await StoryDemoRdsSeeder.SeedAsync(db, scenario, CancellationToken.None);
 
-        Assert.Equal(2, await db.Users.CountAsync());
+        Assert.Equal(
+            2 + scenario.AdditionalUsers.Count,
+            await db.Users.CountAsync());
         Assert.Equal(1, await db.Users.CountAsync(u => u.Email == scenario.User.Email));
+        foreach (var user in scenario.AdditionalUsers)
+        {
+            Assert.Equal(1, await db.Users.CountAsync(u => u.Email == user.Email));
+        }
         Assert.Equal(1, await db.UserIdentities.CountAsync(ui => ui.UserId == scenario.User.Id));
         Assert.Equal(1, await db.UserSubscriptions.CountAsync(us => us.UserId == scenario.User.Id));
         Assert.Equal(scenario.Budgets.Count, await db.Budgets.CountAsync(b => b.UserId == scenario.User.Id));

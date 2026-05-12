@@ -14,13 +14,15 @@ public class TransactionServiceTests
     private readonly Mock<ITransactionRepository> _repoMock = new();
     private readonly Mock<IExchangeRateService> _fxMock = new();
     private readonly Mock<IRecurringScheduleService> _recurringScheduleServiceMock = new();
+    private readonly Mock<IFamilySpaceRepository> _familyRepoMock = new();
     private readonly TransactionService _svc;
 
     public TransactionServiceTests() => _svc = new TransactionService(
         _repoMock.Object,
         _fxMock.Object,
         NullLogger<TransactionService>.Instance,
-        _recurringScheduleServiceMock.Object);
+        _recurringScheduleServiceMock.Object,
+        _familyRepoMock.Object);
 
     [Fact]
     public async Task CreateAsync_CreatesTransaction()
@@ -92,9 +94,13 @@ public class TransactionServiceTests
     {
         var dto = new CreateTransactionDto
         {
-            Amount = 10, CurrencyCode = "USD", Category = "Food",
+            Amount = 10,
+            CurrencyCode = "USD",
+            Category = "Food",
             Date = DateTime.UtcNow,
-            Latitude = 40.7128, Longitude = -74.0060, PlaceName = "NYC Shop"
+            Latitude = 40.7128,
+            Longitude = -74.0060,
+            PlaceName = "NYC Shop"
         };
 
         _repoMock.Setup(r => r.AddWithOutboxAsync(
@@ -132,7 +138,8 @@ public class TransactionServiceTests
         var txnId = Guid.NewGuid();
         var existing = new Transaction
         {
-            Id = txnId, UserId = userId,
+            Id = txnId,
+            UserId = userId,
             Type = TransactionType.Expense,
             Amount = new Money(50, "USD"),
             Category = "Food",
@@ -213,8 +220,12 @@ public class TransactionServiceTests
         var txnId = Guid.NewGuid();
         var existing = new Transaction
         {
-            Id = txnId, UserId = userId, Type = TransactionType.Expense,
-            Amount = new Money(50, "USD"), Category = "Food", Date = DateTime.UtcNow
+            Id = txnId,
+            UserId = userId,
+            Type = TransactionType.Expense,
+            Amount = new Money(50, "USD"),
+            Category = "Food",
+            Date = DateTime.UtcNow
         };
 
         _repoMock.Setup(r => r.GetByIdAsync(userId, txnId, It.IsAny<CancellationToken>()))
@@ -299,6 +310,60 @@ public class TransactionServiceTests
         Assert.Equal(2, result.Items.Count);
         Assert.Equal(1, result.Page);
         Assert.Equal(10, result.PageSize);
+    }
+
+    [Fact]
+    public async Task ListFamilyAsync_ReturnsFamilySpaceTransactions()
+    {
+        var userId = Guid.NewGuid();
+        var familySpaceId = Guid.NewGuid();
+        var familyItems = new List<Transaction>
+        {
+            new()
+            {
+                Id = Guid.NewGuid(),
+                UserId = Guid.NewGuid(),
+                Scope = RecordScope.Family,
+                FamilySpaceId = familySpaceId,
+                Amount = new Money(2460, "PHP"),
+                Category = "Family Dining",
+                Date = DateTime.UtcNow.AddDays(-1)
+            },
+            new()
+            {
+                Id = Guid.NewGuid(),
+                UserId = Guid.NewGuid(),
+                Scope = RecordScope.Family,
+                FamilySpaceId = familySpaceId,
+                Amount = new Money(3840, "PHP"),
+                Category = "Groceries",
+                Date = DateTime.UtcNow.AddDays(-2)
+            }
+        };
+
+        _familyRepoMock.Setup(r => r.GetMembershipByUserIdAsync(userId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new FamilyMember
+            {
+                UserId = userId,
+                FamilySpaceId = familySpaceId,
+                Role = FamilyMemberRole.Contributor
+            });
+        _repoMock.Setup(r => r.GetByFamilySpaceAndDateRangeAsync(
+                familySpaceId,
+                It.IsAny<DateTime>(),
+                It.IsAny<DateTime>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(familyItems);
+
+        var result = await _svc.ListFamilyAsync(userId, 1, 20, "Dining");
+
+        Assert.Single(result.Items);
+        Assert.Equal("Family Dining", result.Items[0].Category);
+        _repoMock.Verify(r => r.GetByFamilySpaceAndDateRangeAsync(
+            familySpaceId,
+            It.IsAny<DateTime>(),
+            It.IsAny<DateTime>(),
+            It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -408,5 +473,79 @@ public class TransactionServiceTests
                 r.EndDate == transactionDate.AddMonths(6) &&
                 r.Counterparty == "Netflix"),
             It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task CreateAsync_FamilyScope_AddsFamilyMetadataToTransactionAndOutboxPayload()
+    {
+        var userId = Guid.NewGuid();
+        var familySpaceId = Guid.NewGuid();
+        var dto = new CreateTransactionDto
+        {
+            Type = TransactionType.Expense,
+            Amount = 280m,
+            CurrencyCode = "PHP",
+            Category = "Dining",
+            Counterparty = "Starbucks",
+            Date = DateTime.UtcNow,
+            Scope = RecordScope.Family,
+            FamilySpaceId = familySpaceId
+        };
+        OutboxEvent? capturedEvent = null;
+
+        _familyRepoMock.Setup(r => r.GetMembershipByUserIdAsync(userId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new FamilyMember
+            {
+                UserId = userId,
+                FamilySpaceId = familySpaceId,
+                Role = FamilyMemberRole.Contributor
+            });
+        _repoMock.Setup(r => r.AddWithOutboxAsync(
+                It.IsAny<Transaction>(),
+                It.IsAny<OutboxEvent>(),
+                It.IsAny<CancellationToken>()))
+            .Callback<Transaction, OutboxEvent, CancellationToken>((_, evt, _) => capturedEvent = evt)
+            .ReturnsAsync((Transaction t, OutboxEvent _, CancellationToken __) => t);
+
+        var result = await _svc.CreateAsync(userId, dto);
+
+        Assert.Equal(RecordScope.Family, result.Scope);
+        Assert.Equal(familySpaceId, result.FamilySpaceId);
+        Assert.Equal(userId, result.SharedByUserId);
+        Assert.NotNull(result.SharedAt);
+        Assert.Contains("\"Scope\":\"Family\"", capturedEvent!.Payload);
+        Assert.Contains(familySpaceId.ToString(), capturedEvent.Payload);
+    }
+
+    [Fact]
+    public async Task CreateAsync_FamilyScopeRejectsUserOutsideFamilySpace()
+    {
+        var userId = Guid.NewGuid();
+        var familySpaceId = Guid.NewGuid();
+        _familyRepoMock.Setup(r => r.GetMembershipByUserIdAsync(userId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new FamilyMember
+            {
+                UserId = userId,
+                FamilySpaceId = Guid.NewGuid(),
+                Role = FamilyMemberRole.Contributor
+            });
+
+        var error = await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
+            _svc.CreateAsync(userId, new CreateTransactionDto
+            {
+                Type = TransactionType.Expense,
+                Amount = 280m,
+                CurrencyCode = "PHP",
+                Category = "Dining",
+                Date = DateTime.UtcNow,
+                Scope = RecordScope.Family,
+                FamilySpaceId = familySpaceId
+            }));
+
+        Assert.Equal("You do not belong to that Family Space.", error.Message);
+        _repoMock.Verify(r => r.AddWithOutboxAsync(
+            It.IsAny<Transaction>(),
+            It.IsAny<OutboxEvent>(),
+            It.IsAny<CancellationToken>()), Times.Never);
     }
 }

@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using Conscia.Application.DTOs;
 using Conscia.Application.Interfaces;
 using Conscia.Application.Models;
 using Conscia.Domain.Entities;
@@ -30,7 +31,10 @@ public class BudgetEndpointTests : IClassFixture<TestWebAppFactory>
     public async Task CreateBudget_ValidPayload_Returns201()
     {
         _factory.BudgetServiceMock
-            .Setup(s => s.CreateAsync(UserId, "Food", 500m, "USD", It.IsAny<CancellationToken>()))
+            .Setup(s => s.CreateAsync(UserId, It.Is<CreateBudgetDto>(dto =>
+                dto.Category == "Food" &&
+                dto.MonthlyLimit == 500m &&
+                dto.CurrencyCode == "USD"), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new Budget
             {
                 Id = Guid.NewGuid(), UserId = UserId, Category = "Food",
@@ -134,7 +138,10 @@ public class BudgetEndpointTests : IClassFixture<TestWebAppFactory>
                 new() { Id = Guid.NewGuid(), UserId = UserId, Category = "Transport", MonthlyLimit = 137m, CurrencyCode = "USD" },
             });
         _factory.BudgetServiceMock
-            .Setup(s => s.CreateAsync(UserId, "Shopping", 98m, "USD", It.IsAny<CancellationToken>()))
+            .Setup(s => s.CreateAsync(UserId, It.Is<CreateBudgetDto>(dto =>
+                dto.Category == "Shopping" &&
+                dto.MonthlyLimit == 98m &&
+                dto.CurrencyCode == "USD"), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new Budget
             {
                 Id = Guid.NewGuid(),

@@ -27,7 +27,7 @@ String friendlySignInErrorMessage(
 
   if (apiError != null) {
     if (isPasswordSignIn && apiError.isUnauthorized) {
-      return 'Invalid username or password. Reference: ${appError.referenceId}';
+      return 'Invalid username or password.';
     }
     return appError.userMessage;
   }

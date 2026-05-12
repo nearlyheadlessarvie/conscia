@@ -15,17 +15,20 @@ public class TransactionService : ITransactionService
     private readonly IExchangeRateService _exchangeRateService;
     private readonly ILogger<TransactionService> _logger;
     private readonly IRecurringScheduleService? _recurringScheduleService;
+    private readonly IFamilySpaceRepository _familySpaces;
 
     public TransactionService(
         ITransactionRepository repo,
         IExchangeRateService exchangeRateService,
         ILogger<TransactionService> logger,
-        IRecurringScheduleService? recurringScheduleService = null)
+        IRecurringScheduleService? recurringScheduleService,
+        IFamilySpaceRepository familySpaces)
     {
         _repo = repo;
         _exchangeRateService = exchangeRateService;
         _logger = logger;
         _recurringScheduleService = recurringScheduleService;
+        _familySpaces = familySpaces;
     }
 
     public async Task<Transaction> CreateAsync(Guid userId, CreateTransactionDto dto, CancellationToken ct = default)
@@ -50,6 +53,8 @@ public class TransactionService : ITransactionService
             Date = dto.Date,
             CreatedAt = DateTime.UtcNow
         };
+        await EnsureCanWriteFamilyRecordAsync(userId, dto.Scope, dto.FamilySpaceId, "family transactions", ct);
+        ApplyScope(transaction, userId, dto.Scope, dto.FamilySpaceId);
 
         if (dto.Latitude.HasValue && dto.Longitude.HasValue)
         {
@@ -78,6 +83,8 @@ public class TransactionService : ITransactionService
                 StartDate = dto.Recurring.StartDate ?? dto.Date,
                 Cadence = dto.Recurring.Cadence,
                 EndDate = dto.Recurring.EndDate,
+                Scope = dto.Scope,
+                FamilySpaceId = dto.FamilySpaceId,
             }, ct);
         }
 
@@ -104,6 +111,47 @@ public class TransactionService : ITransactionService
         };
     }
 
+    public async Task<PagedResult<Transaction>> ListFamilyAsync(
+        Guid userId, int page, int pageSize, string? category = null, CancellationToken ct = default)
+    {
+        var member = await _familySpaces.GetMembershipByUserIdAsync(userId, ct);
+        if (member is null)
+        {
+            return new PagedResult<Transaction>
+            {
+                Items = Array.Empty<Transaction>(),
+                Page = page,
+                PageSize = pageSize,
+                TotalCount = 0
+            };
+        }
+
+        var now = DateTime.UtcNow;
+        var items = await _repo.GetByFamilySpaceAndDateRangeAsync(
+            member.FamilySpaceId,
+            now.AddYears(-2),
+            now.AddYears(1),
+            ct);
+
+        var filtered = items
+            .Where(t => string.IsNullOrWhiteSpace(category) || NormalizeFamilyCategory(t.Category) == category)
+            .OrderByDescending(t => t.Date)
+            .ToList();
+
+        var pageItems = filtered
+            .Skip(Math.Max(page - 1, 0) * pageSize)
+            .Take(pageSize)
+            .ToList();
+
+        return new PagedResult<Transaction>
+        {
+            Items = pageItems,
+            Page = page,
+            PageSize = pageSize,
+            TotalCount = filtered.Count
+        };
+    }
+
     public async Task<Transaction> UpdateAsync(Guid userId, Guid id, UpdateTransactionDto dto, CancellationToken ct = default)
     {
         var existing = await _repo.GetByIdAsync(userId, id, ct);
@@ -123,6 +171,11 @@ public class TransactionService : ITransactionService
         if (dto.Category is not null) existing.Category = dto.Category;
         if (dto.Counterparty is not null) existing.Counterparty = dto.Counterparty;
         if (dto.Date.HasValue) existing.Date = dto.Date.Value;
+        if (dto.Scope.HasValue)
+        {
+            await EnsureCanWriteFamilyRecordAsync(userId, dto.Scope.Value, dto.FamilySpaceId, "family transactions", ct);
+            ApplyScope(existing, userId, dto.Scope.Value, dto.FamilySpaceId);
+        }
 
         await _repo.UpdateWithOutboxAsync(
             existing,
@@ -161,7 +214,11 @@ public class TransactionService : ITransactionService
                 Category = transaction.Category,
                 Amount = transaction.Amount.Amount,
                 CurrencyCode = transaction.Amount.CurrencyCode,
-                TransactionDate = transaction.Date
+                TransactionDate = transaction.Date,
+                Scope = transaction.Scope.ToString(),
+                transaction.FamilySpaceId,
+                transaction.SharedByUserId,
+                transaction.SharedAt
             }),
             CreatedAt = DateTime.UtcNow
         };
@@ -204,7 +261,13 @@ public class TransactionService : ITransactionService
                 Category = current.Category,
                 Amount = current.Amount.Amount,
                 CurrencyCode = current.Amount.CurrencyCode,
-                TransactionDate = current.Date
+                TransactionDate = current.Date,
+                PreviousScope = previous.Scope.ToString(),
+                PreviousFamilySpaceId = previous.FamilySpaceId,
+                Scope = current.Scope.ToString(),
+                current.FamilySpaceId,
+                current.SharedByUserId,
+                current.SharedAt
             }),
             CreatedAt = DateTime.UtcNow
         };
@@ -226,6 +289,10 @@ public class TransactionService : ITransactionService
             RegretLevel = transaction.RegretLevel,
             RecurringScheduleId = transaction.RecurringScheduleId,
             RecurringOccurrenceDate = transaction.RecurringOccurrenceDate,
+            Scope = transaction.Scope,
+            FamilySpaceId = transaction.FamilySpaceId,
+            SharedAt = transaction.SharedAt,
+            SharedByUserId = transaction.SharedByUserId,
             Location = transaction.Location is null
                 ? null
                 : new Location
@@ -235,4 +302,49 @@ public class TransactionService : ITransactionService
                     PlaceName = transaction.Location.PlaceName
                 }
         };
+
+    private static string NormalizeFamilyCategory(string category) =>
+        category.StartsWith("Family ", StringComparison.OrdinalIgnoreCase)
+            ? category["Family ".Length..]
+            : category;
+
+    private static void ApplyScope(Transaction transaction, Guid userId, RecordScope scope, Guid? familySpaceId)
+    {
+        transaction.Scope = scope;
+        if (scope == RecordScope.Family)
+        {
+            transaction.FamilySpaceId = familySpaceId
+                ?? throw new InvalidOperationException("Family Space is required for family transactions.");
+            transaction.SharedByUserId = userId;
+            transaction.SharedAt ??= DateTime.UtcNow;
+            return;
+        }
+
+        transaction.FamilySpaceId = null;
+        transaction.SharedByUserId = null;
+        transaction.SharedAt = null;
+    }
+
+    private async Task EnsureCanWriteFamilyRecordAsync(
+        Guid userId,
+        RecordScope scope,
+        Guid? familySpaceId,
+        string recordLabel,
+        CancellationToken ct)
+    {
+        if (scope != RecordScope.Family)
+            return;
+
+        if (!familySpaceId.HasValue)
+            throw new InvalidOperationException($"Family Space is required for {recordLabel}.");
+
+        var member = await _familySpaces.GetMembershipByUserIdAsync(userId, ct)
+            ?? throw new UnauthorizedAccessException("You do not belong to a Family Space.");
+
+        if (member.FamilySpaceId != familySpaceId.Value)
+            throw new UnauthorizedAccessException("You do not belong to that Family Space.");
+
+        if (member.Role == FamilyMemberRole.Viewer)
+            throw new UnauthorizedAccessException("Viewer cannot create Family Space records.");
+    }
 }

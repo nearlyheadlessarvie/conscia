@@ -9,6 +9,7 @@ import '../../core/errors/app_error.dart';
 import '../../core/utils/currency_formatter.dart';
 import '../../providers/alert_provider.dart';
 import '../../providers/ai_provider.dart';
+import '../../providers/auth_provider.dart';
 import '../../providers/budget_providers.dart';
 import '../../providers/transaction_providers.dart';
 import '../../providers/usage_provider.dart';
@@ -18,6 +19,7 @@ import '../../core/constants/category_icons.dart';
 import '../../screens/assistant/widgets/ai_message_bubble.dart';
 import '../../screens/dashboard/widgets/in_app_alert_banner.dart';
 import '../../widgets/conscience_mark.dart';
+import '../../widgets/family_badge.dart';
 import '../../widgets/premium_upgrade_dialog.dart';
 import '../../widgets/recurring_badge.dart';
 import '../../widgets/skeleton_loader.dart';
@@ -260,9 +262,31 @@ class _TransactionDetailScreenState
     });
   }
 
+  bool _isCurrentTransactionRoute(String? route) {
+    if (route == null || route.isEmpty) return false;
+
+    final uri = Uri.tryParse(route);
+    final path = uri?.path ?? route.split('?').first;
+    final normalizedPath =
+        path.endsWith('/') ? path.substring(0, path.length - 1) : path;
+
+    return normalizedPath == '/transactions/${widget.transactionId}';
+  }
+
+  bool _shouldHideContextualAlertAction(AppAlert alert) {
+    if (alert.type == 'ReflectionFollowUp') return false;
+
+    final isViewTransactionAction =
+        alert.actionLabel?.trim().toLowerCase() == 'view transaction';
+    return isViewTransactionAction &&
+        (alert.transactionId == widget.transactionId ||
+            _isCurrentTransactionRoute(alert.actionRoute));
+  }
+
   Widget _buildContent(Transaction tx, List<AppAlert> alerts) {
     final colors = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
+    final currentUserId = ref.watch(authProvider).userId;
     final isIncome = tx.type == 'income';
     final prefix = isIncome ? '+' : '-';
     final displayCounterparty =
@@ -337,7 +361,7 @@ class _TransactionDetailScreenState
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    '${isIncome ? "Income" : "Expense"} · ${tx.category}',
+                    '${isIncome ? "Income" : "Expense"} · ${_displayCategory(tx)}',
                     style: textTheme.bodyLarge?.copyWith(
                       color: colors.onSurfaceVariant,
                     ),
@@ -349,12 +373,38 @@ class _TransactionDetailScreenState
                       color: colors.onSurfaceVariant,
                     ),
                   ),
-                  if (tx.isRecurring) ...[
+                  if (tx.isRecurring || tx.isFamily) ...[
                     const SizedBox(height: 10),
-                    const RecurringBadge(),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 6,
+                      alignment: WrapAlignment.center,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        if (tx.isRecurring) const RecurringBadge(),
+                        if (tx.isFamily) const FamilyBadge(),
+                        if (_shouldShowSharerAvatar(tx, currentUserId))
+                          CircleAvatar(
+                            key: const ValueKey('transaction-sharer-avatar'),
+                            radius: 13,
+                            backgroundColor: colors.tertiaryContainer,
+                            child: Text(
+                              _sharerInitials(tx),
+                              style: textTheme.labelSmall?.copyWith(
+                                color: colors.onTertiaryContainer,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
                     const SizedBox(height: 6),
                     Text(
-                      'Recurring transaction',
+                      tx.isRecurring && tx.isFamily
+                          ? 'Recurring family transaction'
+                          : tx.isFamily
+                              ? 'Family transaction'
+                              : 'Recurring transaction',
                       style: textTheme.bodySmall?.copyWith(
                         color: colors.onSurfaceVariant,
                       ),
@@ -366,25 +416,35 @@ class _TransactionDetailScreenState
           ),
           const SizedBox(height: 24),
           if (contextualAlert != null) ...[
-            InAppAlertBanner(
-              title: contextualAlert.title,
-              message: contextualAlert.message,
-              actionLabel: contextualAlert.actionLabel,
-              onAction: () {
-                final alert = contextualAlert!;
-                if (alert.transactionId == widget.transactionId &&
-                    alert.type == 'ReflectionFollowUp') {
-                  _askAiReflection(dismissFollowUpAlert: true);
-                  return;
-                }
-                final route = alert.actionRoute;
-                if (route != null) {
-                  context.push(route);
-                }
+            Builder(
+              builder: (_) {
+                final actionLabel =
+                    _shouldHideContextualAlertAction(contextualAlert!)
+                        ? null
+                        : contextualAlert.actionLabel;
+                return InAppAlertBanner(
+                  title: contextualAlert.title,
+                  message: contextualAlert.message,
+                  actionLabel: actionLabel,
+                  onAction: actionLabel == null
+                      ? null
+                      : () {
+                          final alert = contextualAlert!;
+                          if (alert.transactionId == widget.transactionId &&
+                              alert.type == 'ReflectionFollowUp') {
+                            _askAiReflection(dismissFollowUpAlert: true);
+                            return;
+                          }
+                          final route = alert.actionRoute;
+                          if (route != null) {
+                            context.push(route);
+                          }
+                        },
+                  onDismiss: () => ref
+                      .read(dismissedAlertIdsProvider.notifier)
+                      .dismiss(contextualAlert!.id),
+                );
               },
-              onDismiss: () => ref
-                  .read(dismissedAlertIdsProvider.notifier)
-                  .dismiss(contextualAlert!.id),
             ),
             const SizedBox(height: 16),
           ],
@@ -432,6 +492,31 @@ class _TransactionDetailScreenState
           _buildRegretPicker(colors),
       ],
     );
+  }
+
+  String _displayCategory(Transaction tx) {
+    if (tx.isFamily && tx.category.startsWith('Family ')) {
+      return tx.category.substring('Family '.length);
+    }
+    return tx.category;
+  }
+
+  bool _shouldShowSharerAvatar(Transaction tx, String? currentUserId) =>
+      tx.sharedByUserId != null &&
+      tx.sharedByUserId!.isNotEmpty &&
+      tx.sharedByUserId != currentUserId;
+
+  String _sharerInitials(Transaction tx) {
+    final explicit = tx.sharedByInitials?.trim();
+    if (explicit != null && explicit.isNotEmpty) {
+      return explicit.length <= 2
+          ? explicit.toUpperCase()
+          : explicit.substring(0, 2).toUpperCase();
+    }
+
+    final compactId = tx.sharedByUserId?.replaceAll('-', '') ?? '';
+    if (compactId.length >= 2) return compactId.substring(0, 2).toUpperCase();
+    return '?';
   }
 
   Widget _buildRegretChip(ColorScheme colors) {

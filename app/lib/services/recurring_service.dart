@@ -21,4 +21,14 @@ class RecurringService {
         .map((item) => RecurringSchedule.fromJson(item as Map<String, dynamic>))
         .toList(growable: false);
   }
+
+  Future<RecurringSchedule> create(CreateRecurringScheduleRequest request) async {
+    final response = await _dio.post(
+      ApiConstants.recurring,
+      data: request.toJson(),
+    );
+    return RecurringSchedule.fromJson(
+      Map<String, dynamic>.from(response.data as Map),
+    );
+  }
 }

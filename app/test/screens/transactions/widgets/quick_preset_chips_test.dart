@@ -2,12 +2,35 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:conscia_app/core/constants/category_icons.dart';
+import 'package:conscia_app/models/managed_category.dart';
+import 'package:conscia_app/providers/category_provider.dart';
 import 'package:conscia_app/providers/usage_provider.dart';
 import 'package:conscia_app/screens/transactions/widgets/quick_preset_chips.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+ManagedCategory _category({
+  required String id,
+  required String name,
+  required String type,
+}) {
+  return ManagedCategory(
+    id: id,
+    name: name,
+    normalizedName: name.toLowerCase(),
+    type: type,
+    scope: 'Personal',
+    iconKey: null,
+    colorKey: null,
+    isArchived: false,
+    isDefault: false,
+    createdAt: DateTime(2026),
+    updatedAt: DateTime(2026),
+  );
+}
+
 Future<Widget> _buildQuickPresetChipsApp({
   required QuickPresetChips child,
+  List<ManagedCategory> managedCategories = const [],
   Map<String, Object> initialPrefs = const {
     'location_suggestions_enabled': false,
     'location_suggestions_prompted': true,
@@ -19,6 +42,8 @@ Future<Widget> _buildQuickPresetChipsApp({
   return ProviderScope(
     overrides: [
       sharedPreferencesProvider.overrideWithValue(prefs),
+      managedCategoriesProvider(const CategoryQuery())
+          .overrideWith((ref) async => managedCategories),
     ],
     child: MaterialApp(
       home: Scaffold(body: child),
@@ -61,7 +86,8 @@ void main() {
       ),
     ));
 
-    final chip = tester.widget<FilterChip>(find.widgetWithText(FilterChip, 'Coffee'));
+    final chip =
+        tester.widget<FilterChip>(find.widgetWithText(FilterChip, 'Coffee'));
     expect(chip.selected, isTrue);
   });
 
@@ -99,13 +125,38 @@ void main() {
     expect(find.text('Coffee'), findsNothing);
   });
 
+  testWidgets('uses managed categories for quick picks', (tester) async {
+    await tester.pumpWidget(await _buildQuickPresetChipsApp(
+      managedCategories: [
+        _category(id: 'pet', name: 'Pet care', type: 'Expense'),
+        _category(id: 'salary', name: 'Salary', type: 'Income'),
+      ],
+      child: QuickPresetChips(
+        selectedCategory: null,
+        isExpense: true,
+        onCategorySelected: (_) {},
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Pet care'), findsOneWidget);
+    expect(find.text('Dining'), findsNothing);
+    expect(find.text('Salary'), findsNothing);
+  });
+
   testWidgets('free-tier expense chips hide categories beyond the cap',
       (tester) async {
     await tester.pumpWidget(await _buildQuickPresetChipsApp(
       initialPrefs: const {
         'location_suggestions_enabled': false,
         'location_suggestions_prompted': true,
-        'recent_categories': ['Travel', 'Health', 'Shopping', 'Dining', 'Coffee'],
+        'recent_categories': [
+          'Travel',
+          'Health',
+          'Shopping',
+          'Dining',
+          'Coffee'
+        ],
       },
       child: QuickPresetChips(
         selectedCategory: null,

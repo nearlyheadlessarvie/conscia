@@ -22,7 +22,8 @@ public abstract class BaseAIService : IAIService
 
         var userPrompt = PromptTemplates.BuildPrePurchaseUserPrompt(
             context.Amount, context.CurrencyCode, context.Category,
-            context.BudgetPercentUsed, context.RecentRegrets, context.SpendingFrequencyThisWeek);
+            context.BudgetPercentUsed, context.RecentRegrets, context.SpendingFrequencyThisWeek,
+            context.ContextScope, context.FamilyContextSummary, context.InsightContext);
 
         return await OrchestrateAsync(userPrompt, context, isReflectionFlow: false, ct);
     }

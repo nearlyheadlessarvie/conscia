@@ -18,6 +18,59 @@ class RecurringDraft {
   }
 }
 
+class CreateRecurringScheduleRequest {
+  const CreateRecurringScheduleRequest({
+    required this.type,
+    required this.amount,
+    required this.currencyCode,
+    required this.category,
+    required this.startDate,
+    required this.cadence,
+    this.counterparty,
+    this.endDate,
+    this.scope = 'personal',
+    this.familySpaceId,
+  });
+
+  final String type;
+  final double amount;
+  final String currencyCode;
+  final String category;
+  final String? counterparty;
+  final DateTime startDate;
+  final String cadence;
+  final DateTime? endDate;
+  final String scope;
+  final String? familySpaceId;
+
+  Map<String, dynamic> toJson() {
+    final json = <String, dynamic>{
+      'type': _pascal(type),
+      'amount': amount,
+      'currencyCode': currencyCode,
+      'category': category,
+      'startDate': startDate.toIso8601String(),
+      'cadence': cadence,
+      'scope': _pascal(scope),
+    };
+    if (counterparty != null && counterparty!.trim().isNotEmpty) {
+      json['counterparty'] = counterparty!.trim();
+    }
+    if (endDate != null) {
+      json['endDate'] = endDate!.toIso8601String();
+    }
+    if (familySpaceId != null) {
+      json['familySpaceId'] = familySpaceId;
+    }
+    return json;
+  }
+
+  static String _pascal(String value) {
+    if (value.isEmpty) return value;
+    return value[0].toUpperCase() + value.substring(1).toLowerCase();
+  }
+}
+
 class RecurringSchedule {
   final String id;
   final String type;

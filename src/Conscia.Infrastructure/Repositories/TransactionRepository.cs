@@ -63,10 +63,9 @@ public class TransactionRepository : DynamoRepository, ITransactionRepository
 
     public async Task UpdateAsync(Transaction transaction, CancellationToken ct = default)
     {
-        await Dynamo.PutItemAsync(new PutItemRequest
+        await Dynamo.TransactWriteItemsAsync(new TransactWriteItemsRequest
         {
-            TableName = TableName,
-            Item = ToItem(transaction)
+            TransactItems = await BuildReplaceTransactionWritesAsync(transaction, ct)
         }, ct);
     }
 
@@ -77,25 +76,7 @@ public class TransactionRepository : DynamoRepository, ITransactionRepository
     {
         await Dynamo.TransactWriteItemsAsync(new TransactWriteItemsRequest
         {
-            TransactItems =
-            [
-                new()
-                {
-                    Put = new Put
-                    {
-                        TableName = TableName,
-                        Item = ToItem(transaction)
-                    }
-                },
-                new()
-                {
-                    Put = new Put
-                    {
-                        TableName = "OutboxEvents",
-                        Item = OutboxToItem(outboxEvent)
-                    }
-                }
-            ]
+            TransactItems = await BuildReplaceTransactionWritesAsync(transaction, ct, outboxEvent)
         }, ct);
     }
 
@@ -287,6 +268,44 @@ public class TransactionRepository : DynamoRepository, ITransactionRepository
         return response.Items.Select(FromItem).ToList();
     }
 
+    public async Task<IReadOnlyList<Transaction>> GetByFamilySpaceAndDateRangeAsync(
+        Guid familySpaceId,
+        DateTime from,
+        DateTime to,
+        CancellationToken ct = default)
+    {
+        var transactions = new List<Transaction>();
+        Dictionary<string, AttributeValue>? lastEvaluatedKey = null;
+
+        do
+        {
+            var response = await Dynamo.ScanAsync(new ScanRequest
+            {
+                TableName = TableName,
+                FilterExpression = "#scope = :scope AND FamilySpaceId = :familySpaceId AND #date BETWEEN :from AND :to",
+                ExpressionAttributeNames = new Dictionary<string, string>
+                {
+                    ["#scope"] = "Scope",
+                    ["#date"] = "Date"
+                },
+                ExpressionAttributeValues = new Dictionary<string, AttributeValue>
+                {
+                    [":scope"] = new(RecordScope.Family.ToString()),
+                    [":familySpaceId"] = new(familySpaceId.ToString()),
+                    [":from"] = new(from.ToString("O")),
+                    [":to"] = new(to.ToString("O"))
+                },
+                ExclusiveStartKey = lastEvaluatedKey
+            }, ct);
+
+            transactions.AddRange(response.Items.Select(FromItem));
+            lastEvaluatedKey = response.LastEvaluatedKey;
+        }
+        while (lastEvaluatedKey is { Count: > 0 });
+
+        return transactions;
+    }
+
     public async Task UpdateRegretLevelAsync(Guid userId, Guid id, RegretLevel level, CancellationToken ct = default)
     {
         var existing = await GetByIdAsync(userId, id, ct)
@@ -308,6 +327,91 @@ public class TransactionRepository : DynamoRepository, ITransactionRepository
 
     // ---------------- MAPPERS ----------------
 
+    private async Task<List<TransactWriteItem>> BuildReplaceTransactionWritesAsync(
+        Transaction transaction,
+        CancellationToken ct,
+        OutboxEvent? outboxEvent = null)
+    {
+        var transactionItem = ToItem(transaction);
+        var currentKey = Key(transactionItem["PK"].S, transactionItem["SK"].S);
+        var existingKeys = await QueryKeysByTransactionIdAsync(transaction.UserId, transaction.Id, ct);
+
+        var writes = new List<TransactWriteItem>();
+        writes.AddRange(existingKeys
+            .Where(key => !IsSameKey(key, currentKey))
+            .Select(key => new TransactWriteItem
+            {
+                Delete = new Delete
+                {
+                    TableName = TableName,
+                    Key = key
+                }
+            }));
+
+        writes.Add(new TransactWriteItem
+        {
+            Put = new Put
+            {
+                TableName = TableName,
+                Item = transactionItem
+            }
+        });
+
+        if (outboxEvent is not null)
+        {
+            writes.Add(new TransactWriteItem
+            {
+                Put = new Put
+                {
+                    TableName = "OutboxEvents",
+                    Item = OutboxToItem(outboxEvent)
+                }
+            });
+        }
+
+        return writes;
+    }
+
+    private async Task<List<Dictionary<string, AttributeValue>>> QueryKeysByTransactionIdAsync(
+        Guid userId,
+        Guid transactionId,
+        CancellationToken ct)
+    {
+        var keys = new List<Dictionary<string, AttributeValue>>();
+        Dictionary<string, AttributeValue>? lastEvaluatedKey = null;
+
+        do
+        {
+            var response = await Dynamo.QueryAsync(new QueryRequest
+            {
+                TableName = TableName,
+                KeyConditionExpression = "PK = :pk",
+                FilterExpression = "Id = :id",
+                ProjectionExpression = "PK, SK",
+                ExpressionAttributeValues = new Dictionary<string, AttributeValue>
+                {
+                    [":pk"] = new(DynamoKeys.User(userId)),
+                    [":id"] = new(transactionId.ToString())
+                },
+                ExclusiveStartKey = lastEvaluatedKey
+            }, ct);
+
+            keys.AddRange(response.Items
+                .Where(item => item.ContainsKey("PK") && item.ContainsKey("SK"))
+                .Select(item => Key(item["PK"].S, item["SK"].S)));
+
+            lastEvaluatedKey = response.LastEvaluatedKey;
+        }
+        while (lastEvaluatedKey is { Count: > 0 });
+
+        return keys;
+    }
+
+    private static bool IsSameKey(
+        Dictionary<string, AttributeValue> left,
+        Dictionary<string, AttributeValue> right) =>
+        left["PK"].S == right["PK"].S && left["SK"].S == right["SK"].S;
+
     private static Dictionary<string, AttributeValue> ToItem(Transaction t)
     {
         var item = new Dictionary<string, AttributeValue>
@@ -323,6 +427,7 @@ public class TransactionRepository : DynamoRepository, ITransactionRepository
             ["Category"] = new(t.Category),
             ["Date"] = new(t.Date.ToString("O")),
             ["CreatedAt"] = new(t.CreatedAt.ToString("O")),
+            ["Scope"] = new(t.Scope.ToString()),
 
             // GSI SUPPORT
             ["GSI1SK"] = new(DynamoKeys.TransactionSortKey(t.Category, t.Date))
@@ -351,6 +456,15 @@ public class TransactionRepository : DynamoRepository, ITransactionRepository
 
         if (t.RecurringOccurrenceDate.HasValue)
             item["RecurringOccurrenceDate"] = new(t.RecurringOccurrenceDate.Value.ToString("O"));
+
+        if (t.FamilySpaceId.HasValue)
+            item["FamilySpaceId"] = new(t.FamilySpaceId.Value.ToString());
+
+        if (t.SharedAt.HasValue)
+            item["SharedAt"] = new(t.SharedAt.Value.ToString("O"));
+
+        if (t.SharedByUserId.HasValue)
+            item["SharedByUserId"] = new(t.SharedByUserId.Value.ToString());
 
         return item;
     }
@@ -385,6 +499,21 @@ public class TransactionRepository : DynamoRepository, ITransactionRepository
             RecurringOccurrenceDate = item.TryGetValue("RecurringOccurrenceDate", out var recurringOccurrenceDate)
                 && DateTime.TryParse(recurringOccurrenceDate.S, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var occurrenceDate)
                     ? occurrenceDate
+                    : null,
+            Scope = item.TryGetValue("Scope", out var scope)
+                ? Enum.Parse<RecordScope>(scope.S)
+                : RecordScope.Personal,
+            FamilySpaceId = item.TryGetValue("FamilySpaceId", out var familySpaceId)
+                && Guid.TryParse(familySpaceId.S, out var parsedFamilySpaceId)
+                    ? parsedFamilySpaceId
+                    : null,
+            SharedAt = item.TryGetValue("SharedAt", out var sharedAt)
+                && DateTime.TryParse(sharedAt.S, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var parsedSharedAt)
+                    ? parsedSharedAt
+                    : null,
+            SharedByUserId = item.TryGetValue("SharedByUserId", out var sharedByUserId)
+                && Guid.TryParse(sharedByUserId.S, out var parsedSharedByUserId)
+                    ? parsedSharedByUserId
                     : null,
             CreatedAt = DateTime.Parse(item["CreatedAt"].S, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind)
         };

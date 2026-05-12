@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/routing/app_router.dart';
 import '../../core/theme/app_colors.dart';
+import '../../providers/auth_provider.dart';
 import '../../providers/transaction_providers.dart';
 import '../../services/transaction_service.dart';
 import '../../widgets/empty_state.dart';
@@ -56,7 +57,7 @@ class _TransactionListScreenState extends ConsumerState<TransactionListScreen> {
 
     final categories = {
       if (selectedCategory != null) selectedCategory,
-      ...state.transactions.map((t) => t.category),
+      ...state.transactions.map(_displayCategory),
     }.toList()
       ..sort();
 
@@ -227,11 +228,15 @@ class _TransactionListScreenState extends ConsumerState<TransactionListScreen> {
                         isIncome: groups[key]![index].type == 'income',
                         amount: groups[key]![index].amount,
                         currencyCode: groups[key]![index].currencyCode,
-                        category: groups[key]![index].category,
+                        category: _displayCategory(groups[key]![index]),
                         counterparty: groups[key]![index].description,
                         date: groups[key]![index].date,
                         regretLevel: groups[key]![index].regretLevel,
                         isRecurring: groups[key]![index].isRecurring,
+                        isFamily: groups[key]![index].isFamily,
+                        sharedByUserId: groups[key]![index].sharedByUserId,
+                        sharedByInitials: groups[key]![index].sharedByInitials,
+                        currentUserId: ref.watch(authProvider).userId,
                       ),
                       if (index < groups[key]!.length - 1)
                         const Divider(indent: 72, height: 1),
@@ -243,6 +248,13 @@ class _TransactionListScreenState extends ConsumerState<TransactionListScreen> {
           ),
         ),
     ];
+  }
+
+  String _displayCategory(Transaction tx) {
+    if (tx.isFamily && tx.category.startsWith('Family ')) {
+      return tx.category.substring('Family '.length);
+    }
+    return tx.category;
   }
 
   String _formatDateLabel(DateTime date) {

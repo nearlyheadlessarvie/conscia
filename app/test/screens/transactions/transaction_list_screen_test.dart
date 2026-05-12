@@ -12,18 +12,29 @@ class _StaticTransactionService extends TransactionService {
   _StaticTransactionService(this.transactions) : super(Dio());
 
   final List<Transaction> transactions;
+  String? lastScope;
 
   @override
   Future<PaginatedTransactions> list({
     int page = 1,
     int pageSize = 20,
     String? category,
+    String? scope,
   }) async {
+    lastScope = scope;
+    final filtered = transactions.where((t) {
+      final matchesScope = scope == null || t.scope == scope;
+      final normalizedCategory = t.category.startsWith('Family ')
+          ? t.category.substring('Family '.length)
+          : t.category;
+      final matchesCategory =
+          category == null || normalizedCategory == category;
+      return matchesScope && matchesCategory;
+    }).toList();
+
     return PaginatedTransactions(
-      items: category == null
-          ? transactions
-          : transactions.where((t) => t.category == category).toList(),
-      totalCount: transactions.length,
+      items: filtered,
+      totalCount: filtered.length,
       page: page,
       pageSize: pageSize,
       hasMore: false,
@@ -286,5 +297,82 @@ void main() {
     );
 
     expect(find.text('Recurring'), findsOneWidget);
+  });
+
+  testWidgets('family transaction displays real category with family badge', (
+    tester,
+  ) async {
+    await _pumpTransactionList(
+      tester,
+      transactions: [
+        Transaction(
+          id: 'tx-family',
+          amount: 2460,
+          currencyCode: 'PHP',
+          category: 'Family Dining',
+          description: 'Manam',
+          type: 'expense',
+          date: DateTime(2026, 5, 3),
+          scope: 'family',
+          familySpaceId: 'family-1',
+        ),
+      ],
+    );
+
+    expect(find.text('Dining · May 3'), findsOneWidget);
+    expect(find.text('Family Dining'), findsNothing);
+    expect(
+        find.byKey(const ValueKey('family-transaction-badge')), findsOneWidget);
+    expect(find.byKey(const ValueKey('selection-chip-button-Dining')),
+        findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('selection-chip-button-Family Dining')),
+      findsNothing,
+    );
+  });
+
+  testWidgets('transaction list does not expose a family-only filter toggle', (
+    tester,
+  ) async {
+    final service = _StaticTransactionService([
+      Transaction(
+        id: 'tx-personal',
+        amount: 420,
+        currencyCode: 'PHP',
+        category: 'Transport',
+        description: 'Grab',
+        type: 'expense',
+        date: DateTime(2026, 4, 30),
+      ),
+      Transaction(
+        id: 'tx-family',
+        amount: 2460,
+        currencyCode: 'PHP',
+        category: 'Dining',
+        description: 'Manam',
+        type: 'expense',
+        date: DateTime(2026, 5, 3),
+        scope: 'family',
+        familySpaceId: 'family-1',
+      ),
+    ]);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          transactionServiceProvider.overrideWithValue(service),
+        ],
+        child: const MaterialApp(home: TransactionListScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Grab'), findsOneWidget);
+    expect(find.text('Manam'), findsOneWidget);
+    expect(
+        find.byKey(const ValueKey('family-transaction-badge')), findsOneWidget);
+    expect(service.lastScope, isNull);
+    expect(find.byTooltip('Show family transactions'), findsNothing);
+    expect(find.byTooltip('Show all transactions'), findsNothing);
   });
 }

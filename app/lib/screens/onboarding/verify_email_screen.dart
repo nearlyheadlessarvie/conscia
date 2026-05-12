@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/constants/api_constants.dart';
 import '../../core/routing/app_router.dart';
 import '../../core/errors/app_error.dart';
 import '../../providers/auth_provider.dart';
@@ -172,6 +173,42 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
                       color: colors.onSurfaceVariant,
                     ),
               ),
+              if (ApiConstants.useMockAuth) ...[
+                const SizedBox(height: 12),
+                DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: colors.secondaryContainer,
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 12,
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(
+                          Icons.code,
+                          size: 18,
+                          color: colors.onSecondaryContainer,
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            'Local dev: no email was sent. Enter any code to continue.',
+                            style:
+                                Theme.of(context).textTheme.bodySmall?.copyWith(
+                                      color: colors.onSecondaryContainer,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
               const SizedBox(height: 32),
               if (_errorMessage != null) ...[
                 MaterialBanner(

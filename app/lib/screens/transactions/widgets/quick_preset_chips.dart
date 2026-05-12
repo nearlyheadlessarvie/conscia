@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/category_icons.dart';
 import '../../../core/constants/category_visibility.dart';
 import '../../../core/constants/generated/app_constants.g.dart';
+import '../../../models/managed_category.dart';
+import '../../../providers/category_provider.dart';
 import '../../../providers/category_recents_provider.dart';
 
 class QuickPresetChips extends ConsumerWidget {
@@ -23,12 +25,22 @@ class QuickPresetChips extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final recentCategories = ref.watch(recentCategoryProvider);
-    final categories = isExpense
-        ? _expenseQuickCategories(recentCategories)
-        : orderCategoriesByRecency(
-            categories: incomeCategories,
+    final managedCategories =
+        ref.watch(managedCategoriesProvider(const CategoryQuery())).maybeWhen(
+              data: _managedCategoryNames,
+              orElse: () => const <String>[],
+            );
+    final categories = managedCategories.isNotEmpty
+        ? orderCategoriesByRecency(
+            categories: managedCategories,
             recents: recentCategories,
-          ).take(5).toList();
+          ).take(5).toList()
+        : isExpense
+            ? _expenseQuickCategories(recentCategories)
+            : orderCategoriesByRecency(
+                categories: incomeCategories,
+                recents: recentCategories,
+              ).take(5).toList();
 
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
@@ -61,5 +73,13 @@ class QuickPresetChips extends ConsumerWidget {
       categories: allowedCategories,
       recents: recentCategories,
     ).take(5).toList();
+  }
+
+  List<String> _managedCategoryNames(List<ManagedCategory> categories) {
+    return categories
+        .where((category) => !category.isArchived)
+        .where((category) => isExpense ? category.isExpense : category.isIncome)
+        .map((category) => category.name)
+        .toList(growable: false);
   }
 }

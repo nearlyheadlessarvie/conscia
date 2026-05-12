@@ -23,7 +23,18 @@ public class BudgetConfiguration : IEntityTypeConfiguration<Budget>
             .IsRequired()
             .HasMaxLength(3);
 
+        builder.Property(b => b.Scope)
+            .HasConversion<string>()
+            .IsRequired()
+            .HasMaxLength(20);
+
         builder.HasIndex(b => b.UserId);
-        builder.HasIndex(b => new { b.UserId, b.Category }).IsUnique();
+        builder.HasIndex(b => b.FamilySpaceId);
+        builder.HasIndex(b => new { b.UserId, b.Category })
+            .IsUnique()
+            .HasFilter("\"Scope\" = 'Personal'");
+        builder.HasIndex(b => new { b.FamilySpaceId, b.Category })
+            .IsUnique()
+            .HasFilter("\"Scope\" = 'Family'");
     }
 }

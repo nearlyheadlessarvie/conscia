@@ -2,7 +2,9 @@ import 'package:conscia_app/providers/transaction_providers.dart';
 import 'package:conscia_app/providers/budget_providers.dart';
 import 'package:conscia_app/providers/alert_provider.dart';
 import 'package:conscia_app/providers/ai_provider.dart';
+import 'package:conscia_app/providers/auth_provider.dart';
 import 'package:conscia_app/screens/transactions/transaction_detail_screen.dart';
+import 'package:conscia_app/services/auth_service.dart';
 import 'package:conscia_app/services/ai_service.dart';
 import 'package:conscia_app/services/budget_service.dart';
 import 'package:conscia_app/services/transaction_service.dart';
@@ -10,6 +12,7 @@ import 'package:conscia_app/widgets/conscience_mark.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
@@ -217,7 +220,8 @@ void main() {
     expect(transactionService.deletedId, 'tx-1');
   });
 
-  testWidgets('detail screen shows contextual regret alert for matching transaction',
+  testWidgets(
+      'detail screen shows contextual regret alert for matching transaction',
       (tester) async {
     final transaction = Transaction(
       id: 'tx-9',
@@ -246,7 +250,8 @@ void main() {
                   createdAt: DateTime.utc(2026, 5, 8),
                 ),
               ]),
-          transactionDetailProvider.overrideWith((ref, id) async => transaction),
+          transactionDetailProvider
+              .overrideWith((ref, id) async => transaction),
         ],
         child: const MaterialApp(
           home: TransactionDetailScreen(transactionId: 'tx-9'),
@@ -256,11 +261,60 @@ void main() {
 
     await tester.pumpAndSettle();
 
-    expect(find.text('This purchase still deserves a second look'), findsOneWidget);
+    expect(find.text('This purchase still deserves a second look'),
+        findsOneWidget);
     expect(find.text('Reflect now'), findsOneWidget);
   });
 
-  testWidgets('shows shared loader while reflection is loading', (tester) async {
+  testWidgets(
+      'detail screen hides alert action when it points to current transaction',
+      (tester) async {
+    final transaction = Transaction(
+      id: 'tx-recurring-alert',
+      amount: 3500,
+      currencyCode: 'PHP',
+      category: 'Salary',
+      description: 'Freelance Client',
+      type: 'income',
+      date: DateTime(2026, 5, 8, 11, 12),
+      recurringScheduleId: 'schedule-1',
+      recurringOccurrenceDate: DateTime(2026, 5, 8),
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          alertsProvider.overrideWith((ref) async => [
+                AppAlert(
+                  id: 'recurring-alert-tx-recurring-alert',
+                  type: 'recurring_transaction_created',
+                  title: 'Recurring income added',
+                  message: 'Freelance Client was added automatically.',
+                  priority: 30,
+                  actionLabel: 'View transaction',
+                  actionRoute: '/transactions/tx-recurring-alert',
+                  transactionId: 'tx-recurring-alert',
+                  isDismissed: false,
+                  createdAt: DateTime.utc(2026, 5, 8),
+                ),
+              ]),
+          transactionDetailProvider
+              .overrideWith((ref, id) async => transaction),
+        ],
+        child: const MaterialApp(
+          home: TransactionDetailScreen(transactionId: 'tx-recurring-alert'),
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    expect(find.text('Recurring income added'), findsOneWidget);
+    expect(find.text('View transaction'), findsNothing);
+  });
+
+  testWidgets('shows shared loader while reflection is loading',
+      (tester) async {
     final transaction = Transaction(
       id: 'tx-reflect',
       amount: 320,
@@ -276,7 +330,8 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          transactionDetailProvider.overrideWith((ref, id) async => transaction),
+          transactionDetailProvider
+              .overrideWith((ref, id) async => transaction),
           aiServiceProvider.overrideWithValue(_DelayedReflectionAIService()),
           transactionServiceProvider.overrideWithValue(transactionService),
         ],
@@ -293,8 +348,10 @@ void main() {
     await tester.pump(const Duration(milliseconds: 300));
 
     expect(find.byType(ConscienceLoader), findsAtLeastNWidgets(1));
-    expect(find.text('Reflection is making sense of the moment...'), findsOneWidget);
-    expect(find.byKey(const ValueKey('conscience-loader-reflection')), findsOneWidget);
+    expect(find.text('Reflection is making sense of the moment...'),
+        findsOneWidget);
+    expect(find.byKey(const ValueKey('conscience-loader-reflection')),
+        findsOneWidget);
 
     await tester.pump(const Duration(seconds: 5));
     await tester.pumpAndSettle();
@@ -316,7 +373,8 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          transactionDetailProvider.overrideWith((ref, id) async => transaction),
+          transactionDetailProvider
+              .overrideWith((ref, id) async => transaction),
         ],
         child: const MaterialApp(
           home: TransactionDetailScreen(transactionId: 'tx-recurring'),
@@ -327,6 +385,50 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Recurring transaction'), findsOneWidget);
+  });
+
+  testWidgets('detail screen tags family transactions and other sharers', (
+    tester,
+  ) async {
+    final transaction = Transaction(
+      id: 'tx-family-detail',
+      amount: 2460,
+      currencyCode: 'PHP',
+      category: 'Dining',
+      description: 'Manam',
+      type: 'expense',
+      date: DateTime(2026, 5, 3),
+      scope: 'family',
+      familySpaceId: 'family-1',
+      sharedByUserId: 'spouse-user-id',
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          authProvider.overrideWith(
+            (ref) => _TestAuthNotifier(
+              const AuthState(
+                status: AuthStatus.authenticated,
+                userId: 'current-user-id',
+              ),
+            ),
+          ),
+          transactionDetailProvider
+              .overrideWith((ref, id) async => transaction),
+        ],
+        child: const MaterialApp(
+          home: TransactionDetailScreen(transactionId: 'tx-family-detail'),
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    expect(
+        find.byKey(const ValueKey('family-transaction-badge')), findsOneWidget);
+    expect(find.byKey(const ValueKey('transaction-sharer-avatar')),
+        findsOneWidget);
   });
 
   testWidgets(
@@ -361,7 +463,8 @@ void main() {
                   createdAt: DateTime.utc(2026, 5, 8),
                 ),
               ]),
-          transactionDetailProvider.overrideWith((ref, id) async => transaction),
+          transactionDetailProvider
+              .overrideWith((ref, id) async => transaction),
           aiServiceProvider.overrideWithValue(_DelayedReflectionAIService()),
           transactionServiceProvider.overrideWithValue(transactionService),
         ],
@@ -379,9 +482,34 @@ void main() {
 
     expect(find.text('Reflect now'), findsNothing);
     expect(find.byType(ConscienceLoader), findsAtLeastNWidgets(1));
-    expect(find.text('Reflection is making sense of the moment...'), findsOneWidget);
+    expect(find.text('Reflection is making sense of the moment...'),
+        findsOneWidget);
 
     await tester.pump(const Duration(seconds: 5));
     await tester.pumpAndSettle();
   });
+}
+
+class _TestAuthNotifier extends AuthNotifier {
+  _TestAuthNotifier(AuthState initialState)
+      : super(AuthService(Dio()), _FakeSecureStorage()) {
+    state = initialState;
+  }
+}
+
+class _FakeSecureStorage extends FlutterSecureStorage {
+  _FakeSecureStorage();
+
+  @override
+  Future<String?> read({
+    required String key,
+    AppleOptions? iOptions,
+    AndroidOptions? aOptions,
+    LinuxOptions? lOptions,
+    WebOptions? webOptions,
+    WindowsOptions? wOptions,
+    AppleOptions? mOptions,
+  }) async {
+    return null;
+  }
 }

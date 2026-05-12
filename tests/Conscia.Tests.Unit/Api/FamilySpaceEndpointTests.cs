@@ -1,0 +1,511 @@
+using System.Net;
+using System.Net.Http.Headers;
+using System.Net.Http.Json;
+using System.Text.Json;
+using Conscia.Application.DTOs;
+using Conscia.Domain.Entities;
+using Conscia.Domain.Enums;
+using Moq;
+
+namespace Conscia.Tests.Unit.Api;
+
+public class FamilySpaceEndpointTests
+{
+    private static readonly Guid UserId = Guid.Parse("a1b2c3d4-0001-4000-8000-000000000001");
+
+    [Fact]
+    public async Task CreateFamilySpace_ValidRequest_ReturnsCreated()
+    {
+        await using var factory = new TestWebAppFactory();
+        var familySpaceId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+        factory.FamilySpaceServiceMock
+            .Setup(s => s.CreateAsync(UserId, "Santos Household", "PHP", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new FamilySpace
+            {
+                Id = familySpaceId,
+                Name = "Santos Household",
+                CurrencyCode = "PHP",
+                CreatedByUserId = UserId
+            });
+
+        var client = CreateAuthorizedClient(factory);
+        var response = await client.PostAsJsonAsync("/api/v1/family-space", new
+        {
+            name = "Santos Household",
+            currencyCode = "PHP"
+        });
+
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        Assert.Equal($"/api/v1/family-space/{familySpaceId}", response.Headers.Location?.ToString());
+
+        var json = await response.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal("Santos Household", json.GetProperty("name").GetString());
+        Assert.Equal("PHP", json.GetProperty("currencyCode").GetString());
+    }
+
+    [Fact]
+    public async Task CreateFamilySpace_FreeUser_ReturnsForbiddenUpgradeRequired()
+    {
+        await using var factory = new TestWebAppFactory();
+        factory.FamilySpaceServiceMock
+            .Setup(s => s.CreateAsync(It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("Family Space requires Premium."));
+
+        var client = CreateAuthorizedClient(factory, tier: "Free");
+        var response = await client.PostAsJsonAsync("/api/v1/family-space", new
+        {
+            name = "Santos Household",
+            currencyCode = "PHP"
+        });
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+
+        var json = await response.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.True(json.GetProperty("upgradeRequired").GetBoolean());
+    }
+
+    [Fact]
+    public async Task GetFamilySpace_WhenMember_ReturnsCurrentSpace()
+    {
+        await using var factory = new TestWebAppFactory();
+        factory.FamilySpaceServiceMock
+            .Setup(s => s.GetCurrentAsync(UserId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new FamilySpaceDto(
+                Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"),
+                "Santos Household",
+                "PHP",
+                false,
+                FamilyMemberRole.Owner.ToString()));
+
+        var client = CreateAuthorizedClient(factory);
+        var response = await client.GetAsync("/api/v1/family-space");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        var json = await response.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal("Santos Household", json.GetProperty("name").GetString());
+        Assert.Equal("Owner", json.GetProperty("role").GetString());
+    }
+
+    [Fact]
+    public async Task GetFamilySpace_WhenNotMember_ReturnsNoContent()
+    {
+        await using var factory = new TestWebAppFactory();
+        factory.FamilySpaceServiceMock
+            .Setup(s => s.GetCurrentAsync(UserId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((FamilySpaceDto?)null);
+
+        var client = CreateAuthorizedClient(factory);
+        var response = await client.GetAsync("/api/v1/family-space");
+
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task UpdateFamilySpace_ValidOwnerRequest_ReturnsUpdatedSpace()
+    {
+        await using var factory = new TestWebAppFactory();
+        var familySpaceId = Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
+        factory.FamilySpaceServiceMock
+            .Setup(s => s.UpdateAsync(UserId, "Santos Family", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new FamilySpaceDto(
+                familySpaceId,
+                "Santos Family",
+                "PHP",
+                false,
+                FamilyMemberRole.Owner.ToString()));
+
+        var client = CreateAuthorizedClient(factory);
+        var response = await client.PatchAsJsonAsync("/api/v1/family-space", new
+        {
+            name = "Santos Family"
+        });
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        var json = await response.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal("Santos Family", json.GetProperty("name").GetString());
+        Assert.Equal("PHP", json.GetProperty("currencyCode").GetString());
+        Assert.Equal("Owner", json.GetProperty("role").GetString());
+    }
+
+    [Fact]
+    public async Task UpdateFamilySpace_PutRequest_ReturnsUpdatedSpace()
+    {
+        await using var factory = new TestWebAppFactory();
+        var familySpaceId = Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
+        factory.FamilySpaceServiceMock
+            .Setup(s => s.UpdateAsync(UserId, "Santos Family", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new FamilySpaceDto(
+                familySpaceId,
+                "Santos Family",
+                "PHP",
+                false,
+                FamilyMemberRole.Owner.ToString()));
+
+        var client = CreateAuthorizedClient(factory);
+        var response = await client.PutAsJsonAsync("/api/v1/family-space", new
+        {
+            name = "Santos Family"
+        });
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        var json = await response.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal("Santos Family", json.GetProperty("name").GetString());
+        Assert.Equal("PHP", json.GetProperty("currencyCode").GetString());
+        Assert.Equal("Owner", json.GetProperty("role").GetString());
+    }
+
+    [Fact]
+    public async Task UpdateFamilySpace_NonOwner_ReturnsForbidden()
+    {
+        await using var factory = new TestWebAppFactory();
+        factory.FamilySpaceServiceMock
+            .Setup(s => s.UpdateAsync(UserId, "Santos Family", It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new UnauthorizedAccessException("Only Family Space owners can edit household settings."));
+
+        var client = CreateAuthorizedClient(factory);
+        var response = await client.PatchAsJsonAsync("/api/v1/family-space", new
+        {
+            name = "Santos Family"
+        });
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task CreateInvite_OwnerRequest_ReturnsCreatedInvite()
+    {
+        await using var factory = new TestWebAppFactory();
+        var inviteId = Guid.Parse("cccccccc-cccc-cccc-cccc-cccccccccccc");
+        factory.FamilySpaceServiceMock
+            .Setup(s => s.InviteAsync(UserId, "wife@example.com", FamilyMemberRole.Contributor, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new FamilyInvite
+            {
+                Id = inviteId,
+                FamilySpaceId = Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"),
+                Email = "wife@example.com",
+                Role = FamilyMemberRole.Contributor,
+                ExpiresAt = DateTime.UtcNow.AddDays(14)
+            });
+
+        var client = CreateAuthorizedClient(factory);
+        var response = await client.PostAsJsonAsync("/api/v1/family-space/invites", new
+        {
+            email = "wife@example.com",
+            role = "Contributor"
+        });
+
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        Assert.Equal($"/api/v1/family-space/invites/{inviteId}", response.Headers.Location?.ToString());
+
+        var json = await response.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal("wife@example.com", json.GetProperty("email").GetString());
+        Assert.Equal("Contributor", json.GetProperty("role").GetString());
+    }
+
+    [Fact]
+    public async Task CreateInvite_ContributorRequest_ReturnsForbidden()
+    {
+        await using var factory = new TestWebAppFactory();
+        factory.FamilySpaceServiceMock
+            .Setup(s => s.InviteAsync(It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<FamilyMemberRole>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new UnauthorizedAccessException("Only Family Space owners can invite members."));
+
+        var client = CreateAuthorizedClient(factory);
+        var response = await client.PostAsJsonAsync("/api/v1/family-space/invites", new
+        {
+            email = "wife@example.com",
+            role = "Contributor"
+        });
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task ListInvites_ReturnsPendingInvitesForSignedInEmail()
+    {
+        await using var factory = new TestWebAppFactory();
+        var inviteId = Guid.Parse("cccccccc-cccc-cccc-cccc-cccccccccccc");
+        factory.FamilySpaceServiceMock
+            .Setup(s => s.GetPendingInvitesAsync("alice@example.com", It.IsAny<CancellationToken>()))
+            .ReturnsAsync([
+                new FamilyInviteDto(
+                    inviteId,
+                    Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"),
+                    "Santos Household",
+                    "alice@example.com",
+                    "Contributor",
+                    DateTime.UtcNow.AddDays(-1),
+                    DateTime.UtcNow.AddDays(13))
+            ]);
+
+        var client = CreateAuthorizedClient(factory, email: "alice@example.com");
+        var response = await client.GetAsync("/api/v1/family-space/invites");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var json = await response.Content.ReadFromJsonAsync<JsonElement>();
+        var invite = Assert.Single(json.EnumerateArray());
+        Assert.Equal(inviteId, invite.GetProperty("id").GetGuid());
+        Assert.Equal("Santos Household", invite.GetProperty("familySpaceName").GetString());
+        Assert.Equal("Contributor", invite.GetProperty("role").GetString());
+    }
+
+    [Fact]
+    public async Task ListOutgoingInvites_OwnerRequest_ReturnsOutstandingInvites()
+    {
+        await using var factory = new TestWebAppFactory();
+        var inviteId = Guid.Parse("cccccccc-cccc-cccc-cccc-cccccccccccc");
+        factory.FamilySpaceServiceMock
+            .Setup(s => s.GetOutgoingInvitesAsync(UserId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync([
+                new FamilyInviteDto(
+                    inviteId,
+                    Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"),
+                    "Santos Household",
+                    "wife@example.com",
+                    "Contributor",
+                    DateTime.UtcNow.AddDays(-1),
+                    DateTime.UtcNow.AddDays(13))
+            ]);
+
+        var client = CreateAuthorizedClient(factory);
+        var response = await client.GetAsync("/api/v1/family-space/invites/outgoing");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var json = await response.Content.ReadFromJsonAsync<JsonElement>();
+        var invite = Assert.Single(json.EnumerateArray());
+        Assert.Equal(inviteId, invite.GetProperty("id").GetGuid());
+        Assert.Equal("wife@example.com", invite.GetProperty("email").GetString());
+        Assert.Equal("Contributor", invite.GetProperty("role").GetString());
+    }
+
+    [Fact]
+    public async Task ListOutgoingInvites_NonOwner_ReturnsForbidden()
+    {
+        await using var factory = new TestWebAppFactory();
+        factory.FamilySpaceServiceMock
+            .Setup(s => s.GetOutgoingInvitesAsync(UserId, It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new UnauthorizedAccessException("Only Family Space owners can manage invites."));
+
+        var client = CreateAuthorizedClient(factory);
+        var response = await client.GetAsync("/api/v1/family-space/invites/outgoing");
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task CancelInvite_OwnerRequest_ReturnsNoContent()
+    {
+        await using var factory = new TestWebAppFactory();
+        var inviteId = Guid.Parse("cccccccc-cccc-cccc-cccc-cccccccccccc");
+        factory.FamilySpaceServiceMock
+            .Setup(s => s.CancelInviteAsync(UserId, inviteId, It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        var client = CreateAuthorizedClient(factory);
+        var response = await client.DeleteAsync($"/api/v1/family-space/invites/{inviteId}");
+
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+        factory.FamilySpaceServiceMock.Verify(s =>
+            s.CancelInviteAsync(UserId, inviteId, It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task AcceptInvite_UsesSignedInEmailAndReturnsAcceptedMember()
+    {
+        await using var factory = new TestWebAppFactory();
+        var inviteId = Guid.Parse("cccccccc-cccc-cccc-cccc-cccccccccccc");
+        var familySpaceId = Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
+        factory.FamilySpaceServiceMock
+            .Setup(s => s.AcceptInviteAsync(UserId, "alice@example.com", inviteId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new FamilyMember
+            {
+                Id = Guid.Parse("eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee"),
+                FamilySpaceId = familySpaceId,
+                UserId = UserId,
+                Role = FamilyMemberRole.Contributor,
+                JoinedAt = DateTime.UtcNow
+            });
+
+        var client = CreateAuthorizedClient(factory, email: "alice@example.com");
+        var response = await client.PostAsync($"/api/v1/family-space/invites/{inviteId}/accept", null);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var json = await response.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal(familySpaceId, json.GetProperty("familySpaceId").GetGuid());
+        Assert.Equal("Contributor", json.GetProperty("role").GetString());
+    }
+
+    [Fact]
+    public async Task DeclineInvite_UsesSignedInEmailAndReturnsNoContent()
+    {
+        await using var factory = new TestWebAppFactory();
+        var inviteId = Guid.Parse("cccccccc-cccc-cccc-cccc-cccccccccccc");
+        factory.FamilySpaceServiceMock
+            .Setup(s => s.DeclineInviteAsync(UserId, "alice@example.com", inviteId, It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        var client = CreateAuthorizedClient(factory, email: "alice@example.com");
+        var response = await client.PostAsync($"/api/v1/family-space/invites/{inviteId}/decline", null);
+
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+        factory.FamilySpaceServiceMock.Verify(s =>
+            s.DeclineInviteAsync(UserId, "alice@example.com", inviteId, It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task ListMembers_ReturnsFamilyRoster()
+    {
+        await using var factory = new TestWebAppFactory();
+        var memberId = Guid.Parse("eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee");
+        factory.FamilySpaceServiceMock
+            .Setup(s => s.GetMembersAsync(UserId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync([
+                new FamilyMemberDto(
+                    memberId,
+                    UserId,
+                    "alice@example.com",
+                    "Owner",
+                    DateTime.Parse("2026-05-01T00:00:00Z"),
+                    true)
+            ]);
+
+        var client = CreateAuthorizedClient(factory);
+        var response = await client.GetAsync("/api/v1/family-space/members");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var json = await response.Content.ReadFromJsonAsync<JsonElement>();
+        var member = Assert.Single(json.EnumerateArray());
+        Assert.Equal(memberId, member.GetProperty("id").GetGuid());
+        Assert.Equal("alice@example.com", member.GetProperty("email").GetString());
+        Assert.Equal("Owner", member.GetProperty("role").GetString());
+        Assert.True(member.GetProperty("isCurrentUser").GetBoolean());
+    }
+
+    [Fact]
+    public async Task UpdateMemberRole_OwnerRequest_ReturnsUpdatedMember()
+    {
+        await using var factory = new TestWebAppFactory();
+        var memberId = Guid.Parse("eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee");
+        factory.FamilySpaceServiceMock
+            .Setup(s => s.UpdateMemberRoleAsync(UserId, memberId, FamilyMemberRole.Viewer, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new FamilyMemberDto(
+                memberId,
+                Guid.Parse("ffffffff-ffff-ffff-ffff-ffffffffffff"),
+                "spouse@example.com",
+                "Viewer",
+                DateTime.UtcNow,
+                false));
+
+        var client = CreateAuthorizedClient(factory);
+        var response = await client.PatchAsJsonAsync($"/api/v1/family-space/members/{memberId}/role", new
+        {
+            role = "Viewer"
+        });
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var json = await response.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal("Viewer", json.GetProperty("role").GetString());
+    }
+
+    [Fact]
+    public async Task RemoveMember_OwnerRequest_ReturnsNoContent()
+    {
+        await using var factory = new TestWebAppFactory();
+        var memberId = Guid.Parse("eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee");
+        factory.FamilySpaceServiceMock
+            .Setup(s => s.RemoveMemberAsync(UserId, memberId, It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        var client = CreateAuthorizedClient(factory);
+        var response = await client.DeleteAsync($"/api/v1/family-space/members/{memberId}");
+
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+        factory.FamilySpaceServiceMock.Verify(s =>
+            s.RemoveMemberAsync(UserId, memberId, It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task LeaveFamilySpace_CurrentMember_ReturnsNoContent()
+    {
+        await using var factory = new TestWebAppFactory();
+        factory.FamilySpaceServiceMock
+            .Setup(s => s.LeaveAsync(UserId, It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        var client = CreateAuthorizedClient(factory);
+        var response = await client.PostAsync("/api/v1/family-space/leave", null);
+
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+        factory.FamilySpaceServiceMock.Verify(s =>
+            s.LeaveAsync(UserId, It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task GetOverview_ReturnsFamilySnapshot()
+    {
+        await using var factory = new TestWebAppFactory();
+        var familySpaceId = Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
+        factory.FamilySpaceServiceMock
+            .Setup(s => s.GetOverviewAsync(UserId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new FamilySpaceOverviewDto(
+                familySpaceId,
+                [
+                    new FamilyBudgetOverviewDto(
+                        Guid.Parse("11111111-1111-1111-1111-111111111111"),
+                        "Dining",
+                        4000m,
+                        280m,
+                        7,
+                        "PHP")
+                ],
+                [
+                    new FamilyActivityDto(
+                        Guid.Parse("22222222-2222-2222-2222-222222222222"),
+                        "Starbucks",
+                        "Dining",
+                        "Expense",
+                        280m,
+                        "PHP",
+                        DateTime.Parse("2026-05-11T00:00:00Z"))
+                ],
+                [
+                    new FamilyRecurringOverviewDto(
+                        Guid.Parse("33333333-3333-3333-3333-333333333333"),
+                        "Home internet",
+                        "Bills",
+                        "Expense",
+                        2499m,
+                        "PHP",
+                        "Monthly",
+                        DateTime.Parse("2026-05-16T00:00:00Z"))
+                ]));
+
+        var client = CreateAuthorizedClient(factory);
+        var response = await client.GetAsync("/api/v1/family-space/overview");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var json = await response.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal(familySpaceId, json.GetProperty("familySpaceId").GetGuid());
+        Assert.Equal("Dining", json.GetProperty("budgets")[0].GetProperty("category").GetString());
+        Assert.Equal("Starbucks", json.GetProperty("recentActivity")[0].GetProperty("label").GetString());
+        Assert.Equal("Home internet", json.GetProperty("recurringItems")[0].GetProperty("label").GetString());
+    }
+
+    private static HttpClient CreateAuthorizedClient(
+        TestWebAppFactory factory,
+        string tier = "Premium",
+        string email = "alice@example.com")
+    {
+        var client = factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue("Bearer", factory.GenerateTestToken(UserId.ToString(), email: email, tier: tier));
+        return client;
+    }
+}

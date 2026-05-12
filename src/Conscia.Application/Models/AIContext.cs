@@ -11,4 +11,7 @@ public class AIContext
     public int RecentRegrets { get; set; }
     public int SpendingFrequencyThisWeek { get; set; }
     public string AiPersonalityIntensity { get; set; } = "balanced";
+    public string ContextScope { get; set; } = "personal";
+    public string? FamilyContextSummary { get; set; }
+    public string? InsightContext { get; set; }
 }

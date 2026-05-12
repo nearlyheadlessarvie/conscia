@@ -90,4 +90,58 @@ public class RecurringScheduleRepositoryTests
         Assert.Equal(endDate, loaded.EndDate);
         Assert.Equal("Internet", loaded.Counterparty);
     }
+
+    [Fact]
+    public async Task ListByFamilySpaceAsync_ScansFamilySchedulesForTheSpace()
+    {
+        var dynamoMock = new Mock<IAmazonDynamoDB>();
+        ScanRequest? scanRequest = null;
+        var userId = Guid.NewGuid();
+        var familySpaceId = Guid.NewGuid();
+        var scheduleId = Guid.NewGuid();
+        var startDate = new DateTime(2026, 05, 31, 0, 0, 0, DateTimeKind.Utc);
+
+        dynamoMock
+            .Setup(d => d.ScanAsync(It.IsAny<ScanRequest>(), It.IsAny<CancellationToken>()))
+            .Callback<ScanRequest, CancellationToken>((request, _) => scanRequest = request)
+            .ReturnsAsync(new ScanResponse
+            {
+                Items =
+                [
+                    new Dictionary<string, AttributeValue>
+                    {
+                        ["PK"] = new($"USER#{userId}"),
+                        ["SK"] = new($"RECURRING#{scheduleId}"),
+                        ["Id"] = new(scheduleId.ToString()),
+                        ["UserId"] = new(userId.ToString()),
+                        ["Type"] = new(TransactionType.Expense.ToString()),
+                        ["Amount"] = new() { N = "2500" },
+                        ["CurrencyCode"] = new("PHP"),
+                        ["Category"] = new("Bills"),
+                        ["Counterparty"] = new("Internet"),
+                        ["StartDate"] = new(startDate.ToString("O")),
+                        ["Cadence"] = new(RecurringCadence.Monthly.ToString()),
+                        ["NextRunAt"] = new(startDate.ToString("O")),
+                        ["IsActive"] = new() { BOOL = true },
+                        ["CreatedAt"] = new(startDate.ToString("O")),
+                        ["UpdatedAt"] = new(startDate.ToString("O")),
+                        ["Scope"] = new(RecordScope.Family.ToString()),
+                        ["FamilySpaceId"] = new(familySpaceId.ToString())
+                    }
+                ]
+            });
+
+        var schedules = await new RecurringScheduleRepository(dynamoMock.Object)
+            .ListByFamilySpaceAsync(familySpaceId, CancellationToken.None);
+
+        var schedule = Assert.Single(schedules);
+        Assert.Equal(familySpaceId, schedule.FamilySpaceId);
+        Assert.NotNull(scanRequest);
+        Assert.Equal("RecurringSchedules", scanRequest!.TableName);
+        Assert.Contains("#scope = :scope", scanRequest.FilterExpression);
+        Assert.Contains("FamilySpaceId = :familySpaceId", scanRequest.FilterExpression);
+        Assert.Equal("Scope", scanRequest.ExpressionAttributeNames["#scope"]);
+        Assert.Equal(RecordScope.Family.ToString(), scanRequest.ExpressionAttributeValues[":scope"].S);
+        Assert.Equal(familySpaceId.ToString(), scanRequest.ExpressionAttributeValues[":familySpaceId"].S);
+    }
 }

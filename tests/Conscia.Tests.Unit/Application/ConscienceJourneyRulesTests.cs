@@ -80,4 +80,34 @@ public class ConscienceJourneyRulesTests
             ],
             levels);
     }
+
+    [Fact]
+    public void FamilyEvents_AreSupportedWithXpRules()
+    {
+        var familyEvents = new[]
+        {
+            ConscienceEventTypes.FamilyInviteSent,
+            ConscienceEventTypes.FamilyInviteAccepted,
+            ConscienceEventTypes.FamilyExpenseAdded,
+            ConscienceEventTypes.FamilyPurchaseChecked
+        };
+
+        foreach (var eventType in familyEvents)
+        {
+            Assert.Contains(eventType, ConscienceJourneyRules.SupportedEventTypes);
+            Assert.True(ConscienceJourneyRules.XpByEventType[eventType] > 0);
+        }
+    }
+
+    [Fact]
+    public void FamilyBadgesAndQuests_AreAvailable()
+    {
+        var badges = ConscienceJourneyRules.Badges.Select(b => b.Key).ToHashSet();
+        var quests = ConscienceJourneyRules.WeeklyQuests.Select(q => q.Key).ToHashSet();
+
+        Assert.Contains("family_founder", badges);
+        Assert.Contains("family_planner", badges);
+        Assert.Contains("send_family_invite", quests);
+        Assert.Contains("add_family_expense", quests);
+    }
 }

@@ -1,7 +1,9 @@
 import 'package:conscia_app/providers/category_frequency_provider.dart';
 import 'package:conscia_app/providers/alert_provider.dart';
 import 'package:conscia_app/providers/budget_providers.dart';
+import 'package:conscia_app/models/family_space.dart';
 import 'package:conscia_app/models/recurring_schedule.dart';
+import 'package:conscia_app/providers/family_space_provider.dart';
 import 'package:conscia_app/providers/subscription_provider.dart';
 import 'package:conscia_app/providers/transaction_providers.dart';
 import 'package:conscia_app/providers/usage_provider.dart';
@@ -45,7 +47,9 @@ class _FakeLocationAssistanceService extends LocationAssistanceService {
 }
 
 class _RecordingTransactionService extends TransactionService {
-  _RecordingTransactionService() : super(Dio());
+  _RecordingTransactionService({this.editTransaction}) : super(Dio());
+
+  final Transaction? editTransaction;
 
   CreateTransactionDto? lastCreated;
   CreateTransactionDto? lastUpdated;
@@ -61,15 +65,17 @@ class _RecordingTransactionService extends TransactionService {
       description: dto.counterparty,
       type: dto.type,
       date: dto.date,
-      recurringScheduleId: dto.recurring?.enabled == true
-          ? 'schedule-1'
-          : null,
+      scope: dto.scope,
+      familySpaceId: dto.familySpaceId,
+      recurringScheduleId: dto.recurring?.enabled == true ? 'schedule-1' : null,
       recurringOccurrenceDate: dto.recurring?.enabled == true ? dto.date : null,
     );
   }
 
   @override
   Future<Transaction> getById(String id) async {
+    if (editTransaction != null) return editTransaction!;
+
     return Transaction(
       id: id,
       amount: 14.75,
@@ -92,9 +98,9 @@ class _RecordingTransactionService extends TransactionService {
       description: dto.counterparty,
       type: dto.type,
       date: dto.date,
-      recurringScheduleId: dto.recurring?.enabled == true
-          ? 'schedule-1'
-          : null,
+      scope: dto.scope,
+      familySpaceId: dto.familySpaceId,
+      recurringScheduleId: dto.recurring?.enabled == true ? 'schedule-1' : null,
       recurringOccurrenceDate: dto.recurring?.enabled == true ? dto.date : null,
     );
   }
@@ -150,7 +156,9 @@ Future<ProviderContainer> _pumpTransactionForm(
   SharedPreferences? prefs,
   LocationAssistanceService? locationService,
   TransactionService? transactionService,
+  String? transactionId,
   List<Budget> budgets = const [],
+  FamilySpace? familySpace,
   bool locationSuggestionsEnabled = false,
 }) async {
   final resolvedPrefs = prefs ??
@@ -196,20 +204,26 @@ Future<ProviderContainer> _pumpTransactionForm(
       recurringServiceProvider.overrideWithValue(_FakeRecurringService()),
       budgetServiceProvider.overrideWithValue(_StaticBudgetService(budgets)),
       budgetReconciliationEnabledProvider.overrideWithValue(false),
+      familySpaceProvider.overrideWith((ref) async => familySpace),
     ],
   );
   addTearDown(container.dispose);
 
-  await tester.pumpWidget(_buildTransactionFormApp(container));
+  await tester.pumpWidget(
+    _buildTransactionFormApp(container, transactionId: transactionId),
+  );
 
   return container;
 }
 
-Widget _buildTransactionFormApp(ProviderContainer container) {
+Widget _buildTransactionFormApp(
+  ProviderContainer container, {
+  String? transactionId,
+}) {
   return UncontrolledProviderScope(
     container: container,
-    child: const MaterialApp(
-      home: TransactionFormScreen(),
+    child: MaterialApp(
+      home: TransactionFormScreen(transactionId: transactionId),
     ),
   );
 }
@@ -255,6 +269,7 @@ Future<Widget> buildTransactionFormApp(
       recurringServiceProvider.overrideWithValue(_FakeRecurringService()),
       budgetServiceProvider.overrideWithValue(_StaticBudgetService(const [])),
       budgetReconciliationEnabledProvider.overrideWithValue(false),
+      familySpaceProvider.overrideWith((ref) async => null),
     ],
   );
   addTearDown(container.dispose);
@@ -279,6 +294,23 @@ void main() {
     expect(tx.description, 'ACME Corp');
   });
 
+  test('transaction json reads scope and family space id', () {
+    final tx = Transaction.fromJson({
+      'id': 'tx-1',
+      'amount': 2460,
+      'currencyCode': 'PHP',
+      'category': 'Dining',
+      'counterparty': 'Manam',
+      'type': 'Expense',
+      'date': '2026-05-03T00:00:00Z',
+      'scope': 'Family',
+      'familySpaceId': 'family-1',
+    });
+
+    expect(tx.scope, 'family');
+    expect(tx.familySpaceId, 'family-1');
+  });
+
   test('create transaction dto serializes counterparty', () {
     final dto = CreateTransactionDto(
       amount: 1000,
@@ -291,6 +323,22 @@ void main() {
 
     expect(dto.toJson()['counterparty'], 'ACME Corp');
     expect(dto.toJson().containsKey('merchant'), isFalse);
+  });
+
+  test('create transaction dto serializes family scope', () {
+    final dto = CreateTransactionDto(
+      amount: 1500,
+      currencyCode: 'PHP',
+      category: 'Groceries',
+      counterparty: 'Landers',
+      type: 'expense',
+      date: DateTime.utc(2026, 5, 7),
+      scope: 'family',
+      familySpaceId: 'family-1',
+    );
+
+    expect(dto.toJson()['scope'], 'Family');
+    expect(dto.toJson()['familySpaceId'], 'family-1');
   });
 
   testWidgets(
@@ -343,7 +391,8 @@ void main() {
     expect(find.byType(VoiceInputButton), findsNothing);
   });
 
-  testWidgets('transaction form shows category chips above all categories action', (
+  testWidgets(
+      'transaction form shows category chips above all categories action', (
     tester,
   ) async {
     await tester.pumpWidget(await buildTransactionFormApp(tester));
@@ -398,7 +447,8 @@ void main() {
     );
   });
 
-  testWidgets('transaction form shows only one category heading', (tester) async {
+  testWidgets('transaction form shows only one category heading',
+      (tester) async {
     await tester.pumpWidget(await buildTransactionFormApp(tester));
 
     await tester.pumpAndSettle();
@@ -737,6 +787,80 @@ void main() {
     expect(alerts, hasLength(1));
     expect(alerts.first.type, 'budget_nudge');
     expect(alerts.first.title, 'No budget for Dining yet');
+  });
+
+  testWidgets('transaction form can save a family-scoped transaction', (
+    tester,
+  ) async {
+    final transactionService = _RecordingTransactionService();
+
+    await _pumpTransactionForm(
+      tester,
+      transactionService: transactionService,
+      familySpace: const FamilySpace(
+        id: 'family-1',
+        name: 'Santos Household',
+        currencyCode: 'PHP',
+        isReadOnly: false,
+        role: 'Contributor',
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Family'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField).first, '1500');
+    await tester.tap(find.text('Groceries'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Save Transaction'));
+    await tester.pumpAndSettle();
+
+    expect(transactionService.lastCreated?.scope, 'family');
+    expect(transactionService.lastCreated?.familySpaceId, 'family-1');
+  });
+
+  testWidgets('edit form shows and preserves family transaction scope', (
+    tester,
+  ) async {
+    final transactionService = _RecordingTransactionService(
+      editTransaction: Transaction(
+        id: 'tx-family',
+        amount: 2460,
+        currencyCode: 'PHP',
+        category: 'Dining',
+        description: 'Manam',
+        type: 'expense',
+        date: DateTime(2026, 5, 3),
+        scope: 'family',
+        familySpaceId: 'family-1',
+      ),
+    );
+
+    await _pumpTransactionForm(
+      tester,
+      transactionService: transactionService,
+      transactionId: 'tx-family',
+      familySpace: const FamilySpace(
+        id: 'family-1',
+        name: 'Santos Household',
+        currencyCode: 'PHP',
+        isReadOnly: false,
+        role: 'Contributor',
+      ),
+    );
+
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 250));
+
+    expect(find.text('Scope'), findsOneWidget);
+    expect(find.textContaining('Santos Household'), findsOneWidget);
+
+    await tester.tap(find.text('Update Transaction'));
+    await tester.pump();
+
+    expect(transactionService.lastUpdated?.scope, 'family');
+    expect(transactionService.lastUpdated?.familySpaceId, 'family-1');
   });
 
   testWidgets('saving a budgeted expense updates budget usage immediately', (

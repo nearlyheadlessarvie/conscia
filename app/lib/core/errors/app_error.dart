@@ -50,7 +50,9 @@ class AppError {
   final Object originalError;
   final StackTrace? stackTrace;
 
-  String get userMessage => '$message Reference: $referenceId';
+  String get userMessage => _shouldShowReference(originalError)
+      ? '$message Reference: $referenceId'
+      : message;
 
   static void configure({
     AppErrorLogger? logger,
@@ -97,6 +99,21 @@ class AppError {
     }
 
     return 'Something went wrong. Please try again.';
+  }
+
+  static bool _shouldShowReference(Object error) {
+    final apiError = switch (error) {
+      ApiException apiException => apiException,
+      DioException dioException => ApiException.fromDioException(dioException),
+      _ => null,
+    };
+
+    final statusCode = apiError?.statusCode;
+    if (statusCode != null && statusCode >= 400 && statusCode < 500) {
+      return false;
+    }
+
+    return true;
   }
 
   static String _defaultReferenceId() {

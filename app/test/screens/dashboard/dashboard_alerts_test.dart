@@ -50,6 +50,7 @@ class _StaticTransactionService extends TransactionService {
     int page = 1,
     int pageSize = 20,
     String? category,
+    String? scope,
   }) async {
     return PaginatedTransactions(
       items: transactions,

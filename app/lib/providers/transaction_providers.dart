@@ -2,13 +2,17 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/errors/app_error.dart';
 import '../core/network/dio_client.dart';
+import 'auth_provider.dart';
 import '../services/transaction_service.dart';
 
 final transactionServiceProvider = Provider<TransactionService>((ref) {
   return TransactionService(ref.watch(dioProvider));
 });
 
-final categoryFilterProvider = StateProvider<String?>((_) => null);
+final categoryFilterProvider = StateProvider<String?>((ref) {
+  ref.watch(authCacheScopeProvider);
+  return null;
+});
 
 class TransactionListState {
   final List<Transaction> transactions;
@@ -45,15 +49,20 @@ class TransactionListState {
 class TransactionListNotifier extends StateNotifier<TransactionListState> {
   final TransactionService? _service;
   final String? _categoryFilter;
+  final String? _scopeFilter;
 
-  TransactionListNotifier(this._service, this._categoryFilter)
-      : super(const TransactionListState()) {
+  TransactionListNotifier(
+    this._service,
+    this._categoryFilter, [
+    this._scopeFilter,
+  ]) : super(const TransactionListState()) {
     loadMore();
   }
 
   TransactionListNotifier.fromList(List<Transaction> txs)
       : _service = null,
         _categoryFilter = null,
+        _scopeFilter = null,
         super(TransactionListState(
           transactions: txs,
           isLoading: false,
@@ -71,6 +80,7 @@ class TransactionListNotifier extends StateNotifier<TransactionListState> {
       final result = await service.list(
         page: nextPage,
         category: _categoryFilter,
+        scope: _scopeFilter,
       );
       state = state.copyWith(
         transactions: [...state.transactions, ...result.items],

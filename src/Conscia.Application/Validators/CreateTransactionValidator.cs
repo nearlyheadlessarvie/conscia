@@ -1,4 +1,5 @@
 using Conscia.Application.DTOs;
+using Conscia.Domain.Enums;
 using FluentValidation;
 
 namespace Conscia.Application.Validators;
@@ -32,5 +33,10 @@ public class CreateTransactionValidator : AbstractValidator<CreateTransactionDto
         RuleFor(x => x.Longitude)
             .InclusiveBetween(-180, 180)
             .When(x => x.Longitude.HasValue);
+
+        RuleFor(x => x.FamilySpaceId)
+            .NotNull()
+            .When(x => x.Scope == RecordScope.Family)
+            .WithMessage("Family Space is required for family transactions");
     }
 }

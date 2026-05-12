@@ -14,4 +14,6 @@ public class UpdateRecurringScheduleDto
     public RecurringCadence? Cadence { get; set; }
     public DateTime? EndDate { get; set; }
     public bool? IsActive { get; set; }
+    public RecordScope? Scope { get; set; }
+    public Guid? FamilySpaceId { get; set; }
 }

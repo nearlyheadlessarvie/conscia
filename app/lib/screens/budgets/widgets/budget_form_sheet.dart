@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../providers/budget_providers.dart';
+import '../../../providers/family_space_provider.dart';
 import '../../../providers/subscription_provider.dart';
 import '../../../services/budget_service.dart';
 import '../../transactions/widgets/transaction_style_category_selector.dart';
 import '../../../widgets/currency_badge.dart';
+import '../../../widgets/scope_selector.dart';
 import '../../../widgets/screen_section.dart';
 import '../../../providers/user_provider.dart';
 
@@ -40,6 +42,7 @@ class _BudgetFormSheetState extends ConsumerState<BudgetFormSheet> {
   late final TextEditingController _amountController;
   String? _selectedCategory;
   bool _submitting = false;
+  String _scope = 'personal';
   bool get _isEditing => widget.existing != null;
 
   @override
@@ -71,10 +74,15 @@ class _BudgetFormSheetState extends ConsumerState<BudgetFormSheet> {
     final user = ref.read(currentUserProvider);
     final currency =
         widget.existing?.currencyCode ?? user.value?.currencyCode ?? 'USD';
+    final familySpace = ref.read(familySpaceProvider).valueOrNull;
+    final isFamilyScope =
+        !_isEditing && _scope == 'family' && familySpace != null;
     final dto = CreateBudgetDto(
       category: _selectedCategory!,
       monthlyLimit: amount,
       currencyCode: currency,
+      scope: isFamilyScope ? 'family' : 'personal',
+      familySpaceId: isFamilyScope ? familySpace.id : null,
     );
 
     final notifier = ref.read(budgetListProvider.notifier);
@@ -125,10 +133,11 @@ class _BudgetFormSheetState extends ConsumerState<BudgetFormSheet> {
         widget.existing?.currencyCode ?? user.value?.currencyCode ?? 'USD';
     final isPremium =
         ref.watch(subscriptionProvider).valueOrNull?.isPremium ?? false;
+    final familySpace = ref.watch(familySpaceProvider).valueOrNull;
     return Padding(
       padding: EdgeInsets.only(bottom: bottomInset),
       child: SizedBox(
-        height: 460,
+        height: 540,
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Column(
@@ -173,12 +182,13 @@ class _BudgetFormSheetState extends ConsumerState<BudgetFormSheet> {
                     ),
                     ScreenSection(
                       title: 'Monthly cap',
-                      subtitle: 'Set the spending ceiling you want Conscia to track.',
+                      subtitle:
+                          'Set the spending ceiling you want Conscia to track.',
                       compact: true,
                       child: TextField(
                         controller: _amountController,
-                        keyboardType:
-                            const TextInputType.numberWithOptions(decimal: true),
+                        keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true),
                         onChanged: (_) => setState(() {}),
                         decoration: InputDecoration(
                           labelText: 'Monthly Limit',
@@ -194,6 +204,18 @@ class _BudgetFormSheetState extends ConsumerState<BudgetFormSheet> {
                         ),
                       ),
                     ),
+                    if (!_isEditing && familySpace != null)
+                      ScreenSection(
+                        title: 'Scope',
+                        subtitle:
+                            'Choose whether this budget stays personal or appears in ${familySpace.name}.',
+                        compact: true,
+                        child: ScopeSelector(
+                          value: _scope,
+                          familyEnabled: true,
+                          onChanged: (value) => setState(() => _scope = value),
+                        ),
+                      ),
                   ],
                 ),
               ),

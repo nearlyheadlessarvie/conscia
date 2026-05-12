@@ -1,3 +1,5 @@
+import 'package:conscia_app/models/family_space.dart';
+import 'package:conscia_app/providers/family_space_provider.dart';
 import 'package:conscia_app/providers/location_assistance_provider.dart';
 import 'package:conscia_app/providers/subscription_provider.dart';
 import 'package:conscia_app/providers/usage_provider.dart';
@@ -26,7 +28,7 @@ class _RecordingLocationAssistanceService extends LocationAssistanceService {
 
   @override
   ({List<String> nearbyMerchants, List<String> likelyCategories})
-  getTransactionSuggestions() {
+      getTransactionSuggestions() {
     return const (
       nearbyMerchants: <String>[],
       likelyCategories: <String>[],
@@ -63,8 +65,7 @@ class _RecordingUserService extends UserService {
       locale: locale ?? 'en_US',
       createdAt: DateTime(2026),
       hasCompletedOnboarding: true,
-      locationSuggestionsEnabled:
-          locationSuggestionsEnabled ?? false,
+      locationSuggestionsEnabled: locationSuggestionsEnabled ?? false,
       aiPersonalityIntensity: aiPersonalityIntensity ?? 'balanced',
     );
   }
@@ -75,6 +76,7 @@ Future<ProviderContainer> _pumpSettingsScreen(
   required SharedPreferences prefs,
   required LocationAssistanceService locationService,
   UserService? userService,
+  FamilySpace? familySpace,
 }) async {
   final container = ProviderContainer(
     overrides: [
@@ -89,6 +91,7 @@ Future<ProviderContainer> _pumpSettingsScreen(
           aiPersonalityIntensity: 'balanced',
         ),
       ),
+      familySpaceProvider.overrideWith((ref) async => familySpace),
       subscriptionProvider.overrideWith(
         (ref) async => const SubscriptionStatus(
           tier: 'free',
@@ -97,7 +100,8 @@ Future<ProviderContainer> _pumpSettingsScreen(
       ),
       sharedPreferencesProvider.overrideWithValue(prefs),
       locationAssistanceServiceProvider.overrideWithValue(locationService),
-      if (userService != null) userServiceProvider.overrideWithValue(userService),
+      if (userService != null)
+        userServiceProvider.overrideWithValue(userService),
     ],
   );
   addTearDown(container.dispose);
@@ -138,9 +142,13 @@ void main() {
     expect(find.text('Smart location suggestions'), findsOneWidget);
     expect(find.textContaining('Currently off'), findsOneWidget);
     expect(
-      find.textContaining('System location permission may also need to be enabled'),
+      find.textContaining(
+          'System location permission may also need to be enabled'),
       findsOneWidget,
     );
+
+    await tester.ensureVisible(find.text('Smart location suggestions'));
+    await tester.pumpAndSettle();
 
     await tester.tap(find.byType(Switch).last);
     await tester.pumpAndSettle();
@@ -153,6 +161,9 @@ void main() {
     );
     expect(find.textContaining('Currently on'), findsOneWidget);
 
+    await tester.ensureVisible(find.text('Smart location suggestions'));
+    await tester.pumpAndSettle();
+
     await tester.tap(find.byType(Switch).last);
     await tester.pumpAndSettle();
 
@@ -164,7 +175,8 @@ void main() {
     );
     expect(find.textContaining('Currently off'), findsOneWidget);
     expect(
-      find.textContaining('System location permission may also need to be enabled'),
+      find.textContaining(
+          'System location permission may also need to be enabled'),
       findsNothing,
     );
   });
@@ -183,6 +195,9 @@ void main() {
       userService: userService,
     );
 
+    await tester.pumpAndSettle();
+
+    await tester.ensureVisible(find.text('Region / Number Format'));
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('Region / Number Format'));
@@ -212,6 +227,9 @@ void main() {
 
     await tester.pumpAndSettle();
 
+    await tester.ensureVisible(find.text('AI Personality Intensity'));
+    await tester.pumpAndSettle();
+
     await tester.tap(find.text('AI Personality Intensity'));
     await tester.pumpAndSettle();
 
@@ -220,5 +238,81 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(userService.lastAiPersonalityIntensity, 'intense');
+  });
+
+  testWidgets('shared conscia appears under profile with household summary', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+    final locationService =
+        _RecordingLocationAssistanceService(permissionGranted: true);
+
+    await _pumpSettingsScreen(
+      tester,
+      prefs: prefs,
+      locationService: locationService,
+      familySpace: const FamilySpace(
+        id: 'family-1',
+        name: 'Santos Household',
+        currencyCode: 'PHP',
+        isReadOnly: false,
+        role: 'Owner',
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    expect(find.text('Santos Household'), findsOneWidget);
+    expect(find.text('Owner · PHP'), findsOneWidget);
+    expect(find.text('Family Space settings'), findsOneWidget);
+
+    final profileTop = tester.getTopLeft(find.text('Profile')).dy;
+    final sharedTop = tester.getTopLeft(find.text('Shared Conscia')).dy;
+    final preferencesTop = tester.getTopLeft(find.text('Preferences')).dy;
+
+    expect(sharedTop, greaterThan(profileTop));
+    expect(sharedTop, lessThan(preferencesTop));
+  });
+
+  testWidgets('preferences and planning rows are grouped in the intended order',
+      (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+    final locationService =
+        _RecordingLocationAssistanceService(permissionGranted: true);
+
+    await _pumpSettingsScreen(
+      tester,
+      prefs: prefs,
+      locationService: locationService,
+    );
+
+    await tester.pumpAndSettle();
+
+    await tester.ensureVisible(find.text('AI Personality Intensity'));
+    await tester.pumpAndSettle();
+
+    final aiTop = tester.getTopLeft(find.text('AI Personality Intensity')).dy;
+    final smartLocationTop =
+        tester.getTopLeft(find.text('Smart location suggestions')).dy;
+    expect(aiTop, lessThan(smartLocationTop));
+
+    await tester.ensureVisible(find.text('Budgets'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Budgets & Categories'), findsOneWidget);
+    final planningTop = tester.getTopLeft(find.text('Budgets & Categories')).dy;
+    final categoriesTop = tester.getTopLeft(find.text('Categories')).dy;
+    final budgetsTop = tester.getTopLeft(find.text('Budgets')).dy;
+
+    expect(categoriesTop, greaterThan(planningTop));
+    expect(budgetsTop, greaterThan(categoriesTop));
+    expect(
+      find.text('Create and tune monthly caps for spending categories'),
+      findsOneWidget,
+    );
   });
 }

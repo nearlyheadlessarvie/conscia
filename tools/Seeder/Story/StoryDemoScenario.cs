@@ -10,7 +10,12 @@ public sealed class StoryDemoScenario
 {
     public required User User { get; init; }
     public required UserIdentity Identity { get; init; }
+    public required IReadOnlyList<User> AdditionalUsers { get; init; }
+    public required IReadOnlyList<UserIdentity> AdditionalIdentities { get; init; }
     public required UserSubscription Subscription { get; init; }
+    public required FamilySpace FamilySpace { get; init; }
+    public required IReadOnlyList<FamilyMember> FamilyMembers { get; init; }
+    public required IReadOnlyList<FamilyInvite> FamilyInvites { get; init; }
     public required IReadOnlyList<Budget> Budgets { get; init; }
     public required IReadOnlyList<Transaction> Transactions { get; init; }
     public required IReadOnlyList<RecurringSchedule> RecurringSchedules { get; init; }
@@ -31,6 +36,9 @@ public sealed class StoryDemoScenario
         nowUtc = DateTime.SpecifyKind(nowUtc, DateTimeKind.Utc);
 
         var userId = Guid.Parse("7aa7aa7a-1111-4444-8888-111111111111");
+        var spouseId = Guid.Parse("7aa7aa7a-1111-4444-8888-111111111112");
+        var viewerId = Guid.Parse("7aa7aa7a-1111-4444-8888-111111111113");
+        var familySpaceId = Guid.Parse("7aa7aa7a-1111-4444-8888-700000000001");
         var monthStart = new DateTime(nowUtc.Year, nowUtc.Month, 1, 0, 0, 0, DateTimeKind.Utc);
         var currentWeekStart = GetStartOfWeek(nowUtc);
         var previousWeekStart = currentWeekStart.AddDays(-7);
@@ -60,6 +68,51 @@ public sealed class StoryDemoScenario
             CreatedAt = nowUtc.AddMonths(-4)
         };
 
+        var spouse = new User
+        {
+            Id = spouseId,
+            Email = "story-spouse@example.com",
+            PreferredCurrency = "PHP",
+            Locale = "en_PH",
+            HasCompletedOnboarding = true,
+            LocationSuggestionsEnabled = true,
+            AiPersonalityIntensity = "balanced",
+            HouseholdSize = "family",
+            CreatedAt = nowUtc.AddMonths(-3)
+        };
+
+        var viewer = new User
+        {
+            Id = viewerId,
+            Email = "story-viewer@example.com",
+            PreferredCurrency = "PHP",
+            Locale = "en_PH",
+            HasCompletedOnboarding = true,
+            AiPersonalityIntensity = "mild",
+            HouseholdSize = "family",
+            CreatedAt = nowUtc.AddMonths(-2)
+        };
+
+        var additionalIdentities = new List<UserIdentity>
+        {
+            new()
+            {
+                Id = Guid.Parse("7aa7aa7a-1111-4444-8888-222222222223"),
+                UserId = spouseId,
+                Provider = AuthProvider.Email,
+                ProviderSub = "story-spouse@example.com",
+                CreatedAt = nowUtc.AddMonths(-3)
+            },
+            new()
+            {
+                Id = Guid.Parse("7aa7aa7a-1111-4444-8888-222222222224"),
+                UserId = viewerId,
+                Provider = AuthProvider.Email,
+                ProviderSub = "story-viewer@example.com",
+                CreatedAt = nowUtc.AddMonths(-2)
+            }
+        };
+
         var subscription = new UserSubscription
         {
             Id = Guid.Parse("7aa7aa7a-1111-4444-8888-250000000001"),
@@ -69,11 +122,43 @@ public sealed class StoryDemoScenario
             OriginalTransactionId = "story-demo-premium"
         };
 
+        var familySpace = new FamilySpace
+        {
+            Id = familySpaceId,
+            Name = "Santos Household",
+            CurrencyCode = "PHP",
+            CreatedByUserId = userId,
+            CreatedAt = nowUtc.AddMonths(-1)
+        };
+
+        var familyMembers = new List<FamilyMember>
+        {
+            new() { Id = Guid.Parse("7aa7aa7a-1111-4444-8888-710000000001"), FamilySpaceId = familySpaceId, UserId = userId, Role = FamilyMemberRole.Owner, JoinedAt = nowUtc.AddMonths(-1) },
+            new() { Id = Guid.Parse("7aa7aa7a-1111-4444-8888-710000000002"), FamilySpaceId = familySpaceId, UserId = spouseId, Role = FamilyMemberRole.Contributor, JoinedAt = nowUtc.AddDays(-18) },
+            new() { Id = Guid.Parse("7aa7aa7a-1111-4444-8888-710000000003"), FamilySpaceId = familySpaceId, UserId = viewerId, Role = FamilyMemberRole.Viewer, JoinedAt = nowUtc.AddDays(-12) }
+        };
+
+        var familyInvites = new List<FamilyInvite>
+        {
+            new()
+            {
+                Id = Guid.Parse("7aa7aa7a-1111-4444-8888-720000000001"),
+                FamilySpaceId = familySpaceId,
+                Email = "story-cousin@example.com",
+                Role = FamilyMemberRole.Viewer,
+                InvitedByUserId = userId,
+                CreatedAt = nowUtc.AddDays(-1),
+                ExpiresAt = nowUtc.AddDays(13)
+            }
+        };
+
         var budgets = new List<Budget>
         {
             new() { Id = Guid.Parse("7aa7aa7a-1111-4444-8888-300000000001"), UserId = userId, Category = "Dining", MonthlyLimit = 4000m, CurrencyCode = "PHP" },
             new() { Id = Guid.Parse("7aa7aa7a-1111-4444-8888-300000000002"), UserId = userId, Category = "Bills", MonthlyLimit = 12000m, CurrencyCode = "PHP" },
-            new() { Id = Guid.Parse("7aa7aa7a-1111-4444-8888-300000000003"), UserId = userId, Category = "Shopping", MonthlyLimit = 3500m, CurrencyCode = "PHP" }
+            new() { Id = Guid.Parse("7aa7aa7a-1111-4444-8888-300000000003"), UserId = userId, Category = "Shopping", MonthlyLimit = 3500m, CurrencyCode = "PHP" },
+            new() { Id = Guid.Parse("7aa7aa7a-1111-4444-8888-300000000004"), UserId = userId, Category = "Dining", MonthlyLimit = 6500m, CurrencyCode = "PHP", Scope = RecordScope.Family, FamilySpaceId = familySpaceId, SharedAt = nowUtc.AddDays(-16), SharedByUserId = userId },
+            new() { Id = Guid.Parse("7aa7aa7a-1111-4444-8888-300000000005"), UserId = userId, Category = "Groceries", MonthlyLimit = 14000m, CurrencyCode = "PHP", Scope = RecordScope.Family, FamilySpaceId = familySpaceId, SharedAt = nowUtc.AddDays(-16), SharedByUserId = userId }
         };
 
         var transactions = new List<Transaction>
@@ -102,13 +187,16 @@ public sealed class StoryDemoScenario
         {
             new() { Id = Guid.Parse("7aa7aa7a-1111-4444-8888-500000000001"), UserId = userId, Type = TransactionType.Expense, Category = "Subscriptions", Counterparty = "Netflix", Amount = new Money(549m, "PHP"), Cadence = RecurringCadence.Monthly, StartDate = nowUtc.AddMonths(-3), NextRunAt = nowUtc.AddDays(5), IsActive = true, CreatedAt = nowUtc.AddMonths(-3), UpdatedAt = nowUtc },
             new() { Id = Guid.Parse("7aa7aa7a-1111-4444-8888-500000000002"), UserId = userId, Type = TransactionType.Expense, Category = "Bills", Counterparty = "Globe", Amount = new Money(1499m, "PHP"), Cadence = RecurringCadence.Monthly, StartDate = nowUtc.AddMonths(-3), NextRunAt = nowUtc.AddDays(8), IsActive = true, CreatedAt = nowUtc.AddMonths(-3), UpdatedAt = nowUtc },
-            new() { Id = Guid.Parse("7aa7aa7a-1111-4444-8888-500000000003"), UserId = userId, Type = TransactionType.Income, Category = "Salary", Counterparty = "Freelance Client", Amount = new Money(3500m, "PHP"), Cadence = RecurringCadence.Weekly, StartDate = nowUtc.AddMonths(-1), NextRunAt = nowUtc.AddDays(4), IsActive = true, CreatedAt = nowUtc.AddMonths(-1), UpdatedAt = nowUtc, LastGeneratedAt = nowUtc.AddDays(-3) }
+            new() { Id = Guid.Parse("7aa7aa7a-1111-4444-8888-500000000003"), UserId = userId, Type = TransactionType.Income, Category = "Salary", Counterparty = "Freelance Client", Amount = new Money(3500m, "PHP"), Cadence = RecurringCadence.Weekly, StartDate = nowUtc.AddMonths(-1), NextRunAt = nowUtc.AddDays(4), IsActive = true, CreatedAt = nowUtc.AddMonths(-1), UpdatedAt = nowUtc, LastGeneratedAt = nowUtc.AddDays(-3) },
+            new() { Id = Guid.Parse("7aa7aa7a-1111-4444-8888-500000000005"), UserId = userId, Type = TransactionType.Expense, Category = "Bills", Counterparty = "Home internet", Amount = new Money(1899m, "PHP"), Cadence = RecurringCadence.Monthly, StartDate = monthStart, NextRunAt = monthStart.AddMonths(1).AddDays(4), IsActive = true, CreatedAt = monthStart, UpdatedAt = nowUtc, Scope = RecordScope.Family, FamilySpaceId = familySpaceId, SharedAt = monthStart, SharedByUserId = userId }
         };
 
         transactions.AddRange(
         [
             new() { Id = Guid.Parse("7aa7aa7a-1111-4444-8888-400000000019"), UserId = userId, Type = TransactionType.Income, Category = "Salary", Counterparty = "Freelance Client", Amount = new Money(3500m, "PHP"), Date = nowUtc.AddDays(-3), RecurringScheduleId = recurringSchedules[2].Id, RecurringOccurrenceDate = nowUtc.AddDays(-3), CreatedAt = nowUtc.AddDays(-3) },
-            new() { Id = Guid.Parse("7aa7aa7a-1111-4444-8888-400000000020"), UserId = userId, Type = TransactionType.Expense, Category = "Subscriptions", Counterparty = "Netflix", Amount = new Money(549m, "PHP"), Date = nowUtc.AddMonths(-1).AddDays(-20), RegretLevel = RegretLevel.WorthIt, RecurringScheduleId = recurringSchedules[0].Id, RecurringOccurrenceDate = nowUtc.AddMonths(-1).AddDays(-20), CreatedAt = nowUtc.AddMonths(-1).AddDays(-20) }
+            new() { Id = Guid.Parse("7aa7aa7a-1111-4444-8888-400000000020"), UserId = userId, Type = TransactionType.Expense, Category = "Subscriptions", Counterparty = "Netflix", Amount = new Money(549m, "PHP"), Date = nowUtc.AddMonths(-1).AddDays(-20), RegretLevel = RegretLevel.WorthIt, RecurringScheduleId = recurringSchedules[0].Id, RecurringOccurrenceDate = nowUtc.AddMonths(-1).AddDays(-20), CreatedAt = nowUtc.AddMonths(-1).AddDays(-20) },
+            new() { Id = Guid.Parse("7aa7aa7a-1111-4444-8888-400000000022"), UserId = userId, Type = TransactionType.Expense, Category = "Groceries", Counterparty = "Landers", Amount = new Money(3840m, "PHP"), Date = nowUtc.AddDays(-5), RegretLevel = RegretLevel.WorthIt, CreatedAt = nowUtc.AddDays(-5), Scope = RecordScope.Family, FamilySpaceId = familySpaceId, SharedAt = nowUtc.AddDays(-5), SharedByUserId = userId },
+            new() { Id = Guid.Parse("7aa7aa7a-1111-4444-8888-400000000023"), UserId = userId, Type = TransactionType.Expense, Category = "Dining", Counterparty = "Manam", Amount = new Money(2460m, "PHP"), Date = nowUtc.AddDays(-8), RegretLevel = RegretLevel.WorthIt, CreatedAt = nowUtc.AddDays(-8), Scope = RecordScope.Family, FamilySpaceId = familySpaceId, SharedAt = nowUtc.AddDays(-8), SharedByUserId = userId }
         ]);
 
         var weeklyInsights = new List<WeeklyInsights>
@@ -186,13 +274,14 @@ public sealed class StoryDemoScenario
             new() { UserId = userId, EventType = ConscienceEventTypes.ReflectionCompleted, SourceId = transactions[3].Id.ToString(), XpAwarded = 20, CreatedAt = nowUtc.AddDays(-10).AddHours(1) },
             new() { UserId = userId, EventType = ConscienceEventTypes.PrePurchaseChecked, SourceId = "prepurchase:dining:test-001", XpAwarded = 20, CreatedAt = nowUtc.AddHours(-5) },
             new() { UserId = userId, EventType = ConscienceEventTypes.InsightReviewed, SourceId = $"insights:{DateOnly.FromDateTime(currentWeekStart):yyyy-MM-dd}", XpAwarded = 10, CreatedAt = nowUtc.AddHours(-4) },
-            new() { UserId = userId, EventType = ConscienceEventTypes.RegretPatternReviewed, SourceId = "pattern:shopping:2026-05", XpAwarded = 25, CreatedAt = nowUtc.AddHours(-3) }
+            new() { UserId = userId, EventType = ConscienceEventTypes.RegretPatternReviewed, SourceId = "pattern:shopping:2026-05", XpAwarded = 25, CreatedAt = nowUtc.AddHours(-3) },
+            new() { UserId = userId, EventType = ConscienceEventTypes.FamilyInviteSent, SourceId = familyInvites[0].Id.ToString(), XpAwarded = 15, CreatedAt = nowUtc.AddDays(-1) }
         };
 
         var conscienceProgress = new ConscienceJourneyProgress
         {
             UserId = userId,
-            XpTotal = 485,
+            XpTotal = 500,
             MomentumDays = 6,
             BestMomentumDays = 9,
             LastMomentumDate = DateOnly.FromDateTime(nowUtc.Date),
@@ -204,7 +293,9 @@ public sealed class StoryDemoScenario
         {
             new() { UserId = userId, WeekStart = currentWeek, QuestKey = "reflect_three_purchases", Progress = 3, Target = 3, XpAwarded = 15, CompletedAt = nowUtc.AddHours(-8), UpdatedAt = nowUtc },
             new() { UserId = userId, WeekStart = currentWeek, QuestKey = "check_before_purchase", Progress = 1, Target = 1, XpAwarded = 10, CompletedAt = nowUtc.AddHours(-5), UpdatedAt = nowUtc },
-            new() { UserId = userId, WeekStart = currentWeek, QuestKey = "review_regret_pattern", Progress = 1, Target = 1, XpAwarded = 15, CompletedAt = nowUtc.AddHours(-3), UpdatedAt = nowUtc }
+            new() { UserId = userId, WeekStart = currentWeek, QuestKey = "review_regret_pattern", Progress = 1, Target = 1, XpAwarded = 15, CompletedAt = nowUtc.AddHours(-3), UpdatedAt = nowUtc },
+            new() { UserId = userId, WeekStart = currentWeek, QuestKey = "send_family_invite", Progress = 1, Target = 1, XpAwarded = 10, CompletedAt = nowUtc.AddDays(-1), UpdatedAt = nowUtc },
+            new() { UserId = userId, WeekStart = currentWeek, QuestKey = "add_family_expense", Progress = 1, Target = 1, XpAwarded = 15, CompletedAt = nowUtc.AddDays(-5), UpdatedAt = nowUtc }
         };
 
         var conscienceBadgeProgress = new List<ConscienceBadgeProgress>
@@ -213,7 +304,9 @@ public sealed class StoryDemoScenario
             new() { UserId = userId, BadgeKey = "pause_before_purchase", Progress = 1, Target = 1, UnlockedAt = nowUtc.AddHours(-5), UpdatedAt = nowUtc },
             new() { UserId = userId, BadgeKey = "budget_rescuer", Progress = 0, Target = 1, UpdatedAt = nowUtc },
             new() { UserId = userId, BadgeKey = "regret_pattern_spotted", Progress = 1, Target = 1, UnlockedAt = nowUtc.AddHours(-3), UpdatedAt = nowUtc },
-            new() { UserId = userId, BadgeKey = "worth_it_week", Progress = 3, Target = 5, UpdatedAt = nowUtc }
+            new() { UserId = userId, BadgeKey = "worth_it_week", Progress = 3, Target = 5, UpdatedAt = nowUtc },
+            new() { UserId = userId, BadgeKey = "family_founder", Progress = 1, Target = 1, UnlockedAt = nowUtc.AddDays(-1), UpdatedAt = nowUtc },
+            new() { UserId = userId, BadgeKey = "family_planner", Progress = 1, Target = 1, UnlockedAt = nowUtc.AddDays(-8), UpdatedAt = nowUtc }
         };
 
         var conscienceMascotMoments = new List<ConscienceMascotMoment>
@@ -332,7 +425,12 @@ public sealed class StoryDemoScenario
         {
             User = user,
             Identity = identity,
+            AdditionalUsers = [spouse, viewer],
+            AdditionalIdentities = additionalIdentities,
             Subscription = subscription,
+            FamilySpace = familySpace,
+            FamilyMembers = familyMembers,
+            FamilyInvites = familyInvites,
             Budgets = budgets,
             Transactions = transactions,
             RecurringSchedules = recurringSchedules,

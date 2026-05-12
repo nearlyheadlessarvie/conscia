@@ -24,10 +24,16 @@ public static class StoryDemoDynamoSeeder
     {
         await EnsureRequiredTablesAsync(dynamo, ct);
 
-        var userPk = DynamoKeys.User(scenario.User.Id);
+        var userIds = new[] { scenario.User.Id }
+            .Concat(scenario.AdditionalUsers.Select(user => user.Id))
+            .ToList();
 
-        foreach (var tableName in UserScopedTables)
-            await DeleteUserSliceAsync(dynamo, tableName, userPk, ct);
+        foreach (var userId in userIds)
+        {
+            var userPk = DynamoKeys.User(userId);
+            foreach (var tableName in UserScopedTables)
+                await DeleteUserSliceAsync(dynamo, tableName, userPk, ct);
+        }
 
         var transactionRepository = new TransactionRepository(dynamo);
         foreach (var transaction in scenario.Transactions)

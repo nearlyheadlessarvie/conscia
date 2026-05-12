@@ -24,7 +24,7 @@ void main() {
 
     expect(
       friendlySignInErrorMessage(error, isPasswordSignIn: true),
-      'Invalid username or password. Reference: LOGIN401',
+      'Invalid username or password.',
     );
   });
 
@@ -70,7 +70,7 @@ void main() {
 
     expect(
       friendlySignInErrorMessage(appError, isPasswordSignIn: true),
-      'Invalid username or password. Reference: ORIGINAL',
+      'Invalid username or password.',
     );
   });
 }

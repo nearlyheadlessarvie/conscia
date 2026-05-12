@@ -42,7 +42,7 @@ public static class BudgetEndpoints
                         statusCode: 403);
             }
 
-            var budget = await svc.CreateAsync(userId, dto.Category, dto.MonthlyLimit, dto.CurrencyCode, ctx.RequestAborted);
+            var budget = await svc.CreateAsync(userId, dto, ctx.RequestAborted);
             var status = await svc.GetStatusByIdAsync(userId, budget.Id, ct: ctx.RequestAborted);
             return Results.Created($"/api/v1/budgets/{budget.Id}", new
             {
@@ -53,7 +53,11 @@ public static class BudgetEndpoints
                 CurrentSpend = status?.CurrentSpend ?? 0m,
                 budget.CurrencyCode,
                 PercentUsed = status?.PercentUsed ?? 0m,
-                IsOverBudget = status?.IsOverBudget ?? false
+                IsOverBudget = status?.IsOverBudget ?? false,
+                budget.Scope,
+                budget.FamilySpaceId,
+                budget.SharedAt,
+                budget.SharedByUserId
             });
         }).WithName("CreateBudget");
 
@@ -69,7 +73,11 @@ public static class BudgetEndpoints
                 b.CurrentSpend,
                 b.CurrencyCode,
                 b.PercentUsed,
-                b.IsOverBudget
+                b.IsOverBudget,
+                b.Scope,
+                b.FamilySpaceId,
+                b.SharedAt,
+                b.SharedByUserId
             }));
         }).WithName("ListBudgets");
 
@@ -87,7 +95,11 @@ public static class BudgetEndpoints
                 budget.CurrentSpend,
                 budget.CurrencyCode,
                 budget.PercentUsed,
-                budget.IsOverBudget
+                budget.IsOverBudget,
+                budget.Scope,
+                budget.FamilySpaceId,
+                budget.SharedAt,
+                budget.SharedByUserId
             });
         }).WithName("GetBudget");
 
@@ -113,7 +125,11 @@ public static class BudgetEndpoints
                 CurrentSpend = status?.CurrentSpend ?? 0m,
                 budget.CurrencyCode,
                 PercentUsed = status?.PercentUsed ?? 0m,
-                IsOverBudget = status?.IsOverBudget ?? false
+                IsOverBudget = status?.IsOverBudget ?? false,
+                budget.Scope,
+                budget.FamilySpaceId,
+                budget.SharedAt,
+                budget.SharedByUserId
             });
         }).WithName("UpdateBudget");
 

@@ -6,4 +6,6 @@ public class PrePurchaseRequestDto
     public decimal Amount { get; set; }
     public string CurrencyCode { get; set; } = "USD";
     public string Category { get; set; } = string.Empty;
+    public string ContextScope { get; set; } = "personal";
+    public string? InsightContext { get; set; }
 }

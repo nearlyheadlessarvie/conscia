@@ -1,4 +1,5 @@
 using Conscia.Application.Interfaces;
+using Conscia.Application.DTOs;
 using Conscia.Domain.Enums;
 using Conscia.Domain.ValueObjects;
 using Conscia.Application.Services;
@@ -12,12 +13,14 @@ public class BudgetServiceTests
 {
     private readonly Mock<IBudgetRepository> _repoMock = new();
     private readonly Mock<ITransactionRepository> _transactionRepoMock = new();
+    private readonly Mock<IFamilySpaceRepository> _familyRepoMock = new();
     private readonly BudgetService _svc;
 
     public BudgetServiceTests() => _svc = new BudgetService(
         _repoMock.Object,
         _transactionRepoMock.Object,
-        NullLogger<BudgetService>.Instance);
+        NullLogger<BudgetService>.Instance,
+        _familyRepoMock.Object);
 
     [Fact]
     public async Task CreateAsync_ReturnsBudgetWithCorrectFields()
@@ -33,6 +36,63 @@ public class BudgetServiceTests
         Assert.Equal(500m, result.MonthlyLimit);
         Assert.Equal("USD", result.CurrencyCode);
         Assert.NotEqual(Guid.Empty, result.Id);
+    }
+
+    [Fact]
+    public async Task CreateAsync_FamilyScope_AddsFamilyMetadataToBudget()
+    {
+        var userId = Guid.NewGuid();
+        var familySpaceId = Guid.NewGuid();
+        _familyRepoMock.Setup(r => r.GetMembershipByUserIdAsync(userId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new FamilyMember
+            {
+                UserId = userId,
+                FamilySpaceId = familySpaceId,
+                Role = FamilyMemberRole.Contributor
+            });
+        _repoMock.Setup(r => r.AddAsync(It.IsAny<Budget>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Budget b, CancellationToken _) => b);
+
+        var result = await _svc.CreateAsync(userId, new CreateBudgetDto
+        {
+            Category = "Groceries",
+            MonthlyLimit = 12000m,
+            CurrencyCode = "PHP",
+            Scope = RecordScope.Family,
+            FamilySpaceId = familySpaceId
+        });
+
+        Assert.Equal(RecordScope.Family, result.Scope);
+        Assert.Equal(familySpaceId, result.FamilySpaceId);
+        Assert.Equal(userId, result.SharedByUserId);
+        Assert.NotNull(result.SharedAt);
+    }
+
+    [Fact]
+    public async Task CreateAsync_FamilyScopeRejectsViewer()
+    {
+        var userId = Guid.NewGuid();
+        var familySpaceId = Guid.NewGuid();
+        _familyRepoMock.Setup(r => r.GetMembershipByUserIdAsync(userId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new FamilyMember
+            {
+                UserId = userId,
+                FamilySpaceId = familySpaceId,
+                Role = FamilyMemberRole.Viewer
+            });
+
+        var error = await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
+            _svc.CreateAsync(userId, new CreateBudgetDto
+            {
+                Category = "Groceries",
+                MonthlyLimit = 12000m,
+                CurrencyCode = "PHP",
+                Scope = RecordScope.Family,
+                FamilySpaceId = familySpaceId
+            }));
+
+        Assert.Equal("Viewer cannot create Family Space records.", error.Message);
+        _repoMock.Verify(r => r.AddAsync(It.IsAny<Budget>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]

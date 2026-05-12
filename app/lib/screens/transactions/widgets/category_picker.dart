@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/category_icons.dart';
 import '../../../core/constants/category_visibility.dart';
 import '../../../core/constants/generated/app_constants.g.dart';
+import '../../../models/managed_category.dart';
+import '../../../providers/category_provider.dart';
 import '../../../providers/category_recents_provider.dart';
 
 class CategoryData {
@@ -36,17 +38,33 @@ class _CategoryPickerState extends ConsumerState<CategoryPicker> {
   bool _expanded = false;
 
   List<CategoryData> get _categories {
-    final names = widget.isExpense
-        ? visibleBudgetCategories(
-            isPremium: widget.isPremium,
-            categories: expenseCategories,
-          )
-        : incomeCategories;
+    final managed =
+        ref.watch(managedCategoriesProvider(const CategoryQuery())).maybeWhen(
+              data: _managedCategoryNames,
+              orElse: () => const <String>[],
+            );
+    final names = managed.isNotEmpty
+        ? managed
+        : widget.isExpense
+            ? visibleBudgetCategories(
+                isPremium: widget.isPremium,
+                categories: expenseCategories,
+              )
+            : incomeCategories;
     final orderedNames = orderCategoriesByRecency(
       categories: names,
       recents: ref.watch(recentCategoryProvider),
     );
     return orderedNames.map(CategoryData.new).toList();
+  }
+
+  List<String> _managedCategoryNames(List<ManagedCategory> categories) {
+    return categories
+        .where((category) => !category.isArchived)
+        .where((category) =>
+            widget.isExpense ? category.isExpense : category.isIncome)
+        .map((category) => category.name)
+        .toList(growable: false);
   }
 
   @override

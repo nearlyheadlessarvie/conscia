@@ -26,4 +26,8 @@ public class RecurringSchedule
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? LastGeneratedAt { get; set; }
+    public RecordScope Scope { get; set; } = RecordScope.Personal;
+    public Guid? FamilySpaceId { get; set; }
+    public DateTime? SharedAt { get; set; }
+    public Guid? SharedByUserId { get; set; }
 }

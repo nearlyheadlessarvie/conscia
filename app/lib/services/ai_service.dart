@@ -63,6 +63,7 @@ class AIService {
     required String currencyCode,
     required String category,
     String? insightContext,
+    String contextScope = 'personal',
   }) async {
     try {
       final response = await _dio.post(
@@ -72,6 +73,7 @@ class AIService {
           'amount': amount,
           'currencyCode': currencyCode,
           'category': category,
+          'contextScope': contextScope,
           if (insightContext != null && insightContext.trim().isNotEmpty)
             'insightContext': insightContext.trim(),
         },

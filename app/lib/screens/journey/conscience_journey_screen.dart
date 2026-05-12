@@ -460,6 +460,7 @@ class _JourneyGuideSheet extends StatelessWidget {
     'Created a budget from a nudge.',
     'Reviewed a regret pattern before it repeated.',
     'Built a week of reflective spending awareness.',
+    'Invited someone into a family space.',
   ];
 
   static const _questHints = [
@@ -486,6 +487,14 @@ class _JourneyGuideSheet extends StatelessWidget {
     _GuideQuest(
       'Keep your momentum alive.',
       'Celebrates consistency without punishing missed days.',
+    ),
+    _GuideQuest(
+      'Invite a family member.',
+      'Helps a household coordinate without mixing up identities.',
+    ),
+    _GuideQuest(
+      'Check a family purchase first.',
+      'Rewards pausing when a purchase affects shared budgets.',
     ),
   ];
 
