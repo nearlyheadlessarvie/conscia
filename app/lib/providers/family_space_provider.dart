@@ -34,6 +34,17 @@ final familyInvitesProvider = FutureProvider<List<FamilyInvite>>((ref) async {
       .toList();
 });
 
+final familyOutgoingInvitesProvider =
+    FutureProvider<List<FamilyInvite>>((ref) async {
+  final dio = ref.watch(dioProvider);
+  final response = await dio.get(ApiConstants.familyOutgoingInvites);
+  final data = response.data as List<dynamic>? ?? [];
+  return data
+      .map((item) =>
+          FamilyInvite.fromJson(Map<String, dynamic>.from(item as Map)))
+      .toList();
+});
+
 final familySpaceActionsProvider = Provider<FamilySpaceActions>((ref) {
   return FamilySpaceActions(ref);
 });
@@ -88,6 +99,7 @@ class FamilySpaceActions {
         'role': role,
       },
     );
+    _ref.invalidate(familyOutgoingInvitesProvider);
   }
 
   Future<void> acceptInvite(String inviteId) async {
@@ -102,6 +114,12 @@ class FamilySpaceActions {
     final dio = _ref.read(dioProvider);
     await dio.post(ApiConstants.familyInviteDecline(inviteId));
     _ref.invalidate(familyInvitesProvider);
+  }
+
+  Future<void> cancelInvite(String inviteId) async {
+    final dio = _ref.read(dioProvider);
+    await dio.delete(ApiConstants.familyInvite(inviteId));
+    _ref.invalidate(familyOutgoingInvitesProvider);
   }
 
   Future<FamilyImportPreview> previewImport({

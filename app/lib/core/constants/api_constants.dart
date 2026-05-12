@@ -74,6 +74,8 @@ class ApiConstants {
   static const String familySpace = 'family-space';
   static const String familyOverview = 'family-space/overview';
   static const String familyInvites = 'family-space/invites';
+  static const String familyOutgoingInvites = 'family-space/invites/outgoing';
+  static String familyInvite(String id) => 'family-space/invites/$id';
   static String familyInviteAccept(String id) =>
       'family-space/invites/$id/accept';
   static String familyInviteDecline(String id) =>

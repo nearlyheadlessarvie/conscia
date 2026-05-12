@@ -22,13 +22,29 @@ class FamilyInvitesScreen extends ConsumerWidget {
       child: invites.when(
         data: (items) {
           final canInvite = familySpace.valueOrNull?.role == 'Owner';
+          final outgoingInvites =
+              canInvite ? ref.watch(familyOutgoingInvitesProvider) : null;
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               if (canInvite) ...[
                 const _InviteComposer(),
                 const SizedBox(height: 16),
+                outgoingInvites!.when(
+                  data: (items) => _OutgoingInvitesSection(invites: items),
+                  loading: () => const SkeletonCard(),
+                  error: (_, __) => _InviteErrorCard(
+                    message: 'Unable to load sent invites',
+                    onRetry: () => ref.invalidate(familyOutgoingInvitesProvider),
+                  ),
+                ),
+                const SizedBox(height: 16),
               ],
+              Text(
+                'Invites you received',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              const SizedBox(height: 10),
               if (items.isEmpty)
                 const _EmptyInvites()
               else
@@ -43,19 +59,9 @@ class FamilyInvitesScreen extends ConsumerWidget {
             SkeletonCard(),
           ],
         ),
-        error: (_, __) => FeedCard(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text('Unable to load family invites'),
-              const SizedBox(height: 10),
-              OutlinedButton.icon(
-                onPressed: () => ref.invalidate(familyInvitesProvider),
-                icon: const Icon(Icons.refresh),
-                label: const Text('Retry'),
-              ),
-            ],
-          ),
+        error: (_, __) => _InviteErrorCard(
+          message: 'Unable to load family invites',
+          onRetry: () => ref.invalidate(familyInvitesProvider),
         ),
       ),
     );
@@ -165,6 +171,134 @@ class _InviteComposerState extends ConsumerState<_InviteComposer> {
   }
 }
 
+class _OutgoingInvitesSection extends StatelessWidget {
+  const _OutgoingInvitesSection({required this.invites});
+
+  final List<FamilyInvite> invites;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Invites you sent', style: theme.textTheme.titleMedium),
+        const SizedBox(height: 10),
+        if (invites.isEmpty)
+          const _EmptyOutgoingInvites()
+        else
+          ...invites.map((invite) => _OutgoingInviteCard(invite: invite)),
+      ],
+    );
+  }
+}
+
+class _EmptyOutgoingInvites extends StatelessWidget {
+  const _EmptyOutgoingInvites();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return FeedCard(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.outgoing_mail),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('No outstanding invites',
+                    style: theme.textTheme.titleMedium),
+                const SizedBox(height: 4),
+                Text(
+                  'Sent invites that have not been accepted will show up here.',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                    height: 1.3,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _OutgoingInviteCard extends ConsumerStatefulWidget {
+  const _OutgoingInviteCard({required this.invite});
+
+  final FamilyInvite invite;
+
+  @override
+  ConsumerState<_OutgoingInviteCard> createState() =>
+      _OutgoingInviteCardState();
+}
+
+class _OutgoingInviteCardState extends ConsumerState<_OutgoingInviteCard> {
+  bool _isSubmitting = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return FeedCard(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.mark_email_unread_outlined),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(widget.invite.email, style: theme.textTheme.titleMedium),
+                const SizedBox(height: 4),
+                Text(
+                  '${widget.invite.role} · expires ${_formatInviteDate(widget.invite.expiresAt)}',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                TextButton(
+                  onPressed: _isSubmitting ? null : _cancel,
+                  child: Text(_isSubmitting ? 'Cancelling...' : 'Cancel invite'),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _cancel() async {
+    setState(() => _isSubmitting = true);
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await ref
+          .read(familySpaceActionsProvider)
+          .cancelInvite(widget.invite.id);
+      if (!mounted) return;
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Family invite cancelled.')),
+      );
+    } catch (e, s) {
+      if (!mounted) return;
+      final error = AppError.from(e, stackTrace: s);
+      messenger.showSnackBar(SnackBar(content: Text(error.userMessage)));
+    } finally {
+      if (mounted) setState(() => _isSubmitting = false);
+    }
+  }
+}
+
 class _EmptyInvites extends StatelessWidget {
   const _EmptyInvites();
 
@@ -193,6 +327,34 @@ class _EmptyInvites extends StatelessWidget {
                 ),
               ],
             ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _InviteErrorCard extends StatelessWidget {
+  const _InviteErrorCard({
+    required this.message,
+    required this.onRetry,
+  });
+
+  final String message;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return FeedCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(message),
+          const SizedBox(height: 10),
+          OutlinedButton.icon(
+            onPressed: onRetry,
+            icon: const Icon(Icons.refresh),
+            label: const Text('Retry'),
           ),
         ],
       ),
@@ -306,4 +468,22 @@ class _InviteCardState extends ConsumerState<_InviteCard> {
       if (mounted) setState(() => _isSubmitting = false);
     }
   }
+}
+
+String _formatInviteDate(DateTime date) {
+  const months = [
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
+  ];
+  return '${months[date.month - 1]} ${date.day}';
 }

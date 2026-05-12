@@ -1,3 +1,4 @@
+import 'package:conscia_app/models/family_import_preview.dart';
 import 'package:conscia_app/models/family_invite.dart';
 import 'package:conscia_app/models/family_space.dart';
 import 'package:conscia_app/providers/family_space_provider.dart';
@@ -26,6 +27,7 @@ void main() {
               ),
             ],
           ),
+          familyOutgoingInvitesProvider.overrideWith((ref) async => []),
           familySpaceProvider.overrideWith((ref) async => null),
         ],
         child: const MaterialApp(home: FamilyInvitesScreen()),
@@ -35,6 +37,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Family invites'), findsWidgets);
+    expect(find.text('Invites you received'), findsOneWidget);
     expect(find.text('Santos Household'), findsOneWidget);
     expect(find.text('Contributor'), findsOneWidget);
     expect(find.widgetWithText(FilledButton, 'Accept'), findsOneWidget);
@@ -48,6 +51,7 @@ void main() {
       ProviderScope(
         overrides: [
           familyInvitesProvider.overrideWith((ref) async => []),
+          familyOutgoingInvitesProvider.overrideWith((ref) async => []),
           familySpaceProvider.overrideWith(
             (ref) async => const FamilySpace(
               id: 'family-1',
@@ -68,4 +72,102 @@ void main() {
     expect(find.widgetWithText(TextField, 'Email'), findsOneWidget);
     expect(find.widgetWithText(FilledButton, 'Send invite'), findsOneWidget);
   });
+
+  testWidgets('owner sees outgoing invites and can cancel one', (
+    tester,
+  ) async {
+    final actions = _RecordingFamilySpaceActions();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          familySpaceActionsProvider.overrideWithValue(actions),
+          familyInvitesProvider.overrideWith((ref) async => []),
+          familyOutgoingInvitesProvider.overrideWith(
+            (ref) async => [
+              FamilyInvite(
+                id: 'invite-outgoing',
+                familySpaceId: 'family-1',
+                familySpaceName: 'Santos Household',
+                email: 'wife@example.com',
+                role: 'Contributor',
+                createdAt: DateTime(2026, 5, 1),
+                expiresAt: DateTime(2026, 5, 15),
+              ),
+            ],
+          ),
+          familySpaceProvider.overrideWith(
+            (ref) async => const FamilySpace(
+              id: 'family-1',
+              name: 'Santos Household',
+              currencyCode: 'PHP',
+              isReadOnly: false,
+              role: 'Owner',
+            ),
+          ),
+        ],
+        child: const MaterialApp(home: FamilyInvitesScreen()),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    expect(find.text('Invites you sent'), findsOneWidget);
+    expect(find.text('wife@example.com'), findsOneWidget);
+    expect(find.widgetWithText(TextButton, 'Cancel invite'), findsOneWidget);
+
+    await tester.tap(find.widgetWithText(TextButton, 'Cancel invite'));
+    await tester.pumpAndSettle();
+
+    expect(actions.cancelledInviteIds, ['invite-outgoing']);
+  });
+}
+
+class _RecordingFamilySpaceActions implements FamilySpaceActions {
+  final cancelledInviteIds = <String>[];
+
+  @override
+  Future<void> cancelInvite(String inviteId) async {
+    cancelledInviteIds.add(inviteId);
+  }
+
+  @override
+  Future<void> acceptInvite(String inviteId) async {}
+
+  @override
+  Future<FamilySpace> create({
+    required String name,
+    required String currencyCode,
+  }) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<void> declineInvite(String inviteId) async {}
+
+  @override
+  Future<int> importRecords(List<FamilyImportSelection> selections) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<void> invite({
+    required String email,
+    required String role,
+  }) async {}
+
+  @override
+  Future<FamilyImportPreview> previewImport({
+    required bool includeTransactions,
+    required bool includeBudgets,
+    required bool includeRecurringSchedules,
+    List<String> categories = const [],
+  }) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<FamilySpace> updateName(String name) {
+    throw UnimplementedError();
+  }
 }
