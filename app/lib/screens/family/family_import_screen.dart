@@ -39,11 +39,26 @@ class _FamilyImportScreenState extends ConsumerState<FamilyImportScreen> {
               onPressed: _isLoading ? null : _previewRecords,
               child: Text(_isLoading ? 'Previewing...' : 'Preview records'),
             )
-          : FilledButton(
-              onPressed: _isLoading || _selectedIds.isEmpty ? null : _import,
-              child: Text(_isLoading
-                  ? 'Importing...'
-                  : 'Import ${_selectedIds.length} selected'),
+          : Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: _isLoading ? null : _resetImportFlow,
+                    child: const Text('Cancel'),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  flex: 2,
+                  child: FilledButton(
+                    onPressed:
+                        _isLoading || _selectedIds.isEmpty ? null : _import,
+                    child: Text(_isLoading
+                        ? 'Importing...'
+                        : 'Import ${_selectedIds.length} selected'),
+                  ),
+                ),
+              ],
             ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -70,29 +85,43 @@ class _FamilyImportScreenState extends ConsumerState<FamilyImportScreen> {
                   'Record types',
                   style: Theme.of(context).textTheme.titleSmall,
                 ),
-                const SizedBox(height: 8),
-                _ImportTypeOption(
-                  icon: Icons.receipt_long_outlined,
-                  title: 'Transactions',
-                  subtitle: 'Expenses and contributions you choose below.',
-                  selected: _includeTransactions,
-                  onChanged: (value) =>
-                      setState(() => _includeTransactions = value),
-                ),
-                _ImportTypeOption(
-                  icon: Icons.account_balance_wallet_outlined,
-                  title: 'Budgets',
-                  subtitle: 'Monthly caps for shared categories.',
-                  selected: _includeBudgets,
-                  onChanged: (value) => setState(() => _includeBudgets = value),
-                ),
-                _ImportTypeOption(
-                  icon: Icons.repeat_outlined,
-                  title: 'Recurring schedules',
-                  subtitle: 'Bills or contribution schedules.',
-                  selected: _includeRecurringSchedules,
-                  onChanged: (value) =>
-                      setState(() => _includeRecurringSchedules = value),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _ImportTypeCard(
+                        icon: Icons.receipt_long_outlined,
+                        title: 'Transactions',
+                        selected: _includeTransactions,
+                        onTap: () => setState(
+                          () => _includeTransactions = !_includeTransactions,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: _ImportTypeCard(
+                        icon: Icons.account_balance_wallet_outlined,
+                        title: 'Budgets',
+                        selected: _includeBudgets,
+                        onTap: () => setState(
+                          () => _includeBudgets = !_includeBudgets,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: _ImportTypeCard(
+                        icon: Icons.repeat_outlined,
+                        title: 'Recurring Schedules',
+                        selected: _includeRecurringSchedules,
+                        onTap: () => setState(
+                          () => _includeRecurringSchedules =
+                              !_includeRecurringSchedules,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 14),
                 TextField(
@@ -143,6 +172,17 @@ class _FamilyImportScreenState extends ConsumerState<FamilyImportScreen> {
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
+  }
+
+  void _resetImportFlow() {
+    setState(() {
+      _includeTransactions = true;
+      _includeBudgets = true;
+      _includeRecurringSchedules = true;
+      _categoryController.clear();
+      _preview = null;
+      _selectedIds = {};
+    });
   }
 
   Future<void> _import() async {
@@ -200,6 +240,7 @@ class FamilyImportPreviewList extends StatelessWidget {
     final totalCount = preview.items.length;
     final selectedCount = selectedIds.length;
     final allSelected = totalCount > 0 && selectedCount == totalCount;
+    final groups = _groupItems(preview.items);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -244,84 +285,98 @@ class FamilyImportPreviewList extends StatelessWidget {
           const SizedBox(height: 10),
         ],
         if (preview.items.isNotEmpty)
-          ...preview.items.map((item) => _ImportItemTile(
-                item: item,
-                selected: selectedIds.contains(item.selectionKey),
-                onChanged: (selected) {
-                  final next = {...selectedIds};
-                  if (selected) {
-                    next.add(item.selectionKey);
-                  } else {
-                    next.remove(item.selectionKey);
-                  }
-                  onSelectionChanged(next);
-                },
-              )),
+          for (final entry in groups.entries) ...[
+            Padding(
+              padding: const EdgeInsets.fromLTRB(2, 8, 2, 8),
+              child: Text(entry.key, style: theme.textTheme.titleSmall),
+            ),
+            ...entry.value.map((item) => _ImportItemTile(
+                  item: item,
+                  selected: selectedIds.contains(item.selectionKey),
+                  onChanged: (selected) {
+                    final next = {...selectedIds};
+                    if (selected) {
+                      next.add(item.selectionKey);
+                    } else {
+                      next.remove(item.selectionKey);
+                    }
+                    onSelectionChanged(next);
+                  },
+                )),
+          ],
       ],
     );
   }
+
+  static Map<String, List<FamilyImportItem>> _groupItems(
+    List<FamilyImportItem> items,
+  ) {
+    final groups = <String, List<FamilyImportItem>>{};
+    for (final item in items) {
+      groups.putIfAbsent(_recordTypeGroupTitle(item.recordType), () => []);
+      groups[_recordTypeGroupTitle(item.recordType)]!.add(item);
+    }
+    return groups;
+  }
 }
 
-class _ImportTypeOption extends StatelessWidget {
-  const _ImportTypeOption({
+class _ImportTypeCard extends StatelessWidget {
+  const _ImportTypeCard({
     required this.icon,
     required this.title,
-    required this.subtitle,
     required this.selected,
-    required this.onChanged,
+    required this.onTap,
   });
 
   final IconData icon;
   final String title;
-  final String subtitle;
   final bool selected;
-  final ValueChanged<bool> onChanged;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
 
-    return InkWell(
-      borderRadius: BorderRadius.circular(18),
-      onTap: () => onChanged(!selected),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        child: Row(
-          children: [
-            CircleAvatar(
-              radius: 18,
-              backgroundColor: selected
-                  ? colors.primaryContainer.withValues(alpha: 0.68)
-                  : colors.surfaceContainerHighest,
-              child: Icon(
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(20),
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 160),
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+          decoration: BoxDecoration(
+            color: selected
+                ? colors.primaryContainer.withValues(alpha: 0.55)
+                : colors.surfaceContainerHighest.withValues(alpha: 0.55),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: selected
+                  ? colors.primary.withValues(alpha: 0.38)
+                  : colors.outlineVariant,
+            ),
+          ),
+          child: Column(
+            children: [
+              Icon(
                 icon,
-                size: 18,
+                size: 22,
                 color: selected ? colors.primary : colors.onSurfaceVariant,
               ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(title, style: theme.textTheme.titleSmall),
-                  const SizedBox(height: 2),
-                  Text(
-                    subtitle,
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: colors.onSurfaceVariant,
-                      height: 1.25,
-                    ),
-                  ),
-                ],
+              const SizedBox(height: 8),
+              Text(
+                title,
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.labelMedium?.copyWith(
+                  color: selected ? colors.primary : colors.onSurfaceVariant,
+                  fontWeight: FontWeight.w800,
+                ),
               ),
-            ),
-            Switch(
-              value: selected,
-              onChanged: onChanged,
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -439,15 +494,26 @@ class _ImportItemTile extends StatelessWidget {
   }
 
   static String _recordTypeLabel(String recordType) {
-    switch (recordType.toLowerCase()) {
-      case 'budget':
-        return 'Budget';
-      case 'recurring':
-      case 'recurringschedule':
-      case 'recurring_schedule':
-        return 'Recurring';
-      default:
-        return 'Transaction';
-    }
+    return switch (_normalizeRecordType(recordType)) {
+      'budget' => 'Budget',
+      'recurring' => 'Recurring',
+      _ => 'Transaction',
+    };
   }
+}
+
+String _recordTypeGroupTitle(String recordType) {
+  return switch (_normalizeRecordType(recordType)) {
+    'budget' => 'Budgets',
+    'recurring' => 'Recurring Schedules',
+    _ => 'Transactions',
+  };
+}
+
+String _normalizeRecordType(String recordType) {
+  return switch (recordType.toLowerCase()) {
+    'budget' => 'budget',
+    'recurring' || 'recurringschedule' || 'recurring_schedule' => 'recurring',
+    _ => 'transaction',
+  };
 }
