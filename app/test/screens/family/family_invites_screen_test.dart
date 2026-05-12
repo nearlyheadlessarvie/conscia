@@ -1,4 +1,5 @@
 import 'package:conscia_app/models/family_invite.dart';
+import 'package:conscia_app/models/family_member.dart';
 import 'package:conscia_app/models/family_space.dart';
 import 'package:conscia_app/providers/family_space_provider.dart';
 import 'package:conscia_app/screens/family/family_invites_screen.dart';
@@ -183,6 +184,24 @@ class _RecordingFamilySpaceActions implements FamilySpaceActions {
 
   @override
   Future<FamilySpace> updateName(String name) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<void> leaveFamilySpace() {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<void> removeMember(String memberId) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<FamilyMember> updateMemberRole({
+    required String memberId,
+    required String role,
+  }) {
     throw UnimplementedError();
   }
 }

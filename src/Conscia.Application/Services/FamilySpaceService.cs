@@ -17,6 +17,7 @@ public class FamilySpaceService : IFamilySpaceService
     private readonly ITransactionRepository _transactions;
     private readonly IBudgetRepository _budgets;
     private readonly IRecurringScheduleRepository _recurringSchedules;
+    private readonly IUserRepository _users;
     private readonly ILogger<FamilySpaceService> _logger;
 
     public FamilySpaceService(
@@ -26,6 +27,7 @@ public class FamilySpaceService : IFamilySpaceService
         ITransactionRepository transactions,
         IBudgetRepository budgets,
         IRecurringScheduleRepository recurringSchedules,
+        IUserRepository users,
         ILogger<FamilySpaceService> logger)
     {
         _repository = repository;
@@ -34,6 +36,7 @@ public class FamilySpaceService : IFamilySpaceService
         _transactions = transactions;
         _budgets = budgets;
         _recurringSchedules = recurringSchedules;
+        _users = users;
         _logger = logger;
     }
 
@@ -261,6 +264,61 @@ public class FamilySpaceService : IFamilySpaceService
             .ToList();
     }
 
+    public async Task<IReadOnlyList<FamilyMemberDto>> GetMembersAsync(
+        Guid userId,
+        CancellationToken ct = default)
+    {
+        var member = await RequireMemberAsync(userId, ct);
+        var members = await _repository.ListMembersAsync(member.FamilySpaceId, ct);
+        return await ToMemberDtosAsync(members, userId, ct);
+    }
+
+    public async Task<FamilyMemberDto> UpdateMemberRoleAsync(
+        Guid userId,
+        Guid memberId,
+        FamilyMemberRole role,
+        CancellationToken ct = default)
+    {
+        if (role == FamilyMemberRole.Owner)
+            throw new InvalidOperationException("Owner role changes require ownership transfer.");
+
+        var owner = await RequireOwnerAsync(userId, ct);
+        var members = await _repository.ListMembersAsync(owner.FamilySpaceId, ct);
+        var target = FindMember(members, memberId);
+
+        if (target.Role == FamilyMemberRole.Owner)
+            throw new InvalidOperationException("Owner role changes require ownership transfer.");
+
+        target.Role = role;
+        await _repository.UpdateMemberAsync(target, ct);
+        return await ToMemberDtoAsync(target, userId, ct);
+    }
+
+    public async Task RemoveMemberAsync(
+        Guid userId,
+        Guid memberId,
+        CancellationToken ct = default)
+    {
+        var owner = await RequireOwnerAsync(userId, ct);
+        var members = await _repository.ListMembersAsync(owner.FamilySpaceId, ct);
+        var target = FindMember(members, memberId);
+
+        if (target.Role == FamilyMemberRole.Owner)
+            throw new InvalidOperationException("Owners must transfer ownership before leaving or being removed.");
+
+        await _repository.DeleteMemberAsync(memberId, ct);
+    }
+
+    public async Task LeaveAsync(Guid userId, CancellationToken ct = default)
+    {
+        var member = await RequireMemberAsync(userId, ct);
+
+        if (member.Role == FamilyMemberRole.Owner)
+            throw new InvalidOperationException("Owners must transfer ownership before leaving or being removed.");
+
+        await _repository.DeleteMemberAsync(member.Id, ct);
+    }
+
     public async Task<FamilyMember> AcceptInviteAsync(
         Guid userId,
         string email,
@@ -336,6 +394,44 @@ public class FamilySpaceService : IFamilySpaceService
 
         return invite;
     }
+
+    private async Task<IReadOnlyList<FamilyMemberDto>> ToMemberDtosAsync(
+        IReadOnlyList<FamilyMember> members,
+        Guid currentUserId,
+        CancellationToken ct)
+    {
+        var results = new List<FamilyMemberDto>(members.Count);
+
+        foreach (var member in members)
+        {
+            results.Add(await ToMemberDtoAsync(member, currentUserId, ct));
+        }
+
+        return results;
+    }
+
+    private async Task<FamilyMemberDto> ToMemberDtoAsync(
+        FamilyMember member,
+        Guid currentUserId,
+        CancellationToken ct)
+    {
+        var user = await _users.GetByIdAsync(member.UserId, ct);
+        var email = string.IsNullOrWhiteSpace(user?.Email)
+            ? $"member-{member.UserId.ToString()[..8]}"
+            : user.Email;
+
+        return new FamilyMemberDto(
+            member.Id,
+            member.UserId,
+            email,
+            member.Role.ToString(),
+            member.JoinedAt,
+            member.UserId == currentUserId);
+    }
+
+    private static FamilyMember FindMember(IReadOnlyList<FamilyMember> members, Guid memberId) =>
+        members.FirstOrDefault(m => m.Id == memberId)
+            ?? throw new InvalidOperationException("Family member was not found.");
 
     private async Task<FamilyMember> RequireOwnerAsync(Guid userId, CancellationToken ct)
     {

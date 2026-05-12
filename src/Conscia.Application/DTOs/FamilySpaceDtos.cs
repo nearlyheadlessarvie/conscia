@@ -6,6 +6,8 @@ public record CreateFamilySpaceDto(string Name, string CurrencyCode);
 
 public record UpdateFamilySpaceDto(string Name);
 
+public record UpdateFamilyMemberRoleDto(FamilyMemberRole Role);
+
 public record FamilySpaceDto(
     Guid Id,
     string Name,
@@ -23,6 +25,14 @@ public record FamilyInviteDto(
     string Role,
     DateTime CreatedAt,
     DateTime ExpiresAt);
+
+public record FamilyMemberDto(
+    Guid Id,
+    Guid UserId,
+    string Email,
+    string Role,
+    DateTime JoinedAt,
+    bool IsCurrentUser);
 
 public record FamilySpaceOverviewDto(
     Guid FamilySpaceId,

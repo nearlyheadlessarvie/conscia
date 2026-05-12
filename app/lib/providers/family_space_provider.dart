@@ -4,6 +4,7 @@ import '../core/constants/api_constants.dart';
 import '../core/network/dio_client.dart';
 import '../models/family_overview.dart';
 import '../models/family_invite.dart';
+import '../models/family_member.dart';
 import '../models/family_space.dart';
 
 final familySpaceProvider = FutureProvider<FamilySpace?>((ref) async {
@@ -44,20 +45,39 @@ final familyOutgoingInvitesProvider =
       .toList();
 });
 
+final familyMembersProvider = FutureProvider<List<FamilyMember>>((ref) async {
+  final dio = ref.watch(dioProvider);
+  final response = await dio.get(ApiConstants.familyMembers);
+  final data = response.data as List<dynamic>? ?? [];
+  return data
+      .map((item) =>
+          FamilyMember.fromJson(Map<String, dynamic>.from(item as Map)))
+      .toList();
+});
+
 final familySpaceActionsProvider = Provider<FamilySpaceActions>((ref) {
   return FamilySpaceActions(ref);
 });
 
 class FamilySpaceActions {
-  FamilySpaceActions(this._ref);
+  FamilySpaceActions([this._ref]);
 
-  final Ref _ref;
+  final Ref? _ref;
+
+  Ref get _requireRef {
+    final ref = _ref;
+    if (ref == null) {
+      throw StateError('FamilySpaceActions requires a Riverpod ref.');
+    }
+    return ref;
+  }
 
   Future<FamilySpace> create({
     required String name,
     required String currencyCode,
   }) async {
-    final dio = _ref.read(dioProvider);
+    final ref = _requireRef;
+    final dio = ref.read(dioProvider);
     final response = await dio.post(
       ApiConstants.familySpace,
       data: {
@@ -66,21 +86,22 @@ class FamilySpaceActions {
       },
     );
 
-    _ref.invalidate(familySpaceProvider);
-    _ref.invalidate(familyOverviewProvider);
+    ref.invalidate(familySpaceProvider);
+    ref.invalidate(familyOverviewProvider);
     return FamilySpace.fromJson(
         Map<String, dynamic>.from(response.data as Map));
   }
 
   Future<FamilySpace> updateName(String name) async {
-    final dio = _ref.read(dioProvider);
+    final ref = _requireRef;
+    final dio = ref.read(dioProvider);
     final response = await dio.put(
       ApiConstants.familySpace,
       data: {'name': name},
     );
 
-    _ref.invalidate(familySpaceProvider);
-    _ref.invalidate(familyOverviewProvider);
+    ref.invalidate(familySpaceProvider);
+    ref.invalidate(familyOverviewProvider);
     return FamilySpace.fromJson(
       Map<String, dynamic>.from(response.data as Map),
     );
@@ -90,7 +111,8 @@ class FamilySpaceActions {
     required String email,
     required String role,
   }) async {
-    final dio = _ref.read(dioProvider);
+    final ref = _requireRef;
+    final dio = ref.read(dioProvider);
     await dio.post(
       ApiConstants.familyInvites,
       data: {
@@ -98,27 +120,66 @@ class FamilySpaceActions {
         'role': role,
       },
     );
-    _ref.invalidate(familyOutgoingInvitesProvider);
+    ref.invalidate(familyOutgoingInvitesProvider);
   }
 
   Future<void> acceptInvite(String inviteId) async {
-    final dio = _ref.read(dioProvider);
+    final ref = _requireRef;
+    final dio = ref.read(dioProvider);
     await dio.post(ApiConstants.familyInviteAccept(inviteId));
-    _ref.invalidate(familyInvitesProvider);
-    _ref.invalidate(familySpaceProvider);
-    _ref.invalidate(familyOverviewProvider);
+    ref.invalidate(familyInvitesProvider);
+    ref.invalidate(familySpaceProvider);
+    ref.invalidate(familyOverviewProvider);
+    ref.invalidate(familyMembersProvider);
   }
 
   Future<void> declineInvite(String inviteId) async {
-    final dio = _ref.read(dioProvider);
+    final ref = _requireRef;
+    final dio = ref.read(dioProvider);
     await dio.post(ApiConstants.familyInviteDecline(inviteId));
-    _ref.invalidate(familyInvitesProvider);
+    ref.invalidate(familyInvitesProvider);
   }
 
   Future<void> cancelInvite(String inviteId) async {
-    final dio = _ref.read(dioProvider);
+    final ref = _requireRef;
+    final dio = ref.read(dioProvider);
     await dio.delete(ApiConstants.familyInvite(inviteId));
-    _ref.invalidate(familyOutgoingInvitesProvider);
+    ref.invalidate(familyOutgoingInvitesProvider);
   }
 
+  Future<FamilyMember> updateMemberRole({
+    required String memberId,
+    required String role,
+  }) async {
+    final ref = _requireRef;
+    final dio = ref.read(dioProvider);
+    final response = await dio.patch(
+      ApiConstants.familyMemberRole(memberId),
+      data: {'role': role},
+    );
+
+    ref.invalidate(familyMembersProvider);
+    ref.invalidate(familySpaceProvider);
+    ref.invalidate(familyOverviewProvider);
+    return FamilyMember.fromJson(
+      Map<String, dynamic>.from(response.data as Map),
+    );
+  }
+
+  Future<void> removeMember(String memberId) async {
+    final ref = _requireRef;
+    final dio = ref.read(dioProvider);
+    await dio.delete(ApiConstants.familyMember(memberId));
+    ref.invalidate(familyMembersProvider);
+    ref.invalidate(familyOverviewProvider);
+  }
+
+  Future<void> leaveFamilySpace() async {
+    final ref = _requireRef;
+    final dio = ref.read(dioProvider);
+    await dio.post(ApiConstants.familyLeave);
+    ref.invalidate(familyMembersProvider);
+    ref.invalidate(familySpaceProvider);
+    ref.invalidate(familyOverviewProvider);
+  }
 }

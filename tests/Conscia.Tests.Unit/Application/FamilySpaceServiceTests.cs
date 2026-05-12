@@ -18,6 +18,7 @@ public class FamilySpaceServiceTests
     private readonly Mock<ITransactionRepository> _transactions = new();
     private readonly Mock<IBudgetRepository> _budgets = new();
     private readonly Mock<IRecurringScheduleRepository> _recurringSchedules = new();
+    private readonly Mock<IUserRepository> _users = new();
 
     private FamilySpaceService CreateService() =>
         new(
@@ -27,6 +28,7 @@ public class FamilySpaceServiceTests
             _transactions.Object,
             _budgets.Object,
             _recurringSchedules.Object,
+            _users.Object,
             NullLogger<FamilySpaceService>.Instance);
 
     [Fact]
@@ -336,6 +338,179 @@ public class FamilySpaceServiceTests
     }
 
     [Fact]
+    public async Task GetMembersAsync_ReturnsFamilyRosterWithCurrentUserFlag()
+    {
+        var ownerId = Guid.NewGuid();
+        var spouseId = Guid.NewGuid();
+        var familySpaceId = Guid.NewGuid();
+        var ownerMemberId = Guid.NewGuid();
+        var spouseMemberId = Guid.NewGuid();
+        _repo.Setup(r => r.GetMembershipByUserIdAsync(ownerId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new FamilyMember
+            {
+                Id = ownerMemberId,
+                UserId = ownerId,
+                FamilySpaceId = familySpaceId,
+                Role = FamilyMemberRole.Owner
+            });
+        _repo.Setup(r => r.ListMembersAsync(familySpaceId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync([
+                new FamilyMember
+                {
+                    Id = ownerMemberId,
+                    UserId = ownerId,
+                    FamilySpaceId = familySpaceId,
+                    Role = FamilyMemberRole.Owner,
+                    JoinedAt = new DateTime(2026, 5, 1, 0, 0, 0, DateTimeKind.Utc)
+                },
+                new FamilyMember
+                {
+                    Id = spouseMemberId,
+                    UserId = spouseId,
+                    FamilySpaceId = familySpaceId,
+                    Role = FamilyMemberRole.Contributor,
+                    JoinedAt = new DateTime(2026, 5, 2, 0, 0, 0, DateTimeKind.Utc)
+                }
+            ]);
+        _users.Setup(r => r.GetByIdAsync(ownerId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new User { Id = ownerId, Email = "owner@example.com" });
+        _users.Setup(r => r.GetByIdAsync(spouseId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new User { Id = spouseId, Email = "spouse@example.com" });
+
+        var members = await CreateService().GetMembersAsync(ownerId);
+
+        Assert.Equal(2, members.Count);
+        Assert.True(members[0].IsCurrentUser);
+        Assert.Equal("owner@example.com", members[0].Email);
+        Assert.False(members[1].IsCurrentUser);
+        Assert.Equal("Contributor", members[1].Role);
+    }
+
+    [Fact]
+    public async Task UpdateMemberRoleAsync_OwnerChangesContributorToViewer()
+    {
+        var ownerId = Guid.NewGuid();
+        var targetUserId = Guid.NewGuid();
+        var familySpaceId = Guid.NewGuid();
+        var targetMemberId = Guid.NewGuid();
+        var targetMember = new FamilyMember
+        {
+            Id = targetMemberId,
+            UserId = targetUserId,
+            FamilySpaceId = familySpaceId,
+            Role = FamilyMemberRole.Contributor,
+            JoinedAt = DateTime.UtcNow
+        };
+        SetupOwner(ownerId, familySpaceId);
+        _repo.Setup(r => r.ListMembersAsync(familySpaceId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync([
+                new FamilyMember { Id = Guid.NewGuid(), UserId = ownerId, FamilySpaceId = familySpaceId, Role = FamilyMemberRole.Owner },
+                targetMember
+            ]);
+        _users.Setup(r => r.GetByIdAsync(targetUserId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new User { Id = targetUserId, Email = "member@example.com" });
+
+        var updated = await CreateService().UpdateMemberRoleAsync(ownerId, targetMemberId, FamilyMemberRole.Viewer);
+
+        Assert.Equal("Viewer", updated.Role);
+        _repo.Verify(r => r.UpdateMemberAsync(
+            It.Is<FamilyMember>(m => m.Id == targetMemberId && m.Role == FamilyMemberRole.Viewer),
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task UpdateMemberRoleAsync_CannotChangeOwnerRole()
+    {
+        var ownerId = Guid.NewGuid();
+        var familySpaceId = Guid.NewGuid();
+        var ownerMemberId = Guid.NewGuid();
+        SetupOwner(ownerId, familySpaceId, ownerMemberId);
+        _repo.Setup(r => r.ListMembersAsync(familySpaceId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync([
+                new FamilyMember { Id = ownerMemberId, UserId = ownerId, FamilySpaceId = familySpaceId, Role = FamilyMemberRole.Owner }
+            ]);
+
+        var error = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            CreateService().UpdateMemberRoleAsync(ownerId, ownerMemberId, FamilyMemberRole.Viewer));
+
+        Assert.Equal("Owner role changes require ownership transfer.", error.Message);
+        _repo.Verify(r => r.UpdateMemberAsync(It.IsAny<FamilyMember>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task RemoveMemberAsync_OwnerRemovesContributor()
+    {
+        var ownerId = Guid.NewGuid();
+        var targetUserId = Guid.NewGuid();
+        var familySpaceId = Guid.NewGuid();
+        var targetMemberId = Guid.NewGuid();
+        SetupOwner(ownerId, familySpaceId);
+        _repo.Setup(r => r.ListMembersAsync(familySpaceId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync([
+                new FamilyMember { Id = Guid.NewGuid(), UserId = ownerId, FamilySpaceId = familySpaceId, Role = FamilyMemberRole.Owner },
+                new FamilyMember { Id = targetMemberId, UserId = targetUserId, FamilySpaceId = familySpaceId, Role = FamilyMemberRole.Contributor }
+            ]);
+
+        await CreateService().RemoveMemberAsync(ownerId, targetMemberId);
+
+        _repo.Verify(r => r.DeleteMemberAsync(targetMemberId, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task RemoveMemberAsync_CannotRemoveOwner()
+    {
+        var ownerId = Guid.NewGuid();
+        var familySpaceId = Guid.NewGuid();
+        var ownerMemberId = Guid.NewGuid();
+        SetupOwner(ownerId, familySpaceId, ownerMemberId);
+        _repo.Setup(r => r.ListMembersAsync(familySpaceId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync([
+                new FamilyMember { Id = ownerMemberId, UserId = ownerId, FamilySpaceId = familySpaceId, Role = FamilyMemberRole.Owner }
+            ]);
+
+        var error = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            CreateService().RemoveMemberAsync(ownerId, ownerMemberId));
+
+        Assert.Equal("Owners must transfer ownership before leaving or being removed.", error.Message);
+        _repo.Verify(r => r.DeleteMemberAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task LeaveAsync_ContributorDeletesOwnMembership()
+    {
+        var userId = Guid.NewGuid();
+        var memberId = Guid.NewGuid();
+        var familySpaceId = Guid.NewGuid();
+        _repo.Setup(r => r.GetMembershipByUserIdAsync(userId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new FamilyMember
+            {
+                Id = memberId,
+                UserId = userId,
+                FamilySpaceId = familySpaceId,
+                Role = FamilyMemberRole.Contributor
+            });
+
+        await CreateService().LeaveAsync(userId);
+
+        _repo.Verify(r => r.DeleteMemberAsync(memberId, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task LeaveAsync_OwnerCannotLeaveWithoutTransfer()
+    {
+        var ownerId = Guid.NewGuid();
+        var familySpaceId = Guid.NewGuid();
+        var ownerMemberId = Guid.NewGuid();
+        SetupOwner(ownerId, familySpaceId, ownerMemberId);
+
+        var error = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            CreateService().LeaveAsync(ownerId));
+
+        Assert.Equal("Owners must transfer ownership before leaving or being removed.", error.Message);
+        _repo.Verify(r => r.DeleteMemberAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
     public async Task GetOverviewAsync_MemberReceivesSharedBudgetsActivityAndRecurringItems()
     {
         var userId = Guid.NewGuid();
@@ -440,5 +615,17 @@ public class FamilySpaceServiceTests
     {
         using var document = JsonDocument.Parse(payload);
         return document.RootElement.GetProperty("email").GetString() == email;
+    }
+
+    private void SetupOwner(Guid ownerId, Guid familySpaceId, Guid? memberId = null)
+    {
+        _repo.Setup(r => r.GetMembershipByUserIdAsync(ownerId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new FamilyMember
+            {
+                Id = memberId ?? Guid.NewGuid(),
+                UserId = ownerId,
+                FamilySpaceId = familySpaceId,
+                Role = FamilyMemberRole.Owner
+            });
     }
 }

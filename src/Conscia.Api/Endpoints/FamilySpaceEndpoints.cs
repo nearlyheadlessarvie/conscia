@@ -177,6 +177,79 @@ public static class FamilySpaceEndpoints
             }
         }).WithName("DeclineFamilyInvite");
 
+        group.MapGet("/members", async (HttpContext ctx, IFamilySpaceService svc) =>
+        {
+            try
+            {
+                var members = await svc.GetMembersAsync(ctx.User.GetUserId(), ctx.RequestAborted);
+                return Results.Ok(members);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Results.Json(new { error = ex.Message }, statusCode: StatusCodes.Status403Forbidden);
+            }
+        }).WithName("ListFamilyMembers");
+
+        group.MapPatch("/members/{memberId:guid}/role", async (
+            HttpContext ctx,
+            Guid memberId,
+            UpdateFamilyMemberRoleDto dto,
+            IFamilySpaceService svc) =>
+        {
+            try
+            {
+                var member = await svc.UpdateMemberRoleAsync(
+                    ctx.User.GetUserId(),
+                    memberId,
+                    dto.Role,
+                    ctx.RequestAborted);
+
+                return Results.Ok(member);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Results.Json(new { error = ex.Message }, statusCode: StatusCodes.Status403Forbidden);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return Results.BadRequest(new { error = ex.Message });
+            }
+        }).WithName("UpdateFamilyMemberRole");
+
+        group.MapDelete("/members/{memberId:guid}", async (HttpContext ctx, Guid memberId, IFamilySpaceService svc) =>
+        {
+            try
+            {
+                await svc.RemoveMemberAsync(ctx.User.GetUserId(), memberId, ctx.RequestAborted);
+                return Results.NoContent();
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Results.Json(new { error = ex.Message }, statusCode: StatusCodes.Status403Forbidden);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return Results.BadRequest(new { error = ex.Message });
+            }
+        }).WithName("RemoveFamilyMember");
+
+        group.MapPost("/leave", async (HttpContext ctx, IFamilySpaceService svc) =>
+        {
+            try
+            {
+                await svc.LeaveAsync(ctx.User.GetUserId(), ctx.RequestAborted);
+                return Results.NoContent();
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Results.Json(new { error = ex.Message }, statusCode: StatusCodes.Status403Forbidden);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return Results.BadRequest(new { error = ex.Message });
+            }
+        }).WithName("LeaveFamilySpace");
+
         return group;
     }
 

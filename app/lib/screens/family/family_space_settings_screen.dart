@@ -153,6 +153,13 @@ class _FamilySpaceSettingsView extends ConsumerWidget {
                   subtitle: 'Shared budgets, recurring items, and activity.',
                   onTap: () => context.push(AppRoutes.familyOverview),
                 ),
+                const Divider(height: 24),
+                _SettingsRow(
+                  icon: AppIcons.family,
+                  title: 'Members',
+                  subtitle: 'View access, roles, and leaving rules.',
+                  onTap: () => context.push(AppRoutes.familyMembers),
+                ),
                 if (canManage) ...[
                   const Divider(height: 24),
                   _SettingsRow(

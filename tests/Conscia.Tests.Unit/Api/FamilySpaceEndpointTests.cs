@@ -358,6 +358,96 @@ public class FamilySpaceEndpointTests
     }
 
     [Fact]
+    public async Task ListMembers_ReturnsFamilyRoster()
+    {
+        await using var factory = new TestWebAppFactory();
+        var memberId = Guid.Parse("eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee");
+        factory.FamilySpaceServiceMock
+            .Setup(s => s.GetMembersAsync(UserId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync([
+                new FamilyMemberDto(
+                    memberId,
+                    UserId,
+                    "alice@example.com",
+                    "Owner",
+                    DateTime.Parse("2026-05-01T00:00:00Z"),
+                    true)
+            ]);
+
+        var client = CreateAuthorizedClient(factory);
+        var response = await client.GetAsync("/api/v1/family-space/members");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var json = await response.Content.ReadFromJsonAsync<JsonElement>();
+        var member = Assert.Single(json.EnumerateArray());
+        Assert.Equal(memberId, member.GetProperty("id").GetGuid());
+        Assert.Equal("alice@example.com", member.GetProperty("email").GetString());
+        Assert.Equal("Owner", member.GetProperty("role").GetString());
+        Assert.True(member.GetProperty("isCurrentUser").GetBoolean());
+    }
+
+    [Fact]
+    public async Task UpdateMemberRole_OwnerRequest_ReturnsUpdatedMember()
+    {
+        await using var factory = new TestWebAppFactory();
+        var memberId = Guid.Parse("eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee");
+        factory.FamilySpaceServiceMock
+            .Setup(s => s.UpdateMemberRoleAsync(UserId, memberId, FamilyMemberRole.Viewer, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new FamilyMemberDto(
+                memberId,
+                Guid.Parse("ffffffff-ffff-ffff-ffff-ffffffffffff"),
+                "spouse@example.com",
+                "Viewer",
+                DateTime.UtcNow,
+                false));
+
+        var client = CreateAuthorizedClient(factory);
+        var response = await client.PatchAsJsonAsync($"/api/v1/family-space/members/{memberId}/role", new
+        {
+            role = "Viewer"
+        });
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var json = await response.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal("Viewer", json.GetProperty("role").GetString());
+    }
+
+    [Fact]
+    public async Task RemoveMember_OwnerRequest_ReturnsNoContent()
+    {
+        await using var factory = new TestWebAppFactory();
+        var memberId = Guid.Parse("eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee");
+        factory.FamilySpaceServiceMock
+            .Setup(s => s.RemoveMemberAsync(UserId, memberId, It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        var client = CreateAuthorizedClient(factory);
+        var response = await client.DeleteAsync($"/api/v1/family-space/members/{memberId}");
+
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+        factory.FamilySpaceServiceMock.Verify(s =>
+            s.RemoveMemberAsync(UserId, memberId, It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task LeaveFamilySpace_CurrentMember_ReturnsNoContent()
+    {
+        await using var factory = new TestWebAppFactory();
+        factory.FamilySpaceServiceMock
+            .Setup(s => s.LeaveAsync(UserId, It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        var client = CreateAuthorizedClient(factory);
+        var response = await client.PostAsync("/api/v1/family-space/leave", null);
+
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+        factory.FamilySpaceServiceMock.Verify(s =>
+            s.LeaveAsync(UserId, It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
     public async Task GetOverview_ReturnsFamilySnapshot()
     {
         await using var factory = new TestWebAppFactory();
