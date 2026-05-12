@@ -28,7 +28,7 @@ class _RecordingLocationAssistanceService extends LocationAssistanceService {
 
   @override
   ({List<String> nearbyMerchants, List<String> likelyCategories})
-  getTransactionSuggestions() {
+      getTransactionSuggestions() {
     return const (
       nearbyMerchants: <String>[],
       likelyCategories: <String>[],
@@ -65,8 +65,7 @@ class _RecordingUserService extends UserService {
       locale: locale ?? 'en_US',
       createdAt: DateTime(2026),
       hasCompletedOnboarding: true,
-      locationSuggestionsEnabled:
-          locationSuggestionsEnabled ?? false,
+      locationSuggestionsEnabled: locationSuggestionsEnabled ?? false,
       aiPersonalityIntensity: aiPersonalityIntensity ?? 'balanced',
     );
   }
@@ -101,7 +100,8 @@ Future<ProviderContainer> _pumpSettingsScreen(
       ),
       sharedPreferencesProvider.overrideWithValue(prefs),
       locationAssistanceServiceProvider.overrideWithValue(locationService),
-      if (userService != null) userServiceProvider.overrideWithValue(userService),
+      if (userService != null)
+        userServiceProvider.overrideWithValue(userService),
     ],
   );
   addTearDown(container.dispose);
@@ -142,7 +142,8 @@ void main() {
     expect(find.text('Smart location suggestions'), findsOneWidget);
     expect(find.textContaining('Currently off'), findsOneWidget);
     expect(
-      find.textContaining('System location permission may also need to be enabled'),
+      find.textContaining(
+          'System location permission may also need to be enabled'),
       findsOneWidget,
     );
 
@@ -174,7 +175,8 @@ void main() {
     );
     expect(find.textContaining('Currently off'), findsOneWidget);
     expect(
-      find.textContaining('System location permission may also need to be enabled'),
+      find.textContaining(
+          'System location permission may also need to be enabled'),
       findsNothing,
     );
   });
@@ -271,5 +273,42 @@ void main() {
 
     expect(sharedTop, greaterThan(profileTop));
     expect(sharedTop, lessThan(preferencesTop));
+  });
+
+  testWidgets('preferences and planning rows are grouped in the intended order',
+      (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+    final locationService =
+        _RecordingLocationAssistanceService(permissionGranted: true);
+
+    await _pumpSettingsScreen(
+      tester,
+      prefs: prefs,
+      locationService: locationService,
+    );
+
+    await tester.pumpAndSettle();
+
+    await tester.ensureVisible(find.text('AI Personality Intensity'));
+    await tester.pumpAndSettle();
+
+    final aiTop = tester.getTopLeft(find.text('AI Personality Intensity')).dy;
+    final smartLocationTop =
+        tester.getTopLeft(find.text('Smart location suggestions')).dy;
+    expect(aiTop, lessThan(smartLocationTop));
+
+    await tester.ensureVisible(find.text('Manage Budgets'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Budgets & Categories'), findsOneWidget);
+    final planningTop = tester.getTopLeft(find.text('Budgets & Categories')).dy;
+    final categoriesTop = tester.getTopLeft(find.text('Categories')).dy;
+    final budgetsTop = tester.getTopLeft(find.text('Manage Budgets')).dy;
+
+    expect(categoriesTop, greaterThan(planningTop));
+    expect(budgetsTop, greaterThan(categoriesTop));
   });
 }

@@ -213,6 +213,19 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       value: _biometricEnabled,
                       onChanged: _toggleBiometric,
                     ),
+                  _SettingsActionRow(
+                    leading: const Icon(Icons.tune),
+                    title: 'AI Personality Intensity',
+                    subtitle: userAsync.maybeWhen(
+                      data: (user) =>
+                          _labelForAiIntensity(user.aiPersonalityIntensity),
+                      orElse: () => 'Balanced',
+                    ),
+                    onTap: userAsync.maybeWhen(
+                      data: (_) => () => _showAiIntensityPicker(context, ref),
+                      orElse: () => null,
+                    ),
+                  ),
                   _SettingsSwitchRow(
                     leading: const Icon(Icons.location_searching_outlined),
                     title: 'Smart location suggestions',
@@ -233,34 +246,21 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       }
                     },
                   ),
-                  _SettingsActionRow(
-                    leading: const Icon(Icons.tune),
-                    title: 'AI Personality Intensity',
-                    subtitle: userAsync.maybeWhen(
-                      data: (user) =>
-                          _labelForAiIntensity(user.aiPersonalityIntensity),
-                      orElse: () => 'Balanced',
-                    ),
-                    onTap: userAsync.maybeWhen(
-                      data: (_) => () => _showAiIntensityPicker(context, ref),
-                      orElse: () => null,
-                    ),
-                  ),
+                ],
+              ),
+            ),
+          ),
+          ScreenSection(
+            title: 'Budgets & Categories',
+            child: FeedCard(
+              child: Column(
+                children: [
                   _SettingsActionRow(
                     leading: const Icon(Icons.category_outlined),
                     title: 'Categories',
                     subtitle: 'Manage labels used by transactions and budgets',
                     onTap: () => context.push(AppRoutes.categories),
                   ),
-                ],
-              ),
-            ),
-          ),
-          ScreenSection(
-            title: 'Budgets',
-            child: FeedCard(
-              child: Column(
-                children: [
                   _SettingsActionRow(
                     leading: const Icon(Icons.pie_chart_outline),
                     title: 'Manage Budgets',
