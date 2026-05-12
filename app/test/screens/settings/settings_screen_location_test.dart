@@ -1,3 +1,5 @@
+import 'package:conscia_app/models/family_space.dart';
+import 'package:conscia_app/providers/family_space_provider.dart';
 import 'package:conscia_app/providers/location_assistance_provider.dart';
 import 'package:conscia_app/providers/subscription_provider.dart';
 import 'package:conscia_app/providers/usage_provider.dart';
@@ -75,6 +77,7 @@ Future<ProviderContainer> _pumpSettingsScreen(
   required SharedPreferences prefs,
   required LocationAssistanceService locationService,
   UserService? userService,
+  FamilySpace? familySpace,
 }) async {
   final container = ProviderContainer(
     overrides: [
@@ -89,6 +92,7 @@ Future<ProviderContainer> _pumpSettingsScreen(
           aiPersonalityIntensity: 'balanced',
         ),
       ),
+      familySpaceProvider.overrideWith((ref) async => familySpace),
       subscriptionProvider.overrideWith(
         (ref) async => const SubscriptionStatus(
           tier: 'free',
@@ -142,6 +146,9 @@ void main() {
       findsOneWidget,
     );
 
+    await tester.ensureVisible(find.text('Smart location suggestions'));
+    await tester.pumpAndSettle();
+
     await tester.tap(find.byType(Switch).last);
     await tester.pumpAndSettle();
 
@@ -152,6 +159,9 @@ void main() {
       isTrue,
     );
     expect(find.textContaining('Currently on'), findsOneWidget);
+
+    await tester.ensureVisible(find.text('Smart location suggestions'));
+    await tester.pumpAndSettle();
 
     await tester.tap(find.byType(Switch).last);
     await tester.pumpAndSettle();
@@ -185,6 +195,9 @@ void main() {
 
     await tester.pumpAndSettle();
 
+    await tester.ensureVisible(find.text('Region / Number Format'));
+    await tester.pumpAndSettle();
+
     await tester.tap(find.text('Region / Number Format'));
     await tester.pumpAndSettle();
 
@@ -212,6 +225,9 @@ void main() {
 
     await tester.pumpAndSettle();
 
+    await tester.ensureVisible(find.text('AI Personality Intensity'));
+    await tester.pumpAndSettle();
+
     await tester.tap(find.text('AI Personality Intensity'));
     await tester.pumpAndSettle();
 
@@ -220,5 +236,40 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(userService.lastAiPersonalityIntensity, 'intense');
+  });
+
+  testWidgets('shared conscia appears under profile with household summary', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+    final locationService =
+        _RecordingLocationAssistanceService(permissionGranted: true);
+
+    await _pumpSettingsScreen(
+      tester,
+      prefs: prefs,
+      locationService: locationService,
+      familySpace: const FamilySpace(
+        id: 'family-1',
+        name: 'Santos Household',
+        currencyCode: 'PHP',
+        isReadOnly: false,
+        role: 'Owner',
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    expect(find.text('Santos Household'), findsOneWidget);
+    expect(find.text('Owner · PHP'), findsOneWidget);
+    expect(find.text('Family Space settings'), findsOneWidget);
+
+    final profileTop = tester.getTopLeft(find.text('Profile')).dy;
+    final sharedTop = tester.getTopLeft(find.text('Shared Conscia')).dy;
+    final preferencesTop = tester.getTopLeft(find.text('Preferences')).dy;
+
+    expect(sharedTop, greaterThan(profileTop));
+    expect(sharedTop, lessThan(preferencesTop));
   });
 }

@@ -14,7 +14,9 @@ import '../../core/errors/app_error.dart';
 import '../../core/network/dio_client.dart';
 import '../../core/routing/app_router.dart';
 import '../../core/theme/app_colors.dart';
+import '../../models/family_space.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/family_space_provider.dart';
 import '../../providers/health_provider.dart';
 import '../../providers/location_assistance_provider.dart';
 import '../../providers/subscription_provider.dart';
@@ -122,6 +124,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final userAsync = ref.watch(currentUserProvider);
+    final familySpaceAsync = ref.watch(familySpaceProvider);
     final subAsync = ref.watch(subscriptionProvider);
     final locationAssistance = ref.watch(locationAssistanceProvider);
     final userPreferences = ref.watch(userPreferencesProvider);
@@ -153,6 +156,33 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     title: 'My Profile',
                     subtitle: 'Spending style, income, household',
                     onTap: () => context.push(AppRoutes.settingsProfile),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          ScreenSection(
+            title: 'Shared Conscia',
+            child: FeedCard(
+              child: Column(
+                children: [
+                  familySpaceAsync.when(
+                    data: (space) => _FamilySpaceSummary(space: space),
+                    loading: () => _SettingsInfoRow(
+                      leading: CircleAvatar(child: Icon(AppIcons.family)),
+                      title: 'Loading Family Space...',
+                    ),
+                    error: (_, __) => _SettingsInfoRow(
+                      leading: CircleAvatar(child: Icon(AppIcons.family)),
+                      title: 'Unable to load Family Space',
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  _SettingsActionRow(
+                    leading: Icon(AppIcons.family),
+                    title: 'Family Space settings',
+                    subtitle: 'Household name, invites, imports',
+                    onTap: () => context.push(AppRoutes.familySpace),
                   ),
                 ],
               ),
@@ -229,21 +259,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     leading: const Icon(Icons.pie_chart_outline),
                     title: 'Manage Budgets',
                     onTap: () => context.push(AppRoutes.budgets),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          ScreenSection(
-            title: 'Shared Conscia',
-            child: FeedCard(
-              child: Column(
-                children: [
-                  _SettingsActionRow(
-                    leading: Icon(AppIcons.family),
-                    title: 'Family Space settings',
-                    subtitle: 'Household name, invites, imports',
-                    onTap: () => context.push(AppRoutes.familySpace),
                   ),
                 ],
               ),
@@ -694,6 +709,24 @@ class _ProfileSummary extends StatelessWidget {
       'Dec',
     ];
     return '${months[date.month - 1]} ${date.year}';
+  }
+}
+
+class _FamilySpaceSummary extends StatelessWidget {
+  const _FamilySpaceSummary({required this.space});
+
+  final FamilySpace? space;
+
+  @override
+  Widget build(BuildContext context) {
+    final familySpace = space;
+    return _SettingsInfoRow(
+      leading: CircleAvatar(child: Icon(AppIcons.family)),
+      title: familySpace?.name ?? 'No Family Space yet',
+      subtitle: familySpace == null
+          ? 'Create or join a household'
+          : '${familySpace.role} · ${familySpace.currencyCode}',
+    );
   }
 }
 
