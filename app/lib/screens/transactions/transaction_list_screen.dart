@@ -1,18 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 
+import '../../core/constants/category_icons.dart';
 import '../../core/routing/app_router.dart';
 import '../../core/theme/app_colors.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/family_space_provider.dart';
 import '../../providers/transaction_providers.dart';
 import '../../services/transaction_service.dart';
+import '../../core/utils/currency_formatter.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/feed_card.dart';
-import '../../widgets/screen_section.dart';
+import '../../widgets/scope_pill_switch.dart';
 import '../../widgets/selection_chip_group.dart';
 import '../../widgets/skeleton_loader.dart';
-import 'widgets/transaction_tile.dart';
 
 class TransactionListScreen extends ConsumerStatefulWidget {
   const TransactionListScreen({super.key});
@@ -54,6 +57,8 @@ class _TransactionListScreenState extends ConsumerState<TransactionListScreen> {
   Widget build(BuildContext context) {
     final state = ref.watch(filteredTransactionListProvider);
     final selectedCategory = ref.watch(categoryFilterProvider);
+    final selectedScope = ref.watch(transactionScopeFilterProvider);
+    final hasFamilySpace = ref.watch(familySpaceProvider).valueOrNull != null;
 
     final categories = {
       if (selectedCategory != null) selectedCategory,
@@ -64,11 +69,15 @@ class _TransactionListScreenState extends ConsumerState<TransactionListScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Transactions'),
+        centerTitle: false,
         actions: [
-          IconButton(
-            tooltip: 'Add transaction',
-            icon: const Icon(Icons.add),
-            onPressed: () => context.push(AppRoutes.addTransaction),
+          Padding(
+            padding: const EdgeInsets.only(right: 10),
+            child: IconButton(
+              tooltip: 'Add transaction',
+              icon: const Icon(Icons.add),
+              onPressed: () => context.push(AppRoutes.addTransaction),
+            ),
           ),
         ],
       ),
@@ -83,7 +92,13 @@ class _TransactionListScreenState extends ConsumerState<TransactionListScreen> {
             ],
           ),
         ),
-        child: _buildBody(state, selectedCategory, categories),
+        child: _buildBody(
+          state,
+          selectedCategory,
+          selectedScope,
+          hasFamilySpace,
+          categories,
+        ),
       ),
     );
   }
@@ -91,6 +106,8 @@ class _TransactionListScreenState extends ConsumerState<TransactionListScreen> {
   Widget _buildBody(
     TransactionListState state,
     String? selectedCategory,
+    String selectedScope,
+    bool hasFamilySpace,
     List<String> categories,
   ) {
     if (state.error != null && state.transactions.isEmpty) {
@@ -128,20 +145,31 @@ class _TransactionListScreenState extends ConsumerState<TransactionListScreen> {
     return Column(
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(16, 20, 16, 12),
-          child: ScreenSection(
-            title: 'Filters',
-            subtitle: 'Jump between your most recent spending categories.',
-            compact: true,
-            child: SelectionChipGroup(
-              options: ['All', ...categories],
-              value: selectedCategory ?? 'All',
-              scrollable: true,
-              onSelected: (value) {
-                ref.read(categoryFilterProvider.notifier).state =
-                    value == 'All' ? null : value;
-              },
-            ),
+          padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
+          child: Column(
+            children: [
+              ScopePillSwitch(
+                value: selectedScope,
+                familyEnabled: hasFamilySpace,
+                onChanged: (scope) {
+                  ref.read(transactionScopeFilterProvider.notifier).state =
+                      scope;
+                },
+              ),
+              const SizedBox(height: 12),
+              SelectionChipGroup(
+                options: ['All', ...categories.take(4)],
+                value: selectedCategory ?? 'All',
+                scrollable: true,
+                avatarBuilder: (option, _) => option == 'All'
+                    ? null
+                    : CategoryIcons.rawIcon(option, size: 13),
+                onSelected: (value) {
+                  ref.read(categoryFilterProvider.notifier).state =
+                      value == 'All' ? null : value;
+                },
+              ),
+            ],
           ),
         ),
         Expanded(
@@ -157,9 +185,10 @@ class _TransactionListScreenState extends ConsumerState<TransactionListScreen> {
   Widget _buildScrollableList(TransactionListState state) {
     if (state.isLoading && state.transactions.isEmpty) {
       return ListView.builder(
+        key: const PageStorageKey('transactions-shell-scroll'),
         controller: _scrollController,
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(16, 0, 16, 28),
+        padding: const EdgeInsets.fromLTRB(20, 0, 20, 112),
         itemCount: 8,
         itemBuilder: (_, __) => const Padding(
           padding: EdgeInsets.only(bottom: 12),
@@ -170,9 +199,10 @@ class _TransactionListScreenState extends ConsumerState<TransactionListScreen> {
 
     if (state.transactions.isEmpty) {
       return ListView(
+        key: const PageStorageKey('transactions-shell-scroll'),
         controller: _scrollController,
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(16, 0, 16, 28),
+        padding: const EdgeInsets.fromLTRB(20, 0, 20, 112),
         children: const [
           EmptyState(
             icon: Icons.receipt_long_outlined,
@@ -184,6 +214,7 @@ class _TransactionListScreenState extends ConsumerState<TransactionListScreen> {
     }
 
     return CustomScrollView(
+      key: const PageStorageKey('transactions-shell-scroll'),
       controller: _scrollController,
       physics: const AlwaysScrollableScrollPhysics(),
       slivers: [
@@ -191,7 +222,7 @@ class _TransactionListScreenState extends ConsumerState<TransactionListScreen> {
         if (state.isLoading)
           const SliverToBoxAdapter(
             child: Padding(
-              padding: EdgeInsets.fromLTRB(16, 0, 16, 28),
+              padding: EdgeInsets.fromLTRB(20, 0, 20, 112),
               child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
             ),
           ),
@@ -212,38 +243,35 @@ class _TransactionListScreenState extends ConsumerState<TransactionListScreen> {
       for (final key in sortedKeys)
         SliverToBoxAdapter(
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 22),
-            child: ScreenSection(
-              title: _formatDateLabel(groups[key]!.first.date),
-              compact: true,
-              child: FeedCard(
-                padding: EdgeInsets.zero,
-                child: Column(
+            padding: const EdgeInsets.fromLTRB(20, 6, 20, 14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  _formatDateLabel(groups[key]!.first.date).toUpperCase(),
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: Theme.of(context).appColors.softInk,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 0.6,
+                      ),
+                ),
+                const SizedBox(height: 10),
+                Column(
                   children: [
                     for (var index = 0;
                         index < groups[key]!.length;
                         index++) ...[
-                      TransactionTile(
-                        id: groups[key]![index].id,
-                        isIncome: groups[key]![index].type == 'income',
-                        amount: groups[key]![index].amount,
-                        currencyCode: groups[key]![index].currencyCode,
-                        category: _displayCategory(groups[key]![index]),
-                        counterparty: groups[key]![index].description,
-                        date: groups[key]![index].date,
-                        regretLevel: groups[key]![index].regretLevel,
-                        isRecurring: groups[key]![index].isRecurring,
-                        isFamily: groups[key]![index].isFamily,
-                        sharedByUserId: groups[key]![index].sharedByUserId,
-                        sharedByInitials: groups[key]![index].sharedByInitials,
+                      _EditorialTransactionRow(
+                        transaction: groups[key]![index],
+                        displayCategory: _displayCategory(groups[key]![index]),
                         currentUserId: ref.watch(authProvider).userId,
                       ),
                       if (index < groups[key]!.length - 1)
-                        const Divider(indent: 72, height: 1),
+                        const Divider(height: 4),
                     ],
                   ],
                 ),
-              ),
+              ],
             ),
           ),
         ),
@@ -263,8 +291,12 @@ class _TransactionListScreenState extends ConsumerState<TransactionListScreen> {
     final dateOnly = DateTime(date.year, date.month, date.day);
     final diff = today.difference(dateOnly).inDays;
 
-    if (diff == 0) return 'Today';
-    if (diff == 1) return 'Yesterday';
+    if (diff == 0) {
+      return 'Today, ${DateFormat.MMMd().format(date)}';
+    }
+    if (diff == 1) {
+      return 'Yesterday, ${DateFormat.MMMd().format(date)}';
+    }
     const weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
     const months = [
       'Jan',
@@ -281,5 +313,140 @@ class _TransactionListScreenState extends ConsumerState<TransactionListScreen> {
       'Dec',
     ];
     return '${weekdays[date.weekday - 1]}, ${months[date.month - 1]} ${date.day}';
+  }
+}
+
+class _EditorialTransactionRow extends StatelessWidget {
+  const _EditorialTransactionRow({
+    required this.transaction,
+    required this.displayCategory,
+    required this.currentUserId,
+  });
+
+  final Transaction transaction;
+  final String displayCategory;
+  final String? currentUserId;
+
+  @override
+  Widget build(BuildContext context) {
+    final isIncome = transaction.type == 'income';
+    final colors = Theme.of(context).appColors;
+    final amountColor = isIncome ? colors.income : colors.expense;
+    final amountPrefix = isIncome ? '+' : '-';
+    final counterparty = transaction.description.trim().isEmpty
+        ? 'Unknown'
+        : transaction.description;
+
+    final rowStyle = Theme.of(context).textTheme.titleSmall?.copyWith(
+      fontWeight: FontWeight.w600,
+      fontFeatures: const [FontFeature.tabularFigures()],
+    );
+
+    return InkWell(
+      onTap: () => context.push('/transactions/${transaction.id}'),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 6),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            CategoryIcons.badge(displayCategory, size: 28),
+            const SizedBox(width: 12),
+            // Left column: merchant + category name
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    counterparty,
+                    style: rowStyle,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    displayCategory,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: colors.mutedInk,
+                        ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            // Right column: amount + icon-only tags (family → recurring → regret)
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  '$amountPrefix${CurrencyFormatter.format(transaction.amount.abs(), currencyCode: transaction.currencyCode)}',
+                  style: rowStyle?.copyWith(color: amountColor),
+                ),
+                if (transaction.isFamily ||
+                    transaction.isRecurring ||
+                    transaction.regretLevel != null) ...[
+                  const SizedBox(height: 4),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (transaction.isFamily)
+                        _IconTag(
+                          icon: Icons.people_rounded,
+                          color: colors.family,
+                        ),
+                      if (transaction.isRecurring)
+                        _IconTag(
+                          icon: Icons.repeat_rounded,
+                          color: colors.deepNavy,
+                        ),
+                      if (transaction.regretLevel != null)
+                        _IconTag(
+                          icon: _regretIcon(transaction.regretLevel!),
+                          color: _regretColor(
+                            transaction.regretLevel!,
+                            colors,
+                          ),
+                        ),
+                    ],
+                  ),
+                ],
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Color _regretColor(int level, AppColors colors) {
+    if (level == 0) return colors.income;
+    if (level == 1) return colors.amber;
+    return colors.expense;
+  }
+
+  IconData _regretIcon(int level) {
+    if (level == 0) return Icons.check_circle_rounded;
+    if (level == 1) return Icons.help_rounded;
+    return Icons.sentiment_dissatisfied_rounded;
+  }
+}
+
+class _IconTag extends StatelessWidget {
+  const _IconTag({required this.icon, required this.color});
+
+  final IconData icon;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(left: 4),
+      width: 20,
+      height: 20,
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.13),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Icon(icon, size: 12, color: color),
+    );
   }
 }

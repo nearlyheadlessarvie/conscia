@@ -132,6 +132,14 @@ class CategoryIcons {
 
   static IconData forCategory(String category) => _spec(category).icon(_isIOS);
 
+  static Color accentFor(String category) => _spec(category).accent;
+
+  static Widget rawIcon(String category, {double size = 16}) => Icon(
+        _spec(category).icon(_isIOS),
+        size: size,
+        color: _spec(category).accent,
+      );
+
   static _CategorySpec _spec(String category) =>
       _specs[category] ?? _specs['Other']!;
 

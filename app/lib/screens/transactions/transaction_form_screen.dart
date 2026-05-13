@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/constants/app_icons.dart';
 import '../../core/constants/category_icons.dart';
 import '../../core/errors/app_error.dart';
+import '../../core/theme/app_colors.dart';
 import '../../providers/alert_provider.dart';
 import '../../providers/budget_providers.dart';
 import '../../providers/category_recents_provider.dart';
@@ -16,13 +17,13 @@ import '../../providers/transaction_providers.dart';
 import '../../providers/user_provider.dart';
 import '../../models/recurring_schedule.dart';
 import '../../services/transaction_service.dart';
-import '../../widgets/amount_input_field.dart';
 import '../../widgets/hero_screen_scaffold.dart';
 import '../../widgets/location_assistance_prompt_sheet.dart';
 import '../../widgets/recurring_schedule_section.dart';
-import '../../widgets/scope_selector.dart';
+import '../../widgets/scope_pill_switch.dart';
 import '../../widgets/skeleton_loader.dart';
 import '../../widgets/smart_suggestions_card.dart';
+import '../../widgets/currency_picker_sheet.dart';
 import 'widgets/transaction_style_category_selector.dart';
 
 class TransactionFormScreen extends ConsumerStatefulWidget {
@@ -49,9 +50,6 @@ class TransactionFormScreen extends ConsumerStatefulWidget {
 class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
   bool get _isEditing => widget.transactionId != null;
 
-  bool _categoryExpanded = true;
-  bool _detailsExpanded = true;
-  bool _recurringExpanded = false;
   bool _isExpense = true;
   final _amountController = TextEditingController();
   final _exchangeRateController = TextEditingController();
@@ -60,7 +58,6 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
   String? _selectedCategory;
   final _counterpartyController = TextEditingController();
   DateTime _selectedDate = DateTime.now();
-  final _notesController = TextEditingController();
   bool _submitting = false;
   bool _prefilled = false;
   bool _hasCheckedLocationPrompt = false;
@@ -152,7 +149,6 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
     _amountController.dispose();
     _exchangeRateController.dispose();
     _counterpartyController.dispose();
-    _notesController.dispose();
     super.dispose();
   }
 
@@ -317,14 +313,32 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
         suggestions.likelyCategories.isNotEmpty;
 
     return HeroScreenScaffold(
+      padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
       appBar: AppBar(
-        title: Text(_isEditing ? 'Edit Transaction' : 'Add Transaction'),
+        centerTitle: true,
+        title: Text(_isEditing ? 'Edit transaction' : 'Add transaction'),
         leading: IconButton(
-          icon: Icon(AppIcons.close),
+          icon: Text(
+            _isEditing ? 'Cancel' : 'Cancel',
+            style: textTheme.bodyMedium?.copyWith(
+              color: colors.onSurfaceVariant,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
           onPressed: () => context.pop(),
         ),
+        leadingWidth: 76,
+        actions: [
+          TextButton(
+            onPressed: _isValid && !_submitting ? _submit : null,
+            child: Text(_isEditing ? 'Save' : 'Save'),
+          ),
+        ],
       ),
       bottom: FilledButton(
+        style: FilledButton.styleFrom(
+          minimumSize: const Size(double.infinity, 52),
+        ),
         onPressed: _isValid && !_submitting ? _submit : null,
         child: _submitting
             ? const SizedBox(
@@ -342,44 +356,26 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          SegmentedButton<bool>(
-            segments: [
-              ButtonSegment(
-                value: true,
-                label: const Text('Expense'),
-                icon: Icon(
-                  Icons.arrow_downward,
-                  color: _isExpense
-                      ? (colors.brightness == Brightness.light
-                          ? const Color(0xFFE53935)
-                          : const Color(0xFFEF9A9A))
-                      : null,
-                ),
-              ),
-              ButtonSegment(
-                value: false,
-                label: const Text('Income'),
-                icon: Icon(
-                  Icons.arrow_upward,
-                  color: !_isExpense
-                      ? (colors.brightness == Brightness.light
-                          ? const Color(0xFF4CAF50)
-                          : const Color(0xFF81C784))
-                      : null,
-                ),
-              ),
-            ],
-            selected: {_isExpense},
-            onSelectionChanged: (v) => setState(() {
+          _FormSegmentedSwitch(
+            left: 'Expense',
+            right: 'Income',
+            leftSelected: _isExpense,
+            selectedColor: _isExpense
+                ? Theme.of(context).appColors.expense
+                : Theme.of(context).appColors.income,
+            onChanged: (expense) => setState(() {
+              final v = {expense};
               _isExpense = v.first;
               _selectedCategory = null;
             }),
           ),
           const SizedBox(height: 18),
-          AmountInputField(
+          const _FormLabel('AMOUNT'),
+          const SizedBox(height: 8),
+          _AmountHeroField(
             controller: _amountController,
-            isExpense: _isExpense,
             currencyCode: _currencyCode,
+            isExpense: _isExpense,
             isPremium: isPremium,
             onChanged: (_) => setState(() {}),
             onCurrencyChanged: (code) => setState(() {
@@ -388,36 +384,6 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
             }),
           ),
           const SizedBox(height: 18),
-          if (familySpace != null) ...[
-            Padding(
-              padding: const EdgeInsets.only(bottom: 18),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Text(
-                    'Scope',
-                    style: textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Choose whether this record stays personal or appears in ${familySpace.name}.',
-                    style: textTheme.bodySmall?.copyWith(
-                      color: colors.onSurfaceVariant,
-                      height: 1.35,
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  ScopeSelector(
-                    value: _scope,
-                    familyEnabled: true,
-                    onChanged: (value) => setState(() => _scope = value),
-                  ),
-                ],
-              ),
-            ),
-          ],
           Consumer(
             builder: (context, ref, _) {
               final userCurrency = ref.watch(userPreferencesProvider).currency;
@@ -453,32 +419,49 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
               );
             },
           ),
-          _AccordionSection(
-            title: 'Category',
-            subtitle: _isExpense
-                ? 'Choose a category first, then refine the rest.'
-                : 'Pick the income source type you want to track.',
-            expanded: _categoryExpanded,
-            onToggle: () => setState(() {
-              _categoryExpanded = !_categoryExpanded;
-            }),
-            child: TransactionStyleCategorySelector(
-              selectedCategory: _selectedCategory,
-              isExpense: _isExpense,
-              isPremium: isPremium,
-              showHeader: false,
-              labelStyle: textTheme.titleSmall?.copyWith(
-                color: colors.onSurfaceVariant,
+          if (familySpace != null) ...[
+            Padding(
+              padding: const EdgeInsets.only(bottom: 14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    'SCOPE',
+                    style: textTheme.labelSmall?.copyWith(
+                      color: Theme.of(context).appColors.mutedInk,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 0.7,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  ScopePillSwitch(
+                    value: _scope,
+                    familyEnabled: true,
+                    onChanged: (value) => setState(() => _scope = value),
+                  ),
+                ],
               ),
-              moreCategoriesIcon: AppIcons.add,
-              onCategorySelected: (category) {
-                setState(() => _selectedCategory = category);
-                if (category != null) {
-                  ref.read(recentCategoryProvider.notifier).record(category);
-                }
-              },
             ),
+          ],
+          const _FormLabel('CATEGORY'),
+          const SizedBox(height: 8),
+          TransactionStyleCategorySelector(
+            selectedCategory: _selectedCategory,
+            isExpense: _isExpense,
+            isPremium: isPremium,
+            showHeader: false,
+            labelStyle: textTheme.titleSmall?.copyWith(
+              color: colors.onSurfaceVariant,
+            ),
+            moreCategoriesIcon: AppIcons.add,
+            onCategorySelected: (category) {
+              setState(() => _selectedCategory = category);
+              if (category != null) {
+                ref.read(recentCategoryProvider.notifier).record(category);
+              }
+            },
           ),
+          const SizedBox(height: 18),
           if (!_isEditing &&
               locationAssistance.isEnabled &&
               hasSuggestions) ...[
@@ -504,91 +487,64 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
             ),
             const SizedBox(height: 18),
           ],
-          _AccordionSection(
-            title: 'Details',
-            subtitle:
-                'Add the who, when, and any context you want to remember later.',
-            expanded: _detailsExpanded,
-            onToggle: () => setState(() {
-              _detailsExpanded = !_detailsExpanded;
-            }),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                TextField(
-                  controller: _counterpartyController,
-                  textCapitalization: TextCapitalization.words,
-                  onChanged: (_) => setState(() {}),
-                  decoration: InputDecoration(
-                    labelText: _isExpense
-                        ? 'Merchant (optional)'
-                        : 'Source (optional)',
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              TextField(
+                controller: _counterpartyController,
+                textCapitalization: TextCapitalization.words,
+                onChanged: (_) => setState(() {}),
+                decoration: InputDecoration(
+                  labelText:
+                      _isExpense ? 'Merchant (optional)' : 'Source (optional)',
+                ),
+              ),
+              const SizedBox(height: 18),
+              InkWell(
+                onTap: _pickDate,
+                borderRadius: BorderRadius.circular(12),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 10,
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        AppIcons.calendar,
+                        size: 18,
+                        color: colors.onSurfaceVariant,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        _relativeDateLabel(_selectedDate),
+                        style: textTheme.bodyMedium,
+                      ),
+                      const Spacer(),
+                      Icon(
+                        AppIcons.chevronRight,
+                        size: 16,
+                        color: colors.outline,
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 14),
-                TextField(
-                  controller: _notesController,
-                  maxLines: 3,
-                  minLines: 1,
-                  decoration: const InputDecoration(
-                    labelText: 'Notes (optional)',
-                  ),
-                ),
-                const SizedBox(height: 14),
-                InkWell(
-                  onTap: _pickDate,
-                  borderRadius: BorderRadius.circular(12),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 10,
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(
-                          AppIcons.calendar,
-                          size: 18,
-                          color: colors.onSurfaceVariant,
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          _relativeDateLabel(_selectedDate),
-                          style: textTheme.bodyMedium,
-                        ),
-                        const Spacer(),
-                        Icon(
-                          AppIcons.chevronRight,
-                          size: 16,
-                          color: colors.outline,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
           if (!_isEditing) ...[
             const SizedBox(height: 18),
-            _AccordionSection(
-              title: 'Recurring',
-              subtitle:
-                  'Create future transactions automatically on a schedule.',
-              expanded: _recurringExpanded,
-              onToggle: () => setState(() {
-                _recurringExpanded = !_recurringExpanded;
-              }),
-              child: RecurringScheduleSection(
-                enabled: _recurringEnabled,
-                cadence: _recurringCadence,
-                endDate: _recurringEndDate,
-                onEnabledChanged: (value) =>
-                    setState(() => _recurringEnabled = value),
-                onCadenceChanged: (value) =>
-                    setState(() => _recurringCadence = value),
-                onEndDateChanged: (value) =>
-                    setState(() => _recurringEndDate = value),
-              ),
+            const Divider(height: 1),
+            RecurringScheduleSection(
+              enabled: _recurringEnabled,
+              cadence: _recurringCadence,
+              endDate: _recurringEndDate,
+              onEnabledChanged: (value) =>
+                  setState(() => _recurringEnabled = value),
+              onCadenceChanged: (value) =>
+                  setState(() => _recurringCadence = value),
+              onEndDateChanged: (value) =>
+                  setState(() => _recurringEndDate = value),
             ),
           ],
         ],
@@ -626,92 +582,186 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
   }
 }
 
-class _AccordionSection extends StatelessWidget {
-  const _AccordionSection({
-    required this.title,
-    this.subtitle,
-    required this.expanded,
-    required this.onToggle,
-    required this.child,
-  });
+class _FormLabel extends StatelessWidget {
+  const _FormLabel(this.label);
 
-  final String title;
-  final String? subtitle;
-  final bool expanded;
-  final VoidCallback onToggle;
-  final Widget child;
+  final String label;
 
   @override
   Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-    final colors = Theme.of(context).colorScheme;
-
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 18),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          InkWell(
-            onTap: onToggle,
-            borderRadius: BorderRadius.circular(16),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 2),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          title,
-                          style: textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                        if (subtitle != null) ...[
-                          const SizedBox(height: 4),
-                          Text(
-                            subtitle!,
-                            style: textTheme.bodySmall?.copyWith(
-                              color: colors.onSurfaceVariant,
-                              height: 1.35,
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Padding(
-                    padding: const EdgeInsets.only(top: 2),
-                    child: AnimatedRotation(
-                      turns: expanded ? 0.5 : 0,
-                      duration: const Duration(milliseconds: 180),
-                      curve: Curves.easeOutCubic,
-                      child: Icon(
-                        Icons.keyboard_arrow_down_rounded,
-                        color: colors.onSurfaceVariant,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
+    final colors = Theme.of(context).appColors;
+    return Text(
+      label,
+      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+            color: colors.mutedInk,
+            fontWeight: FontWeight.w800,
+            letterSpacing: 0.7,
           ),
-          ClipRect(
-            child: AnimatedSize(
-              duration: const Duration(milliseconds: 180),
-              curve: Curves.easeOutCubic,
-              child: expanded
-                  ? Padding(
-                      padding: const EdgeInsets.only(top: 10),
-                      child: child,
-                    )
-                  : const SizedBox.shrink(),
-            ),
+    );
+  }
+}
+
+class _FormSegmentedSwitch extends StatelessWidget {
+  const _FormSegmentedSwitch({
+    required this.left,
+    required this.right,
+    required this.leftSelected,
+    required this.selectedColor,
+    required this.onChanged,
+  });
+
+  final String left;
+  final String right;
+  final bool leftSelected;
+  final Color selectedColor;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).appColors;
+    return Container(
+      height: 40,
+      padding: const EdgeInsets.all(3),
+      decoration: BoxDecoration(
+        color: colors.border.withValues(alpha: 0.75),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        children: [
+          _FormSegment(
+            label: left,
+            selected: leftSelected,
+            color: selectedColor,
+            onTap: () => onChanged(true),
+          ),
+          _FormSegment(
+            label: right,
+            selected: !leftSelected,
+            color: selectedColor,
+            onTap: () => onChanged(false),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _FormSegment extends StatelessWidget {
+  const _FormSegment({
+    required this.label,
+    required this.selected,
+    required this.color,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final Color color;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).appColors;
+    return Expanded(
+      child: InkWell(
+        borderRadius: BorderRadius.circular(999),
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: selected ? colors.surfaceRaised : Colors.transparent,
+            borderRadius: BorderRadius.circular(999),
+          ),
+          child: Text(
+            label,
+            style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                  color: selected ? color : colors.softInk,
+                  fontWeight: FontWeight.w700,
+                ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _AmountHeroField extends StatelessWidget {
+  const _AmountHeroField({
+    required this.controller,
+    required this.currencyCode,
+    required this.isExpense,
+    required this.isPremium,
+    required this.onChanged,
+    required this.onCurrencyChanged,
+  });
+
+  final TextEditingController controller;
+  final String currencyCode;
+  final bool isExpense;
+  final bool isPremium;
+  final ValueChanged<String> onChanged;
+  final ValueChanged<String> onCurrencyChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).appColors;
+    final amountColor = isExpense ? colors.expense : colors.income;
+    final amountStyle = Theme.of(context).textTheme.headlineMedium?.copyWith(
+          color: amountColor,
+          fontWeight: FontWeight.w700,
+        );
+    return TextField(
+      controller: controller,
+      onChanged: onChanged,
+      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+      style: amountStyle,
+      decoration: InputDecoration(
+        prefixIconConstraints: const BoxConstraints(),
+        prefixIcon: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: () => CurrencyPickerSheet.show(
+            context,
+            selectedCode: currencyCode,
+            isPremium: isPremium,
+            onSelected: onCurrencyChanged,
+          ),
+          child: Padding(
+            padding: const EdgeInsets.only(left: 16, right: 6),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(currencyCode, style: amountStyle),
+                const SizedBox(width: 2),
+                Icon(
+                  Icons.keyboard_arrow_down_rounded,
+                  size: 20,
+                  color: amountColor.withValues(alpha: 0.65),
+                ),
+              ],
+            ),
+          ),
+        ),
+        hintText: '0',
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide(color: colors.border),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide:
+              BorderSide(color: amountColor.withValues(alpha: 0.5), width: 1.5),
+        ),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        hintStyle: amountStyle?.copyWith(
+          color: amountColor.withValues(alpha: 0.32),
+        ),
+        filled: true,
+        fillColor: colors.surfaceMuted,
       ),
     );
   }

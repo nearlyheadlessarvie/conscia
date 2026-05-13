@@ -290,12 +290,12 @@ class AppTheme {
       ),
       titleLarge: GoogleFonts.poppins(
         fontSize: 18,
-        fontWeight: FontWeight.w700,
+        fontWeight: FontWeight.w600,
         color: color,
       ),
       titleMedium: GoogleFonts.inter(
         fontSize: 16,
-        fontWeight: FontWeight.w700,
+        fontWeight: FontWeight.w500,
         letterSpacing: 0.15,
         color: color,
       ),
