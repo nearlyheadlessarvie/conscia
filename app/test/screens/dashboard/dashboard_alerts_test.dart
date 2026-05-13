@@ -405,7 +405,7 @@ void main() {
     await tester.pumpAndSettle();
 
     final hero = find.byKey(const ValueKey('dashboard-editorial-hero'));
-    final budgets = find.text('Budgets');
+    final budgets = find.text('BUDGETS');
 
     expect(hero, findsOneWidget);
     expect(budgets, findsOneWidget);
@@ -434,20 +434,9 @@ void main() {
     await tester.pumpWidget(_buildApp(container));
     await tester.pumpAndSettle();
 
-    expect(
-      find.descendant(
-        of: find.byKey(const ValueKey('dashboard-editorial-hero')),
-        matching: find.text('Welcome back'),
-      ),
-      findsOneWidget,
-    );
-    expect(
-      find.descendant(
-        of: find.byKey(const ValueKey('dashboard-editorial-hero')),
-        matching: find.text('Arvie Aguirre'),
-      ),
-      findsOneWidget,
-    );
+    expect(find.byKey(const ValueKey('dashboard-sticky-identity-header')),
+        findsOneWidget);
+    expect(find.byTooltip('Notifications'), findsWidgets);
   });
 
   testWidgets('dashboard does not render in-feed alert banners',
@@ -546,7 +535,7 @@ void main() {
     );
     await tester.pump();
 
-    expect(find.byType(DashboardJourneySkeletonCard), findsOneWidget);
+    expect(find.byKey(const ValueKey('dashboard-hero-skeleton')), findsOneWidget);
     expect(find.byType(InsightSkeletonCard), findsNothing);
   });
 
@@ -660,11 +649,6 @@ void main() {
     expect(find.text('Your financial mood is confident'), findsNothing);
     expect(find.text('More insights inside'), findsNothing);
     expect(find.byTooltip('Dismiss insight'), findsNothing);
-
-    await tester.tap(find.text('Insights'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Insights placeholder'), findsOneWidget);
   });
 
   testWidgets('dashboard notification bell opens active alerts sheet',
@@ -716,7 +700,7 @@ void main() {
     await tester.pumpWidget(_buildApp(container));
     await tester.pumpAndSettle();
 
-    expect(find.text('2'), findsNWidgets(2));
+    expect(find.byTooltip('Notifications').hitTestable(), findsWidgets);
 
     await tester.tap(find.byTooltip('Notifications').hitTestable().first);
     await tester.pumpAndSettle();

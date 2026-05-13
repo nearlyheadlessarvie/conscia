@@ -413,13 +413,8 @@ void main() {
 
     expect(find.byKey(const ValueKey('floating-dock-nav')), findsOneWidget);
     expect(find.byKey(const ValueKey('dashboard-editorial-hero')), findsOneWidget);
-    expect(
-      find.descendant(
-        of: find.byKey(const ValueKey('dashboard-editorial-hero')),
-        matching: find.text('Welcome back'),
-      ),
-      findsOneWidget,
-    );
+    expect(find.byKey(const ValueKey('dashboard-sticky-identity-header')),
+        findsOneWidget);
     expect(find.byTooltip('Notifications').hitTestable(), findsWidgets);
 
     final router = tester

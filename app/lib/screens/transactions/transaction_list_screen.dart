@@ -13,7 +13,6 @@ import '../../services/transaction_service.dart';
 import '../../core/utils/currency_formatter.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/feed_card.dart';
-import '../../widgets/scope_pill_switch.dart';
 import '../../widgets/selection_chip_group.dart';
 import '../../widgets/skeleton_loader.dart';
 import '../../../widgets/form_label.dart';
@@ -336,7 +335,7 @@ class _EditorialTransactionRow extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            CategoryIcons.badge(displayCategory, size: 36),
+            CategoryIcons.badge(displayCategory, size: 30),
             const SizedBox(width: 12),
             // Left column: merchant + category name
             Expanded(
