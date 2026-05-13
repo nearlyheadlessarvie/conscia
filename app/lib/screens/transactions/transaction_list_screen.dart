@@ -390,11 +390,13 @@ class _EditorialTransactionRow extends StatelessWidget {
                     children: [
                       if (transaction.isFamily)
                         _IconTag(
+                          key: const ValueKey('family-transaction-badge'),
                           icon: Icons.people_rounded,
                           color: colors.family,
                         ),
                       if (transaction.isRecurring)
                         _IconTag(
+                          key: const ValueKey('recurring-transaction-badge'),
                           icon: Icons.repeat_rounded,
                           color: colors.deepNavy,
                         ),
@@ -431,7 +433,7 @@ class _EditorialTransactionRow extends StatelessWidget {
 }
 
 class _IconTag extends StatelessWidget {
-  const _IconTag({required this.icon, required this.color});
+  const _IconTag({super.key, required this.icon, required this.color});
 
   final IconData icon;
   final Color color;

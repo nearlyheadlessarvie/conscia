@@ -1,12 +1,46 @@
+import 'package:conscia_app/providers/auth_provider.dart';
 import 'package:conscia_app/providers/transaction_providers.dart';
 import 'package:conscia_app/screens/transactions/transaction_list_screen.dart';
+import 'package:conscia_app/services/auth_service.dart';
 import 'package:conscia_app/services/transaction_service.dart';
 import 'package:conscia_app/widgets/skeleton_loader.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+
+class _FakeAuthService extends AuthService {
+  _FakeAuthService() : super(Dio());
+}
+
+class _FakeSecureStorage extends FlutterSecureStorage {
+  @override
+  Future<String?> read({
+    required String key,
+    AppleOptions? iOptions,
+    AndroidOptions? aOptions,
+    LinuxOptions? lOptions,
+    WebOptions? webOptions,
+    WindowsOptions? wOptions,
+    AppleOptions? mOptions,
+  }) async =>
+      null;
+}
+
+class _TestAuthNotifier extends AuthNotifier {
+  _TestAuthNotifier(AuthState initialState)
+      : super(_FakeAuthService(), _FakeSecureStorage()) {
+    state = initialState;
+  }
+}
+
+final _authenticatedOverride = authProvider.overrideWith(
+  (ref) => _TestAuthNotifier(
+    const AuthState(status: AuthStatus.authenticated, userId: 'user-1'),
+  ),
+);
 
 class _StaticTransactionService extends TransactionService {
   _StaticTransactionService(this.transactions) : super(Dio());
@@ -57,10 +91,13 @@ class _LoadingTransactionListNotifier extends TransactionListNotifier {
 Future<void> _pumpTransactionList(
   WidgetTester tester, {
   required List<Transaction> transactions,
+  String scope = 'personal',
 }) async {
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
+        _authenticatedOverride,
+        transactionScopeFilterProvider.overrideWith((ref) => scope),
         transactionServiceProvider.overrideWithValue(
           _StaticTransactionService(transactions),
         ),
@@ -77,6 +114,7 @@ void main() {
       () async {
     final container = ProviderContainer(
       overrides: [
+        _authenticatedOverride,
         transactionServiceProvider.overrideWithValue(
           _StaticTransactionService([
             Transaction(
@@ -147,6 +185,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          _authenticatedOverride,
           transactionServiceProvider.overrideWithValue(
             _StaticTransactionService(const []),
           ),
@@ -214,7 +253,6 @@ void main() {
 
     await tester.pump();
 
-    expect(find.text('Filters'), findsOneWidget);
     expect(find.byKey(const ValueKey('selection-chip-button-Gift')),
         findsOneWidget);
     expect(find.byType(SkeletonListTile), findsWidgets);
@@ -296,7 +334,10 @@ void main() {
       ],
     );
 
-    expect(find.text('Recurring'), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('recurring-transaction-badge')),
+      findsOneWidget,
+    );
   });
 
   testWidgets('family transaction displays real category with family badge', (
@@ -304,6 +345,7 @@ void main() {
   ) async {
     await _pumpTransactionList(
       tester,
+      scope: 'family',
       transactions: [
         Transaction(
           id: 'tx-family',
@@ -319,7 +361,8 @@ void main() {
       ],
     );
 
-    expect(find.text('Dining · May 3'), findsOneWidget);
+    expect(find.text('Manam'), findsOneWidget);
+    expect(find.text('Dining'), findsWidgets);
     expect(find.text('Family Dining'), findsNothing);
     expect(
         find.byKey(const ValueKey('family-transaction-badge')), findsOneWidget);
@@ -331,7 +374,7 @@ void main() {
     );
   });
 
-  testWidgets('transaction list does not expose a family-only filter toggle', (
+  testWidgets('transaction list uses scope pill switch instead of a family-only toggle', (
     tester,
   ) async {
     final service = _StaticTransactionService([
@@ -343,6 +386,7 @@ void main() {
         description: 'Grab',
         type: 'expense',
         date: DateTime(2026, 4, 30),
+        scope: 'personal',
       ),
       Transaction(
         id: 'tx-family',
@@ -360,6 +404,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          _authenticatedOverride,
           transactionServiceProvider.overrideWithValue(service),
         ],
         child: const MaterialApp(home: TransactionListScreen()),
@@ -367,11 +412,9 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    // Personal scope is default — personal transaction is visible
     expect(find.text('Grab'), findsOneWidget);
-    expect(find.text('Manam'), findsOneWidget);
-    expect(
-        find.byKey(const ValueKey('family-transaction-badge')), findsOneWidget);
-    expect(service.lastScope, isNull);
+    // No old-style icon-button family toggles
     expect(find.byTooltip('Show family transactions'), findsNothing);
     expect(find.byTooltip('Show all transactions'), findsNothing);
   });

@@ -1,6 +1,7 @@
-import 'package:conscia_app/providers/category_frequency_provider.dart';
 import 'package:conscia_app/providers/alert_provider.dart';
+import 'package:conscia_app/providers/auth_provider.dart';
 import 'package:conscia_app/providers/budget_providers.dart';
+import 'package:conscia_app/providers/category_frequency_provider.dart';
 import 'package:conscia_app/models/family_space.dart';
 import 'package:conscia_app/models/recurring_schedule.dart';
 import 'package:conscia_app/providers/family_space_provider.dart';
@@ -9,8 +10,8 @@ import 'package:conscia_app/providers/transaction_providers.dart';
 import 'package:conscia_app/providers/usage_provider.dart';
 import 'package:conscia_app/providers/user_provider.dart';
 import 'package:conscia_app/screens/transactions/transaction_form_screen.dart';
-import 'package:conscia_app/screens/transactions/widgets/quick_preset_chips.dart';
 import 'package:conscia_app/screens/transactions/widgets/voice_input_button.dart';
+import 'package:conscia_app/services/auth_service.dart';
 import 'package:conscia_app/services/budget_service.dart';
 import 'package:conscia_app/services/location_assistance_service.dart';
 import 'package:conscia_app/services/recurring_service.dart';
@@ -20,6 +21,7 @@ import 'package:conscia_app/services/user_service.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -45,6 +47,37 @@ class _FakeLocationAssistanceService extends LocationAssistanceService {
   ({List<String> nearbyMerchants, List<String> likelyCategories})
       getTransactionSuggestions() => suggestions;
 }
+
+class _FakeAuthService extends AuthService {
+  _FakeAuthService() : super(Dio());
+}
+
+class _FakeSecureStorage extends FlutterSecureStorage {
+  @override
+  Future<String?> read({
+    required String key,
+    AppleOptions? iOptions,
+    AndroidOptions? aOptions,
+    LinuxOptions? lOptions,
+    WebOptions? webOptions,
+    WindowsOptions? wOptions,
+    AppleOptions? mOptions,
+  }) async =>
+      null;
+}
+
+class _TestAuthNotifier extends AuthNotifier {
+  _TestAuthNotifier(AuthState initialState)
+      : super(_FakeAuthService(), _FakeSecureStorage()) {
+    state = initialState;
+  }
+}
+
+final _authenticatedOverride = authProvider.overrideWith(
+  (ref) => _TestAuthNotifier(
+    const AuthState(status: AuthStatus.authenticated, userId: 'user-1'),
+  ),
+);
 
 class _RecordingTransactionService extends TransactionService {
   _RecordingTransactionService({this.editTransaction}) : super(Dio());
@@ -126,6 +159,8 @@ class _FakeUserService extends UserService {
   Future<UserProfile> updateProfile({
     String? preferredCurrency,
     String? locale,
+    String? displayName,
+    String? photoUrl,
     String? spendingPersonality,
     String? incomeRange,
     String? occupationType,
@@ -172,6 +207,7 @@ Future<ProviderContainer> _pumpTransactionForm(
 
   final container = ProviderContainer(
     overrides: [
+      _authenticatedOverride,
       categoryFrequencyProvider.overrideWithValue(
         ['Coffee', 'Dining', 'Shopping', 'Gaming', 'Travel'],
       ),
@@ -240,6 +276,7 @@ Future<Widget> buildTransactionFormApp(
 
   final container = ProviderContainer(
     overrides: [
+      _authenticatedOverride,
       categoryFrequencyProvider.overrideWithValue(
         ['Coffee', 'Dining', 'Shopping', 'Gaming', 'Travel'],
       ),
@@ -349,7 +386,7 @@ void main() {
 
     await tester.pumpAndSettle();
 
-    expect(find.byType(QuickPresetChips), findsOneWidget);
+    expect(find.text('More'), findsOneWidget);
     expect(find.text('Quick add'), findsNothing);
   });
 
@@ -398,10 +435,11 @@ void main() {
     await tester.pumpWidget(await buildTransactionFormApp(tester));
     await tester.pumpAndSettle();
 
-    final chipsTopLeft = tester.getTopLeft(find.text('Dining').first);
-    final actionTopLeft = tester.getTopLeft(find.text('All categories'));
+    // 'Dining' chip and 'More' button are in the same horizontal chip rail row
+    final chipsY = tester.getCenter(find.text('Dining').first).dy;
+    final actionY = tester.getCenter(find.text('More')).dy;
 
-    expect(chipsTopLeft.dy, lessThan(actionTopLeft.dy));
+    expect((chipsY - actionY).abs(), lessThan(8));
   });
 
   testWidgets(
@@ -418,10 +456,9 @@ void main() {
 
     await tester.pumpAndSettle();
 
-    expect(find.text('More categories'), findsNothing);
-    expect(find.text('All categories'), findsOneWidget);
+    expect(find.text('More'), findsOneWidget);
 
-    await tester.tap(find.text('All categories'));
+    await tester.tap(find.text('More'));
     await tester.pumpAndSettle();
 
     expect(find.byType(BottomSheet), findsOneWidget);
@@ -438,13 +475,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(BottomSheet), findsNothing);
-    expect(
-      find.descendant(
-        of: find.byType(InputChip),
-        matching: find.text('Groceries'),
-      ),
-      findsOneWidget,
-    );
+    expect(find.text('Groceries'), findsWidgets);
   });
 
   testWidgets('transaction form shows only one category heading',
@@ -453,76 +484,47 @@ void main() {
 
     await tester.pumpAndSettle();
 
-    expect(find.text('Category'), findsOneWidget);
+    expect(find.text('CATEGORY'), findsOneWidget);
   });
 
-  testWidgets('category and details accordions start expanded', (tester) async {
+  testWidgets('category selector and merchant field are always visible',
+      (tester) async {
     await tester.pumpWidget(await buildTransactionFormApp(tester));
     await tester.pumpAndSettle();
 
-    expect(find.text('All categories'), findsOneWidget);
+    expect(find.text('More'), findsOneWidget);
     expect(find.text('Merchant (optional)'), findsOneWidget);
   });
 
-  testWidgets('category accordion can collapse and expand', (tester) async {
+  testWidgets('category label and chip rail are always visible', (tester) async {
     await tester.pumpWidget(await buildTransactionFormApp(tester));
     await tester.pumpAndSettle();
 
-    expect(find.text('All categories'), findsOneWidget);
-
-    await tester.tap(find.text('Category'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('All categories'), findsNothing);
-
-    await tester.tap(find.text('Category'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('All categories'), findsOneWidget);
+    expect(find.text('CATEGORY'), findsOneWidget);
+    expect(find.text('More'), findsOneWidget);
   });
 
-  testWidgets('details accordion can collapse and expand', (tester) async {
+  testWidgets('merchant field and date are always visible', (tester) async {
     await tester.pumpWidget(await buildTransactionFormApp(tester));
     await tester.pumpAndSettle();
 
     expect(find.text('Merchant (optional)'), findsOneWidget);
-
-    await tester.tap(find.text('Details'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Merchant (optional)'), findsNothing);
-    expect(find.text('Notes (optional)'), findsNothing);
-    expect(find.text('Today'), findsNothing);
-
-    await tester.tap(find.text('Details'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Merchant (optional)'), findsOneWidget);
+    expect(find.text('Today'), findsOneWidget);
   });
 
-  testWidgets('recurring accordion starts collapsed and can expand', (
+  testWidgets('recurring section is always visible and cadence options are hidden by default',
+      (tester) async {
+    await tester.pumpWidget(await buildTransactionFormApp(tester));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Recurring'), findsOneWidget);
+    expect(find.text('Weekly'), findsNothing);
+  });
+
+  testWidgets('shows recurring controls when recurring switch is enabled', (
     tester,
   ) async {
     await tester.pumpWidget(await buildTransactionFormApp(tester));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Make this recurring'), findsNothing);
-
-    await tester.ensureVisible(find.text('Recurring'));
-    await tester.tap(find.text('Recurring'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Make this recurring'), findsOneWidget);
-  });
-
-  testWidgets('shows recurring controls when make this recurring is enabled', (
-    tester,
-  ) async {
-    await tester.pumpWidget(await buildTransactionFormApp(tester));
-    await tester.pumpAndSettle();
-
-    await tester.ensureVisible(find.text('Recurring'));
-    await tester.tap(find.text('Recurring'));
     await tester.pumpAndSettle();
 
     await tester.ensureVisible(find.byType(Switch));
@@ -685,13 +687,7 @@ void main() {
     await tester.tap(find.widgetWithText(ActionChip, 'Groceries'));
     await tester.pumpAndSettle();
 
-    expect(
-      find.descendant(
-        of: find.byType(InputChip),
-        matching: find.text('Groceries'),
-      ),
-      findsOneWidget,
-    );
+    expect(find.text('Groceries'), findsWidgets);
   });
 
   testWidgets(
@@ -853,8 +849,8 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 250));
 
-    expect(find.text('Scope'), findsOneWidget);
-    expect(find.textContaining('Santos Household'), findsOneWidget);
+    expect(find.text('SCOPE'), findsOneWidget);
+    expect(find.text('Family'), findsOneWidget);
 
     await tester.tap(find.text('Update Transaction'));
     await tester.pump();
@@ -924,6 +920,7 @@ void main() {
 
     final container = ProviderContainer(
       overrides: [
+        _authenticatedOverride,
         categoryFrequencyProvider.overrideWithValue(
           ['Coffee', 'Dining', 'Shopping', 'Gaming', 'Travel'],
         ),
@@ -1010,6 +1007,7 @@ void main() {
 
     final container = ProviderContainer(
       overrides: [
+        _authenticatedOverride,
         categoryFrequencyProvider.overrideWithValue(
           ['Coffee', 'Dining', 'Shopping', 'Gaming', 'Travel'],
         ),
