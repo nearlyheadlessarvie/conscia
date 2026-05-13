@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
+import 'package:go_router/go_router.dart';
 
-import '../../core/constants/app_icons.dart';
 import '../../core/errors/app_error.dart';
+import '../../core/theme/app_colors.dart';
+import '../../providers/auth_provider.dart';
 import '../../providers/user_provider.dart';
 import '../../services/user_service.dart';
+import '../../widgets/floating_label_text_field.dart';
 import '../../widgets/hero_screen_scaffold.dart';
-import '../../widgets/screen_section.dart';
-import '../../widgets/selection_chip_group.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
@@ -18,19 +18,23 @@ class ProfileScreen extends ConsumerStatefulWidget {
 }
 
 class _ProfileScreenState extends ConsumerState<ProfileScreen> {
-  String? _personality;
-  String? _incomeRange;
-  String? _occupation;
-  String? _household;
+  final _nameController = TextEditingController();
   bool _loaded = false;
   bool _saving = false;
+  String _aiIntensity = 'balanced';
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    super.dispose();
+  }
 
   void _loadFromProfile(UserProfile profile) {
     if (_loaded) return;
-    _personality = profile.spendingPersonality;
-    _incomeRange = profile.incomeRange;
-    _occupation = profile.occupationType;
-    _household = profile.householdSize;
+    _nameController.text = profile.displayName?.trim().isNotEmpty == true
+        ? profile.displayName!.trim()
+        : _nameFromEmail(profile.email);
+    _aiIntensity = profile.aiPersonalityIntensity;
     _loaded = true;
   }
 
@@ -38,10 +42,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     setState(() => _saving = true);
     try {
       await ref.read(userServiceProvider).updateProfile(
-            spendingPersonality: _personality,
-            incomeRange: _incomeRange,
-            occupationType: _occupation,
-            householdSize: _household,
+            displayName: _nameController.text.trim(),
+            aiPersonalityIntensity: _aiIntensity,
           );
       ref.invalidate(currentUserProvider);
       if (!mounted) return;
@@ -63,140 +65,98 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-    final colors = Theme.of(context).colorScheme;
     final userAsync = ref.watch(currentUserProvider);
 
     return HeroScreenScaffold(
-      appBar: AppBar(title: const Text('My Profile')),
-      bottom: FilledButton(
-        onPressed: _saving ? null : _save,
-        child: _saving
-            ? const SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: Colors.white,
-                ),
-              )
-            : const Text('Save Changes'),
+      padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
+      appBar: AppBar(
+        centerTitle: true,
+        title: const Text('Profile'),
+        leading: IconButton(
+          icon: const Text('‹', style: TextStyle(fontSize: 28)),
+          onPressed: () => context.pop(),
+        ),
+        actions: [
+          TextButton(
+            onPressed: _saving ? null : _save,
+            child: _saving
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Text('Save'),
+          ),
+        ],
       ),
       child: userAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text('Error: $e')),
         data: (profile) {
           _loadFromProfile(profile);
-          final currencyCode = profile.currencyCode;
-          final locale = profile.locale;
-          final formatter = NumberFormat.currency(
-            locale: locale.replaceAll('_', '-'),
-            symbol: '$currencyCode ',
-            decimalDigits: 0,
-          );
           return Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: CircleAvatar(
+              _ProfilePhoto(
+                photoUrl: profile.photoUrl,
+                initials: _initials(_nameController.text, profile.email),
+              ),
+              const SizedBox(height: 22),
+              FloatingLabelTextField(
+                controller: _nameController,
+                label: 'Display name',
+                textInputAction: TextInputAction.done,
+                onSubmitted: (_) => _save(),
+              ),
+              const SizedBox(height: 12),
+              FloatingLabelTextField(
+                controller: TextEditingController(text: profile.email),
+                label: 'Email',
+                enabled: false,
+              ),
+              const SizedBox(height: 12),
+              FloatingLabelTextField(
+                controller: TextEditingController(
+                  text:
+                      '${profile.currencyCode} — ${_currencyName(profile.currencyCode)}',
+                ),
+                label: 'Currency',
+                readOnly: true,
+              ),
+              const SizedBox(height: 12),
+              FloatingLabelTextField(
+                controller: TextEditingController(
+                  text: _spendingStyleLabel(profile.spendingPersonality),
+                ),
+                label: 'Spending style',
+                readOnly: true,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'AI Personality Intensity',
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      color: Theme.of(context).appColors.mutedInk,
+                      fontWeight: FontWeight.w800,
+                    ),
+              ),
+              const SizedBox(height: 8),
+              _IntensitySelector(
+                value: _aiIntensity,
+                onChanged: (value) => setState(() => _aiIntensity = value),
+              ),
+              const SizedBox(height: 16),
+              Divider(color: Theme.of(context).appColors.border),
+              const SizedBox(height: 18),
+              Center(
+                child: TextButton(
+                  onPressed: () => ref.read(authProvider.notifier).logout(),
                   child: Text(
-                    profile.email.isNotEmpty
-                        ? profile.email[0].toUpperCase()
-                        : '?',
-                  ),
-                ),
-                title: Text(profile.email),
-                subtitle: Text(
-                  'Member since ${DateFormat('MMM yyyy').format(profile.createdAt)}',
-                  style: textTheme.bodySmall?.copyWith(
-                    color: colors.onSurfaceVariant,
-                  ),
-                ),
-              ),
-              const Divider(height: 32),
-              ScreenSection(
-                title: 'Spending Style',
-                subtitle:
-                    'Keep this aligned with how you naturally make tradeoffs.',
-                child: Row(
-                  children: [
-                    _personalityCard(
-                      colors,
-                      textTheme,
-                      'saver',
-                      'Saver',
-                    ),
-                    const SizedBox(width: 8),
-                    _personalityCard(
-                      colors,
-                      textTheme,
-                      'balanced',
-                      'Balanced',
-                    ),
-                    const SizedBox(width: 8),
-                    _personalityCard(
-                      colors,
-                      textTheme,
-                      'free_spender',
-                      'Free spender',
-                    ),
-                  ],
-                ),
-              ),
-              ScreenSection(
-                title: 'Monthly Income',
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: _incomeOptions
-                      .map(
-                        (option) => _incomeRow(
-                          colors,
-                          textTheme,
-                          option.$1,
-                          _incomeLabel(option.$1, formatter),
+                    'Sign out',
+                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                          color: Theme.of(context).appColors.expense,
+                          fontWeight: FontWeight.w800,
                         ),
-                      )
-                      .toList(),
-                ),
-              ),
-              ScreenSection(
-                title: 'Occupation',
-                child: SelectionChipGroup(
-                  options: const [
-                    'employed',
-                    'self_employed',
-                    'student',
-                    'retired',
-                    'other',
-                  ],
-                  value: _occupation,
-                  labelBuilder: _labelForValue,
-                  avatarBuilder: (value, selected) =>
-                      AppIcons.profileBadge(value, selected: selected),
-                  showTrailingCheck: true,
-                  onSelected: (value) {
-                    setState(() {
-                      _occupation = _occupation == value ? null : value;
-                    });
-                  },
-                ),
-              ),
-              ScreenSection(
-                title: 'Household',
-                compact: true,
-                child: SelectionChipGroup(
-                  options: const ['solo', 'couple', 'family', 'shared'],
-                  value: _household,
-                  labelBuilder: _labelForValue,
-                  avatarBuilder: (value, selected) =>
-                      AppIcons.profileBadge(value, selected: selected),
-                  showTrailingCheck: true,
-                  onSelected: (value) {
-                    setState(() {
-                      _household = _household == value ? null : value;
-                    });
-                  },
+                  ),
                 ),
               ),
             ],
@@ -206,113 +166,142 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     );
   }
 
-  static const _incomeOptions = [
-    ('low',),
-    ('mid',),
-    ('high',),
-    ('very_high',),
-    ('prefer_not_to_say',),
-  ];
+  String _nameFromEmail(String email) {
+    final local = email.split('@').first;
+    if (local.isEmpty) return 'Conscia member';
+    return local
+        .split(RegExp(r'[._-]+'))
+        .where((part) => part.isNotEmpty)
+        .map((part) => '${part[0].toUpperCase()}${part.substring(1)}')
+        .join(' ');
+  }
 
-  String _incomeLabel(String value, NumberFormat formatter) {
-    return switch (value) {
-      'low' => 'Under ${formatter.format(20000)}',
-      'mid' => '${formatter.format(20000)} - ${formatter.format(50000)}',
-      'high' => '${formatter.format(50000)} - ${formatter.format(100000)}',
-      'very_high' => 'Over ${formatter.format(100000)}',
-      _ => 'Prefer not to say',
+  String _initials(String name, String email) {
+    final source = name.trim().isNotEmpty ? name.trim() : email;
+    final parts = source.split(RegExp(r'\s+|@')).where((p) => p.isNotEmpty);
+    final initials = parts.take(2).map((p) => p[0].toUpperCase()).join();
+    return initials.isEmpty ? '?' : initials;
+  }
+
+  String _currencyName(String code) {
+    return switch (code.toUpperCase()) {
+      'PHP' => 'Philippine Peso',
+      'USD' => 'US Dollar',
+      'EUR' => 'Euro',
+      _ => code.toUpperCase(),
     };
   }
 
-  String _labelForValue(String value) {
+  String _spendingStyleLabel(String? value) {
     return switch (value) {
-      'self_employed' => 'Self-employed',
-      'solo' => 'Just me',
-      'couple' => 'Couple',
-      'family' => 'Family',
-      'shared' => 'Shared',
-      'student' => 'Student',
-      'retired' => 'Retired',
-      'other' => 'Other',
-      _ => 'Employed',
+      'saver' => '🏦  Saver',
+      'balanced' => '⚖️  Balanced',
+      'free_spender' => '🎉  Free Spender',
+      _ => 'Not set',
     };
   }
+}
 
-  Widget _personalityCard(
-    ColorScheme colors,
-    TextTheme textTheme,
-    String value,
-    String label,
-  ) {
-    final selected = _personality == value;
-    return Expanded(
-      child: GestureDetector(
-        onTap: () => setState(() {
-          _personality = selected ? null : value;
-        }),
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: selected ? colors.primary : colors.outlineVariant,
-              width: selected ? 2 : 1,
-            ),
-            color: selected ? colors.primaryContainer : colors.surface,
-          ),
-          child: Column(
-            children: [
-              AppIcons.spendingStyleBadge(
-                value,
-                size: 24,
-                selected: selected,
+class _ProfilePhoto extends StatelessWidget {
+  const _ProfilePhoto({
+    required this.photoUrl,
+    required this.initials,
+  });
+
+  final String? photoUrl;
+  final String initials;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).appColors;
+    return Column(
+      children: [
+        CircleAvatar(
+          radius: 36,
+          backgroundColor: colors.navySoft,
+          backgroundImage: photoUrl == null || photoUrl!.isEmpty
+              ? null
+              : NetworkImage(photoUrl!),
+          child: photoUrl == null || photoUrl!.isEmpty
+              ? Text(
+                  initials,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        color: colors.deepNavy,
+                        fontWeight: FontWeight.w900,
+                      ),
+                )
+              : null,
+        ),
+        const SizedBox(height: 10),
+        Text(
+          'Change photo',
+          style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                color: colors.deepNavy,
+                fontWeight: FontWeight.w800,
               ),
-              const SizedBox(height: 6),
-              Text(
-                label,
-                textAlign: TextAlign.center,
-                style: textTheme.labelSmall?.copyWith(
-                  fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+        ),
+      ],
+    );
+  }
+}
+
+class _IntensitySelector extends StatelessWidget {
+  const _IntensitySelector({
+    required this.value,
+    required this.onChanged,
+  });
+
+  final String value;
+  final ValueChanged<String> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).appColors;
+    return Container(
+      height: 40,
+      padding: const EdgeInsets.all(3),
+      decoration: BoxDecoration(
+        color: colors.border.withValues(alpha: 0.75),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        children: [
+          for (final option in const ['mild', 'balanced', 'intense'])
+            Expanded(
+              child: InkWell(
+                borderRadius: BorderRadius.circular(999),
+                onTap: () => onChanged(option),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 180),
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: value == option
+                        ? colors.surfaceRaised
+                        : Colors.transparent,
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Text(
+                    _label(option),
+                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                          color: value == option
+                              ? colors.deepNavy
+                              : colors.softInk,
+                          fontWeight: FontWeight.w800,
+                        ),
+                  ),
                 ),
               ),
-            ],
-          ),
-        ),
+            ),
+        ],
       ),
     );
   }
 
-  Widget _incomeRow(
-    ColorScheme colors,
-    TextTheme textTheme,
-    String value,
-    String label,
-  ) {
-    final selected = _incomeRange == value;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: InkWell(
-        onTap: () => setState(() => _incomeRange = selected ? null : value),
-        borderRadius: BorderRadius.circular(10),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(
-              color: selected ? colors.primary : colors.outlineVariant,
-              width: selected ? 2 : 1,
-            ),
-            color: selected ? colors.primaryContainer : colors.surface,
-          ),
-          child: Row(
-            children: [
-              Expanded(child: Text(label, style: textTheme.bodyMedium)),
-              if (selected)
-                Icon(AppIcons.check, size: 18, color: colors.primary),
-            ],
-          ),
-        ),
-      ),
-    );
+  String _label(String value) {
+    return switch (value) {
+      'mild' => 'Mild',
+      'intense' => 'Intense',
+      _ => 'Balanced',
+    };
   }
 }

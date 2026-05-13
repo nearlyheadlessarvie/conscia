@@ -48,6 +48,10 @@ abstract class AppIcons {
       adaptive(material: Icons.close, cupertino: CupertinoIcons.xmark);
   static IconData get check =>
       adaptive(material: Icons.check, cupertino: CupertinoIcons.checkmark);
+  static IconData get chevronLeft => adaptive(
+        material: Icons.chevron_left,
+        cupertino: CupertinoIcons.chevron_back,
+      );
   static IconData get chevronRight => adaptive(
         material: Icons.chevron_right,
         cupertino: CupertinoIcons.chevron_right,

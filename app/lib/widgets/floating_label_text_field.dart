@@ -13,6 +13,7 @@ class FloatingLabelTextField extends StatefulWidget {
     this.keyboardType,
     this.textInputAction,
     this.onChanged,
+    this.onSubmitted,
     this.onTap,
     this.obscureText = false,
     this.errorText,
@@ -37,6 +38,7 @@ class FloatingLabelTextField extends StatefulWidget {
   final TextInputType? keyboardType;
   final TextInputAction? textInputAction;
   final ValueChanged<String>? onChanged;
+  final ValueChanged<String>? onSubmitted;
   final VoidCallback? onTap;
   final bool obscureText;
   final String? errorText;
@@ -179,6 +181,7 @@ class _FloatingLabelTextFieldState extends State<FloatingLabelTextField> {
               keyboardType: widget.keyboardType,
               textInputAction: widget.textInputAction,
               onChanged: widget.onChanged,
+              onSubmitted: widget.onSubmitted,
               onTap: widget.onTap,
               obscureText: widget.obscureText,
               enabled: widget.enabled,

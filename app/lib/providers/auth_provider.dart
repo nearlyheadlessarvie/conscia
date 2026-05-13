@@ -323,11 +323,11 @@ class AuthNotifier extends StateNotifier<AuthState> {
   }
 
   Future<void> logout() async {
+    _pendingPassword = null;
+    state = const AuthState();
     await _storage.delete(key: _accessTokenKey);
     await _storage.delete(key: _refreshTokenKey);
     await _storage.delete(key: _userIdKey);
-    _pendingPassword = null;
-    state = const AuthState();
   }
 
   Future<bool> refreshSession() async {
@@ -358,14 +358,14 @@ class AuthNotifier extends StateNotifier<AuthState> {
   }
 
   Future<void> markSessionExpired() async {
-    await _storage.delete(key: _accessTokenKey);
-    await _storage.delete(key: _refreshTokenKey);
-    await _storage.delete(key: _userIdKey);
     _pendingPassword = null;
     state = const AuthState(
       status: AuthStatus.sessionExpired,
       error: 'Session expired',
     );
+    await _storage.delete(key: _accessTokenKey);
+    await _storage.delete(key: _refreshTokenKey);
+    await _storage.delete(key: _userIdKey);
   }
 
   Future<void> _persistTokens(AuthTokens tokens) async {

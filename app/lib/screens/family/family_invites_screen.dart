@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../core/constants/app_icons.dart';
 import '../../core/errors/app_error.dart';
+import '../../core/theme/app_colors.dart';
 import '../../models/family_invite.dart';
 import '../../providers/family_space_provider.dart';
 import '../../widgets/feed_card.dart';
+import '../../widgets/floating_label_text_field.dart';
 import '../../widgets/hero_screen_scaffold.dart';
 import '../../widgets/skeleton_loader.dart';
 
@@ -18,7 +19,8 @@ class FamilyInvitesScreen extends ConsumerWidget {
     final familySpace = ref.watch(familySpaceProvider);
 
     return HeroScreenScaffold(
-      appBar: AppBar(title: const Text('Family invites')),
+      padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
+      appBar: AppBar(title: const Text('Invites')),
       child: invites.when(
         data: (items) {
           final canInvite = familySpace.valueOrNull?.role == 'Owner';
@@ -41,11 +43,8 @@ class FamilyInvitesScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: 16),
               ],
-              Text(
-                'Invites you received',
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
-              const SizedBox(height: 10),
+              const _SectionLabel('INVITES YOU RECEIVED'),
+              const SizedBox(height: 8),
               if (items.isEmpty)
                 const _EmptyInvites()
               else
@@ -89,55 +88,54 @@ class _InviteComposerState extends ConsumerState<_InviteComposer> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final colors = Theme.of(context).appColors;
 
     return FeedCard(
+      padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Invite someone', style: theme.textTheme.titleMedium),
-          const SizedBox(height: 6),
           Text(
-            'They can join once they register with the invited email.',
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
-            ),
-          ),
-          const SizedBox(height: 14),
-          TextField(
-            controller: _emailController,
-            keyboardType: TextInputType.emailAddress,
-            decoration: const InputDecoration(
-              labelText: 'Email',
-              prefixIcon: Icon(Icons.mail_outline),
-            ),
+            'Invite a family member',
+            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w800,
+                  color: colors.ink,
+                ),
           ),
           const SizedBox(height: 12),
-          DropdownButtonFormField<String>(
-            initialValue: _role,
-            decoration: const InputDecoration(
-              labelText: 'Role',
-              prefixIcon: Icon(Icons.admin_panel_settings_outlined),
-            ),
-            items: const [
-              DropdownMenuItem(
-                value: 'Contributor',
-                child: Text('Contributor'),
-              ),
-              DropdownMenuItem(
-                value: 'Viewer',
-                child: Text('Viewer'),
-              ),
-            ],
-            onChanged: (value) {
-              if (value != null) setState(() => _role = value);
+          FloatingLabelTextField(
+            controller: _emailController,
+            label: 'Email address',
+            keyboardType: TextInputType.emailAddress,
+            textInputAction: TextInputAction.done,
+            onSubmitted: (_) {
+              if (!_isSubmitting) _submit();
             },
+          ),
+          const SizedBox(height: 14),
+          Text(
+            'Role',
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: colors.mutedInk,
+                  fontWeight: FontWeight.w700,
+                ),
+          ),
+          const SizedBox(height: 6),
+          _RoleSegmentedControl(
+            value: _role,
+            onChanged: (value) => setState(() => _role = value),
           ),
           const SizedBox(height: 14),
           SizedBox(
             width: double.infinity,
+            height: 48,
             child: FilledButton(
               onPressed: _isSubmitting ? null : _submit,
+              style: FilledButton.styleFrom(
+                backgroundColor: colors.deepNavy,
+                foregroundColor: Colors.white,
+                shape: const StadiumBorder(),
+              ),
               child: Text(_isSubmitting ? 'Sending...' : 'Send invite'),
             ),
           ),
@@ -172,6 +170,83 @@ class _InviteComposerState extends ConsumerState<_InviteComposer> {
   }
 }
 
+class _RoleSegmentedControl extends StatelessWidget {
+  const _RoleSegmentedControl({
+    required this.value,
+    required this.onChanged,
+  });
+
+  final String value;
+  final ValueChanged<String> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).appColors;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: colors.navySoft,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(3),
+        child: Row(
+          children: [
+            _RoleSegment(
+              label: 'Contributor',
+              selected: value == 'Contributor',
+              onTap: () => onChanged('Contributor'),
+            ),
+            _RoleSegment(
+              label: 'Viewer',
+              selected: value == 'Viewer',
+              onTap: () => onChanged('Viewer'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _RoleSegment extends StatelessWidget {
+  const _RoleSegment({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).appColors;
+    return Expanded(
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 160),
+          height: 30,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: selected ? colors.surfaceRaised : Colors.transparent,
+            borderRadius: BorderRadius.circular(999),
+          ),
+          child: Text(
+            label,
+            style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                  color: selected ? colors.deepNavy : colors.softInk,
+                  fontWeight: FontWeight.w800,
+                ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _OutgoingInvitesSection extends StatelessWidget {
   const _OutgoingInvitesSection({required this.invites});
 
@@ -179,13 +254,11 @@ class _OutgoingInvitesSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Invites you sent', style: theme.textTheme.titleMedium),
-        const SizedBox(height: 10),
+        const _SectionLabel('SENT'),
+        const SizedBox(height: 8),
         if (invites.isEmpty)
           const _CompactInviteEmptyState(
             icon: Icons.outgoing_mail,
@@ -217,80 +290,65 @@ class _OutgoingInviteCardState extends ConsumerState<_OutgoingInviteCard> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final colors = theme.colorScheme;
+    final colors = theme.appColors;
 
     return FeedCard(
-      padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              CircleAvatar(
-                radius: 20,
-                backgroundColor:
-                    colors.primaryContainer.withValues(alpha: 0.48),
-                child: Icon(
-                  Icons.mark_email_unread_outlined,
-                  size: 20,
-                  color: colors.primary,
-                ),
+          CircleAvatar(
+            radius: 20,
+            backgroundColor: colors.angelSoft,
+            child: Text(
+              _initials(widget.invite.email),
+              style: theme.textTheme.labelMedium?.copyWith(
+                color: colors.angelAccent,
+                fontWeight: FontWeight.w900,
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  widget.invite.email,
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w800,
+                    color: colors.ink,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 6,
                   children: [
-                    Text(
-                      widget.invite.email,
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
+                    _InvitePill(
+                      label: widget.invite.role,
+                      color: colors.angelAccent,
+                      background: colors.angelSoft,
                     ),
-                    const SizedBox(height: 7),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: [
-                        _InvitePill(
-                          label: widget.invite.role,
-                          icon: Icons.admin_panel_settings_outlined,
-                        ),
-                        _InvitePill(
-                          label:
-                              'Expires ${_formatInviteDate(widget.invite.expiresAt)}',
-                          icon: Icons.schedule_outlined,
-                          quiet: true,
-                        ),
-                      ],
+                    Text(
+                      'Expires ${_formatInviteDate(widget.invite.expiresAt)}',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: colors.mutedInk,
+                      ),
                     ),
                   ],
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          Align(
-            alignment: Alignment.centerRight,
-            child: OutlinedButton.icon(
-              onPressed: _isSubmitting ? null : _cancel,
-              icon: _isSubmitting
-                  ? const SizedBox(
-                      width: 14,
-                      height: 14,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.close, size: 16),
-              label: Text(_isSubmitting ? 'Cancelling...' : 'Cancel invite'),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: colors.error,
-                side: BorderSide(color: colors.error.withValues(alpha: 0.34)),
-                minimumSize: const Size(0, 34),
-                padding: const EdgeInsets.symmetric(horizontal: 13),
-                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              ),
+              ],
             ),
+          ),
+          TextButton(
+            onPressed: _isSubmitting ? null : _cancel,
+            style: TextButton.styleFrom(
+              foregroundColor: colors.expense,
+              minimumSize: const Size(0, 32),
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+            ),
+            child: Text(_isSubmitting ? 'Cancelling...' : 'Cancel'),
           ),
         ],
       ),
@@ -319,40 +377,28 @@ class _OutgoingInviteCardState extends ConsumerState<_OutgoingInviteCard> {
 class _InvitePill extends StatelessWidget {
   const _InvitePill({
     required this.label,
-    required this.icon,
-    this.quiet = false,
+    required this.color,
+    required this.background,
   });
 
   final String label;
-  final IconData icon;
-  final bool quiet;
+  final Color color;
+  final Color background;
 
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-    final Color background =
-        quiet ? colors.surfaceContainerHighest : colors.primaryContainer;
-    final Color foreground = quiet ? colors.onSurfaceVariant : colors.primary;
-
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: background.withValues(alpha: quiet ? 0.58 : 0.72),
+        color: background,
         borderRadius: BorderRadius.circular(999),
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 14, color: foreground),
-          const SizedBox(width: 5),
-          Text(
-            label,
-            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: foreground,
-                  fontWeight: FontWeight.w700,
-                ),
-          ),
-        ],
+      child: Text(
+        label,
+        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              color: color,
+              fontWeight: FontWeight.w800,
+            ),
       ),
     );
   }
@@ -445,15 +491,27 @@ class _InviteCardState extends ConsumerState<_InviteCard> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final colors = theme.appColors;
 
     return FeedCard(
+      padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              CircleAvatar(child: Icon(AppIcons.family)),
+              CircleAvatar(
+                radius: 20,
+                backgroundColor: colors.amberSoft,
+                child: Text(
+                  _initials(widget.invite.email),
+                  style: theme.textTheme.labelMedium?.copyWith(
+                    color: colors.devilAccent,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
@@ -461,7 +519,9 @@ class _InviteCardState extends ConsumerState<_InviteCard> {
                   children: [
                     Text(
                       widget.invite.familySpaceName,
-                      style: theme.textTheme.titleMedium,
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w800,
+                      ),
                     ),
                     const SizedBox(height: 3),
                     Text(
@@ -471,7 +531,11 @@ class _InviteCardState extends ConsumerState<_InviteCard> {
                       ),
                     ),
                     const SizedBox(height: 8),
-                    Chip(label: Text(widget.invite.role)),
+                    _InvitePill(
+                      label: widget.invite.role,
+                      color: colors.deepNavy,
+                      background: colors.navySoft,
+                    ),
                   ],
                 ),
               ),
@@ -490,6 +554,10 @@ class _InviteCardState extends ConsumerState<_InviteCard> {
               Expanded(
                 child: FilledButton(
                   onPressed: _isSubmitting ? null : () => _accept(context),
+                  style: FilledButton.styleFrom(
+                    minimumSize: const Size.fromHeight(48),
+                    shape: const StadiumBorder(),
+                  ),
                   child: Text(_isSubmitting ? 'Saving...' : 'Accept'),
                 ),
               ),
@@ -554,4 +622,36 @@ String _formatInviteDate(DateTime date) {
     'Dec',
   ];
   return '${months[date.month - 1]} ${date.day}';
+}
+
+String _initials(String email) {
+  final local = email.split('@').first.trim();
+  if (local.isEmpty) return '?';
+  final parts = local
+      .split(RegExp(r'[._\-\s]+'))
+      .where((part) => part.isNotEmpty)
+      .toList();
+  if (parts.length >= 2) {
+    return '${parts.first[0]}${parts[1][0]}'.toUpperCase();
+  }
+  return local.substring(0, local.length >= 2 ? 2 : 1).toUpperCase();
+}
+
+class _SectionLabel extends StatelessWidget {
+  const _SectionLabel(this.label);
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).appColors;
+    return Text(
+      label,
+      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+            color: colors.mutedInk,
+            letterSpacing: 0.8,
+            fontWeight: FontWeight.w700,
+          ),
+    );
+  }
 }

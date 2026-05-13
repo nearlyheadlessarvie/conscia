@@ -5,6 +5,8 @@ import '../core/constants/api_constants.dart';
 class UserProfile {
   final String id;
   final String email;
+  final String? displayName;
+  final String? photoUrl;
   final String currencyCode;
   final String locale;
   final DateTime createdAt;
@@ -25,6 +27,8 @@ class UserProfile {
     required this.hasCompletedOnboarding,
     this.locationSuggestionsEnabled = false,
     this.aiPersonalityIntensity = 'balanced',
+    this.displayName,
+    this.photoUrl,
     this.spendingPersonality,
     this.incomeRange,
     this.occupationType,
@@ -35,6 +39,8 @@ class UserProfile {
     return UserProfile(
       id: json['id'] as String,
       email: json['email'] as String,
+      displayName: json['displayName'] as String? ?? json['name'] as String?,
+      photoUrl: json['photoUrl'] as String? ?? json['avatarUrl'] as String?,
       currencyCode:
           (json['currencyCode'] ?? json['preferredCurrency']) as String? ??
               'USD',
@@ -42,8 +48,7 @@ class UserProfile {
       createdAt: json['createdAt'] != null
           ? DateTime.parse(json['createdAt'] as String)
           : DateTime.now(),
-      hasCompletedOnboarding:
-          json['hasCompletedOnboarding'] as bool? ?? false,
+      hasCompletedOnboarding: json['hasCompletedOnboarding'] as bool? ?? false,
       locationSuggestionsEnabled:
           json['locationSuggestionsEnabled'] as bool? ?? false,
       aiPersonalityIntensity:
@@ -73,6 +78,8 @@ class UserService {
   Future<UserProfile> updateProfile({
     String? preferredCurrency,
     String? locale,
+    String? displayName,
+    String? photoUrl,
     String? spendingPersonality,
     String? incomeRange,
     String? occupationType,
@@ -87,6 +94,8 @@ class UserService {
         data: {
           if (preferredCurrency != null) 'preferredCurrency': preferredCurrency,
           if (locale != null) 'locale': locale,
+          if (displayName != null) 'displayName': displayName,
+          if (photoUrl != null) 'photoUrl': photoUrl,
           if (spendingPersonality != null)
             'spendingPersonality': spendingPersonality,
           if (incomeRange != null) 'incomeRange': incomeRange,

@@ -23,6 +23,7 @@ class FloatingDockNav extends StatelessWidget {
       minimum: const EdgeInsets.fromLTRB(20, 8, 20, 16),
       child: Align(
         alignment: Alignment.bottomCenter,
+        heightFactor: 1,
         child: Container(
           key: const ValueKey('floating-dock-nav'),
           constraints: const BoxConstraints(maxWidth: 360),

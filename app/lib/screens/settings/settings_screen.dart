@@ -26,9 +26,7 @@ import '../../widgets/currency_picker_sheet.dart';
 import '../../widgets/feed_card.dart';
 import '../../widgets/hero_screen_scaffold.dart';
 import '../../widgets/locale_picker_sheet.dart';
-import '../../widgets/screen_section.dart';
 import '../../widgets/skeleton_loader.dart';
-import 'widgets/subscription_card.dart';
 import 'widgets/subscription_sheet.dart';
 
 const _biometricEnabledKey = 'biometric_enabled';
@@ -137,233 +135,216 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final userPreferences = ref.watch(userPreferencesProvider);
 
     return HeroScreenScaffold(
+      scrollViewKey: const PageStorageKey('settings-shell-scroll'),
+      padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
       appBar: AppBar(title: const Text('Settings')),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          ScreenSection(
-            title: 'Profile',
-            child: FeedCard(
-              child: Column(
-                children: [
-                  userAsync.when(
-                    data: (user) => _ProfileSummary(user: user),
-                    loading: () => const _SettingsInfoRow(
-                      leading: CircleAvatar(child: Icon(Icons.person)),
-                      title: 'Loading...',
-                    ),
-                    error: (_, __) => const _SettingsInfoRow(
-                      leading: CircleAvatar(child: Icon(Icons.person)),
-                      title: 'Unable to load profile',
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  _SettingsActionRow(
-                    leading: Icon(AppIcons.person),
-                    title: 'My Profile',
-                    subtitle: 'Spending style, income, household',
-                    onTap: () => context.push(AppRoutes.settingsProfile),
-                  ),
-                ],
-              ),
+          userAsync.when(
+            data: (user) => _ProfileSummary(
+              user: user,
+              onTap: () => context.push(AppRoutes.settingsProfile),
+            ),
+            loading: () => const SkeletonCard(),
+            error: (_, __) => _SettingsHeroRow(
+              icon: AppIcons.person,
+              iconBackground: theme.appColors.navySoft,
+              title: 'Unable to load profile',
+              onTap: () => context.push(AppRoutes.settingsProfile),
             ),
           ),
-          ScreenSection(
-            title: 'Shared Conscia',
-            child: FeedCard(
-              child: Column(
-                children: [
-                  familySpaceAsync.when(
-                    data: (space) => _FamilySpaceSummary(space: space),
-                    loading: () => _SettingsInfoRow(
-                      leading: CircleAvatar(child: Icon(AppIcons.family)),
-                      title: 'Loading Family Space...',
-                    ),
-                    error: (_, __) => _SettingsInfoRow(
-                      leading: CircleAvatar(child: Icon(AppIcons.family)),
-                      title: 'Unable to load Family Space',
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  _SettingsActionRow(
-                    leading: Icon(AppIcons.family),
-                    title: 'Family Space settings',
-                    subtitle: 'Household name, invites, imports',
-                    onTap: () => context.push(AppRoutes.familySpace),
-                  ),
-                ],
-              ),
+          const SizedBox(height: 12),
+          familySpaceAsync.when(
+            data: (space) => _FamilySpaceSummary(
+              space: space,
+              onTap: () => context.push(AppRoutes.familySpace),
+            ),
+            loading: () => const SkeletonCard(),
+            error: (_, __) => _SettingsHeroRow(
+              icon: AppIcons.family,
+              iconBackground: theme.appColors.familySoft,
+              title: 'Unable to load Shared Conscia',
+              highlighted: true,
+              onTap: () => context.push(AppRoutes.familySpace),
             ),
           ),
-          ScreenSection(
-            title: 'Preferences',
-            child: FeedCard(
-              child: Column(
-                children: [
-                  _SettingsActionRow(
-                    leading: const Icon(Icons.currency_exchange),
-                    title: 'Default Currency',
-                    subtitle: userPreferences.currency,
-                    onTap: () => _showCurrencyPicker(context, ref),
-                  ),
-                  _SettingsActionRow(
-                    leading: const Icon(Icons.language),
-                    title: 'Currency & Region Format',
-                    subtitle:
-                        '${userPreferences.currency} · ${_regionFormatLabels[userPreferences.locale] ?? 'Philippines / US'} format',
-                    onTap: () => _showLocalePicker(context, ref),
-                  ),
-                  if (_biometricSupported)
-                    _SettingsSwitchRow(
-                      leading: const Icon(Icons.fingerprint),
-                      title: 'Biometric Sign-In',
-                      subtitle: 'Use fingerprint or face to sign in',
-                      value: _biometricEnabled,
-                      onChanged: _toggleBiometric,
-                    ),
-                  _SettingsActionRow(
-                    leading: const Icon(Icons.tune),
-                    title: 'AI Personality Intensity',
-                    subtitle: userAsync.maybeWhen(
-                      data: (user) =>
-                          _labelForAiIntensity(user.aiPersonalityIntensity),
-                      orElse: () => 'Balanced',
-                    ),
-                    onTap: userAsync.maybeWhen(
-                      data: (_) => () => _showAiIntensityPicker(context, ref),
-                      orElse: () => null,
-                    ),
-                  ),
-                  _SettingsSwitchRow(
-                    leading: const Icon(Icons.location_searching_outlined),
-                    title: 'Smart location suggestions',
-                    subtitle: [
-                      'Currently ${locationAssistance.isEnabled ? 'on' : 'off'} for nearby merchant and category suggestions.',
-                      if (!locationAssistance.isEnabled &&
-                          locationAssistance.permissionDenied)
-                        'System location permission may also need to be enabled.',
-                    ].join(' '),
-                    value: locationAssistance.isEnabled,
-                    onChanged: (value) async {
-                      final notifier =
-                          ref.read(locationAssistanceProvider.notifier);
-                      if (value) {
-                        await notifier.enableFromSettings();
-                      } else {
-                        await notifier.disableFromSettings();
-                      }
-                    },
-                  ),
-                ],
-              ),
-            ),
-          ),
-          ScreenSection(
+          const SizedBox(height: 18),
+          _SettingsGroup(
             title: 'Budgets & Categories',
-            child: FeedCard(
-              child: Column(
-                children: [
-                  _SettingsActionRow(
-                    leading: const Icon(Icons.category_outlined),
-                    title: 'Categories',
-                    subtitle: 'Manage labels used by transactions and budgets',
-                    onTap: () => context.push(AppRoutes.categories),
-                  ),
-                  _SettingsActionRow(
-                    leading: const Icon(Icons.pie_chart_outline),
-                    title: 'Budgets',
-                    subtitle:
-                        'Create and tune monthly caps for spending categories',
-                    onTap: () => context.push(AppRoutes.budgets),
-                  ),
-                ],
+            children: [
+              _SettingsActionRow(
+                leading: _SettingsIconBox(
+                  icon: Icons.bar_chart_rounded,
+                  backgroundColor: theme.appColors.navySoft,
+                ),
+                title: 'Budgets',
+                subtitle: 'Create and tune monthly caps',
+                onTap: () => context.push(AppRoutes.budgets),
               ),
-            ),
+              _SettingsActionRow(
+                leading: _SettingsIconBox(
+                  icon: Icons.sell_outlined,
+                  backgroundColor: theme.appColors.amberSoft,
+                ),
+                title: 'Categories',
+                subtitle: 'Manage labels for transactions',
+                onTap: () => context.push(AppRoutes.categories),
+              ),
+            ],
           ),
-          ScreenSection(
-            title: 'Subscription',
-            child: subAsync.when(
-              data: (status) => SubscriptionCard(
-                status: status,
-                onUpgrade: () => SubscriptionSheet.show(context),
-                onManage: () => SubscriptionSheet.show(context),
-              ),
-              loading: () => const SkeletonCard(),
-              error: (_, __) => FeedCard(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text('Unable to load subscription'),
-                    const SizedBox(height: 8),
-                    OutlinedButton.icon(
-                      onPressed: () => ref.invalidate(subscriptionProvider),
-                      icon: const Icon(Icons.refresh),
-                      label: const Text('Retry'),
-                    ),
-                  ],
+          _SettingsGroup(
+            title: 'Preferences',
+            children: [
+              _SettingsActionRow(
+                leading: _SettingsIconBox(
+                  icon: Icons.psychology_alt_outlined,
+                  backgroundColor: theme.appColors.amberSoft,
+                ),
+                title: 'AI Personality',
+                subtitle: userAsync.maybeWhen(
+                  data: (user) =>
+                      '${_labelForAiIntensity(user.aiPersonalityIntensity)} intensity',
+                  orElse: () => 'Balanced intensity',
+                ),
+                onTap: userAsync.maybeWhen(
+                  data: (_) => () => _showAiIntensityPicker(context, ref),
+                  orElse: () => null,
                 ),
               ),
-            ),
+              _SettingsSwitchRow(
+                leading: _SettingsIconBox(
+                  icon: Icons.location_on_outlined,
+                  backgroundColor: theme.appColors.angelSoft,
+                ),
+                title: 'Location Assistance',
+                subtitle: 'Smart merchant suggestions',
+                value: locationAssistance.isEnabled,
+                onChanged: (value) async {
+                  final notifier =
+                      ref.read(locationAssistanceProvider.notifier);
+                  if (value) {
+                    await notifier.enableFromSettings();
+                  } else {
+                    await notifier.disableFromSettings();
+                  }
+                },
+              ),
+              _SettingsActionRow(
+                leading: _SettingsIconBox(
+                  icon: Icons.language,
+                  backgroundColor: theme.appColors.navySoft,
+                ),
+                title: 'Locale & Number Format',
+                subtitle:
+                    '${userPreferences.currency} · ${_regionFormatLabels[userPreferences.locale] ?? 'English'} numbers only',
+                onTap: () => _showLocalePicker(context, ref),
+              ),
+              _SettingsActionRow(
+                leading: _SettingsIconBox(
+                  icon: Icons.currency_exchange,
+                  backgroundColor: theme.appColors.navySoft,
+                ),
+                title: 'Default Currency',
+                subtitle: userPreferences.currency,
+                onTap: () => _showCurrencyPicker(context, ref),
+              ),
+              if (_biometricSupported)
+                _SettingsSwitchRow(
+                  leading: _SettingsIconBox(
+                    icon: Icons.fingerprint,
+                    backgroundColor: theme.appColors.navySoft,
+                  ),
+                  title: 'Biometric Sign-In',
+                  subtitle: 'Use fingerprint or face to sign in',
+                  value: _biometricEnabled,
+                  onChanged: _toggleBiometric,
+                ),
+            ],
+          ),
+          _SettingsGroup(
+            title: 'Subscription',
+            highlighted: true,
+            children: [
+              subAsync.when(
+                data: (status) => _PremiumRow(
+                  isPremium: status.isPremium,
+                  onTap: () => SubscriptionSheet.show(context),
+                ),
+                loading: () => const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 12),
+                  child: LinearProgressIndicator(),
+                ),
+                error: (_, __) => _SettingsActionRow(
+                  leading: _SettingsIconBox(
+                    icon: Icons.star_rounded,
+                    backgroundColor: theme.appColors.amberSoft,
+                  ),
+                  title: 'Conscia Premium',
+                  subtitle: 'Unable to load subscription',
+                  onTap: () => ref.invalidate(subscriptionProvider),
+                ),
+              ),
+            ],
           ),
           if (ApiConstants.useMockAuth)
-            ScreenSection(
+            _SettingsGroup(
               title: 'Developer',
-              child: FeedCard(child: _DevUpgradeTile()),
+              children: [_DevUpgradeTile()],
             ),
-          ScreenSection(
-            title: 'Data & Privacy',
-            child: FeedCard(
-              child: Column(
-                children: [
-                  _SettingsActionRow(
-                    leading: const Icon(Icons.download_outlined),
-                    title: 'Export My Data',
-                    subtitle: 'Download all your data as JSON',
-                    onTap: () => _exportData(context, ref),
-                  ),
-                  _SettingsActionRow(
-                    leading: Icon(
-                      Icons.delete_forever,
-                      color: theme.colorScheme.error,
-                    ),
-                    title: 'Delete Account',
-                    subtitle: 'Permanently remove all your data',
-                    titleColor: theme.colorScheme.error,
-                    onTap: () => _confirmDeleteAccount(context, ref),
-                  ),
-                ],
+          _SettingsGroup(
+            title: 'Data & About',
+            children: [
+              _SettingsActionRow(
+                leading: _SettingsIconBox(
+                  icon: Icons.privacy_tip_outlined,
+                  backgroundColor: theme.appColors.incomeSoft,
+                ),
+                title: 'Privacy & Data',
+                subtitle: 'Export your data as JSON',
+                onTap: () => _exportData(context, ref),
               ),
-            ),
+              const _ServiceStatusTile(compact: true),
+              _SettingsActionRow(
+                leading: _SettingsIconBox(
+                  icon: Icons.info_outline,
+                  backgroundColor: theme.appColors.navySoft,
+                ),
+                title: 'About Conscia',
+                subtitle: 'Version 1.0.0',
+              ),
+            ],
           ),
-          const ScreenSection(
-            title: 'About',
-            child: FeedCard(
-              child: Column(
-                children: [
-                  _ServiceStatusTile(compact: true),
-                  _SettingsStaticRow(
-                    leading: Icon(Icons.info_outline),
-                    title: 'App Version',
-                    subtitle: 'Version 1.0.0 (build 1)',
-                  ),
-                ],
+          _SettingsGroup(
+            title: 'Account',
+            children: [
+              _SettingsActionRow(
+                leading: _SettingsIconBox(
+                  icon: Icons.delete_forever,
+                  backgroundColor: theme.appColors.expenseSoft,
+                  foregroundColor: theme.appColors.expense,
+                ),
+                title: 'Delete Account',
+                subtitle: 'Permanently remove all your data',
+                titleColor: theme.appColors.expense,
+                onTap: () => _confirmDeleteAccount(context, ref),
               ),
-            ),
+            ],
           ),
           SizedBox(
             width: double.infinity,
             child: OutlinedButton.icon(
-              icon: Icon(Icons.logout, color: theme.colorScheme.error),
+              icon: Icon(Icons.logout, color: theme.appColors.expense),
               label: Text(
                 'Sign Out',
-                style: TextStyle(color: theme.colorScheme.error),
+                style: TextStyle(color: theme.appColors.expense),
               ),
               style: OutlinedButton.styleFrom(
                 side: BorderSide(
-                  color: theme.colorScheme.error.withValues(alpha: 0.5),
+                  color: theme.appColors.expense.withValues(alpha: 0.5),
                 ),
                 padding: const EdgeInsets.symmetric(vertical: 16),
-                backgroundColor: Colors.white.withValues(alpha: 0.86),
+                backgroundColor: theme.appColors.surfaceRaised,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(18),
                 ),
@@ -693,96 +674,286 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   }
 }
 
-class _ProfileSummary extends StatelessWidget {
-  const _ProfileSummary({required this.user});
+class _SettingsGroup extends StatelessWidget {
+  const _SettingsGroup({
+    required this.title,
+    required this.children,
+    this.highlighted = false,
+  });
 
-  final UserProfile user;
+  final String title;
+  final List<Widget> children;
+  final bool highlighted;
 
   @override
   Widget build(BuildContext context) {
-    return _SettingsInfoRow(
-      leading: CircleAvatar(
-        child: Text(user.email.isNotEmpty ? user.email[0].toUpperCase() : '?'),
+    final colors = Theme.of(context).appColors;
+
+    return Padding(
+      padding: EdgeInsets.only(bottom: highlighted ? 20 : 18),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(left: 2, bottom: 8),
+            child: Text(
+              title.toUpperCase(),
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: colors.mutedInk,
+                    letterSpacing: 0.8,
+                    fontWeight: FontWeight.w700,
+                  ),
+            ),
+          ),
+          FeedCard(
+            padding: const EdgeInsets.fromLTRB(14, 8, 14, 8),
+            child: Column(children: _withDividers(children)),
+          ),
+        ],
       ),
-      title: user.email,
-      subtitle: 'Member since ${_formatCreated(user.createdAt)}',
+    );
+  }
+}
+
+class _SettingsHeroRow extends StatelessWidget {
+  const _SettingsHeroRow({
+    required this.icon,
+    required this.iconBackground,
+    required this.title,
+    this.subtitle,
+    this.badge,
+    this.highlighted = false,
+    this.onTap,
+  });
+
+  final IconData icon;
+  final Color iconBackground;
+  final String title;
+  final String? subtitle;
+  final Widget? badge;
+  final bool highlighted;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).appColors;
+    final textTheme = Theme.of(context).textTheme;
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(22),
+        onTap: onTap,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: highlighted ? colors.familySoft : colors.surfaceRaised,
+            borderRadius: BorderRadius.circular(22),
+            border: Border.all(
+              color: highlighted
+                  ? colors.family.withValues(alpha: 0.3)
+                  : colors.sectionBorder,
+            ),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                _SettingsIconBox(
+                  icon: icon,
+                  backgroundColor: iconBackground,
+                  foregroundColor:
+                      highlighted ? colors.family : colors.deepNavy,
+                  size: 56,
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: textTheme.titleMedium?.copyWith(
+                          color: highlighted ? colors.deepNavy : colors.ink,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      if (subtitle != null) ...[
+                        const SizedBox(height: 3),
+                        Text(
+                          subtitle!,
+                          style: textTheme.bodySmall?.copyWith(
+                            color:
+                                highlighted ? colors.family : colors.mutedInk,
+                          ),
+                        ),
+                      ],
+                      if (badge != null) ...[
+                        const SizedBox(height: 8),
+                        badge!,
+                      ],
+                    ],
+                  ),
+                ),
+                Icon(AppIcons.chevronRight, color: colors.border),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SettingsIconBox extends StatelessWidget {
+  const _SettingsIconBox({
+    required this.icon,
+    required this.backgroundColor,
+    this.foregroundColor,
+    this.size = 42,
+  });
+
+  final IconData icon;
+  final Color backgroundColor;
+  final Color? foregroundColor;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).appColors;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: SizedBox(
+        width: size,
+        height: size,
+        child: Icon(icon, color: foregroundColor ?? colors.deepNavy, size: 22),
+      ),
+    );
+  }
+}
+
+class _PremiumRow extends StatelessWidget {
+  const _PremiumRow({
+    required this.isPremium,
+    required this.onTap,
+  });
+
+  final bool isPremium;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).appColors;
+    return _SettingsActionRow(
+      leading: _SettingsIconBox(
+        icon: Icons.star_rounded,
+        backgroundColor: colors.amberSoft,
+        foregroundColor: colors.amber,
+      ),
+      title: 'Conscia Premium',
+      subtitle: isPremium ? 'Active' : 'Unlock receipt scan and family tools',
+      onTap: onTap,
+    );
+  }
+}
+
+class _TinyBadge extends StatelessWidget {
+  const _TinyBadge({
+    required this.label,
+    required this.background,
+    required this.foreground,
+  });
+
+  final String label;
+  final Color background;
+  final Color foreground;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        child: Text(
+          label,
+          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                color: foreground,
+                fontWeight: FontWeight.w800,
+              ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ProfileSummary extends StatelessWidget {
+  const _ProfileSummary({
+    required this.user,
+    required this.onTap,
+  });
+
+  final UserProfile user;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).appColors;
+    final displayName = user.displayName?.trim().isNotEmpty == true
+        ? user.displayName!.trim()
+        : _nameFromEmail(user.email);
+
+    return _SettingsHeroRow(
+      icon: AppIcons.person,
+      iconBackground: colors.navySoft,
+      title: displayName,
+      subtitle: user.email,
+      badge: _TinyBadge(
+        label: '★ Premium',
+        background: colors.amberSoft,
+        foreground: colors.deepNavy,
+      ),
+      onTap: onTap,
     );
   }
 
-  String _formatCreated(DateTime date) {
-    const months = [
-      'Jan',
-      'Feb',
-      'Mar',
-      'Apr',
-      'May',
-      'Jun',
-      'Jul',
-      'Aug',
-      'Sep',
-      'Oct',
-      'Nov',
-      'Dec',
-    ];
-    return '${months[date.month - 1]} ${date.year}';
+  String _nameFromEmail(String email) {
+    final local = email.split('@').first;
+    if (local.isEmpty) return 'Conscia member';
+    return local
+        .split(RegExp(r'[._-]+'))
+        .where((part) => part.isNotEmpty)
+        .map((part) => '${part[0].toUpperCase()}${part.substring(1)}')
+        .join(' ');
   }
 }
 
 class _FamilySpaceSummary extends StatelessWidget {
-  const _FamilySpaceSummary({required this.space});
-
-  final FamilySpace? space;
-
-  @override
-  Widget build(BuildContext context) {
-    final familySpace = space;
-    return _SettingsInfoRow(
-      leading: CircleAvatar(child: Icon(AppIcons.family)),
-      title: familySpace?.name ?? 'No Family Space yet',
-      subtitle: familySpace == null
-          ? 'Create or join a household'
-          : '${familySpace.role} · ${familySpace.currencyCode}',
-    );
-  }
-}
-
-class _SettingsInfoRow extends StatelessWidget {
-  const _SettingsInfoRow({
-    required this.leading,
-    required this.title,
-    this.subtitle,
+  const _FamilySpaceSummary({
+    required this.space,
+    required this.onTap,
   });
 
-  final Widget leading;
-  final String title;
-  final String? subtitle;
+  final FamilySpace? space;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        leading,
-        const SizedBox(width: 14),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(title, style: textTheme.titleMedium),
-              if (subtitle != null) ...[
-                const SizedBox(height: 4),
-                Text(
-                  subtitle!,
-                  style: textTheme.bodyMedium?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
-                ),
-              ],
-            ],
-          ),
-        ),
-      ],
+    final colors = Theme.of(context).appColors;
+    final familySpace = space;
+    return _SettingsHeroRow(
+      icon: AppIcons.family,
+      iconBackground: colors.navySoft,
+      highlighted: true,
+      title: 'Shared Conscia',
+      subtitle: familySpace == null
+          ? 'Create or join a household'
+          : '${familySpace.name} · ${familySpace.role}',
+      onTap: onTap,
     );
   }
 }
@@ -807,13 +978,13 @@ class _SettingsActionRow extends StatelessWidget {
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(16),
         onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 12),
+          padding: const EdgeInsets.symmetric(vertical: 10),
           child: Row(
             children: [
-              SizedBox(width: 28, child: Center(child: leading)),
+              leading,
               const SizedBox(width: 14),
               Expanded(
                 child: Column(
@@ -823,18 +994,16 @@ class _SettingsActionRow extends StatelessWidget {
                       title,
                       style: Theme.of(context).textTheme.titleSmall?.copyWith(
                             color: titleColor,
-                            fontWeight: FontWeight.w600,
+                            fontWeight: FontWeight.w700,
                           ),
                     ),
                     if (subtitle != null) ...[
-                      const SizedBox(height: 4),
+                      const SizedBox(height: 3),
                       Text(
                         subtitle!,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .onSurfaceVariant,
-                              height: 1.35,
+                              color: Theme.of(context).appColors.mutedInk,
+                              height: 1.25,
                             ),
                       ),
                     ],
@@ -842,7 +1011,8 @@ class _SettingsActionRow extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 8),
-              Icon(AppIcons.chevronRight),
+              Icon(AppIcons.chevronRight,
+                  color: Theme.of(context).appColors.border),
             ],
           ),
         ),
@@ -873,7 +1043,7 @@ class _SettingsSwitchRow extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(width: 28, child: Center(child: leading)),
+          leading,
           const SizedBox(width: 14),
           Expanded(
             child: Padding(
@@ -900,48 +1070,6 @@ class _SettingsSwitchRow extends StatelessWidget {
             ),
           ),
           Switch(value: value, onChanged: onChanged),
-        ],
-      ),
-    );
-  }
-}
-
-class _SettingsStaticRow extends StatelessWidget {
-  const _SettingsStaticRow({
-    required this.leading,
-    required this.title,
-    this.subtitle,
-  });
-
-  final Widget leading;
-  final String title;
-  final String? subtitle;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 12),
-      child: Row(
-        children: [
-          SizedBox(width: 28, child: Center(child: leading)),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title, style: Theme.of(context).textTheme.titleSmall),
-                if (subtitle != null) ...[
-                  const SizedBox(height: 4),
-                  Text(
-                    subtitle!,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                        ),
-                  ),
-                ],
-              ],
-            ),
-          ),
         ],
       ),
     );
@@ -998,8 +1126,13 @@ class _ServiceStatusTile extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     if (compact) {
+      final colors = Theme.of(context).appColors;
       return _SettingsActionRow(
-        leading: const Icon(Icons.monitor_heart_outlined),
+        leading: _SettingsIconBox(
+          icon: Icons.settings_outlined,
+          backgroundColor: colors.navySoft,
+          foregroundColor: colors.softInk,
+        ),
         title: 'Service Status',
         subtitle: 'Check API, AI, and storage health',
         onTap: () => context.push(AppRoutes.serviceStatus),
@@ -1051,4 +1184,13 @@ class _SettingsLifecycleObserver extends WidgetsBindingObserver {
       onResume();
     }
   }
+}
+
+List<Widget> _withDividers(List<Widget> children) {
+  return [
+    for (var i = 0; i < children.length; i++) ...[
+      children[i],
+      if (i != children.length - 1) const Divider(height: 1),
+    ],
+  ];
 }

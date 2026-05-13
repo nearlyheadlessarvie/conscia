@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'selection_chip_group.dart';
+import '../../../widgets/form_label.dart';
 
 class RecurringScheduleSection extends StatelessWidget {
   const RecurringScheduleSection({
@@ -35,17 +36,14 @@ class RecurringScheduleSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-    final colors = Theme.of(context).colorScheme;
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         SwitchListTile.adaptive(
           contentPadding: EdgeInsets.zero,
-          title: const Text('Make this recurring'),
+          title: const FormLabel(label: 'RECURRING'),
           subtitle: const Text(
-            'Auto-create future transactions and remind me when they post.',
+            'Repeat on a schedule.',
           ),
           value: enabled,
           onChanged: onEnabledChanged,
@@ -59,12 +57,7 @@ class RecurringScheduleSection extends StatelessWidget {
             scrollable: true,
           ),
           const SizedBox(height: 12),
-          Text(
-            'End date (optional)',
-            style: textTheme.labelLarge?.copyWith(
-              color: colors.onSurfaceVariant,
-            ),
-          ),
+          const FormLabel(label: 'END DATE'),
           const SizedBox(height: 8),
           InkWell(
             onTap: () => _pickEndDate(context),
@@ -77,9 +70,7 @@ class RecurringScheduleSection extends StatelessWidget {
                 children: [
                   Expanded(
                     child: Text(
-                      endDate == null
-                          ? 'Never ends'
-                          : _formatDate(endDate!),
+                      endDate == null ? 'Never ends' : _formatDate(endDate!),
                     ),
                   ),
                   if (endDate != null)

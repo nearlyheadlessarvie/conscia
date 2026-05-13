@@ -25,16 +25,18 @@ final dioProvider = Provider<Dio>((ref) {
   dio.interceptors.add(
     InterceptorsWrapper(
       onRequest: (options, handler) async {
-        final authState = ref.read(authProvider);
-        final token =
-            await storage.read(key: _tokenKey) ?? authState.accessToken;
-        if (token != null && token.isNotEmpty) {
-          options.headers['Authorization'] = 'Bearer $token';
+        if (_isPublicRequest(options)) {
           return handler.next(options);
         }
 
-        if (_isPublicRequest(options) || authState.isAuthenticated) {
-          return handler.next(options);
+        final authState = ref.read(authProvider);
+        if (authState.isAuthenticated) {
+          final token =
+              authState.accessToken ?? await storage.read(key: _tokenKey);
+          if (token != null && token.isNotEmpty) {
+            options.headers['Authorization'] = 'Bearer $token';
+            return handler.next(options);
+          }
         }
 
         return handler.reject(
@@ -46,7 +48,7 @@ final dioProvider = Provider<Dio>((ref) {
               data: const {'message': 'Session ended'},
             ),
             type: DioExceptionType.badResponse,
-            error: 'Cannot send authenticated request after logout.',
+            error: 'Cannot send authenticated request without an active session.',
           ),
         );
       },

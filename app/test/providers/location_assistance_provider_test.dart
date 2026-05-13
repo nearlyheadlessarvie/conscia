@@ -18,15 +18,17 @@ class _FakeLocationAssistanceService extends LocationAssistanceService {
   });
 
   final bool permissionGranted;
-  final ({List<String> nearbyMerchants, List<String> likelyCategories})
-      suggestions;
+  final ({
+    List<String> nearbyMerchants,
+    List<String> likelyCategories
+  }) suggestions;
 
   @override
   Future<bool> requestPermission() async => permissionGranted;
 
   @override
   ({List<String> nearbyMerchants, List<String> likelyCategories})
-  getTransactionSuggestions() => suggestions;
+      getTransactionSuggestions() => suggestions;
 }
 
 class _FakeUserService extends UserService {
@@ -38,6 +40,8 @@ class _FakeUserService extends UserService {
   Future<UserProfile> updateProfile({
     String? preferredCurrency,
     String? locale,
+    String? displayName,
+    String? photoUrl,
     String? spendingPersonality,
     String? incomeRange,
     String? occupationType,
@@ -84,7 +88,8 @@ void main() {
         if (service != null)
           locationAssistanceServiceProvider.overrideWithValue(service),
         currentUserProvider.overrideWith((ref) async => resolvedUserProfile),
-        userServiceProvider.overrideWithValue(userService ?? _FakeUserService()),
+        userServiceProvider
+            .overrideWithValue(userService ?? _FakeUserService()),
       ],
     );
   }
@@ -132,7 +137,9 @@ void main() {
     );
     addTearDown(container.dispose);
 
-    await container.read(locationAssistanceProvider.notifier).enableFromPrompt();
+    await container
+        .read(locationAssistanceProvider.notifier)
+        .enableFromPrompt();
 
     final rehydratedContainer = buildContainer(
       prefs,
@@ -158,7 +165,9 @@ void main() {
     );
     addTearDown(container.dispose);
 
-    await container.read(locationAssistanceProvider.notifier).enableFromPrompt();
+    await container
+        .read(locationAssistanceProvider.notifier)
+        .enableFromPrompt();
 
     final rehydratedContainer = buildContainer(
       prefs,
@@ -252,7 +261,8 @@ void main() {
     expect(suggestions.likelyCategories, isEmpty);
   });
 
-  test('provider syncs enabled state from server-backed user profile', () async {
+  test('provider syncs enabled state from server-backed user profile',
+      () async {
     SharedPreferences.setMockInitialValues({});
     final prefs = await SharedPreferences.getInstance();
 

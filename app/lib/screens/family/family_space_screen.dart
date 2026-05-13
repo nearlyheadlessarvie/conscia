@@ -5,12 +5,13 @@ import 'package:intl/intl.dart';
 
 import '../../core/constants/app_icons.dart';
 import '../../core/routing/app_router.dart';
+import '../../core/theme/app_colors.dart';
 import '../../models/family_overview.dart';
+import '../../models/family_member.dart';
 import '../../models/family_space.dart';
 import '../../providers/family_space_provider.dart';
 import '../../widgets/feed_card.dart';
 import '../../widgets/hero_screen_scaffold.dart';
-import '../../widgets/screen_section.dart';
 import '../../widgets/skeleton_loader.dart';
 
 class FamilySpaceScreen extends ConsumerWidget {
@@ -21,6 +22,7 @@ class FamilySpaceScreen extends ConsumerWidget {
     final familySpace = ref.watch(familySpaceProvider);
 
     return HeroScreenScaffold(
+      padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
       appBar: AppBar(title: const Text('Shared Conscia')),
       child: familySpace.when(
         data: (space) => space == null
@@ -105,46 +107,24 @@ class _FamilySpaceOverview extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
     final overview = ref.watch(familyOverviewProvider);
+    final members = ref.watch(familyMembersProvider);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        FeedCard(
-          child: Row(
-            children: [
-              CircleAvatar(
-                child: Text(space.name.isEmpty ? '?' : space.name[0]),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(space.name, style: theme.textTheme.titleMedium),
-                    const SizedBox(height: 4),
-                    Text(
-                      '${space.role} · ${space.currencyCode}',
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              if (space.isReadOnly)
-                const Tooltip(
-                  message: 'Read-only while Premium is inactive',
-                  child: Icon(Icons.lock_outline),
-                ),
-            ],
-          ),
+        _FamilyEditorialHeader(
+          space: space,
+          memberCount: members.valueOrNull?.length,
         ),
         overview.when(
           data: (data) => Padding(
-            padding: const EdgeInsets.only(top: 18),
-            child: _FamilyOverviewDetails(overview: data),
+            padding: const EdgeInsets.only(top: 20),
+            child: _FamilyOverviewDetails(
+              overview: data,
+              membersAsync: members,
+              role: space.role,
+            ),
           ),
           loading: () => const Padding(
             padding: EdgeInsets.only(top: 14),
@@ -176,40 +156,181 @@ class _FamilySpaceOverview extends ConsumerWidget {
   }
 }
 
+class _FamilyEditorialHeader extends StatelessWidget {
+  const _FamilyEditorialHeader({
+    required this.space,
+    required this.memberCount,
+  });
+
+  final FamilySpace space;
+  final int? memberCount;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).appColors;
+    final textTheme = Theme.of(context).textTheme;
+    final countText = memberCount == null
+        ? 'Members'
+        : '$memberCount ${memberCount == 1 ? 'member' : 'members'}';
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: colors.familySoft,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: colors.family.withValues(alpha: 0.28)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 24, 20, 20),
+        child: Center(
+          child: Column(
+            children: [
+              const Text('👨‍👩‍👧', style: TextStyle(fontSize: 38)),
+              const SizedBox(height: 12),
+              Text(
+                space.name,
+                textAlign: TextAlign.center,
+                style: textTheme.titleLarge?.copyWith(
+                  color: colors.family,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                '$countText · You are the ${_roleLabel(space.role)}',
+                textAlign: TextAlign.center,
+                style: textTheme.bodySmall?.copyWith(color: colors.mutedInk),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                _roleLabel(space.role),
+                style: textTheme.labelSmall?.copyWith(
+                  color: colors.deepNavy,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _FamilyOverviewDetails extends StatelessWidget {
-  const _FamilyOverviewDetails({required this.overview});
+  const _FamilyOverviewDetails({
+    required this.overview,
+    required this.membersAsync,
+    required this.role,
+  });
 
   final FamilyOverview overview;
+  final AsyncValue<List<FamilyMember>> membersAsync;
+  final String role;
 
   @override
   Widget build(BuildContext context) {
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        ScreenSection(
+        _SectionHeader(
           title: 'Shared budgets',
-          child: overview.budgets.isEmpty
-              ? const FeedCard(child: Text('No shared budgets yet.'))
-              : FeedCard(
-                  child: Column(
-                    children: overview.budgets
-                        .map((budget) => _BudgetOverviewRow(budget: budget))
-                        .toList(),
+          action: 'Manage ›',
+          onTap: () => context.push(AppRoutes.budgets),
+        ),
+        const SizedBox(height: 10),
+        overview.budgets.isEmpty
+            ? const FeedCard(child: Text('No shared budgets yet.'))
+            : FeedCard(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+                child: Column(
+                  children: _separated(
+                    overview.budgets
+                        .map((budget) => _BudgetOverviewRow(budget: budget)),
                   ),
                 ),
-        ),
-        ScreenSection(
-          title: 'Recent family activity',
-          child: overview.recentActivity.isEmpty
-              ? const FeedCard(child: Text('No family activity yet.'))
-              : FeedCard(
-                  child: Column(
-                    children: overview.recentActivity
-                        .map((activity) =>
-                            _FamilyActivityRow(activity: activity))
-                        .toList(),
+              ),
+        const SizedBox(height: 24),
+        const _SectionHeader(title: 'Recent family activity'),
+        const SizedBox(height: 10),
+        overview.recentActivity.isEmpty
+            ? const FeedCard(child: Text('No family activity yet.'))
+            : FeedCard(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+                child: Column(
+                  children: _separated(
+                    overview.recentActivity.map(
+                      (activity) => _FamilyActivityRow(activity: activity),
+                    ),
                   ),
                 ),
+              ),
+        const SizedBox(height: 24),
+        _SectionHeader(
+          title: 'Members',
+          action: 'Manage ›',
+          onTap: () => context.push(AppRoutes.familyMembers),
         ),
+        const SizedBox(height: 10),
+        membersAsync.when(
+          data: (members) => members.isEmpty
+              ? const FeedCard(child: Text('No family members yet.'))
+              : FeedCard(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+                  child: Column(
+                    children: _separated(
+                      members.take(4).map((member) => _MemberOverviewRow(
+                            member: member,
+                          )),
+                    ),
+                  ),
+                ),
+          loading: () => const SkeletonCard(),
+          error: (_, __) =>
+              const FeedCard(child: Text('Unable to load members.')),
+        ),
+        const SizedBox(height: 12),
+        const _PrivacyNote(),
+      ],
+    );
+  }
+}
+
+class _SectionHeader extends StatelessWidget {
+  const _SectionHeader({
+    required this.title,
+    this.action,
+    this.onTap,
+  });
+
+  final String title;
+  final String? action;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).appColors;
+    return Row(
+      children: [
+        Expanded(
+          child: Text(
+            title,
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w800,
+                  color: colors.ink,
+                ),
+          ),
+        ),
+        if (action != null)
+          TextButton(
+            onPressed: onTap,
+            style: TextButton.styleFrom(
+              foregroundColor: colors.deepNavy,
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              minimumSize: const Size(0, 32),
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+            child: Text(action!),
+          ),
       ],
     );
   }
@@ -223,12 +344,13 @@ class _BudgetOverviewRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final colors = theme.appColors;
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
         children: [
-          const _FamilyIcon(icon: Icons.account_balance_wallet_outlined),
+          const _FamilyIcon(icon: Icons.shopping_cart_outlined),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -247,8 +369,9 @@ class _BudgetOverviewRow extends StatelessWidget {
           ),
           Text(
             '${budget.usagePercent}%',
-            style: theme.textTheme.labelLarge?.copyWith(
-              color: theme.colorScheme.primary,
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: colors.income,
+              fontWeight: FontWeight.w800,
             ),
           ),
         ],
@@ -265,6 +388,7 @@ class _FamilyActivityRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final colors = theme.appColors;
     final isExpense = activity.type.toLowerCase() == 'expense';
 
     return Padding(
@@ -293,12 +417,129 @@ class _FamilyActivityRow extends StatelessWidget {
             ),
           ),
           Text(
-            '${activity.currencyCode} ${_amount(activity.amount)}',
-            style: theme.textTheme.labelLarge?.copyWith(
-              color: isExpense ? Colors.red : Colors.green,
+            '${isExpense ? '-' : '+'}${activity.currencyCode} ${_amount(activity.amount)}',
+            style: theme.textTheme.titleSmall?.copyWith(
+              color: isExpense ? colors.expense : colors.income,
+              fontWeight: FontWeight.w800,
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _MemberOverviewRow extends StatelessWidget {
+  const _MemberOverviewRow({required this.member});
+
+  final FamilyMember member;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).appColors;
+    final textTheme = Theme.of(context).textTheme;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 10),
+      child: Row(
+        children: [
+          CircleAvatar(
+            radius: 18,
+            backgroundColor: colors.navySoft,
+            child: Text(
+              member.initials,
+              style: textTheme.labelSmall?.copyWith(
+                color: colors.deepNavy,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  member.displayName,
+                  style: textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  member.email,
+                  style: textTheme.bodySmall?.copyWith(color: colors.mutedInk),
+                ),
+              ],
+            ),
+          ),
+          _RolePill(role: member.role),
+        ],
+      ),
+    );
+  }
+}
+
+class _RolePill extends StatelessWidget {
+  const _RolePill({required this.role});
+
+  final String role;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).appColors;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: role.toLowerCase() == 'contributor'
+            ? colors.angelSoft
+            : colors.navySoft,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        child: Text(
+          _roleLabel(role),
+          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                color: role.toLowerCase() == 'contributor'
+                    ? colors.angelAccent
+                    : colors.deepNavy,
+                fontWeight: FontWeight.w800,
+              ),
+        ),
+      ),
+    );
+  }
+}
+
+class _PrivacyNote extends StatelessWidget {
+  const _PrivacyNote();
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).appColors;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: colors.angelSoft,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: colors.angelAccent.withValues(alpha: 0.25)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Row(
+          children: [
+            const Text('🔒', style: TextStyle(fontSize: 22)),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                'Personal stays personal unless you mark it Family.',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: colors.deepNavy,
+                      fontWeight: FontWeight.w600,
+                    ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -311,13 +552,34 @@ class _FamilyIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-    return CircleAvatar(
-      radius: 18,
-      backgroundColor: colors.primaryContainer.withValues(alpha: 0.45),
-      child: Icon(icon, size: 18, color: colors.primary),
+    final colors = Theme.of(context).appColors;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: colors.incomeSoft,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: SizedBox(
+        width: 38,
+        height: 38,
+        child: Icon(icon, size: 20, color: colors.family),
+      ),
     );
   }
 }
 
 String _amount(double value) => NumberFormat('#,##0.00').format(value);
+
+String _roleLabel(String role) {
+  if (role.isEmpty) return 'Member';
+  return '${role[0].toUpperCase()}${role.substring(1).toLowerCase()}';
+}
+
+List<Widget> _separated(Iterable<Widget> children) {
+  final items = children.toList();
+  return [
+    for (var i = 0; i < items.length; i++) ...[
+      items[i],
+      if (i != items.length - 1) const Divider(height: 1),
+    ],
+  ];
+}

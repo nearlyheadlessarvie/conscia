@@ -61,6 +61,8 @@ final alertsDioProvider = Provider<Dio>((ref) {
 });
 
 final alertsProvider = FutureProvider<List<AppAlert>>((ref) async {
+  final authState = ref.watch(authProvider);
+  if (!authState.isAuthenticated) return const [];
   final dio = ref.watch(alertsDioProvider);
   try {
     final response = await dio.get(ApiConstants.alerts);

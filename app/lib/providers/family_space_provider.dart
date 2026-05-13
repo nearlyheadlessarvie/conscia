@@ -9,6 +9,8 @@ import '../models/family_space.dart';
 import 'auth_provider.dart';
 
 final familySpaceProvider = FutureProvider<FamilySpace?>((ref) async {
+  final authState = ref.watch(authProvider);
+  if (!authState.isAuthenticated) return null;
   final dio = ref.watch(dioProvider);
   final response = await dio.get(ApiConstants.familySpace);
   if (response.statusCode == 204 || response.data == null) return null;
@@ -21,6 +23,15 @@ final selectedScopeProvider = StateProvider<String>((ref) {
 });
 
 final familyOverviewProvider = FutureProvider<FamilyOverview>((ref) async {
+  final authState = ref.watch(authProvider);
+  if (!authState.isAuthenticated) {
+    return const FamilyOverview(
+      familySpaceId: '',
+      budgets: [],
+      recentActivity: [],
+      recurringItems: [],
+    );
+  }
   final dio = ref.watch(dioProvider);
   final response = await dio.get(ApiConstants.familyOverview);
   return FamilyOverview.fromJson(
@@ -29,6 +40,8 @@ final familyOverviewProvider = FutureProvider<FamilyOverview>((ref) async {
 });
 
 final familyInvitesProvider = FutureProvider<List<FamilyInvite>>((ref) async {
+  final authState = ref.watch(authProvider);
+  if (!authState.isAuthenticated) return const [];
   final dio = ref.watch(dioProvider);
   final response = await dio.get(ApiConstants.familyInvites);
   final data = response.data as List<dynamic>? ?? [];
@@ -40,6 +53,8 @@ final familyInvitesProvider = FutureProvider<List<FamilyInvite>>((ref) async {
 
 final familyOutgoingInvitesProvider =
     FutureProvider<List<FamilyInvite>>((ref) async {
+  final authState = ref.watch(authProvider);
+  if (!authState.isAuthenticated) return const [];
   final dio = ref.watch(dioProvider);
   final response = await dio.get(ApiConstants.familyOutgoingInvites);
   final data = response.data as List<dynamic>? ?? [];
@@ -50,6 +65,8 @@ final familyOutgoingInvitesProvider =
 });
 
 final familyMembersProvider = FutureProvider<List<FamilyMember>>((ref) async {
+  final authState = ref.watch(authProvider);
+  if (!authState.isAuthenticated) return const [];
   final dio = ref.watch(dioProvider);
   final response = await dio.get(ApiConstants.familyMembers);
   final data = response.data as List<dynamic>? ?? [];

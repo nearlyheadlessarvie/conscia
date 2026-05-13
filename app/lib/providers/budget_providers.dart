@@ -40,17 +40,23 @@ class BudgetListState {
 }
 
 class BudgetListNotifier extends StateNotifier<BudgetListState> {
-  final BudgetService _service;
+  final BudgetService? _service;
   Timer? _pendingRefresh;
 
   BudgetListNotifier(this._service) : super(const BudgetListState()) {
     load();
   }
 
+  BudgetListNotifier.empty()
+      : _service = null,
+        super(const BudgetListState());
+
   Future<void> load() async {
+    final service = _service;
+    if (service == null) return;
     state = state.copyWith(isLoading: true, error: null);
     try {
-      final budgets = await _service.list();
+      final budgets = await service.list();
       state = state.copyWith(budgets: budgets, isLoading: false);
     } catch (e, s) {
       state = state.copyWith(
@@ -61,8 +67,10 @@ class BudgetListNotifier extends StateNotifier<BudgetListState> {
   }
 
   Future<void> create(CreateBudgetDto dto) async {
+    final service = _service;
+    if (service == null) return;
     try {
-      final budget = await _service.create(dto);
+      final budget = await service.create(dto);
       state = state.copyWith(budgets: [...state.budgets, budget]);
     } catch (e, s) {
       state =
@@ -71,8 +79,10 @@ class BudgetListNotifier extends StateNotifier<BudgetListState> {
   }
 
   Future<void> update(String id, CreateBudgetDto dto) async {
+    final service = _service;
+    if (service == null) return;
     try {
-      final updated = await _service.update(id, dto);
+      final updated = await service.update(id, dto);
       state = state.copyWith(
         budgets: state.budgets.map((b) => b.id == id ? updated : b).toList(),
       );
@@ -83,8 +93,10 @@ class BudgetListNotifier extends StateNotifier<BudgetListState> {
   }
 
   Future<void> delete(String id) async {
+    final service = _service;
+    if (service == null) return;
     try {
-      await _service.delete(id);
+      await service.delete(id);
       state = state.copyWith(
         budgets: state.budgets.where((b) => b.id != id).toList(),
       );
@@ -165,8 +177,10 @@ class BudgetListNotifier extends StateNotifier<BudgetListState> {
   }
 
   Future<void> refreshInBackground() async {
+    final service = _service;
+    if (service == null) return;
     try {
-      final budgets = await _service.list();
+      final budgets = await service.list();
       state = state.copyWith(budgets: budgets, error: null);
     } catch (e, s) {
       state =
@@ -192,6 +206,8 @@ class BudgetListNotifier extends StateNotifier<BudgetListState> {
 
 final budgetListProvider =
     StateNotifierProvider<BudgetListNotifier, BudgetListState>((ref) {
+  final authState = ref.watch(authProvider);
+  if (!authState.isAuthenticated) return BudgetListNotifier.empty();
   final service = ref.watch(budgetServiceProvider);
   return BudgetListNotifier(service);
 });

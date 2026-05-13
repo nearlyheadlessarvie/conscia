@@ -33,4 +33,54 @@ void main() {
 
     expect(withKeyboard, lessThan(withoutKeyboard));
   });
+
+  testWidgets('HeroScreenScaffold keeps scroll position isolated per key',
+      (tester) async {
+    final bucket = PageStorageBucket();
+
+    Future<void> pumpScreen({
+      required Key scrollKey,
+      required String label,
+    }) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: PageStorage(
+            bucket: bucket,
+            child: HeroScreenScaffold(
+              scrollViewKey: scrollKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(label),
+                  const SizedBox(height: 3200),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+    }
+
+    await pumpScreen(
+      scrollKey: const PageStorageKey('first-scroll'),
+      label: 'First screen top',
+    );
+
+    final beforeScrollTop = tester.getTopLeft(find.text('First screen top')).dy;
+    await tester.drag(
+      find.byType(SingleChildScrollView),
+      const Offset(0, -1800),
+    );
+    await tester.pumpAndSettle();
+    final afterScrollTop = tester.getTopLeft(find.text('First screen top')).dy;
+    expect(afterScrollTop, lessThan(beforeScrollTop));
+
+    await pumpScreen(
+      scrollKey: const PageStorageKey('second-scroll'),
+      label: 'Second screen top',
+    );
+
+    expect(find.text('Second screen top'), findsOneWidget);
+  });
 }

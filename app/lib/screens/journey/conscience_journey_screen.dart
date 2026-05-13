@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/assets/mascot_sprite_sheet.dart';
+import '../../core/theme/app_colors.dart';
 import '../../models/conscience_journey.dart';
 import '../../providers/conscience_journey_provider.dart';
 import '../../widgets/feed_card.dart';
@@ -16,8 +17,9 @@ class ConscienceJourneyScreen extends ConsumerWidget {
     final journeyAsync = ref.watch(conscienceJourneyProvider);
 
     return HeroScreenScaffold(
+      padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
       appBar: AppBar(
-        title: const Text('Conscience Journey'),
+        title: const Text('Journey'),
         actions: [
           IconButton(
             tooltip: 'Journey guide',
@@ -62,23 +64,30 @@ class ConscienceJourneyContent extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _JourneyHeroCard(summary: summary),
-        const SizedBox(height: 26),
+        const SizedBox(height: 18),
         ScreenSection(
-          title: 'Weekly quests',
-          subtitle: 'Small reps that keep your money conscience sharp.',
-          child: Column(
-            children: [
-              for (final quest in summary.weeklyQuests) ...[
-                _QuestTile(quest: quest),
-                if (quest != summary.weeklyQuests.last)
-                  const SizedBox(height: 10),
+          title: "This week's quests",
+          compact: true,
+          child: FeedCard(
+            padding: EdgeInsets.zero,
+            child: Column(
+              children: [
+                for (var i = 0; i < summary.weeklyQuests.length; i++) ...[
+                  _QuestTile(quest: summary.weeklyQuests[i]),
+                  if (i < summary.weeklyQuests.length - 1)
+                    const Divider(indent: 72, height: 1),
+                ],
               ],
-            ],
+            ),
           ),
         ),
         ScreenSection(
           title: 'Achievements',
-          subtitle: 'Badges earned by pausing, reflecting, and rescuing money.',
+          trailing: TextButton(
+            onPressed: () {},
+            child: const Text('All ›'),
+          ),
+          compact: true,
           child: _BadgeGrid(badges: summary.badges),
         ),
         if (summary.recentMascotMoment case final moment?)
@@ -104,76 +113,83 @@ class _JourneyHeroCard extends StatelessWidget {
     final nextLevel = summary.nextLevel;
     final progress = _levelProgress(summary);
 
-    return FeedCard(
-      padding: const EdgeInsets.all(20),
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(20, 24, 20, 22),
+      decoration: BoxDecoration(
+        color: Theme.of(context).appColors.amberSoft,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: Theme.of(context).appColors.amber),
+      ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const _JourneyMascot(persona: 'both', width: 74),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Level',
-                      style: textTheme.labelLarge?.copyWith(
-                        color: colors.onSurfaceVariant,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      summary.currentLevel.title,
-                      style: textTheme.headlineSmall?.copyWith(
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      nextLevel == null
-                          ? 'Top level reached. The mascots are taking notes.'
-                          : '${summary.xpToNextLevel} XP to ${nextLevel.title}',
-                      style: textTheme.bodySmall?.copyWith(
-                        color: colors.onSurfaceVariant,
-                      ),
-                    ),
-                  ],
+          const SizedBox(
+            width: 220,
+            height: 80,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                Positioned(
+                  left: 16,
+                  top: 0,
+                  child: MascotSpriteFrame(
+                    atlas: angelMascotAtlas,
+                    frameName: '4_win.png',
+                    width: 74,
+                  ),
                 ),
-              ),
-              _XpPill(label: '${summary.xpTotal} XP'),
-            ],
+                Positioned(
+                  child: Text('⚔️', style: TextStyle(fontSize: 56)),
+                ),
+                Positioned(
+                  right: 16,
+                  top: 0,
+                  child: MascotSpriteFrame(
+                    atlas: devilMascotAtlas,
+                    frameName: '5_win.png',
+                    width: 74,
+                  ),
+                ),
+              ],
+            ),
           ),
-          const SizedBox(height: 18),
+          const SizedBox(height: 4),
+          Text(
+            'Level ${_levelNumber(summary.currentLevel)}',
+            style: textTheme.labelLarge?.copyWith(
+              color: colors.onSurface,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            summary.currentLevel.title,
+            style: textTheme.headlineSmall?.copyWith(
+              fontWeight: FontWeight.w900,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            nextLevel == null
+                ? '${summary.xpTotal} XP · Top level reached'
+                : '${summary.xpIntoLevel} / ${nextLevel.requiredXp - summary.currentLevel.requiredXp} XP to ${nextLevel.title}',
+            style: textTheme.bodySmall?.copyWith(
+              color: colors.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: 14),
           ClipRRect(
             borderRadius: BorderRadius.circular(999),
             child: LinearProgressIndicator(
               minHeight: 10,
               value: progress,
               backgroundColor: colors.surfaceContainerHighest,
-              valueColor: AlwaysStoppedAnimation<Color>(colors.primary),
+              valueColor: AlwaysStoppedAnimation<Color>(
+                Theme.of(context).appColors.amber,
+              ),
             ),
-          ),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(
-                child: _StatPill(
-                  icon: Icons.local_fire_department_rounded,
-                  label: '${summary.momentumDays}-day momentum',
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: _StatPill(
-                  icon: Icons.emoji_events_rounded,
-                  label: '${summary.bestMomentumDays}-day best',
-                ),
-              ),
-            ],
           ),
         ],
       ),
@@ -188,6 +204,18 @@ class _JourneyHeroCard extends StatelessWidget {
     if (levelSpan <= 0) return 0;
 
     return (summary.xpIntoLevel / levelSpan).clamp(0, 1).toDouble();
+  }
+
+  int _levelNumber(ConscienceLevel level) {
+    const order = [
+      'awakening',
+      'impulse_spotter',
+      'budget_guardian',
+      'conscience_captain',
+      'money_monk',
+    ];
+    final index = order.indexOf(level.key);
+    return index < 0 ? 1 : index + 1;
   }
 }
 
@@ -204,8 +232,8 @@ class _QuestTile extends StatelessWidget {
         ? 0.0
         : (quest.progress / quest.target).clamp(0, 1).toDouble();
 
-    return FeedCard(
-      padding: const EdgeInsets.all(16),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
       child: Row(
         children: [
           _IconBadge(
@@ -239,6 +267,18 @@ class _QuestTile extends StatelessWidget {
                     backgroundColor: colors.surfaceContainerHighest,
                   ),
                 ),
+                const SizedBox(height: 5),
+                Text(
+                  quest.isCompleted
+                      ? '✓ Complete!'
+                      : '${quest.progress} / ${quest.target} completed',
+                  style: textTheme.labelSmall?.copyWith(
+                    color: quest.isCompleted
+                        ? Theme.of(context).appColors.income
+                        : colors.onSurfaceVariant,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
               ],
             ),
           ),
@@ -265,23 +305,14 @@ class _BadgeGrid extends StatelessWidget {
       );
     }
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final isWide = constraints.maxWidth > 520;
-        return Wrap(
-          spacing: 10,
-          runSpacing: 10,
-          children: [
-            for (final badge in badges)
-              SizedBox(
-                width: isWide
-                    ? (constraints.maxWidth - 10) / 2
-                    : constraints.maxWidth,
-                child: _BadgeTile(badge: badge),
-              ),
-          ],
-        );
-      },
+    return SizedBox(
+      height: 104,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: badges.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 16),
+        itemBuilder: (context, index) => _BadgeTile(badge: badges[index]),
+      ),
     );
   }
 }
@@ -295,56 +326,44 @@ class _BadgeTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
-    final progress = badge.target == 0
-        ? 0.0
-        : (badge.progress / badge.target).clamp(0, 1).toDouble();
 
-    return FeedCard(
-      padding: const EdgeInsets.all(16),
-      child: Row(
+    return SizedBox(
+      width: 72,
+      child: Column(
         children: [
-          _IconBadge(
-            icon: badge.isUnlocked
-                ? Icons.workspace_premium_rounded
-                : Icons.lock_outline_rounded,
-            color: badge.isUnlocked ? colors.primary : colors.outline,
+          Container(
+            width: 58,
+            height: 58,
+            decoration: BoxDecoration(
+              color: badge.isUnlocked
+                  ? Theme.of(context).appColors.angelSoft
+                  : colors.surfaceContainerHighest.withValues(alpha: 0.7),
+              borderRadius: BorderRadius.circular(16),
+              border: badge.isUnlocked
+                  ? Border.all(
+                      color: Theme.of(context).appColors.angelAccent,
+                      width: 2,
+                    )
+                  : null,
+            ),
+            child: Icon(
+              badge.isUnlocked
+                  ? Icons.pause_rounded
+                  : Icons.lock_outline_rounded,
+              color: badge.isUnlocked
+                  ? Theme.of(context).appColors.angelAccent
+                  : colors.outline,
+            ),
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  badge.title,
-                  style: textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w800,
-                    color: badge.isUnlocked
-                        ? colors.onSurface
-                        : colors.onSurfaceVariant,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  badge.description,
-                  style: textTheme.bodySmall?.copyWith(
-                    color: colors.onSurfaceVariant,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                Text(
-                  badge.isUnlocked
-                      ? 'Unlocked'
-                      : '${badge.progress}/${badge.target}',
-                  style: textTheme.labelSmall?.copyWith(
-                    color: badge.isUnlocked ? colors.primary : colors.outline,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                if (!badge.isUnlocked) ...[
-                  const SizedBox(height: 6),
-                  LinearProgressIndicator(value: progress, minHeight: 5),
-                ],
-              ],
+          const SizedBox(height: 6),
+          Text(
+            badge.isUnlocked ? badge.title : '???',
+            textAlign: TextAlign.center,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: textTheme.labelSmall?.copyWith(
+              color: badge.isUnlocked ? colors.onSurface : colors.outline,
+              fontWeight: FontWeight.w800,
             ),
           ),
         ],
@@ -783,46 +802,6 @@ class _IconBadge extends StatelessWidget {
         borderRadius: BorderRadius.circular(14),
       ),
       child: Icon(icon, color: color, size: 22),
-    );
-  }
-}
-
-class _StatPill extends StatelessWidget {
-  const _StatPill({
-    required this.icon,
-    required this.label,
-  });
-
-  final IconData icon;
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        color: colors.primaryContainer.withValues(alpha: 0.45),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 17, color: colors.primary),
-          const SizedBox(width: 6),
-          Flexible(
-            child: Text(
-              label,
-              style: textTheme.labelMedium?.copyWith(
-                color: colors.primary,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-          ),
-        ],
-      ),
     );
   }
 }

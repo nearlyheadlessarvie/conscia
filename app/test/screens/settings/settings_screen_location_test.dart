@@ -47,6 +47,8 @@ class _RecordingUserService extends UserService {
   Future<UserProfile> updateProfile({
     String? preferredCurrency,
     String? locale,
+    String? displayName,
+    String? photoUrl,
     String? spendingPersonality,
     String? incomeRange,
     String? occupationType,

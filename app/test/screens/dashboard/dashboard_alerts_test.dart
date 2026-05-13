@@ -314,6 +314,48 @@ void main() {
     expect(headerFinder.hitTestable(), findsOneWidget);
   });
 
+  testWidgets('dashboard uses editorial hero and grouped recent activity',
+      (tester) async {
+    final transactions = List.generate(
+      3,
+      (index) => Transaction(
+        id: 'tx-grouped-$index',
+        amount: 100 + index.toDouble(),
+        currencyCode: 'PHP',
+        category: 'Dining',
+        description: 'Transaction $index',
+        type: 'expense',
+        date: DateTime(2026, 5, 7).subtract(Duration(days: index)),
+      ),
+    );
+
+    final container = ProviderContainer(
+      overrides: [
+        sharedPreferencesProvider.overrideWithValue(prefs),
+        budgetServiceProvider.overrideWithValue(_StaticBudgetService(const [])),
+        transactionServiceProvider
+            .overrideWithValue(_StaticTransactionService(transactions)),
+        behavioralInsightsProvider.overrideWith((ref) async => null),
+        insightsSummaryProvider.overrideWith((ref) async => null),
+        insightsCategoriesProvider.overrideWith((ref) async => const []),
+        insightsMerchantsProvider.overrideWith((ref) async => const []),
+        localAlertsProvider.overrideWith(
+          (ref) => _LocalAlertsTestNotifier(const []),
+        ),
+      ],
+    );
+    addTearDown(container.dispose);
+    await container.read(transactionListProvider.notifier).refresh();
+
+    await tester.pumpWidget(_buildApp(container));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const ValueKey('dashboard-editorial-hero')),
+      findsOneWidget,
+    );
+  });
+
   testWidgets('dashboard insight loading state matches summary card shape',
       (tester) async {
     final pendingSummary = Completer<DashboardInsightSummary?>();
@@ -342,9 +384,6 @@ void main() {
     );
     await tester.pump();
 
-    expect(find.text('Your Insights'), findsOneWidget);
-    expect(find.byType(DashboardInsightSummarySkeletonCard), findsOneWidget);
-    expect(find.text('Journey'), findsOneWidget);
     expect(find.byType(DashboardJourneySkeletonCard), findsOneWidget);
     expect(find.byType(InsightSkeletonCard), findsNothing);
   });
@@ -399,7 +438,8 @@ void main() {
     await tester.pumpWidget(_buildApp(container));
     await tester.pumpAndSettle();
 
-    expect(find.text('Your Insights'), findsOneWidget);
+    expect(find.byKey(const ValueKey('dashboard-editorial-hero')),
+        findsOneWidget);
     expect(
       find.text('Dining is above your recent 3-month pace.'),
       findsOneWidget,
@@ -409,7 +449,7 @@ void main() {
     expect(find.text('Budget trends'), findsNothing);
   });
 
-  testWidgets('dashboard shows an inferred insight summary with a chevron',
+  testWidgets('dashboard shows an inferred insight summary in the hero card',
       (tester) async {
     final container = ProviderContainer(
       overrides: [
@@ -453,16 +493,14 @@ void main() {
       find.text('Dining is above your recent 3-month pace.'),
       findsOneWidget,
     );
-    expect(find.text('Summary'), findsOneWidget);
+    expect(find.byKey(const ValueKey('dashboard-editorial-hero')),
+        findsOneWidget);
     expect(find.byType(MascotSpriteFrame), findsWidgets);
     expect(find.text('Your financial mood is confident'), findsNothing);
     expect(find.text('More insights inside'), findsNothing);
-    expect(find.byIcon(Icons.chevron_right_rounded), findsWidgets);
     expect(find.byTooltip('Dismiss insight'), findsNothing);
 
-    await tester.tap(
-      find.text('Dining is above your recent 3-month pace.'),
-    );
+    await tester.tap(find.text('View Insights'));
     await tester.pumpAndSettle();
 
     expect(find.text('Insights placeholder'), findsOneWidget);

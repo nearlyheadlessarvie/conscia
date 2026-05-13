@@ -27,6 +27,8 @@ class _FailingAuthService extends AuthService {
 }
 
 class _FakeSecureStorage extends FlutterSecureStorage {
+  const _FakeSecureStorage();
+
   @override
   Future<String?> read({
     required String key,
@@ -121,7 +123,7 @@ void main() {
     (tester) async {
       final authNotifier = AuthNotifier(
         _FailingAuthService(),
-        _FakeSecureStorage(),
+        const _FakeSecureStorage(),
       );
 
       await tester.pumpWidget(
@@ -147,4 +149,51 @@ void main() {
       expect(find.text('Invalid username or password.'), findsOneWidget);
     },
   );
+
+  testWidgets('pressing enter in password field submits sign in',
+      (tester) async {
+    var loginCallCount = 0;
+    final authService = _RecordingAuthService(
+      onLogin: (email, password) {
+        loginCallCount += 1;
+        return const AuthTokens(
+          accessToken: 'header.payload.signature',
+          refreshToken: 'refresh-token',
+          userId: 'user-1',
+        );
+      },
+    );
+    final authNotifier = AuthNotifier(authService, const _FakeSecureStorage());
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          authProvider.overrideWith((ref) => authNotifier),
+        ],
+        child: const MaterialApp(
+          home: SignInScreen(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final fields = find.byType(TextField);
+    await tester.enterText(fields.at(0), 'nearlyheadlessarvie@live.com.ph');
+    await tester.enterText(fields.at(1), 'Secure123');
+    await tester.testTextInput.receiveAction(TextInputAction.done);
+    await tester.pump();
+
+    expect(loginCallCount, 1);
+  });
+}
+
+class _RecordingAuthService extends AuthService {
+  _RecordingAuthService({required this.onLogin}) : super(Dio());
+
+  final AuthTokens Function(String email, String password) onLogin;
+
+  @override
+  Future<AuthTokens> login(String email, String password) async {
+    return onLogin(email, password);
+  }
 }

@@ -60,12 +60,6 @@ class _MainShellState extends ConsumerState<MainShell> {
     return 0;
   }
 
-  bool _showSharedAddFab(String location) {
-    return !location.startsWith('/transactions') &&
-        !location.startsWith('/assistant') &&
-        !location.startsWith('/settings');
-  }
-
   @override
   Widget build(BuildContext context) {
     final location = GoRouterState.of(context).uri.toString();
@@ -78,42 +72,6 @@ class _MainShellState extends ConsumerState<MainShell> {
     }
     _lastLocation = location;
     final currentIndex = _selectedIndex(location);
-    final isWide = MediaQuery.sizeOf(context).width > 840;
-    final showSharedAddFab = _showSharedAddFab(location);
-
-    if (isWide) {
-      return Scaffold(
-        body: Row(
-          children: [
-            NavigationRail(
-              selectedIndex: currentIndex,
-              onDestinationSelected: (i) => _onDestinationSelected(context, i),
-              labelType: NavigationRailLabelType.all,
-              leading: showSharedAddFab
-                  ? Padding(
-                      padding: const EdgeInsets.only(top: 8),
-                      child: FloatingActionButton(
-                        onPressed: () => context.push('/transactions/add'),
-                        child: Icon(AppIcons.add),
-                      ),
-                    )
-                  : null,
-              destinations: _tabs
-                  .map(
-                    (t) => NavigationRailDestination(
-                      icon: Icon(t.icon),
-                      selectedIcon: Icon(t.activeIcon),
-                      label: Text(t.label),
-                    ),
-                  )
-                  .toList(),
-            ),
-            const VerticalDivider(width: 1, thickness: 1),
-            Expanded(child: widget.child),
-          ],
-        ),
-      );
-    }
 
     return Scaffold(
       body: widget.child,

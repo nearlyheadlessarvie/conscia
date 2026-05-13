@@ -16,6 +16,7 @@ import '../../widgets/feed_card.dart';
 import '../../widgets/scope_pill_switch.dart';
 import '../../widgets/selection_chip_group.dart';
 import '../../widgets/skeleton_loader.dart';
+import '../../../widgets/form_label.dart';
 
 class TransactionListScreen extends ConsumerStatefulWidget {
   const TransactionListScreen({super.key});
@@ -69,7 +70,7 @@ class _TransactionListScreenState extends ConsumerState<TransactionListScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Transactions'),
-        centerTitle: false,
+        centerTitle: true,
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 10),
@@ -148,15 +149,6 @@ class _TransactionListScreenState extends ConsumerState<TransactionListScreen> {
           padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
           child: Column(
             children: [
-              ScopePillSwitch(
-                value: selectedScope,
-                familyEnabled: hasFamilySpace,
-                onChanged: (scope) {
-                  ref.read(transactionScopeFilterProvider.notifier).state =
-                      scope;
-                },
-              ),
-              const SizedBox(height: 12),
               SelectionChipGroup(
                 options: ['All', ...categories.take(4)],
                 value: selectedCategory ?? 'All',
@@ -247,14 +239,9 @@ class _TransactionListScreenState extends ConsumerState<TransactionListScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  _formatDateLabel(groups[key]!.first.date).toUpperCase(),
-                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: Theme.of(context).appColors.softInk,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: 0.6,
-                      ),
-                ),
+                FormLabel(
+                    label: _formatDateLabel(groups[key]!.first.date)
+                        .toUpperCase()),
                 const SizedBox(height: 10),
                 Column(
                   children: [
@@ -349,7 +336,7 @@ class _EditorialTransactionRow extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            CategoryIcons.badge(displayCategory, size: 28),
+            CategoryIcons.badge(displayCategory, size: 36),
             const SizedBox(width: 12),
             // Left column: merchant + category name
             Expanded(

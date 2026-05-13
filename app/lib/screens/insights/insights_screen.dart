@@ -7,6 +7,7 @@ import '../../providers/budget_providers.dart';
 import '../../providers/insight_feed_provider.dart';
 import '../../providers/insights_provider.dart';
 import '../../providers/user_provider.dart';
+import '../../core/theme/app_colors.dart';
 import '../budgets/widgets/budget_form_sheet.dart';
 import '../dashboard/widgets/insight_feed_card.dart';
 import '../../widgets/feed_card.dart';
@@ -56,6 +57,14 @@ class InsightsScreen extends ConsumerWidget {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              if (summary != null) ...[
+                _InsightEditorialHighlight(
+                  summary: summary,
+                  currencyCode: prefs.currency,
+                  locale: prefs.locale,
+                ),
+                const SizedBox(height: 24),
+              ],
               _InsightFeedSection(
                 title: 'This week',
                 subtitle: 'The freshest read on how your money decisions feel.',
@@ -204,6 +213,84 @@ class _MerchantSpotlightSection extends StatelessWidget {
           child: MerchantSpotlightCard(merchant: merchants.first),
         );
       },
+    );
+  }
+}
+
+class _InsightEditorialHighlight extends StatelessWidget {
+  const _InsightEditorialHighlight({
+    required this.summary,
+    required this.currencyCode,
+    required this.locale,
+  });
+
+  final InsightsSummary summary;
+  final String currencyCode;
+  final String? locale;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).appColors;
+    final textTheme = Theme.of(context).textTheme;
+    final regretText = formatInsightCurrency(
+      summary.regrettedAmount,
+      currencyCode: currencyCode,
+      locale: locale,
+    );
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: colors.amberSoft,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: colors.amber.withValues(alpha: 0.35)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(18),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Text('😇  ⚔️  😈', style: TextStyle(fontSize: 26)),
+                const Spacer(),
+                DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: colors.surfaceRaised.withValues(alpha: 0.7),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Padding(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    child: Text(
+                      '${(summary.avgRegretRate * 100).toStringAsFixed(0)}% regret rate',
+                      style: textTheme.labelSmall?.copyWith(
+                        color: colors.deepNavy,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 18),
+            Text(
+              'Your spending story is pointing at ${summary.regrettedCategory}.',
+              style: textTheme.titleLarge?.copyWith(
+                color: colors.ink,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              '$regretText has been tagged as regret lately. Keep the current insights below, but treat this category as the one to pause on first.',
+              style: textTheme.bodyMedium?.copyWith(
+                color: colors.mutedInk,
+                height: 1.35,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

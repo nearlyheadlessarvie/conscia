@@ -10,6 +10,7 @@ class HeroScreenScaffold extends StatelessWidget {
     this.padding = const EdgeInsets.fromLTRB(16, 20, 16, 28),
     this.bottom,
     this.scrollable = true,
+    this.scrollViewKey,
   });
 
   final PreferredSizeWidget? appBar;
@@ -17,6 +18,7 @@ class HeroScreenScaffold extends StatelessWidget {
   final EdgeInsetsGeometry padding;
   final Widget? bottom;
   final bool scrollable;
+  final Key? scrollViewKey;
 
   @override
   Widget build(BuildContext context) {
@@ -43,6 +45,7 @@ class HeroScreenScaffold extends StatelessWidget {
               Expanded(
                 child: scrollable
                     ? SingleChildScrollView(
+                        key: scrollViewKey,
                         physics: const AlwaysScrollableScrollPhysics(),
                         padding: EdgeInsets.only(
                           left: resolvedPadding.left,

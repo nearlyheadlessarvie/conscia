@@ -139,6 +139,19 @@ void main() {
     expect(find.byType(FloatingActionButton), findsNothing);
   });
 
+  testWidgets('MainShell does not show a navigation rail add FAB on wide home',
+      (tester) async {
+    await _pumpShell(
+      tester,
+      initialLocation: '/',
+      windowSize: const Size(1200, 800),
+    );
+
+    expect(find.byType(NavigationRail), findsNothing);
+    expect(find.byKey(const ValueKey('floating-dock-nav')), findsOneWidget);
+    expect(find.byType(FloatingActionButton), findsNothing);
+  });
+
   testWidgets(
       'MainShell hides the navigation rail add FAB on transactions, assistant, and settings',
       (tester) async {
@@ -149,7 +162,8 @@ void main() {
       initialLocation: '/transactions',
       windowSize: wideSize,
     );
-    expect(find.byType(NavigationRail), findsOneWidget);
+    expect(find.byType(NavigationRail), findsNothing);
+    expect(find.byKey(const ValueKey('floating-dock-nav')), findsOneWidget);
     expect(find.byType(FloatingActionButton), findsNothing);
 
     await _pumpShell(
@@ -157,7 +171,8 @@ void main() {
       initialLocation: '/assistant',
       windowSize: wideSize,
     );
-    expect(find.byType(NavigationRail), findsOneWidget);
+    expect(find.byType(NavigationRail), findsNothing);
+    expect(find.byKey(const ValueKey('floating-dock-nav')), findsOneWidget);
     expect(find.byType(FloatingActionButton), findsNothing);
 
     await _pumpShell(
@@ -165,7 +180,8 @@ void main() {
       initialLocation: '/settings',
       windowSize: wideSize,
     );
-    expect(find.byType(NavigationRail), findsOneWidget);
+    expect(find.byType(NavigationRail), findsNothing);
+    expect(find.byKey(const ValueKey('floating-dock-nav')), findsOneWidget);
     expect(find.byType(FloatingActionButton), findsNothing);
   });
 

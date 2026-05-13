@@ -23,8 +23,10 @@ import '../../widgets/recurring_schedule_section.dart';
 import '../../widgets/scope_pill_switch.dart';
 import '../../widgets/skeleton_loader.dart';
 import '../../widgets/smart_suggestions_card.dart';
-import '../../widgets/currency_picker_sheet.dart';
+import '../../widgets/amount_hero_field.dart';
 import 'widgets/transaction_style_category_selector.dart';
+import '../../widgets/segmented_switch.dart';
+import '../../widgets/form_label.dart';
 
 class TransactionFormScreen extends ConsumerStatefulWidget {
   final String? transactionId;
@@ -318,22 +320,9 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
         centerTitle: true,
         title: Text(_isEditing ? 'Edit transaction' : 'Add transaction'),
         leading: IconButton(
-          icon: Text(
-            _isEditing ? 'Cancel' : 'Cancel',
-            style: textTheme.bodyMedium?.copyWith(
-              color: colors.onSurfaceVariant,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
+          icon: Icon(AppIcons.chevronLeft),
           onPressed: () => context.pop(),
         ),
-        leadingWidth: 76,
-        actions: [
-          TextButton(
-            onPressed: _isValid && !_submitting ? _submit : null,
-            child: Text(_isEditing ? 'Save' : 'Save'),
-          ),
-        ],
       ),
       bottom: FilledButton(
         style: FilledButton.styleFrom(
@@ -356,23 +345,22 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          _FormSegmentedSwitch(
-            left: 'Expense',
-            right: 'Income',
-            leftSelected: _isExpense,
+          SegmentedSwitch(
+            items: const ['Expense', 'Income'],
+            selectedItem: _isExpense ? 'expense' : 'income',
             selectedColor: _isExpense
                 ? Theme.of(context).appColors.expense
                 : Theme.of(context).appColors.income,
-            onChanged: (expense) => setState(() {
-              final v = {expense};
-              _isExpense = v.first;
+            onChanged: (label) => setState(() {
+              final v = {label};
+              _isExpense = v.first == 'expense';
               _selectedCategory = null;
             }),
           ),
           const SizedBox(height: 18),
-          const _FormLabel('AMOUNT'),
+          const FormLabel(label: 'AMOUNT'),
           const SizedBox(height: 8),
-          _AmountHeroField(
+          AmountHeroField(
             controller: _amountController,
             currencyCode: _currencyCode,
             isExpense: _isExpense,
@@ -425,25 +413,19 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Text(
-                    'SCOPE',
-                    style: textTheme.labelSmall?.copyWith(
-                      color: Theme.of(context).appColors.mutedInk,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 0.7,
-                    ),
-                  ),
+                  const FormLabel(label: 'SCOPE'),
                   const SizedBox(height: 8),
                   ScopePillSwitch(
                     value: _scope,
                     familyEnabled: true,
-                    onChanged: (value) => setState(() => _scope = value),
+                    onChanged: (value) =>
+                        setState(() => _scope = value.toLowerCase()),
                   ),
                 ],
               ),
             ),
           ],
-          const _FormLabel('CATEGORY'),
+          const FormLabel(label: 'CATEGORY'),
           const SizedBox(height: 8),
           TransactionStyleCategorySelector(
             selectedCategory: _selectedCategory,
@@ -487,6 +469,8 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
             ),
             const SizedBox(height: 18),
           ],
+          const FormLabel(label: 'DETAILS'),
+          const SizedBox(height: 8),
           Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -503,29 +487,18 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
               InkWell(
                 onTap: _pickDate,
                 borderRadius: BorderRadius.circular(12),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 10,
+                child: InputDecorator(
+                  decoration: InputDecoration(
+                    hintText: _relativeDateLabel(_selectedDate),
                   ),
                   child: Row(
                     children: [
-                      Icon(
-                        AppIcons.calendar,
-                        size: 18,
-                        color: colors.onSurfaceVariant,
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
+                      Expanded(
+                          child: Text(
                         _relativeDateLabel(_selectedDate),
                         style: textTheme.bodyMedium,
-                      ),
-                      const Spacer(),
-                      Icon(
-                        AppIcons.chevronRight,
-                        size: 16,
-                        color: colors.outline,
-                      ),
+                      )),
+                      const Icon(Icons.calendar_today_outlined, size: 18),
                     ],
                   ),
                 ),
@@ -579,190 +552,5 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
       return 'Yesterday';
     }
     return _formatDate(date);
-  }
-}
-
-class _FormLabel extends StatelessWidget {
-  const _FormLabel(this.label);
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).appColors;
-    return Text(
-      label,
-      style: Theme.of(context).textTheme.labelSmall?.copyWith(
-            color: colors.mutedInk,
-            fontWeight: FontWeight.w800,
-            letterSpacing: 0.7,
-          ),
-    );
-  }
-}
-
-class _FormSegmentedSwitch extends StatelessWidget {
-  const _FormSegmentedSwitch({
-    required this.left,
-    required this.right,
-    required this.leftSelected,
-    required this.selectedColor,
-    required this.onChanged,
-  });
-
-  final String left;
-  final String right;
-  final bool leftSelected;
-  final Color selectedColor;
-  final ValueChanged<bool> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).appColors;
-    return Container(
-      height: 40,
-      padding: const EdgeInsets.all(3),
-      decoration: BoxDecoration(
-        color: colors.border.withValues(alpha: 0.75),
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Row(
-        children: [
-          _FormSegment(
-            label: left,
-            selected: leftSelected,
-            color: selectedColor,
-            onTap: () => onChanged(true),
-          ),
-          _FormSegment(
-            label: right,
-            selected: !leftSelected,
-            color: selectedColor,
-            onTap: () => onChanged(false),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _FormSegment extends StatelessWidget {
-  const _FormSegment({
-    required this.label,
-    required this.selected,
-    required this.color,
-    required this.onTap,
-  });
-
-  final String label;
-  final bool selected;
-  final Color color;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).appColors;
-    return Expanded(
-      child: InkWell(
-        borderRadius: BorderRadius.circular(999),
-        onTap: onTap,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 180),
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: selected ? colors.surfaceRaised : Colors.transparent,
-            borderRadius: BorderRadius.circular(999),
-          ),
-          child: Text(
-            label,
-            style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                  color: selected ? color : colors.softInk,
-                  fontWeight: FontWeight.w700,
-                ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _AmountHeroField extends StatelessWidget {
-  const _AmountHeroField({
-    required this.controller,
-    required this.currencyCode,
-    required this.isExpense,
-    required this.isPremium,
-    required this.onChanged,
-    required this.onCurrencyChanged,
-  });
-
-  final TextEditingController controller;
-  final String currencyCode;
-  final bool isExpense;
-  final bool isPremium;
-  final ValueChanged<String> onChanged;
-  final ValueChanged<String> onCurrencyChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).appColors;
-    final amountColor = isExpense ? colors.expense : colors.income;
-    final amountStyle = Theme.of(context).textTheme.headlineMedium?.copyWith(
-          color: amountColor,
-          fontWeight: FontWeight.w700,
-        );
-    return TextField(
-      controller: controller,
-      onChanged: onChanged,
-      keyboardType: const TextInputType.numberWithOptions(decimal: true),
-      style: amountStyle,
-      decoration: InputDecoration(
-        prefixIconConstraints: const BoxConstraints(),
-        prefixIcon: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: () => CurrencyPickerSheet.show(
-            context,
-            selectedCode: currencyCode,
-            isPremium: isPremium,
-            onSelected: onCurrencyChanged,
-          ),
-          child: Padding(
-            padding: const EdgeInsets.only(left: 16, right: 6),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(currencyCode, style: amountStyle),
-                const SizedBox(width: 2),
-                Icon(
-                  Icons.keyboard_arrow_down_rounded,
-                  size: 20,
-                  color: amountColor.withValues(alpha: 0.65),
-                ),
-              ],
-            ),
-          ),
-        ),
-        hintText: '0',
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: BorderSide(color: colors.border),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide:
-              BorderSide(color: amountColor.withValues(alpha: 0.5), width: 1.5),
-        ),
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        hintStyle: amountStyle?.copyWith(
-          color: amountColor.withValues(alpha: 0.32),
-        ),
-        filled: true,
-        fillColor: colors.surfaceMuted,
-      ),
-    );
   }
 }

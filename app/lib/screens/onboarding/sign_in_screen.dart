@@ -250,6 +250,11 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                       obscureText: _obscurePassword,
                       textInputAction: TextInputAction.done,
                       onChanged: (_) => _clearInlineErrors(),
+                      onSubmitted: (_) {
+                        if (!_isLoading) {
+                          _submit();
+                        }
+                      },
                       errorText: _passwordFieldError,
                       enableSuggestions: false,
                       autocorrect: false,

@@ -3,6 +3,7 @@ import 'package:conscia_app/providers/budget_providers.dart';
 import 'package:conscia_app/providers/alert_provider.dart';
 import 'package:conscia_app/providers/ai_provider.dart';
 import 'package:conscia_app/providers/auth_provider.dart';
+import 'package:conscia_app/providers/usage_provider.dart';
 import 'package:conscia_app/screens/transactions/transaction_detail_screen.dart';
 import 'package:conscia_app/services/auth_service.dart';
 import 'package:conscia_app/services/ai_service.dart';
@@ -15,6 +16,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class _RecordingTransactionService extends TransactionService {
   _RecordingTransactionService() : super(Dio());
@@ -54,6 +56,13 @@ class _DelayedReflectionAIService extends AIService {
 }
 
 void main() {
+  late SharedPreferences prefs;
+
+  setUp(() async {
+    SharedPreferences.setMockInitialValues({});
+    prefs = await SharedPreferences.getInstance();
+  });
+
   testWidgets('detail screen falls back to Unknown when description is empty', (
     tester,
   ) async {
@@ -82,6 +91,38 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Unknown'), findsOneWidget);
+  });
+
+  testWidgets('detail screen uses editorial hero and grouped metadata',
+      (tester) async {
+    final transaction = Transaction(
+      id: 'tx-editorial',
+      amount: 350,
+      currencyCode: 'PHP',
+      category: 'Dining',
+      description: 'Jollibee Cubao',
+      type: 'expense',
+      date: DateTime(2026, 5, 7, 19, 0),
+      regretLevel: 2,
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          transactionDetailProvider
+              .overrideWith((ref, id) async => transaction),
+        ],
+        child: const MaterialApp(
+          home: TransactionDetailScreen(transactionId: 'tx-editorial'),
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    expect(find.text('Jollibee Cubao'), findsOneWidget);
+    expect(find.text('How did this purchase feel?'), findsOneWidget);
+    expect(find.text('Ask AI to Reflect'), findsOneWidget);
   });
 
   testWidgets('detail screen shows edited transaction returned from edit route',
@@ -151,7 +192,7 @@ void main() {
 
     await tester.tap(find.byIcon(Icons.more_vert));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Edit'));
+    await tester.tap(find.widgetWithText(PopupMenuItem<String>, 'Edit'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Return updated'));
     await tester.pumpAndSettle();
@@ -176,22 +217,25 @@ void main() {
 
     final container = ProviderContainer(
       overrides: [
-        budgetServiceProvider.overrideWithValue(
-          _StaticBudgetService(const [
-            Budget(
-              id: 'budget-1',
-              category: 'Coffee',
-              monthlyLimit: 100,
-              spent: 32.5,
-              currencyCode: 'USD',
-              percentage: 0.325,
-              isOverBudget: false,
-            ),
-          ]),
+        budgetListProvider.overrideWith(
+          (ref) => BudgetListNotifier(
+            _StaticBudgetService(const [
+              Budget(
+                id: 'budget-1',
+                category: 'Coffee',
+                monthlyLimit: 100,
+                spent: 32.5,
+                currencyCode: 'USD',
+                percentage: 0.325,
+                isOverBudget: false,
+              ),
+            ]),
+          ),
         ),
         budgetReconciliationEnabledProvider.overrideWithValue(false),
         transactionServiceProvider.overrideWithValue(transactionService),
         transactionDetailProvider.overrideWith((ref, id) async => transaction),
+        sharedPreferencesProvider.overrideWithValue(prefs),
       ],
     );
     addTearDown(container.dispose);
@@ -199,8 +243,24 @@ void main() {
     await tester.pumpWidget(
       UncontrolledProviderScope(
         container: container,
-        child: const MaterialApp(
-          home: TransactionDetailScreen(transactionId: 'tx-1'),
+        child: MaterialApp.router(
+          routerConfig: GoRouter(
+            initialLocation: '/transactions/tx-1',
+            routes: [
+              GoRoute(
+                path: '/',
+                builder: (_, __) => const Scaffold(body: Text('Root')),
+                routes: [
+                  GoRoute(
+                    path: 'transactions/:id',
+                    builder: (_, state) => TransactionDetailScreen(
+                      transactionId: state.pathParameters['id']!,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -209,10 +269,11 @@ void main() {
 
     await tester.tap(find.byIcon(Icons.more_vert));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Delete'));
+    await tester.tap(find.widgetWithText(PopupMenuItem<String>, 'Delete'));
     await tester.pumpAndSettle();
     await tester.tap(find.widgetWithText(TextButton, 'Delete'));
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
 
     final updatedBudget = container.read(budgetListProvider).budgets.single;
     expect(updatedBudget.spent, 20);
@@ -334,6 +395,7 @@ void main() {
               .overrideWith((ref, id) async => transaction),
           aiServiceProvider.overrideWithValue(_DelayedReflectionAIService()),
           transactionServiceProvider.overrideWithValue(transactionService),
+          sharedPreferencesProvider.overrideWithValue(prefs),
         ],
         child: const MaterialApp(
           home: TransactionDetailScreen(transactionId: 'tx-reflect'),
@@ -343,6 +405,7 @@ void main() {
 
     await tester.pumpAndSettle();
 
+    await tester.ensureVisible(find.text('Ask AI to Reflect'));
     await tester.tap(find.text('Ask AI to Reflect'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
@@ -467,6 +530,7 @@ void main() {
               .overrideWith((ref, id) async => transaction),
           aiServiceProvider.overrideWithValue(_DelayedReflectionAIService()),
           transactionServiceProvider.overrideWithValue(transactionService),
+          sharedPreferencesProvider.overrideWithValue(prefs),
         ],
         child: const MaterialApp(
           home: TransactionDetailScreen(

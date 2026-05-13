@@ -91,6 +91,8 @@ class _FakeUserService extends UserService {
   Future<UserProfile> updateProfile({
     String? preferredCurrency,
     String? locale,
+    String? displayName,
+    String? photoUrl,
     String? spendingPersonality,
     String? incomeRange,
     String? occupationType,
@@ -388,11 +390,11 @@ void main() {
     );
     expect(
       _assetImageFinder('assets/images/sprites/devil/sprite_sheet.png'),
-      findsOneWidget,
+      findsAtLeastNWidgets(1),
     );
     expect(
       _assetImageFinder('assets/images/sprites/angel/sprite_sheet.png'),
-      findsOneWidget,
+      findsAtLeastNWidgets(1),
     );
     expect(
       _assetImageFinder('assets/images/sprites/money/sprite_sheet.png'),
@@ -404,6 +406,21 @@ void main() {
         find.byKey(const ValueKey('conscience-angel-neutral')), findsOneWidget);
     expect(
         find.byKey(const ValueKey('conscience-money-neutral')), findsOneWidget);
+  });
+
+  testWidgets('pre-purchase assistant shows the editorial prompt note',
+      (tester) async {
+    await tester.pumpWidget(await buildPrePurchaseApp(tester));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const ValueKey('assistant-editorial-note')),
+      findsOneWidget,
+    );
+    expect(
+      find.text('Both sides are standing by. What are you thinking of buying?'),
+      findsOneWidget,
+    );
   });
 
   testWidgets('shows shared loader while AI response is pending',
@@ -772,11 +789,6 @@ void main() {
     await tester.pump(const Duration(milliseconds: 700));
     await tester.pumpAndSettle();
 
-    final formatted = CurrencyFormatter.format(
-      600,
-      currencyCode: 'PHP',
-      locale: 'en_PH',
-    );
     final spentFormatted = CurrencyFormatter.format(
       0,
       currencyCode: 'PHP',
@@ -790,7 +802,6 @@ void main() {
 
     expect(find.textContaining('\$600 PHP'), findsNothing);
     expect(aiService.receivedCurrencyCode, 'PHP');
-    expect(find.text(formatted), findsOneWidget);
     expect(find.textContaining('\$0.00 / \$16706.49'), findsNothing);
     expect(find.text(spentFormatted), findsOneWidget);
     expect(find.text(' / $limitFormatted'), findsOneWidget);
@@ -840,12 +851,13 @@ void main() {
     await tester.pump(const Duration(milliseconds: 700));
     await tester.pumpAndSettle();
 
-    expect(find.text('Bought it anyway'), findsOneWidget);
+    final buyButton = find.textContaining('Buy it');
+    expect(buyButton, findsOneWidget);
 
-    await tester.tap(find.text('Bought it anyway'));
+    await tester.tap(buyButton);
     await tester.pumpAndSettle();
 
-    expect(find.text('Add Transaction'), findsOneWidget);
+    expect(find.text('Add transaction'), findsOneWidget);
 
     final amountField = tester.widget<TextField>(find.byType(TextField).first);
     expect(amountField.controller?.text, '600');

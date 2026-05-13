@@ -1,7 +1,6 @@
 import 'package:conscia_app/providers/user_provider.dart';
 import 'package:conscia_app/screens/settings/profile_screen.dart';
 import 'package:conscia_app/services/user_service.dart';
-import 'package:conscia_app/widgets/selection_chip_group.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -16,6 +15,8 @@ class _RecordingUserService extends UserService {
   Future<UserProfile> updateProfile({
     String? preferredCurrency,
     String? locale,
+    String? displayName,
+    String? photoUrl,
     String? spendingPersonality,
     String? incomeRange,
     String? occupationType,
@@ -27,6 +28,8 @@ class _RecordingUserService extends UserService {
     lastUpdate = {
       'preferredCurrency': preferredCurrency,
       'locale': locale,
+      'displayName': displayName,
+      'photoUrl': photoUrl,
       'spendingPersonality': spendingPersonality,
       'incomeRange': incomeRange,
       'occupationType': occupationType,
@@ -41,6 +44,8 @@ class _RecordingUserService extends UserService {
       email: 'profile@example.com',
       currencyCode: 'USD',
       locale: 'en_US',
+      displayName: displayName,
+      photoUrl: photoUrl,
       createdAt: DateTime(2026),
       hasCompletedOnboarding: true,
       locationSuggestionsEnabled: locationSuggestionsEnabled ?? false,
@@ -54,7 +59,7 @@ class _RecordingUserService extends UserService {
 }
 
 void main() {
-  testWidgets('untouched optional spending style stays unset when saving', (
+  testWidgets('profile saves display name without legacy profile fields', (
     tester,
   ) async {
     final userService = _RecordingUserService();
@@ -68,6 +73,7 @@ void main() {
               email: 'profile@example.com',
               currencyCode: 'USD',
               locale: 'en_US',
+              displayName: 'Arvie Aguirre',
               createdAt: DateTime(2026),
               hasCompletedOnboarding: true,
               spendingPersonality: null,
@@ -85,14 +91,19 @@ void main() {
     );
 
     await tester.pumpAndSettle();
-    await tester.ensureVisible(find.text('Save Changes'));
-    await tester.tap(find.text('Save Changes'));
+    await tester.enterText(
+      find.byType(TextField).first,
+      'Arvie Updated',
+    );
+    await tester.tap(find.text('Save'));
     await tester.pumpAndSettle();
 
+    expect(userService.lastUpdate?['displayName'], 'Arvie Updated');
     expect(userService.lastUpdate?['spendingPersonality'], isNull);
+    expect(userService.lastUpdate?['incomeRange'], isNull);
   });
 
-  testWidgets('profile uses branded avatars for profile choice chips', (
+  testWidgets('profile shows photo affordance and read-only account fields', (
     tester,
   ) async {
     final userService = _RecordingUserService();
@@ -106,6 +117,7 @@ void main() {
               email: 'profile@example.com',
               currencyCode: 'USD',
               locale: 'en_US',
+              displayName: 'Arvie Aguirre',
               createdAt: DateTime(2026),
               hasCompletedOnboarding: true,
               spendingPersonality: 'balanced',
@@ -124,16 +136,13 @@ void main() {
 
     await tester.pumpAndSettle();
 
-    final chips = tester
-        .widgetList<SelectionChipButton>(find.byType(SelectionChipButton))
-        .toList();
-
-    expect(chips, isNotEmpty);
-    expect(chips.first.avatar, isNotNull);
-    expect(chips.first.avatar, isNot(isA<Icon>()));
+    expect(find.text('Change photo'), findsOneWidget);
+    expect(find.text('Display name'), findsOneWidget);
+    expect(find.text('Email'), findsOneWidget);
+    expect(find.text('AI Personality Intensity'), findsOneWidget);
   });
 
-  testWidgets('profile shows explicit monthly income ranges', (tester) async {
+  testWidgets('profile can save AI personality intensity', (tester) async {
     final userService = _RecordingUserService();
 
     await tester.pumpWidget(
@@ -145,6 +154,7 @@ void main() {
               email: 'profile@example.com',
               currencyCode: 'PHP',
               locale: 'en_US',
+              displayName: 'Arvie Aguirre',
               createdAt: DateTime(2026),
               hasCompletedOnboarding: true,
               spendingPersonality: 'balanced',
@@ -163,10 +173,11 @@ void main() {
 
     await tester.pumpAndSettle();
 
-    expect(find.text('Under PHP 20,000'), findsOneWidget);
-    expect(find.text('PHP 20,000 - PHP 50,000'), findsOneWidget);
-    expect(find.text('PHP 50,000 - PHP 100,000'), findsOneWidget);
-    expect(find.text('Over PHP 100,000'), findsOneWidget);
-    expect(find.text('Prefer not to say'), findsOneWidget);
+    await tester.tap(find.text('Intense'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Save'));
+    await tester.pumpAndSettle();
+
+    expect(userService.lastUpdate?['aiPersonalityIntensity'], 'intense');
   });
 }

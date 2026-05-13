@@ -116,6 +116,20 @@ These screens should stay lighter and more functional:
 - Family invites and member management
 - Receipt review
 
+### Transaction Screen Rules
+
+Transaction screens follow the utility-tier treatment even after the broader redesign.
+
+Rules:
+
+- Transactions list stays in the paper-native utility tier.
+- On iPhone SE, the list uses a single horizontal chip rail and does not add a separate `Personal / Family` segmented control.
+- Add and edit transaction share the same structure.
+- `Merchant` / `Source` and `Date` use the v2 floating-label filled-field treatment.
+- `SCOPE` remains an explicit section label rather than relying on implied context.
+- Category selection stays a single-row horizontal rail on SE.
+- Recurring stays compact by default and expands inline only when enabled.
+
 ### Dark Utility Exception
 
 `Scan Receipt` keeps the dark live-camera treatment, but the chrome should still feel more iOS-native and consistent with the rest of the redesign.

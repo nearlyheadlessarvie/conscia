@@ -52,7 +52,8 @@ class SelectionChipGroup extends StatelessWidget {
     if (scrollable) {
       return SingleChildScrollView(
         scrollDirection: Axis.horizontal,
-        child: Row(children: chips),
+        child:
+            Row(crossAxisAlignment: CrossAxisAlignment.start, children: chips),
       );
     }
 

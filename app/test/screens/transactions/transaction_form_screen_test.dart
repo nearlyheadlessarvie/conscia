@@ -509,7 +509,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Merchant (optional)'), findsOneWidget);
-    expect(find.text('Today'), findsOneWidget);
+    expect(find.byIcon(Icons.calendar_today_outlined), findsOneWidget);
   });
 
   testWidgets('recurring section is always visible and cadence options are hidden by default',
@@ -517,7 +517,7 @@ void main() {
     await tester.pumpWidget(await buildTransactionFormApp(tester));
     await tester.pumpAndSettle();
 
-    expect(find.text('Recurring'), findsOneWidget);
+    expect(find.text('RECURRING'), findsOneWidget);
     expect(find.text('Weekly'), findsNothing);
   });
 
@@ -534,7 +534,8 @@ void main() {
     expect(find.text('Weekly'), findsOneWidget);
     expect(find.text('Monthly'), findsOneWidget);
     expect(find.text('Yearly'), findsOneWidget);
-    expect(find.text('End date (optional)'), findsOneWidget);
+    expect(find.text('END DATE'), findsOneWidget);
+    expect(find.byIcon(Icons.calendar_today_outlined), findsWidgets);
   });
 
   testWidgets('create transaction dto serializes recurring payload', (
