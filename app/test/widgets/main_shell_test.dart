@@ -133,6 +133,13 @@ void main() {
     expect(activeDecoration.shape, BoxShape.circle);
   });
 
+  testWidgets('MainShell exposes a dock overlay layer for transparent underlay',
+      (tester) async {
+    await _pumpShell(tester);
+
+    expect(find.byKey(const ValueKey('main-shell-dock-overlay')), findsOneWidget);
+  });
+
   testWidgets('MainShell does not show a shared add FAB on mobile',
       (tester) async {
     await _pumpShell(tester);

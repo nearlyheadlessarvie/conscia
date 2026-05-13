@@ -412,9 +412,15 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byKey(const ValueKey('floating-dock-nav')), findsOneWidget);
-    expect(find.text('Conscia'), findsOneWidget);
-    expect(find.text('Conscia').hitTestable(), findsOneWidget);
-    expect(find.byTooltip('Notifications').hitTestable(), findsOneWidget);
+    expect(find.byKey(const ValueKey('dashboard-editorial-hero')), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('dashboard-editorial-hero')),
+        matching: find.text('Welcome back'),
+      ),
+      findsOneWidget,
+    );
+    expect(find.byTooltip('Notifications').hitTestable(), findsWidgets);
 
     final router = tester
         .widget<MaterialApp>(find.byType(MaterialApp))

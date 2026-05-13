@@ -74,11 +74,31 @@ class _MainShellState extends ConsumerState<MainShell> {
     final currentIndex = _selectedIndex(location);
 
     return Scaffold(
-      body: widget.child,
-      bottomNavigationBar: FloatingDockNav(
-        currentIndex: currentIndex,
-        onDestinationSelected: (index) =>
-            _onDestinationSelected(context, index),
+      body: Stack(
+        children: [
+          Positioned.fill(child: widget.child),
+          Positioned.fill(
+            child: IgnorePointer(
+              ignoring: true,
+              child: Align(
+                alignment: Alignment.bottomCenter,
+                child: Container(
+                  key: const ValueKey('main-shell-dock-overlay'),
+                ),
+              ),
+            ),
+          ),
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            child: FloatingDockNav(
+              currentIndex: currentIndex,
+              onDestinationSelected: (index) =>
+                  _onDestinationSelected(context, index),
+            ),
+          ),
+        ],
       ),
     );
   }

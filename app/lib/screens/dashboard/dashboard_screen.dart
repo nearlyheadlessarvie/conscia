@@ -2,13 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'dart:ui' show lerpDouble;
 
 import 'package:conscia_app/core/constants/generated/app_constants.g.dart';
 import 'package:conscia_app/core/assets/mascot_sprite_sheet.dart';
 import 'package:conscia_app/core/routing/app_router.dart';
 import 'package:conscia_app/core/theme/app_colors.dart';
 import 'package:conscia_app/models/conscience_journey.dart';
-import 'package:conscia_app/models/insight_feed_item.dart';
 import 'package:conscia_app/providers/alert_provider.dart';
 import 'package:conscia_app/providers/behavioral_insights_provider.dart';
 import 'package:conscia_app/providers/budget_providers.dart';
@@ -16,21 +16,19 @@ import 'package:conscia_app/providers/conscience_journey_provider.dart';
 import 'package:conscia_app/providers/insight_feed_provider.dart';
 import 'package:conscia_app/providers/subscription_provider.dart';
 import 'package:conscia_app/providers/transaction_providers.dart';
+import 'package:conscia_app/providers/user_provider.dart';
 import 'package:conscia_app/providers/usage_provider.dart';
-import 'package:conscia_app/screens/dashboard/widgets/budget_summary_card.dart';
-import 'package:conscia_app/screens/dashboard/widgets/in_app_alert_banner.dart';
-import 'package:conscia_app/screens/dashboard/widgets/budget_warning_banner.dart';
 import 'package:conscia_app/screens/dashboard/widgets/recent_transaction_tile.dart';
 import 'package:conscia_app/screens/dashboard/widgets/regret_prompt_card.dart';
 import 'package:conscia_app/screens/budgets/widgets/budget_form_sheet.dart';
 import 'package:conscia_app/screens/transactions/widgets/transaction_tile.dart';
+import 'package:conscia_app/services/budget_service.dart';
 import 'package:conscia_app/services/transaction_service.dart';
+import 'package:conscia_app/services/user_service.dart';
 import 'package:conscia_app/widgets/empty_state.dart';
 import 'package:conscia_app/widgets/grouped_list_card.dart';
 import 'package:conscia_app/widgets/premium_upgrade_dialog.dart';
 import 'package:conscia_app/widgets/skeleton_loader.dart';
-import 'dart:async';
-
 class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
 
@@ -39,7 +37,6 @@ class DashboardScreen extends ConsumerStatefulWidget {
 }
 
 class _DashboardScreenState extends ConsumerState<DashboardScreen> {
-  bool _bannerDismissed = false;
   final Set<String> _dismissedPrompts = {};
 
   Future<void> _onRefresh() async {
@@ -117,22 +114,22 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     context.push(alert.actionRoute ?? AppRoutes.budgets);
   }
 
-  void _showNotificationsSheet() {
+  void _showNotificationsSheet(List<AppAlert> initialAlerts) {
     showModalBottomSheet(
       context: context,
       useRootNavigator: true,
       useSafeArea: true,
       isScrollControlled: true,
       builder: (sheetContext) {
+        var sheetAlerts = initialAlerts;
         return DraggableScrollableSheet(
           expand: false,
           initialChildSize: 0.62,
           minChildSize: 0.32,
           maxChildSize: 0.9,
           builder: (context, scrollController) {
-            return Consumer(
-              builder: (context, ref, _) {
-                final alerts = ref.watch(activeAlertsProvider);
+            return StatefulBuilder(
+              builder: (context, setSheetState) {
                 final colors = Theme.of(context).colorScheme;
                 final textTheme = Theme.of(context).textTheme;
 
@@ -159,7 +156,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      alerts.isEmpty
+                      sheetAlerts.isEmpty
                           ? 'Nothing needs your attention right now.'
                           : 'The latest nudges and reminders from Conscia.',
                       style: textTheme.bodySmall?.copyWith(
@@ -167,14 +164,14 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                       ),
                     ),
                     const SizedBox(height: 16),
-                    if (alerts.isEmpty)
+                    if (sheetAlerts.isEmpty)
                       const EmptyState(
                         icon: Icons.notifications_none_rounded,
                         title: 'All clear',
                         subtitle: 'New reminders will show up here.',
                       )
                     else
-                      for (final alert in alerts) ...[
+                      for (final alert in sheetAlerts) ...[
                         _NotificationListTile(
                           alert: alert,
                           onAction: alert.actionLabel == null &&
@@ -184,9 +181,16 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                                   Navigator.of(sheetContext).pop();
                                   _handleAlertAction(alert);
                                 },
-                          onDismiss: () => ref
-                              .read(dismissedAlertIdsProvider.notifier)
-                              .dismiss(alert.id),
+                          onDismiss: () {
+                            ref
+                                .read(dismissedAlertIdsProvider.notifier)
+                                .dismiss(alert.id);
+                            setSheetState(() {
+                              sheetAlerts = sheetAlerts
+                                  .where((item) => item.id != alert.id)
+                                  .toList(growable: false);
+                            });
+                          },
                         ),
                         const SizedBox(height: 10),
                       ],
@@ -202,18 +206,16 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
     final budgetState = ref.watch(budgetListProvider);
     final txState = ref.watch(transactionListProvider);
     final insightSummaryState = ref.watch(dashboardInsightSummaryProvider);
     final journeyState = ref.watch(conscienceJourneyProvider);
-    final alerts = ref.watch(activeAlertsProvider);
+    final profile = ref.watch(currentUserProvider).valueOrNull;
+    final alerts = _visibleAlerts(ref.watch(activeAlertsProvider), budgetState.budgets);
 
     final budgets = budgetState.budgets;
     final transactions = txState.transactions;
     final recentTransactions = transactions.take(5).toList();
-    final highlightedAlert = alerts.isNotEmpty ? alerts.first : null;
     final insightSummary = insightSummaryState.valueOrNull;
     final journey = journeyState.valueOrNull;
     final regretPrompts = transactions
@@ -223,8 +225,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             !_dismissedPrompts.contains(t.id))
         .take(3)
         .toList();
-
-    final overBudgetCount = budgets.where((b) => b.percentage >= 0.8).length;
+    final greetingName = _greetingName(profile);
+    final monthExpenseTotal = _currentMonthExpenseTotal(transactions);
 
     return RefreshIndicator(
       onRefresh: _onRefresh,
@@ -232,63 +234,32 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         key: const PageStorageKey('dashboard-shell-scroll'),
         physics: const AlwaysScrollableScrollPhysics(),
         slivers: [
-          SliverAppBar(
-            floating: true,
-            pinned: true,
-            title: Text(
-              'Conscia',
-              style: GoogleFonts.poppins(
-                textStyle: textTheme.titleLarge,
-                color: colors.primary,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            actions: [
-              IconButton(
-                tooltip: 'Notifications',
-                icon: _NotificationBell(count: alerts.length),
-                onPressed: _showNotificationsSheet,
-              ),
-            ],
-          ),
-          if (overBudgetCount > 0 && !_bannerDismissed)
-            SliverToBoxAdapter(
-              child: BudgetWarningBanner(
-                overBudgetCount: overBudgetCount,
-                onDismiss: () => setState(() => _bannerDismissed = true),
-              ),
-            ),
-          if (highlightedAlert != null)
-            SliverToBoxAdapter(
-              child: InAppAlertBanner(
-                title: highlightedAlert.title,
-                message: highlightedAlert.message,
-                actionLabel: highlightedAlert.actionLabel ??
-                    (highlightedAlert.type == 'budget_nudge'
-                        ? 'Add budget'
-                        : null),
-                onAction: (highlightedAlert.actionRoute == null &&
-                        highlightedAlert.type != 'budget_nudge')
-                    ? null
-                    : () => _handleAlertAction(highlightedAlert),
-                onDismiss: () => ref
-                    .read(dismissedAlertIdsProvider.notifier)
-                    .dismiss(highlightedAlert.id),
-              ),
-            ),
           SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-              child: _DashboardEditorialHeroCard(
-                journey: journey,
-                summary: insightSummary,
-                loading:
-                    (journeyState.isLoading && journey == null) ||
-                    (insightSummaryState.isLoading && insightSummary == null),
-                onJourneyTap: () => context.push(AppRoutes.journey),
-                onInsightsTap: insightSummary == null
-                    ? null
-                    : () => context.push(AppRoutes.insights),
+            child: _DashboardEditorialHeroCard(
+              profile: profile,
+              greetingName: greetingName,
+              alertsCount: alerts.length,
+              monthExpenseTotal: monthExpenseTotal,
+              journey: journey,
+              summary: insightSummary,
+              loading:
+                  (journeyState.isLoading && journey == null) ||
+                  (insightSummaryState.isLoading && insightSummary == null),
+              onNotificationsTap: () => _showNotificationsSheet(alerts),
+              onJourneyTap: () => context.push(AppRoutes.journey),
+              onInsightsTap: () => context.push(AppRoutes.insights),
+              onAddTransactionTap: () => context.push(AppRoutes.addTransaction),
+            ),
+          ),
+          SliverPersistentHeader(
+            pinned: true,
+            delegate: _DashboardStickyHeaderDelegate(
+              topPadding: MediaQuery.paddingOf(context).top,
+              child: _DashboardStickyIdentityHeader(
+                profile: profile,
+                greetingName: greetingName,
+                alertsCount: alerts.length,
+                onNotificationsTap: () => _showNotificationsSheet(alerts),
               ),
             ),
           ),
@@ -296,15 +267,15 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             child: _buildSectionHeader(context, 'Budgets'),
           ),
           if (budgetState.isLoading && budgets.isEmpty)
-            SliverToBoxAdapter(
-              child: SizedBox(
-                height: 160,
-                child: ListView.separated(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  itemCount: 3,
-                  separatorBuilder: (_, __) => const SizedBox(width: 12),
-                  itemBuilder: (_, __) => const BudgetSummarySkeletonCard(),
+            const SliverPadding(
+              padding: EdgeInsets.symmetric(horizontal: 20),
+              sliver: SliverToBoxAdapter(
+                child: GroupedListCard(
+                  children: [
+                    BudgetSummarySkeletonCard(),
+                    BudgetSummarySkeletonCard(),
+                    BudgetSummarySkeletonCard(),
+                  ],
                 ),
               ),
             )
@@ -319,28 +290,25 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               ),
             )
           else
-            SliverToBoxAdapter(
-              child: SizedBox(
-                height: 160,
-                child: ListView.separated(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  itemCount: budgets.length,
-                  separatorBuilder: (_, __) => const SizedBox(width: 12),
-                  itemBuilder: (context, index) {
-                    final b = budgets[index];
-                    return BudgetSummaryCard(
-                      categoryBadge: TransactionTile.badgeFor(
-                        b.category,
-                        size: 16,
-                        filled: false,
+            SliverPadding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              sliver: SliverToBoxAdapter(
+                child: GroupedListCard(
+                  children: [
+                    for (final budget in budgets.take(4))
+                      _BudgetSummaryRow(
+                        categoryBadge: TransactionTile.badgeFor(
+                          budget.category,
+                          size: 18,
+                          filled: false,
+                        ),
+                        categoryName: budget.category,
+                        spent: budget.spent,
+                        limit: budget.monthlyLimit,
+                        currencyCode: budget.currencyCode,
+                        percentage: budget.percentage,
                       ),
-                      categoryName: b.category,
-                      spent: b.spent,
-                      limit: b.monthlyLimit,
-                      currencyCode: b.currencyCode,
-                    );
-                  },
+                  ],
                 ),
               ),
             ),
@@ -349,7 +317,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               child: _buildSectionHeader(context, 'Reflect'),
             ),
             SliverPadding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
+              padding: const EdgeInsets.symmetric(horizontal: 20),
               sliver: SliverList.builder(
                 itemCount: regretPrompts.length,
                 itemBuilder: (context, index) {
@@ -399,7 +367,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             )
           else
             SliverPadding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
+              padding: const EdgeInsets.symmetric(horizontal: 20),
               sliver: SliverToBoxAdapter(
                 child: GroupedListCard(
                   children: [
@@ -424,15 +392,46 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 ),
               ),
             ),
-          const SliverPadding(padding: EdgeInsets.only(bottom: 80)),
+          const SliverPadding(padding: EdgeInsets.only(bottom: 112)),
         ],
       ),
     );
   }
 
+  String _greetingName(UserProfile? profile) {
+    final displayName = profile?.displayName?.trim();
+    if (displayName != null && displayName.isNotEmpty) {
+      return displayName;
+    }
+    final email = profile?.email.trim();
+    if (email != null && email.isNotEmpty) {
+      return email.split('@').first;
+    }
+    return 'there';
+  }
+
+  double _currentMonthExpenseTotal(List<Transaction> transactions) {
+    final now = DateTime.now();
+    return transactions
+        .where((t) => t.type != 'income')
+        .where((t) => t.date.year == now.year && t.date.month == now.month)
+        .fold(0.0, (sum, t) => sum + t.amount.abs());
+  }
+
+  List<AppAlert> _visibleAlerts(List<AppAlert> alerts, List<Budget> budgets) {
+    final budgetCategories = budgets.map((budget) => budget.category.toLowerCase()).toSet();
+    return alerts.where((alert) {
+      if (alert.type != 'budget_nudge') {
+        return true;
+      }
+      final category = alert.category?.toLowerCase();
+      return category == null || !budgetCategories.contains(category);
+    }).toList(growable: false);
+  }
+
   Widget _buildSectionHeader(BuildContext context, String title) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 24, 16, 12),
+      padding: const EdgeInsets.fromLTRB(20, 24, 20, 12),
       child: Text(
         title,
         style: Theme.of(context).textTheme.titleMedium?.copyWith(
@@ -445,18 +444,30 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
 class _DashboardEditorialHeroCard extends StatelessWidget {
   const _DashboardEditorialHeroCard({
+    required this.profile,
+    required this.greetingName,
+    required this.alertsCount,
+    required this.monthExpenseTotal,
     required this.journey,
     required this.summary,
     required this.loading,
+    required this.onNotificationsTap,
     required this.onJourneyTap,
-    this.onInsightsTap,
+    required this.onInsightsTap,
+    required this.onAddTransactionTap,
   });
 
+  final UserProfile? profile;
+  final String greetingName;
+  final int alertsCount;
+  final double monthExpenseTotal;
   final ConscienceJourneySummary? journey;
   final DashboardInsightSummary? summary;
   final bool loading;
+  final VoidCallback onNotificationsTap;
   final VoidCallback onJourneyTap;
-  final VoidCallback? onInsightsTap;
+  final VoidCallback onInsightsTap;
+  final VoidCallback onAddTransactionTap;
 
   @override
   Widget build(BuildContext context) {
@@ -469,61 +480,65 @@ class _DashboardEditorialHeroCard extends StatelessWidget {
 
     return Container(
       key: const ValueKey('dashboard-editorial-hero'),
-      padding: const EdgeInsets.all(20),
+      width: double.infinity,
+      padding: EdgeInsets.fromLTRB(
+        20,
+        MediaQuery.paddingOf(context).top + 16,
+        20,
+        28,
+      ),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            colors.deepNavy,
-            colors.family,
+            colors.amberSoft,
+            colors.paper,
+            colors.navySoft,
           ],
         ),
-        borderRadius: BorderRadius.circular(28),
+        borderRadius: const BorderRadius.vertical(
+          bottom: Radius.circular(32),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Your Journey',
-                      style: textTheme.titleLarge?.copyWith(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      journey?.currentLevel.title ?? 'Conscia is warming up',
-                      style: textTheme.headlineSmall?.copyWith(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      journey == null
-                          ? 'Your spending story will start taking shape as activity comes in.'
-                          : journey!.nextLevel == null
-                              ? '${journey!.xpTotal} XP earned so far.'
-                              : '${journey!.xpTotal} XP · ${journey!.xpToNextLevel} to ${journey!.nextLevel!.title}',
-                      style: textTheme.bodyMedium?.copyWith(
-                        color: Colors.white.withValues(alpha: 0.88),
-                        height: 1.35,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 12),
-              const _JourneyCardMascots(),
-            ],
+          _DashboardIdentityRow(
+            profile: profile,
+            greetingName: greetingName,
+            alertsCount: alertsCount,
+            onNotificationsTap: onNotificationsTap,
+          ),
+          const SizedBox(height: 18),
+          Text(
+            'Spent this month',
+            style: textTheme.bodyMedium?.copyWith(
+              color: colors.mutedInk,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            monthExpenseTotal <= 0
+                ? 'PHP 0.00'
+                : 'PHP ${monthExpenseTotal.toStringAsFixed(2)}',
+            style: GoogleFonts.inter(
+              textStyle: textTheme.displaySmall,
+              color: colors.ink,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            summary?.text ??
+                (journey == null
+                    ? 'Conscia will turn your next few transactions into a clearer monthly story.'
+                    : '${journey!.momentumDays}-day mindful streak · ${_DashboardJourneyCard._completedQuestCount(journey!.weeklyQuests)}/${journey!.weeklyQuests.length} quests this week'),
+            style: textTheme.bodyMedium?.copyWith(
+              color: colors.mutedInk,
+              height: 1.35,
+            ),
           ),
           const SizedBox(height: 18),
           Row(
@@ -534,6 +549,8 @@ class _DashboardEditorialHeroCard extends StatelessWidget {
                   label: journey == null
                       ? '0-day streak'
                       : '${journey!.momentumDays}-day streak',
+                  backgroundColor: colors.surfaceRaised.withValues(alpha: 0.75),
+                  foregroundColor: colors.deepNavy,
                 ),
               ),
               const SizedBox(width: 10),
@@ -543,66 +560,38 @@ class _DashboardEditorialHeroCard extends StatelessWidget {
                   label: journey == null
                       ? '0/0 quests'
                       : '${_DashboardJourneyCard._completedQuestCount(journey!.weeklyQuests)}/${journey!.weeklyQuests.length} quests',
+                  backgroundColor: colors.surfaceRaised.withValues(alpha: 0.75),
+                  foregroundColor: colors.deepNavy,
                 ),
               ),
             ],
           ),
-          if (summary != null) ...[
-            const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.14),
-                borderRadius: BorderRadius.circular(18),
-                border: Border.all(
-                  color: Colors.white.withValues(alpha: 0.12),
-                ),
-              ),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _SummaryMascot(tone: summary!.tone),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      summary!.text,
-                      style: textTheme.bodyMedium?.copyWith(
-                        color: Colors.white,
-                        height: 1.35,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-          const SizedBox(height: 16),
+          const SizedBox(height: 18),
           Row(
             children: [
               Expanded(
-                child: OutlinedButton(
+                child: _DashboardQuickLink(
+                  icon: Icons.flag_rounded,
+                  label: 'Journey',
                   onPressed: onJourneyTap,
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: Colors.white,
-                    side: BorderSide(color: Colors.white.withValues(alpha: 0.2)),
-                  ),
-                  child: const Text('Open Journey'),
                 ),
               ),
-              if (onInsightsTap != null) ...[
-                const SizedBox(width: 10),
-                Expanded(
-                  child: FilledButton.tonal(
-                    onPressed: onInsightsTap,
-                    style: FilledButton.styleFrom(
-                      backgroundColor: Colors.white,
-                      foregroundColor: colors.deepNavy,
-                    ),
-                    child: const Text('View Insights'),
-                  ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _DashboardQuickLink(
+                  icon: Icons.auto_graph_rounded,
+                  label: 'Insights',
+                  onPressed: onInsightsTap,
                 ),
-              ],
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _DashboardQuickLink(
+                  icon: Icons.add_rounded,
+                  label: 'Add',
+                  onPressed: onAddTransactionTap,
+                ),
+              ),
             ],
           ),
         ],
@@ -615,30 +604,34 @@ class _HeroMetricPill extends StatelessWidget {
   const _HeroMetricPill({
     required this.icon,
     required this.label,
+    required this.backgroundColor,
+    required this.foregroundColor,
   });
 
   final IconData icon;
   final String label;
+  final Color backgroundColor;
+  final Color foregroundColor;
 
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.12),
+        color: backgroundColor,
         borderRadius: BorderRadius.circular(999),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(icon, size: 15, color: Colors.white),
+          Icon(icon, size: 15, color: foregroundColor),
           const SizedBox(width: 6),
           Flexible(
             child: Text(
               label,
               overflow: TextOverflow.ellipsis,
               style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                    color: Colors.white,
+                    color: foregroundColor,
                     fontWeight: FontWeight.w700,
                   ),
             ),
@@ -646,6 +639,303 @@ class _HeroMetricPill extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+class _DashboardQuickLink extends StatelessWidget {
+  const _DashboardQuickLink({
+    required this.icon,
+    required this.label,
+    required this.onPressed,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).appColors;
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(18),
+        onTap: onPressed,
+        child: Ink(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+          decoration: BoxDecoration(
+            color: colors.surfaceRaised.withValues(alpha: 0.82),
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: colors.border.withValues(alpha: 0.7)),
+          ),
+          child: Column(
+            children: [
+              Icon(icon, size: 18, color: colors.deepNavy),
+              const SizedBox(height: 6),
+              Text(
+                label,
+                style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                      color: colors.deepNavy,
+                      fontWeight: FontWeight.w700,
+                    ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _DashboardStickyHeaderDelegate extends SliverPersistentHeaderDelegate {
+  const _DashboardStickyHeaderDelegate({
+    required this.topPadding,
+    required this.child,
+  });
+
+  final double topPadding;
+  final Widget child;
+
+  @override
+  double get minExtent => topPadding + 68;
+
+  @override
+  double get maxExtent => topPadding + 84;
+
+  @override
+  Widget build(
+      BuildContext context, double shrinkOffset, bool overlapsContent) {
+    final progress =
+        (shrinkOffset / (maxExtent - minExtent)).clamp(0.0, 1.0).toDouble();
+    final colors = Theme.of(context).appColors;
+
+    return Container(
+      key: const ValueKey('dashboard-sticky-identity-header'),
+      decoration: BoxDecoration(
+        color: colors.paper.withValues(alpha: lerpDouble(0.0, 0.94, progress)!),
+        border: progress > 0.35
+            ? Border(bottom: BorderSide(color: colors.border))
+            : null,
+      ),
+      child: SafeArea(
+        bottom: false,
+        child: Align(
+          alignment: Alignment.bottomCenter,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 10),
+            child: child,
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
+  bool shouldRebuild(covariant _DashboardStickyHeaderDelegate oldDelegate) {
+    return topPadding != oldDelegate.topPadding || child != oldDelegate.child;
+  }
+}
+
+class _DashboardStickyIdentityHeader extends StatelessWidget {
+  const _DashboardStickyIdentityHeader({
+    required this.profile,
+    required this.greetingName,
+    required this.alertsCount,
+    required this.onNotificationsTap,
+  });
+
+  final UserProfile? profile;
+  final String greetingName;
+  final int alertsCount;
+  final VoidCallback onNotificationsTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return _DashboardIdentityRow(
+      profile: profile,
+      greetingName: greetingName,
+      alertsCount: alertsCount,
+      onNotificationsTap: onNotificationsTap,
+      compact: true,
+    );
+  }
+}
+
+class _DashboardIdentityRow extends StatelessWidget {
+  const _DashboardIdentityRow({
+    required this.profile,
+    required this.greetingName,
+    required this.alertsCount,
+    required this.onNotificationsTap,
+    this.compact = false,
+  });
+
+  final UserProfile? profile;
+  final String greetingName;
+  final int alertsCount;
+  final VoidCallback onNotificationsTap;
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).appColors;
+    final textTheme = Theme.of(context).textTheme;
+
+    return Row(
+      children: [
+        _ProfileAvatar(photoUrl: profile?.photoUrl, compact: compact),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Welcome back',
+                style: textTheme.bodySmall?.copyWith(
+                  color: colors.mutedInk,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                greetingName,
+                style: GoogleFonts.poppins(
+                  textStyle:
+                      compact ? textTheme.titleMedium : textTheme.headlineSmall,
+                  color: colors.ink,
+                  fontWeight: FontWeight.w700,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(width: 12),
+        Material(
+          color: colors.surfaceRaised.withValues(alpha: compact ? 0.72 : 0.92),
+          shape: const CircleBorder(),
+          child: IconButton(
+            tooltip: 'Notifications',
+            onPressed: onNotificationsTap,
+            icon: _NotificationBell(count: alertsCount),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ProfileAvatar extends StatelessWidget {
+  const _ProfileAvatar({
+    required this.photoUrl,
+    required this.compact,
+  });
+
+  final String? photoUrl;
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).appColors;
+    final radius = compact ? 20.0 : 24.0;
+
+    return CircleAvatar(
+      radius: radius,
+      backgroundColor: colors.surfaceRaised,
+      foregroundImage:
+          photoUrl != null && photoUrl!.isNotEmpty ? NetworkImage(photoUrl!) : null,
+      child: Icon(
+        Icons.person_rounded,
+        size: compact ? 20 : 24,
+        color: colors.deepNavy,
+      ),
+    );
+  }
+}
+
+class _BudgetSummaryRow extends StatelessWidget {
+  const _BudgetSummaryRow({
+    required this.categoryBadge,
+    required this.categoryName,
+    required this.spent,
+    required this.limit,
+    required this.currencyCode,
+    required this.percentage,
+  });
+
+  final Widget categoryBadge;
+  final String categoryName;
+  final double spent;
+  final double limit;
+  final String currencyCode;
+  final double percentage;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).appColors;
+    final textTheme = Theme.of(context).textTheme;
+
+    return InkWell(
+      onTap: () => context.push('/settings/budgets'),
+      borderRadius: BorderRadius.circular(16),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 2),
+        child: Row(
+          children: [
+            categoryBadge,
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    categoryName,
+                    style: textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'PHP ${spent.toStringAsFixed(0)} / ${limit.toStringAsFixed(0)}',
+                    style: textTheme.bodySmall?.copyWith(
+                      color: colors.mutedInk,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(999),
+                    child: LinearProgressIndicator(
+                      minHeight: 6,
+                      value: percentage.clamp(0.0, 1.0),
+                      backgroundColor: colors.border,
+                      valueColor:
+                          AlwaysStoppedAnimation<Color>(_budgetColor(colors)),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 12),
+            Text(
+              '${(percentage * 100).round()}%',
+              style: textTheme.labelMedium?.copyWith(
+                color: _budgetColor(colors),
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Color _budgetColor(AppColors colors) {
+    if (percentage >= 1) return colors.budgetDanger;
+    if (percentage >= 0.8) return colors.budgetWarning;
+    if (percentage >= 0.6) return colors.budgetCaution;
+    return colors.budgetHealthy;
   }
 }
 
@@ -856,30 +1146,6 @@ class _NotificationBell extends StatelessWidget {
             ),
           ),
       ],
-    );
-  }
-}
-
-class _SummaryMascot extends StatelessWidget {
-  const _SummaryMascot({
-    required this.tone,
-  });
-
-  final InsightFeedTone tone;
-
-  @override
-  Widget build(BuildContext context) {
-    final (atlas, frameName) = switch (tone) {
-      InsightFeedTone.positive => (angelMascotAtlas, '4_win.png'),
-      InsightFeedTone.caution => (devilMascotAtlas, '9_coin.png'),
-      InsightFeedTone.urgent => (devilMascotAtlas, '14_frustrated.png'),
-      InsightFeedTone.neutral => (angelMascotAtlas, '1_neutral.png'),
-    };
-
-    return MascotSpriteFrame(
-      atlas: atlas,
-      frameName: frameName,
-      width: 64,
     );
   }
 }

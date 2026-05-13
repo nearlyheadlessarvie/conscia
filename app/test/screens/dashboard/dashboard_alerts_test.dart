@@ -1,5 +1,4 @@
 import 'package:conscia_app/models/insight_feed_item.dart';
-import 'package:conscia_app/core/assets/mascot_sprite_sheet.dart';
 import 'package:conscia_app/providers/alert_provider.dart';
 import 'package:conscia_app/providers/behavioral_insights_provider.dart';
 import 'package:conscia_app/models/behavioral_insights.dart';
@@ -86,6 +85,7 @@ class _LocalAlertsTestNotifier extends LocalAlertsNotifier {
 final _testUser = UserProfile(
   id: 'user-1',
   email: 'test@example.com',
+  displayName: 'Arvie Aguirre',
   currencyCode: 'PHP',
   locale: 'en_PH',
   createdAt: DateTime.utc(2026, 5, 1),
@@ -291,6 +291,7 @@ void main() {
         transactionServiceProvider.overrideWithValue(
           _StaticTransactionService(transactions),
         ),
+        currentUserProvider.overrideWith((ref) async => _testUser),
         behavioralInsightsProvider.overrideWith((ref) async => null),
         insightsSummaryProvider.overrideWith((ref) async => null),
         insightsCategoriesProvider.overrideWith((ref) async => const []),
@@ -305,8 +306,9 @@ void main() {
     await tester.pumpWidget(_buildApp(container));
     await tester.pumpAndSettle();
 
-    final headerFinder = find.text('Conscia');
-    expect(headerFinder.hitTestable(), findsOneWidget);
+    final headerFinder =
+        find.byKey(const ValueKey('dashboard-sticky-identity-header'));
+    expect(headerFinder, findsOneWidget);
 
     await tester.drag(find.byType(CustomScrollView), const Offset(0, -600));
     await tester.pumpAndSettle();
@@ -354,6 +356,166 @@ void main() {
       find.byKey(const ValueKey('dashboard-editorial-hero')),
       findsOneWidget,
     );
+  });
+
+  testWidgets('dashboard shows editorial hero before utility sections',
+      (tester) async {
+    final container = ProviderContainer(
+      overrides: [
+        sharedPreferencesProvider.overrideWithValue(prefs),
+        budgetServiceProvider.overrideWithValue(
+          _StaticBudgetService(const [
+            Budget(
+              id: 'budget-1',
+              category: 'Dining',
+              monthlyLimit: 5000,
+              spent: 2400,
+              currencyCode: 'PHP',
+              percentage: 0.48,
+              isOverBudget: false,
+            ),
+          ]),
+        ),
+        transactionServiceProvider.overrideWithValue(
+          _StaticTransactionService([
+            Transaction(
+              id: 'tx-1',
+              amount: 350,
+              currencyCode: 'PHP',
+              category: 'Dining',
+              description: 'Starbucks',
+              type: 'expense',
+              date: DateTime(2026, 5, 10),
+            ),
+          ]),
+        ),
+        currentUserProvider.overrideWith((ref) async => _testUser),
+        behavioralInsightsProvider.overrideWith((ref) async => null),
+        insightsSummaryProvider.overrideWith((ref) async => null),
+        insightsCategoriesProvider.overrideWith((ref) async => const []),
+        insightsMerchantsProvider.overrideWith((ref) async => const []),
+        localAlertsProvider.overrideWith(
+          (ref) => _LocalAlertsTestNotifier(const []),
+        ),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    await tester.pumpWidget(_buildApp(container));
+    await tester.pumpAndSettle();
+
+    final hero = find.byKey(const ValueKey('dashboard-editorial-hero'));
+    final budgets = find.text('Budgets');
+
+    expect(hero, findsOneWidget);
+    expect(budgets, findsOneWidget);
+    expect(tester.getTopLeft(hero).dy, lessThan(tester.getTopLeft(budgets).dy));
+  });
+
+  testWidgets('dashboard uses a personal welcome header', (tester) async {
+    final container = ProviderContainer(
+      overrides: [
+        sharedPreferencesProvider.overrideWithValue(prefs),
+        budgetServiceProvider.overrideWithValue(_StaticBudgetService(const [])),
+        transactionServiceProvider
+            .overrideWithValue(_StaticTransactionService()),
+        currentUserProvider.overrideWith((ref) async => _testUser),
+        behavioralInsightsProvider.overrideWith((ref) async => null),
+        insightsSummaryProvider.overrideWith((ref) async => null),
+        insightsCategoriesProvider.overrideWith((ref) async => const []),
+        insightsMerchantsProvider.overrideWith((ref) async => const []),
+        localAlertsProvider.overrideWith(
+          (ref) => _LocalAlertsTestNotifier(const []),
+        ),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    await tester.pumpWidget(_buildApp(container));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('dashboard-editorial-hero')),
+        matching: find.text('Welcome back'),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('dashboard-editorial-hero')),
+        matching: find.text('Arvie Aguirre'),
+      ),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('dashboard does not render in-feed alert banners',
+      (tester) async {
+    final container = ProviderContainer(
+      overrides: [
+        sharedPreferencesProvider.overrideWithValue(prefs),
+        budgetServiceProvider.overrideWithValue(
+          _StaticBudgetService(const [
+            Budget(
+              id: 'budget-1',
+              category: 'Dining',
+              monthlyLimit: 500,
+              spent: 450,
+              currencyCode: 'PHP',
+              percentage: 0.9,
+              isOverBudget: false,
+            ),
+          ]),
+        ),
+        transactionServiceProvider
+            .overrideWithValue(_StaticTransactionService()),
+        currentUserProvider.overrideWith((ref) async => _testUser),
+        behavioralInsightsProvider.overrideWith((ref) async => null),
+        insightsSummaryProvider.overrideWith((ref) async => null),
+        insightsCategoriesProvider.overrideWith((ref) async => const []),
+        insightsMerchantsProvider.overrideWith((ref) async => const []),
+        alertsProvider.overrideWith((ref) async => [
+              AppAlert(
+                id: 'reflection-follow-up-tx-1',
+                type: 'ReflectionFollowUp',
+                title: 'This purchase still deserves a second look',
+                message:
+                    'A reflection can help you spot what was really going on.',
+                priority: 50,
+                actionLabel: 'Reflect now',
+                actionRoute: AppRoutes.transactionDetail('tx-1'),
+                transactionId: 'tx-1',
+                isDismissed: false,
+                createdAt: DateTime.utc(2026, 5, 9),
+              ),
+            ]),
+        localAlertsProvider.overrideWith(
+          (ref) => _LocalAlertsTestNotifier(
+            [
+              AppAlert(
+                id: 'budget-nudge-dining',
+                type: 'budget_nudge',
+                title: 'No budget for Dining yet',
+                message:
+                    'You logged an expense in Dining without a matching budget.',
+                category: 'Dining',
+                isDismissed: false,
+                createdAt: DateTime(2026, 5, 7),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    await tester.pumpWidget(_buildApp(container));
+    await tester.pumpAndSettle();
+
+    expect(find.text('No budget for Dining yet'), findsNothing);
+    expect(find.text('This purchase still deserves a second look'),
+        findsNothing);
   });
 
   testWidgets('dashboard insight loading state matches summary card shape',
@@ -495,12 +657,11 @@ void main() {
     );
     expect(find.byKey(const ValueKey('dashboard-editorial-hero')),
         findsOneWidget);
-    expect(find.byType(MascotSpriteFrame), findsWidgets);
     expect(find.text('Your financial mood is confident'), findsNothing);
     expect(find.text('More insights inside'), findsNothing);
     expect(find.byTooltip('Dismiss insight'), findsNothing);
 
-    await tester.tap(find.text('View Insights'));
+    await tester.tap(find.text('Insights'));
     await tester.pumpAndSettle();
 
     expect(find.text('Insights placeholder'), findsOneWidget);
@@ -555,9 +716,9 @@ void main() {
     await tester.pumpWidget(_buildApp(container));
     await tester.pumpAndSettle();
 
-    expect(find.text('2'), findsOneWidget);
+    expect(find.text('2'), findsNWidgets(2));
 
-    await tester.tap(find.byTooltip('Notifications'));
+    await tester.tap(find.byTooltip('Notifications').hitTestable().first);
     await tester.pumpAndSettle();
 
     expect(find.text('Notifications'), findsOneWidget);
@@ -589,14 +750,14 @@ void main() {
 
     expect(find.text('Shell nav').hitTestable(), findsOneWidget);
 
-    await tester.tap(find.byTooltip('Notifications'));
+    await tester.tap(find.byTooltip('Notifications').hitTestable().first);
     await tester.pumpAndSettle();
 
     expect(find.text('Notifications'), findsOneWidget);
     expect(find.text('Shell nav').hitTestable(), findsNothing);
   });
 
-  testWidgets('dashboard surfaces local budget nudges with a budget CTA',
+  testWidgets('notification sheet surfaces local budget nudges with a budget CTA',
       (tester) async {
     final container = ProviderContainer(
       overrides: [
@@ -633,6 +794,11 @@ void main() {
     await tester.pumpWidget(_buildApp(container));
     await tester.pumpAndSettle();
 
+    expect(find.text('No budget for Dining yet'), findsNothing);
+
+    await tester.tap(find.byTooltip('Notifications').hitTestable().first);
+    await tester.pumpAndSettle();
+
     expect(find.text('No budget for Dining yet'), findsOneWidget);
     expect(find.text('Add budget'), findsOneWidget);
 
@@ -652,7 +818,8 @@ void main() {
     expect(container.read(activeAlertsProvider), hasLength(1));
   });
 
-  testWidgets('dashboard can dismiss a local budget nudge', (tester) async {
+  testWidgets('notification sheet can dismiss a local budget nudge',
+      (tester) async {
     final container = ProviderContainer(
       overrides: [
         sharedPreferencesProvider.overrideWithValue(prefs),
@@ -685,14 +852,20 @@ void main() {
     await tester.pumpWidget(_buildApp(container));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byIcon(Icons.close).first);
+    expect(find.text('No budget for Dining yet'), findsNothing);
+
+    await tester.tap(find.byTooltip('Notifications').hitTestable().first);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('Dismiss notification').first);
     await tester.pumpAndSettle();
 
     expect(find.text('No budget for Dining yet'), findsNothing);
-    expect(container.read(activeAlertsProvider), isEmpty);
+    expect(find.text('Notifications'), findsOneWidget);
   });
 
-  testWidgets('dashboard hides a budget nudge once a matching budget exists',
+  testWidgets(
+      'matching-budget nudges stay in notifications instead of rendering in the feed',
       (tester) async {
     final container = ProviderContainer(
       overrides: [
@@ -725,6 +898,7 @@ void main() {
                 title: 'No budget for Gaming yet',
                 message:
                     'You logged an expense in Gaming without a matching budget.',
+                category: 'Gaming',
                 isDismissed: false,
                 createdAt: DateTime(2026, 5, 7),
               ),
@@ -739,10 +913,14 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('No budget for Gaming yet'), findsNothing);
-    expect(container.read(activeAlertsProvider), isEmpty);
+
+    await tester.tap(find.byTooltip('Notifications').hitTestable().first);
+    await tester.pumpAndSettle();
+
+    expect(find.text('No budget for Gaming yet'), findsOneWidget);
   });
 
-  testWidgets('dashboard prioritizes remote regret alerts above local nudges',
+  testWidgets('notification sheet prioritizes remote regret alerts above local nudges',
       (tester) async {
     final container = ProviderContainer(
       overrides: [
@@ -789,12 +967,18 @@ void main() {
     await tester.pumpWidget(_buildApp(container));
     await tester.pumpAndSettle();
 
-    expect(find.text('Dining keeps turning into regret'), findsOneWidget);
+    expect(find.text('Dining keeps turning into regret'), findsNothing);
     expect(find.text('No budget for Dining yet'), findsNothing);
+
+    await tester.tap(find.byTooltip('Notifications').hitTestable().first);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Dining keeps turning into regret'), findsOneWidget);
+    expect(find.text('No budget for Dining yet'), findsOneWidget);
   });
 
   testWidgets(
-      'dashboard reflection alert dismisses and routes to detail with auto reflect',
+      'notification sheet reflection alert dismisses and routes to detail with auto reflect',
       (tester) async {
     final container = ProviderContainer(
       overrides: [
@@ -829,6 +1013,11 @@ void main() {
     addTearDown(container.dispose);
 
     await tester.pumpWidget(_buildApp(container));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Reflect now'), findsNothing);
+
+    await tester.tap(find.byTooltip('Notifications').hitTestable().first);
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('Reflect now'));
