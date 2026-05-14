@@ -994,4 +994,21 @@ void main() {
     await tester.pump(const Duration(seconds: 30));
     await tester.pumpAndSettle();
   });
+
+  testWidgets('input hero bleeds full width with bottom-only radius',
+      (tester) async {
+    await tester.pumpWidget(await buildPrePurchaseApp(tester));
+    await tester.pumpAndSettle();
+
+    final hero = find.byKey(const ValueKey('assistant-hero-bleed'));
+    expect(hero, findsOneWidget);
+
+    // Hero spans the full screen width
+    final heroWidth = tester.getSize(hero).width;
+    final screenWidth = tester.getSize(find.byType(MaterialApp)).width;
+    expect(heroWidth, closeTo(screenWidth, 1));
+
+    // Hero tagline is visible
+    expect(find.text("Let's think this through"), findsOneWidget);
+  });
 }

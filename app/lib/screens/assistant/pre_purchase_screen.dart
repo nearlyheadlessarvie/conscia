@@ -302,8 +302,6 @@ class _PrePurchaseScreenState extends ConsumerState<PrePurchaseScreen>
   // ── Input Form ──────────────────────────────────────────────────────
 
   Widget _buildInputForm() {
-    final textTheme = Theme.of(context).textTheme;
-    final colors = Theme.of(context).appColors;
     final isPremium =
         ref.watch(subscriptionProvider).valueOrNull?.isPremium ?? false;
     final locationAssistance = ref.watch(locationAssistanceProvider);
@@ -318,10 +316,15 @@ class _PrePurchaseScreenState extends ConsumerState<PrePurchaseScreen>
       });
     }
 
+    final greetingName =
+        ref.watch(currentUserProvider).valueOrNull?.displayName ?? '';
+
     return HeroScreenScaffold(
       appBar: AppBar(title: const Text('Purchase Assistant')),
       scrollViewKey: const PageStorageKey('assistant-shell-scroll'),
-      padding: const EdgeInsets.fromLTRB(16, 20, 16, 12),
+      // Zero horizontal padding so the bleed hero can span full width.
+      // Form fields below add their own 16px horizontal padding.
+      padding: const EdgeInsets.fromLTRB(0, 0, 0, 12),
       extraBottomPadding: _kDockNavOffset,
       bottom: FilledButton(
         style: FilledButton.styleFrom(
@@ -332,119 +335,86 @@ class _PrePurchaseScreenState extends ConsumerState<PrePurchaseScreen>
       ),
       child: Column(
         children: [
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.fromLTRB(18, 10, 18, 20),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  colors.deepNavy,
-                  colors.family,
-                ],
-              ),
-              borderRadius: BorderRadius.circular(28),
-            ),
+          _AssistantHeroBleed(greetingName: greetingName),
+          const SizedBox(height: 20),
+
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Column(
               children: [
-                const ConsciaAlterEgoMotion(
-                  preset: ConsciaAlterEgoPreset.idle,
-                  size: 64,
-                ),
-                const SizedBox(height: 5),
-                Text(
-                  "Let's think this through",
-                  style: textTheme.headlineSmall?.copyWith(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w800,
+                if (familySpace != null) ...[
+                  const SizedBox(height: 8),
+                  ScopePillSwitch(
+                    value: _selectedContextScope,
+                    familyEnabled: true,
+                    onChanged: (scope) =>
+                        setState(() => _selectedContextScope = scope),
                   ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Conscia will give you a devil\'s impulse, an angel\'s reason, and a neutral take to help you make smarter purchase decisions.',
-                  style: textTheme.bodyMedium?.copyWith(
-                    color: Colors.white.withValues(alpha: 0.86),
-                    height: 1.35,
+                  const SizedBox(height: 18),
+                ],
+                TextField(
+                  controller: _descriptionController,
+                  maxLines: 1,
+                  decoration: InputDecoration(
+                    labelText: 'What are you thinking of buying?',
+                    suffixIcon: VoiceInputButton(
+                      onTranscriptReady: _applyVoiceTranscript,
+                    ),
                   ),
-                  textAlign: TextAlign.center,
+                  onChanged: (_) => setState(() {}),
                 ),
+                const SizedBox(height: 18),
+                AmountHeroField(
+                  controller: _amountController,
+                  currencyCode: _currencyCode,
+                  isExpense: true,
+                  isPremium: isPremium,
+                  onChanged: (_) => setState(() {}),
+                  onCurrencyChanged: (code) => setState(() {
+                    _currencyManuallyChanged = true;
+                    _currencyCode = code;
+                  }),
+                ),
+                const SizedBox(height: 18),
+
+                TransactionStyleCategorySelector(
+                  selectedCategory: _selectedCategory,
+                  isExpense: true,
+                  isPremium: isPremium,
+                  showHeader: false,
+                  onCategorySelected: (category) {
+                    setState(() => _selectedCategory = category);
+                    if (category != null) {
+                      ref.read(recentCategoryProvider.notifier).record(category);
+                    }
+                  },
+                ),
+                if (locationAssistance.isEnabled && hasSuggestions) ...[
+                  SmartSuggestionsCard(
+                    suggestions: suggestions,
+                    subtitle:
+                        'Need a nudge? Try a nearby merchant or likely category, then edit anything you want.',
+                    onMerchantSelected: (merchant) {
+                      setState(() {
+                        _descriptionController.text = merchant;
+                      });
+                    },
+                    onCategorySelected: (category) {
+                      setState(() {
+                        _selectedCategory = category;
+                      });
+                      ref.read(recentCategoryProvider.notifier).record(category);
+                    },
+                    categoryAvatarBuilder: (category) => CategoryIcons.badge(
+                      category,
+                      size: 14,
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 20),
               ],
             ),
           ),
-          const SizedBox(height: 24),
-
-          if (familySpace != null) ...[
-            const SizedBox(height: 8),
-            ScopePillSwitch(
-              value: _selectedContextScope,
-              familyEnabled: true,
-              onChanged: (scope) =>
-                  setState(() => _selectedContextScope = scope),
-            ),
-            const SizedBox(height: 18),
-          ],
-          TextField(
-            controller: _descriptionController,
-            maxLines: 1,
-            decoration: InputDecoration(
-              labelText: 'What are you thinking of buying?',
-              suffixIcon: VoiceInputButton(
-                onTranscriptReady: _applyVoiceTranscript,
-              ),
-            ),
-            onChanged: (_) => setState(() {}),
-          ),
-          const SizedBox(height: 18),
-          AmountHeroField(
-            controller: _amountController,
-            currencyCode: _currencyCode,
-            isExpense: true,
-            isPremium: isPremium,
-            onChanged: (_) => setState(() {}),
-            onCurrencyChanged: (code) => setState(() {
-              _currencyManuallyChanged = true;
-              _currencyCode = code;
-            }),
-          ),
-          const SizedBox(height: 18),
-
-          TransactionStyleCategorySelector(
-            selectedCategory: _selectedCategory,
-            isExpense: true,
-            isPremium: isPremium,
-            showHeader: false,
-            onCategorySelected: (category) {
-              setState(() => _selectedCategory = category);
-              if (category != null) {
-                ref.read(recentCategoryProvider.notifier).record(category);
-              }
-            },
-          ),
-          if (locationAssistance.isEnabled && hasSuggestions) ...[
-            SmartSuggestionsCard(
-              suggestions: suggestions,
-              subtitle:
-                  'Need a nudge? Try a nearby merchant or likely category, then edit anything you want.',
-              onMerchantSelected: (merchant) {
-                setState(() {
-                  _descriptionController.text = merchant;
-                });
-              },
-              onCategorySelected: (category) {
-                setState(() {
-                  _selectedCategory = category;
-                });
-                ref.read(recentCategoryProvider.notifier).record(category);
-              },
-              categoryAvatarBuilder: (category) => CategoryIcons.badge(
-                category,
-                size: 14,
-              ),
-            ),
-          ],
-          const SizedBox(height: 20),
         ],
       ),
     );
@@ -949,6 +919,105 @@ class _ConsciaTakeCard extends StatelessWidget {
               avatar: const Icon(Icons.auto_awesome, size: 16),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Bleed hero (input screen) ────────────────────────────────────────
+
+class _AssistantHeroBleed extends StatelessWidget {
+  const _AssistantHeroBleed({required this.greetingName});
+  final String greetingName;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).appColors;
+    final textTheme = Theme.of(context).textTheme;
+
+    return Container(
+      key: const ValueKey('assistant-hero-bleed'),
+      width: double.infinity,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [colors.navySoft, colors.amberSoft],
+        ),
+        borderRadius: const BorderRadius.vertical(
+          bottom: Radius.circular(32),
+        ),
+      ),
+      child: SafeArea(
+        bottom: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 14, 20, 22),
+          child: Column(
+            children: [
+              // Identity row
+              Row(
+                children: [
+                  CircleAvatar(
+                    radius: 18,
+                    backgroundColor: colors.navySoft,
+                    child: Icon(Icons.person, size: 20, color: colors.deepNavy),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Welcome back',
+                          style: textTheme.bodySmall?.copyWith(
+                            color: colors.mutedInk,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        if (greetingName.isNotEmpty)
+                          Text(
+                            greetingName,
+                            style: textTheme.titleSmall?.copyWith(
+                              color: colors.ink,
+                              fontWeight: FontWeight.w700,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 18),
+              // Mascot
+              const ConsciaAlterEgoMotion(
+                preset: ConsciaAlterEgoPreset.idle,
+                size: 56,
+              ),
+              const SizedBox(height: 10),
+              // Tagline
+              Text(
+                "Let's think this through",
+                style: textTheme.headlineSmall?.copyWith(
+                  color: colors.deepNavy,
+                  fontWeight: FontWeight.w800,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 6),
+              Text(
+                "Conscia gives you a devil's impulse, an angel's reason, "
+                'and a neutral take to help you spend more mindfully.',
+                style: textTheme.bodySmall?.copyWith(
+                  color: colors.mutedInk,
+                  height: 1.4,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
         ),
       ),
     );
