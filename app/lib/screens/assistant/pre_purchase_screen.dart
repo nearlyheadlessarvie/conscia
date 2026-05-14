@@ -949,9 +949,7 @@ class _AssistantHeroBleed extends StatelessWidget {
           bottom: Radius.circular(32),
         ),
       ),
-      child: SafeArea(
-        bottom: false,
-        child: Padding(
+      child: Padding(
           padding: const EdgeInsets.fromLTRB(20, 14, 20, 22),
           child: Column(
             children: [
@@ -1019,7 +1017,6 @@ class _AssistantHeroBleed extends StatelessWidget {
             ],
           ),
         ),
-      ),
     );
   }
 }
