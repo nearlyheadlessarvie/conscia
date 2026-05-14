@@ -163,9 +163,10 @@ class AppTheme {
       textTheme: _buildTextTheme(Brightness.dark),
       splashFactory: InkSparkle.splashFactory,
       cardTheme: CardThemeData(
-        elevation: 2,
+        elevation: 0,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(22),
+          side: BorderSide(color: colorScheme.outlineVariant),
         ),
         margin: EdgeInsets.zero,
         color: colorScheme.surface,
@@ -270,7 +271,7 @@ class AppTheme {
       displayLarge: GoogleFonts.poppins(
         fontSize: 32,
         fontWeight: FontWeight.w700,
-        letterSpacing: -0.5,
+        letterSpacing: 0,
         color: color,
       ),
       displayMedium: GoogleFonts.poppins(
@@ -290,13 +291,13 @@ class AppTheme {
       ),
       titleLarge: GoogleFonts.poppins(
         fontSize: 18,
-        fontWeight: FontWeight.w600,
+        fontWeight: FontWeight.w700,
         color: color,
       ),
-      titleMedium: GoogleFonts.inter(
+      titleMedium: GoogleFonts.poppins(
         fontSize: 16,
-        fontWeight: FontWeight.w500,
-        letterSpacing: 0.15,
+        fontWeight: FontWeight.w700,
+        letterSpacing: 0,
         color: color,
       ),
       titleSmall: GoogleFonts.inter(

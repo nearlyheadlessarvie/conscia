@@ -18,6 +18,7 @@ import 'package:conscia_app/services/recurring_service.dart';
 import 'package:conscia_app/services/subscription_service.dart';
 import 'package:conscia_app/services/transaction_service.dart';
 import 'package:conscia_app/services/user_service.dart';
+import 'package:conscia_app/widgets/floating_label_text_field.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -264,6 +265,15 @@ Widget _buildTransactionFormApp(
   );
 }
 
+Finder _floatingLabelInput(String label) {
+  return find.descendant(
+    of: find.byWidgetPredicate(
+      (widget) => widget is FloatingLabelTextField && widget.label == label,
+    ),
+    matching: find.byType(TextField),
+  );
+}
+
 Future<Widget> buildTransactionFormApp(
   WidgetTester tester, {
   Map<String, Object> initialPrefs = const {
@@ -496,7 +506,8 @@ void main() {
     expect(find.text('Merchant (optional)'), findsOneWidget);
   });
 
-  testWidgets('category label and chip rail are always visible', (tester) async {
+  testWidgets('category label and chip rail are always visible',
+      (tester) async {
     await tester.pumpWidget(await buildTransactionFormApp(tester));
     await tester.pumpAndSettle();
 
@@ -512,7 +523,31 @@ void main() {
     expect(find.byIcon(Icons.calendar_today_outlined), findsOneWidget);
   });
 
-  testWidgets('recurring section is always visible and cadence options are hidden by default',
+  testWidgets('merchant field uses Conscia v2 floating label treatment',
+      (tester) async {
+    await tester.pumpWidget(await buildTransactionFormApp(tester));
+    await tester.pumpAndSettle();
+
+    final floatingFields = tester.widgetList<FloatingLabelTextField>(
+      find.byType(FloatingLabelTextField),
+    );
+
+    expect(
+      floatingFields.any((field) => field.label == 'Merchant (optional)'),
+      isTrue,
+    );
+    expect(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is TextField &&
+            widget.decoration?.labelText == 'Merchant (optional)',
+      ),
+      findsNothing,
+    );
+  });
+
+  testWidgets(
+      'recurring section is always visible and cadence options are hidden by default',
       (tester) async {
     await tester.pumpWidget(await buildTransactionFormApp(tester));
     await tester.pumpAndSettle();
@@ -675,14 +710,14 @@ void main() {
     await tester.tap(find.text('Corner Bakery'));
     await tester.pumpAndSettle();
 
-    final merchantField = tester.widget<TextField>(
+    final merchantField = tester.widget<FloatingLabelTextField>(
       find.byWidgetPredicate(
         (widget) =>
-            widget is TextField &&
-            widget.decoration?.labelText == 'Merchant (optional)',
+            widget is FloatingLabelTextField &&
+            widget.label == 'Merchant (optional)',
       ),
     );
-    expect(merchantField.controller?.text, 'Corner Bakery');
+    expect(merchantField.controller.text, 'Corner Bakery');
 
     await tester.ensureVisible(find.widgetWithText(ActionChip, 'Groceries'));
     await tester.tap(find.widgetWithText(ActionChip, 'Groceries'));
@@ -981,13 +1016,7 @@ void main() {
 
     await tester.enterText(find.byType(TextField).first, '18.25');
     await tester.enterText(
-      find.byWidgetPredicate(
-        (widget) =>
-            widget is TextField &&
-            widget.decoration?.labelText == 'Merchant (optional)',
-      ),
-      'Morning Brew',
-    );
+        _floatingLabelInput('Merchant (optional)'), 'Morning Brew');
     await tester.tap(find.text('Update Transaction'));
     await tester.pumpAndSettle();
 

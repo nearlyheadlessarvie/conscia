@@ -7,6 +7,7 @@ import '../../core/errors/app_error.dart';
 import '../../models/managed_category.dart';
 import '../../providers/category_provider.dart';
 import '../../widgets/feed_card.dart';
+import '../../widgets/floating_label_text_field.dart';
 import '../../widgets/hero_screen_scaffold.dart';
 import '../../widgets/screen_section.dart';
 import '../../widgets/skeleton_loader.dart';
@@ -362,13 +363,11 @@ class _CategoryFormSheetState extends State<_CategoryFormSheet> {
               style: Theme.of(context).textTheme.titleLarge,
             ),
             const SizedBox(height: 16),
-            TextField(
+            FloatingLabelTextField(
               controller: _nameController,
+              label: 'Category name',
               autofocus: true,
-              decoration: const InputDecoration(
-                labelText: 'Category name',
-                prefixIcon: Icon(Icons.label_outline),
-              ),
+              prefix: const Icon(Icons.label_outline),
               textInputAction: TextInputAction.done,
               onSubmitted: (_) => _submit(),
             ),

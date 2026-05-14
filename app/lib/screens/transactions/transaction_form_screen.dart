@@ -24,6 +24,7 @@ import '../../widgets/scope_pill_switch.dart';
 import '../../widgets/skeleton_loader.dart';
 import '../../widgets/smart_suggestions_card.dart';
 import '../../widgets/amount_hero_field.dart';
+import '../../widgets/floating_label_text_field.dart';
 import 'widgets/transaction_style_category_selector.dart';
 import '../../widgets/segmented_switch.dart';
 import '../../widgets/form_label.dart';
@@ -388,20 +389,27 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
                 child: rateAsync.when(
                   loading: () => const LinearProgressIndicator(),
                   error: (_, __) => const SizedBox.shrink(),
-                  data: (liveRate) => TextField(
-                    controller: _exchangeRateController,
-                    keyboardType: const TextInputType.numberWithOptions(
-                      decimal: true,
-                    ),
-                    decoration: InputDecoration(
-                      labelText: 'Exchange rate (optional)',
-                      hintText: liveRate != null
-                          ? liveRate.toStringAsFixed(4)
-                          : 'Enter rate manually',
-                      helperText: liveRate != null
-                          ? 'Leave blank to use live rate (1 $_currencyCode = ${liveRate.toStringAsFixed(4)} $userCurrency)'
-                          : 'Live rate unavailable — enter manually or leave blank',
-                    ),
+                  data: (liveRate) => Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      FloatingLabelTextField(
+                        controller: _exchangeRateController,
+                        label: 'Exchange rate (optional)',
+                        keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true,
+                        ),
+                        onChanged: (_) => setState(() {}),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        liveRate != null
+                            ? 'Leave blank to use live rate (1 $_currencyCode = ${liveRate.toStringAsFixed(4)} $userCurrency)'
+                            : 'Live rate unavailable - enter manually or leave blank',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: Theme.of(context).appColors.mutedInk,
+                            ),
+                      ),
+                    ],
                   ),
                 ),
               );
@@ -474,14 +482,11 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
           Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              TextField(
+              FloatingLabelTextField(
                 controller: _counterpartyController,
-                textCapitalization: TextCapitalization.words,
                 onChanged: (_) => setState(() {}),
-                decoration: InputDecoration(
-                  labelText:
-                      _isExpense ? 'Merchant (optional)' : 'Source (optional)',
-                ),
+                textInputAction: TextInputAction.done,
+                label: _isExpense ? 'Merchant (optional)' : 'Source (optional)',
               ),
               const SizedBox(height: 18),
               InkWell(

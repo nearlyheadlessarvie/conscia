@@ -9,6 +9,7 @@ import '../../widgets/feed_card.dart';
 import '../../widgets/hero_screen_scaffold.dart';
 import '../../widgets/screen_section.dart';
 import 'widgets/insights_formatting.dart';
+import 'widgets/insight_detail_back_button.dart';
 
 class MerchantListScreen extends ConsumerWidget {
   const MerchantListScreen({super.key});
@@ -19,7 +20,9 @@ class MerchantListScreen extends ConsumerWidget {
     final prefs = ref.watch(userPreferencesProvider);
 
     return HeroScreenScaffold(
-      appBar: AppBar(title: const Text('Merchants')),
+      appBar: AppBar(
+          leading: const InsightDetailBackButton(),
+          title: const Text('Merchants')),
       child: merchantsAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (_, __) => const _MessageCard(
@@ -85,7 +88,8 @@ class _MerchantCard extends StatelessWidget {
     final colors = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
     final rateColor = insightRateColor(context, merchant.regretRate);
-    final rateText = '${(merchant.regretRate * 100).toStringAsFixed(0)}% regret';
+    final rateText =
+        '${(merchant.regretRate * 100).toStringAsFixed(0)}% regret';
 
     return FeedCard(
       onTap: () => context.push(

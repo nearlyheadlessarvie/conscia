@@ -8,6 +8,7 @@ import '../../providers/user_provider.dart';
 import '../../widgets/feed_card.dart';
 import '../../widgets/hero_screen_scaffold.dart';
 import '../../widgets/screen_section.dart';
+import 'widgets/insight_detail_back_button.dart';
 import 'widgets/insight_transaction_card.dart';
 import 'widgets/insights_formatting.dart';
 
@@ -22,7 +23,10 @@ class CategoryDetailScreen extends ConsumerWidget {
     final prefs = ref.watch(userPreferencesProvider);
 
     return HeroScreenScaffold(
-      appBar: AppBar(title: Text(category)),
+      appBar: AppBar(
+        leading: const InsightDetailBackButton(),
+        title: Text(category),
+      ),
       child: detailAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (_, __) => const _StateCard(
@@ -65,7 +69,8 @@ class CategoryDetailScreen extends ConsumerWidget {
                               locale: prefs.locale,
                               subtitle:
                                   '${tx.merchant ?? tx.category} • ${formatInsightDate(tx.date, locale: prefs.locale)}',
-                              leading: CategoryIcons.badge(tx.category, size: 18),
+                              leading:
+                                  CategoryIcons.badge(tx.category, size: 18),
                             ),
                             const SizedBox(height: 12),
                           ],

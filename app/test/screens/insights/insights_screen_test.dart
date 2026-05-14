@@ -4,16 +4,20 @@ import 'package:conscia_app/models/insights_models.dart';
 import 'package:conscia_app/providers/behavioral_insights_provider.dart';
 import 'package:conscia_app/providers/budget_providers.dart';
 import 'package:conscia_app/providers/insights_provider.dart';
+import 'package:conscia_app/providers/usage_provider.dart';
 import 'package:conscia_app/providers/user_provider.dart';
 import 'package:conscia_app/screens/insights/category_detail_screen.dart';
 import 'package:conscia_app/screens/insights/insights_screen.dart';
+import 'package:conscia_app/screens/insights/merchant_detail_screen.dart';
 import 'package:conscia_app/screens/insights/widgets/insights_formatting.dart';
 import 'package:conscia_app/services/budget_service.dart';
+import 'package:conscia_app/services/user_service.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class _StaticBudgetService extends BudgetService {
   _StaticBudgetService() : super(Dio());
@@ -89,6 +93,51 @@ void main() {
     expect(find.text(expected), findsOneWidget);
   });
 
+  testWidgets('insights hero appears before the regret pulse', (tester) async {
+    final summary = InsightsSummary(
+      regrettedAmount: 1890,
+      regrettedCategory: 'Shopping',
+      avgRegretRate: 0.33,
+      patternCount: 4,
+      updatedAt: DateTime(2026, 5, 8),
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          userPreferencesProvider.overrideWithValue(
+            (currency: 'PHP', locale: 'en_PH'),
+          ),
+          behavioralInsightsProvider.overrideWith(
+            (ref) async => const BehavioralInsights(
+              mood: FinancialMood.balanced,
+              worthItPercentage: 71,
+              worthItCount: 5,
+              previousMonthWorthItCount: 2,
+              impulseeTrends: [],
+              budgetTrends: [],
+            ),
+          ),
+          insightsSummaryProvider.overrideWith((ref) async => summary),
+          insightsMerchantsProvider.overrideWith((ref) async => const []),
+          insightsCategoriesProvider.overrideWith((ref) async => const []),
+        ],
+        child: const MaterialApp(home: InsightsScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final heroTop = tester
+        .getTopLeft(find.byKey(const ValueKey('insights-editorial-hero')))
+        .dy;
+    final pulseTop = tester.getTopLeft(find.text('YOUR REGRET PULSE')).dy;
+
+    expect(heroTop, lessThan(pulseTop));
+    expect(find.text('Your spending story is pointing at Shopping.'),
+        findsOneWidget);
+    expect(find.text('😇  ⚔️  😈'), findsNothing);
+  });
+
   testWidgets('insights screen renders dynamic sections from the feed',
       (tester) async {
     final summary = InsightsSummary(
@@ -152,10 +201,15 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Insights'), findsOneWidget);
-    expect(find.text('This week'), findsWidgets);
-    expect(find.text('Budget trends'), findsOneWidget);
-    expect(find.text('Regret patterns'), findsOneWidget);
-    expect(find.text('Recent signals'), findsOneWidget);
+    expect(
+        find.byKey(const ValueKey('insights-editorial-hero')), findsOneWidget);
+    expect(
+        find.byKey(const ValueKey('insights-sticky-header')), findsOneWidget);
+    expect(find.text('😇  ⚔️  😈'), findsNothing);
+    expect(find.text('BUDGET TRENDS'), findsOneWidget);
+    expect(find.text('REGRET PATTERNS'), findsOneWidget);
+    expect(find.text('RECENT SIGNALS'), findsOneWidget);
+    expect(find.text('Regret patterns'), findsNothing);
     expect(
       find.text('Subscriptions has enough activity for a budget'),
       findsOneWidget,
@@ -166,9 +220,14 @@ void main() {
     expect(find.byTooltip('Add budget'), findsNothing);
     expect(find.text('View merchant'), findsNothing);
     expect(find.byIcon(Icons.chevron_right_rounded), findsWidgets);
-    expect(find.text('Regret Patterns'), findsNothing);
 
-    await tester.tap(find.text('Your financial mood is balanced'));
+    final staticInsight = find.text('Your financial mood is balanced');
+    await Scrollable.ensureVisible(
+      tester.element(staticInsight),
+      alignment: 0.45,
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(staticInsight);
     await tester.pump();
 
     expect(tester.takeException(), isNull);
@@ -209,13 +268,31 @@ void main() {
 
   testWidgets('unbudgeted budget trend opens create budget with category',
       (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+    final budgetService = _StaticBudgetService();
+
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
           userPreferencesProvider.overrideWithValue(
             (currency: 'PHP', locale: 'en_PH'),
           ),
-          budgetServiceProvider.overrideWithValue(_StaticBudgetService()),
+          sharedPreferencesProvider.overrideWithValue(prefs),
+          budgetServiceProvider.overrideWithValue(budgetService),
+          budgetListProvider.overrideWith(
+            (ref) => BudgetListNotifier(budgetService),
+          ),
+          currentUserProvider.overrideWith(
+            (ref) async => UserProfile(
+              id: 'user-1',
+              email: 'insights@example.com',
+              currencyCode: 'PHP',
+              locale: 'en_PH',
+              createdAt: DateTime(2026),
+              hasCompletedOnboarding: true,
+            ),
+          ),
           behavioralInsightsProvider.overrideWith(
             (ref) async => const BehavioralInsights(
               mood: FinancialMood.balanced,
@@ -251,25 +328,24 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('New Budget'), findsOneWidget);
-    expect(
-      find.descendant(
-        of: find.byType(InputChip),
-        matching: find.text('Subscriptions'),
-      ),
-      findsOneWidget,
-    );
+    expect(find.text('Subscriptions'), findsOneWidget);
+    expect(find.byIcon(Icons.close_rounded), findsOneWidget);
   });
 
   testWidgets('budget trend nudge disappears once budget exists',
       (tester) async {
+    final budgetService = _ExistingSubscriptionsBudgetService();
+
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
           userPreferencesProvider.overrideWithValue(
             (currency: 'PHP', locale: 'en_PH'),
           ),
-          budgetServiceProvider
-              .overrideWithValue(_ExistingSubscriptionsBudgetService()),
+          budgetServiceProvider.overrideWithValue(budgetService),
+          budgetListProvider.overrideWith(
+            (ref) => BudgetListNotifier(budgetService),
+          ),
           behavioralInsightsProvider.overrideWith(
             (ref) async => const BehavioralInsights(
               mood: FinancialMood.balanced,
@@ -359,7 +435,11 @@ void main() {
     await tester.pumpAndSettle();
 
     final regretCard = find.textContaining('regretted on Shopping');
-    await tester.ensureVisible(regretCard);
+    await Scrollable.ensureVisible(
+      tester.element(regretCard),
+      alignment: 0.45,
+    );
+    await tester.pumpAndSettle();
     await tester.tap(regretCard);
     await tester.pumpAndSettle();
 
@@ -409,5 +489,41 @@ void main() {
 
     expect(find.text('USD 18.75'), findsNothing);
     expect(find.text(expected), findsOneWidget);
+    expect(find.byIcon(Icons.chevron_left_rounded), findsOneWidget);
+    expect(find.byIcon(Icons.arrow_back), findsNothing);
+  });
+
+  testWidgets('merchant detail uses an iOS chevron back control',
+      (tester) async {
+    const detail = MerchantDetail(
+      stats: MerchantStat(
+        merchant: 'Corner Cafe',
+        visitCount: 3,
+        regretCount: 1,
+        regretRate: 0.33,
+        lastVisitDate: '2026-05-01',
+      ),
+      recentTransactions: [],
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          userPreferencesProvider.overrideWithValue(
+            (currency: 'USD', locale: 'en_US'),
+          ),
+          merchantDetailProvider('Corner Cafe').overrideWith(
+            (ref) async => detail,
+          ),
+        ],
+        child: const MaterialApp(
+          home: MerchantDetailScreen(merchant: 'Corner Cafe'),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byIcon(Icons.chevron_left_rounded), findsOneWidget);
+    expect(find.byIcon(Icons.arrow_back), findsNothing);
   });
 }

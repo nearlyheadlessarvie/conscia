@@ -1,6 +1,7 @@
 import 'package:conscia_app/models/managed_category.dart';
 import 'package:conscia_app/providers/category_provider.dart';
 import 'package:conscia_app/screens/settings/category_management_screen.dart';
+import 'package:conscia_app/widgets/floating_label_text_field.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -92,7 +93,7 @@ void main() {
     expect(find.text('Income'), findsWidgets);
     expect(find.text('Dining'), findsOneWidget);
     expect(find.text('Salary'), findsOneWidget);
-    expect(find.text('Archived'), findsOneWidget);
+    expect(find.text('ARCHIVED'), findsOneWidget);
     expect(find.text('Old Hobby'), findsOneWidget);
   });
 
@@ -109,6 +110,32 @@ void main() {
 
     expect(actions.createdName, 'Pet care');
     expect(actions.createdType, 'Expense');
+  });
+
+  testWidgets('category sheet uses Conscia v2 floating input', (tester) async {
+    final actions = _RecordingCategoryActions();
+    await _pumpScreen(tester, actions: actions);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Add category'));
+    await tester.pumpAndSettle();
+
+    final floatingFields = tester.widgetList<FloatingLabelTextField>(
+      find.byType(FloatingLabelTextField),
+    );
+
+    expect(
+      floatingFields.any((field) => field.label == 'Category name'),
+      isTrue,
+    );
+    expect(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is TextField &&
+            widget.decoration?.labelText == 'Category name',
+      ),
+      findsNothing,
+    );
   });
 
   testWidgets('archives a custom category after confirmation', (tester) async {

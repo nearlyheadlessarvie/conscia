@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../core/theme/app_colors.dart';
+
 class ScreenSection extends StatelessWidget {
   const ScreenSection({
     super.key,
@@ -19,6 +21,7 @@ class ScreenSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
+    final appColors = Theme.of(context).appColors;
     final colors = Theme.of(context).colorScheme;
 
     return Padding(
@@ -34,9 +37,12 @@ class ScreenSection extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      title,
-                      style: textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w700,
+                      title.toUpperCase(),
+                      style: textTheme.labelSmall?.copyWith(
+                        color: appColors.mutedInk,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 0.9,
                       ),
                     ),
                     if (subtitle != null) ...[

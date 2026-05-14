@@ -149,6 +149,34 @@ Rules:
 - Respect the existing spacing scale from v2.
 - Screens should feel more breathable than today, especially in forms and list sections.
 
+### Section Labels, Titles, And Subtitles
+
+Section headings should behave more like navigation landmarks than content headlines.
+
+Use the updated `sectionTitle` treatment for major content sections:
+
+- uppercase text
+- 12sp Inter
+- 800 weight
+- 0.8-1.0 letter spacing
+- `mutedInk`
+- placed above the section subtitle and content group
+
+This should feel related to `FormLabel`, but slightly more prominent:
+
+- `FormLabel`: 11sp, uppercase, compact, used inside forms/detail groups such as `AMOUNT`, `CATEGORY`, `DETAILS`, `SCOPE`
+- `sectionTitle`: 12sp, uppercase, more vertical spacing, used for screen structure such as `REGRET PATTERNS`, `MERCHANT SPOTLIGHT`, `RECENT SIGNALS`, `BUDGETS`
+
+Section subtitles should stay readable and explanatory:
+
+- 13-14sp Inter
+- regular weight
+- `mutedInk` or `softInk`
+- line height around 1.35
+- placed directly under the section label
+
+Avoid using large title-case section headings when the heading is only grouping related rows. Reserve larger Poppins title treatments for hero copy, card titles, modal titles, and true editorial statements.
+
 ### Surfaces
 
 - Primary screen canvas: `paper`
@@ -324,7 +352,16 @@ Primary mascot surfaces:
 
 - Do not invent new information architecture
 - Preserve the current product structure and meaning
-- Only add editorial highlight treatment to the top summary/emphasis layer
+- Use the richer editorial tier because Insights is an important reflective surface
+- Use a full-bleed top hero that reaches into the top safe area, matching the Home hero behavior
+- Use one transparent sticky header over the hero that becomes translucent on scroll
+- Do not use Angel / Devil emoji as mascot substitutes
+- If mascots appear, use the actual Angel and Devil sprite assets; otherwise use product/category iconography
+- Put the strongest insight summary in the hero, then place the pulse summary immediately below it
+- Prioritize the flow: hero, regret pulse, regret patterns, merchant spotlight, category trend, recent signals
+- Section headings use the updated uppercase muted `sectionTitle` treatment with subtitles underneath
+- Repeated insight rows should live in grouped cards with separators rather than separate cards per row
+- Keep all insight content grounded in the current providers and avoid inventing new analytics
 
 ### Shared Conscia
 

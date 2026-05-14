@@ -1,9 +1,12 @@
 import 'package:conscia_app/models/family_space.dart';
+import 'package:conscia_app/providers/auth_provider.dart';
 import 'package:conscia_app/providers/budget_providers.dart';
 import 'package:conscia_app/providers/family_space_provider.dart';
 import 'package:conscia_app/providers/subscription_provider.dart';
+import 'package:conscia_app/providers/usage_provider.dart';
 import 'package:conscia_app/screens/budgets/budgets_screen.dart';
 import 'package:conscia_app/screens/budgets/widgets/budget_form_sheet.dart';
+import 'package:conscia_app/services/auth_service.dart';
 import 'package:conscia_app/services/budget_service.dart';
 import 'package:conscia_app/services/subscription_service.dart';
 import 'package:conscia_app/services/user_service.dart';
@@ -11,7 +14,40 @@ import 'package:conscia_app/providers/user_provider.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+class _FakeAuthService extends AuthService {
+  _FakeAuthService() : super(Dio());
+}
+
+class _FakeSecureStorage extends FlutterSecureStorage {
+  @override
+  Future<String?> read({
+    required String key,
+    AppleOptions? iOptions,
+    AndroidOptions? aOptions,
+    LinuxOptions? lOptions,
+    WebOptions? webOptions,
+    WindowsOptions? wOptions,
+    AppleOptions? mOptions,
+  }) async =>
+      null;
+}
+
+class _TestAuthNotifier extends AuthNotifier {
+  _TestAuthNotifier(AuthState initialState)
+      : super(_FakeAuthService(), _FakeSecureStorage()) {
+    state = initialState;
+  }
+}
+
+final _authenticatedOverride = authProvider.overrideWith(
+  (ref) => _TestAuthNotifier(
+    const AuthState(status: AuthStatus.authenticated, userId: 'user-1'),
+  ),
+);
 
 class _StaticBudgetService extends BudgetService {
   _StaticBudgetService(this.budgets) : super(Dio());
@@ -49,10 +85,15 @@ Future<void> _pumpBudgetsScreen(
   WidgetTester tester, {
   required List<Budget> budgets,
 }) async {
+  SharedPreferences.setMockInitialValues({});
+  final prefs = await SharedPreferences.getInstance();
+
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
+        _authenticatedOverride,
         budgetServiceProvider.overrideWithValue(_StaticBudgetService(budgets)),
+        sharedPreferencesProvider.overrideWithValue(prefs),
         subscriptionProvider.overrideWith(
           (ref) async => const SubscriptionStatus(
             tier: 'premium',
@@ -155,11 +196,15 @@ void main() {
 
   testWidgets('budget form can create a family-scoped budget', (tester) async {
     final budgetService = _RecordingBudgetService();
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
 
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          _authenticatedOverride,
           budgetServiceProvider.overrideWithValue(budgetService),
+          sharedPreferencesProvider.overrideWithValue(prefs),
           familySpaceProvider.overrideWith(
             (ref) async => const FamilySpace(
               id: 'family-1',
@@ -195,12 +240,16 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.enterText(find.byType(TextField).last, '12000');
-    await tester.drag(find.byType(ListView), const Offset(0, -220));
     await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Family'));
     await tester.tap(find.text('Family'));
     await tester.pumpAndSettle();
     await tester.ensureVisible(find.text('Create Budget'));
-    await tester.tap(find.text('Create Budget'));
+    final createButton = tester.widget<FilledButton>(
+      find.widgetWithText(FilledButton, 'Create Budget'),
+    );
+    expect(createButton.onPressed, isNotNull);
+    await tester.tap(find.widgetWithText(FilledButton, 'Create Budget'));
     await tester.pumpAndSettle();
 
     expect(budgetService.lastCreated?.scope, 'family');

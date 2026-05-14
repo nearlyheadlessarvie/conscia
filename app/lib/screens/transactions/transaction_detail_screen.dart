@@ -6,6 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 
 import '../../core/errors/app_error.dart';
+import '../../core/theme/app_colors.dart';
 import '../../core/utils/currency_formatter.dart';
 import '../../providers/alert_provider.dart';
 import '../../providers/ai_provider.dart';
@@ -20,6 +21,9 @@ import '../../screens/assistant/widgets/ai_message_bubble.dart';
 import '../../screens/dashboard/widgets/in_app_alert_banner.dart';
 import '../../widgets/conscience_mark.dart';
 import '../../widgets/family_badge.dart';
+import '../../widgets/form_label.dart';
+import '../../widgets/grouped_list_card.dart';
+import '../../widgets/hero_screen_scaffold.dart';
 import '../../widgets/premium_upgrade_dialog.dart';
 import '../../widgets/recurring_badge.dart';
 import '../../widgets/skeleton_loader.dart';
@@ -187,7 +191,9 @@ class _TransactionDetailScreenState
         _editedTransactionOverride ?? detailAsync.valueOrNull;
     final alerts = ref.watch(activeAlertsProvider);
 
-    return Scaffold(
+    return HeroScreenScaffold(
+      padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
+      scrollable: false,
       appBar: AppBar(
         title: const Text('Transaction'),
         actions: [
@@ -206,9 +212,9 @@ class _TransactionDetailScreenState
           ),
         ],
       ),
-      body: detailAsync.when(
+      child: detailAsync.when(
         loading: () => ListView(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+          padding: const EdgeInsets.symmetric(vertical: 24),
           children: const [
             SkeletonLoader(height: 40, width: 200),
             SizedBox(height: 24),
@@ -284,7 +290,9 @@ class _TransactionDetailScreenState
   }
 
   Widget _buildContent(Transaction tx, List<AppAlert> alerts) {
-    final colors = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    final appColors = theme.appColors;
     final textTheme = Theme.of(context).textTheme;
     final currentUserId = ref.watch(authProvider).userId;
     final isIncome = tx.type == 'income';
@@ -325,94 +333,86 @@ class _TransactionDetailScreenState
     }
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.only(bottom: 32),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           const SizedBox(height: 16),
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                children: [
-                  CircleAvatar(
-                    radius: 32,
-                    backgroundColor: colors.primaryContainer,
-                    child: CategoryIcons.badge(
-                      tx.category,
-                      size: 28,
-                      filled: false,
-                    ),
+          _TransactionDetailHero(
+            category: tx.category,
+            counterparty: displayCounterparty,
+            amountText:
+                '$prefix${CurrencyFormatter.format(tx.amount.abs(), currencyCode: tx.currencyCode)}',
+            amountColor: _amountColor(colors, isIncome),
+            subtitle:
+                '${isIncome ? "Income" : "Expense"} · ${_displayCategory(tx)}',
+          ),
+          const SizedBox(height: 20),
+          const FormLabel(label: 'DETAILS'),
+          const SizedBox(height: 10),
+          GroupedListCard(
+            children: [
+              _DetailRow(
+                label: 'Category',
+                value: _displayCategory(tx),
+                leading: CategoryIcons.badge(_displayCategory(tx), size: 30),
+              ),
+              _DetailRow(
+                label: 'Date',
+                value: DateFormat.yMMMd().add_jm().format(tx.date),
+                leading: Icon(
+                  Icons.calendar_today_outlined,
+                  color: appColors.deepNavy,
+                  size: 20,
+                ),
+              ),
+              _DetailRow(
+                label: 'Type',
+                value: isIncome ? 'Income' : 'Expense',
+                leading: Icon(
+                  isIncome
+                      ? Icons.arrow_downward_rounded
+                      : Icons.arrow_upward_rounded,
+                  color: isIncome ? appColors.income : appColors.expense,
+                  size: 20,
+                ),
+              ),
+              if (tx.isRecurring || tx.isFamily)
+                _DetailRow(
+                  label: 'Shared context',
+                  value: tx.isRecurring && tx.isFamily
+                      ? 'Recurring family transaction'
+                      : tx.isFamily
+                          ? 'Family transaction'
+                          : 'Recurring transaction',
+                  leading: Icon(
+                    tx.isFamily ? Icons.people_rounded : Icons.repeat_rounded,
+                    color: tx.isFamily ? appColors.family : appColors.deepNavy,
+                    size: 20,
                   ),
-                  const SizedBox(height: 12),
-                  Text(
-                    displayCounterparty,
-                    style: textTheme.headlineLarge,
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    '$prefix${CurrencyFormatter.format(tx.amount.abs(), currencyCode: tx.currencyCode)}',
-                    style: GoogleFonts.poppins(
-                      fontSize: 28,
-                      fontWeight: FontWeight.w700,
-                      color: _amountColor(colors, isIncome),
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    '${isIncome ? "Income" : "Expense"} · ${_displayCategory(tx)}',
-                    style: textTheme.bodyLarge?.copyWith(
-                      color: colors.onSurfaceVariant,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    DateFormat.yMMMd().add_jm().format(tx.date),
-                    style: textTheme.bodyMedium?.copyWith(
-                      color: colors.onSurfaceVariant,
-                    ),
-                  ),
-                  if (tx.isRecurring || tx.isFamily) ...[
-                    const SizedBox(height: 10),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 6,
-                      alignment: WrapAlignment.center,
-                      crossAxisAlignment: WrapCrossAlignment.center,
-                      children: [
-                        if (tx.isRecurring) const RecurringBadge(),
-                        if (tx.isFamily) const FamilyBadge(),
-                        if (_shouldShowSharerAvatar(tx, currentUserId))
-                          CircleAvatar(
-                            key: const ValueKey('transaction-sharer-avatar'),
-                            radius: 13,
-                            backgroundColor: colors.tertiaryContainer,
-                            child: Text(
-                              _sharerInitials(tx),
-                              style: textTheme.labelSmall?.copyWith(
-                                color: colors.onTertiaryContainer,
-                                fontWeight: FontWeight.w800,
-                              ),
+                  trailing: Wrap(
+                    spacing: 8,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      if (tx.isRecurring) const RecurringBadge(),
+                      if (tx.isFamily) const FamilyBadge(),
+                      if (_shouldShowSharerAvatar(tx, currentUserId))
+                        CircleAvatar(
+                          key: const ValueKey('transaction-sharer-avatar'),
+                          radius: 13,
+                          backgroundColor: colors.tertiaryContainer,
+                          child: Text(
+                            _sharerInitials(tx),
+                            style: textTheme.labelSmall?.copyWith(
+                              color: colors.onTertiaryContainer,
+                              fontWeight: FontWeight.w800,
                             ),
                           ),
-                      ],
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      tx.isRecurring && tx.isFamily
-                          ? 'Recurring family transaction'
-                          : tx.isFamily
-                              ? 'Family transaction'
-                              : 'Recurring transaction',
-                      style: textTheme.bodySmall?.copyWith(
-                        color: colors.onSurfaceVariant,
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
+                        ),
+                    ],
+                  ),
+                ),
+            ],
           ),
           const SizedBox(height: 24),
           if (contextualAlert != null) ...[
@@ -616,6 +616,123 @@ class _TransactionDetailScreenState
       return (Icons.sentiment_neutral, 'Not Sure', const Color(0xFFFFC107));
     }
     return (Icons.sentiment_dissatisfied, 'Regret', const Color(0xFFE53935));
+  }
+}
+
+class _TransactionDetailHero extends StatelessWidget {
+  const _TransactionDetailHero({
+    required this.category,
+    required this.counterparty,
+    required this.amountText,
+    required this.amountColor,
+    required this.subtitle,
+  });
+
+  final String category;
+  final String counterparty;
+  final String amountText;
+  final Color amountColor;
+  final String subtitle;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.appColors;
+    final textTheme = theme.textTheme;
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: colors.navySoft,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: colors.deepNavy.withValues(alpha: 0.16)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 24, 20, 22),
+        child: Column(
+          children: [
+            CategoryIcons.badge(category, size: 52),
+            const SizedBox(height: 14),
+            Text(
+              counterparty,
+              style: textTheme.headlineLarge,
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              amountText,
+              style: GoogleFonts.poppins(
+                fontSize: 28,
+                fontWeight: FontWeight.w700,
+                color: amountColor,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 6),
+            Text(
+              subtitle,
+              style: textTheme.bodyMedium?.copyWith(color: colors.mutedInk),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _DetailRow extends StatelessWidget {
+  const _DetailRow({
+    required this.label,
+    required this.value,
+    required this.leading,
+    this.trailing,
+  });
+
+  final String label;
+  final String value;
+  final Widget leading;
+  final Widget? trailing;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.appColors;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 10),
+      child: Row(
+        children: [
+          SizedBox(width: 30, height: 30, child: Center(child: leading)),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: colors.mutedInk,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  value,
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    color: colors.ink,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (trailing != null) ...[
+            const SizedBox(width: 12),
+            trailing!,
+          ],
+        ],
+      ),
+    );
   }
 }
 

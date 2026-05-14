@@ -10,6 +10,8 @@ import 'package:conscia_app/services/ai_service.dart';
 import 'package:conscia_app/services/budget_service.dart';
 import 'package:conscia_app/services/transaction_service.dart';
 import 'package:conscia_app/widgets/conscience_mark.dart';
+import 'package:conscia_app/widgets/grouped_list_card.dart';
+import 'package:conscia_app/widgets/hero_screen_scaffold.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -121,6 +123,10 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Jollibee Cubao'), findsOneWidget);
+    expect(find.byType(HeroScreenScaffold), findsOneWidget);
+    expect(find.byType(Card), findsNothing);
+    expect(find.byType(GroupedListCard), findsOneWidget);
+    expect(find.text('DETAILS'), findsOneWidget);
     expect(find.text('How did this purchase feel?'), findsOneWidget);
     expect(find.text('Ask AI to Reflect'), findsOneWidget);
   });

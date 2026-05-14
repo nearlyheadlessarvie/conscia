@@ -91,13 +91,13 @@ void main() {
     // (same effect as an outer Scaffold with a BottomNavigationBar of height 80).
     const navBarHeight = 80.0;
     await tester.pumpWidget(
-      MaterialApp(
+      const MaterialApp(
         home: MediaQuery(
-          data: const MediaQueryData(
+          data: MediaQueryData(
             size: Size(390, 844),
             padding: EdgeInsets.only(bottom: navBarHeight),
           ),
-          child: const HeroScreenScaffold(
+          child: HeroScreenScaffold(
             bottom: SizedBox(
               key: ValueKey('cta'),
               height: 52,
@@ -111,7 +111,8 @@ void main() {
     await tester.pumpAndSettle();
 
     final screenHeight = tester.getSize(find.byType(MaterialApp)).height;
-    final ctaBottom = tester.getBottomLeft(find.byKey(const ValueKey('cta'))).dy;
+    final ctaBottom =
+        tester.getBottomLeft(find.byKey(const ValueKey('cta'))).dy;
 
     // The CTA's bottom edge must be at least navBarHeight above the screen bottom.
     // This ensures the CTA is not obscured by the shell nav bar.

@@ -141,15 +141,10 @@ void main() {
 
     await tester.pumpAndSettle();
 
-    expect(find.text('Smart location suggestions'), findsOneWidget);
-    expect(find.textContaining('Currently off'), findsOneWidget);
-    expect(
-      find.textContaining(
-          'System location permission may also need to be enabled'),
-      findsOneWidget,
-    );
+    expect(find.text('Location Assistance'), findsOneWidget);
+    expect(find.text('Smart merchant suggestions'), findsOneWidget);
 
-    await tester.ensureVisible(find.text('Smart location suggestions'));
+    await tester.ensureVisible(find.text('Location Assistance'));
     await tester.pumpAndSettle();
 
     await tester.tap(find.byType(Switch).last);
@@ -161,9 +156,8 @@ void main() {
       container.read(locationAssistanceProvider).isEnabled,
       isTrue,
     );
-    expect(find.textContaining('Currently on'), findsOneWidget);
 
-    await tester.ensureVisible(find.text('Smart location suggestions'));
+    await tester.ensureVisible(find.text('Location Assistance'));
     await tester.pumpAndSettle();
 
     await tester.tap(find.byType(Switch).last);
@@ -174,12 +168,6 @@ void main() {
     expect(
       container.read(locationAssistanceProvider).isEnabled,
       isFalse,
-    );
-    expect(find.textContaining('Currently off'), findsOneWidget);
-    expect(
-      find.textContaining(
-          'System location permission may also need to be enabled'),
-      findsNothing,
     );
   });
 
@@ -199,10 +187,10 @@ void main() {
 
     await tester.pumpAndSettle();
 
-    await tester.ensureVisible(find.text('Currency & Region Format'));
+    await tester.ensureVisible(find.text('Locale & Number Format'));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Currency & Region Format'));
+    await tester.tap(find.text('Locale & Number Format'));
     await tester.pumpAndSettle();
 
     expect(find.text('Region Format'), findsOneWidget);
@@ -229,10 +217,10 @@ void main() {
 
     await tester.pumpAndSettle();
 
-    await tester.ensureVisible(find.text('AI Personality Intensity'));
+    await tester.ensureVisible(find.text('AI Personality'));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('AI Personality Intensity'));
+    await tester.tap(find.text('AI Personality'));
     await tester.pumpAndSettle();
 
     expect(find.text('Balanced'), findsWidgets);
@@ -265,16 +253,15 @@ void main() {
 
     await tester.pumpAndSettle();
 
-    expect(find.text('Santos Household'), findsOneWidget);
-    expect(find.text('Owner · PHP'), findsOneWidget);
-    expect(find.text('Family Space settings'), findsOneWidget);
+    expect(find.text('Shared Conscia'), findsOneWidget);
+    expect(find.text('Santos Household · Owner'), findsOneWidget);
 
-    final profileTop = tester.getTopLeft(find.text('Profile')).dy;
+    final profileTop = tester.getTopLeft(find.text('settings@example.com')).dy;
     final sharedTop = tester.getTopLeft(find.text('Shared Conscia')).dy;
-    final preferencesTop = tester.getTopLeft(find.text('Preferences')).dy;
+    final planningTop = tester.getTopLeft(find.text('BUDGETS & CATEGORIES')).dy;
 
     expect(sharedTop, greaterThan(profileTop));
-    expect(sharedTop, lessThan(preferencesTop));
+    expect(sharedTop, lessThan(planningTop));
   });
 
   testWidgets('preferences and planning rows are grouped in the intended order',
@@ -294,26 +281,26 @@ void main() {
 
     await tester.pumpAndSettle();
 
-    await tester.ensureVisible(find.text('AI Personality Intensity'));
+    await tester.ensureVisible(find.text('AI Personality'));
     await tester.pumpAndSettle();
 
-    final aiTop = tester.getTopLeft(find.text('AI Personality Intensity')).dy;
+    final aiTop = tester.getTopLeft(find.text('AI Personality')).dy;
     final smartLocationTop =
-        tester.getTopLeft(find.text('Smart location suggestions')).dy;
+        tester.getTopLeft(find.text('Location Assistance')).dy;
     expect(aiTop, lessThan(smartLocationTop));
 
     await tester.ensureVisible(find.text('Budgets'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Budgets & Categories'), findsOneWidget);
-    final planningTop = tester.getTopLeft(find.text('Budgets & Categories')).dy;
+    expect(find.text('BUDGETS & CATEGORIES'), findsOneWidget);
+    final planningTop = tester.getTopLeft(find.text('BUDGETS & CATEGORIES')).dy;
     final categoriesTop = tester.getTopLeft(find.text('Categories')).dy;
     final budgetsTop = tester.getTopLeft(find.text('Budgets')).dy;
 
     expect(categoriesTop, greaterThan(planningTop));
-    expect(budgetsTop, greaterThan(categoriesTop));
+    expect(budgetsTop, lessThan(categoriesTop));
     expect(
-      find.text('Create and tune monthly caps for spending categories'),
+      find.text('Create and tune monthly caps'),
       findsOneWidget,
     );
   });

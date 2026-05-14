@@ -12,6 +12,7 @@ class FloatingLabelTextField extends StatefulWidget {
     this.prefix,
     this.keyboardType,
     this.textInputAction,
+    this.textCapitalization = TextCapitalization.none,
     this.onChanged,
     this.onSubmitted,
     this.onTap,
@@ -19,6 +20,7 @@ class FloatingLabelTextField extends StatefulWidget {
     this.errorText,
     this.enabled = true,
     this.readOnly = false,
+    this.autofocus = false,
     this.trailing,
     this.maxLines = 1,
     this.minLines,
@@ -37,6 +39,7 @@ class FloatingLabelTextField extends StatefulWidget {
   final Widget? prefix;
   final TextInputType? keyboardType;
   final TextInputAction? textInputAction;
+  final TextCapitalization textCapitalization;
   final ValueChanged<String>? onChanged;
   final ValueChanged<String>? onSubmitted;
   final VoidCallback? onTap;
@@ -44,6 +47,7 @@ class FloatingLabelTextField extends StatefulWidget {
   final String? errorText;
   final bool enabled;
   final bool readOnly;
+  final bool autofocus;
   final Widget? trailing;
   final int maxLines;
   final int? minLines;
@@ -180,12 +184,14 @@ class _FloatingLabelTextFieldState extends State<FloatingLabelTextField> {
               focusNode: _focusNode,
               keyboardType: widget.keyboardType,
               textInputAction: widget.textInputAction,
+              textCapitalization: widget.textCapitalization,
               onChanged: widget.onChanged,
               onSubmitted: widget.onSubmitted,
               onTap: widget.onTap,
               obscureText: widget.obscureText,
               enabled: widget.enabled,
               readOnly: widget.readOnly,
+              autofocus: widget.autofocus,
               maxLines: widget.maxLines,
               minLines: widget.minLines,
               autofillHints: widget.autofillHints,

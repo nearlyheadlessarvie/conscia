@@ -10,12 +10,14 @@ class InsightFeedCard extends StatelessWidget {
     this.onDismiss,
     this.onTap,
     this.enableNavigation = true,
+    this.groupedRow = false,
   });
 
   final InsightFeedItem item;
   final VoidCallback? onDismiss;
   final VoidCallback? onTap;
   final bool enableNavigation;
+  final bool groupedRow;
 
   @override
   Widget build(BuildContext context) {
@@ -28,94 +30,99 @@ class InsightFeedCard extends StatelessWidget {
     final isDrillDown = item.interaction == InsightFeedInteraction.drillDown &&
         effectiveOnTap != null;
 
-    return Card(
-      child: InkWell(
-        borderRadius: BorderRadius.circular(12),
-        onTap: effectiveOnTap,
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _KindIcon(item: item, color: toneColor),
+    final content = InkWell(
+      borderRadius: BorderRadius.circular(groupedRow ? 0 : 12),
+      onTap: effectiveOnTap,
+      child: Padding(
+        padding: EdgeInsets.symmetric(
+          horizontal: groupedRow ? 0 : 16,
+          vertical: groupedRow ? 14 : 16,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _KindIcon(item: item, color: toneColor),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    item.title,
+                    style: textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+                if (item.metric != null) ...[
                   const SizedBox(width: 8),
-                  Expanded(
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: toneColor.withValues(alpha: 0.14),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                     child: Text(
-                      item.title,
-                      style: textTheme.titleSmall?.copyWith(
+                      item.metric!,
+                      style: textTheme.labelLarge?.copyWith(
+                        color: toneColor,
                         fontWeight: FontWeight.w800,
                       ),
                     ),
                   ),
-                  if (item.metric != null) ...[
-                    const SizedBox(width: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: toneColor.withValues(alpha: 0.14),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Text(
-                        item.metric!,
-                        style: textTheme.labelLarge?.copyWith(
-                          color: toneColor,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                    ),
-                  ],
-                  if (isDrillDown) ...[
-                    const SizedBox(width: 6),
-                    Icon(
-                      Icons.chevron_right_rounded,
-                      color: colors.onSurfaceVariant,
-                      size: 20,
-                    ),
-                  ],
                 ],
-              ),
-              const SizedBox(height: 10),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _DetailVisual(item: item, color: toneColor),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          item.body,
-                          style: textTheme.bodySmall?.copyWith(
-                            color: colors.onSurfaceVariant,
-                          ),
-                        ),
-                        if (item.caption != null) ...[
-                          const SizedBox(height: 8),
-                          Text(
-                            isAction ? '+ ${item.caption!}' : item.caption!,
-                            style: textTheme.labelSmall?.copyWith(
-                              color: toneColor,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
+                if (isDrillDown) ...[
+                  const SizedBox(width: 6),
+                  Icon(
+                    Icons.chevron_right_rounded,
+                    color: colors.onSurfaceVariant,
+                    size: 20,
                   ),
                 ],
-              ),
-            ],
-          ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _DetailVisual(item: item, color: toneColor),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        item.body,
+                        style: textTheme.bodySmall?.copyWith(
+                          color: colors.onSurfaceVariant,
+                        ),
+                      ),
+                      if (item.caption != null) ...[
+                        const SizedBox(height: 8),
+                        Text(
+                          isAction ? '+ ${item.caption!}' : item.caption!,
+                          style: textTheme.labelSmall?.copyWith(
+                            color: toneColor,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ],
         ),
       ),
     );
+
+    if (groupedRow) return content;
+
+    return Card(child: content);
   }
 
   Color _toneColor(ColorScheme colors) {

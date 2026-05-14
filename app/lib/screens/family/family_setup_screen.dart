@@ -7,6 +7,7 @@ import '../../core/errors/app_error.dart';
 import '../../core/routing/app_router.dart';
 import '../../providers/family_space_provider.dart';
 import '../../widgets/feed_card.dart';
+import '../../widgets/floating_label_text_field.dart';
 import '../../widgets/hero_screen_scaffold.dart';
 import '../../widgets/screen_section.dart';
 
@@ -18,10 +19,11 @@ class FamilySetupScreen extends ConsumerStatefulWidget {
 }
 
 class _FamilySetupScreenState extends ConsumerState<FamilySetupScreen> {
-  final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController(text: 'My Family Space');
   final _currencyController = TextEditingController(text: 'PHP');
   bool _isSubmitting = false;
+  String? _nameError;
+  String? _currencyError;
 
   @override
   void dispose() {
@@ -42,81 +44,80 @@ class _FamilySetupScreenState extends ConsumerState<FamilySetupScreen> {
         onPressed: _isSubmitting ? null : _submit,
         child: Text(_isSubmitting ? 'Creating...' : 'Create Family Space'),
       ),
-      child: Form(
-        key: _formKey,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Family Space shares household planning, not private accounts.',
-              style: theme.textTheme.titleMedium,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Family Space shares household planning, not private accounts.',
+            style: theme.textTheme.titleMedium,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Records stay personal unless you mark them as Family. Start clean, then share only the household spending that belongs there.',
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+              height: 1.35,
             ),
-            const SizedBox(height: 8),
-            Text(
-              'Records stay personal unless you mark them as Family. Start clean, then share only the household spending that belongs there.',
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-                height: 1.35,
-              ),
+          ),
+          const SizedBox(height: 18),
+          FeedCard(
+            child: Column(
+              children: [
+                FloatingLabelTextField(
+                  controller: _nameController,
+                  label: 'Family Space name',
+                  prefix: Icon(AppIcons.family),
+                  textInputAction: TextInputAction.next,
+                  textCapitalization: TextCapitalization.words,
+                  errorText: _nameError,
+                  onChanged: (_) {
+                    if (_nameError != null) {
+                      setState(() => _nameError = null);
+                    }
+                  },
+                ),
+                const SizedBox(height: 14),
+                FloatingLabelTextField(
+                  controller: _currencyController,
+                  label: 'Shared currency',
+                  prefix: const Icon(Icons.payments_outlined),
+                  maxLength: 3,
+                  counterText: '',
+                  textCapitalization: TextCapitalization.characters,
+                  errorText: _currencyError,
+                  onChanged: (_) {
+                    if (_currencyError != null) {
+                      setState(() => _currencyError = null);
+                    }
+                  },
+                ),
+              ],
             ),
-            const SizedBox(height: 18),
-            FeedCard(
-              child: Column(
+          ),
+          const ScreenSection(
+            title: 'Premium',
+            child: FeedCard(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  TextFormField(
-                    controller: _nameController,
-                    decoration: InputDecoration(
-                      labelText: 'Family Space name',
-                      prefixIcon: Icon(AppIcons.family),
+                  Icon(Icons.workspace_premium_outlined),
+                  SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'Requires Premium to create. Invited members can participate free.',
                     ),
-                    textInputAction: TextInputAction.next,
-                    validator: (value) =>
-                        value == null || value.trim().isEmpty
-                            ? 'Name is required'
-                            : null,
-                  ),
-                  const SizedBox(height: 14),
-                  TextFormField(
-                    controller: _currencyController,
-                    decoration: const InputDecoration(
-                      labelText: 'Shared currency',
-                      prefixIcon: Icon(Icons.payments_outlined),
-                    ),
-                    maxLength: 3,
-                    textCapitalization: TextCapitalization.characters,
-                    validator: (value) =>
-                        value == null || value.trim().length != 3
-                            ? 'Use a 3-letter currency code'
-                            : null,
                   ),
                 ],
               ),
             ),
-            const ScreenSection(
-              title: 'Premium',
-              child: FeedCard(
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Icon(Icons.workspace_premium_outlined),
-                    SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        'Requires Premium to create. Invited members can participate free.',
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 
   Future<void> _submit() async {
-    if (!_formKey.currentState!.validate()) return;
+    if (!_validate()) return;
 
     setState(() => _isSubmitting = true);
     final messenger = ScaffoldMessenger.of(context);
@@ -134,5 +135,20 @@ class _FamilySetupScreenState extends ConsumerState<FamilySetupScreen> {
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }
+  }
+
+  bool _validate() {
+    final nextNameError =
+        _nameController.text.trim().isEmpty ? 'Name is required' : null;
+    final nextCurrencyError = _currencyController.text.trim().length != 3
+        ? 'Use a 3-letter currency code'
+        : null;
+
+    setState(() {
+      _nameError = nextNameError;
+      _currencyError = nextCurrencyError;
+    });
+
+    return nextNameError == null && nextCurrencyError == null;
   }
 }

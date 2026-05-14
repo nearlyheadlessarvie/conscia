@@ -10,6 +10,7 @@ import '../../widgets/feed_card.dart';
 import '../../widgets/hero_screen_scaffold.dart';
 import '../../widgets/screen_section.dart';
 import 'widgets/insights_formatting.dart';
+import 'widgets/insight_detail_back_button.dart';
 
 class CategoryListScreen extends ConsumerWidget {
   const CategoryListScreen({super.key});
@@ -20,7 +21,9 @@ class CategoryListScreen extends ConsumerWidget {
     final prefs = ref.watch(userPreferencesProvider);
 
     return HeroScreenScaffold(
-      appBar: AppBar(title: const Text('Categories')),
+      appBar: AppBar(
+          leading: const InsightDetailBackButton(),
+          title: const Text('Categories')),
       child: categoriesAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (_, __) => const _MessageCard(
@@ -88,7 +91,8 @@ class _CategoryCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
-    final rateText = '${(category.regretRate * 100).toStringAsFixed(0)}% regret';
+    final rateText =
+        '${(category.regretRate * 100).toStringAsFixed(0)}% regret';
     final regretText = formatInsightCurrency(
       category.regrettedSpend,
       currencyCode: currencyCode,

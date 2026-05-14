@@ -120,12 +120,10 @@ class _LocalePickerBody extends StatelessWidget {
                           ),
                           const SizedBox(width: 12),
                           if (isSelected)
-                            Text(
-                              '✓',
-                              style: textTheme.titleMedium?.copyWith(
-                                color: Theme.of(context).appColors.deepNavy,
-                                fontWeight: FontWeight.w700,
-                              ),
+                            Icon(
+                              Icons.check_rounded,
+                              color: Theme.of(context).appColors.deepNavy,
+                              size: 20,
                             ),
                         ],
                       ),

@@ -7,6 +7,7 @@ import '../../core/routing/app_router.dart';
 import '../../models/family_space.dart';
 import '../../providers/family_space_provider.dart';
 import '../../widgets/feed_card.dart';
+import '../../widgets/floating_label_text_field.dart';
 import '../../widgets/hero_screen_scaffold.dart';
 import '../../widgets/screen_section.dart';
 import '../../widgets/skeleton_loader.dart';
@@ -240,13 +241,11 @@ class _RenameFamilySpaceSheetState
                   ),
             ),
             const SizedBox(height: 12),
-            TextField(
+            FloatingLabelTextField(
               controller: _controller,
+              label: 'Household name',
               autofocus: true,
               textCapitalization: TextCapitalization.words,
-              decoration: const InputDecoration(
-                labelText: 'Household name',
-              ),
               onChanged: (_) => setState(() {}),
             ),
             const SizedBox(height: 18),

@@ -6,6 +6,7 @@ import 'package:conscia_app/screens/budgets/widgets/budget_form_sheet.dart';
 import 'package:conscia_app/services/budget_service.dart';
 import 'package:conscia_app/services/subscription_service.dart';
 import 'package:conscia_app/services/user_service.dart';
+import 'package:conscia_app/widgets/floating_label_text_field.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -71,14 +72,14 @@ void main() {
     );
 
     expect(find.text('Subscriptions'), findsOneWidget);
-    expect(find.widgetWithText(InputChip, 'Subscriptions'), findsOneWidget);
+    expect(find.byIcon(Icons.close_rounded), findsOneWidget);
   });
 
   testWidgets('budget form hides upgrade-only categories for free users',
       (tester) async {
     await _pumpBudgetFormSheet(tester, isPremium: false);
 
-    await tester.tap(find.text('All categories'));
+    await tester.tap(find.text('More'));
     await tester.pumpAndSettle();
 
     expect(find.text('Groceries'), findsWidgets);
@@ -92,10 +93,36 @@ void main() {
       (tester) async {
     await _pumpBudgetFormSheet(tester, isPremium: true);
 
-    await tester.tap(find.text('All categories'));
+    final categoryRail = find.byWidgetPredicate(
+      (widget) =>
+          widget is ListView && widget.scrollDirection == Axis.horizontal,
+    );
+    await tester.drag(categoryRail, const Offset(-260, 0));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('More'));
     await tester.pumpAndSettle();
 
     expect(find.text('Travel'), findsOneWidget);
     expect(find.text('Salary'), findsNothing);
+  });
+
+  testWidgets('monthly cap uses Conscia v2 floating label treatment',
+      (tester) async {
+    await _pumpBudgetFormSheet(tester, isPremium: true);
+
+    final floatingFields = tester.widgetList<FloatingLabelTextField>(
+      find.byType(FloatingLabelTextField),
+    );
+
+    expect(
+        floatingFields.any((field) => field.label == 'Monthly limit'), isTrue);
+    expect(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is TextField &&
+            widget.decoration?.labelText == 'Monthly Limit',
+      ),
+      findsNothing,
+    );
   });
 }

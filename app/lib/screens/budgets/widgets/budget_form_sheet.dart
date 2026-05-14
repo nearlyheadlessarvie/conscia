@@ -7,6 +7,7 @@ import '../../../providers/subscription_provider.dart';
 import '../../../services/budget_service.dart';
 import '../../transactions/widgets/transaction_style_category_selector.dart';
 import '../../../widgets/currency_badge.dart';
+import '../../../widgets/floating_label_text_field.dart';
 import '../../../widgets/scope_selector.dart';
 import '../../../widgets/screen_section.dart';
 import '../../../providers/user_provider.dart';
@@ -185,22 +186,17 @@ class _BudgetFormSheetState extends ConsumerState<BudgetFormSheet> {
                       subtitle:
                           'Set the spending ceiling you want Conscia to track.',
                       compact: true,
-                      child: TextField(
+                      child: FloatingLabelTextField(
                         controller: _amountController,
+                        label: 'Monthly limit',
                         keyboardType: const TextInputType.numberWithOptions(
                             decimal: true),
                         onChanged: (_) => setState(() {}),
-                        decoration: InputDecoration(
-                          labelText: 'Monthly Limit',
-                          border: const OutlineInputBorder(),
-                          prefixIcon: Padding(
-                            padding: const EdgeInsets.only(left: 12, right: 8),
-                            child: CurrencyBadge(
-                              currencyCode: currency,
-                            ),
+                        prefix: Padding(
+                          padding: const EdgeInsets.only(right: 2),
+                          child: CurrencyBadge(
+                            currencyCode: currency,
                           ),
-                          prefixIconConstraints:
-                              const BoxConstraints(minWidth: 0, minHeight: 0),
                         ),
                       ),
                     ),

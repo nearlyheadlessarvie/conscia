@@ -38,11 +38,31 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   final Set<String> _dismissedPrompts = {};
   final ScrollController _scrollController = ScrollController();
   double _scrollOffset = 0;
+  bool _hasRestoredScrollOffset = false;
+
+  static const _scrollOffsetStorageIdentifier =
+      'dashboard-header-scroll-offset';
 
   @override
   void initState() {
     super.initState();
     _scrollController.addListener(_handleScroll);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_hasRestoredScrollOffset) {
+      final restoredOffset = PageStorage.maybeOf(context)?.readState(
+        context,
+        identifier: _scrollOffsetStorageIdentifier,
+      );
+      if (restoredOffset is num) {
+        _scrollOffset = restoredOffset.toDouble();
+      }
+      _hasRestoredScrollOffset = true;
+    }
+    _syncScrollOffsetAfterLayout();
   }
 
   @override
@@ -56,8 +76,27 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   void _handleScroll() {
     final nextOffset =
         _scrollController.hasClients ? _scrollController.offset : 0.0;
+    PageStorage.maybeOf(context)?.writeState(
+      context,
+      nextOffset,
+      identifier: _scrollOffsetStorageIdentifier,
+    );
     if ((nextOffset - _scrollOffset).abs() < 1) return;
     setState(() => _scrollOffset = nextOffset);
+  }
+
+  void _syncScrollOffsetAfterLayout() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_scrollController.hasClients) return;
+      final nextOffset = _scrollController.offset;
+      PageStorage.maybeOf(context)?.writeState(
+        context,
+        nextOffset,
+        identifier: _scrollOffsetStorageIdentifier,
+      );
+      if ((nextOffset - _scrollOffset).abs() < 1) return;
+      setState(() => _scrollOffset = nextOffset);
+    });
   }
 
   Future<void> _onRefresh() async {
@@ -524,9 +563,8 @@ class _DashboardEditorialHeroCard extends StatelessWidget {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            colors.amberSoft,
-            colors.paper,
             colors.navySoft,
+            colors.amberSoft,
           ],
         ),
         borderRadius: const BorderRadius.vertical(
@@ -537,10 +575,11 @@ class _DashboardEditorialHeroCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Spent this month',
-            style: textTheme.bodyMedium?.copyWith(
-              color: colors.mutedInk,
-              fontWeight: FontWeight.w600,
+            'SPENT THIS MONTH',
+            style: textTheme.labelSmall?.copyWith(
+              color: colors.deepNavy,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.8,
             ),
           ),
           const SizedBox(height: 6),
@@ -561,7 +600,7 @@ class _DashboardEditorialHeroCard extends StatelessWidget {
                     ? 'Conscia will turn your next few transactions into a clearer monthly story.'
                     : '${journey!.momentumDays}-day mindful streak · ${_DashboardJourneyCard._completedQuestCount(journey!.weeklyQuests)}/${journey!.weeklyQuests.length} quests this week'),
             style: textTheme.bodyMedium?.copyWith(
-              color: colors.mutedInk,
+              color: colors.ink,
               height: 1.35,
             ),
           ),

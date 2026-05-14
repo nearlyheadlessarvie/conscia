@@ -337,7 +337,6 @@ class _PrePurchaseScreenState extends ConsumerState<PrePurchaseScreen>
         children: [
           _AssistantHeroBleed(greetingName: greetingName),
           const SizedBox(height: 20),
-
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Column(
@@ -376,7 +375,6 @@ class _PrePurchaseScreenState extends ConsumerState<PrePurchaseScreen>
                   }),
                 ),
                 const SizedBox(height: 18),
-
                 TransactionStyleCategorySelector(
                   selectedCategory: _selectedCategory,
                   isExpense: true,
@@ -385,7 +383,9 @@ class _PrePurchaseScreenState extends ConsumerState<PrePurchaseScreen>
                   onCategorySelected: (category) {
                     setState(() => _selectedCategory = category);
                     if (category != null) {
-                      ref.read(recentCategoryProvider.notifier).record(category);
+                      ref
+                          .read(recentCategoryProvider.notifier)
+                          .record(category);
                     }
                   },
                 ),
@@ -403,7 +403,9 @@ class _PrePurchaseScreenState extends ConsumerState<PrePurchaseScreen>
                       setState(() {
                         _selectedCategory = category;
                       });
-                      ref.read(recentCategoryProvider.notifier).record(category);
+                      ref
+                          .read(recentCategoryProvider.notifier)
+                          .record(category);
                     },
                     categoryAvatarBuilder: (category) => CategoryIcons.badge(
                       category,
@@ -648,8 +650,7 @@ class _InsightSlideshowState extends State<_InsightSlideshow> {
                 icon: widget.category.isNotEmpty
                     ? IconTheme(
                         data: const IconThemeData(color: Colors.white),
-                        child:
-                            CategoryIcons.rawIcon(widget.category, size: 22),
+                        child: CategoryIcons.rawIcon(widget.category, size: 22),
                       )
                     : const Icon(Icons.shopping_bag_outlined,
                         size: 22, color: Colors.white),
@@ -729,7 +730,8 @@ class _SlideCard extends StatelessWidget {
     final colors = Theme.of(context).appColors;
     final textTheme = Theme.of(context).textTheme;
     final titleColor = onLight ? colors.deepNavy : Colors.white;
-    final bodyColor = onLight ? colors.ink : Colors.white.withValues(alpha: 0.9);
+    final bodyColor =
+        onLight ? colors.ink : Colors.white.withValues(alpha: 0.9);
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 4),
@@ -814,13 +816,13 @@ class _VerdictBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors    = Theme.of(context).appColors;
+    final colors = Theme.of(context).appColors;
     final textTheme = Theme.of(context).textTheme;
-    final isDevil   = tone == _VerdictTone.devil;
+    final isDevil = tone == _VerdictTone.devil;
 
-    final bg     = isDevil ? colors.devilBg  : colors.angelBg;
+    final bg = isDevil ? colors.devilBg : colors.angelBg;
     final accent = isDevil ? colors.devilAccent : colors.angelAccent;
-    final label  = isDevil ? 'THE DEVIL SAYS' : 'THE ANGEL SAYS';
+    final label = isDevil ? 'THE DEVIL SAYS' : 'THE ANGEL SAYS';
 
     final bubble = ConstrainedBox(
       constraints: BoxConstraints(
@@ -832,18 +834,21 @@ class _VerdictBubble extends StatelessWidget {
           color: bg,
           border: Border.all(color: accent.withValues(alpha: 0.25)),
           borderRadius: BorderRadius.only(
-            topLeft:     const Radius.circular(16),
-            topRight:    const Radius.circular(16),
-            bottomLeft:  Radius.circular(isDevil ? 4 : 16),
+            topLeft: const Radius.circular(16),
+            topRight: const Radius.circular(16),
+            bottomLeft: Radius.circular(isDevil ? 4 : 16),
             bottomRight: Radius.circular(isDevil ? 16 : 4),
           ),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(label, style: textTheme.labelSmall?.copyWith(color: accent, fontWeight: FontWeight.w800)),
+            Text(label,
+                style: textTheme.labelSmall
+                    ?.copyWith(color: accent, fontWeight: FontWeight.w800)),
             const SizedBox(height: 4),
-            Text('"$message"', style: textTheme.bodySmall?.copyWith(height: 1.45)),
+            Text('"$message"',
+                style: textTheme.bodySmall?.copyWith(height: 1.45)),
           ],
         ),
       ),
@@ -950,73 +955,38 @@ class _AssistantHeroBleed extends StatelessWidget {
         ),
       ),
       child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 14, 20, 22),
-          child: Column(
-            children: [
-              // Identity row
-              Row(
-                children: [
-                  CircleAvatar(
-                    radius: 18,
-                    backgroundColor: colors.navySoft,
-                    child: Icon(Icons.person, size: 20, color: colors.deepNavy),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Welcome back',
-                          style: textTheme.bodySmall?.copyWith(
-                            color: colors.mutedInk,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        if (greetingName.isNotEmpty)
-                          Text(
-                            greetingName,
-                            style: textTheme.titleSmall?.copyWith(
-                              color: colors.ink,
-                              fontWeight: FontWeight.w700,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                      ],
-                    ),
-                  ),
-                ],
+        padding: const EdgeInsets.fromLTRB(20, 14, 20, 22),
+        child: Column(
+          children: [
+            const SizedBox(height: 18),
+            // Mascot
+            const ConsciaAlterEgoMotion(
+              preset: ConsciaAlterEgoPreset.idle,
+              size: 56,
+            ),
+            const SizedBox(height: 10),
+            // Tagline
+            Text(
+              "Let's think this through",
+              style: textTheme.headlineSmall?.copyWith(
+                color: colors.deepNavy,
+                fontWeight: FontWeight.w800,
               ),
-              const SizedBox(height: 18),
-              // Mascot
-              const ConsciaAlterEgoMotion(
-                preset: ConsciaAlterEgoPreset.idle,
-                size: 56,
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 6),
+            Text(
+              "Conscia gives you a devil's impulse, an angel's reason, "
+              'and a neutral take to help you spend more mindfully.',
+              style: textTheme.bodySmall?.copyWith(
+                color: colors.mutedInk,
+                height: 1.4,
               ),
-              const SizedBox(height: 10),
-              // Tagline
-              Text(
-                "Let's think this through",
-                style: textTheme.headlineSmall?.copyWith(
-                  color: colors.deepNavy,
-                  fontWeight: FontWeight.w800,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 6),
-              Text(
-                "Conscia gives you a devil's impulse, an angel's reason, "
-                'and a neutral take to help you spend more mindfully.',
-                style: textTheme.bodySmall?.copyWith(
-                  color: colors.mutedInk,
-                  height: 1.4,
-                ),
-                textAlign: TextAlign.center,
-              ),
-            ],
-          ),
+              textAlign: TextAlign.center,
+            ),
+          ],
         ),
+      ),
     );
   }
 }
