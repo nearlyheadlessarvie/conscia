@@ -453,7 +453,7 @@ void main() {
     await tester.tap(find.widgetWithText(FilterChip, 'Dining'));
     await tester.pump();
 
-    await tester.tap(find.text('Ask Conscia'));
+    await tester.tap(find.textContaining('Ask Conscia'));
     await tester.pump();
 
     expect(
@@ -674,8 +674,8 @@ void main() {
     await tester.tap(find.widgetWithText(FilterChip, 'Dining'));
     await tester.pumpAndSettle();
 
-    await tester.ensureVisible(find.text('Ask Conscia'));
-    await tester.tap(find.text('Ask Conscia'));
+    await tester.ensureVisible(find.textContaining('Ask Conscia'));
+    await tester.tap(find.textContaining('Ask Conscia'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 700));
     await tester.pumpAndSettle();
@@ -727,8 +727,8 @@ void main() {
     await tester.tap(find.widgetWithText(FilterChip, 'Dining'));
     await tester.pumpAndSettle();
 
-    await tester.ensureVisible(find.text('Ask Conscia'));
-    await tester.tap(find.text('Ask Conscia'));
+    await tester.ensureVisible(find.textContaining('Ask Conscia'));
+    await tester.tap(find.textContaining('Ask Conscia'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 700));
     await tester.pumpAndSettle();
@@ -783,8 +783,8 @@ void main() {
     await tester.ensureVisible(find.widgetWithText(FilterChip, 'Dining'));
     await tester.tap(find.widgetWithText(FilterChip, 'Dining'));
     await tester.pumpAndSettle();
-    await tester.ensureVisible(find.text('Ask Conscia'));
-    await tester.tap(find.text('Ask Conscia'));
+    await tester.ensureVisible(find.textContaining('Ask Conscia'));
+    await tester.tap(find.textContaining('Ask Conscia'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 700));
     await tester.pumpAndSettle();
@@ -845,8 +845,8 @@ void main() {
     await tester.ensureVisible(find.widgetWithText(FilterChip, 'Dining'));
     await tester.tap(find.widgetWithText(FilterChip, 'Dining'));
     await tester.pumpAndSettle();
-    await tester.ensureVisible(find.text('Ask Conscia'));
-    await tester.tap(find.text('Ask Conscia'));
+    await tester.ensureVisible(find.textContaining('Ask Conscia'));
+    await tester.tap(find.textContaining('Ask Conscia'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 700));
     await tester.pumpAndSettle();

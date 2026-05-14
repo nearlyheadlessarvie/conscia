@@ -631,6 +631,8 @@ class _InsightSlideshowState extends State<_InsightSlideshow> {
   final _controller = PageController();
   Timer? _timer;
   int _page = 0;
+  // timer tracks its own page counter to avoid stale reads from _page field
+  int _timerPage = 0;
   static const _slideCount = 3;
 
   @override
@@ -638,9 +640,9 @@ class _InsightSlideshowState extends State<_InsightSlideshow> {
     super.initState();
     _timer = Timer.periodic(const Duration(seconds: 3), (_) {
       if (!mounted) return;
-      final next = (_page + 1) % _slideCount;
+      _timerPage = (_timerPage + 1) % _slideCount;
       _controller.animateToPage(
-        next,
+        _timerPage,
         duration: const Duration(milliseconds: 500),
         curve: Curves.easeInOut,
       );
