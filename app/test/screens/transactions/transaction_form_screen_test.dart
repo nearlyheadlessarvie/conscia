@@ -195,6 +195,7 @@ Future<ProviderContainer> _pumpTransactionForm(
   String? transactionId,
   List<Budget> budgets = const [],
   FamilySpace? familySpace,
+  String locale = 'en_US',
   bool locationSuggestionsEnabled = false,
 }) async {
   final resolvedPrefs = prefs ??
@@ -223,7 +224,7 @@ Future<ProviderContainer> _pumpTransactionForm(
           id: 'user-1',
           email: 'tx@example.com',
           currencyCode: 'USD',
-          locale: 'en_US',
+          locale: locale,
           createdAt: DateTime(2026),
           hasCompletedOnboarding: true,
           locationSuggestionsEnabled: locationSuggestionsEnabled,
@@ -280,6 +281,7 @@ Future<Widget> buildTransactionFormApp(
     'location_suggestions_enabled': false,
     'location_suggestions_prompted': true,
   },
+  String locale = 'en_US',
 }) async {
   SharedPreferences.setMockInitialValues(initialPrefs);
   final resolvedPrefs = await SharedPreferences.getInstance();
@@ -301,7 +303,7 @@ Future<Widget> buildTransactionFormApp(
           id: 'user-1',
           email: 'tx@example.com',
           currencyCode: 'USD',
-          locale: 'en_US',
+          locale: locale,
           createdAt: DateTime(2026),
           hasCompletedOnboarding: true,
         ),
@@ -488,13 +490,61 @@ void main() {
     expect(find.text('Groceries'), findsWidgets);
   });
 
-  testWidgets('transaction form shows only one category heading',
+  testWidgets('transaction form keeps category separate from scope',
       (tester) async {
     await tester.pumpWidget(await buildTransactionFormApp(tester));
 
     await tester.pumpAndSettle();
 
+    expect(find.text('TRANSACTION'), findsOneWidget);
+    expect(find.text('Was this money in or out?'), findsOneWidget);
+    expect(find.text('CLASSIFY'), findsNothing);
     expect(find.text('CATEGORY'), findsOneWidget);
+    expect(
+      find.text(
+        'Choose where this transaction belongs so budgets and insights stay accurate.',
+      ),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('income category copy explains income rhythm tracking',
+      (tester) async {
+    await tester.pumpWidget(await buildTransactionFormApp(tester));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Income'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('CATEGORY'), findsOneWidget);
+    expect(
+      find.text(
+        'Choose where this money came from so Conscia can understand your income rhythm separately from spending.',
+      ),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('family scope uses its own classify section', (tester) async {
+    await _pumpTransactionForm(
+      tester,
+      familySpace: const FamilySpace(
+        id: 'family-1',
+        name: 'Santos Household',
+        currencyCode: 'USD',
+        isReadOnly: false,
+        role: 'Contributor',
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('CLASSIFY'), findsOneWidget);
+    expect(
+      find.text('Where should this live in your money story?'),
+      findsOneWidget,
+    );
+    expect(find.text('CATEGORY'), findsOneWidget);
+    expect(find.text('SCOPE'), findsNothing);
   });
 
   testWidgets('category selector and merchant field are always visible',
@@ -553,6 +603,13 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('RECURRING'), findsOneWidget);
+    expect(find.text('Repeat on a schedule.'), findsOneWidget);
+    expect(find.byType(SwitchListTile), findsNothing);
+
+    final title = tester.widget<Text>(find.text('RECURRING'));
+    expect(title.style?.fontSize, 12);
+    expect(title.style?.fontWeight, FontWeight.w800);
+    expect(title.style?.letterSpacing, 0.9);
     expect(find.text('Weekly'), findsNothing);
   });
 
@@ -821,6 +878,65 @@ void main() {
     expect(alerts.first.title, 'No budget for Dining yet');
   });
 
+  testWidgets('transaction form parses localized amount input on save', (
+    tester,
+  ) async {
+    final transactionService = _RecordingTransactionService();
+
+    await _pumpTransactionForm(
+      tester,
+      transactionService: transactionService,
+      locale: 'de_DE',
+      budgets: const [
+        Budget(
+          id: 'budget-1',
+          category: 'Dining',
+          monthlyLimit: 3000,
+          spent: 25,
+          currencyCode: 'USD',
+          percentage: 0.01,
+          isOverBudget: false,
+        ),
+      ],
+    );
+
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextField).first, '1.234,56');
+    await tester.tap(find.text('Dining'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Save Transaction'));
+    await tester.pumpAndSettle();
+
+    expect(transactionService.lastCreated?.amount, 1234.56);
+  });
+
+  testWidgets('transaction form uses locale when showing explicit dates', (
+    tester,
+  ) async {
+    await _pumpTransactionForm(
+      tester,
+      transactionService: _RecordingTransactionService(
+        editTransaction: Transaction(
+          id: 'tx-locale-date',
+          amount: 14.75,
+          currencyCode: 'EUR',
+          category: 'Coffee',
+          description: 'Cafe',
+          type: 'expense',
+          date: DateTime(2026, 5, 3, 12, 30),
+        ),
+      ),
+      transactionId: 'tx-locale-date',
+      locale: 'de_DE',
+    );
+
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 250));
+
+    expect(find.text('3.5.2026'), findsOneWidget);
+  });
+
   testWidgets('transaction form can save a family-scoped transaction', (
     tester,
   ) async {
@@ -885,7 +1001,7 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 250));
 
-    expect(find.text('SCOPE'), findsOneWidget);
+    expect(find.text('CLASSIFY'), findsOneWidget);
     expect(find.text('Family'), findsOneWidget);
 
     await tester.tap(find.text('Update Transaction'));

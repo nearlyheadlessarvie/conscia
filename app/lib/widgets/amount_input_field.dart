@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '../core/utils/localized_number_input.dart';
 import 'currency_badge.dart';
 import 'currency_picker_sheet.dart';
 
@@ -9,6 +9,7 @@ class AmountInputField extends StatelessWidget {
   final TextEditingController controller;
   final bool isExpense;
   final String currencyCode;
+  final String? locale;
   final bool isPremium;
   final ValueChanged<String>? onChanged;
   final ValueChanged<String> onCurrencyChanged;
@@ -19,6 +20,7 @@ class AmountInputField extends StatelessWidget {
     required this.controller,
     required this.isExpense,
     required this.currencyCode,
+    this.locale,
     this.isPremium = false,
     this.onChanged,
     required this.onCurrencyChanged,
@@ -73,7 +75,7 @@ class AmountInputField extends StatelessWidget {
                   const TextInputType.numberWithOptions(decimal: true),
               textAlign: TextAlign.center,
               inputFormatters: [
-                FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
+                LocalizedNumberInput.formatter(locale),
               ],
               style: GoogleFonts.poppins(
                 fontSize: 28,

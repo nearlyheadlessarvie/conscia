@@ -99,13 +99,13 @@ class _TransactionStyleCategorySelectorState
         ? orderCategoriesByRecency(
             categories: managedCategories,
             recents: recentCategories,
-          ).take(5).toList()
+          ).take(4).toList()
         : widget.isExpense
             ? _expenseQuick(recentCategories)
             : orderCategoriesByRecency(
                 categories: incomeCategories,
                 recents: recentCategories,
-              ).take(5).toList();
+              ).take(4).toList();
 
     final visibleQuick =
         quickCategories.where((c) => c != widget.selectedCategory).toList();
@@ -154,7 +154,7 @@ class _TransactionStyleCategorySelectorState
     return orderCategoriesByRecency(
       categories: allowed,
       recents: recents,
-    ).take(5).toList();
+    ).take(4).toList();
   }
 }
 
@@ -179,12 +179,12 @@ class _CategoryChip extends StatelessWidget {
         duration: const Duration(milliseconds: 160),
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         decoration: BoxDecoration(
-          color: selected ? accent.withValues(alpha: 0.12) : colors.surfaceMuted,
+          color:
+              selected ? accent.withValues(alpha: 0.12) : colors.surfaceMuted,
           borderRadius: BorderRadius.circular(18),
           border: Border.all(
-            color: selected
-                ? accent.withValues(alpha: 0.3)
-                : Colors.transparent,
+            color:
+                selected ? accent.withValues(alpha: 0.3) : Colors.transparent,
           ),
         ),
         child: Row(

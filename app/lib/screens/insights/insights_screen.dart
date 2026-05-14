@@ -12,6 +12,7 @@ import '../../core/theme/app_colors.dart';
 import '../budgets/widgets/budget_form_sheet.dart';
 import '../dashboard/widgets/insight_feed_card.dart';
 import '../../widgets/empty_state.dart';
+import '../../widgets/editorial_sticky_header.dart';
 import '../../widgets/feed_card.dart';
 import '../../widgets/screen_section.dart';
 import 'widgets/category_trend_card.dart';
@@ -128,7 +129,9 @@ class _InsightsScreenState extends ConsumerState<InsightsScreen> {
               top: 0,
               left: 0,
               right: 0,
-              child: _InsightsStickyHeader(
+              child: EditorialStickyHeader(
+                key: const ValueKey('insights-sticky-header'),
+                title: 'Insights',
                 progress: stickyProgress,
                 topPadding: MediaQuery.paddingOf(context).top,
               ),
@@ -314,90 +317,6 @@ class _InsightFeedSection extends StatelessWidget {
     if (!hasCurrentBudget) return item;
 
     return null;
-  }
-}
-
-class _InsightsStickyHeader extends StatelessWidget {
-  const _InsightsStickyHeader({
-    required this.progress,
-    required this.topPadding,
-  });
-
-  final double progress;
-  final double topPadding;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).appColors;
-    final textTheme = Theme.of(context).textTheme;
-    final opacity = Curves.easeOut.transform(progress);
-    final canPop = Navigator.of(context).canPop();
-    final background = Color.lerp(
-      Colors.transparent,
-      colors.paper.withValues(alpha: 0.9),
-      opacity,
-    )!;
-    final borderColor = Color.lerp(
-      Colors.transparent,
-      colors.border.withValues(alpha: 0.9),
-      opacity,
-    )!;
-
-    return Padding(
-      padding: EdgeInsets.fromLTRB(8, topPadding + 8, 8, 0),
-      child: AnimatedContainer(
-        key: const ValueKey('insights-sticky-header'),
-        duration: const Duration(milliseconds: 180),
-        curve: Curves.easeOutCubic,
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-        decoration: BoxDecoration(
-          color: background,
-          borderRadius: BorderRadius.circular(999),
-          border: Border.all(color: borderColor),
-          boxShadow: opacity > 0.02
-              ? [
-                  BoxShadow(
-                    color: colors.ink.withValues(alpha: 0.05 * opacity),
-                    blurRadius: 18,
-                    offset: const Offset(0, 8),
-                  ),
-                ]
-              : null,
-        ),
-        child: Row(
-          children: [
-            SizedBox(
-              width: 40,
-              height: 40,
-              child: canPop
-                  ? IconButton(
-                      tooltip: 'Back',
-                      visualDensity: VisualDensity.compact,
-                      onPressed: () => Navigator.of(context).maybePop(),
-                      icon: Icon(
-                        Icons.chevron_left_rounded,
-                        size: 28,
-                        color: colors.deepNavy,
-                      ),
-                    )
-                  : const SizedBox.shrink(),
-            ),
-            Expanded(
-              child: Center(
-                child: Text(
-                  'Insights',
-                  style: textTheme.titleMedium?.copyWith(
-                    color: colors.ink,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(width: 40, height: 40),
-          ],
-        ),
-      ),
-    );
   }
 }
 

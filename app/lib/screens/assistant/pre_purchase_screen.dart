@@ -11,6 +11,7 @@ import '../../core/constants/generated/app_constants.g.dart';
 import '../../core/constants/category_icons.dart';
 import '../../core/errors/app_error.dart';
 import '../../core/utils/currency_formatter.dart';
+import '../../core/utils/localized_number_input.dart';
 import '../../core/utils/voice_input_parser.dart';
 import '../../core/theme/app_colors.dart';
 import '../../providers/ai_provider.dart';
@@ -23,10 +24,13 @@ import '../../providers/usage_provider.dart';
 import '../../providers/user_provider.dart';
 import '../../services/ai_service.dart';
 import '../../widgets/conscience_mark.dart';
+import '../../widgets/editorial_sticky_header.dart';
+import '../../widgets/floating_label_text_field.dart';
 import '../../widgets/hero_screen_scaffold.dart';
 import '../../widgets/thinking_cloud.dart';
 import '../../widgets/location_assistance_prompt_sheet.dart';
 import '../../widgets/premium_upgrade_dialog.dart';
+import '../../widgets/screen_section.dart';
 import '../../widgets/smart_suggestions_card.dart';
 import '../transactions/widgets/transaction_style_category_selector.dart';
 import '../transactions/widgets/voice_input_button.dart';
@@ -37,7 +41,7 @@ import '../../../widgets/scope_pill_switch.dart';
 // Dock nav height (container) without system safe-area, used by HeroScreenScaffold.
 const _kDockNavOffset = 72.0;
 
-enum _ScreenState { input, loading, response, error }
+enum _ScreenState { input, error }
 
 class PrePurchaseScreen extends ConsumerStatefulWidget {
   const PrePurchaseScreen({super.key});
@@ -46,13 +50,13 @@ class PrePurchaseScreen extends ConsumerStatefulWidget {
   ConsumerState<PrePurchaseScreen> createState() => _PrePurchaseScreenState();
 }
 
-class _PrePurchaseScreenState extends ConsumerState<PrePurchaseScreen>
-    with TickerProviderStateMixin {
+class _PrePurchaseScreenState extends ConsumerState<PrePurchaseScreen> {
   _ScreenState _state = _ScreenState.input;
-  AIResponse? _aiResponse;
   String? _errorMessage;
   String? _insightContext;
   bool _hasCheckedLocationPrompt = false;
+  final ScrollController _inputScrollController = ScrollController();
+  double _inputScrollOffset = 0;
 
   // Form
   final _descriptionController = TextEditingController();
@@ -62,30 +66,21 @@ class _PrePurchaseScreenState extends ConsumerState<PrePurchaseScreen>
   String? _selectedCategory;
   String _selectedContextScope = 'personal';
 
-  // Animations for response bubbles
-  late AnimationController _devilAnim;
-  late AnimationController _angelAnim;
-  late AnimationController _neutralAnim;
-
   @override
   void initState() {
     super.initState();
     _currencyCode = ref.read(userPreferencesProvider).currency;
-    _devilAnim = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 400),
-    );
-    _angelAnim = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 400),
-    );
-    _neutralAnim = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 400),
-    );
+    _inputScrollController.addListener(_handleInputScroll);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _maybePromptForLocationAssistance();
     });
+  }
+
+  void _handleInputScroll() {
+    final nextOffset =
+        _inputScrollController.hasClients ? _inputScrollController.offset : 0.0;
+    if ((nextOffset - _inputScrollOffset).abs() < 1) return;
+    setState(() => _inputScrollOffset = nextOffset);
   }
 
   Future<void> _maybePromptForLocationAssistance() async {
@@ -108,16 +103,20 @@ class _PrePurchaseScreenState extends ConsumerState<PrePurchaseScreen>
 
   @override
   void dispose() {
+    _inputScrollController
+      ..removeListener(_handleInputScroll)
+      ..dispose();
     _descriptionController.dispose();
     _amountController.dispose();
-    _devilAnim.dispose();
-    _angelAnim.dispose();
-    _neutralAnim.dispose();
     super.dispose();
   }
 
   bool get _formValid {
-    final amount = double.tryParse(_amountController.text);
+    final prefs = ref.read(userPreferencesProvider);
+    final amount = LocalizedNumberInput.parseAmount(
+      _amountController.text,
+      locale: prefs.locale,
+    );
     return _descriptionController.text.isNotEmpty &&
         amount != null &&
         amount > 0 &&
@@ -136,7 +135,11 @@ class _PrePurchaseScreenState extends ConsumerState<PrePurchaseScreen>
         _descriptionController.text = description;
       }
       if (parsed.amount != null) {
-        _amountController.text = parsed.amount!.toStringAsFixed(0);
+        _amountController.text = LocalizedNumberInput.formatForInput(
+          parsed.amount!,
+          locale: ref.read(userPreferencesProvider).locale,
+          decimalDigits: 0,
+        );
       }
       if (parsed.category != null) {
         _selectedCategory = parsed.category;
@@ -179,11 +182,10 @@ class _PrePurchaseScreenState extends ConsumerState<PrePurchaseScreen>
       return;
     }
 
-    setState(() {
-      _state = _ScreenState.loading;
-      _errorMessage = null;
-    });
+    await _showConscienceCheckSheet();
+  }
 
+  Future<AIResponse> _requestPrePurchaseVerdict() async {
     try {
       final aiService = ref.read(aiServiceProvider);
       String? insightContext;
@@ -197,58 +199,99 @@ class _PrePurchaseScreenState extends ConsumerState<PrePurchaseScreen>
 
       final response = await aiService.prePurchase(
         description: _descriptionController.text,
-        amount: double.parse(_amountController.text),
+        amount: LocalizedNumberInput.parseAmount(
+          _amountController.text,
+          locale: ref.read(userPreferencesProvider).locale,
+        )!,
         currencyCode: _currencyCode,
         category: _selectedCategory!,
         insightContext: insightContext,
         contextScope: _selectedContextScope,
       );
 
-      if (!mounted) return;
       ref.read(monthlyUsageProvider.notifier).recordAiAssist();
-      _aiResponse = response;
-      setState(() => _state = _ScreenState.response);
-      _playEntrance();
+      return response;
     } on DioException catch (e, s) {
-      if (!mounted) return;
       if (e.response?.statusCode == 403) {
-        setState(() => _state = _ScreenState.input);
-        final data = e.response?.data as Map<String, dynamic>?;
-        PremiumUpgradeDialog.show(
-          context,
-          feature: data?['error'] as String? ??
-              'You\'ve reached the free tier limit for AI assists.',
-        );
-        return;
+        throw AppError.from(e, stackTrace: s).userMessage;
       }
-      setState(() {
-        _state = _ScreenState.error;
-        _errorMessage = AppError.from(e, stackTrace: s).userMessage;
-      });
+      throw AppError.from(e, stackTrace: s).userMessage;
     } catch (e, s) {
-      if (!mounted) return;
-      setState(() {
-        _state = _ScreenState.error;
-        _errorMessage = AppError.from(e, stackTrace: s).userMessage;
-      });
+      throw AppError.from(e, stackTrace: s).userMessage;
     }
   }
 
-  Future<void> _playEntrance() async {
-    await Future<void>.delayed(const Duration(milliseconds: 200));
-    _devilAnim.forward();
-    await Future<void>.delayed(const Duration(milliseconds: 200));
-    if (!mounted) return;
-    _angelAnim.forward();
-    await Future<void>.delayed(const Duration(milliseconds: 200));
-    if (!mounted) return;
-    _neutralAnim.forward();
+  Future<void> _showConscienceCheckSheet() async {
+    final amount = LocalizedNumberInput.parseAmount(
+          _amountController.text,
+          locale: ref.read(userPreferencesProvider).locale,
+        ) ??
+        0;
+    final responseFuture = _requestPrePurchaseVerdict();
+
+    await showModalBottomSheet<void>(
+      context: context,
+      useRootNavigator: true,
+      useSafeArea: true,
+      isScrollControlled: true,
+      builder: (sheetContext) {
+        return DraggableScrollableSheet(
+          expand: false,
+          initialChildSize: 0.82,
+          minChildSize: 0.42,
+          maxChildSize: 0.94,
+          builder: (context, scrollController) {
+            return FutureBuilder<AIResponse>(
+              future: responseFuture,
+              builder: (context, snapshot) {
+                if (snapshot.hasError) {
+                  return _ConscienceSheetError(
+                    scrollController: scrollController,
+                    message: snapshot.error.toString(),
+                    onClose: () => Navigator.of(sheetContext).pop(),
+                  );
+                }
+
+                if (!snapshot.hasData) {
+                  return _ConscienceCheckSheetContent(
+                    scrollController: scrollController,
+                    description: _descriptionController.text,
+                    amount: amount,
+                    currencyCode: _currencyCode,
+                    category: _selectedCategory ?? '',
+                    insightText: _insightContext,
+                  );
+                }
+
+                final locale = ref.watch(userPreferencesProvider).locale;
+                return _VerdictSheetContent(
+                  scrollController: scrollController,
+                  response: snapshot.data!,
+                  contextLabel: _selectedContextScope == 'family'
+                      ? 'Family advice'
+                      : 'Personal advice',
+                  selectedCategory: _selectedCategory,
+                  amount: amount,
+                  currencyCode: _currencyCode,
+                  locale: locale,
+                  onBuy: () async {
+                    Navigator.of(sheetContext).pop();
+                    await _openExpenseConfirmation();
+                  },
+                  onSkip: () {
+                    Navigator.of(sheetContext).pop();
+                    _reset();
+                  },
+                );
+              },
+            );
+          },
+        );
+      },
+    );
   }
 
   void _reset() {
-    _devilAnim.reset();
-    _angelAnim.reset();
-    _neutralAnim.reset();
     _descriptionController.clear();
     _amountController.clear();
     setState(() {
@@ -256,7 +299,6 @@ class _PrePurchaseScreenState extends ConsumerState<PrePurchaseScreen>
       _currencyCode = ref.read(userPreferencesProvider).currency;
       _selectedCategory = null;
       _selectedContextScope = 'personal';
-      _aiResponse = null;
       _errorMessage = null;
       _insightContext = null;
       _state = _ScreenState.input;
@@ -293,8 +335,6 @@ class _PrePurchaseScreenState extends ConsumerState<PrePurchaseScreen>
 
     return switch (_state) {
       _ScreenState.input => _buildInputForm(),
-      _ScreenState.loading => _buildLoading(),
-      _ScreenState.response => _buildResponse(),
       _ScreenState.error => _buildError(),
     };
   }
@@ -316,219 +356,179 @@ class _PrePurchaseScreenState extends ConsumerState<PrePurchaseScreen>
       });
     }
 
-    final greetingName =
-        ref.watch(currentUserProvider).valueOrNull?.displayName ?? '';
-
-    return HeroScreenScaffold(
-      appBar: AppBar(title: const Text('Purchase Assistant')),
-      scrollViewKey: const PageStorageKey('assistant-shell-scroll'),
-      // Zero horizontal padding so the bleed hero can span full width.
-      // Form fields below add their own 16px horizontal padding.
-      padding: const EdgeInsets.fromLTRB(0, 0, 0, 12),
-      extraBottomPadding: _kDockNavOffset,
-      bottom: FilledButton(
-        style: FilledButton.styleFrom(
-          minimumSize: const Size(double.infinity, 52),
-        ),
-        onPressed: _formValid ? _submit : null,
-        child: const Text('Ask Conscia ✦'),
-      ),
-      child: Column(
-        children: [
-          _AssistantHeroBleed(greetingName: greetingName),
-          const SizedBox(height: 20),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Column(
-              children: [
-                if (familySpace != null) ...[
-                  const SizedBox(height: 8),
-                  ScopePillSwitch(
-                    value: _selectedContextScope,
-                    familyEnabled: true,
-                    onChanged: (scope) =>
-                        setState(() => _selectedContextScope = scope),
-                  ),
-                  const SizedBox(height: 18),
-                ],
-                TextField(
-                  controller: _descriptionController,
-                  maxLines: 1,
-                  decoration: InputDecoration(
-                    labelText: 'What are you thinking of buying?',
-                    suffixIcon: VoiceInputButton(
-                      onTranscriptReady: _applyVoiceTranscript,
-                    ),
-                  ),
-                  onChanged: (_) => setState(() {}),
-                ),
-                const SizedBox(height: 18),
-                AmountHeroField(
-                  controller: _amountController,
-                  currencyCode: _currencyCode,
-                  isExpense: true,
-                  isPremium: isPremium,
-                  onChanged: (_) => setState(() {}),
-                  onCurrencyChanged: (code) => setState(() {
-                    _currencyManuallyChanged = true;
-                    _currencyCode = code;
-                  }),
-                ),
-                const SizedBox(height: 18),
-                TransactionStyleCategorySelector(
-                  selectedCategory: _selectedCategory,
-                  isExpense: true,
-                  isPremium: isPremium,
-                  showHeader: false,
-                  onCategorySelected: (category) {
-                    setState(() => _selectedCategory = category);
-                    if (category != null) {
-                      ref
-                          .read(recentCategoryProvider.notifier)
-                          .record(category);
-                    }
-                  },
-                ),
-                if (locationAssistance.isEnabled && hasSuggestions) ...[
-                  SmartSuggestionsCard(
-                    suggestions: suggestions,
-                    subtitle:
-                        'Need a nudge? Try a nearby merchant or likely category, then edit anything you want.',
-                    onMerchantSelected: (merchant) {
-                      setState(() {
-                        _descriptionController.text = merchant;
-                      });
-                    },
-                    onCategorySelected: (category) {
-                      setState(() {
-                        _selectedCategory = category;
-                      });
-                      ref
-                          .read(recentCategoryProvider.notifier)
-                          .record(category);
-                    },
-                    categoryAvatarBuilder: (category) => CategoryIcons.badge(
-                      category,
-                      size: 14,
-                    ),
-                  ),
-                ],
-                const SizedBox(height: 20),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ── Loading ─────────────────────────────────────────────────────────
-
-  Widget _buildLoading() {
-    final amount = double.tryParse(_amountController.text) ?? 0;
-    final textTheme = Theme.of(context).textTheme;
     final colors = Theme.of(context).appColors;
+    final stickyProgress = ((_inputScrollOffset - 5) / 10).clamp(0.0, 1.0);
+    final bottomInset = MediaQuery.paddingOf(context).bottom;
+    final keyboardInset = MediaQuery.viewInsetsOf(context).bottom;
 
-    return HeroScreenScaffold(
-      appBar: AppBar(title: const Text('Conscience Check')),
-      extraBottomPadding: _kDockNavOffset,
-      scrollable: false,
-      child: Column(
-        children: [
-          const SizedBox(height: 8),
-          Text(
-            'Reviewing your ${CurrencyFormatter.format(
-              amount,
-              currencyCode: _currencyCode,
-            )} ${_descriptionController.text.trim()} decision...',
-            textAlign: TextAlign.center,
-            style: textTheme.bodySmall?.copyWith(color: colors.mutedInk),
+    return Scaffold(
+      body: DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [colors.pageTop, colors.pageBottom],
           ),
-          const SizedBox(height: 12),
-          const ThinkingCloudWidget(size: 210),
-          const SizedBox(height: 16),
-          Expanded(
-            child: _InsightSlideshow(
-              description: _descriptionController.text,
-              amount: amount,
-              currencyCode: _currencyCode,
-              category: _selectedCategory ?? '',
-              insightText: _insightContext,
+        ),
+        child: Column(
+          children: [
+            Expanded(
+              child: Stack(
+                children: [
+                  SingleChildScrollView(
+                    key: const PageStorageKey('assistant-shell-scroll'),
+                    controller: _inputScrollController,
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: const EdgeInsets.only(bottom: 24),
+                    child: Column(
+                      children: [
+                        const _AssistantHeroBleed(),
+                        const SizedBox(height: 20),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              ScreenSection(
+                                title: 'Decision details',
+                                subtitle:
+                                    "Tell Conscia what you're considering so it can weigh both sides.",
+                                compact: true,
+                                child: Column(
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.stretch,
+                                  children: [
+                                    FloatingLabelTextField(
+                                      controller: _descriptionController,
+                                      label: 'What are you thinking of buying?',
+                                      textInputAction: TextInputAction.next,
+                                      textCapitalization:
+                                          TextCapitalization.sentences,
+                                      trailing: VoiceInputButton(
+                                        onTranscriptReady:
+                                            _applyVoiceTranscript,
+                                      ),
+                                      onChanged: (_) => setState(() {}),
+                                    ),
+                                    const SizedBox(height: 18),
+                                    AmountHeroField(
+                                      controller: _amountController,
+                                      currencyCode: _currencyCode,
+                                      locale: ref
+                                          .watch(userPreferencesProvider)
+                                          .locale,
+                                      isExpense: true,
+                                      isPremium: isPremium,
+                                      onChanged: (_) => setState(() {}),
+                                      onCurrencyChanged: (code) => setState(() {
+                                        _currencyManuallyChanged = true;
+                                        _currencyCode = code;
+                                      }),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              if (familySpace != null)
+                                ScreenSection(
+                                  title: 'Classify',
+                                  subtitle:
+                                      'Where should this live in your money story?',
+                                  compact: true,
+                                  child: ScopePillSwitch(
+                                    value: _selectedContextScope,
+                                    familyEnabled: true,
+                                    onChanged: (scope) => setState(
+                                      () => _selectedContextScope =
+                                          scope.toLowerCase(),
+                                    ),
+                                  ),
+                                ),
+                              ScreenSection(
+                                title: 'Category',
+                                subtitle:
+                                    'Where do you think this belongs so we can give you better insights?',
+                                compact: true,
+                                child: TransactionStyleCategorySelector(
+                                  selectedCategory: _selectedCategory,
+                                  isExpense: true,
+                                  isPremium: isPremium,
+                                  showHeader: false,
+                                  onCategorySelected: (category) {
+                                    setState(
+                                        () => _selectedCategory = category);
+                                    if (category != null) {
+                                      ref
+                                          .read(recentCategoryProvider.notifier)
+                                          .record(category);
+                                    }
+                                  },
+                                ),
+                              ),
+                              if (locationAssistance.isEnabled &&
+                                  hasSuggestions) ...[
+                                SmartSuggestionsCard(
+                                  suggestions: suggestions,
+                                  subtitle:
+                                      'Need a nudge? Try a nearby merchant or likely category, then edit anything you want.',
+                                  onMerchantSelected: (merchant) {
+                                    setState(() {
+                                      _descriptionController.text = merchant;
+                                    });
+                                  },
+                                  onCategorySelected: (category) {
+                                    setState(() {
+                                      _selectedCategory = category;
+                                    });
+                                    ref
+                                        .read(recentCategoryProvider.notifier)
+                                        .record(category);
+                                  },
+                                  categoryAvatarBuilder: (category) =>
+                                      CategoryIcons.badge(
+                                    category,
+                                    size: 14,
+                                  ),
+                                ),
+                              ],
+                              const SizedBox(height: 20),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Positioned(
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    child: EditorialStickyHeader(
+                      title: 'Purchase Assistant',
+                      progress: stickyProgress,
+                      topPadding: MediaQuery.paddingOf(context).top,
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ── Response ────────────────────────────────────────────────────────
-
-  Widget _buildResponse() {
-    final amount = double.tryParse(_amountController.text) ?? 0;
-    final response = _aiResponse!;
-    final locale = ref.watch(userPreferencesProvider).locale;
-
-    return HeroScreenScaffold(
-      padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
-      appBar: AppBar(title: const Text('The verdict')),
-      extraBottomPadding: _kDockNavOffset,
-      bottom: Row(
-        children: [
-          Expanded(
-            child: FilledButton(
-              onPressed: _openExpenseConfirmation,
-              child: const Text('Buy it'),
+            AnimatedPadding(
+              duration: const Duration(milliseconds: 180),
+              curve: Curves.easeOutCubic,
+              padding: EdgeInsets.fromLTRB(
+                16,
+                0,
+                16,
+                28 + _kDockNavOffset + bottomInset + keyboardInset,
+              ),
+              child: FilledButton(
+                style: FilledButton.styleFrom(
+                  minimumSize: const Size(double.infinity, 52),
+                ),
+                onPressed: _formValid ? _submit : null,
+                child: const Text('Ask Conscia ✦'),
+              ),
             ),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: OutlinedButton(
-              onPressed: _reset,
-              child: const Text('Wait 24h'),
-            ),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: OutlinedButton(
-              onPressed: _reset,
-              child: const Text('Skip'),
-            ),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          _VerdictBubble(
-            tone: _VerdictTone.devil,
-            message: response.impulse,
-            animation: _devilAnim,
-          ),
-          const SizedBox(height: 12),
-          _VerdictBubble(
-            tone: _VerdictTone.angel,
-            message: response.reason,
-            animation: _angelAnim,
-          ),
-          const SizedBox(height: 12),
-          _ConsciaTakeCard(
-            message: response.neutral,
-            contextLabel: _selectedContextScope == 'family'
-                ? 'Family advice'
-                : 'Personal advice',
-            animation: _neutralAnim,
-          ),
-          const SizedBox(height: 16),
-          if (_selectedCategory != null && response.budget != null)
-            BudgetContextCard(
-              category: _selectedCategory!,
-              spent: response.budget!.currentSpend,
-              limit: response.budget!.monthlyLimit,
-              currencyCode: _currencyCode,
-              locale: locale,
-              projectedAmount: amount,
-            ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -571,6 +571,246 @@ class _PrePurchaseScreenState extends ConsumerState<PrePurchaseScreen>
           ],
         ),
       ),
+    );
+  }
+}
+
+class _SheetHandle extends StatelessWidget {
+  const _SheetHandle();
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).appColors;
+
+    return Center(
+      child: Container(
+        width: 36,
+        height: 4,
+        decoration: BoxDecoration(
+          color: colors.border,
+          borderRadius: BorderRadius.circular(999),
+        ),
+      ),
+    );
+  }
+}
+
+class _ConscienceCheckSheetContent extends StatelessWidget {
+  const _ConscienceCheckSheetContent({
+    required this.scrollController,
+    required this.description,
+    required this.amount,
+    required this.currencyCode,
+    required this.category,
+    this.insightText,
+  });
+
+  final ScrollController scrollController;
+  final String description;
+  final double amount;
+  final String currencyCode;
+  final String category;
+  final String? insightText;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).appColors;
+    final textTheme = Theme.of(context).textTheme;
+
+    return ListView(
+      controller: scrollController,
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 28),
+      children: [
+        const _SheetHandle(),
+        const SizedBox(height: 18),
+        Text(
+          'Conscience Check',
+          textAlign: TextAlign.center,
+          style: textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
+        ),
+        const SizedBox(height: 28),
+        Text(
+          'Reviewing your ${CurrencyFormatter.format(
+            amount,
+            currencyCode: currencyCode,
+          )} ${description.trim()} decision...',
+          textAlign: TextAlign.center,
+          style: textTheme.bodySmall?.copyWith(color: colors.mutedInk),
+        ),
+        const SizedBox(height: 14),
+        const Center(child: ThinkingCloudWidget(size: 224)),
+        const SizedBox(height: 18),
+        _InsightSlideshow(
+          description: description,
+          amount: amount,
+          currencyCode: currencyCode,
+          category: category,
+          insightText: insightText,
+        ),
+      ],
+    );
+  }
+}
+
+class _ConscienceSheetError extends StatelessWidget {
+  const _ConscienceSheetError({
+    required this.scrollController,
+    required this.message,
+    required this.onClose,
+  });
+
+  final ScrollController scrollController;
+  final String message;
+  final VoidCallback onClose;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).appColors;
+    final textTheme = Theme.of(context).textTheme;
+
+    return ListView(
+      controller: scrollController,
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 28),
+      children: [
+        const _SheetHandle(),
+        const SizedBox(height: 36),
+        Icon(Icons.error_outline_rounded, color: colors.expense, size: 42),
+        const SizedBox(height: 16),
+        Text(
+          'Conscia needs another try',
+          textAlign: TextAlign.center,
+          style: textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          message,
+          textAlign: TextAlign.center,
+          style: textTheme.bodyMedium?.copyWith(color: colors.mutedInk),
+        ),
+        const SizedBox(height: 22),
+        FilledButton(
+          onPressed: onClose,
+          child: const Text('Back to purchase'),
+        ),
+      ],
+    );
+  }
+}
+
+class _VerdictSheetContent extends StatelessWidget {
+  const _VerdictSheetContent({
+    required this.scrollController,
+    required this.response,
+    required this.contextLabel,
+    required this.amount,
+    required this.currencyCode,
+    required this.locale,
+    required this.onBuy,
+    required this.onSkip,
+    this.selectedCategory,
+  });
+
+  final ScrollController scrollController;
+  final AIResponse response;
+  final String contextLabel;
+  final double amount;
+  final String currencyCode;
+  final String? locale;
+  final String? selectedCategory;
+  final Future<void> Function() onBuy;
+  final VoidCallback onSkip;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).appColors;
+    final textTheme = Theme.of(context).textTheme;
+
+    return Column(
+      children: [
+        Expanded(
+          child: SingleChildScrollView(
+            controller: scrollController,
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
+            child: Column(
+              children: [
+                const _SheetHandle(),
+                const SizedBox(height: 18),
+                Text(
+                  'The verdict',
+                  textAlign: TextAlign.center,
+                  style: textTheme.titleLarge
+                      ?.copyWith(fontWeight: FontWeight.w800),
+                ),
+                const SizedBox(height: 22),
+                _VerdictBubble(
+                  tone: _VerdictTone.devil,
+                  message: response.impulse,
+                ),
+                const SizedBox(height: 12),
+                _VerdictBubble(
+                  tone: _VerdictTone.angel,
+                  message: response.reason,
+                ),
+                const SizedBox(height: 12),
+                _ConsciaTakeCard(
+                  message: response.neutral,
+                  contextLabel: contextLabel,
+                ),
+                const SizedBox(height: 16),
+                if (selectedCategory != null && response.budget != null)
+                  BudgetContextCard(
+                    category: selectedCategory!,
+                    spent: response.budget!.currentSpend,
+                    limit: response.budget!.monthlyLimit,
+                    currencyCode: currencyCode,
+                    locale: locale,
+                    projectedAmount: amount,
+                  ),
+              ],
+            ),
+          ),
+        ),
+        SafeArea(
+          top: false,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 10, 20, 16),
+            child: Row(
+              children: [
+                Expanded(
+                  flex: 3,
+                  child: FilledButton(
+                    style: FilledButton.styleFrom(
+                      minimumSize: const Size(0, 48),
+                      shape: const StadiumBorder(),
+                      backgroundColor: colors.deepNavy,
+                      foregroundColor: Colors.white,
+                    ),
+                    onPressed: () => unawaited(onBuy()),
+                    child: const Text('Buy it'),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  flex: 2,
+                  child: OutlinedButton(
+                    style: OutlinedButton.styleFrom(
+                      minimumSize: const Size(0, 48),
+                      shape: const StadiumBorder(),
+                      foregroundColor: colors.deepNavy,
+                      backgroundColor: colors.navySoft.withValues(alpha: 0.34),
+                      side: BorderSide(
+                        color: colors.deepNavy.withValues(alpha: 0.24),
+                      ),
+                    ),
+                    onPressed: onSkip,
+                    child: const Text('Skip'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
@@ -807,12 +1047,10 @@ class _VerdictBubble extends StatelessWidget {
   const _VerdictBubble({
     required this.tone,
     required this.message,
-    required this.animation,
   });
 
   final _VerdictTone tone;
   final String message;
-  final Animation<double> animation;
 
   @override
   Widget build(BuildContext context) {
@@ -824,46 +1062,43 @@ class _VerdictBubble extends StatelessWidget {
     final accent = isDevil ? colors.devilAccent : colors.angelAccent;
     final label = isDevil ? 'THE DEVIL SAYS' : 'THE ANGEL SAYS';
 
-    final bubble = ConstrainedBox(
-      constraints: BoxConstraints(
-        maxWidth: MediaQuery.sizeOf(context).width * 0.62,
+    return Container(
+      key: ValueKey(isDevil ? 'verdict-devil-card' : 'verdict-angel-card'),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: bg,
+        border: Border.all(color: accent.withValues(alpha: 0.38)),
+        borderRadius: BorderRadius.circular(22),
       ),
-      child: Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: bg,
-          border: Border.all(color: accent.withValues(alpha: 0.25)),
-          borderRadius: BorderRadius.only(
-            topLeft: const Radius.circular(16),
-            topRight: const Radius.circular(16),
-            bottomLeft: Radius.circular(isDevil ? 4 : 16),
-            bottomRight: Radius.circular(isDevil ? 16 : 4),
-          ),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(label,
-                style: textTheme.labelSmall
-                    ?.copyWith(color: accent, fontWeight: FontWeight.w800)),
-            const SizedBox(height: 4),
-            Text('"$message"',
-                style: textTheme.bodySmall?.copyWith(height: 1.45)),
-          ],
-        ),
-      ),
-    );
-
-    final avatar = _VerdictAvatar(isDevil: isDevil);
-
-    return FadeTransition(
-      opacity: animation,
       child: Row(
-        key: ValueKey(isDevil ? 'verdict-devil-row' : 'verdict-angel-row'),
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: isDevil
-            ? [avatar, const SizedBox(width: 8), bubble]
-            : [const Spacer(), bubble, const SizedBox(width: 8), avatar],
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _VerdictAvatar(isDevil: isDevil),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: textTheme.labelSmall?.copyWith(
+                    color: accent,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0.7,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  message,
+                  style: textTheme.bodyMedium?.copyWith(
+                    color: colors.ink,
+                    height: 1.42,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -873,58 +1108,57 @@ class _ConsciaTakeCard extends StatelessWidget {
   const _ConsciaTakeCard({
     required this.message,
     required this.contextLabel,
-    required this.animation,
   });
 
   final String message;
   final String contextLabel;
-  final Animation<double> animation;
 
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).appColors;
 
-    return FadeTransition(
-      opacity: animation,
-      child: Container(
-        padding: const EdgeInsets.all(18),
-        decoration: BoxDecoration(
-          color: colors.amberSoft,
-          border: Border.all(color: colors.amber.withValues(alpha: 0.5)),
-          borderRadius: BorderRadius.circular(22),
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [colors.amberSoft, colors.navySoft],
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                const ConscienceBrandIcon(size: 24),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    "Conscia's take",
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          color: colors.deepNavy,
-                          fontWeight: FontWeight.w900,
-                        ),
-                  ),
+        border: Border.all(color: colors.amber.withValues(alpha: 0.55)),
+        borderRadius: BorderRadius.circular(24),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const ConscienceBrandIcon(size: 24),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  "Conscia's take",
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        color: colors.deepNavy,
+                        fontWeight: FontWeight.w900,
+                      ),
                 ),
-              ],
-            ),
-            const SizedBox(height: 14),
-            Text(
-              message,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    height: 1.45,
-                  ),
-            ),
-            const SizedBox(height: 12),
-            Chip(
-              label: Text(contextLabel),
-              avatar: const Icon(Icons.auto_awesome, size: 16),
-            ),
-          ],
-        ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Text(
+            message,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  height: 1.45,
+                ),
+          ),
+          const SizedBox(height: 12),
+          Chip(
+            label: Text(contextLabel),
+            avatar: const Icon(Icons.auto_awesome, size: 16),
+          ),
+        ],
       ),
     );
   }
@@ -933,13 +1167,13 @@ class _ConsciaTakeCard extends StatelessWidget {
 // ── Bleed hero (input screen) ────────────────────────────────────────
 
 class _AssistantHeroBleed extends StatelessWidget {
-  const _AssistantHeroBleed({required this.greetingName});
-  final String greetingName;
+  const _AssistantHeroBleed();
 
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).appColors;
     final textTheme = Theme.of(context).textTheme;
+    final topInset = MediaQuery.paddingOf(context).top;
 
     return Container(
       key: const ValueKey('assistant-hero-bleed'),
@@ -955,17 +1189,11 @@ class _AssistantHeroBleed extends StatelessWidget {
         ),
       ),
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(20, 14, 20, 22),
+        padding: EdgeInsets.fromLTRB(20, topInset + 68, 20, 24),
         child: Column(
           children: [
-            const SizedBox(height: 18),
-            // Mascot
-            const ConsciaAlterEgoMotion(
-              preset: ConsciaAlterEgoPreset.idle,
-              size: 56,
-            ),
-            const SizedBox(height: 10),
-            // Tagline
+            const ThinkingCloudWidget(size: 124),
+            const SizedBox(height: 12),
             Text(
               "Let's think this through",
               style: textTheme.headlineSmall?.copyWith(
@@ -976,8 +1204,7 @@ class _AssistantHeroBleed extends StatelessWidget {
             ),
             const SizedBox(height: 6),
             Text(
-              "Conscia gives you a devil's impulse, an angel's reason, "
-              'and a neutral take to help you spend more mindfully.',
+              'Conscia helps you pause before you spend.',
               style: textTheme.bodySmall?.copyWith(
                 color: colors.mutedInk,
                 height: 1.4,

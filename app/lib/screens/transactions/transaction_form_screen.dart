@@ -6,6 +6,8 @@ import '../../core/constants/app_icons.dart';
 import '../../core/constants/category_icons.dart';
 import '../../core/errors/app_error.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/utils/localized_date_format.dart';
+import '../../core/utils/localized_number_input.dart';
 import '../../providers/alert_provider.dart';
 import '../../providers/budget_providers.dart';
 import '../../providers/category_recents_provider.dart';
@@ -25,6 +27,7 @@ import '../../widgets/skeleton_loader.dart';
 import '../../widgets/smart_suggestions_card.dart';
 import '../../widgets/amount_hero_field.dart';
 import '../../widgets/floating_label_text_field.dart';
+import '../../widgets/screen_section.dart';
 import 'widgets/transaction_style_category_selector.dart';
 import '../../widgets/segmented_switch.dart';
 import '../../widgets/form_label.dart';
@@ -136,7 +139,10 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
         _originalTransaction = tx;
         _prefilled = true;
         _isExpense = tx.type != 'income';
-        _amountController.text = tx.amount.toStringAsFixed(2);
+        _amountController.text = LocalizedNumberInput.formatForInput(
+          tx.amount,
+          locale: ref.read(userPreferencesProvider).locale,
+        );
         _currencyCode = tx.currencyCode;
         _currencyManuallyChanged = true;
         _selectedCategory = tx.category;
@@ -156,7 +162,11 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
   }
 
   bool get _isValid {
-    final amount = double.tryParse(_amountController.text);
+    final prefs = ref.read(userPreferencesProvider);
+    final amount = LocalizedNumberInput.parseAmount(
+      _amountController.text,
+      locale: prefs.locale,
+    );
     return amount != null && amount > 0 && _selectedCategory != null;
   }
 
@@ -164,15 +174,23 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
     if (!_isValid || _submitting) return;
     setState(() => _submitting = true);
 
-    final userCurrency = ref.read(userPreferencesProvider).currency;
-    final rateOverride = double.tryParse(_exchangeRateController.text);
+    final prefs = ref.read(userPreferencesProvider);
+    final userCurrency = prefs.currency;
+    final amount = LocalizedNumberInput.parseAmount(
+      _amountController.text,
+      locale: prefs.locale,
+    )!;
+    final rateOverride = LocalizedNumberInput.parseAmount(
+      _exchangeRateController.text,
+      locale: prefs.locale,
+    );
     final familySpace = ref.read(familySpaceProvider).valueOrNull;
     final familySpaceId =
         familySpace?.id ?? _originalTransaction?.familySpaceId;
     final isFamilyScope = _scope == 'family' && familySpaceId != null;
 
     final dto = CreateTransactionDto(
-      amount: double.parse(_amountController.text),
+      amount: amount,
       currencyCode: _currencyCode,
       category: _selectedCategory!,
       counterparty: _counterpartyController.text,
@@ -314,6 +332,14 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
     final suggestions = ref.watch(locationAssistanceSuggestionsProvider);
     final hasSuggestions = suggestions.nearbyMerchants.isNotEmpty ||
         suggestions.likelyCategories.isNotEmpty;
+    final categorySubtitle = _isExpense
+        ? 'Choose where this transaction belongs so budgets and insights stay accurate.'
+        : 'Choose where this money came from so Conscia can understand your income rhythm separately from spending.';
+    final userPrefs = ref.watch(userPreferencesProvider);
+    final dateLabel = _relativeDateLabel(
+      _selectedDate,
+      locale: userPrefs.locale,
+    );
 
     return HeroScreenScaffold(
       padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
@@ -346,112 +372,135 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          SegmentedSwitch(
-            items: const ['Expense', 'Income'],
-            selectedItem: _isExpense ? 'expense' : 'income',
-            selectedColor: _isExpense
-                ? Theme.of(context).appColors.expense
-                : Theme.of(context).appColors.income,
-            onChanged: (label) => setState(() {
-              final v = {label};
-              _isExpense = v.first == 'expense';
-              _selectedCategory = null;
-            }),
-          ),
-          const SizedBox(height: 18),
-          const FormLabel(label: 'AMOUNT'),
-          const SizedBox(height: 8),
-          AmountHeroField(
-            controller: _amountController,
-            currencyCode: _currencyCode,
-            isExpense: _isExpense,
-            isPremium: isPremium,
-            onChanged: (_) => setState(() {}),
-            onCurrencyChanged: (code) => setState(() {
-              _currencyManuallyChanged = true;
-              _currencyCode = code;
-            }),
-          ),
-          const SizedBox(height: 18),
-          Consumer(
-            builder: (context, ref, _) {
-              final userCurrency = ref.watch(userPreferencesProvider).currency;
-              if (_currencyCode == userCurrency) {
-                return const SizedBox.shrink();
-              }
-
-              final rateAsync = ref.watch(
-                exchangeRateProvider((_currencyCode, userCurrency)),
-              );
-
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 18),
-                child: rateAsync.when(
-                  loading: () => const LinearProgressIndicator(),
-                  error: (_, __) => const SizedBox.shrink(),
-                  data: (liveRate) => Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      FloatingLabelTextField(
-                        controller: _exchangeRateController,
-                        label: 'Exchange rate (optional)',
-                        keyboardType: const TextInputType.numberWithOptions(
-                          decimal: true,
-                        ),
-                        onChanged: (_) => setState(() {}),
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        liveRate != null
-                            ? 'Leave blank to use live rate (1 $_currencyCode = ${liveRate.toStringAsFixed(4)} $userCurrency)'
-                            : 'Live rate unavailable - enter manually or leave blank',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: Theme.of(context).appColors.mutedInk,
-                            ),
-                      ),
-                    ],
-                  ),
+          ScreenSection(
+            title: 'Transaction',
+            subtitle: 'Was this money in or out?',
+            compact: true,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                SegmentedSwitch(
+                  items: const ['Expense', 'Income'],
+                  selectedItem: _isExpense ? 'expense' : 'income',
+                  selectedColor: _isExpense
+                      ? Theme.of(context).appColors.expense
+                      : Theme.of(context).appColors.income,
+                  onChanged: (label) => setState(() {
+                    final v = {label};
+                    _isExpense = v.first == 'expense';
+                    _selectedCategory = null;
+                  }),
                 ),
-              );
-            },
+                const SizedBox(height: 18),
+                const FormLabel(label: 'AMOUNT'),
+                const SizedBox(height: 8),
+                AmountHeroField(
+                  controller: _amountController,
+                  currencyCode: _currencyCode,
+                  locale: userPrefs.locale,
+                  isExpense: _isExpense,
+                  isPremium: isPremium,
+                  onChanged: (_) => setState(() {}),
+                  onCurrencyChanged: (code) => setState(() {
+                    _currencyManuallyChanged = true;
+                    _currencyCode = code;
+                  }),
+                ),
+                Consumer(
+                  builder: (context, ref, _) {
+                    final userCurrency =
+                        ref.watch(userPreferencesProvider).currency;
+                    if (_currencyCode == userCurrency) {
+                      return const SizedBox.shrink();
+                    }
+
+                    final rateAsync = ref.watch(
+                      exchangeRateProvider((_currencyCode, userCurrency)),
+                    );
+
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 18),
+                      child: rateAsync.when(
+                        loading: () => const LinearProgressIndicator(),
+                        error: (_, __) => const SizedBox.shrink(),
+                        data: (liveRate) => Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const SizedBox(height: 18),
+                            FloatingLabelTextField(
+                              controller: _exchangeRateController,
+                              label: 'Exchange rate (optional)',
+                              keyboardType:
+                                  const TextInputType.numberWithOptions(
+                                decimal: true,
+                              ),
+                              inputFormatters: [
+                                LocalizedNumberInput.formatter(
+                                  userPrefs.locale,
+                                  decimalDigits: 4,
+                                  useGrouping: false,
+                                ),
+                              ],
+                              onChanged: (_) => setState(() {}),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              liveRate != null
+                                  ? 'Leave blank to use live rate (1 $_currencyCode = ${LocalizedNumberInput.formatForInput(
+                                      liveRate,
+                                      locale: userPrefs.locale,
+                                      decimalDigits: 4,
+                                    )} $userCurrency)'
+                                  : 'Live rate unavailable - enter manually or leave blank',
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodySmall
+                                  ?.copyWith(
+                                    color: Theme.of(context).appColors.mutedInk,
+                                  ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ],
+            ),
           ),
-          if (familySpace != null) ...[
-            Padding(
-              padding: const EdgeInsets.only(bottom: 14),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const FormLabel(label: 'SCOPE'),
-                  const SizedBox(height: 8),
-                  ScopePillSwitch(
-                    value: _scope,
-                    familyEnabled: true,
-                    onChanged: (value) =>
-                        setState(() => _scope = value.toLowerCase()),
-                  ),
-                ],
+          if (familySpace != null)
+            ScreenSection(
+              title: 'Classify',
+              subtitle: 'Where should this live in your money story?',
+              compact: true,
+              child: ScopePillSwitch(
+                value: _scope,
+                familyEnabled: true,
+                onChanged: (value) =>
+                    setState(() => _scope = value.toLowerCase()),
               ),
             ),
-          ],
-          const FormLabel(label: 'CATEGORY'),
-          const SizedBox(height: 8),
-          TransactionStyleCategorySelector(
-            selectedCategory: _selectedCategory,
-            isExpense: _isExpense,
-            isPremium: isPremium,
-            showHeader: false,
-            labelStyle: textTheme.titleSmall?.copyWith(
-              color: colors.onSurfaceVariant,
+          ScreenSection(
+            title: 'Category',
+            subtitle: categorySubtitle,
+            compact: true,
+            child: TransactionStyleCategorySelector(
+              selectedCategory: _selectedCategory,
+              isExpense: _isExpense,
+              isPremium: isPremium,
+              showHeader: false,
+              labelStyle: textTheme.titleSmall?.copyWith(
+                color: colors.onSurfaceVariant,
+              ),
+              moreCategoriesIcon: AppIcons.add,
+              onCategorySelected: (category) {
+                setState(() => _selectedCategory = category);
+                if (category != null) {
+                  ref.read(recentCategoryProvider.notifier).record(category);
+                }
+              },
             ),
-            moreCategoriesIcon: AppIcons.add,
-            onCategorySelected: (category) {
-              setState(() => _selectedCategory = category);
-              if (category != null) {
-                ref.read(recentCategoryProvider.notifier).record(category);
-              }
-            },
           ),
-          const SizedBox(height: 18),
           if (!_isEditing &&
               locationAssistance.isEnabled &&
               hasSuggestions) ...[
@@ -477,42 +526,44 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
             ),
             const SizedBox(height: 18),
           ],
-          const FormLabel(label: 'DETAILS'),
-          const SizedBox(height: 8),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              FloatingLabelTextField(
-                controller: _counterpartyController,
-                onChanged: (_) => setState(() {}),
-                textInputAction: TextInputAction.done,
-                label: _isExpense ? 'Merchant (optional)' : 'Source (optional)',
-              ),
-              const SizedBox(height: 18),
-              InkWell(
-                onTap: _pickDate,
-                borderRadius: BorderRadius.circular(12),
-                child: InputDecorator(
-                  decoration: InputDecoration(
-                    hintText: _relativeDateLabel(_selectedDate),
-                  ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                          child: Text(
-                        _relativeDateLabel(_selectedDate),
-                        style: textTheme.bodyMedium,
-                      )),
-                      const Icon(Icons.calendar_today_outlined, size: 18),
-                    ],
+          ScreenSection(
+            title: 'Details',
+            subtitle:
+                'Add the merchant or source and date when it helps your history make sense.',
+            compact: true,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                FloatingLabelTextField(
+                  controller: _counterpartyController,
+                  onChanged: (_) => setState(() {}),
+                  textInputAction: TextInputAction.done,
+                  label:
+                      _isExpense ? 'Merchant (optional)' : 'Source (optional)',
+                ),
+                const SizedBox(height: 18),
+                InkWell(
+                  onTap: _pickDate,
+                  borderRadius: BorderRadius.circular(12),
+                  child: InputDecorator(
+                    decoration: const InputDecoration(),
+                    child: Row(
+                      children: [
+                        Expanded(
+                            child: Text(
+                          dateLabel,
+                          style: textTheme.bodyMedium,
+                        )),
+                        const Icon(Icons.calendar_today_outlined, size: 18),
+                      ],
+                    ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
           if (!_isEditing) ...[
-            const SizedBox(height: 18),
-            const Divider(height: 1),
+            const Divider(height: 24),
             RecurringScheduleSection(
               enabled: _recurringEnabled,
               cadence: _recurringCadence,
@@ -530,25 +581,11 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
     );
   }
 
-  String _formatDate(DateTime d) {
-    const months = [
-      'January',
-      'February',
-      'March',
-      'April',
-      'May',
-      'June',
-      'July',
-      'August',
-      'September',
-      'October',
-      'November',
-      'December',
-    ];
-    return '${months[d.month - 1]} ${d.day}, ${d.year}';
+  String _formatDate(DateTime date, {required String locale}) {
+    return LocalizedDateFormat.numeric(date, locale: locale);
   }
 
-  String _relativeDateLabel(DateTime date) {
+  String _relativeDateLabel(DateTime date, {required String locale}) {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     final selected = DateTime(date.year, date.month, date.day);
@@ -556,6 +593,6 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
     if (selected == today.subtract(const Duration(days: 1))) {
       return 'Yesterday';
     }
-    return _formatDate(date);
+    return _formatDate(date, locale: locale);
   }
 }

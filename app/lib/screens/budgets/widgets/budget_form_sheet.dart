@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/utils/localized_number_input.dart';
 import '../../../providers/budget_providers.dart';
 import '../../../providers/family_space_provider.dart';
 import '../../../providers/subscription_provider.dart';
@@ -50,7 +51,12 @@ class _BudgetFormSheetState extends ConsumerState<BudgetFormSheet> {
   void initState() {
     super.initState();
     _amountController = TextEditingController(
-      text: widget.existing?.monthlyLimit.toStringAsFixed(2) ?? '',
+      text: widget.existing == null
+          ? ''
+          : LocalizedNumberInput.formatForInput(
+              widget.existing!.monthlyLimit,
+              locale: ref.read(userPreferencesProvider).locale,
+            ),
     );
     _selectedCategory = widget.existing?.category ?? widget.initialCategory;
   }
@@ -62,7 +68,10 @@ class _BudgetFormSheetState extends ConsumerState<BudgetFormSheet> {
   }
 
   bool get _isValid {
-    final amount = double.tryParse(_amountController.text);
+    final amount = LocalizedNumberInput.parseAmount(
+      _amountController.text,
+      locale: ref.read(userPreferencesProvider).locale,
+    );
     return amount != null && amount > 0 && _selectedCategory != null;
   }
 
@@ -70,7 +79,10 @@ class _BudgetFormSheetState extends ConsumerState<BudgetFormSheet> {
     if (!_isValid || _submitting) return;
     setState(() => _submitting = true);
 
-    final amount = double.tryParse(_amountController.text);
+    final amount = LocalizedNumberInput.parseAmount(
+      _amountController.text,
+      locale: ref.read(userPreferencesProvider).locale,
+    );
     if (_selectedCategory == null || amount == null || amount <= 0) return;
     final user = ref.read(currentUserProvider);
     final currency =
@@ -191,6 +203,11 @@ class _BudgetFormSheetState extends ConsumerState<BudgetFormSheet> {
                         label: 'Monthly limit',
                         keyboardType: const TextInputType.numberWithOptions(
                             decimal: true),
+                        inputFormatters: [
+                          LocalizedNumberInput.formatter(
+                            ref.watch(userPreferencesProvider).locale,
+                          ),
+                        ],
                         onChanged: (_) => setState(() {}),
                         prefix: Padding(
                           padding: const EdgeInsets.only(right: 2),

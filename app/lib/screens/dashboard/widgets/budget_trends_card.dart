@@ -1,8 +1,11 @@
 import 'package:conscia_app/models/behavioral_insights.dart';
+import 'package:conscia_app/core/utils/currency_formatter.dart';
+import 'package:conscia_app/providers/user_provider.dart';
 import 'package:conscia_app/screens/transactions/widgets/transaction_tile.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-class BudgetTrendsCard extends StatelessWidget {
+class BudgetTrendsCard extends ConsumerWidget {
   const BudgetTrendsCard({
     super.key,
     required this.trends,
@@ -11,13 +14,14 @@ class BudgetTrendsCard extends StatelessWidget {
   final List<BudgetTrendInsight> trends;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     if (trends.isEmpty) {
       return const SizedBox.shrink();
     }
 
     final colors = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
+    final locale = ref.watch(userPreferencesProvider).locale;
 
     return Card(
       child: Padding(
@@ -41,7 +45,7 @@ class BudgetTrendsCard extends StatelessWidget {
             const SizedBox(height: 16),
             ...trends.take(3).map((trend) => Padding(
                   padding: const EdgeInsets.only(bottom: 14),
-                  child: _BudgetTrendRow(trend: trend),
+                  child: _BudgetTrendRow(trend: trend, locale: locale),
                 )),
           ],
         ),
@@ -51,9 +55,10 @@ class BudgetTrendsCard extends StatelessWidget {
 }
 
 class _BudgetTrendRow extends StatelessWidget {
-  const _BudgetTrendRow({required this.trend});
+  const _BudgetTrendRow({required this.trend, required this.locale});
 
   final BudgetTrendInsight trend;
+  final String? locale;
 
   @override
   Widget build(BuildContext context) {
@@ -82,7 +87,11 @@ class _BudgetTrendRow extends StatelessWidget {
             Text(
               trend.hasBudget
                   ? '${trend.currentMonthPercentUsed?.toStringAsFixed(0) ?? '0'}%'
-                  : _formatCurrency(trend.currencyCode, trend.currentMonthSpend),
+                  : _formatCurrency(
+                      trend.currencyCode,
+                      trend.currentMonthSpend,
+                      locale,
+                    ),
               style: textTheme.labelLarge?.copyWith(
                 color: colors.primary,
                 fontWeight: FontWeight.w700,
@@ -106,20 +115,27 @@ class _BudgetTrendRow extends StatelessWidget {
     );
   }
 
-  static String _buildMonthsLabel(BudgetTrendInsight trend) {
+  String _buildMonthsLabel(BudgetTrendInsight trend) {
     final values = trend.months.map((value) {
       if (trend.hasBudget) {
         return '${value.toStringAsFixed(0)}%';
       }
 
-      return _formatCurrency(trend.currencyCode, value);
+      return _formatCurrency(trend.currencyCode, value, locale);
     }).join('  •  ');
 
     return values;
   }
 
-  static String _formatCurrency(String currencyCode, double value) {
-    final whole = value % 1 == 0 ? value.toInt().toString() : value.toStringAsFixed(2);
-    return '$currencyCode$whole';
+  static String _formatCurrency(
+    String currencyCode,
+    double value,
+    String? locale,
+  ) {
+    return CurrencyFormatter.format(
+      value,
+      currencyCode: currencyCode,
+      locale: locale,
+    );
   }
 }

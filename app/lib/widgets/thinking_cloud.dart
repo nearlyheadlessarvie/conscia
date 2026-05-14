@@ -1,8 +1,8 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
-/// Animated particle cloud — ~110 small dots drifting independently inside
-/// a soft sphere, coloured with the devil/angel/conscia palette.
+/// Animated particle cloud — many small dots drifting independently inside
+/// and around a soft sphere, coloured with the devil/angel/conscia palette.
 ///
 /// Each particle has a deterministic base position (spherical distribution,
 /// biased toward centre), independent drift frequency and phase, and a colour
@@ -10,8 +10,14 @@ import 'package:flutter/material.dart';
 /// iOS ambient particle animations but with our colour signature and higher
 /// entropy.
 class ThinkingCloudWidget extends StatefulWidget {
-  const ThinkingCloudWidget({super.key, this.size = 220});
+  const ThinkingCloudWidget({
+    super.key,
+    this.size = 220,
+    this.animate = true,
+  });
+
   final double size;
+  final bool animate;
 
   @override
   State<ThinkingCloudWidget> createState() => _ThinkingCloudWidgetState();
@@ -26,8 +32,23 @@ class _ThinkingCloudWidgetState extends State<ThinkingCloudWidget>
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 8),
-    )..repeat();
+      duration: const Duration(seconds: 12),
+    );
+    if (widget.animate) {
+      _controller.repeat();
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant ThinkingCloudWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.animate == oldWidget.animate) return;
+    if (widget.animate) {
+      _controller.repeat();
+    } else {
+      _controller.stop();
+      _controller.value = 0;
+    }
   }
 
   @override
@@ -107,42 +128,50 @@ const _palette = [
 // Angel: 0.00–0.45, Devil: 0.45–0.65, Conscia: 0.65–0.83, Neutral: 0.83–1.00
 const _paletteWeights = [
   0.12, 0.12, 0.12, 0.09, // angel  (45 %)
-  0.08, 0.06, 0.06,       // devil  (20 %)
-  0.10, 0.08,             // conscia(18 %)
-  0.09, 0.08,             // neutral(17 %)
+  0.08, 0.06, 0.06, // devil  (20 %)
+  0.10, 0.08, // conscia(18 %)
+  0.09, 0.08, // neutral(17 %)
 ];
 
 List<_Particle> _buildParticles() {
   final rng = math.Random(0xC0A5C1A); // fixed seed → deterministic layout
-  const count = 110;
+  const count = 168;
   const maxR = 0.44; // sphere radius as fraction of widget dimension
 
   final particles = <_Particle>[];
   for (var i = 0; i < count; i++) {
     // Uniform spherical-disc distribution, biased toward centre via pow.
     final angle = rng.nextDouble() * math.pi * 2;
-    final radial = math.pow(rng.nextDouble(), 0.6).toDouble(); // 0=centre, 1=edge
+    final coreRadial = math.pow(rng.nextDouble(), 0.55).toDouble();
+    final isSpill = rng.nextDouble() < 0.16;
+    final radial = isSpill
+        ? 1.02 + rng.nextDouble() * 0.22
+        : coreRadial; // 0=centre, >1=outside sphere
     final r = maxR * radial;
 
     final bx = 0.5 + r * math.cos(angle);
     final by = 0.5 + r * math.sin(angle);
 
     // Drift: edge particles wander more than core particles.
-    final driftScale = 0.007 + radial * 0.022;
-    final ax = driftScale * (0.6 + rng.nextDouble());
-    final ay = driftScale * (0.6 + rng.nextDouble());
+    final driftScale = 0.008 + radial * 0.026;
+    final ax = driftScale * (0.55 + rng.nextDouble() * 1.25);
+    final ay = driftScale * (0.55 + rng.nextDouble() * 1.25);
 
     // Independent frequencies — wide range drives chaos.
-    final sx = 0.25 + rng.nextDouble() * 1.6;
-    final sy = 0.25 + rng.nextDouble() * 1.6;
+    final sx = 0.18 + rng.nextDouble() * 2.0;
+    final sy = 0.18 + rng.nextDouble() * 2.0;
     final phase = rng.nextDouble() * math.pi * 2;
 
     // Size: centre dots slightly larger for a soft-core feel.
-    final radius = 1.4 + (1 - radial) * 2.2 + rng.nextDouble() * 1.4;
+    final radius = isSpill
+        ? 0.9 + rng.nextDouble() * 1.25
+        : 1.2 + (1 - radial) * 2.3 + rng.nextDouble() * 1.35;
 
     // Opacity: core more opaque; edge particles are wisps.
-    final opacity = (0.30 + (1 - radial) * 0.38 + rng.nextDouble() * 0.15)
-        .clamp(0.18, 0.90);
+    final opacity = (isSpill
+            ? 0.18 + rng.nextDouble() * 0.22
+            : 0.28 + (1 - radial) * 0.40 + rng.nextDouble() * 0.15)
+        .clamp(0.14, 0.90);
 
     // Colour from weighted palette.
     var roll = rng.nextDouble();
@@ -156,9 +185,12 @@ List<_Particle> _buildParticles() {
     }
 
     particles.add(_Particle(
-      bx: bx, by: by,
-      ax: ax, ay: ay,
-      sx: sx, sy: sy,
+      bx: bx,
+      by: by,
+      ax: ax,
+      ay: ay,
+      sx: sx,
+      sy: sy,
       phase: phase,
       color: _palette[colorIdx],
       opacity: opacity,
@@ -186,15 +218,15 @@ class _ThinkingCloudPainter extends CustomPainter {
       size.width * 0.38,
       Paint()
         ..color = const Color(0xFF67D9FF).withValues(alpha: 0.06)
-        ..maskFilter =
-            MaskFilter.blur(BlurStyle.normal, size.width * 0.22),
+        ..maskFilter = MaskFilter.blur(BlurStyle.normal, size.width * 0.22),
     );
 
     final paint = Paint();
 
     for (final p in _particles) {
       final x = (p.bx + math.sin(t * p.sx + p.phase) * p.ax) * size.width;
-      final y = (p.by + math.cos(t * p.sy + p.phase * 1.3) * p.ay) * size.height;
+      final y =
+          (p.by + math.cos(t * p.sy + p.phase * 1.3) * p.ay) * size.height;
 
       // Opacity pulses gently on a slow independent phase.
       final op = (p.opacity + math.sin(t * 0.8 + p.phase * 0.6) * 0.11)
@@ -203,8 +235,7 @@ class _ThinkingCloudPainter extends CustomPainter {
       paint
         ..color = p.color.withValues(alpha: op)
         // Very subtle per-dot softness — keeps dots legible as individuals.
-        ..maskFilter =
-            MaskFilter.blur(BlurStyle.normal, p.radius * 0.35);
+        ..maskFilter = MaskFilter.blur(BlurStyle.normal, p.radius * 0.35);
 
       canvas.drawCircle(Offset(x, y), p.radius, paint);
     }

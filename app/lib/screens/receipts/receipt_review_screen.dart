@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/errors/app_error.dart';
 import '../../core/network/dio_client.dart';
 import '../../core/utils/currency_formatter.dart';
+import '../../core/utils/localized_number_input.dart';
 import '../../providers/subscription_provider.dart';
 import '../../providers/user_provider.dart';
 import '../../widgets/amount_input_field.dart';
@@ -74,7 +75,12 @@ class _ReceiptReviewScreenState extends ConsumerState<ReceiptReviewScreen> {
         _loading = false;
         _merchantController.text = extracted?['merchant'] as String? ?? '';
         final total = (extracted?['total'] as num?)?.toDouble();
-        _amountController.text = total?.toStringAsFixed(2) ?? '';
+        _amountController.text = total == null
+            ? ''
+            : LocalizedNumberInput.formatForInput(
+                total,
+                locale: ref.read(userPreferencesProvider).locale,
+              );
         _currencyCode = extracted?['currencyCode'] as String? ??
             ref.read(userPreferencesProvider).currency;
         _selectedCategory = extracted?['category'] as String?;
@@ -97,7 +103,10 @@ class _ReceiptReviewScreenState extends ConsumerState<ReceiptReviewScreen> {
   }
 
   bool get _isValid {
-    final amount = double.tryParse(_amountController.text);
+    final amount = LocalizedNumberInput.parseAmount(
+      _amountController.text,
+      locale: ref.read(userPreferencesProvider).locale,
+    );
     return amount != null &&
         amount > 0 &&
         _merchantController.text.isNotEmpty &&
@@ -112,12 +121,16 @@ class _ReceiptReviewScreenState extends ConsumerState<ReceiptReviewScreen> {
     });
 
     try {
+      final amount = LocalizedNumberInput.parseAmount(
+        _amountController.text,
+        locale: ref.read(userPreferencesProvider).locale,
+      )!;
       final dio = ref.read(dioProvider);
       await dio.post(
         '/receipts/${widget.receiptId}/confirm',
         data: {
           'merchant': _merchantController.text,
-          'amount': double.parse(_amountController.text),
+          'amount': amount,
           'currencyCode': _currencyCode,
           'category': _selectedCategory,
           'date': _date.toIso8601String(),
@@ -293,6 +306,7 @@ class _ReceiptReviewScreenState extends ConsumerState<ReceiptReviewScreen> {
                   controller: _amountController,
                   isExpense: true,
                   currencyCode: _currencyCode,
+                  locale: ref.watch(userPreferencesProvider).locale,
                   isPremium: isPremium,
                   onCurrencyChanged: (code) =>
                       setState(() => _currencyCode = code),
@@ -353,8 +367,14 @@ class _ReceiptReviewScreenState extends ConsumerState<ReceiptReviewScreen> {
                       ),
                       Text(
                         CurrencyFormatter.format(
-                          double.tryParse(_amountController.text) ?? 0,
+                          LocalizedNumberInput.parseAmount(
+                                _amountController.text,
+                                locale:
+                                    ref.read(userPreferencesProvider).locale,
+                              ) ??
+                              0,
                           currencyCode: _currencyCode,
+                          locale: ref.watch(userPreferencesProvider).locale,
                         ),
                         style: textTheme.titleSmall?.copyWith(
                           fontWeight: FontWeight.w700,
@@ -466,7 +486,11 @@ class _ReceiptReviewScreenState extends ConsumerState<ReceiptReviewScreen> {
             child: Text(item.name, style: textTheme.bodyMedium),
           ),
           Text(
-            CurrencyFormatter.format(item.amount, currencyCode: _currencyCode),
+            CurrencyFormatter.format(
+              item.amount,
+              currencyCode: _currencyCode,
+              locale: ref.watch(userPreferencesProvider).locale,
+            ),
             style: textTheme.bodyMedium?.copyWith(
               fontWeight: FontWeight.w600,
               color: colors.onSurface,

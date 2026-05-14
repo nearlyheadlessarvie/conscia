@@ -88,8 +88,8 @@ void main() {
       (tester) async {
     await _pumpReceiptReviewScreen(tester);
 
-    expect(find.text('AI read quality'), findsOneWidget);
-    expect(find.text('Transaction details'), findsOneWidget);
+    expect(find.text('AI READ QUALITY'), findsOneWidget);
+    expect(find.text('TRANSACTION DETAILS'), findsOneWidget);
     expect(find.text('Confirm and save'), findsOneWidget);
     expect(find.text('Latte'), findsOneWidget);
   });

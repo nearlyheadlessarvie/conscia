@@ -7,6 +7,7 @@ import 'package:conscia_app/core/constants/generated/app_constants.g.dart';
 import 'package:conscia_app/core/assets/mascot_sprite_sheet.dart';
 import 'package:conscia_app/core/routing/app_router.dart';
 import 'package:conscia_app/core/theme/app_colors.dart';
+import 'package:conscia_app/core/utils/currency_formatter.dart';
 import 'package:conscia_app/models/conscience_journey.dart';
 import 'package:conscia_app/providers/alert_provider.dart';
 import 'package:conscia_app/providers/behavioral_insights_provider.dart';
@@ -271,6 +272,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     final insightSummaryState = ref.watch(dashboardInsightSummaryProvider);
     final journeyState = ref.watch(conscienceJourneyProvider);
     final profile = ref.watch(currentUserProvider).valueOrNull;
+    final userPreferences = ref.watch(userPreferencesProvider);
     final alerts =
         _visibleAlerts(ref.watch(activeAlertsProvider), budgetState.budgets);
 
@@ -302,6 +304,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               SliverToBoxAdapter(
                 child: _DashboardEditorialHeroCard(
                   monthExpenseTotal: monthExpenseTotal,
+                  currencyCode: userPreferences.currency,
+                  locale: userPreferences.locale,
                   journey: journey,
                   summary: insightSummary,
                   loading: (journeyState.isLoading && journey == null) ||
@@ -359,6 +363,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                               spent: budget.spent,
                               limit: budget.monthlyLimit,
                               currencyCode: budget.currencyCode,
+                              locale: userPreferences.locale,
                               percentage: budget.percentage,
                             ),
                             if (index < budgets.take(4).length - 1)
@@ -445,7 +450,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                         final t = recentTransactions[index];
                         return Column(
                           children: [
-                            _HomeRecentTransactionRow(transaction: t),
+                            _HomeRecentTransactionRow(
+                              transaction: t,
+                              locale: userPreferences.locale,
+                            ),
                             if (index < recentTransactions.length - 1)
                               Divider(
                                   height: 1,
@@ -529,6 +537,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 class _DashboardEditorialHeroCard extends StatelessWidget {
   const _DashboardEditorialHeroCard({
     required this.monthExpenseTotal,
+    required this.currencyCode,
+    required this.locale,
     required this.journey,
     required this.summary,
     required this.loading,
@@ -538,6 +548,8 @@ class _DashboardEditorialHeroCard extends StatelessWidget {
   });
 
   final double monthExpenseTotal;
+  final String currencyCode;
+  final String? locale;
   final ConscienceJourneySummary? journey;
   final DashboardInsightSummary? summary;
   final bool loading;
@@ -584,9 +596,11 @@ class _DashboardEditorialHeroCard extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           Text(
-            monthExpenseTotal <= 0
-                ? 'PHP 0.00'
-                : 'PHP ${monthExpenseTotal.toStringAsFixed(2)}',
+            CurrencyFormatter.format(
+              monthExpenseTotal,
+              currencyCode: currencyCode,
+              locale: locale,
+            ),
             style: GoogleFonts.inter(
               textStyle: textTheme.displaySmall,
               color: colors.deepNavy,
@@ -986,6 +1000,7 @@ class _BudgetSummaryRow extends StatelessWidget {
     required this.spent,
     required this.limit,
     required this.currencyCode,
+    required this.locale,
     required this.percentage,
   });
 
@@ -994,6 +1009,7 @@ class _BudgetSummaryRow extends StatelessWidget {
   final double spent;
   final double limit;
   final String currencyCode;
+  final String? locale;
   final double percentage;
 
   @override
@@ -1030,7 +1046,15 @@ class _BudgetSummaryRow extends StatelessWidget {
                             ),
                             const SizedBox(height: 3),
                             Text(
-                              '$currencyCode ${spent.toStringAsFixed(0)} / ${limit.toStringAsFixed(0)}',
+                              '${CurrencyFormatter.format(
+                                spent,
+                                currencyCode: currencyCode,
+                                locale: locale,
+                              )} / ${CurrencyFormatter.format(
+                                limit,
+                                currencyCode: currencyCode,
+                                locale: locale,
+                              )}',
                               style: textTheme.bodySmall?.copyWith(
                                 color: colors.mutedInk,
                               ),
@@ -1077,17 +1101,24 @@ class _BudgetSummaryRow extends StatelessWidget {
 }
 
 class _HomeRecentTransactionRow extends StatelessWidget {
-  const _HomeRecentTransactionRow({required this.transaction});
+  const _HomeRecentTransactionRow({
+    required this.transaction,
+    required this.locale,
+  });
 
   final Transaction transaction;
+  final String? locale;
 
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).appColors;
     final textTheme = Theme.of(context).textTheme;
     final isIncome = transaction.type == 'income';
-    final amountText =
-        '${isIncome ? '+' : '-'}${transaction.currencyCode} ${transaction.amount.abs().toStringAsFixed(2)}';
+    final amountText = CurrencyFormatter.formatSigned(
+      isIncome ? transaction.amount.abs() : -transaction.amount.abs(),
+      currencyCode: transaction.currencyCode,
+      locale: locale,
+    );
     final subtitle = transaction.category;
     final title = transaction.description.isNotEmpty
         ? transaction.description

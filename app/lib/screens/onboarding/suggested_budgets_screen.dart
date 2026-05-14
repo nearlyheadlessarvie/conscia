@@ -7,6 +7,7 @@ import '../../core/constants/app_icons.dart';
 import '../../core/constants/category_icons.dart';
 import '../../core/errors/app_error.dart';
 import '../../core/routing/app_router.dart';
+import '../../core/utils/localized_number_input.dart';
 import '../../providers/budget_providers.dart';
 import '../../providers/exchange_rate_provider.dart';
 import '../../providers/user_provider.dart';
@@ -78,8 +79,15 @@ class _SuggestedBudgetsScreenState
 
   Future<void> _editAmount(int index) async {
     final draft = _drafts[index];
+    final locale = ref.read(userPreferencesProvider).locale;
     final controller = TextEditingController(
-      text: draft.amount > 0 ? draft.amount.toStringAsFixed(0) : '',
+      text: draft.amount > 0
+          ? LocalizedNumberInput.formatForInput(
+              draft.amount,
+              locale: locale,
+              decimalDigits: 0,
+            )
+          : '',
     );
 
     await showModalBottomSheet<void>(
@@ -104,12 +112,16 @@ class _SuggestedBudgetsScreenState
               autofocus: true,
               keyboardType:
                   const TextInputType.numberWithOptions(decimal: true),
+              inputFormatters: [LocalizedNumberInput.formatter(locale)],
               decoration: const InputDecoration(labelText: 'Monthly limit'),
             ),
             const SizedBox(height: 12),
             FilledButton(
               onPressed: () {
-                final value = double.tryParse(controller.text.trim());
+                final value = LocalizedNumberInput.parseAmount(
+                  controller.text,
+                  locale: locale,
+                );
                 if (value != null) {
                   setState(
                       () => _drafts[index] = draft.copyWith(amount: value));
