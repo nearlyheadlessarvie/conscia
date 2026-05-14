@@ -1,3 +1,4 @@
+import 'package:conscia_app/widgets/thinking_cloud.dart';
 import 'package:conscia_app/providers/category_frequency_provider.dart';
 import 'package:conscia_app/models/family_space.dart';
 import 'package:conscia_app/models/insight_feed_item.dart';
@@ -950,5 +951,47 @@ void main() {
       (tester) async {
     await pumpWithResponse(tester);
     expect(find.byType(ConscienceBrandIcon), findsOneWidget);
+  });
+
+  // Helper: pump the screen and leave it in the loading state.
+  Future<void> pumpLoading(WidgetTester tester) async {
+    await _pumpPrePurchaseRouterApp(
+      tester,
+      aiService: _FakeAIService(
+        response: const AIResponse(
+          impulse: 'Treat yourself.',
+          reason: 'Check your budget.',
+          neutral: 'You can decide.',
+        ),
+        delay: const Duration(seconds: 30),
+      ),
+      locationService: _FakeLocationAssistanceService(permissionGranted: true),
+    );
+
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is TextField &&
+            widget.decoration?.labelText == 'What are you thinking of buying?',
+      ),
+      'Coffee',
+    );
+    await tester.enterText(find.byType(TextField).at(1), '100');
+    await tester.ensureVisible(find.text('Dining').first);
+    await tester.tap(find.text('Dining').first);
+    await tester.pump();
+
+    await tester.tap(find.textContaining('Ask Conscia'));
+    await tester.pump(); // trigger setState to loading
+  }
+
+  testWidgets('loading state shows ThinkingCloudWidget', (tester) async {
+    await pumpLoading(tester);
+    expect(find.byType(ThinkingCloudWidget), findsOneWidget);
+    // Drain the pending AI delay timer before the test ends.
+    await tester.pump(const Duration(seconds: 30));
+    await tester.pumpAndSettle();
   });
 }

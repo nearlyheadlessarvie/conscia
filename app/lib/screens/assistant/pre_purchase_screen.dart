@@ -24,6 +24,7 @@ import '../../providers/user_provider.dart';
 import '../../services/ai_service.dart';
 import '../../widgets/conscience_mark.dart';
 import '../../widgets/hero_screen_scaffold.dart';
+import '../../widgets/thinking_cloud.dart';
 import '../../widgets/location_assistance_prompt_sheet.dart';
 import '../../widgets/premium_upgrade_dialog.dart';
 import '../../widgets/smart_suggestions_card.dart';
@@ -453,39 +454,35 @@ class _PrePurchaseScreenState extends ConsumerState<PrePurchaseScreen>
 
   Widget _buildLoading() {
     final amount = double.tryParse(_amountController.text) ?? 0;
+    final textTheme = Theme.of(context).textTheme;
+    final colors = Theme.of(context).appColors;
 
     return HeroScreenScaffold(
       appBar: AppBar(title: const Text('Conscience Check')),
       extraBottomPadding: _kDockNavOffset,
+      scrollable: false,
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          const SizedBox(height: 8),
           Text(
-            'Weighing your ${CurrencyFormatter.format(amount, currencyCode: _currencyCode)} decision...',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Theme.of(context).appColors.mutedInk,
-                ),
+            'Reviewing your ${CurrencyFormatter.format(
+              amount,
+              currencyCode: _currencyCode,
+            )} ${_descriptionController.text.trim()} decision...',
+            textAlign: TextAlign.center,
+            style: textTheme.bodySmall?.copyWith(color: colors.mutedInk),
           ),
-          const SizedBox(height: 20),
-          _InsightSlideshow(
-            description: _descriptionController.text,
-            amount: amount,
-            currencyCode: _currencyCode,
-            category: _selectedCategory ?? '',
-            insightText: _insightContext,
-          ),
-          const SizedBox(height: 28),
-          LinearProgressIndicator(
-            borderRadius: BorderRadius.circular(999),
-            backgroundColor:
-                Theme.of(context).appColors.border.withValues(alpha: 0.5),
-          ),
-          const SizedBox(height: 10),
-          Text(
-            'Angel and Devil are making their case...',
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: Theme.of(context).appColors.mutedInk,
-                ),
+          const SizedBox(height: 12),
+          const ThinkingCloudWidget(size: 210),
+          const SizedBox(height: 16),
+          Expanded(
+            child: _InsightSlideshow(
+              description: _descriptionController.text,
+              amount: amount,
+              currencyCode: _currencyCode,
+              category: _selectedCategory ?? '',
+              insightText: _insightContext,
+            ),
           ),
         ],
       ),
