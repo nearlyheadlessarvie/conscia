@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
-import '../../core/assets/mascot_sprite_sheet.dart';
 import '../../models/insight_feed_item.dart';
 import '../../models/insights_models.dart';
 import '../../providers/budget_providers.dart';
@@ -468,62 +468,136 @@ class _InsightEditorialHighlight extends StatelessWidget {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            colors.angelSoft,
-            colors.amberSoft,
             colors.navySoft,
+            colors.amberSoft,
           ],
         ),
         borderRadius: const BorderRadius.vertical(bottom: Radius.circular(32)),
-        border: Border(
-          bottom: BorderSide(color: colors.amber.withValues(alpha: 0.35)),
-        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          const SizedBox(height: 16),
+          Row(children: [
+            Text(
+              'REGRET SIGNAL',
+              style: textTheme.labelSmall?.copyWith(
+                color: colors.deepNavy,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 0.9,
+              ),
+            ),
+            const Spacer(),
+            DecoratedBox(
+              decoration: BoxDecoration(
+                color: colors.surfaceRaised.withValues(alpha: 0.76),
+                borderRadius: BorderRadius.circular(999),
+              ),
+              child: Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                child: Text(
+                  '${(summary.avgRegretRate * 100).toStringAsFixed(0)}% regret rate',
+                  style: textTheme.labelSmall?.copyWith(
+                    color: colors.deepNavy,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+            ),
+          ]),
+          const SizedBox(height: 6),
+          Text(
+            regretText,
+            style: textTheme.displaySmall?.copyWith(
+              color: colors.deepNavy,
+              fontWeight: FontWeight.w800,
+              height: 1.05,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            '${summary.regrettedCategory} is carrying your strongest regret signal right now.',
+            style: textTheme.bodyMedium?.copyWith(
+              color: colors.ink,
+              height: 1.35,
+            ),
+          ),
+          const SizedBox(height: 18),
           Row(
             children: [
-              const _InsightMascotPair(),
-              const SizedBox(width: 8),
-              Icon(
-                Icons.close_rounded,
-                size: 18,
-                color: colors.deepNavy.withValues(alpha: 0.7),
-              ),
-              const Spacer(),
-              DecoratedBox(
-                decoration: BoxDecoration(
-                  color: colors.surfaceRaised.withValues(alpha: 0.75),
-                  borderRadius: BorderRadius.circular(999),
+              Expanded(
+                child: _InsightHeroMetricPill(
+                  icon: Icons.category_rounded,
+                  label: summary.regrettedCategory,
                 ),
-                child: Padding(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                  child: Text(
-                    '${(summary.avgRegretRate * 100).toStringAsFixed(0)}% regret rate',
-                    style: textTheme.labelSmall?.copyWith(
-                      color: colors.deepNavy,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _InsightHeroMetricPill(
+                  icon: Icons.auto_graph_rounded,
+                  label: '${summary.patternCount} patterns',
                 ),
               ),
             ],
           ),
           const SizedBox(height: 18),
-          Text(
-            'Your spending story is pointing at ${summary.regrettedCategory}.',
-            style: textTheme.titleLarge?.copyWith(
-              color: colors.ink,
-              fontWeight: FontWeight.w800,
-            ),
+          Row(
+            children: [
+              Expanded(
+                child: _InsightHeroQuickLink(
+                  icon: Icons.category_rounded,
+                  label: 'Categories',
+                  onTap: () => context.push('/insights/categories'),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _InsightHeroQuickLink(
+                  icon: Icons.storefront_rounded,
+                  label: 'Merchants',
+                  onTap: () => context.push('/insights/merchants'),
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 8),
-          Text(
-            '$regretText has been tagged as regret lately. Keep the current insights below, but treat this category as the one to pause on first.',
-            style: textTheme.bodyMedium?.copyWith(
-              color: colors.mutedInk,
-              height: 1.35,
+        ],
+      ),
+    );
+  }
+}
+
+class _InsightHeroMetricPill extends StatelessWidget {
+  const _InsightHeroMetricPill({
+    required this.icon,
+    required this.label,
+  });
+
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).appColors;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: colors.surfaceRaised.withValues(alpha: 0.76),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, size: 15, color: colors.deepNavy),
+          const SizedBox(width: 6),
+          Flexible(
+            child: Text(
+              label,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                    color: colors.deepNavy,
+                    fontWeight: FontWeight.w700,
+                  ),
             ),
           ),
         ],
@@ -532,36 +606,47 @@ class _InsightEditorialHighlight extends StatelessWidget {
   }
 }
 
-class _InsightMascotPair extends StatelessWidget {
-  const _InsightMascotPair();
+class _InsightHeroQuickLink extends StatelessWidget {
+  const _InsightHeroQuickLink({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return const SizedBox(
-      width: 84,
-      height: 58,
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          Positioned(
-            left: 0,
-            top: 0,
-            child: MascotSpriteFrame(
-              atlas: angelMascotAtlas,
-              frameName: '11_focuspray.png',
-              width: 52,
-            ),
+    final colors = Theme.of(context).appColors;
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(18),
+        onTap: onTap,
+        child: Ink(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+          decoration: BoxDecoration(
+            color: colors.surfaceRaised.withValues(alpha: 0.82),
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: colors.border.withValues(alpha: 0.7)),
           ),
-          Positioned(
-            left: 36,
-            top: 8,
-            child: MascotSpriteFrame(
-              atlas: devilMascotAtlas,
-              frameName: '8_whisper.png',
-              width: 52,
-            ),
+          child: Column(
+            children: [
+              Icon(icon, size: 18, color: colors.deepNavy),
+              const SizedBox(height: 6),
+              Text(
+                label,
+                style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                      color: colors.deepNavy,
+                      fontWeight: FontWeight.w700,
+                    ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }

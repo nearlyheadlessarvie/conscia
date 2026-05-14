@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/theme/app_colors.dart';
 import '../../models/insights_models.dart';
 import '../../providers/insights_provider.dart';
 import '../../providers/user_provider.dart';
@@ -10,6 +11,7 @@ import '../../widgets/hero_screen_scaffold.dart';
 import '../../widgets/screen_section.dart';
 import 'widgets/insights_formatting.dart';
 import 'widgets/insight_detail_back_button.dart';
+import 'widgets/insight_list_editorial_hero.dart';
 
 class MerchantListScreen extends ConsumerWidget {
   const MerchantListScreen({super.key});
@@ -41,13 +43,9 @@ class MerchantListScreen extends ConsumerWidget {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              FeedCard(
-                child: Text(
-                  'These are the merchants where regret tends to cluster. Open one to inspect the purchases behind the pattern.',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                      ),
-                ),
+              _MerchantEditorialHero(
+                merchant: merchants.first,
+                locale: prefs.locale,
               ),
               const SizedBox(height: 26),
               ScreenSection(
@@ -70,6 +68,49 @@ class MerchantListScreen extends ConsumerWidget {
           );
         },
       ),
+    );
+  }
+}
+
+class _MerchantEditorialHero extends StatelessWidget {
+  const _MerchantEditorialHero({
+    required this.merchant,
+    required this.locale,
+  });
+
+  final MerchantStat merchant;
+  final String? locale;
+
+  @override
+  Widget build(BuildContext context) {
+    final regretLabel =
+        '${merchant.regretCount} regret${merchant.regretCount == 1 ? '' : 's'}';
+
+    return InsightListEditorialHero(
+      leading: Container(
+        width: 42,
+        height: 42,
+        decoration: BoxDecoration(
+          color: Theme.of(context).appColors.navySoft,
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Icon(
+          Icons.storefront_rounded,
+          color: Theme.of(context).appColors.deepNavy,
+        ),
+      ),
+      label: 'MERCHANT SIGNAL',
+      primary: merchant.merchant,
+      body:
+          '${merchant.merchant} is carrying your strongest merchant regret signal.',
+      chips: [
+        'Top: ${merchant.merchant}',
+        regretLabel,
+        'Last visit ${formatInsightLastVisit(
+          merchant.lastVisitDate,
+          locale: locale,
+        )}',
+      ],
     );
   }
 }

@@ -9,6 +9,7 @@ import '../../widgets/feed_card.dart';
 import '../../widgets/hero_screen_scaffold.dart';
 import '../../widgets/screen_section.dart';
 import 'widgets/insight_detail_back_button.dart';
+import 'widgets/insight_list_editorial_hero.dart';
 import 'widgets/insight_transaction_card.dart';
 import 'widgets/insights_formatting.dart';
 
@@ -98,138 +99,33 @@ class _CategorySummaryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
-    final rateColor = insightRateColor(context, stats.regretRate);
-
-    return FeedCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              CategoryIcons.badge(stats.category, size: 22),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      stats.category,
-                      style: textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      '${stats.transactionCount} tracked purchases in this category',
-                      style: textTheme.bodyMedium?.copyWith(
-                        color: colors.onSurfaceVariant,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 18),
-          Row(
-            children: [
-              Expanded(
-                child: _Metric(
-                  label: 'Spent',
-                  value: formatInsightCurrency(
-                    stats.totalSpend,
-                    currencyCode: currencyCode,
-                    locale: locale,
-                  ),
-                ),
-              ),
-              Expanded(
-                child: _Metric(
-                  label: 'Regretted',
-                  value: formatInsightCurrency(
-                    stats.regrettedSpend,
-                    currencyCode: currencyCode,
-                    locale: locale,
-                  ),
-                  emphasize: rateColor,
-                ),
-              ),
-              Expanded(
-                child: _Metric(
-                  label: 'Rate',
-                  value: '${(stats.regretRate * 100).toStringAsFixed(0)}%',
-                  emphasize: rateColor,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 18),
-          DecoratedBox(
-            decoration: BoxDecoration(
-              color: rateColor.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(18),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(14),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Icon(Icons.timeline_rounded, color: rateColor, size: 18),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      '${formatInsightCompactCurrency(stats.projectedAnnual, currencyCode: currencyCode, locale: locale)} projected in yearly regret spend if this pace holds.',
-                      style: textTheme.bodySmall?.copyWith(
-                        color: rateColor,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
+    final regrettedText = formatInsightCurrency(
+      stats.regrettedSpend,
+      currencyCode: currencyCode,
+      locale: locale,
     );
-  }
-}
+    final spentText = formatInsightCurrency(
+      stats.totalSpend,
+      currencyCode: currencyCode,
+      locale: locale,
+    );
+    final projectedText = formatInsightCompactCurrency(
+      stats.projectedAnnual,
+      currencyCode: currencyCode,
+      locale: locale,
+    );
+    final rateText = '${(stats.regretRate * 100).toStringAsFixed(0)}% rate';
 
-class _Metric extends StatelessWidget {
-  const _Metric({
-    required this.label,
-    required this.value,
-    this.emphasize,
-  });
-
-  final String label;
-  final String value;
-  final Color? emphasize;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          value,
-          style: textTheme.titleMedium?.copyWith(
-            fontWeight: FontWeight.w800,
-            color: emphasize,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          label,
-          style: textTheme.labelSmall?.copyWith(
-            color: colors.onSurfaceVariant,
-          ),
-        ),
+    return InsightListEditorialHero(
+      leading: CategoryIcons.badge(stats.category, size: 30),
+      label: 'TOP REGRET CATEGORY',
+      primary: regrettedText,
+      body:
+          '${stats.category} has ${stats.transactionCount} tracked purchases driving this regret signal.',
+      chips: [
+        '$spentText spent',
+        rateText,
+        '$projectedText yearly projection',
       ],
     );
   }

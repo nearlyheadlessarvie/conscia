@@ -7,8 +7,10 @@ import 'package:conscia_app/providers/insights_provider.dart';
 import 'package:conscia_app/providers/usage_provider.dart';
 import 'package:conscia_app/providers/user_provider.dart';
 import 'package:conscia_app/screens/insights/category_detail_screen.dart';
+import 'package:conscia_app/screens/insights/category_list_screen.dart';
 import 'package:conscia_app/screens/insights/insights_screen.dart';
 import 'package:conscia_app/screens/insights/merchant_detail_screen.dart';
+import 'package:conscia_app/screens/insights/merchant_list_screen.dart';
 import 'package:conscia_app/screens/insights/widgets/insights_formatting.dart';
 import 'package:conscia_app/services/budget_service.dart';
 import 'package:conscia_app/services/user_service.dart';
@@ -90,7 +92,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('£600'), findsNothing);
-    expect(find.text(expected), findsOneWidget);
+    expect(find.text(expected), findsWidgets);
   });
 
   testWidgets('insights hero appears before the regret pulse', (tester) async {
@@ -100,6 +102,11 @@ void main() {
       avgRegretRate: 0.33,
       patternCount: 4,
       updatedAt: DateTime(2026, 5, 8),
+    );
+    final expectedRegretted = formatInsightCurrency(
+      1890,
+      currencyCode: 'PHP',
+      locale: 'en_PH',
     );
 
     await tester.pumpWidget(
@@ -134,8 +141,117 @@ void main() {
 
     expect(heroTop, lessThan(pulseTop));
     expect(find.text('Your spending story is pointing at Shopping.'),
+        findsNothing);
+    expect(find.text('REGRET SIGNAL'), findsOneWidget);
+    expect(find.text(expectedRegretted), findsWidgets);
+    expect(
+        find.text(
+            'Shopping is carrying your strongest regret signal right now.'),
         findsOneWidget);
+    expect(find.text('Categories'), findsOneWidget);
+    expect(find.text('Merchants'), findsOneWidget);
     expect(find.text('😇  ⚔️  😈'), findsNothing);
+    expect(find.byIcon(Icons.close_rounded), findsNothing);
+  });
+
+  testWidgets('category list opens with a stat-backed editorial hero',
+      (tester) async {
+    final expectedRegretted = formatInsightCurrency(
+      1890,
+      currencyCode: 'PHP',
+      locale: 'en_PH',
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          userPreferencesProvider.overrideWithValue(
+            (currency: 'PHP', locale: 'en_PH'),
+          ),
+          insightsCategoriesProvider.overrideWith(
+            (ref) async => const [
+              CategoryStat(
+                category: 'Shopping',
+                totalSpend: 4200,
+                regrettedSpend: 1890,
+                regretRate: 0.33,
+                transactionCount: 6,
+                projectedAnnual: 21700,
+              ),
+            ],
+          ),
+        ],
+        child: const MaterialApp(home: CategoryListScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text(
+        'See which categories are quietly turning into repeat regret. Tap a category for the recent transactions behind the pattern.',
+      ),
+      findsNothing,
+    );
+    expect(
+      find.text('Repeat regret is clustering around Shopping'),
+      findsNothing,
+    );
+    expect(find.text('TOP REGRET CATEGORY'), findsOneWidget);
+    expect(find.text(expectedRegretted), findsOneWidget);
+    expect(
+      find.text('Shopping is your strongest repeat regret signal right now.'),
+      findsOneWidget,
+    );
+    expect(find.text('Top: Shopping'), findsOneWidget);
+    expect(find.text('6 purchases'), findsOneWidget);
+    expect(find.text('33% regret'), findsWidgets);
+  });
+
+  testWidgets('merchant list opens with a stat-backed editorial hero',
+      (tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          userPreferencesProvider.overrideWithValue(
+            (currency: 'PHP', locale: 'en_PH'),
+          ),
+          insightsMerchantsProvider.overrideWith(
+            (ref) async => const [
+              MerchantStat(
+                merchant: 'Corner Cafe',
+                visitCount: 3,
+                regretCount: 1,
+                regretRate: 0.33,
+                lastVisitDate: '2026-05-01',
+              ),
+            ],
+          ),
+        ],
+        child: const MaterialApp(home: MerchantListScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text(
+        'These are the merchants where regret tends to cluster. Open one to inspect the purchases behind the pattern.',
+      ),
+      findsNothing,
+    );
+    expect(
+      find.text('Regret keeps clustering around Corner Cafe'),
+      findsNothing,
+    );
+    expect(find.text('MERCHANT SIGNAL'), findsOneWidget);
+    expect(find.text('Corner Cafe'), findsWidgets);
+    expect(
+      find.text(
+          'Corner Cafe is carrying your strongest merchant regret signal.'),
+      findsOneWidget,
+    );
+    expect(find.text('Top: Corner Cafe'), findsOneWidget);
+    expect(find.text('1 regret'), findsOneWidget);
+    expect(find.text('Last visit May 1'), findsWidgets);
   });
 
   testWidgets('insights screen renders dynamic sections from the feed',
@@ -489,6 +605,12 @@ void main() {
 
     expect(find.text('USD 18.75'), findsNothing);
     expect(find.text(expected), findsOneWidget);
+    expect(find.text('TOP REGRET CATEGORY'), findsOneWidget);
+    expect(
+        find.text('Dining has 4 tracked purchases driving this regret signal.'),
+        findsOneWidget);
+    expect(find.text('50% rate'), findsOneWidget);
+    expect(find.text('\$1.44K yearly projection'), findsOneWidget);
     expect(find.byIcon(Icons.chevron_left_rounded), findsOneWidget);
     expect(find.byIcon(Icons.arrow_back), findsNothing);
   });
@@ -523,6 +645,14 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    expect(find.text('MERCHANT SIGNAL'), findsOneWidget);
+    expect(
+      find.text('Last visit May 1 · 1 regret across 3 visits.'),
+      findsOneWidget,
+    );
+    expect(find.text('3 visits'), findsOneWidget);
+    expect(find.text('1 regret'), findsOneWidget);
+    expect(find.text('33% rate'), findsOneWidget);
     expect(find.byIcon(Icons.chevron_left_rounded), findsOneWidget);
     expect(find.byIcon(Icons.arrow_back), findsNothing);
   });

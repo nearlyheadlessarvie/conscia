@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/theme/app_colors.dart';
 import '../../models/insights_models.dart';
 import '../../providers/insights_provider.dart';
 import '../../providers/user_provider.dart';
@@ -8,6 +9,7 @@ import '../../widgets/feed_card.dart';
 import '../../widgets/hero_screen_scaffold.dart';
 import '../../widgets/screen_section.dart';
 import 'widgets/insight_detail_back_button.dart';
+import 'widgets/insight_list_editorial_hero.dart';
 import 'widgets/insight_transaction_card.dart';
 import 'widgets/insights_formatting.dart';
 
@@ -95,87 +97,44 @@ class _MerchantSummaryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
-    final rateColor = insightRateColor(context, stats.regretRate);
+    final visitLabel =
+        '${stats.visitCount} visit${stats.visitCount == 1 ? '' : 's'}';
+    final regretLabel =
+        '${stats.regretCount} regret${stats.regretCount == 1 ? '' : 's'}';
+    final rateLabel = '${(stats.regretRate * 100).toStringAsFixed(0)}% rate';
+    final lastVisit =
+        formatInsightLastVisit(stats.lastVisitDate, locale: locale);
 
-    return FeedCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: colors.primaryContainer,
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: Icon(
-                  Icons.storefront_rounded,
-                  color: colors.onPrimaryContainer,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      stats.merchant,
-                      style: textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Last visit ${formatInsightLastVisit(stats.lastVisitDate, locale: locale)}',
-                      style: textTheme.bodyMedium?.copyWith(
-                        color: colors.onSurfaceVariant,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 18),
-          Row(
-            children: [
-              Expanded(
-                child: _Metric(
-                  label: 'Visits',
-                  value: '${stats.visitCount}',
-                ),
-              ),
-              Expanded(
-                child: _Metric(
-                  label: 'Regrets',
-                  value: '${stats.regretCount}',
-                  emphasize: rateColor,
-                ),
-              ),
-              Expanded(
-                child: _Metric(
-                  label: 'Rate',
-                  value: '${(stats.regretRate * 100).toStringAsFixed(0)}%',
-                  emphasize: rateColor,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 18),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(999),
-            child: LinearProgressIndicator(
-              value: stats.regretRate,
-              minHeight: 8,
-              backgroundColor: colors.surfaceContainerHighest,
-              color: rateColor,
-            ),
-          ),
-        ],
+    return InsightListEditorialHero(
+      leading: const _MerchantHeroBadge(),
+      label: 'MERCHANT SIGNAL',
+      primary: stats.merchant,
+      body: 'Last visit $lastVisit · $regretLabel across $visitLabel.',
+      chips: [
+        visitLabel,
+        regretLabel,
+        rateLabel,
+      ],
+    );
+  }
+}
+
+class _MerchantHeroBadge extends StatelessWidget {
+  const _MerchantHeroBadge();
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).appColors;
+    return Container(
+      width: 42,
+      height: 42,
+      decoration: BoxDecoration(
+        color: colors.navySoft,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Icon(
+        Icons.storefront_rounded,
+        color: colors.deepNavy,
       ),
     );
   }
@@ -202,44 +161,6 @@ class _MerchantLeadingBadge extends StatelessWidget {
         color: colors.onSecondaryContainer,
         size: 18,
       ),
-    );
-  }
-}
-
-class _Metric extends StatelessWidget {
-  const _Metric({
-    required this.label,
-    required this.value,
-    this.emphasize,
-  });
-
-  final String label;
-  final String value;
-  final Color? emphasize;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          value,
-          style: textTheme.titleMedium?.copyWith(
-            fontWeight: FontWeight.w800,
-            color: emphasize,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          label,
-          style: textTheme.labelSmall?.copyWith(
-            color: colors.onSurfaceVariant,
-          ),
-        ),
-      ],
     );
   }
 }

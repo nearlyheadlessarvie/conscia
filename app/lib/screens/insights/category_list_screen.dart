@@ -11,6 +11,7 @@ import '../../widgets/hero_screen_scaffold.dart';
 import '../../widgets/screen_section.dart';
 import 'widgets/insights_formatting.dart';
 import 'widgets/insight_detail_back_button.dart';
+import 'widgets/insight_list_editorial_hero.dart';
 
 class CategoryListScreen extends ConsumerWidget {
   const CategoryListScreen({super.key});
@@ -42,13 +43,10 @@ class CategoryListScreen extends ConsumerWidget {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              FeedCard(
-                child: Text(
-                  'See which categories are quietly turning into repeat regret. Tap a category for the recent transactions behind the pattern.',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                      ),
-                ),
+              _CategoryEditorialHero(
+                category: categories.first,
+                currencyCode: prefs.currency,
+                locale: prefs.locale,
               ),
               const SizedBox(height: 26),
               ScreenSection(
@@ -72,6 +70,42 @@ class CategoryListScreen extends ConsumerWidget {
           );
         },
       ),
+    );
+  }
+}
+
+class _CategoryEditorialHero extends StatelessWidget {
+  const _CategoryEditorialHero({
+    required this.category,
+    required this.currencyCode,
+    required this.locale,
+  });
+
+  final CategoryStat category;
+  final String currencyCode;
+  final String? locale;
+
+  @override
+  Widget build(BuildContext context) {
+    final regrettedText = formatInsightCurrency(
+      category.regrettedSpend,
+      currencyCode: currencyCode,
+      locale: locale,
+    );
+    final rateText =
+        '${(category.regretRate * 100).toStringAsFixed(0)}% regret';
+
+    return InsightListEditorialHero(
+      leading: CategoryIcons.badge(category.category, size: 30),
+      label: 'TOP REGRET CATEGORY',
+      primary: regrettedText,
+      body:
+          '${category.category} is your strongest repeat regret signal right now.',
+      chips: [
+        'Top: ${category.category}',
+        '${category.transactionCount} purchases',
+        rateText,
+      ],
     );
   }
 }
