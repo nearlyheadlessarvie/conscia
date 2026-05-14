@@ -879,4 +879,76 @@ void main() {
     );
     expect(merchantField.controller?.text, 'Starbucks');
   });
+
+  // ── Verdict screen tests ─────────────────────────────────────────────────
+
+  // Helper: pump the screen and drive it to the response state.
+  Future<void> pumpWithResponse(WidgetTester tester) async {
+    await _pumpPrePurchaseRouterApp(
+      tester,
+      aiService: _FakeAIService(
+        response: const AIResponse(
+          impulse: 'Treat yourself.',
+          reason: 'Check your budget.',
+          neutral: 'You can decide.',
+        ),
+      ),
+      locationService: _FakeLocationAssistanceService(permissionGranted: true),
+    );
+
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is TextField &&
+            widget.decoration?.labelText == 'What are you thinking of buying?',
+      ),
+      'Coffee',
+    );
+    await tester.enterText(find.byType(TextField).at(1), '100');
+    await tester.ensureVisible(find.text('Dining').first);
+    await tester.tap(find.text('Dining').first);
+    await tester.pumpAndSettle();
+
+    await tester.ensureVisible(find.textContaining('Ask Conscia'));
+    await tester.tap(find.textContaining('Ask Conscia'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 700));
+    await tester.pumpAndSettle();
+  }
+
+  testWidgets('verdict shows devil bubble on left and angel on right',
+      (tester) async {
+    await pumpWithResponse(tester);
+
+    final devilRow = find.byKey(const ValueKey('verdict-devil-row'));
+    final angelRow = find.byKey(const ValueKey('verdict-angel-row'));
+
+    expect(devilRow, findsOneWidget);
+    expect(angelRow, findsOneWidget);
+
+    final devilLeft = tester.getTopLeft(devilRow).dx;
+    final angelRight = tester.getTopRight(angelRow).dx;
+
+    // Devil row starts near the left edge; angel row ends near the right edge.
+    expect(devilLeft, lessThan(40));
+    expect(angelRight,
+        greaterThan(tester.getSize(find.byType(MaterialApp)).width - 40));
+  });
+
+  testWidgets('verdict CTAs are visible and not behind the nav bar',
+      (tester) async {
+    await pumpWithResponse(tester);
+
+    expect(find.text('Buy it'), findsOneWidget);
+    expect(find.text('Wait 24h'), findsOneWidget);
+    expect(find.text('Skip'), findsOneWidget);
+  });
+
+  testWidgets('ConscienceBrandIcon is shown in Conscia take card',
+      (tester) async {
+    await pumpWithResponse(tester);
+    expect(find.byType(ConscienceBrandIcon), findsOneWidget);
+  });
 }

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -31,6 +33,9 @@ import 'widgets/budget_context_card.dart';
 import '../../widgets/amount_hero_field.dart';
 import '../../../widgets/scope_pill_switch.dart';
 
+// Dock nav height (container) without system safe-area, used by HeroScreenScaffold.
+const _kDockNavOffset = 72.0;
+
 enum _ScreenState { input, loading, response, error }
 
 class PrePurchaseScreen extends ConsumerStatefulWidget {
@@ -45,6 +50,7 @@ class _PrePurchaseScreenState extends ConsumerState<PrePurchaseScreen>
   _ScreenState _state = _ScreenState.input;
   AIResponse? _aiResponse;
   String? _errorMessage;
+  String? _insightContext;
   bool _hasCheckedLocationPrompt = false;
 
   // Form
@@ -82,16 +88,13 @@ class _PrePurchaseScreenState extends ConsumerState<PrePurchaseScreen>
   }
 
   Future<void> _maybePromptForLocationAssistance() async {
-    if (_hasCheckedLocationPrompt || !mounted) {
-      return;
-    }
+    if (_hasCheckedLocationPrompt || !mounted) return;
     _hasCheckedLocationPrompt = true;
 
     final state = ref.read(locationAssistanceProvider);
     if (!state.shouldPromptOnFeatureOpen) return;
 
     final accepted = await LocationAssistancePromptSheet.show(context);
-
     if (!mounted) return;
 
     final notifier = ref.read(locationAssistanceProvider.notifier);
@@ -189,6 +192,8 @@ class _PrePurchaseScreenState extends ConsumerState<PrePurchaseScreen>
       } catch (_) {
         insightContext = null;
       }
+      setState(() => _insightContext = insightContext);
+
       final response = await aiService.prePurchase(
         description: _descriptionController.text,
         amount: double.parse(_amountController.text),
@@ -252,6 +257,7 @@ class _PrePurchaseScreenState extends ConsumerState<PrePurchaseScreen>
       _selectedContextScope = 'personal';
       _aiResponse = null;
       _errorMessage = null;
+      _insightContext = null;
       _state = _ScreenState.input;
     });
   }
@@ -284,17 +290,12 @@ class _PrePurchaseScreenState extends ConsumerState<PrePurchaseScreen>
       });
     }
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Purchase Assistant'),
-      ),
-      body: switch (_state) {
-        _ScreenState.input => _buildInputForm(),
-        _ScreenState.loading => _buildLoading(),
-        _ScreenState.response => _buildResponse(),
-        _ScreenState.error => _buildError(),
-      },
-    );
+    return switch (_state) {
+      _ScreenState.input => _buildInputForm(),
+      _ScreenState.loading => _buildLoading(),
+      _ScreenState.response => _buildResponse(),
+      _ScreenState.error => _buildError(),
+    };
   }
 
   // ── Input Form ──────────────────────────────────────────────────────
@@ -317,14 +318,16 @@ class _PrePurchaseScreenState extends ConsumerState<PrePurchaseScreen>
     }
 
     return HeroScreenScaffold(
+      appBar: AppBar(title: const Text('Purchase Assistant')),
       scrollViewKey: const PageStorageKey('assistant-shell-scroll'),
       padding: const EdgeInsets.fromLTRB(16, 20, 16, 12),
+      extraBottomPadding: _kDockNavOffset,
       bottom: FilledButton(
         style: FilledButton.styleFrom(
           minimumSize: const Size(double.infinity, 52),
         ),
         onPressed: _formValid ? _submit : null,
-        child: const Text('Ask Conscia '),
+        child: const Text('Ask Conscia ✦'),
       ),
       child: Column(
         children: [
@@ -381,7 +384,6 @@ class _PrePurchaseScreenState extends ConsumerState<PrePurchaseScreen>
             ),
             const SizedBox(height: 18),
           ],
-          // Description
           TextField(
             controller: _descriptionController,
             maxLines: 1,
@@ -450,78 +452,42 @@ class _PrePurchaseScreenState extends ConsumerState<PrePurchaseScreen>
   // ── Loading ─────────────────────────────────────────────────────────
 
   Widget _buildLoading() {
-    final colors = Theme.of(context).appColors;
-    final textTheme = Theme.of(context).textTheme;
+    final amount = double.tryParse(_amountController.text) ?? 0;
+
     return HeroScreenScaffold(
       appBar: AppBar(title: const Text('Conscience Check')),
-      child: Padding(
-        padding: const EdgeInsets.only(top: 24),
-        child: Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const SizedBox(
-                width: 236,
-                height: 126,
-                child: Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    Positioned(
-                      left: 18,
-                      top: 6,
-                      child: MascotSpriteFrame(
-                        atlas: angelMascotAtlas,
-                        frameName: '4_win.png',
-                        width: 76,
-                      ),
-                    ),
-                    Positioned(
-                      top: 34,
-                      child: Text('⚔️', style: TextStyle(fontSize: 58)),
-                    ),
-                    Positioned(
-                      right: 18,
-                      top: 6,
-                      child: MascotSpriteFrame(
-                        atlas: devilMascotAtlas,
-                        frameName: '5_win.png',
-                        width: 76,
-                      ),
-                    ),
-                    Positioned(
-                      bottom: 0,
-                      child: Text('💰', style: TextStyle(fontSize: 36)),
-                    ),
-                  ],
+      extraBottomPadding: _kDockNavOffset,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Weighing your ${CurrencyFormatter.format(amount, currencyCode: _currencyCode)} decision...',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: Theme.of(context).appColors.mutedInk,
                 ),
-              ),
-              const SizedBox(height: 26),
-              Text(
-                'Letting both sides make their case...',
-                textAlign: TextAlign.center,
-                style: textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.w900,
-                ),
-              ),
-              const SizedBox(height: 10),
-              Text(
-                'Angel and Devil are reviewing your ${CurrencyFormatter.format(double.tryParse(_amountController.text) ?? 0, currencyCode: _currencyCode)} ${_descriptionController.text.trim()} decision.',
-                textAlign: TextAlign.center,
-                style: textTheme.bodyMedium?.copyWith(
-                  color: colors.mutedInk,
-                  height: 1.35,
-                ),
-              ),
-              const SizedBox(height: 22),
-              const ConscienceLoader(
-                size: 48,
-                preset: ConscienceLoaderPreset.assistant,
-                label: 'Your conscience is weighing both sides...',
-              ),
-            ],
           ),
-        ),
+          const SizedBox(height: 20),
+          _InsightSlideshow(
+            description: _descriptionController.text,
+            amount: amount,
+            currencyCode: _currencyCode,
+            category: _selectedCategory ?? '',
+            insightText: _insightContext,
+          ),
+          const SizedBox(height: 28),
+          LinearProgressIndicator(
+            borderRadius: BorderRadius.circular(999),
+            backgroundColor:
+                Theme.of(context).appColors.border.withValues(alpha: 0.5),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            'Angel and Devil are making their case...',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Theme.of(context).appColors.mutedInk,
+                ),
+          ),
+        ],
       ),
     );
   }
@@ -536,19 +502,42 @@ class _PrePurchaseScreenState extends ConsumerState<PrePurchaseScreen>
     return HeroScreenScaffold(
       padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
       appBar: AppBar(title: const Text('The verdict')),
+      extraBottomPadding: _kDockNavOffset,
+      bottom: Row(
+        children: [
+          Expanded(
+            child: FilledButton(
+              onPressed: _openExpenseConfirmation,
+              child: const Text('Buy it'),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: OutlinedButton(
+              onPressed: _reset,
+              child: const Text('Wait 24h'),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: OutlinedButton(
+              onPressed: _reset,
+              child: const Text('Skip'),
+            ),
+          ),
+        ],
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          _VerdictCard(
+          _VerdictBubble(
             tone: _VerdictTone.devil,
-            title: 'The Devil says',
             message: response.impulse,
             animation: _devilAnim,
           ),
           const SizedBox(height: 12),
-          _VerdictCard(
+          _VerdictBubble(
             tone: _VerdictTone.angel,
-            title: 'The Angel says',
             message: response.reason,
             animation: _angelAnim,
           ),
@@ -558,11 +547,7 @@ class _PrePurchaseScreenState extends ConsumerState<PrePurchaseScreen>
             contextLabel: _selectedContextScope == 'family'
                 ? 'Family advice'
                 : 'Personal advice',
-            amount: amount,
-            currencyCode: _currencyCode,
-            onBuy: _openExpenseConfirmation,
-            onWait: _reset,
-            onSkip: _reset,
+            animation: _neutralAnim,
           ),
           const SizedBox(height: 16),
           if (_selectedCategory != null && response.budget != null)
@@ -579,178 +564,13 @@ class _PrePurchaseScreenState extends ConsumerState<PrePurchaseScreen>
     );
   }
 
-/*
-enum _VerdictTone { devil, angel }
-
-class _VerdictCard extends StatelessWidget {
-  const _VerdictCard({
-    required this.tone,
-    required this.title,
-    required this.message,
-    required this.animation,
-  });
-
-  final _VerdictTone tone;
-  final String title;
-  final String message;
-  final Animation<double> animation;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).appColors;
-    final isDevil = tone == _VerdictTone.devil;
-    final bg = isDevil ? colors.devilSoft : colors.angelSoft;
-    final accent = isDevil ? colors.devilAccent : colors.angelAccent;
-    final atlas = isDevil ? devilMascotAtlas : angelMascotAtlas;
-    final frame = isDevil ? '5_win.png' : '4_win.png';
-
-    return FadeTransition(
-      opacity: animation,
-      child: Container(
-        padding: const EdgeInsets.all(18),
-        decoration: BoxDecoration(
-          color: bg,
-          border: Border.all(color: accent.withValues(alpha: 0.34)),
-          borderRadius: BorderRadius.circular(22),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                MascotSpriteFrame(
-                  atlas: atlas,
-                  frameName: frame,
-                  width: 38,
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    title,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          color: accent,
-                          fontWeight: FontWeight.w900,
-                        ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Text(
-              '"$message"',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    height: 1.45,
-                  ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _ConsciaTakeCard extends StatelessWidget {
-  const _ConsciaTakeCard({
-    required this.message,
-    required this.contextLabel,
-    required this.amount,
-    required this.currencyCode,
-    required this.onBuy,
-    required this.onWait,
-    required this.onSkip,
-  });
-
-  final String message;
-  final String contextLabel;
-  final double amount;
-  final String currencyCode;
-  final VoidCallback onBuy;
-  final VoidCallback onWait;
-  final VoidCallback onSkip;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).appColors;
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: colors.amberSoft,
-        border: Border.all(color: colors.amber.withValues(alpha: 0.5)),
-        borderRadius: BorderRadius.circular(22),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Text(
-                '✦',
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      color: colors.ink,
-                      fontWeight: FontWeight.w900,
-                    ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  "Conscia's take",
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        color: colors.deepNavy,
-                        fontWeight: FontWeight.w900,
-                      ),
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(height: 14),
-          Text(
-            message,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  height: 1.45,
-                ),
-          ),
-          const SizedBox(height: 16),
-          Chip(
-            label: Text(contextLabel),
-            avatar: const Icon(Icons.auto_awesome, size: 16),
-          ),
-          const SizedBox(height: 14),
-          Row(
-            children: [
-              Expanded(
-                child: FilledButton(
-                  onPressed: onBuy,
-                  child: const Text('Buy it ✓'),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: onWait,
-                  child: const Text('Wait 24h'),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: onSkip,
-                  child: const Text('Skip'),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-*/
   Widget _buildError() {
     final colors = Theme.of(context).colorScheme;
 
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
+    return HeroScreenScaffold(
+      appBar: AppBar(title: const Text('Purchase Assistant')),
+      extraBottomPadding: _kDockNavOffset,
+      child: Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -786,70 +606,290 @@ class _ConsciaTakeCard extends StatelessWidget {
   }
 }
 
-enum _VerdictTone { devil, angel }
+// ── Insight Slideshow (loading screen) ──────────────────────────────
 
-class _VerdictCard extends StatelessWidget {
-  const _VerdictCard({
-    required this.tone,
-    required this.title,
-    required this.message,
-    required this.animation,
+class _InsightSlideshow extends StatefulWidget {
+  const _InsightSlideshow({
+    required this.description,
+    required this.amount,
+    required this.currencyCode,
+    required this.category,
+    this.insightText,
   });
 
-  final _VerdictTone tone;
-  final String title;
-  final String message;
-  final Animation<double> animation;
+  final String description;
+  final double amount;
+  final String currencyCode;
+  final String category;
+  final String? insightText;
+
+  @override
+  State<_InsightSlideshow> createState() => _InsightSlideshowState();
+}
+
+class _InsightSlideshowState extends State<_InsightSlideshow> {
+  final _controller = PageController();
+  Timer? _timer;
+  int _page = 0;
+  static const _slideCount = 3;
+
+  @override
+  void initState() {
+    super.initState();
+    _timer = Timer.periodic(const Duration(seconds: 3), (_) {
+      if (!mounted) return;
+      final next = (_page + 1) % _slideCount;
+      _controller.animateToPage(
+        next,
+        duration: const Duration(milliseconds: 500),
+        curve: Curves.easeInOut,
+      );
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    _controller.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).appColors;
-    final isDevil = tone == _VerdictTone.devil;
-    final bg = isDevil ? colors.devilSoft : colors.angelSoft;
-    final accent = isDevil ? colors.devilAccent : colors.angelAccent;
-    final atlas = isDevil ? devilMascotAtlas : angelMascotAtlas;
-    final frame = isDevil ? '5_win.png' : '4_win.png';
+    final amountFormatted = CurrencyFormatter.format(
+      widget.amount,
+      currencyCode: widget.currencyCode,
+    );
 
-    return FadeTransition(
-      opacity: animation,
+    return Column(
+      children: [
+        SizedBox(
+          height: 176,
+          child: PageView(
+            controller: _controller,
+            onPageChanged: (p) => setState(() => _page = p),
+            children: [
+              _SlideCard(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [colors.deepNavy, colors.family],
+                ),
+                icon: widget.category.isNotEmpty
+                    ? IconTheme(
+                        data: const IconThemeData(color: Colors.white),
+                        child:
+                            CategoryIcons.rawIcon(widget.category, size: 22),
+                      )
+                    : const Icon(Icons.shopping_bag_outlined,
+                        size: 22, color: Colors.white),
+                title: 'Your purchase',
+                body: widget.description.isNotEmpty
+                    ? '$amountFormatted · ${widget.description}'
+                    : amountFormatted,
+                onLight: false,
+              ),
+              _SlideCard(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [colors.amberSoft, colors.navySoft],
+                ),
+                icon: Icon(Icons.insights_rounded,
+                    size: 22, color: colors.deepNavy),
+                title: 'Your recent snapshot',
+                body: widget.insightText ??
+                    'Reviewing your spending patterns and history...',
+                onLight: true,
+              ),
+              _SlideCard(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [colors.angelSoft, colors.devilSoft],
+                ),
+                icon: Icon(Icons.psychology_rounded,
+                    size: 22, color: colors.deepNavy),
+                title: 'Both sides are making their case',
+                body:
+                    'Angel and Devil are reviewing every angle of this decision.',
+                onLight: true,
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 14),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: List.generate(_slideCount, (i) {
+            return AnimatedContainer(
+              duration: const Duration(milliseconds: 250),
+              margin: const EdgeInsets.symmetric(horizontal: 3),
+              width: _page == i ? 18 : 6,
+              height: 6,
+              decoration: BoxDecoration(
+                color: _page == i ? colors.deepNavy : colors.border,
+                borderRadius: BorderRadius.circular(3),
+              ),
+            );
+          }),
+        ),
+      ],
+    );
+  }
+}
+
+class _SlideCard extends StatelessWidget {
+  const _SlideCard({
+    required this.gradient,
+    required this.icon,
+    required this.title,
+    required this.body,
+    required this.onLight,
+  });
+
+  final LinearGradient gradient;
+  final Widget icon;
+  final String title;
+  final String body;
+  final bool onLight;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).appColors;
+    final textTheme = Theme.of(context).textTheme;
+    final titleColor = onLight ? colors.deepNavy : Colors.white;
+    final bodyColor = onLight ? colors.ink : Colors.white.withValues(alpha: 0.9);
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4),
       child: Container(
-        padding: const EdgeInsets.all(18),
+        width: double.infinity,
+        padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: bg,
-          border: Border.all(color: accent.withValues(alpha: 0.34)),
-          borderRadius: BorderRadius.circular(22),
+          gradient: gradient,
+          borderRadius: BorderRadius.circular(24),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
-                MascotSpriteFrame(
-                  atlas: atlas,
-                  frameName: frame,
-                  width: 38,
-                ),
-                const SizedBox(width: 10),
+                icon,
+                const SizedBox(width: 8),
                 Expanded(
                   child: Text(
                     title,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          color: accent,
-                          fontWeight: FontWeight.w900,
-                        ),
+                    style: textTheme.labelMedium?.copyWith(
+                      color: titleColor.withValues(alpha: 0.8),
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.3,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ],
             ),
             const SizedBox(height: 12),
-            Text(
-              '"$message"',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    height: 1.45,
-                  ),
+            Expanded(
+              child: Text(
+                body,
+                style: textTheme.bodyMedium?.copyWith(
+                  color: bodyColor,
+                  height: 1.4,
+                ),
+                maxLines: 4,
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+// ── Verdict cards ────────────────────────────────────────────────────
+
+enum _VerdictTone { devil, angel }
+
+class _VerdictAvatar extends StatelessWidget {
+  const _VerdictAvatar({required this.isDevil});
+  final bool isDevil;
+
+  @override
+  Widget build(BuildContext context) {
+    final atlas = isDevil ? devilMascotAtlas : angelMascotAtlas;
+    return ClipOval(
+      child: MascotSpriteFrame(
+        atlas: atlas,
+        frameName: '1_neutral.png',
+        width: 48,
+      ),
+    );
+  }
+}
+
+class _VerdictBubble extends StatelessWidget {
+  const _VerdictBubble({
+    required this.tone,
+    required this.message,
+    required this.animation,
+  });
+
+  final _VerdictTone tone;
+  final String message;
+  final Animation<double> animation;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors    = Theme.of(context).appColors;
+    final textTheme = Theme.of(context).textTheme;
+    final isDevil   = tone == _VerdictTone.devil;
+
+    final bg     = isDevil ? colors.devilBg  : colors.angelBg;
+    final accent = isDevil ? colors.devilAccent : colors.angelAccent;
+    final label  = isDevil ? 'THE DEVIL SAYS' : 'THE ANGEL SAYS';
+
+    final bubble = ConstrainedBox(
+      constraints: BoxConstraints(
+        maxWidth: MediaQuery.sizeOf(context).width * 0.62,
+      ),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: bg,
+          border: Border.all(color: accent.withValues(alpha: 0.25)),
+          borderRadius: BorderRadius.only(
+            topLeft:     const Radius.circular(16),
+            topRight:    const Radius.circular(16),
+            bottomLeft:  Radius.circular(isDevil ? 4 : 16),
+            bottomRight: Radius.circular(isDevil ? 16 : 4),
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(label, style: textTheme.labelSmall?.copyWith(color: accent, fontWeight: FontWeight.w800)),
+            const SizedBox(height: 4),
+            Text('"$message"', style: textTheme.bodySmall?.copyWith(height: 1.45)),
+          ],
+        ),
+      ),
+    );
+
+    final avatar = _VerdictAvatar(isDevil: isDevil);
+
+    return FadeTransition(
+      opacity: animation,
+      child: Row(
+        key: ValueKey(isDevil ? 'verdict-devil-row' : 'verdict-angel-row'),
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: isDevil
+            ? [avatar, const SizedBox(width: 8), bubble]
+            : [const Spacer(), bubble, const SizedBox(width: 8), avatar],
       ),
     );
   }
@@ -859,93 +899,58 @@ class _ConsciaTakeCard extends StatelessWidget {
   const _ConsciaTakeCard({
     required this.message,
     required this.contextLabel,
-    required this.amount,
-    required this.currencyCode,
-    required this.onBuy,
-    required this.onWait,
-    required this.onSkip,
+    required this.animation,
   });
 
   final String message;
   final String contextLabel;
-  final double amount;
-  final String currencyCode;
-  final VoidCallback onBuy;
-  final VoidCallback onWait;
-  final VoidCallback onSkip;
+  final Animation<double> animation;
 
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).appColors;
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: colors.amberSoft,
-        border: Border.all(color: colors.amber.withValues(alpha: 0.5)),
-        borderRadius: BorderRadius.circular(22),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Text(
-                '*',
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      color: colors.ink,
-                      fontWeight: FontWeight.w900,
-                    ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  "Conscia's take",
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        color: colors.deepNavy,
-                        fontWeight: FontWeight.w900,
-                      ),
+
+    return FadeTransition(
+      opacity: animation,
+      child: Container(
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          color: colors.amberSoft,
+          border: Border.all(color: colors.amber.withValues(alpha: 0.5)),
+          borderRadius: BorderRadius.circular(22),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const ConscienceBrandIcon(size: 24),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    "Conscia's take",
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          color: colors.deepNavy,
+                          fontWeight: FontWeight.w900,
+                        ),
+                  ),
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 14),
-          Text(
-            message,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  height: 1.45,
-                ),
-          ),
-          const SizedBox(height: 16),
-          Chip(
-            label: Text(contextLabel),
-            avatar: const Icon(Icons.auto_awesome, size: 16),
-          ),
-          const SizedBox(height: 14),
-          Row(
-            children: [
-              Expanded(
-                child: FilledButton(
-                  onPressed: onBuy,
-                  child: const Text('Buy it'),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: onWait,
-                  child: const Text('Wait 24h'),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: onSkip,
-                  child: const Text('Skip'),
-                ),
-              ),
-            ],
-          ),
-        ],
+              ],
+            ),
+            const SizedBox(height: 14),
+            Text(
+              message,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    height: 1.45,
+                  ),
+            ),
+            const SizedBox(height: 12),
+            Chip(
+              label: Text(contextLabel),
+              avatar: const Icon(Icons.auto_awesome, size: 16),
+            ),
+          ],
+        ),
       ),
     );
   }
