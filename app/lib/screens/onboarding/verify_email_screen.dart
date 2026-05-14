@@ -6,11 +6,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/constants/api_constants.dart';
+import '../../core/constants/app_icons.dart';
 import '../../core/errors/app_error.dart';
 import '../../core/routing/app_router.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/user_provider.dart';
 import '../../widgets/floating_label_text_field.dart';
+import '../../widgets/conscia_app_bar.dart';
 import '../../widgets/inline_notice.dart';
 
 class VerifyEmailScreen extends ConsumerStatefulWidget {
@@ -153,8 +155,12 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
     final pendingEmail = ref.watch(authProvider).pendingEmail ?? 'your email';
 
     return Scaffold(
-      appBar: AppBar(
-        leading: BackButton(onPressed: _returnToSignIn),
+      appBar: ConsciaAppBar(
+        leading: IconButton(
+          tooltip: 'Back',
+          icon: Icon(AppIcons.chevronLeft),
+          onPressed: _returnToSignIn,
+        ),
         backgroundColor: Colors.transparent,
         elevation: 0,
       ),

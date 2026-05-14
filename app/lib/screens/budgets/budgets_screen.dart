@@ -6,6 +6,7 @@ import '../../providers/budget_providers.dart';
 import '../../providers/subscription_provider.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/hero_screen_scaffold.dart';
+import '../../widgets/conscia_app_bar.dart';
 import '../../widgets/premium_upgrade_dialog.dart';
 import '../../widgets/screen_section.dart';
 import '../../widgets/skeleton_loader.dart';
@@ -24,7 +25,7 @@ class BudgetsScreen extends ConsumerWidget {
     final budgetState = ref.watch(budgetListProvider);
 
     return HeroScreenScaffold(
-      appBar: AppBar(
+      appBar: ConsciaAppBar(
         title: const Text('Budgets'),
         actions: [
           IconButton(

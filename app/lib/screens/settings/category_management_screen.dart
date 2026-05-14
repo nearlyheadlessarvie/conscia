@@ -9,6 +9,7 @@ import '../../providers/category_provider.dart';
 import '../../widgets/feed_card.dart';
 import '../../widgets/floating_label_text_field.dart';
 import '../../widgets/hero_screen_scaffold.dart';
+import '../../widgets/conscia_app_bar.dart';
 import '../../widgets/screen_section.dart';
 import '../../widgets/skeleton_loader.dart';
 
@@ -24,7 +25,7 @@ class CategoryManagementScreen extends ConsumerWidget {
     );
 
     return HeroScreenScaffold(
-      appBar: AppBar(
+      appBar: ConsciaAppBar(
         title: const Text('Categories'),
         actions: [
           IconButton(

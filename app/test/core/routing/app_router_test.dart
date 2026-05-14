@@ -18,6 +18,7 @@ import 'package:conscia_app/services/location_assistance_service.dart';
 import 'package:conscia_app/services/subscription_service.dart';
 import 'package:conscia_app/services/transaction_service.dart';
 import 'package:conscia_app/services/user_service.dart';
+import 'package:conscia_app/widgets/floating_label_text_field.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -278,14 +279,14 @@ void main() {
           tester.widget<TextField>(find.byType(TextField).first);
       expect(amountField.controller?.text, '600');
 
-      final merchantField = tester.widget<TextField>(
+      final merchantField = tester.widget<FloatingLabelTextField>(
         find.byWidgetPredicate(
           (widget) =>
-              widget is TextField &&
-              widget.decoration?.labelText == 'Merchant (optional)',
+              widget is FloatingLabelTextField &&
+              widget.label == 'Merchant (optional)',
         ),
       );
-      expect(merchantField.controller?.text, 'Starbucks');
+      expect(merchantField.controller.text, 'Starbucks');
     },
   );
 
@@ -412,7 +413,8 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byKey(const ValueKey('floating-dock-nav')), findsOneWidget);
-    expect(find.byKey(const ValueKey('dashboard-editorial-hero')), findsOneWidget);
+    expect(
+        find.byKey(const ValueKey('dashboard-editorial-hero')), findsOneWidget);
     expect(find.byKey(const ValueKey('dashboard-sticky-identity-header')),
         findsOneWidget);
     expect(find.byTooltip('Notifications').hitTestable(), findsWidgets);

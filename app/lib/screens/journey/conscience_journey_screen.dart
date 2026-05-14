@@ -7,6 +7,7 @@ import '../../models/conscience_journey.dart';
 import '../../providers/conscience_journey_provider.dart';
 import '../../widgets/feed_card.dart';
 import '../../widgets/hero_screen_scaffold.dart';
+import '../../widgets/conscia_app_bar.dart';
 import '../../widgets/screen_section.dart';
 
 class ConscienceJourneyScreen extends ConsumerWidget {
@@ -18,7 +19,7 @@ class ConscienceJourneyScreen extends ConsumerWidget {
 
     return HeroScreenScaffold(
       padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
-      appBar: AppBar(
+      appBar: ConsciaAppBar(
         title: const Text('Journey'),
         actions: [
           IconButton(

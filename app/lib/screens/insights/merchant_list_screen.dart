@@ -7,10 +7,9 @@ import '../../models/insights_models.dart';
 import '../../providers/insights_provider.dart';
 import '../../providers/user_provider.dart';
 import '../../widgets/feed_card.dart';
-import '../../widgets/hero_screen_scaffold.dart';
 import '../../widgets/screen_section.dart';
+import 'widgets/insight_drilldown_scaffold.dart';
 import 'widgets/insights_formatting.dart';
-import 'widgets/insight_detail_back_button.dart';
 import 'widgets/insight_list_editorial_hero.dart';
 
 class MerchantListScreen extends ConsumerWidget {
@@ -21,12 +20,12 @@ class MerchantListScreen extends ConsumerWidget {
     final merchantsAsync = ref.watch(insightsMerchantsProvider);
     final prefs = ref.watch(userPreferencesProvider);
 
-    return HeroScreenScaffold(
-      appBar: AppBar(
-          leading: const InsightDetailBackButton(),
-          title: const Text('Merchants')),
+    return InsightDrilldownScaffold(
+      title: 'Merchants',
       child: merchantsAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => const _StatePadding(
+          child: Center(child: CircularProgressIndicator()),
+        ),
         error: (_, __) => const _MessageCard(
           title: 'Merchants are unavailable',
           body: 'We could not load merchant insights right now.',
@@ -48,20 +47,23 @@ class MerchantListScreen extends ConsumerWidget {
                 locale: prefs.locale,
               ),
               const SizedBox(height: 26),
-              ScreenSection(
-                title: 'Merchants to watch',
-                subtitle:
-                    'The places with the highest share of purchases you later regretted.',
-                child: Column(
-                  children: [
-                    for (final merchant in merchants) ...[
-                      _MerchantCard(
-                        merchant: merchant,
-                        locale: prefs.locale,
-                      ),
-                      const SizedBox(height: 12),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: ScreenSection(
+                  title: 'Merchants to watch',
+                  subtitle:
+                      'The places with the highest share of purchases you later regretted.',
+                  child: Column(
+                    children: [
+                      for (final merchant in merchants) ...[
+                        _MerchantCard(
+                          merchant: merchant,
+                          locale: prefs.locale,
+                        ),
+                        const SizedBox(height: 12),
+                      ],
                     ],
-                  ],
+                  ),
                 ),
               ),
             ],
@@ -87,6 +89,8 @@ class _MerchantEditorialHero extends StatelessWidget {
         '${merchant.regretCount} regret${merchant.regretCount == 1 ? '' : 's'}';
 
     return InsightListEditorialHero(
+      bleed: true,
+      topPadding: MediaQuery.paddingOf(context).top + 85,
       leading: Container(
         width: 42,
         height: 42,
@@ -226,6 +230,25 @@ class _Pill extends StatelessWidget {
   }
 }
 
+class _StatePadding extends StatelessWidget {
+  const _StatePadding({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
+        16,
+        MediaQuery.paddingOf(context).top + 85,
+        16,
+        28,
+      ),
+      child: child,
+    );
+  }
+}
+
 class _MessageCard extends StatelessWidget {
   const _MessageCard({
     required this.title,
@@ -240,22 +263,25 @@ class _MessageCard extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
     final colors = Theme.of(context).colorScheme;
 
-    return FeedCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            body,
-            style: textTheme.bodyMedium?.copyWith(
-              color: colors.onSurfaceVariant,
+    return _StatePadding(
+      child: FeedCard(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              title,
+              style:
+                  textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
             ),
-          ),
-        ],
+            const SizedBox(height: 8),
+            Text(
+              body,
+              style: textTheme.bodyMedium?.copyWith(
+                color: colors.onSurfaceVariant,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -304,4 +304,41 @@ void main() {
     expect(response.statusCode, 200);
     expect(adapter.fetchCount, 1);
   });
+
+  test('marks session expired when a retried protected request is still 401',
+      () async {
+    final authNotifier = _TestAuthNotifier(
+      const AuthState(
+        status: AuthStatus.authenticated,
+        accessToken: 'fresh-token',
+        refreshToken: 'fresh-refresh-token',
+        userId: 'user-1',
+      ),
+    );
+    final container = ProviderContainer(
+      overrides: [
+        authProvider.overrideWith((ref) => authNotifier),
+        secureStorageProvider.overrideWithValue(
+          _FakeSecureStorage({'access_token': 'fresh-token'}),
+        ),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    final adapter = _UnauthorizedAdapter();
+    final dio = container.read(dioProvider)..httpClientAdapter = adapter;
+
+    await expectLater(
+      dio.get<dynamic>(
+        '/transactions',
+        options: Options(extra: const {'authRetried': true}),
+      ),
+      throwsA(isA<DioException>()),
+    );
+
+    expect(authNotifier.state.status, AuthStatus.sessionExpired);
+    expect(authNotifier.refreshSessionCount, 0);
+    expect(authNotifier.markSessionExpiredCount, 1);
+    expect(adapter.fetchCount, 1);
+  });
 }

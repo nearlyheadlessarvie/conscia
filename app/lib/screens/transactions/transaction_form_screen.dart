@@ -20,6 +20,7 @@ import '../../providers/user_provider.dart';
 import '../../models/recurring_schedule.dart';
 import '../../services/transaction_service.dart';
 import '../../widgets/hero_screen_scaffold.dart';
+import '../../widgets/conscia_app_bar.dart';
 import '../../widgets/location_assistance_prompt_sheet.dart';
 import '../../widgets/recurring_schedule_section.dart';
 import '../../widgets/scope_pill_switch.dart';
@@ -303,9 +304,9 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
     }
 
     if (_isEditing && !_prefilled) {
-      return HeroScreenScaffold(
-        appBar: AppBar(title: const Text('Edit Transaction')),
-        child: const Column(
+      return const HeroScreenScaffold(
+        appBar: ConsciaAppBar(title: Text('Edit Transaction')),
+        child: Column(
           children: [
             SkeletonLoader(height: 48),
             SizedBox(height: 16),
@@ -343,7 +344,7 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
 
     return HeroScreenScaffold(
       padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
-      appBar: AppBar(
+      appBar: ConsciaAppBar(
         centerTitle: true,
         title: Text(_isEditing ? 'Edit transaction' : 'Add transaction'),
         leading: IconButton(

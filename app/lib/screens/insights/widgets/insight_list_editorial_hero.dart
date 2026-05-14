@@ -11,6 +11,8 @@ class InsightListEditorialHero extends StatelessWidget {
     required this.primary,
     required this.body,
     required this.chips,
+    this.topPadding = 44,
+    this.bleed = false,
   });
 
   final Widget leading;
@@ -18,6 +20,8 @@ class InsightListEditorialHero extends StatelessWidget {
   final String primary;
   final String body;
   final List<String> chips;
+  final double topPadding;
+  final bool bleed;
 
   @override
   Widget build(BuildContext context) {
@@ -35,10 +39,12 @@ class InsightListEditorialHero extends StatelessWidget {
             colors.amberSoft,
           ],
         ),
-        borderRadius: BorderRadius.circular(28),
+        borderRadius: bleed
+            ? const BorderRadius.vertical(bottom: Radius.circular(28))
+            : BorderRadius.circular(28),
       ),
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(18, 18, 18, 20),
+        padding: EdgeInsets.fromLTRB(18, topPadding, 18, 20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [

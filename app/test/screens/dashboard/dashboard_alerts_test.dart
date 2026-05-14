@@ -219,6 +219,77 @@ void main() {
     expect(find.text('Corner Bakery'), findsOneWidget);
   });
 
+  testWidgets('dashboard recent transactions use shared icon-only status tags',
+      (tester) async {
+    final container = ProviderContainer(
+      overrides: [
+        sharedPreferencesProvider.overrideWithValue(prefs),
+        budgetServiceProvider.overrideWithValue(_StaticBudgetService(const [])),
+        transactionListProvider.overrideWith(
+          (ref) => TransactionListNotifier.fromList([
+            Transaction(
+              id: 'tx-shared-recurring-regret',
+              amount: 280,
+              currencyCode: 'PHP',
+              category: 'Family Dining',
+              description: 'Starbucks',
+              type: 'expense',
+              date: DateTime(2026, 5, 11),
+              scope: 'family',
+              familySpaceId: 'family-1',
+              recurringScheduleId: 'schedule-1',
+              recurringOccurrenceDate: DateTime(2026, 5, 11),
+              regretLevel: 1,
+            ),
+            for (var index = 0; index < 8; index++)
+              Transaction(
+                id: 'tx-filler-$index',
+                amount: 100 + index.toDouble(),
+                currencyCode: 'PHP',
+                category: 'Bills',
+                description: 'Filler $index',
+                type: 'expense',
+                date: DateTime(2026, 5, 10).subtract(Duration(days: index)),
+              ),
+          ]),
+        ),
+        behavioralInsightsProvider.overrideWith((ref) async => null),
+        insightsSummaryProvider.overrideWith((ref) async => null),
+        insightsCategoriesProvider.overrideWith((ref) async => const []),
+        insightsMerchantsProvider.overrideWith((ref) async => const []),
+        currentUserProvider.overrideWith((ref) async => _testUser),
+        subscriptionProvider.overrideWith((ref) async => _testSubscription),
+        localAlertsProvider.overrideWith(
+          (ref) => _LocalAlertsTestNotifier(const []),
+        ),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    await tester.pumpWidget(_buildApp(container));
+    await tester.pumpAndSettle();
+
+    await tester.drag(find.byType(CustomScrollView), const Offset(0, -900));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Starbucks'), findsOneWidget);
+    expect(find.byType(RecentTransactionTile), findsAtLeastNWidgets(5));
+    expect(find.text('Family Dining'), findsNothing);
+    expect(find.text('Dining'), findsWidgets);
+    expect(
+      find.byKey(const ValueKey('family-transaction-badge')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('recurring-transaction-badge')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('regret-transaction-badge')),
+      findsOneWidget,
+    );
+  });
+
   testWidgets('regret prompt card displays counterparty text', (tester) async {
     await tester.pumpWidget(
       MaterialApp(

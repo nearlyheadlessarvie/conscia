@@ -8,6 +8,7 @@ import '../../providers/family_space_provider.dart';
 import '../../widgets/feed_card.dart';
 import '../../widgets/floating_label_text_field.dart';
 import '../../widgets/hero_screen_scaffold.dart';
+import '../../widgets/conscia_app_bar.dart';
 import '../../widgets/skeleton_loader.dart';
 
 class FamilyInvitesScreen extends ConsumerWidget {
@@ -20,7 +21,7 @@ class FamilyInvitesScreen extends ConsumerWidget {
 
     return HeroScreenScaffold(
       padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
-      appBar: AppBar(title: const Text('Invites')),
+      appBar: const ConsciaAppBar(title: Text('Invites')),
       child: invites.when(
         data: (items) {
           final canInvite = familySpace.valueOrNull?.role == 'Owner';

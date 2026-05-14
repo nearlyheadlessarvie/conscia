@@ -189,7 +189,7 @@ void main() {
       ),
     );
 
-    await tester.tap(find.byType(BackButton));
+    await tester.tap(find.byTooltip('Back'));
     await tester.pumpAndSettle();
 
     expect(authNotifier.state.status, AuthStatus.unauthenticated);

@@ -148,6 +148,8 @@ Rules:
 - Default horizontal padding: 20px.
 - Respect the existing spacing scale from v2.
 - Screens should feel more breathable than today, especially in forms and list sections.
+- **Hero bleed rule:** emotion-tier editorial heroes should bleed to the device edges and into the top safe area. The hero surface starts at `x=0` with bottom-only rounding, while the content inside the hero keeps intentional internal padding. Non-hero content below the hero must return to normal screen padding.
+- Do not solve hero bleed by removing page padding globally. Only the hero bleeds; sections, lists, and form/detail groups keep their standard horizontal rhythm.
 
 ### Section Labels, Titles, And Subtitles
 
@@ -334,6 +336,7 @@ Primary mascot surfaces:
 
 - Keep the current actual purpose: amount, metadata, feeling, AI reflection access, edit/delete
 - Use a richer hero because this is an important reflective surface
+- The transaction snapshot hero follows the hero bleed rule: it reaches the top/device edges under the sticky header, uses bottom-only rounding, and keeps `DETAILS` and feeling controls in padded utility content below.
 
 ### Assistant
 

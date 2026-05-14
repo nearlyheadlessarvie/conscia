@@ -1,9 +1,12 @@
+import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import 'package:conscia_app/core/constants/generated/app_constants.g.dart';
+import 'package:conscia_app/core/constants/category_icons.dart';
 import 'package:conscia_app/core/assets/mascot_sprite_sheet.dart';
 import 'package:conscia_app/core/routing/app_router.dart';
 import 'package:conscia_app/core/theme/app_colors.dart';
@@ -18,8 +21,10 @@ import 'package:conscia_app/providers/subscription_provider.dart';
 import 'package:conscia_app/providers/transaction_providers.dart';
 import 'package:conscia_app/providers/user_provider.dart';
 import 'package:conscia_app/providers/usage_provider.dart';
+import 'package:conscia_app/screens/dashboard/widgets/recent_transaction_tile.dart';
 import 'package:conscia_app/screens/dashboard/widgets/regret_prompt_card.dart';
 import 'package:conscia_app/screens/budgets/widgets/budget_form_sheet.dart';
+import 'package:conscia_app/screens/transactions/widgets/editorial_transaction_row.dart';
 import 'package:conscia_app/screens/transactions/widgets/transaction_tile.dart';
 import 'package:conscia_app/services/budget_service.dart';
 import 'package:conscia_app/services/transaction_service.dart';
@@ -442,27 +447,31 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   ),
                 )
               else
-                SliverPadding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  sliver: SliverList(
-                    delegate: SliverChildBuilderDelegate(
-                      (context, index) {
-                        final t = recentTransactions[index];
-                        return Column(
-                          children: [
-                            _HomeRecentTransactionRow(
-                              transaction: t,
-                              locale: userPreferences.locale,
-                            ),
-                            if (index < recentTransactions.length - 1)
-                              Divider(
-                                  height: 1,
-                                  color: Theme.of(context).appColors.border),
-                          ],
-                        );
-                      },
-                      childCount: recentTransactions.length,
-                    ),
+                SliverToBoxAdapter(
+                  child: EditorialTransactionRowsGroup(
+                    horizontalPadding: 20,
+                    children: [
+                      for (final transaction in recentTransactions)
+                        RecentTransactionTile(
+                          id: transaction.id,
+                          categoryBadge: CategoryIcons.badge(
+                            displayCategoryForTransaction(transaction),
+                            size: 30,
+                          ),
+                          counterparty: transaction.description.trim().isEmpty
+                              ? 'Unknown'
+                              : transaction.description.trim(),
+                          category: displayCategoryForTransaction(transaction),
+                          date: transaction.date,
+                          amount: transaction.amount,
+                          isIncome: transaction.type == 'income',
+                          currencyCode: transaction.currencyCode,
+                          regretLevel: transaction.regretLevel,
+                          isRecurring: transaction.isRecurring,
+                          isFamily: transaction.isFamily,
+                          locale: userPreferences.locale,
+                        ),
+                    ],
                   ),
                 ),
               const SliverPadding(padding: EdgeInsets.only(bottom: 112)),
@@ -792,49 +801,59 @@ class _DashboardStickyOverlayHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).appColors;
-    final opacity = Curves.easeOut.transform(progress);
+    final opacity = progress >= 1.0 ? 1.0 : 0.0;
+    final radius = BorderRadius.circular(999);
     final headerBackground = Color.lerp(
       Colors.transparent,
-      colors.paper.withValues(alpha: 0.9),
+      colors.paper.withValues(alpha: 0.64),
       opacity,
     )!;
     final borderColor = Color.lerp(
       Colors.transparent,
-      colors.border.withValues(alpha: 0.9),
+      colors.border.withValues(alpha: 0.84),
       opacity,
     )!;
 
     return Padding(
       padding: EdgeInsets.fromLTRB(5, topPadding + 8, 5, 0),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        curve: Curves.easeOutCubic,
-        key: const ValueKey('dashboard-sticky-identity-header'),
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(
-          horizontal: 14,
-          vertical: 10,
-        ),
-        decoration: BoxDecoration(
-          color: headerBackground,
-          borderRadius: BorderRadius.circular(999),
-          border: Border.all(color: borderColor),
-          boxShadow: opacity > 0.02
-              ? [
-                  BoxShadow(
-                    color: colors.ink.withValues(alpha: 0.05 * opacity),
-                    blurRadius: 18,
-                    offset: const Offset(0, 8),
-                  ),
-                ]
-              : null,
-        ),
-        child: _DashboardStickyIdentityHeader(
-          profile: profile,
-          greetingName: greetingName,
-          alertsCount: alertsCount,
-          onNotificationsTap: onNotificationsTap,
-          collapsed: false,
+      child: ClipRRect(
+        borderRadius: radius,
+        child: BackdropFilter(
+          filter: ui.ImageFilter.blur(
+            sigmaX: 18 * opacity,
+            sigmaY: 18 * opacity,
+          ),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 180),
+            curve: Curves.easeOutCubic,
+            key: const ValueKey('dashboard-sticky-identity-header'),
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(
+              horizontal: 14,
+              vertical: 10,
+            ),
+            decoration: BoxDecoration(
+              color: headerBackground,
+              borderRadius: radius,
+              border: Border.all(color: borderColor),
+              boxShadow: opacity > 0.02
+                  ? [
+                      BoxShadow(
+                        color: colors.ink.withValues(alpha: 0.05 * opacity),
+                        blurRadius: 18,
+                        offset: const Offset(0, 8),
+                      ),
+                    ]
+                  : null,
+            ),
+            child: _DashboardStickyIdentityHeader(
+              profile: profile,
+              greetingName: greetingName,
+              alertsCount: alertsCount,
+              onNotificationsTap: onNotificationsTap,
+              collapsed: false,
+            ),
+          ),
         ),
       ),
     );
@@ -1097,80 +1116,6 @@ class _BudgetSummaryRow extends StatelessWidget {
     if (percentage >= 0.8) return colors.budgetWarning;
     if (percentage >= 0.6) return colors.budgetCaution;
     return colors.budgetHealthy;
-  }
-}
-
-class _HomeRecentTransactionRow extends StatelessWidget {
-  const _HomeRecentTransactionRow({
-    required this.transaction,
-    required this.locale,
-  });
-
-  final Transaction transaction;
-  final String? locale;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).appColors;
-    final textTheme = Theme.of(context).textTheme;
-    final isIncome = transaction.type == 'income';
-    final amountText = CurrencyFormatter.formatSigned(
-      isIncome ? transaction.amount.abs() : -transaction.amount.abs(),
-      currencyCode: transaction.currencyCode,
-      locale: locale,
-    );
-    final subtitle = transaction.category;
-    final title = transaction.description.isNotEmpty
-        ? transaction.description
-        : 'Unknown';
-
-    return InkWell(
-      onTap: () => context.push('/transactions/${transaction.id}'),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 14),
-        child: Row(
-          children: [
-            TransactionTile.badgeFor(
-              transaction.category,
-              size: 30,
-              filled: false,
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: textTheme.titleSmall?.copyWith(
-                      color: colors.ink,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  const SizedBox(height: 3),
-                  Text(
-                    subtitle,
-                    style: textTheme.bodySmall?.copyWith(
-                      color: colors.mutedInk,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 12),
-            Text(
-              amountText,
-              style: textTheme.titleSmall?.copyWith(
-                color: isIncome ? colors.income : colors.expense,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
   }
 }
 

@@ -9,6 +9,7 @@ import '../../providers/user_provider.dart';
 import '../../services/user_service.dart';
 import '../../widgets/floating_label_text_field.dart';
 import '../../widgets/hero_screen_scaffold.dart';
+import '../../widgets/conscia_app_bar.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
@@ -69,7 +70,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
     return HeroScreenScaffold(
       padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
-      appBar: AppBar(
+      appBar: ConsciaAppBar(
         centerTitle: true,
         title: const Text('Profile'),
         leading: IconButton(

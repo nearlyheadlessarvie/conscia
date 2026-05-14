@@ -326,6 +326,15 @@ Future<void> _pumpPrePurchaseRouterApp(
 }
 
 void main() {
+  Color purchaseAssistantHeaderColor(WidgetTester tester) {
+    final header = tester.widget<AnimatedContainer>(
+      find.byKey(
+        const ValueKey('editorial-sticky-header-Purchase Assistant'),
+      ),
+    );
+    return (header.decoration! as BoxDecoration).color!;
+  }
+
   testWidgets(
       'pre-purchase assistant shows category picker entrypoint and orders sheet by recent categories',
       (tester) async {
@@ -397,6 +406,78 @@ void main() {
     expect(cloud.animate, isTrue);
     expect(
         find.byKey(const ValueKey('conscience-alter-ego-idle')), findsNothing);
+  });
+
+  testWidgets(
+      'pre-purchase assistant header restores translucent state from saved scroll offset',
+      (tester) async {
+    final bucket = PageStorageBucket();
+    SharedPreferences.setMockInitialValues({
+      'location_suggestions_enabled': false,
+      'location_suggestions_prompted': true,
+    });
+    final prefs = await SharedPreferences.getInstance();
+
+    Future<void> pumpSavedAssistant() async {
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            categoryFrequencyProvider.overrideWithValue(
+              ['Health', 'Dining', 'Shopping', 'Travel', 'Education'],
+            ),
+            subscriptionProvider.overrideWith(
+              (ref) async => const SubscriptionStatus(
+                tier: 'free',
+                isPremium: false,
+              ),
+            ),
+            currentUserProvider.overrideWith(
+              (ref) async => UserProfile(
+                id: 'user-1',
+                email: 'prepurchase@example.com',
+                currencyCode: 'USD',
+                locale: 'en_US',
+                createdAt: DateTime(2026),
+                hasCompletedOnboarding: true,
+              ),
+            ),
+            sharedPreferencesProvider.overrideWithValue(prefs),
+            userServiceProvider.overrideWithValue(_FakeUserService()),
+            familySpaceProvider.overrideWith((ref) async => null),
+            locationAssistanceServiceProvider.overrideWithValue(
+              _FakeLocationAssistanceService(permissionGranted: true),
+            ),
+          ],
+          child: MaterialApp(
+            home: PageStorage(
+              bucket: bucket,
+              child: const TickerMode(
+                enabled: false,
+                child: PrePurchaseScreen(),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+    }
+
+    await pumpSavedAssistant();
+    await tester.drag(
+      find.byKey(const PageStorageKey('assistant-shell-scroll')),
+      const Offset(0, -360),
+      warnIfMissed: false,
+    );
+    await tester.pumpAndSettle();
+
+    expect(purchaseAssistantHeaderColor(tester), isNot(Colors.transparent));
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
+    await pumpSavedAssistant();
+    await tester.pump(const Duration(milliseconds: 220));
+
+    expect(purchaseAssistantHeaderColor(tester), isNot(Colors.transparent));
   });
 
   testWidgets('pre-purchase assistant shows the editorial prompt copy',

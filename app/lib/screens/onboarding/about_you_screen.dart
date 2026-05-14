@@ -6,6 +6,7 @@ import '../../core/constants/app_icons.dart';
 import '../../core/routing/app_router.dart';
 import '../../providers/user_provider.dart';
 import '../../widgets/hero_screen_scaffold.dart';
+import '../../widgets/conscia_app_bar.dart';
 import '../../widgets/screen_section.dart';
 import '../../widgets/selection_chip_group.dart';
 
@@ -55,7 +56,7 @@ class _AboutYouScreenState extends ConsumerState<AboutYouScreen> {
     final colors = Theme.of(context).colorScheme;
 
     return HeroScreenScaffold(
-      appBar: AppBar(
+      appBar: ConsciaAppBar(
         automaticallyImplyLeading: false,
         title: const Text('About You'),
         actions: [

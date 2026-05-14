@@ -9,6 +9,7 @@ import '../../providers/family_space_provider.dart';
 import '../../widgets/feed_card.dart';
 import '../../widgets/floating_label_text_field.dart';
 import '../../widgets/hero_screen_scaffold.dart';
+import '../../widgets/conscia_app_bar.dart';
 import '../../widgets/screen_section.dart';
 
 class FamilySetupScreen extends ConsumerStatefulWidget {
@@ -37,8 +38,8 @@ class _FamilySetupScreenState extends ConsumerState<FamilySetupScreen> {
     final theme = Theme.of(context);
 
     return HeroScreenScaffold(
-      appBar: AppBar(
-        title: const Text('Create Family Space'),
+      appBar: const ConsciaAppBar(
+        title: Text('Create Family Space'),
       ),
       bottom: FilledButton(
         onPressed: _isSubmitting ? null : _submit,

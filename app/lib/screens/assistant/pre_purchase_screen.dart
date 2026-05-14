@@ -27,6 +27,7 @@ import '../../widgets/conscience_mark.dart';
 import '../../widgets/editorial_sticky_header.dart';
 import '../../widgets/floating_label_text_field.dart';
 import '../../widgets/hero_screen_scaffold.dart';
+import '../../widgets/conscia_app_bar.dart';
 import '../../widgets/thinking_cloud.dart';
 import '../../widgets/location_assistance_prompt_sheet.dart';
 import '../../widgets/premium_upgrade_dialog.dart';
@@ -57,6 +58,7 @@ class _PrePurchaseScreenState extends ConsumerState<PrePurchaseScreen> {
   bool _hasCheckedLocationPrompt = false;
   final ScrollController _inputScrollController = ScrollController();
   double _inputScrollOffset = 0;
+  bool _scrollSyncScheduled = false;
 
   // Form
   final _descriptionController = TextEditingController();
@@ -77,10 +79,24 @@ class _PrePurchaseScreenState extends ConsumerState<PrePurchaseScreen> {
   }
 
   void _handleInputScroll() {
+    _syncInputScrollOffset();
+  }
+
+  void _syncInputScrollOffset() {
     final nextOffset =
         _inputScrollController.hasClients ? _inputScrollController.offset : 0.0;
     if ((nextOffset - _inputScrollOffset).abs() < 1) return;
     setState(() => _inputScrollOffset = nextOffset);
+  }
+
+  void _scheduleInputScrollSync() {
+    if (_scrollSyncScheduled) return;
+    _scrollSyncScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _scrollSyncScheduled = false;
+      if (!mounted) return;
+      _syncInputScrollOffset();
+    });
   }
 
   Future<void> _maybePromptForLocationAssistance() async {
@@ -361,6 +377,8 @@ class _PrePurchaseScreenState extends ConsumerState<PrePurchaseScreen> {
     final bottomInset = MediaQuery.paddingOf(context).bottom;
     final keyboardInset = MediaQuery.viewInsetsOf(context).bottom;
 
+    _scheduleInputScrollSync();
+
     return Scaffold(
       body: DecoratedBox(
         decoration: BoxDecoration(
@@ -537,7 +555,7 @@ class _PrePurchaseScreenState extends ConsumerState<PrePurchaseScreen> {
     final colors = Theme.of(context).colorScheme;
 
     return HeroScreenScaffold(
-      appBar: AppBar(title: const Text('Purchase Assistant')),
+      appBar: const ConsciaAppBar(title: Text('Purchase Assistant')),
       extraBottomPadding: _kDockNavOffset,
       child: Center(
         child: Column(

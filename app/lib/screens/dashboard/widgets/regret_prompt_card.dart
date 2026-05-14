@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../../../widgets/feeling_choice_button.dart';
+
 class RegretPromptCard extends StatelessWidget {
   final Widget categoryBadge;
   final String counterparty;
@@ -99,76 +101,23 @@ class RegretPromptCard extends StatelessWidget {
               Row(
                 children: [
                   Expanded(
-                    child: _ActionButton(
-                      label: 'Worth It',
-                      color: const Color(0xFF4CAF50),
-                      icon: Icons.thumb_up_outlined,
-                      onTap: onWorthIt,
+                    child: FeelingChoiceButton.worthIt(
+                      onPressed: onWorthIt,
                     ),
                   ),
                   const SizedBox(width: 8),
                   Expanded(
-                    child: _ActionButton(
-                      label: 'Not Sure',
-                      color: const Color(0xFFFFC107),
-                      icon: Icons.help_outline,
-                      onTap: onNotSure,
+                    child: FeelingChoiceButton.notSure(
+                      onPressed: onNotSure,
                     ),
                   ),
                   const SizedBox(width: 8),
                   Expanded(
-                    child: _ActionButton(
-                      label: 'Regret',
-                      color: const Color(0xFFE53935),
-                      icon: Icons.thumb_down_outlined,
-                      onTap: onRegret,
+                    child: FeelingChoiceButton.regret(
+                      onPressed: onRegret,
                     ),
                   ),
                 ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _ActionButton extends StatelessWidget {
-  final String label;
-  final Color color;
-  final IconData icon;
-  final VoidCallback? onTap;
-
-  const _ActionButton({
-    required this.label,
-    required this.color,
-    required this.icon,
-    this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: color.withValues(alpha: 0.12),
-      borderRadius: BorderRadius.circular(12),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(icon, color: color, size: 20),
-              const SizedBox(height: 4),
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  color: color,
-                ),
               ),
             ],
           ),

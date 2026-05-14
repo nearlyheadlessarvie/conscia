@@ -25,6 +25,7 @@ import '../../services/user_service.dart';
 import '../../widgets/currency_picker_sheet.dart';
 import '../../widgets/feed_card.dart';
 import '../../widgets/hero_screen_scaffold.dart';
+import '../../widgets/conscia_app_bar.dart';
 import '../../widgets/locale_picker_sheet.dart';
 import '../../widgets/skeleton_loader.dart';
 import 'widgets/subscription_sheet.dart';
@@ -137,7 +138,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     return HeroScreenScaffold(
       scrollViewKey: const PageStorageKey('settings-shell-scroll'),
       padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
-      appBar: AppBar(title: const Text('Settings')),
+      appBar: const ConsciaAppBar(title: Text('Settings')),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

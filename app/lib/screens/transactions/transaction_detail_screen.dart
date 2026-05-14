@@ -2,7 +2,6 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 
 import '../../core/errors/app_error.dart';
@@ -18,14 +17,12 @@ import '../../services/ai_service.dart';
 import '../../services/transaction_service.dart';
 import '../../core/constants/category_icons.dart';
 import '../../screens/assistant/widgets/ai_message_bubble.dart';
-import '../../screens/dashboard/widgets/in_app_alert_banner.dart';
+import '../budgets/widgets/budget_form_sheet.dart';
 import '../../widgets/conscience_mark.dart';
-import '../../widgets/family_badge.dart';
+import '../../widgets/editorial_sticky_header.dart';
+import '../../widgets/feeling_choice_button.dart';
 import '../../widgets/form_label.dart';
-import '../../widgets/grouped_list_card.dart';
-import '../../widgets/hero_screen_scaffold.dart';
 import '../../widgets/premium_upgrade_dialog.dart';
-import '../../widgets/recurring_badge.dart';
 import '../../widgets/skeleton_loader.dart';
 
 class TransactionDetailScreen extends ConsumerStatefulWidget {
@@ -45,17 +42,49 @@ class TransactionDetailScreen extends ConsumerStatefulWidget {
 
 class _TransactionDetailScreenState
     extends ConsumerState<TransactionDetailScreen> {
+  static const _contentTopGap = 65.0;
+
+  final _scrollController = ScrollController();
   int? _regretLevel;
   bool _regretLevelInitialized = false;
   bool _loadingReflection = false;
   bool _deleting = false;
   Transaction? _editedTransactionOverride;
   bool _autoReflectHandled = false;
+  double _scrollOffset = 0;
+  bool _scrollSyncScheduled = false;
 
   @override
   void initState() {
     super.initState();
+    _scrollController.addListener(_syncScrollOffset);
     ref.read(budgetListProvider);
+  }
+
+  @override
+  void dispose() {
+    _scrollController
+      ..removeListener(_syncScrollOffset)
+      ..dispose();
+    super.dispose();
+  }
+
+  void _syncScrollOffset() {
+    final nextOffset =
+        _scrollController.hasClients ? _scrollController.offset : 0.0;
+    if ((nextOffset - _scrollOffset).abs() >= 1) {
+      setState(() => _scrollOffset = nextOffset);
+    }
+  }
+
+  void _scheduleScrollOffsetSync() {
+    if (_scrollSyncScheduled) return;
+    _scrollSyncScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _scrollSyncScheduled = false;
+      if (!mounted) return;
+      _syncScrollOffset();
+    });
   }
 
   Color _amountColor(ColorScheme colors, bool isIncome) {
@@ -70,24 +99,15 @@ class _TransactionDetailScreenState
   }
 
   Future<void> _confirmDelete(Transaction? transaction) async {
-    final confirmed = await showDialog<bool>(
+    final confirmed = await showModalBottomSheet<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Delete this transaction?'),
-        content: const Text("This can't be undone."),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(true),
-            child: Text(
-              'Delete',
-              style: TextStyle(color: Theme.of(context).colorScheme.error),
-            ),
-          ),
-        ],
+      useRootNavigator: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      builder: (ctx) => _DeleteTransactionSheet(
+        onCancel: () => Navigator.of(ctx).pop(false),
+        onDelete: () => Navigator.of(ctx).pop(true),
       ),
     );
 
@@ -189,69 +209,123 @@ class _TransactionDetailScreenState
         ref.watch(transactionDetailProvider(widget.transactionId));
     final currentTransaction =
         _editedTransactionOverride ?? detailAsync.valueOrNull;
-    final alerts = ref.watch(activeAlertsProvider);
 
-    return HeroScreenScaffold(
-      padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
-      scrollable: false,
-      appBar: AppBar(
-        title: const Text('Transaction'),
-        actions: [
-          PopupMenuButton<String>(
-            onSelected: (value) {
-              if (value == 'edit') {
-                _openEditScreen();
-              } else if (value == 'delete') {
-                _confirmDelete(currentTransaction);
-              }
-            },
-            itemBuilder: (_) => const [
-              PopupMenuItem(value: 'edit', child: Text('Edit')),
-              PopupMenuItem(value: 'delete', child: Text('Delete')),
+    final topPadding = MediaQuery.paddingOf(context).top;
+    final effectiveScrollOffset =
+        _scrollController.hasClients ? _scrollController.offset : _scrollOffset;
+    final stickyProgress = ((effectiveScrollOffset - 5) / 10).clamp(0.0, 1.0);
+    _scheduleScrollOffsetSync();
+
+    return Scaffold(
+      body: DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              Theme.of(context).appColors.pageTop,
+              Theme.of(context).appColors.pageBottom,
             ],
           ),
-        ],
-      ),
-      child: detailAsync.when(
-        loading: () => ListView(
-          padding: const EdgeInsets.symmetric(vertical: 24),
-          children: const [
-            SkeletonLoader(height: 40, width: 200),
-            SizedBox(height: 24),
-            SkeletonCard(),
-            SizedBox(height: 16),
-            SkeletonCard(),
-            SizedBox(height: 16),
-            SkeletonCard(),
+        ),
+        child: Stack(
+          children: [
+            Positioned.fill(
+              child: detailAsync.when(
+                loading: () => SingleChildScrollView(
+                  controller: _scrollController,
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: const EdgeInsets.only(bottom: 24),
+                  child: _TransactionDetailSkeleton(
+                    topPadding: topPadding + 68,
+                  ),
+                ),
+                error: (error, stackTrace) => Center(
+                  child: Padding(
+                    padding: EdgeInsets.fromLTRB(
+                      32,
+                      topPadding + _contentTopGap,
+                      32,
+                      32,
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.error_outline,
+                          size: 64,
+                          color: Theme.of(context).colorScheme.error,
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          AppError.from(error, stackTrace: stackTrace)
+                              .userMessage,
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 24),
+                        FilledButton.icon(
+                          onPressed: () => ref.invalidate(
+                              transactionDetailProvider(widget.transactionId)),
+                          icon: const Icon(Icons.refresh),
+                          label: const Text('Retry'),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                data: (tx) => _buildContent(
+                  _editedTransactionOverride ?? tx,
+                  topPadding,
+                ),
+              ),
+            ),
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              child: EditorialStickyHeader(
+                title: 'Transaction',
+                progress: stickyProgress,
+                topPadding: topPadding,
+                trailing: IconButton(
+                  tooltip: 'Transaction actions',
+                  visualDensity: VisualDensity.compact,
+                  onPressed: currentTransaction == null
+                      ? null
+                      : () => _showTransactionActions(currentTransaction),
+                  icon: Icon(
+                    Icons.more_horiz_rounded,
+                    color: Theme.of(context).appColors.deepNavy,
+                  ),
+                ),
+              ),
+            ),
           ],
         ),
-        error: (error, stackTrace) => Center(
-          child: Padding(
-            padding: const EdgeInsets.all(32),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.error_outline,
-                    size: 64, color: Theme.of(context).colorScheme.error),
-                const SizedBox(height: 16),
-                Text(
-                  AppError.from(error, stackTrace: stackTrace).userMessage,
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 24),
-                FilledButton.icon(
-                  onPressed: () => ref.invalidate(
-                      transactionDetailProvider(widget.transactionId)),
-                  icon: const Icon(Icons.refresh),
-                  label: const Text('Retry'),
-                ),
-              ],
-            ),
-          ),
-        ),
-        data: (tx) => _buildContent(_editedTransactionOverride ?? tx, alerts),
       ),
     );
+  }
+
+  Future<void> _showTransactionActions(Transaction? transaction) async {
+    final action = await showModalBottomSheet<String>(
+      context: context,
+      useRootNavigator: true,
+      showDragHandle: false,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      builder: (ctx) => _TransactionActionSheet(
+        onEdit: () => Navigator.of(ctx).pop('edit'),
+        onDelete: () => Navigator.of(ctx).pop('delete'),
+      ),
+    );
+
+    if (!mounted) return;
+    if (action == 'edit') {
+      _openEditScreen();
+    } else if (action == 'delete') {
+      _confirmDelete(transaction);
+    }
   }
 
   Future<void> _openEditScreen() async {
@@ -268,50 +342,24 @@ class _TransactionDetailScreenState
     });
   }
 
-  bool _isCurrentTransactionRoute(String? route) {
-    if (route == null || route.isEmpty) return false;
-
-    final uri = Uri.tryParse(route);
-    final path = uri?.path ?? route.split('?').first;
-    final normalizedPath =
-        path.endsWith('/') ? path.substring(0, path.length - 1) : path;
-
-    return normalizedPath == '/transactions/${widget.transactionId}';
-  }
-
-  bool _shouldHideContextualAlertAction(AppAlert alert) {
-    if (alert.type == 'ReflectionFollowUp') return false;
-
-    final isViewTransactionAction =
-        alert.actionLabel?.trim().toLowerCase() == 'view transaction';
-    return isViewTransactionAction &&
-        (alert.transactionId == widget.transactionId ||
-            _isCurrentTransactionRoute(alert.actionRoute));
-  }
-
-  Widget _buildContent(Transaction tx, List<AppAlert> alerts) {
+  Widget _buildContent(Transaction tx, double topPadding) {
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
     final appColors = theme.appColors;
     final textTheme = Theme.of(context).textTheme;
     final currentUserId = ref.watch(authProvider).userId;
+    final budgetState = ref.watch(budgetListProvider);
     final isIncome = tx.type == 'income';
     final prefix = isIncome ? '+' : '-';
     final displayCounterparty =
         tx.description.isNotEmpty ? tx.description : 'Unknown';
-    AppAlert? contextualAlert;
-    for (final alert in alerts) {
-      final matchesTransaction = alert.transactionId == tx.id;
-      final matchesCategory = alert.category != null &&
-          alert.category!.toLowerCase() == tx.category.toLowerCase();
-      final matchesCounterparty = alert.counterparty != null &&
-          alert.counterparty!.toLowerCase() ==
-              displayCounterparty.toLowerCase();
-      if (matchesTransaction || matchesCategory || matchesCounterparty) {
-        contextualAlert = alert;
-        break;
-      }
-    }
+    final displayCategory = _displayCategory(tx);
+    final normalizedCategory = displayCategory.trim().toLowerCase();
+    final hasMatchingBudget = budgetState.budgets.any(
+      (budget) => budget.category.trim().toLowerCase() == normalizedCategory,
+    );
+    final showAddBudget =
+        !isIncome && !budgetState.isLoading && !hasMatchingBudget;
 
     if (widget.autoReflect && !_autoReflectHandled) {
       _autoReflectHandled = true;
@@ -326,166 +374,131 @@ class _TransactionDetailScreenState
       _regretLevelInitialized = true;
     }
 
-    if (widget.autoReflect &&
-        contextualAlert?.type == 'ReflectionFollowUp' &&
-        contextualAlert?.transactionId == widget.transactionId) {
-      contextualAlert = null;
-    }
-
     return SingleChildScrollView(
+      controller: _scrollController,
+      physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.only(bottom: 32),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const SizedBox(height: 16),
           _TransactionDetailHero(
             category: tx.category,
             counterparty: displayCounterparty,
+            snapshotLabel: isIncome ? 'INCOME SNAPSHOT' : 'PURCHASE SNAPSHOT',
             amountText:
                 '$prefix${CurrencyFormatter.format(tx.amount.abs(), currencyCode: tx.currencyCode)}',
             amountColor: _amountColor(colors, isIncome),
-            subtitle:
-                '${isIncome ? "Income" : "Expense"} · ${_displayCategory(tx)}',
+            subtitle: '${isIncome ? "Income" : "Expense"} · $displayCategory',
+            showAddBudget: showAddBudget,
+            onAddBudget:
+                showAddBudget ? () => _openBudgetForm(displayCategory) : null,
+            showReflect: !isIncome,
+            loadingReflection: _loadingReflection,
+            onReflect: _loadingReflection ? null : _askAiReflection,
+            topPadding: topPadding + 68,
           ),
-          const SizedBox(height: 20),
-          const FormLabel(label: 'DETAILS'),
-          const SizedBox(height: 10),
-          GroupedListCard(
-            children: [
-              _DetailRow(
-                label: 'Category',
-                value: _displayCategory(tx),
-                leading: CategoryIcons.badge(_displayCategory(tx), size: 30),
-              ),
-              _DetailRow(
-                label: 'Date',
-                value: DateFormat.yMMMd().add_jm().format(tx.date),
-                leading: Icon(
-                  Icons.calendar_today_outlined,
-                  color: appColors.deepNavy,
-                  size: 20,
-                ),
-              ),
-              _DetailRow(
-                label: 'Type',
-                value: isIncome ? 'Income' : 'Expense',
-                leading: Icon(
-                  isIncome
-                      ? Icons.arrow_downward_rounded
-                      : Icons.arrow_upward_rounded,
-                  color: isIncome ? appColors.income : appColors.expense,
-                  size: 20,
-                ),
-              ),
-              if (tx.isRecurring || tx.isFamily)
-                _DetailRow(
-                  label: 'Shared context',
-                  value: tx.isRecurring && tx.isFamily
-                      ? 'Recurring family transaction'
-                      : tx.isFamily
-                          ? 'Family transaction'
-                          : 'Recurring transaction',
-                  leading: Icon(
-                    tx.isFamily ? Icons.people_rounded : Icons.repeat_rounded,
-                    color: tx.isFamily ? appColors.family : appColors.deepNavy,
-                    size: 20,
-                  ),
-                  trailing: Wrap(
-                    spacing: 8,
-                    crossAxisAlignment: WrapCrossAlignment.center,
-                    children: [
-                      if (tx.isRecurring) const RecurringBadge(),
-                      if (tx.isFamily) const FamilyBadge(),
-                      if (_shouldShowSharerAvatar(tx, currentUserId))
-                        CircleAvatar(
-                          key: const ValueKey('transaction-sharer-avatar'),
-                          radius: 13,
-                          backgroundColor: colors.tertiaryContainer,
-                          child: Text(
-                            _sharerInitials(tx),
-                            style: textTheme.labelSmall?.copyWith(
-                              color: colors.onTertiaryContainer,
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-            ],
-          ),
-          const SizedBox(height: 24),
-          if (contextualAlert != null) ...[
-            Builder(
-              builder: (_) {
-                final actionLabel =
-                    _shouldHideContextualAlertAction(contextualAlert!)
-                        ? null
-                        : contextualAlert.actionLabel;
-                return InAppAlertBanner(
-                  title: contextualAlert.title,
-                  message: contextualAlert.message,
-                  actionLabel: actionLabel,
-                  onAction: actionLabel == null
-                      ? null
-                      : () {
-                          final alert = contextualAlert!;
-                          if (alert.transactionId == widget.transactionId &&
-                              alert.type == 'ReflectionFollowUp') {
-                            _askAiReflection(dismissFollowUpAlert: true);
-                            return;
-                          }
-                          final route = alert.actionRoute;
-                          if (route != null) {
-                            context.push(route);
-                          }
-                        },
-                  onDismiss: () => ref
-                      .read(dismissedAlertIdsProvider.notifier)
-                      .dismiss(contextualAlert!.id),
-                );
-              },
-            ),
-            const SizedBox(height: 16),
-          ],
-          _buildRegretSection(colors, textTheme),
-          const SizedBox(height: 24),
-          SizedBox(
-            width: double.infinity,
-            child: FilledButton.tonal(
-              onPressed: _loadingReflection ? null : _askAiReflection,
-              child: _loadingReflection
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.auto_awesome, size: 20),
-                        SizedBox(width: 8),
-                        Text('Ask AI to Reflect'),
-                      ],
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const FormLabel(label: 'DETAILS'),
+                const SizedBox(height: 10),
+                _DetailRowsGroup(
+                  children: [
+                    _DetailRow(
+                      label: 'Category',
+                      value: displayCategory,
+                      leading: CategoryIcons.badge(displayCategory, size: 30),
                     ),
+                    _DetailRow(
+                      label: 'Date',
+                      value: DateFormat.yMMMd().add_jm().format(tx.date),
+                      leading: Icon(
+                        Icons.calendar_today_outlined,
+                        color: appColors.deepNavy,
+                        size: 20,
+                      ),
+                    ),
+                    _DetailRow(
+                      label: 'Type',
+                      value: isIncome ? 'Income' : 'Expense',
+                      leading: Icon(
+                        isIncome
+                            ? Icons.arrow_downward_rounded
+                            : Icons.arrow_upward_rounded,
+                        color: isIncome ? appColors.income : appColors.expense,
+                        size: 20,
+                      ),
+                    ),
+                    if (tx.isRecurring || tx.isFamily)
+                      _DetailRow(
+                        label: 'Shared context',
+                        value: tx.isRecurring && tx.isFamily
+                            ? 'Recurring family transaction'
+                            : tx.isFamily
+                                ? 'Family transaction'
+                                : 'Recurring transaction',
+                        leading: Icon(
+                          tx.isFamily
+                              ? Icons.people_rounded
+                              : Icons.repeat_rounded,
+                          color: tx.isFamily
+                              ? appColors.family
+                              : appColors.deepNavy,
+                          size: 20,
+                        ),
+                        trailing: _shouldShowSharerAvatar(tx, currentUserId)
+                            ? CircleAvatar(
+                                key:
+                                    const ValueKey('transaction-sharer-avatar'),
+                                radius: 13,
+                                backgroundColor: colors.tertiaryContainer,
+                                child: Text(
+                                  _sharerInitials(tx),
+                                  style: textTheme.labelSmall?.copyWith(
+                                    color: colors.onTertiaryContainer,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                              )
+                            : null,
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 24),
+                if (!isIncome) _buildRegretSection(colors, textTheme),
+                if (_deleting) ...[
+                  const SizedBox(height: 16),
+                  const CircularProgressIndicator(),
+                ],
+                const SizedBox(height: 32),
+              ],
             ),
           ),
-          if (_deleting) ...[
-            const SizedBox(height: 16),
-            const CircularProgressIndicator(),
-          ],
-          const SizedBox(height: 32),
         ],
       ),
     );
   }
 
+  void _openBudgetForm(String category) {
+    BudgetFormSheet.show(context, initialCategory: category);
+  }
+
   Widget _buildRegretSection(ColorScheme colors, TextTheme textTheme) {
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.center,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text('How did this purchase feel?', style: textTheme.titleMedium),
-        const SizedBox(height: 12),
+        const FormLabel(label: 'HOW DID THIS FEEL?'),
+        const SizedBox(height: 4),
+        Text(
+          'Mark the feeling so future insights understand the pattern.',
+          style: textTheme.bodySmall?.copyWith(
+            color: Theme.of(context).appColors.mutedInk,
+            height: 1.25,
+          ),
+        ),
+        const SizedBox(height: 14),
         if (_regretLevel != null)
           _buildRegretChip(colors)
         else
@@ -541,63 +554,23 @@ class _TransactionDetailScreenState
   }
 
   Widget _buildRegretPicker(ColorScheme colors) {
-    const greenColor = Color(0xFF4CAF50);
-    const amberColor = Color(0xFFFFC107);
-    const redColor = Color(0xFFE53935);
-
     return Row(
       children: [
         Expanded(
-          child: FilledButton.tonal(
+          child: FeelingChoiceButton.worthIt(
             onPressed: () => _updateRegret(0),
-            style: FilledButton.styleFrom(
-              backgroundColor: greenColor.withValues(alpha: 0.15),
-              foregroundColor: greenColor,
-            ),
-            child: const Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.sentiment_satisfied_alt, size: 18),
-                SizedBox(width: 4),
-                // Text('Worth It'),
-              ],
-            ),
           ),
         ),
         const SizedBox(width: 8),
         Expanded(
-          child: FilledButton.tonal(
+          child: FeelingChoiceButton.notSure(
             onPressed: () => _updateRegret(1),
-            style: FilledButton.styleFrom(
-              backgroundColor: amberColor.withValues(alpha: 0.15),
-              foregroundColor: amberColor,
-            ),
-            child: const Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.sentiment_neutral, size: 18),
-                SizedBox(width: 4),
-                // Text('Not Sure'),
-              ],
-            ),
           ),
         ),
         const SizedBox(width: 8),
         Expanded(
-          child: FilledButton.tonal(
+          child: FeelingChoiceButton.regret(
             onPressed: () => _updateRegret(2),
-            style: FilledButton.styleFrom(
-              backgroundColor: redColor.withValues(alpha: 0.15),
-              foregroundColor: redColor,
-            ),
-            child: const Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.sentiment_dissatisfied, size: 18),
-                SizedBox(width: 4),
-                // Text('Regret'),
-              ],
-            ),
           ),
         ),
       ],
@@ -623,16 +596,30 @@ class _TransactionDetailHero extends StatelessWidget {
   const _TransactionDetailHero({
     required this.category,
     required this.counterparty,
+    required this.snapshotLabel,
     required this.amountText,
     required this.amountColor,
     required this.subtitle,
+    required this.showAddBudget,
+    required this.onAddBudget,
+    required this.showReflect,
+    required this.loadingReflection,
+    required this.onReflect,
+    required this.topPadding,
   });
 
   final String category;
   final String counterparty;
+  final String snapshotLabel;
   final String amountText;
   final Color amountColor;
   final String subtitle;
+  final bool showAddBudget;
+  final VoidCallback? onAddBudget;
+  final bool showReflect;
+  final bool loadingReflection;
+  final VoidCallback? onReflect;
+  final double topPadding;
 
   @override
   Widget build(BuildContext context) {
@@ -641,40 +628,470 @@ class _TransactionDetailHero extends StatelessWidget {
     final textTheme = theme.textTheme;
 
     return DecoratedBox(
+      key: const ValueKey('transaction-detail-hero'),
       decoration: BoxDecoration(
-        color: colors.navySoft,
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: colors.deepNavy.withValues(alpha: 0.16)),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            colors.navySoft,
+            colors.paper,
+            colors.amberSoft.withValues(alpha: 0.74),
+          ],
+        ),
+        borderRadius: const BorderRadius.vertical(
+          bottom: Radius.circular(28),
+        ),
+        border: Border.all(color: colors.border),
       ),
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(20, 24, 20, 22),
+        padding: EdgeInsets.fromLTRB(18, topPadding, 18, 20),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            CategoryIcons.badge(category, size: 52),
-            const SizedBox(height: 14),
+            Row(
+              children: [
+                CategoryIcons.badge(category, size: 44),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Text(
+                    snapshotLabel,
+                    style: textTheme.labelSmall?.copyWith(
+                      color: colors.deepNavy,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 1.0,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 18),
             Text(
               counterparty,
-              style: textTheme.headlineLarge,
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              amountText,
-              style: GoogleFonts.poppins(
-                fontSize: 28,
-                fontWeight: FontWeight.w700,
-                color: amountColor,
+              style: textTheme.titleLarge?.copyWith(
+                color: colors.ink,
+                fontWeight: FontWeight.w800,
               ),
-              textAlign: TextAlign.center,
             ),
             const SizedBox(height: 6),
             Text(
+              amountText,
+              style: textTheme.displaySmall?.copyWith(
+                fontWeight: FontWeight.w800,
+                color: amountColor,
+                letterSpacing: -0.7,
+              ),
+            ),
+            const SizedBox(height: 10),
+            Text(
               subtitle,
-              style: textTheme.bodyMedium?.copyWith(color: colors.mutedInk),
-              textAlign: TextAlign.center,
+              style: textTheme.bodyMedium?.copyWith(
+                color: colors.mutedInk,
+                height: 1.25,
+              ),
+            ),
+            const SizedBox(height: 18),
+            if (showReflect || showAddBudget)
+              Wrap(
+                spacing: 10,
+                runSpacing: 10,
+                children: [
+                  if (showReflect)
+                    FilledButton.icon(
+                      onPressed: onReflect,
+                      style: FilledButton.styleFrom(
+                        minimumSize: const Size(112, 40),
+                        backgroundColor: colors.deepNavy,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 18),
+                        shape: const StadiumBorder(),
+                      ),
+                      icon: loadingReflection
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : const Icon(Icons.auto_awesome_rounded, size: 18),
+                      label: Text(loadingReflection ? 'Reflecting' : 'Reflect'),
+                    ),
+                  if (showAddBudget)
+                    OutlinedButton.icon(
+                      onPressed: onAddBudget,
+                      style: OutlinedButton.styleFrom(
+                        minimumSize: const Size(120, 40),
+                        foregroundColor: colors.deepNavy,
+                        backgroundColor: Colors.white.withValues(alpha: 0.72),
+                        side: BorderSide(color: colors.deepNavy),
+                        padding: const EdgeInsets.symmetric(horizontal: 18),
+                        shape: const StadiumBorder(),
+                      ),
+                      icon: const Icon(Icons.flag_rounded, size: 18),
+                      label: const Text('Add Budget'),
+                    ),
+                ],
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _TransactionDetailSkeleton extends StatelessWidget {
+  const _TransactionDetailSkeleton({required this.topPadding});
+
+  final double topPadding;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).appColors;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        DecoratedBox(
+          key: const ValueKey('transaction-detail-hero-skeleton'),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                colors.navySoft,
+                colors.paper,
+                colors.amberSoft.withValues(alpha: 0.74),
+              ],
+            ),
+            borderRadius: const BorderRadius.vertical(
+              bottom: Radius.circular(28),
+            ),
+            border: Border.all(color: colors.border),
+          ),
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(18, topPadding, 18, 20),
+            child: const Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    SkeletonLoader(
+                      width: 44,
+                      height: 44,
+                      borderRadius: 16,
+                    ),
+                    SizedBox(width: 14),
+                    SkeletonLoader(width: 132, height: 12),
+                  ],
+                ),
+                SizedBox(height: 22),
+                SkeletonLoader(width: 150, height: 20),
+                SizedBox(height: 10),
+                SkeletonLoader(width: 190, height: 34),
+                SizedBox(height: 12),
+                SkeletonLoader(width: 128, height: 14),
+                SizedBox(height: 18),
+                SkeletonLoader(
+                  width: 112,
+                  height: 40,
+                  borderRadius: 999,
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 20),
+        const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SkeletonLoader(width: 64, height: 12),
+              SizedBox(height: 12),
+              _SkeletonDetailRow(),
+              _SkeletonDivider(),
+              _SkeletonDetailRow(),
+              _SkeletonDivider(),
+              _SkeletonDetailRow(),
+            ],
+          ),
+        ),
+        const SizedBox(height: 28),
+        const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SkeletonLoader(width: 132, height: 12),
+              SizedBox(height: 8),
+              SkeletonLoader(width: 260, height: 14),
+              SizedBox(height: 14),
+              Row(
+                children: [
+                  Expanded(
+                      child: SkeletonLoader(height: 40, borderRadius: 999)),
+                  SizedBox(width: 8),
+                  Expanded(
+                      child: SkeletonLoader(height: 40, borderRadius: 999)),
+                  SizedBox(width: 8),
+                  Expanded(
+                      child: SkeletonLoader(height: 40, borderRadius: 999)),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _SkeletonDetailRow extends StatelessWidget {
+  const _SkeletonDetailRow();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Padding(
+      padding: EdgeInsets.symmetric(vertical: 10),
+      child: Row(
+        children: [
+          SkeletonLoader(width: 30, height: 30, borderRadius: 10),
+          SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SkeletonLoader(width: 72, height: 10),
+                SizedBox(height: 6),
+                SkeletonLoader(width: 128, height: 16),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SkeletonDivider extends StatelessWidget {
+  const _SkeletonDivider();
+
+  @override
+  Widget build(BuildContext context) {
+    return Divider(
+      height: 1,
+      thickness: 1,
+      color: Theme.of(context).appColors.border,
+    );
+  }
+}
+
+class _TransactionActionSheet extends StatelessWidget {
+  const _TransactionActionSheet({
+    required this.onEdit,
+    required this.onDelete,
+  });
+
+  final VoidCallback onEdit;
+  final VoidCallback onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).appColors;
+
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 10, 20, 20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 36,
+              height: 4,
+              decoration: BoxDecoration(
+                color: colors.border,
+                borderRadius: BorderRadius.circular(999),
+              ),
+            ),
+            const SizedBox(height: 18),
+            _ActionSheetRow(
+              icon: Icons.edit_rounded,
+              label: 'Edit Transaction',
+              onTap: onEdit,
+            ),
+            Divider(height: 1, color: colors.border),
+            _ActionSheetRow(
+              icon: Icons.delete_outline_rounded,
+              label: 'Delete Transaction',
+              destructive: true,
+              onTap: onDelete,
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton(
+                onPressed: () => Navigator.of(context).pop(),
+                style: OutlinedButton.styleFrom(
+                  minimumSize: const Size.fromHeight(48),
+                  shape: const StadiumBorder(),
+                ),
+                child: const Text('Cancel'),
+              ),
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _DeleteTransactionSheet extends StatelessWidget {
+  const _DeleteTransactionSheet({
+    required this.onCancel,
+    required this.onDelete,
+  });
+
+  final VoidCallback onCancel;
+  final VoidCallback onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).appColors;
+    final textTheme = Theme.of(context).textTheme;
+
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 10, 20, 20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Align(
+              alignment: Alignment.center,
+              child: Container(
+                width: 36,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: colors.border,
+                  borderRadius: BorderRadius.circular(999),
+                ),
+              ),
+            ),
+            const SizedBox(height: 22),
+            Text(
+              'Delete this transaction?',
+              textAlign: TextAlign.center,
+              style: textTheme.titleMedium?.copyWith(
+                color: colors.ink,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              "This can't be undone.",
+              textAlign: TextAlign.center,
+              style: textTheme.bodyMedium?.copyWith(color: colors.mutedInk),
+            ),
+            const SizedBox(height: 22),
+            FilledButton(
+              onPressed: onDelete,
+              style: FilledButton.styleFrom(
+                minimumSize: const Size.fromHeight(48),
+                backgroundColor: colors.expense,
+                foregroundColor: Colors.white,
+                shape: const StadiumBorder(),
+              ),
+              child: const Text('Delete transaction'),
+            ),
+            const SizedBox(height: 10),
+            OutlinedButton(
+              onPressed: onCancel,
+              style: OutlinedButton.styleFrom(
+                minimumSize: const Size.fromHeight(48),
+                shape: const StadiumBorder(),
+              ),
+              child: const Text('Cancel'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ActionSheetRow extends StatelessWidget {
+  const _ActionSheetRow({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+    this.destructive = false,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+  final bool destructive;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).appColors;
+    final foreground = destructive ? colors.expense : colors.ink;
+
+    return InkWell(
+      borderRadius: BorderRadius.circular(16),
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 16),
+        child: Row(
+          children: [
+            Icon(icon, size: 22, color: foreground),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Text(
+                label,
+                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      color: foreground,
+                      fontWeight: FontWeight.w700,
+                    ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _DetailRowsGroup extends StatelessWidget {
+  const _DetailRowsGroup({required this.children});
+
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).appColors;
+    final separatedChildren = <Widget>[];
+
+    for (var index = 0; index < children.length; index++) {
+      separatedChildren.add(children[index]);
+      if (index < children.length - 1) {
+        separatedChildren.add(
+          Divider(
+            height: 1,
+            thickness: 1,
+            color: colors.border,
+          ),
+        );
+      }
+    }
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: separatedChildren,
       ),
     );
   }

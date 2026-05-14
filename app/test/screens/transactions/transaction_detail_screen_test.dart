@@ -1,17 +1,20 @@
+import 'dart:async';
+
 import 'package:conscia_app/providers/transaction_providers.dart';
 import 'package:conscia_app/providers/budget_providers.dart';
 import 'package:conscia_app/providers/alert_provider.dart';
 import 'package:conscia_app/providers/ai_provider.dart';
 import 'package:conscia_app/providers/auth_provider.dart';
 import 'package:conscia_app/providers/usage_provider.dart';
+import 'package:conscia_app/providers/user_provider.dart';
 import 'package:conscia_app/screens/transactions/transaction_detail_screen.dart';
 import 'package:conscia_app/services/auth_service.dart';
 import 'package:conscia_app/services/ai_service.dart';
 import 'package:conscia_app/services/budget_service.dart';
 import 'package:conscia_app/services/transaction_service.dart';
+import 'package:conscia_app/services/user_service.dart';
 import 'package:conscia_app/widgets/conscience_mark.dart';
-import 'package:conscia_app/widgets/grouped_list_card.dart';
-import 'package:conscia_app/widgets/hero_screen_scaffold.dart';
+import 'package:conscia_app/widgets/editorial_sticky_header.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -41,6 +44,29 @@ class _StaticBudgetService extends BudgetService {
 
   @override
   Future<List<Budget>> list() async => budgets;
+}
+
+class _RecordingBudgetService extends BudgetService {
+  _RecordingBudgetService() : super(Dio());
+
+  CreateBudgetDto? lastCreated;
+
+  @override
+  Future<List<Budget>> list() async => const [];
+
+  @override
+  Future<Budget> create(CreateBudgetDto dto) async {
+    lastCreated = dto;
+    return Budget(
+      id: 'budget-${dto.category.toLowerCase()}',
+      category: dto.category,
+      monthlyLimit: dto.monthlyLimit,
+      spent: 0,
+      currencyCode: dto.currencyCode,
+      percentage: 0,
+      isOverBudget: false,
+    );
+  }
 }
 
 class _DelayedReflectionAIService extends AIService {
@@ -95,7 +121,7 @@ void main() {
     expect(find.text('Unknown'), findsOneWidget);
   });
 
-  testWidgets('detail screen uses editorial hero and grouped metadata',
+  testWidgets('detail screen uses editorial hero and open metadata',
       (tester) async {
     final transaction = Transaction(
       id: 'tx-editorial',
@@ -123,12 +149,170 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Jollibee Cubao'), findsOneWidget);
-    expect(find.byType(HeroScreenScaffold), findsOneWidget);
     expect(find.byType(Card), findsNothing);
-    expect(find.byType(GroupedListCard), findsOneWidget);
+    expect(find.byType(EditorialStickyHeader), findsOneWidget);
+    final hero = find.byKey(const ValueKey('transaction-detail-hero'));
+    expect(hero, findsOneWidget);
+    expect(tester.getTopLeft(hero).dx, 0);
+    expect(tester.getTopLeft(find.text('DETAILS')).dx, 20);
+    final header = find.byKey(
+      const ValueKey('editorial-sticky-header-Transaction'),
+    );
+    final heroLabelGap = tester.getTopLeft(find.text('PURCHASE SNAPSHOT')).dy -
+        tester.getBottomLeft(header).dy;
+    expect(heroLabelGap, lessThanOrEqualTo(28));
+    expect(find.text('PURCHASE SNAPSHOT'), findsOneWidget);
     expect(find.text('DETAILS'), findsOneWidget);
-    expect(find.text('How did this purchase feel?'), findsOneWidget);
-    expect(find.text('Ask AI to Reflect'), findsOneWidget);
+    expect(find.text('HOW DID THIS FEEL?'), findsOneWidget);
+    expect(find.text('Reflect'), findsOneWidget);
+    expect(find.text('Reflect with Conscia'), findsNothing);
+  });
+
+  testWidgets('detail loading skeleton uses the same bleed hero shape',
+      (tester) async {
+    final pendingTransaction = Completer<Transaction>();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          transactionDetailProvider
+              .overrideWith((ref, id) => pendingTransaction.future),
+        ],
+        child: const MaterialApp(
+          home: TransactionDetailScreen(transactionId: 'tx-loading'),
+        ),
+      ),
+    );
+
+    await tester.pump();
+
+    final skeletonHero =
+        find.byKey(const ValueKey('transaction-detail-hero-skeleton'));
+    expect(skeletonHero, findsOneWidget);
+    expect(tester.getTopLeft(skeletonHero).dx, 0);
+
+    pendingTransaction.complete(
+      Transaction(
+        id: 'tx-loading',
+        amount: 300,
+        currencyCode: 'PHP',
+        category: 'Subscriptions',
+        description: 'OpenAI',
+        type: 'expense',
+        date: DateTime(2026, 5, 9),
+      ),
+    );
+  });
+
+  testWidgets('detail screen labels income hero as income snapshot',
+      (tester) async {
+    final transaction = Transaction(
+      id: 'tx-income-snapshot',
+      amount: 45000,
+      currencyCode: 'PHP',
+      category: 'Salary',
+      description: 'Employer',
+      type: 'income',
+      date: DateTime(2026, 5, 10, 15, 12),
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          transactionDetailProvider
+              .overrideWith((ref, id) async => transaction),
+        ],
+        child: const MaterialApp(
+          home: TransactionDetailScreen(transactionId: 'tx-income-snapshot'),
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    expect(find.text('INCOME SNAPSHOT'), findsOneWidget);
+    expect(find.text('PURCHASE SNAPSHOT'), findsNothing);
+    expect(find.text('Reflect'), findsNothing);
+    expect(find.text('HOW DID THIS FEEL?'), findsNothing);
+  });
+
+  testWidgets('detail regret picker uses labeled sentiment buttons',
+      (tester) async {
+    final transaction = Transaction(
+      id: 'tx-unreflected',
+      amount: 280,
+      currencyCode: 'PHP',
+      category: 'Dining',
+      description: 'Starbucks',
+      type: 'expense',
+      date: DateTime(2026, 5, 11, 15, 12),
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          transactionDetailProvider
+              .overrideWith((ref, id) async => transaction),
+        ],
+        child: const MaterialApp(
+          home: TransactionDetailScreen(transactionId: 'tx-unreflected'),
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    expect(find.text('HOW DID THIS FEEL?'), findsOneWidget);
+    expect(find.byIcon(Icons.sentiment_satisfied_alt), findsOneWidget);
+    expect(find.byIcon(Icons.sentiment_neutral), findsOneWidget);
+    expect(find.byIcon(Icons.sentiment_dissatisfied), findsOneWidget);
+    expect(find.text('Worth It'), findsOneWidget);
+    expect(find.text('Not Sure'), findsOneWidget);
+    expect(find.text('Regret'), findsOneWidget);
+  });
+
+  testWidgets('detail header starts transparent and docks after scrolling',
+      (tester) async {
+    final transaction = Transaction(
+      id: 'tx-scroll-header',
+      amount: 280,
+      currencyCode: 'PHP',
+      category: 'Dining',
+      description: 'Starbucks',
+      type: 'expense',
+      date: DateTime(2026, 5, 11, 15, 12),
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          transactionDetailProvider
+              .overrideWith((ref, id) async => transaction),
+        ],
+        child: const MaterialApp(
+          home: TransactionDetailScreen(transactionId: 'tx-scroll-header'),
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    Color headerColor() {
+      final header = tester.widget<AnimatedContainer>(
+        find.byKey(const ValueKey('editorial-sticky-header-Transaction')),
+      );
+      return (header.decoration! as BoxDecoration).color!;
+    }
+
+    expect(headerColor(), Colors.transparent);
+
+    await tester.drag(
+      find.byType(SingleChildScrollView).first,
+      const Offset(0, -160),
+    );
+    await tester.pump(const Duration(milliseconds: 220));
+
+    expect(headerColor(), isNot(Colors.transparent));
   });
 
   testWidgets('detail screen shows edited transaction returned from edit route',
@@ -196,9 +380,9 @@ void main() {
 
     expect(find.text('Watami'), findsOneWidget);
 
-    await tester.tap(find.byIcon(Icons.more_vert));
+    await tester.tap(find.byTooltip('Transaction actions'));
     await tester.pumpAndSettle();
-    await tester.tap(find.widgetWithText(PopupMenuItem<String>, 'Edit'));
+    await tester.tap(find.text('Edit Transaction'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Return updated'));
     await tester.pumpAndSettle();
@@ -273,11 +457,11 @@ void main() {
 
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byIcon(Icons.more_vert));
+    await tester.tap(find.byTooltip('Transaction actions'));
     await tester.pumpAndSettle();
-    await tester.tap(find.widgetWithText(PopupMenuItem<String>, 'Delete'));
+    await tester.tap(find.text('Delete Transaction'));
     await tester.pumpAndSettle();
-    await tester.tap(find.widgetWithText(TextButton, 'Delete'));
+    await tester.tap(find.widgetWithText(FilledButton, 'Delete transaction'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
 
@@ -287,8 +471,7 @@ void main() {
     expect(transactionService.deletedId, 'tx-1');
   });
 
-  testWidgets(
-      'detail screen shows contextual regret alert for matching transaction',
+  testWidgets('detail screen does not render matching in-app alerts',
       (tester) async {
     final transaction = Transaction(
       id: 'tx-9',
@@ -328,13 +511,12 @@ void main() {
 
     await tester.pumpAndSettle();
 
-    expect(find.text('This purchase still deserves a second look'),
-        findsOneWidget);
-    expect(find.text('Reflect now'), findsOneWidget);
+    expect(
+        find.text('This purchase still deserves a second look'), findsNothing);
+    expect(find.text('Reflect now'), findsNothing);
   });
 
-  testWidgets(
-      'detail screen hides alert action when it points to current transaction',
+  testWidgets('detail screen keeps recurring alerts out of the detail page',
       (tester) async {
     final transaction = Transaction(
       id: 'tx-recurring-alert',
@@ -376,8 +558,59 @@ void main() {
 
     await tester.pumpAndSettle();
 
-    expect(find.text('Recurring income added'), findsOneWidget);
+    expect(find.text('Recurring income added'), findsNothing);
     expect(find.text('View transaction'), findsNothing);
+  });
+
+  testWidgets('detail hero opens create budget form for unbudgeted expenses',
+      (tester) async {
+    final transaction = Transaction(
+      id: 'tx-unbudgeted',
+      amount: 499,
+      currencyCode: 'PHP',
+      category: 'Subscriptions',
+      description: 'OpenAI',
+      type: 'expense',
+      date: DateTime(2026, 5, 7, 21, 0),
+    );
+    final budgetService = _RecordingBudgetService();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          budgetListProvider.overrideWith(
+            (ref) => BudgetListNotifier(budgetService),
+          ),
+          transactionDetailProvider
+              .overrideWith((ref, id) async => transaction),
+          sharedPreferencesProvider.overrideWithValue(prefs),
+          currentUserProvider.overrideWith(
+            (ref) async => UserProfile(
+              id: 'user-1',
+              email: 'budget@example.com',
+              currencyCode: 'PHP',
+              locale: 'en_PH',
+              createdAt: DateTime(2026),
+              hasCompletedOnboarding: true,
+            ),
+          ),
+        ],
+        child: const MaterialApp(
+          home: TransactionDetailScreen(transactionId: 'tx-unbudgeted'),
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    expect(find.text('No budget for Subscriptions yet'), findsNothing);
+    expect(find.widgetWithText(OutlinedButton, 'Add Budget'), findsOneWidget);
+
+    await tester.tap(find.widgetWithText(OutlinedButton, 'Add Budget'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('New Budget'), findsOneWidget);
+    expect(find.text('Subscriptions'), findsAtLeastNWidgets(1));
   });
 
   testWidgets('shows shared loader while reflection is loading',
@@ -411,8 +644,8 @@ void main() {
 
     await tester.pumpAndSettle();
 
-    await tester.ensureVisible(find.text('Ask AI to Reflect'));
-    await tester.tap(find.text('Ask AI to Reflect'));
+    await tester.ensureVisible(find.text('Reflect'));
+    await tester.tap(find.text('Reflect'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
 
@@ -456,7 +689,7 @@ void main() {
     expect(find.text('Recurring transaction'), findsOneWidget);
   });
 
-  testWidgets('detail screen tags family transactions and other sharers', (
+  testWidgets('detail screen shows family context without redundant badge', (
     tester,
   ) async {
     final transaction = Transaction(
@@ -494,10 +727,54 @@ void main() {
 
     await tester.pumpAndSettle();
 
+    expect(find.text('Family transaction'), findsOneWidget);
     expect(
-        find.byKey(const ValueKey('family-transaction-badge')), findsOneWidget);
+        find.byKey(const ValueKey('family-transaction-badge')), findsNothing);
     expect(find.byKey(const ValueKey('transaction-sharer-avatar')),
         findsOneWidget);
+  });
+
+  testWidgets(
+      'detail screen shows one shared context row for recurring family transaction',
+      (
+    tester,
+  ) async {
+    final transaction = Transaction(
+      id: 'tx-family-recurring-detail',
+      amount: 4200,
+      currencyCode: 'PHP',
+      category: 'Family Groceries',
+      description: 'Landers',
+      type: 'expense',
+      date: DateTime(2026, 5, 3),
+      scope: 'family',
+      familySpaceId: 'family-1',
+      recurringScheduleId: 'schedule-1',
+      recurringOccurrenceDate: DateTime(2026, 5, 3),
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          transactionDetailProvider
+              .overrideWith((ref, id) async => transaction),
+        ],
+        child: const MaterialApp(
+          home: TransactionDetailScreen(
+            transactionId: 'tx-family-recurring-detail',
+          ),
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    expect(find.text('Shared context'), findsOneWidget);
+    expect(find.text('Recurring family transaction'), findsOneWidget);
+    expect(find.byKey(const ValueKey('recurring-transaction-badge')),
+        findsNothing);
+    expect(
+        find.byKey(const ValueKey('family-transaction-badge')), findsNothing);
   });
 
   testWidgets(

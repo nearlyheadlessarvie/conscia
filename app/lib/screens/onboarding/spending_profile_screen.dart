@@ -7,6 +7,7 @@ import '../../core/constants/app_icons.dart';
 import '../../core/routing/app_router.dart';
 import '../../providers/user_provider.dart';
 import '../../widgets/hero_screen_scaffold.dart';
+import '../../widgets/conscia_app_bar.dart';
 import '../../widgets/screen_section.dart';
 import '../../widgets/selection_card_group.dart';
 
@@ -85,7 +86,7 @@ class _SpendingProfileScreenState extends ConsumerState<SpendingProfileScreen> {
     );
 
     return HeroScreenScaffold(
-      appBar: AppBar(
+      appBar: ConsciaAppBar(
         automaticallyImplyLeading: false,
         title: const Text('Spending Profile'),
         actions: [

@@ -11,6 +11,7 @@ import '../../providers/user_provider.dart';
 import '../../widgets/amount_input_field.dart';
 import '../../widgets/feed_card.dart';
 import '../../widgets/hero_screen_scaffold.dart';
+import '../../widgets/conscia_app_bar.dart';
 import '../../widgets/screen_section.dart';
 import '../transactions/widgets/category_picker.dart';
 
@@ -170,7 +171,7 @@ class _ReceiptReviewScreenState extends ConsumerState<ReceiptReviewScreen> {
     final textTheme = Theme.of(context).textTheme;
 
     return HeroScreenScaffold(
-      appBar: AppBar(
+      appBar: ConsciaAppBar(
         title: const Text('Review Receipt'),
         leading: IconButton(
           icon: const Icon(Icons.close),

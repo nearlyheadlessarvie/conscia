@@ -9,6 +9,7 @@ import '../../providers/family_space_provider.dart';
 import '../../widgets/feed_card.dart';
 import '../../widgets/floating_label_text_field.dart';
 import '../../widgets/hero_screen_scaffold.dart';
+import '../../widgets/conscia_app_bar.dart';
 import '../../widgets/screen_section.dart';
 import '../../widgets/skeleton_loader.dart';
 
@@ -20,7 +21,7 @@ class FamilySpaceSettingsScreen extends ConsumerWidget {
     final familySpace = ref.watch(familySpaceProvider);
 
     return HeroScreenScaffold(
-      appBar: AppBar(title: const Text('Shared Conscia')),
+      appBar: const ConsciaAppBar(title: Text('Shared Conscia')),
       child: familySpace.when(
         data: (space) => space == null
             ? const _NoFamilySpaceSettingsView()

@@ -1,16 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/constants/category_icons.dart';
 import '../../core/theme/app_colors.dart';
 import '../../models/insights_models.dart';
 import '../../providers/insights_provider.dart';
 import '../../providers/user_provider.dart';
+import '../dashboard/widgets/recent_transaction_tile.dart';
+import '../transactions/widgets/editorial_transaction_row.dart';
 import '../../widgets/feed_card.dart';
-import '../../widgets/hero_screen_scaffold.dart';
 import '../../widgets/screen_section.dart';
-import 'widgets/insight_detail_back_button.dart';
+import 'widgets/insight_drilldown_scaffold.dart';
 import 'widgets/insight_list_editorial_hero.dart';
-import 'widgets/insight_transaction_card.dart';
 import 'widgets/insights_formatting.dart';
 
 class MerchantDetailScreen extends ConsumerWidget {
@@ -23,13 +24,12 @@ class MerchantDetailScreen extends ConsumerWidget {
     final detailAsync = ref.watch(merchantDetailProvider(merchant));
     final prefs = ref.watch(userPreferencesProvider);
 
-    return HeroScreenScaffold(
-      appBar: AppBar(
-        leading: const InsightDetailBackButton(),
-        title: Text(merchant),
-      ),
+    return InsightDrilldownScaffold(
+      title: merchant,
       child: detailAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => const _StatePadding(
+          child: Center(child: CircularProgressIndicator()),
+        ),
         error: (_, __) => const _StateCard(
           title: 'Could not load merchant details',
           body: 'Try this merchant again in a moment.',
@@ -51,32 +51,38 @@ class MerchantDetailScreen extends ConsumerWidget {
                 locale: prefs.locale,
               ),
               const SizedBox(height: 26),
-              ScreenSection(
-                title: 'Recent transactions',
-                subtitle:
-                    'The purchases currently shaping this merchant pattern.',
-                child: detail.recentTransactions.isEmpty
-                    ? const _StateCard(
-                        title: 'No recent transactions',
-                        body:
-                            'There are not any recent purchases to show for this merchant yet.',
-                      )
-                    : Column(
-                        children: [
-                          for (final tx in detail.recentTransactions) ...[
-                            InsightTransactionCard(
-                              tx: tx,
-                              locale: prefs.locale,
-                              title: tx.merchant ?? merchant,
-                              subtitle:
-                                  '${tx.category} • ${formatInsightDate(tx.date, locale: prefs.locale)}',
-                              leading:
-                                  _MerchantLeadingBadge(category: tx.category),
-                            ),
-                            const SizedBox(height: 12),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: ScreenSection(
+                  title: 'Latest matches',
+                  subtitle: 'Last 30 days of purchases matching this merchant.',
+                  child: detail.recentTransactions.isEmpty
+                      ? const _StateCard(
+                          title: 'No recent transactions',
+                          body:
+                              'There are not any recent purchases to show for this merchant yet.',
+                        )
+                      : EditorialTransactionRowsGroup(
+                          horizontalPadding: 0,
+                          children: [
+                            for (final tx in detail.recentTransactions)
+                              RecentTransactionTile(
+                                id: tx.id,
+                                categoryBadge:
+                                    CategoryIcons.badge(tx.category, size: 30),
+                                counterparty: tx.merchant ?? merchant,
+                                category: tx.category,
+                                date: tx.date,
+                                amount: tx.amount,
+                                isIncome: false,
+                                currencyCode: tx.currencyCode,
+                                regretLevel:
+                                    insightRegretLevelValue(tx.regretLevel),
+                                locale: prefs.locale,
+                              ),
                           ],
-                        ],
-                      ),
+                        ),
+                ),
               ),
             ],
           );
@@ -106,6 +112,8 @@ class _MerchantSummaryCard extends StatelessWidget {
         formatInsightLastVisit(stats.lastVisitDate, locale: locale);
 
     return InsightListEditorialHero(
+      bleed: true,
+      topPadding: MediaQuery.paddingOf(context).top + 85,
       leading: const _MerchantHeroBadge(),
       label: 'MERCHANT SIGNAL',
       primary: stats.merchant,
@@ -140,27 +148,21 @@ class _MerchantHeroBadge extends StatelessWidget {
   }
 }
 
-class _MerchantLeadingBadge extends StatelessWidget {
-  const _MerchantLeadingBadge({required this.category});
+class _StatePadding extends StatelessWidget {
+  const _StatePadding({required this.child});
 
-  final String category;
+  final Widget child;
 
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-
-    return Container(
-      width: 36,
-      height: 36,
-      decoration: BoxDecoration(
-        color: colors.secondaryContainer,
-        borderRadius: BorderRadius.circular(12),
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
+        16,
+        MediaQuery.paddingOf(context).top + 85,
+        16,
+        28,
       ),
-      child: Icon(
-        Icons.receipt_long_rounded,
-        color: colors.onSecondaryContainer,
-        size: 18,
-      ),
+      child: child,
     );
   }
 }
@@ -179,22 +181,25 @@ class _StateCard extends StatelessWidget {
     final colors = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
 
-    return FeedCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            body,
-            style: textTheme.bodyMedium?.copyWith(
-              color: colors.onSurfaceVariant,
+    return _StatePadding(
+      child: FeedCard(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              title,
+              style:
+                  textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
             ),
-          ),
-        ],
+            const SizedBox(height: 8),
+            Text(
+              body,
+              style: textTheme.bodyMedium?.copyWith(
+                color: colors.onSurfaceVariant,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import 'package:conscia_app/providers/user_provider.dart';
+import 'package:conscia_app/widgets/conscia_app_bar.dart';
 import 'package:conscia_app/widgets/currency_picker_sheet.dart';
 import 'package:conscia_app/widgets/floating_label_text_field.dart';
 import 'package:conscia_app/widgets/hero_screen_scaffold.dart';
@@ -93,8 +94,8 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
     final textTheme = Theme.of(context).textTheme;
 
     return HeroScreenScaffold(
-      appBar: AppBar(
-        title: const Text('Set Up Your Profile'),
+      appBar: const ConsciaAppBar(
+        title: Text('Set Up Your Profile'),
         automaticallyImplyLeading: false,
       ),
       bottom: SizedBox(

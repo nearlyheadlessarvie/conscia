@@ -3,6 +3,7 @@ import 'package:conscia_app/providers/category_frequency_provider.dart';
 import 'package:conscia_app/providers/usage_provider.dart';
 import 'package:conscia_app/providers/subscription_provider.dart';
 import 'package:conscia_app/providers/user_provider.dart';
+import 'package:conscia_app/core/constants/app_icons.dart';
 import 'package:conscia_app/screens/receipts/receipt_scanner_screen.dart';
 import 'package:conscia_app/screens/transactions/transaction_form_screen.dart';
 import 'package:conscia_app/services/budget_service.dart';
@@ -28,8 +29,10 @@ class _FakeLocationAssistanceService extends LocationAssistanceService {
   Future<bool> requestPermission() async => false;
 
   @override
-  ({List<String> nearbyMerchants, List<String> likelyCategories})
-  getTransactionSuggestions() =>
+  ({
+    List<String> nearbyMerchants,
+    List<String> likelyCategories
+  }) getTransactionSuggestions() =>
       const (nearbyMerchants: <String>[], likelyCategories: <String>[]);
 }
 
@@ -202,7 +205,7 @@ void main() {
 
     await tester.pumpAndSettle();
 
-    expect(find.text('Scan the receipt, then sanity-check the details'),
+    expect(find.text('SCAN THE RECEIPT, THEN SANITY-CHECK THE DETAILS'),
         findsOneWidget);
     expect(find.text('Take photo'), findsOneWidget);
     expect(find.text('Choose from gallery'), findsOneWidget);
@@ -219,11 +222,12 @@ void main() {
     await tester.tap(find.text('Maybe Later'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Add Transaction'), findsOneWidget);
+    expect(find.text('Add transaction'), findsOneWidget);
     expect(find.text('Expense'), findsOneWidget);
   });
 
-  testWidgets('receipt maybe later add expense form can close back to previous screen',
+  testWidgets(
+      'receipt maybe later add expense form can close back to previous screen',
       (tester) async {
     await _pumpReceiptRouterAppWithPreviousRoute(tester);
     await tester.pumpAndSettle();
@@ -236,12 +240,12 @@ void main() {
     await tester.tap(find.text('Maybe Later'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Add Transaction'), findsOneWidget);
+    expect(find.text('Add transaction'), findsOneWidget);
 
-    await tester.tap(find.byIcon(Icons.close));
+    await tester.tap(find.byIcon(AppIcons.chevronLeft));
     await tester.pumpAndSettle();
 
     expect(find.text('Open Scan'), findsOneWidget);
-    expect(find.text('Add Transaction'), findsNothing);
+    expect(find.text('Add transaction'), findsNothing);
   });
 }

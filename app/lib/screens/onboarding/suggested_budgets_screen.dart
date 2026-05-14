@@ -12,6 +12,7 @@ import '../../providers/budget_providers.dart';
 import '../../providers/exchange_rate_provider.dart';
 import '../../providers/user_provider.dart';
 import '../../services/budget_service.dart';
+import '../../widgets/conscia_app_bar.dart';
 import '../transactions/widgets/category_picker.dart';
 
 class SuggestedBudgetsScreen extends ConsumerStatefulWidget {
@@ -282,7 +283,7 @@ class _SuggestedBudgetsScreenState
     String? helperText,
   }) {
     return Scaffold(
-      appBar: AppBar(
+      appBar: ConsciaAppBar(
         automaticallyImplyLeading: false,
         title: const Text('Suggested Budgets'),
         actions: [

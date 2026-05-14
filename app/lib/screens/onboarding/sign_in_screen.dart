@@ -13,6 +13,7 @@ import '../../core/routing/app_router.dart';
 import '../../core/utils/email_validator.dart';
 import '../../providers/auth_provider.dart';
 import '../../widgets/floating_label_text_field.dart';
+import '../../widgets/conscia_app_bar.dart';
 import '../../widgets/inline_notice.dart';
 
 String friendlySignInErrorMessage(
@@ -196,8 +197,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
     final colors = Theme.of(context).colorScheme;
 
     return Scaffold(
-      appBar: AppBar(
-        leading: const BackButton(),
+      appBar: const ConsciaAppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
       ),

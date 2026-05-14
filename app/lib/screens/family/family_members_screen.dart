@@ -7,6 +7,7 @@ import '../../models/family_member.dart';
 import '../../providers/family_space_provider.dart';
 import '../../widgets/feed_card.dart';
 import '../../widgets/hero_screen_scaffold.dart';
+import '../../widgets/conscia_app_bar.dart';
 import '../../widgets/skeleton_loader.dart';
 
 class FamilyMembersScreen extends ConsumerWidget {
@@ -21,7 +22,7 @@ class FamilyMembersScreen extends ConsumerWidget {
         !(familySpace.valueOrNull?.isReadOnly ?? true);
 
     return HeroScreenScaffold(
-      appBar: AppBar(title: const Text('Family members')),
+      appBar: const ConsciaAppBar(title: Text('Family members')),
       child: members.when(
         data: (items) => Column(
           crossAxisAlignment: CrossAxisAlignment.start,

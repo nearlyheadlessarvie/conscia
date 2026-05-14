@@ -31,7 +31,8 @@ class PremiumGate extends StatelessWidget {
             children: [
               CircleAvatar(
                 radius: 38,
-                backgroundColor: theme.colorScheme.primary.withValues(alpha: 0.12),
+                backgroundColor:
+                    theme.colorScheme.primary.withValues(alpha: 0.12),
                 child: Icon(
                   icon,
                   size: 38,

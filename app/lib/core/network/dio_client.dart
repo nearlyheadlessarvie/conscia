@@ -48,7 +48,8 @@ final dioProvider = Provider<Dio>((ref) {
               data: const {'message': 'Session ended'},
             ),
             type: DioExceptionType.badResponse,
-            error: 'Cannot send authenticated request without an active session.',
+            error:
+                'Cannot send authenticated request without an active session.',
           ),
         );
       },
@@ -60,6 +61,11 @@ final dioProvider = Provider<Dio>((ref) {
             request.path.endsWith(ApiConstants.refreshToken);
 
         if (isUnauthorized && !ref.read(authProvider).isAuthenticated) {
+          return handler.next(error);
+        }
+
+        if (isUnauthorized && alreadyRetried && !isRefreshRequest) {
+          await ref.read(authProvider.notifier).markSessionExpired();
           return handler.next(error);
         }
 

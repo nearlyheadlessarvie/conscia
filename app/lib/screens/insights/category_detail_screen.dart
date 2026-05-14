@@ -5,12 +5,12 @@ import '../../core/constants/category_icons.dart';
 import '../../models/insights_models.dart';
 import '../../providers/insights_provider.dart';
 import '../../providers/user_provider.dart';
+import '../dashboard/widgets/recent_transaction_tile.dart';
 import '../../widgets/feed_card.dart';
-import '../../widgets/hero_screen_scaffold.dart';
 import '../../widgets/screen_section.dart';
-import 'widgets/insight_detail_back_button.dart';
+import '../transactions/widgets/editorial_transaction_row.dart';
+import 'widgets/insight_drilldown_scaffold.dart';
 import 'widgets/insight_list_editorial_hero.dart';
-import 'widgets/insight_transaction_card.dart';
 import 'widgets/insights_formatting.dart';
 
 class CategoryDetailScreen extends ConsumerWidget {
@@ -23,13 +23,12 @@ class CategoryDetailScreen extends ConsumerWidget {
     final detailAsync = ref.watch(categoryDetailProvider(category));
     final prefs = ref.watch(userPreferencesProvider);
 
-    return HeroScreenScaffold(
-      appBar: AppBar(
-        leading: const InsightDetailBackButton(),
-        title: Text(category),
-      ),
+    return InsightDrilldownScaffold(
+      title: category,
       child: detailAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => const _StatePadding(
+          child: Center(child: CircularProgressIndicator()),
+        ),
         error: (_, __) => const _StateCard(
           title: 'Could not load category details',
           body: 'Try this category again in a moment.',
@@ -52,31 +51,38 @@ class CategoryDetailScreen extends ConsumerWidget {
                 locale: prefs.locale,
               ),
               const SizedBox(height: 26),
-              ScreenSection(
-                title: 'Recent transactions',
-                subtitle:
-                    'The purchases currently driving this category pattern.',
-                child: detail.recentTransactions.isEmpty
-                    ? const _StateCard(
-                        title: 'No recent transactions',
-                        body:
-                            'There are not any recent purchases to show for this category yet.',
-                      )
-                    : Column(
-                        children: [
-                          for (final tx in detail.recentTransactions) ...[
-                            InsightTransactionCard(
-                              tx: tx,
-                              locale: prefs.locale,
-                              subtitle:
-                                  '${tx.merchant ?? tx.category} • ${formatInsightDate(tx.date, locale: prefs.locale)}',
-                              leading:
-                                  CategoryIcons.badge(tx.category, size: 18),
-                            ),
-                            const SizedBox(height: 12),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: ScreenSection(
+                  title: 'Latest matches',
+                  subtitle: 'Last 30 days of purchases matching this category.',
+                  child: detail.recentTransactions.isEmpty
+                      ? const _StateCard(
+                          title: 'No recent transactions',
+                          body:
+                              'There are not any recent purchases to show for this category yet.',
+                        )
+                      : EditorialTransactionRowsGroup(
+                          horizontalPadding: 0,
+                          children: [
+                            for (final tx in detail.recentTransactions)
+                              RecentTransactionTile(
+                                id: tx.id,
+                                categoryBadge:
+                                    CategoryIcons.badge(tx.category, size: 30),
+                                counterparty: tx.merchant ?? tx.category,
+                                category: tx.category,
+                                date: tx.date,
+                                amount: tx.amount,
+                                isIncome: false,
+                                currencyCode: tx.currencyCode,
+                                regretLevel:
+                                    insightRegretLevelValue(tx.regretLevel),
+                                locale: prefs.locale,
+                              ),
                           ],
-                        ],
-                      ),
+                        ),
+                ),
               ),
             ],
           );
@@ -117,6 +123,8 @@ class _CategorySummaryCard extends StatelessWidget {
     final rateText = '${(stats.regretRate * 100).toStringAsFixed(0)}% rate';
 
     return InsightListEditorialHero(
+      bleed: true,
+      topPadding: MediaQuery.paddingOf(context).top + 85,
       leading: CategoryIcons.badge(stats.category, size: 30),
       label: 'TOP REGRET CATEGORY',
       primary: regrettedText,
@@ -127,6 +135,25 @@ class _CategorySummaryCard extends StatelessWidget {
         rateText,
         '$projectedText yearly projection',
       ],
+    );
+  }
+}
+
+class _StatePadding extends StatelessWidget {
+  const _StatePadding({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
+        16,
+        MediaQuery.paddingOf(context).top + 85,
+        16,
+        28,
+      ),
+      child: child,
     );
   }
 }
@@ -145,22 +172,25 @@ class _StateCard extends StatelessWidget {
     final colors = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
 
-    return FeedCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            body,
-            style: textTheme.bodyMedium?.copyWith(
-              color: colors.onSurfaceVariant,
+    return _StatePadding(
+      child: FeedCard(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              title,
+              style:
+                  textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
             ),
-          ),
-        ],
+            const SizedBox(height: 8),
+            Text(
+              body,
+              style: textTheme.bodyMedium?.copyWith(
+                color: colors.onSurfaceVariant,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

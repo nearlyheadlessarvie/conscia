@@ -11,7 +11,9 @@ import 'package:conscia_app/screens/insights/category_list_screen.dart';
 import 'package:conscia_app/screens/insights/insights_screen.dart';
 import 'package:conscia_app/screens/insights/merchant_detail_screen.dart';
 import 'package:conscia_app/screens/insights/merchant_list_screen.dart';
+import 'package:conscia_app/screens/insights/widgets/insight_list_editorial_hero.dart';
 import 'package:conscia_app/screens/insights/widgets/insights_formatting.dart';
+import 'package:conscia_app/screens/dashboard/widgets/recent_transaction_tile.dart';
 import 'package:conscia_app/services/budget_service.dart';
 import 'package:conscia_app/services/user_service.dart';
 import 'package:conscia_app/widgets/empty_state.dart';
@@ -236,6 +238,22 @@ void main() {
     expect(find.text('Top: Shopping'), findsOneWidget);
     expect(find.text('6 purchases'), findsOneWidget);
     expect(find.text('33% regret'), findsWidgets);
+
+    final heroTop = tester.getTopLeft(find.byType(InsightListEditorialHero)).dy;
+    final heroLeft =
+        tester.getTopLeft(find.byType(InsightListEditorialHero)).dx;
+    final labelTop = tester.getTopLeft(find.text('TOP REGRET CATEGORY')).dy;
+    final sectionLeft =
+        tester.getTopLeft(find.text('TOP REGRET CATEGORIES')).dx;
+    final headerBottom = tester
+        .getBottomLeft(
+          find.byKey(const ValueKey('editorial-sticky-header-Categories')),
+        )
+        .dy;
+    expect(heroTop, lessThanOrEqualTo(1));
+    expect(heroLeft, 0);
+    expect(labelTop, greaterThanOrEqualTo(headerBottom + 20));
+    expect(sectionLeft, greaterThanOrEqualTo(16));
   });
 
   testWidgets('merchant list opens with a stat-backed editorial hero',
@@ -283,6 +301,26 @@ void main() {
     expect(find.text('Top: Corner Cafe'), findsOneWidget);
     expect(find.text('1 regret'), findsOneWidget);
     expect(find.text('Last visit May 1'), findsWidgets);
+
+    final heroTop = tester.getTopLeft(find.byType(InsightListEditorialHero)).dy;
+    final labelTop = tester.getTopLeft(find.text('MERCHANT SIGNAL')).dy;
+    final primaryTop = tester.getTopLeft(find.text('Corner Cafe').first).dy;
+    final bodyTop = tester
+        .getTopLeft(
+          find.text(
+            'Corner Cafe is carrying your strongest merchant regret signal.',
+          ),
+        )
+        .dy;
+    final headerBottom = tester
+        .getBottomLeft(
+          find.byKey(const ValueKey('editorial-sticky-header-Merchants')),
+        )
+        .dy;
+    expect(heroTop, lessThanOrEqualTo(1));
+    expect(labelTop, greaterThanOrEqualTo(headerBottom + 20));
+    expect(primaryTop, greaterThanOrEqualTo(headerBottom + 34));
+    expect(bodyTop, greaterThanOrEqualTo(headerBottom + 70));
   });
 
   testWidgets('insights screen renders dynamic sections from the feed',
@@ -635,7 +673,17 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('USD 18.75'), findsNothing);
-    expect(find.text(expected), findsOneWidget);
+    expect(find.text('-$expected'), findsOneWidget);
+    expect(find.text('Regret'), findsNothing);
+    expect(
+      find.byKey(const ValueKey('regret-transaction-badge')),
+      findsOneWidget,
+    );
+    expect(find.text('LATEST MATCHES'), findsOneWidget);
+    expect(
+      find.text('Last 30 days of purchases matching this category.'),
+      findsOneWidget,
+    );
     expect(find.text('TOP REGRET CATEGORY'), findsOneWidget);
     expect(
         find.text('Dining has 4 tracked purchases driving this regret signal.'),
@@ -684,7 +732,60 @@ void main() {
     expect(find.text('3 visits'), findsOneWidget);
     expect(find.text('1 regret'), findsOneWidget);
     expect(find.text('33% rate'), findsOneWidget);
+    expect(find.text('LATEST MATCHES'), findsOneWidget);
+    expect(
+      find.text('Last 30 days of purchases matching this merchant.'),
+      findsOneWidget,
+    );
     expect(find.byIcon(Icons.chevron_left_rounded), findsOneWidget);
     expect(find.byIcon(Icons.arrow_back), findsNothing);
+  });
+
+  testWidgets('merchant detail recent transactions use the shared row widget',
+      (tester) async {
+    final detail = MerchantDetail(
+      stats: const MerchantStat(
+        merchant: 'Corner Cafe',
+        visitCount: 3,
+        regretCount: 1,
+        regretRate: 0.33,
+        lastVisitDate: '2026-05-01',
+      ),
+      recentTransactions: [
+        TransactionSummary(
+          id: 'merchant-tx-1',
+          amount: 18.75,
+          currencyCode: 'USD',
+          category: 'Dining',
+          merchant: 'Corner Cafe',
+          date: DateTime(2026, 5, 1),
+          regretLevel: 'regret',
+        ),
+      ],
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          userPreferencesProvider.overrideWithValue(
+            (currency: 'USD', locale: 'en_US'),
+          ),
+          merchantDetailProvider('Corner Cafe').overrideWith(
+            (ref) async => detail,
+          ),
+        ],
+        child: const MaterialApp(
+          home: MerchantDetailScreen(merchant: 'Corner Cafe'),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byType(RecentTransactionTile), findsOneWidget);
+    expect(find.text('Corner Cafe'), findsWidgets);
+    expect(
+      find.byKey(const ValueKey('regret-transaction-badge')),
+      findsOneWidget,
+    );
   });
 }

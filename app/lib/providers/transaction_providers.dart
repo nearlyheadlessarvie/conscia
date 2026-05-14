@@ -88,7 +88,9 @@ class TransactionListNotifier extends StateNotifier<TransactionListState> {
 
   Future<void> loadMore() async {
     final service = _service;
-    if (service == null || state.isLoading || !state.hasMore) return;
+    if (service == null || !mounted || state.isLoading || !state.hasMore) {
+      return;
+    }
     state = state.copyWith(isLoading: true, error: null);
 
     try {
@@ -98,13 +100,16 @@ class TransactionListNotifier extends StateNotifier<TransactionListState> {
         category: _categoryFilter,
         scope: _scopeFilter,
       );
-      state = state.copyWith(
-        transactions: [...state.transactions, ...result.items],
+      if (!mounted) return;
+      final current = state;
+      state = current.copyWith(
+        transactions: [...current.transactions, ...result.items],
         isLoading: false,
         hasMore: result.hasMore,
         currentPage: nextPage,
       );
     } catch (e, s) {
+      if (!mounted) return;
       state = state.copyWith(
         isLoading: false,
         error: AppError.from(e, stackTrace: s).userMessage,
@@ -113,6 +118,7 @@ class TransactionListNotifier extends StateNotifier<TransactionListState> {
   }
 
   Future<void> refresh() async {
+    if (!mounted) return;
     state = const TransactionListState();
     await loadMore();
   }

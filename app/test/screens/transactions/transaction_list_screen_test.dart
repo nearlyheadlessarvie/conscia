@@ -3,6 +3,7 @@ import 'package:conscia_app/providers/transaction_providers.dart';
 import 'package:conscia_app/screens/transactions/transaction_list_screen.dart';
 import 'package:conscia_app/services/auth_service.dart';
 import 'package:conscia_app/services/transaction_service.dart';
+import 'package:conscia_app/widgets/grouped_list_card.dart';
 import 'package:conscia_app/widgets/skeleton_loader.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
@@ -47,6 +48,7 @@ class _StaticTransactionService extends TransactionService {
 
   final List<Transaction> transactions;
   String? lastScope;
+  String? lastCategory;
 
   @override
   Future<PaginatedTransactions> list({
@@ -56,6 +58,7 @@ class _StaticTransactionService extends TransactionService {
     String? scope,
   }) async {
     lastScope = scope;
+    lastCategory = category;
     final filtered = transactions.where((t) {
       final matchesScope = scope == null || t.scope == scope;
       final normalizedCategory = t.category.startsWith('Family ')
@@ -107,6 +110,29 @@ Future<void> _pumpTransactionList(
   );
 
   await tester.pumpAndSettle();
+}
+
+List<Transaction> _manyTransactions() {
+  final categories = ['Bills', 'Dining', 'Gift', 'Shopping'];
+  return List.generate(16, (index) {
+    final category = categories[index % categories.length];
+    return Transaction(
+      id: 'tx-$index',
+      amount: 100.0 + index,
+      currencyCode: 'PHP',
+      category: category,
+      description: '$category $index',
+      type: 'expense',
+      date: DateTime(2026, 5, 8 - (index ~/ 3)),
+    );
+  });
+}
+
+Color _transactionsHeaderColor(WidgetTester tester) {
+  final header = tester.widget<AnimatedContainer>(
+    find.byKey(const ValueKey('editorial-sticky-header-Transactions')),
+  );
+  return (header.decoration! as BoxDecoration).color!;
 }
 
 void main() {
@@ -204,6 +230,53 @@ void main() {
     expect(find.text('Add transaction screen'), findsOneWidget);
   });
 
+  testWidgets('transaction list leads with editorial hero and open date groups',
+      (
+    tester,
+  ) async {
+    await _pumpTransactionList(
+      tester,
+      transactions: [
+        Transaction(
+          id: 'tx-shopee',
+          amount: 1250,
+          currencyCode: 'PHP',
+          category: 'Shopping',
+          description: 'Shopee',
+          type: 'expense',
+          date: DateTime(2026, 5, 8),
+          regretLevel: 2,
+        ),
+        Transaction(
+          id: 'tx-spotify',
+          amount: 149,
+          currencyCode: 'PHP',
+          category: 'Subscriptions',
+          description: 'Spotify',
+          type: 'expense',
+          date: DateTime(2026, 5, 8),
+          recurringScheduleId: 'schedule-1',
+        ),
+        Transaction(
+          id: 'tx-book',
+          amount: 640,
+          currencyCode: 'PHP',
+          category: 'Gift',
+          description: 'National Book Store',
+          type: 'expense',
+          date: DateTime(2026, 5, 7),
+        ),
+      ],
+    );
+
+    expect(find.text('MONEY TRAIL'), findsOneWidget);
+    expect(find.textContaining('Shopping is carrying'), findsOneWidget);
+    expect(find.text('FRI, MAY 8'), findsOneWidget);
+    expect(find.byKey(const ValueKey('selection-chip-button-All')),
+        findsOneWidget);
+    expect(find.byType(GroupedListCard), findsNothing);
+  });
+
   testWidgets('selected transaction filters stay compact without overflow', (
     tester,
   ) async {
@@ -255,6 +328,14 @@ void main() {
 
     expect(find.byKey(const ValueKey('selection-chip-button-Gift')),
         findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('transaction-filter-skeleton-pill-0')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('transaction-filter-skeleton-pill-1')),
+      findsOneWidget,
+    );
     expect(find.byType(SkeletonListTile), findsWidgets);
   });
 
@@ -312,6 +393,126 @@ void main() {
     expect((allY - giftY).abs(), lessThan(8));
     expect((allY - groceriesY).abs(), lessThan(8));
     expect((allY - subscriptionsY).abs(), lessThan(8));
+  });
+
+  testWidgets(
+      'transaction filters pin below the compact header while scrolling', (
+    tester,
+  ) async {
+    await _pumpTransactionList(
+      tester,
+      transactions: _manyTransactions(),
+    );
+
+    await tester.drag(
+      find.byType(CustomScrollView),
+      const Offset(0, -460),
+      warnIfMissed: false,
+    );
+    await tester.pumpAndSettle();
+
+    final headerBottom = tester
+        .getBottomLeft(
+          find.byKey(const ValueKey('editorial-sticky-header-Transactions')),
+        )
+        .dy;
+    final filterTop = tester
+        .getTopLeft(find.byKey(const ValueKey('selection-chip-button-All')))
+        .dy;
+    final filterBottom = tester
+        .getBottomLeft(find.byKey(const ValueKey('selection-chip-button-All')))
+        .dy;
+    final railTop = tester
+        .getTopLeft(
+          find.byKey(const ValueKey('transaction-filter-rail-overlay')),
+        )
+        .dy;
+    final railBottom = tester
+        .getBottomLeft(
+          find.byKey(const ValueKey('transaction-filter-rail-overlay')),
+        )
+        .dy;
+
+    expect(railTop, greaterThanOrEqualTo(headerBottom - 2));
+    expect(railTop, lessThanOrEqualTo(headerBottom + 1));
+    expect(filterTop, greaterThanOrEqualTo(headerBottom + 6));
+    expect(filterTop, lessThanOrEqualTo(headerBottom + 10));
+    expect(railBottom, lessThanOrEqualTo(filterBottom + 6));
+  });
+
+  testWidgets('docked transaction filters remain tappable', (
+    tester,
+  ) async {
+    final service = _StaticTransactionService(_manyTransactions());
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          _authenticatedOverride,
+          transactionServiceProvider.overrideWithValue(service),
+        ],
+        child: const MaterialApp(home: TransactionListScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.drag(
+      find.byType(CustomScrollView),
+      const Offset(0, -460),
+      warnIfMissed: false,
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(
+      find.byKey(const ValueKey('selection-chip-button-Dining')),
+      warnIfMissed: false,
+    );
+    await tester.pumpAndSettle();
+
+    expect(service.lastCategory, 'Dining');
+  });
+
+  testWidgets(
+      'transaction header restores opaque state from saved scroll offset', (
+    tester,
+  ) async {
+    final bucket = PageStorageBucket();
+    final service = _StaticTransactionService(_manyTransactions());
+
+    Future<void> pumpSavedList() async {
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            _authenticatedOverride,
+            transactionServiceProvider.overrideWithValue(service),
+          ],
+          child: MaterialApp(
+            home: PageStorage(
+              bucket: bucket,
+              child: const TransactionListScreen(),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+    }
+
+    await pumpSavedList();
+    await tester.drag(
+      find.byType(CustomScrollView),
+      const Offset(0, -460),
+      warnIfMissed: false,
+    );
+    await tester.pumpAndSettle();
+
+    expect(_transactionsHeaderColor(tester), isNot(Colors.transparent));
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
+    await pumpSavedList();
+    await tester.pump(const Duration(milliseconds: 220));
+
+    expect(_transactionsHeaderColor(tester), isNot(Colors.transparent));
   });
 
   testWidgets('renders recurring badge in transaction list item', (
@@ -374,7 +575,9 @@ void main() {
     );
   });
 
-  testWidgets('transaction list uses scope pill switch instead of a family-only toggle', (
+  testWidgets(
+      'transaction list uses scope pill switch instead of a family-only toggle',
+      (
     tester,
   ) async {
     final service = _StaticTransactionService([

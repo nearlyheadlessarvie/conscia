@@ -10,6 +10,7 @@ import '../../core/network/dio_client.dart';
 import '../../providers/subscription_provider.dart';
 import '../../widgets/feed_card.dart';
 import '../../widgets/hero_screen_scaffold.dart';
+import '../../widgets/conscia_app_bar.dart';
 import '../../widgets/screen_section.dart';
 import 'widgets/premium_gate.dart';
 
@@ -72,7 +73,7 @@ class _ReceiptScannerScreenState extends ConsumerState<ReceiptScannerScreen> {
     final subAsync = ref.watch(subscriptionProvider);
 
     return HeroScreenScaffold(
-      appBar: AppBar(title: const Text('Scan Receipt')),
+      appBar: const ConsciaAppBar(title: Text('Scan Receipt')),
       child: subAsync.when(
         data: (status) {
           if (!status.isPremium) {

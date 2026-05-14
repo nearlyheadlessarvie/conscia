@@ -20,14 +20,13 @@ void main() {
     );
 
     expect(find.text('Budget Guardian'), findsOneWidget);
-    expect(find.text('485 XP'), findsOneWidget);
-    expect(find.text('6-day momentum'), findsOneWidget);
-    expect(find.text('Weekly quests'), findsOneWidget);
+    expect(find.text('85 / 600 XP to Conscience Captain'), findsOneWidget);
+    expect(find.text("THIS WEEK'S QUESTS"), findsOneWidget);
     expect(find.text('Reflect on 3 purchases'), findsOneWidget);
-    expect(find.text('Achievements'), findsOneWidget);
+    expect(find.text('ACHIEVEMENTS'), findsOneWidget);
     expect(find.text('First Reflection'), findsOneWidget);
-    expect(find.text('Budget Rescuer'), findsOneWidget);
-    expect(find.text('Mascot moment'), findsOneWidget);
+    expect(find.text('???'), findsOneWidget);
+    expect(find.text('MASCOT MOMENT'), findsOneWidget);
     expect(find.text('You paused before buying.'), findsOneWidget);
   });
 

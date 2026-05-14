@@ -12,6 +12,7 @@ import '../../models/family_space.dart';
 import '../../providers/family_space_provider.dart';
 import '../../widgets/feed_card.dart';
 import '../../widgets/hero_screen_scaffold.dart';
+import '../../widgets/conscia_app_bar.dart';
 import '../../widgets/skeleton_loader.dart';
 
 class FamilySpaceScreen extends ConsumerWidget {
@@ -23,7 +24,7 @@ class FamilySpaceScreen extends ConsumerWidget {
 
     return HeroScreenScaffold(
       padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
-      appBar: AppBar(title: const Text('Shared Conscia')),
+      appBar: const ConsciaAppBar(title: Text('Shared Conscia')),
       child: familySpace.when(
         data: (space) => space == null
             ? const _NoFamilySpaceView()

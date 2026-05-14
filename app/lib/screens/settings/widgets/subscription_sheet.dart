@@ -130,9 +130,10 @@ class _SubscriptionSheetBodyState
         ),
         const SizedBox(height: 24),
         Text(
-          isCurrentPremium ? 'Manage Conscia Premium' : 'Unlock Conscia Premium',
-          style:
-              textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
+          isCurrentPremium
+              ? 'Manage Conscia Premium'
+              : 'Unlock Conscia Premium',
+          style: textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: 32),
@@ -236,7 +237,8 @@ class _SubscriptionSheetBodyState
                   height: 20,
                   child: CircularProgressIndicator(strokeWidth: 2),
                 )
-              : Text(isCurrentPremium ? 'Manage Subscription' : 'Subscribe Now'),
+              : Text(
+                  isCurrentPremium ? 'Manage Subscription' : 'Subscribe Now'),
         ),
         const SizedBox(height: 12),
         if (!isCurrentPremium)
@@ -305,7 +307,8 @@ class _SubscriptionSheetBodyState
                   child: Text(f.$1, style: textTheme.bodyMedium),
                 ),
                 Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+                  padding:
+                      const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
                   child: _PlanValueCell(
                     value: f.$2,
                     isActive: !isPremiumActive,
@@ -313,7 +316,8 @@ class _SubscriptionSheetBodyState
                   ),
                 ),
                 Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+                  padding:
+                      const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
                   child: _PlanValueCell(
                     value: f.$3,
                     isActive: isPremiumActive,

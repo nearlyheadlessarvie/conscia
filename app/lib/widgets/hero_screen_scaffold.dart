@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 
 import '../core/theme/app_colors.dart';
+import 'conscia_app_bar.dart';
 
-class HeroScreenScaffold extends StatelessWidget {
+class HeroScreenScaffold extends StatefulWidget {
   const HeroScreenScaffold({
     super.key,
     this.appBar,
@@ -24,66 +25,98 @@ class HeroScreenScaffold extends StatelessWidget {
   final double extraBottomPadding;
 
   @override
+  State<HeroScreenScaffold> createState() => _HeroScreenScaffoldState();
+}
+
+class _HeroScreenScaffoldState extends State<HeroScreenScaffold> {
+  final _appBarScrollProgress = ValueNotifier<double>(0);
+
+  @override
+  void dispose() {
+    _appBarScrollProgress.dispose();
+    super.dispose();
+  }
+
+  bool _handleScrollNotification(ScrollNotification notification) {
+    if (notification.metrics.axis == Axis.vertical) {
+      final nextProgress = (notification.metrics.pixels / 10).clamp(0.0, 1.0);
+      if (_appBarScrollProgress.value != nextProgress) {
+        _appBarScrollProgress.value = nextProgress;
+      }
+    }
+    return false;
+  }
+
+  @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).appColors;
     final keyboardInset = MediaQuery.viewInsetsOf(context).bottom;
     final mediaQueryPaddingBottom = MediaQuery.paddingOf(context).bottom;
-    final resolvedPadding = padding.resolve(Directionality.of(context));
+    final resolvedPadding = widget.padding.resolve(Directionality.of(context));
 
-    return Scaffold(
-      appBar: appBar,
-      body: DecoratedBox(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              colors.pageTop,
-              colors.pageBottom,
-            ],
-          ),
-        ),
-        child: SafeArea(
-          child: Column(
-            children: [
-              Expanded(
-                child: scrollable
-                    ? SingleChildScrollView(
-                        key: scrollViewKey,
-                        physics: const AlwaysScrollableScrollPhysics(),
-                        padding: EdgeInsets.only(
-                          left: resolvedPadding.left,
-                          top: resolvedPadding.top,
-                          right: resolvedPadding.right,
-                          bottom: resolvedPadding.bottom +
-                              (bottom != null ? 0 : keyboardInset),
-                        ),
-                        child: child,
-                      )
-                    : Padding(
-                        padding: EdgeInsets.only(
-                          left: resolvedPadding.left,
-                          top: resolvedPadding.top,
-                          right: resolvedPadding.right,
-                          bottom: resolvedPadding.bottom +
-                              (bottom != null ? 0 : keyboardInset),
-                        ),
-                        child: child,
-                      ),
+    return ConsciaAppBarScrollScope(
+      scrollProgress: _appBarScrollProgress,
+      child: Scaffold(
+        appBar: widget.appBar,
+        body: NotificationListener<ScrollNotification>(
+          onNotification: _handleScrollNotification,
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  colors.pageTop,
+                  colors.pageBottom,
+                ],
               ),
-              if (bottom != null)
-                AnimatedPadding(
-                  duration: const Duration(milliseconds: 180),
-                  curve: Curves.easeOut,
-                  padding: EdgeInsets.fromLTRB(
-                    16,
-                    0,
-                    16,
-                    20 + extraBottomPadding + keyboardInset + mediaQueryPaddingBottom,
+            ),
+            child: SafeArea(
+              child: Column(
+                children: [
+                  Expanded(
+                    child: widget.scrollable
+                        ? SingleChildScrollView(
+                            key: widget.scrollViewKey,
+                            physics: const AlwaysScrollableScrollPhysics(),
+                            padding: EdgeInsets.only(
+                              left: resolvedPadding.left,
+                              top: resolvedPadding.top,
+                              right: resolvedPadding.right,
+                              bottom: resolvedPadding.bottom +
+                                  (widget.bottom != null ? 0 : keyboardInset),
+                            ),
+                            child: widget.child,
+                          )
+                        : Padding(
+                            padding: EdgeInsets.only(
+                              left: resolvedPadding.left,
+                              top: resolvedPadding.top,
+                              right: resolvedPadding.right,
+                              bottom: resolvedPadding.bottom +
+                                  (widget.bottom != null ? 0 : keyboardInset),
+                            ),
+                            child: widget.child,
+                          ),
                   ),
-                  child: bottom!,
-                ),
-            ],
+                  if (widget.bottom != null)
+                    AnimatedPadding(
+                      duration: const Duration(milliseconds: 180),
+                      curve: Curves.easeOut,
+                      padding: EdgeInsets.fromLTRB(
+                        16,
+                        0,
+                        16,
+                        20 +
+                            widget.extraBottomPadding +
+                            keyboardInset +
+                            mediaQueryPaddingBottom,
+                      ),
+                      child: widget.bottom!,
+                    ),
+                ],
+              ),
+            ),
           ),
         ),
       ),

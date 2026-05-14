@@ -101,25 +101,34 @@ Color insightRateColor(BuildContext context, double rate) {
 
   return switch (regretLevel?.toLowerCase()) {
     'worthit' => (
-      icon: Icons.check_circle_rounded,
-      color: const Color(0xFF2E7D5B),
-      label: 'Worth it',
-    ),
+        icon: Icons.check_circle_rounded,
+        color: const Color(0xFF2E7D5B),
+        label: 'Worth it',
+      ),
     'regret' => (
-      icon: Icons.do_not_disturb_on_rounded,
-      color: colors.error,
-      label: 'Regret',
-    ),
+        icon: Icons.do_not_disturb_on_rounded,
+        color: colors.error,
+        label: 'Regret',
+      ),
     'notsure' => (
-      icon: Icons.help_rounded,
-      color: colors.tertiary,
-      label: 'Not sure',
-    ),
+        icon: Icons.help_rounded,
+        color: colors.tertiary,
+        label: 'Not sure',
+      ),
     _ => (
-      icon: Icons.schedule_rounded,
-      color: colors.onSurfaceVariant,
-      label: 'Unrated',
-    ),
+        icon: Icons.schedule_rounded,
+        color: colors.onSurfaceVariant,
+        label: 'Unrated',
+      ),
+  };
+}
+
+int? insightRegretLevelValue(String? regretLevel) {
+  return switch (regretLevel?.toLowerCase().replaceAll('_', '')) {
+    'worthit' => 0,
+    'notsure' => 1,
+    'regret' => 2,
+    _ => null,
   };
 }
 
