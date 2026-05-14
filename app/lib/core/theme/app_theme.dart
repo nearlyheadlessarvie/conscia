@@ -44,30 +44,41 @@ class AppTheme {
         margin: EdgeInsets.zero,
         color: colorScheme.surface,
       ),
-      elevatedButtonTheme: ElevatedButtonThemeData(
-        style: ElevatedButton.styleFrom(
-          minimumSize: const Size(double.infinity, 48),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(24),
-          ),
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(
+          minimumSize: const Size(0, 48),
+          shape: const StadiumBorder(),
           foregroundColor: colorScheme.onPrimary,
           backgroundColor: colorScheme.primary,
+          disabledForegroundColor: colorScheme.onSurfaceVariant,
+          disabledBackgroundColor: colorScheme.outlineVariant,
+          textStyle: _buttonTextStyle(Brightness.light),
+        ),
+      ),
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          minimumSize: const Size(0, 48),
+          shape: const StadiumBorder(),
+          foregroundColor: colorScheme.onPrimary,
+          backgroundColor: colorScheme.primary,
+          textStyle: _buttonTextStyle(Brightness.light),
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
-          minimumSize: const Size(double.infinity, 48),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(24),
-          ),
+          minimumSize: const Size(0, 48),
+          shape: const StadiumBorder(),
+          foregroundColor: colorScheme.primary,
+          side: BorderSide(color: colorScheme.primary),
+          textStyle: _buttonTextStyle(Brightness.light),
         ),
       ),
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
           minimumSize: const Size(0, 48),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(24),
-          ),
+          shape: const StadiumBorder(),
+          foregroundColor: colorScheme.primary,
+          textStyle: _buttonTextStyle(Brightness.light),
         ),
       ),
       inputDecorationTheme: InputDecorationTheme(
@@ -171,30 +182,41 @@ class AppTheme {
         margin: EdgeInsets.zero,
         color: colorScheme.surface,
       ),
-      elevatedButtonTheme: ElevatedButtonThemeData(
-        style: ElevatedButton.styleFrom(
-          minimumSize: const Size(double.infinity, 48),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(24),
-          ),
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(
+          minimumSize: const Size(0, 48),
+          shape: const StadiumBorder(),
           foregroundColor: colorScheme.onPrimary,
           backgroundColor: colorScheme.primary,
+          disabledForegroundColor: colorScheme.onSurfaceVariant,
+          disabledBackgroundColor: colorScheme.outlineVariant,
+          textStyle: _buttonTextStyle(Brightness.dark),
+        ),
+      ),
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          minimumSize: const Size(0, 48),
+          shape: const StadiumBorder(),
+          foregroundColor: colorScheme.onPrimary,
+          backgroundColor: colorScheme.primary,
+          textStyle: _buttonTextStyle(Brightness.dark),
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
-          minimumSize: const Size(double.infinity, 48),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(24),
-          ),
+          minimumSize: const Size(0, 48),
+          shape: const StadiumBorder(),
+          foregroundColor: colorScheme.primary,
+          side: BorderSide(color: colorScheme.primary),
+          textStyle: _buttonTextStyle(Brightness.dark),
         ),
       ),
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
           minimumSize: const Size(0, 48),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(24),
-          ),
+          shape: const StadiumBorder(),
+          foregroundColor: colorScheme.primary,
+          textStyle: _buttonTextStyle(Brightness.dark),
         ),
       ),
       inputDecorationTheme: InputDecorationTheme(
@@ -342,6 +364,19 @@ class AppTheme {
         letterSpacing: 0.5,
         color: color,
       ),
+    );
+  }
+
+  static TextStyle _buttonTextStyle(Brightness brightness) {
+    final color = brightness == Brightness.dark
+        ? const Color(0xFFE6E1E5)
+        : const Color(0xFF171421);
+
+    return GoogleFonts.inter(
+      fontSize: 14,
+      fontWeight: FontWeight.w700,
+      letterSpacing: 0,
+      color: color,
     );
   }
 }

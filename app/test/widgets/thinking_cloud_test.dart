@@ -24,7 +24,71 @@ void main() {
     await tester.pumpWidget(
       const MaterialApp(home: Scaffold(body: ThinkingCloudWidget())),
     );
-    await tester.pumpWidget(const MaterialApp(home: Scaffold(body: SizedBox())));
+    await tester
+        .pumpWidget(const MaterialApp(home: Scaffold(body: SizedBox())));
     // No exceptions thrown on dispose
+  });
+
+  test('ThinkingCloudWidget palette includes neutral ink particles', () {
+    final neutralParticles = debugThinkingCloudPalette.where((color) {
+      final red = (color.r * 255).round();
+      final green = (color.g * 255).round();
+      final blue = (color.b * 255).round();
+      return (red - green).abs() <= 8 && (green - blue).abs() <= 8;
+    });
+
+    expect(neutralParticles.length, greaterThanOrEqualTo(3));
+  });
+
+  test('ThinkingCloudWidget gives neutral particles more visual weight', () {
+    expect(
+      debugThinkingCloudNeutralWeight,
+      greaterThanOrEqualTo(0.34),
+    );
+  });
+
+  testWidgets('ThinkingCloudWidget supports a non-zero starting phase',
+      (tester) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(
+          body: ThinkingCloudWidget(
+            animate: false,
+            initialPhase: 1.25,
+          ),
+        ),
+      ),
+    );
+
+    final customPaint = tester.widget<CustomPaint>(
+      find.descendant(
+        of: find.byType(ThinkingCloudWidget),
+        matching: find.byType(CustomPaint),
+      ),
+    );
+
+    expect(debugThinkingCloudPainterPhase(customPaint.painter), 1.25);
+  });
+
+  testWidgets('ThinkingCloudWidget creates a safe fallback phase',
+      (tester) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(
+          body: ThinkingCloudWidget(animate: false),
+        ),
+      ),
+    );
+
+    final customPaint = tester.widget<CustomPaint>(
+      find.descendant(
+        of: find.byType(ThinkingCloudWidget),
+        matching: find.byType(CustomPaint),
+      ),
+    );
+    final phase = debugThinkingCloudPainterPhase(customPaint.painter);
+
+    expect(phase, isNotNull);
+    expect(phase!.isFinite, isTrue);
   });
 }

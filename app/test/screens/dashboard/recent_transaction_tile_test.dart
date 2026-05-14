@@ -33,7 +33,7 @@ void main() {
     expect(find.text('Starbucks'), findsOneWidget);
   });
 
-  testWidgets('regret tag uses the shared smiley icon without a badge fill', (
+  testWidgets('regret tag uses the shared soft badge icon language', (
     tester,
   ) async {
     await tester.pumpWidget(
@@ -61,14 +61,14 @@ void main() {
       ),
     );
 
-    expect(regretTag.icon, Icons.sentiment_satisfied_alt);
-    expect(regretTag.size, 20);
+    expect(regretTag.icon, Icons.thumb_up_alt_outlined);
+    expect(regretTag.size, 12);
     expect(
       find.descendant(
         of: find.byKey(const ValueKey('regret-transaction-badge')),
         matching: find.byType(Container),
       ),
-      findsNothing,
+      findsOneWidget,
     );
   });
 }

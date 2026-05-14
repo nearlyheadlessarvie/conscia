@@ -609,6 +609,50 @@ void main() {
     );
   });
 
+  testWidgets('dashboard hero distinguishes shortcut cards from static pills',
+      (tester) async {
+    final container = ProviderContainer(
+      overrides: [
+        sharedPreferencesProvider.overrideWithValue(prefs),
+        budgetServiceProvider.overrideWithValue(_StaticBudgetService(const [])),
+        transactionServiceProvider
+            .overrideWithValue(_StaticTransactionService()),
+        behavioralInsightsProvider.overrideWith((ref) async => null),
+        insightsSummaryProvider.overrideWith((ref) async => null),
+        insightsCategoriesProvider.overrideWith((ref) async => const []),
+        insightsMerchantsProvider.overrideWith((ref) async => const []),
+        conscienceJourneyServiceProvider.overrideWithValue(_testJourneyService),
+        localAlertsProvider.overrideWith(
+          (ref) => _LocalAlertsTestNotifier(const []),
+        ),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    await tester.pumpWidget(_buildApp(container));
+    await tester.pumpAndSettle();
+
+    for (final id in [
+      'dashboard-journey-link',
+      'dashboard-insights-link',
+      'dashboard-add-link'
+    ]) {
+      final material = tester.widget<Material>(
+        find.descendant(
+          of: find.byKey(ValueKey(id)),
+          matching: find.byType(Material),
+        ),
+      );
+      expect(material.color, isNot(Colors.transparent));
+      expect(material.shape, isA<RoundedRectangleBorder>());
+    }
+
+    expect(find.byKey(const ValueKey('hero-shortcut-card-6-day streak')),
+        findsNothing);
+    expect(find.byKey(const ValueKey('hero-shortcut-card-0/0 quests')),
+        findsNothing);
+  });
+
   testWidgets('dashboard shows editorial hero before utility sections',
       (tester) async {
     final container = ProviderContainer(

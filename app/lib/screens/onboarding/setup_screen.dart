@@ -101,11 +101,6 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
       bottom: SizedBox(
         height: 48,
         child: FilledButton(
-          style: FilledButton.styleFrom(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(24),
-            ),
-          ),
           onPressed: () async {
             try {
               final userService = ref.read(userServiceProvider);

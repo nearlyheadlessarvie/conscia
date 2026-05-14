@@ -143,6 +143,49 @@ const angelMascotAtlas = MascotSpriteAtlas(
   },
 );
 
+const devilProfileSpriteAtlas = MascotSpriteAtlas(
+  assetPath: 'assets/images/sprites/devil/profile_sprite_sheet.png',
+  sheetWidth: 6270,
+  sheetHeight: 2508,
+  frames: {
+    '1_neutral.png': MascotSpriteRect(x: 0, y: 0, width: 1254, height: 1254),
+    '2_angry.png': MascotSpriteRect(x: 1254, y: 0, width: 1254, height: 1254),
+    '3_secret.png': MascotSpriteRect(x: 2508, y: 0, width: 1254, height: 1254),
+    '4_sad.png': MascotSpriteRect(x: 3762, y: 0, width: 1254, height: 1254),
+    '5_naughty.png': MascotSpriteRect(x: 5016, y: 0, width: 1254, height: 1254),
+    '6_lol.png': MascotSpriteRect(x: 0, y: 1254, width: 1254, height: 1254),
+    '7_surprised.png':
+        MascotSpriteRect(x: 1254, y: 1254, width: 1254, height: 1254),
+    '8_embarrassed.png':
+        MascotSpriteRect(x: 2508, y: 1254, width: 1254, height: 1254),
+    '9_wink.png': MascotSpriteRect(x: 3762, y: 1254, width: 1254, height: 1254),
+    '10_distrust.png':
+        MascotSpriteRect(x: 5016, y: 1254, width: 1254, height: 1254),
+  },
+);
+
+const angelProfileSpriteAtlas = MascotSpriteAtlas(
+  assetPath: 'assets/images/sprites/angel/profile_sprite_sheet.png',
+  sheetWidth: 6270,
+  sheetHeight: 2508,
+  frames: {
+    '1_neutral.png': MascotSpriteRect(x: 0, y: 0, width: 1254, height: 1254),
+    '2_fiece.png': MascotSpriteRect(x: 1254, y: 0, width: 1254, height: 1254),
+    '3_joy.png': MascotSpriteRect(x: 2508, y: 0, width: 1254, height: 1254),
+    '4_sad.png': MascotSpriteRect(x: 3762, y: 0, width: 1254, height: 1254),
+    '5_wink.png': MascotSpriteRect(x: 5016, y: 0, width: 1254, height: 1254),
+    '6_surprised.png':
+        MascotSpriteRect(x: 0, y: 1254, width: 1254, height: 1254),
+    '7_shy.png': MascotSpriteRect(x: 1254, y: 1254, width: 1254, height: 1254),
+    '8_sleepy.png':
+        MascotSpriteRect(x: 2508, y: 1254, width: 1254, height: 1254),
+    '9_confused.png':
+        MascotSpriteRect(x: 3762, y: 1254, width: 1254, height: 1254),
+    '10_love.png':
+        MascotSpriteRect(x: 5016, y: 1254, width: 1254, height: 1254),
+  },
+);
+
 const moneyMascotAtlas = MascotSpriteAtlas(
   assetPath: 'assets/images/sprites/money/sprite_sheet.png',
   sheetWidth: 5016,

@@ -280,11 +280,6 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
               SizedBox(
                 height: 48,
                 child: FilledButton(
-                  style: FilledButton.styleFrom(
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(24),
-                    ),
-                  ),
                   onPressed: _isLoading ? null : _submit,
                   child: _isLoading
                       ? const SizedBox(
@@ -300,11 +295,6 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                 SizedBox(
                   height: 48,
                   child: OutlinedButton.icon(
-                    style: OutlinedButton.styleFrom(
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(24),
-                      ),
-                    ),
                     icon: const Icon(Icons.fingerprint, size: 24),
                     label: const Text('Sign in with Biometrics'),
                     onPressed: _isLoading ? null : _authenticateWithBiometrics,

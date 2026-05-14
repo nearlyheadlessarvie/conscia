@@ -255,11 +255,6 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
               SizedBox(
                 height: 48,
                 child: FilledButton(
-                  style: FilledButton.styleFrom(
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(24),
-                    ),
-                  ),
                   onPressed: _isSubmitting ? null : _confirm,
                   child: _isSubmitting
                       ? const SizedBox(

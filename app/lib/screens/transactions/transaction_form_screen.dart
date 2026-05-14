@@ -352,23 +352,23 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
           onPressed: () => context.pop(),
         ),
       ),
-      bottom: FilledButton(
-        style: FilledButton.styleFrom(
-          minimumSize: const Size(double.infinity, 52),
-        ),
-        onPressed: _isValid && !_submitting ? _submit : null,
-        child: _submitting
-            ? const SizedBox(
-                width: 24,
-                height: 24,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: Colors.white,
+      bottom: SizedBox(
+        width: double.infinity,
+        child: FilledButton(
+          onPressed: _isValid && !_submitting ? _submit : null,
+          child: _submitting
+              ? const SizedBox(
+                  width: 24,
+                  height: 24,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.white,
+                  ),
+                )
+              : Text(
+                  _isEditing ? 'Update Transaction' : 'Save Transaction',
                 ),
-              )
-            : Text(
-                _isEditing ? 'Update Transaction' : 'Save Transaction',
-              ),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,

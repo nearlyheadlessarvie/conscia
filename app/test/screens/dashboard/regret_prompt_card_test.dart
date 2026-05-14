@@ -28,7 +28,7 @@ void main() {
     expect(find.byType(CircleAvatar), findsNothing);
   });
 
-  testWidgets('uses the shared sentiment icon language for regret choices', (
+  testWidgets('uses large shared feeling buttons with thumb cue icons', (
     tester,
   ) async {
     await tester.pumpWidget(
@@ -45,14 +45,25 @@ void main() {
       ),
     );
 
-    expect(find.byIcon(Icons.sentiment_satisfied_alt), findsOneWidget);
-    expect(find.byIcon(Icons.sentiment_neutral), findsOneWidget);
-    expect(find.byIcon(Icons.sentiment_dissatisfied), findsOneWidget);
+    expect(find.byIcon(Icons.thumb_up_alt_outlined), findsOneWidget);
+    expect(find.byIcon(Icons.help_outline_rounded), findsOneWidget);
+    expect(find.byIcon(Icons.thumb_down_alt_outlined), findsOneWidget);
     expect(find.text('Worth It'), findsOneWidget);
     expect(find.text('Not Sure'), findsOneWidget);
     expect(find.text('Regret'), findsOneWidget);
-    expect(find.byIcon(Icons.thumb_up_outlined), findsNothing);
-    expect(find.byIcon(Icons.thumb_down_outlined), findsNothing);
-    expect(find.byIcon(Icons.help_outline), findsNothing);
+
+    for (final label in ['Worth It', 'Not Sure', 'Regret']) {
+      final button = tester.widget<FilledButton>(
+        find.ancestor(
+          of: find.text(label),
+          matching: find.byType(FilledButton),
+        ),
+      );
+      expect(button.style?.minimumSize?.resolve({})?.height, 72);
+    }
+
+    expect(find.byIcon(Icons.sentiment_satisfied_alt), findsNothing);
+    expect(find.byIcon(Icons.sentiment_neutral), findsNothing);
+    expect(find.byIcon(Icons.sentiment_dissatisfied), findsNothing);
   });
 }

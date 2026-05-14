@@ -7,14 +7,17 @@ import 'package:conscia_app/providers/ai_provider.dart';
 import 'package:conscia_app/providers/auth_provider.dart';
 import 'package:conscia_app/providers/usage_provider.dart';
 import 'package:conscia_app/providers/user_provider.dart';
+import 'package:conscia_app/core/utils/currency_formatter.dart';
 import 'package:conscia_app/screens/transactions/transaction_detail_screen.dart';
+import 'package:conscia_app/screens/assistant/widgets/ai_message_bubble.dart';
 import 'package:conscia_app/services/auth_service.dart';
 import 'package:conscia_app/services/ai_service.dart';
 import 'package:conscia_app/services/budget_service.dart';
 import 'package:conscia_app/services/transaction_service.dart';
 import 'package:conscia_app/services/user_service.dart';
-import 'package:conscia_app/widgets/conscience_mark.dart';
 import 'package:conscia_app/widgets/editorial_sticky_header.dart';
+import 'package:conscia_app/widgets/feeling_choice_button.dart';
+import 'package:conscia_app/widgets/thinking_cloud.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -79,6 +82,19 @@ class _DelayedReflectionAIService extends AIService {
       impulse: 'Impulse',
       reason: 'Reason',
       neutral: 'Reflection',
+    );
+  }
+}
+
+class _ImmediateReflectionAIService extends AIService {
+  _ImmediateReflectionAIService() : super(Dio());
+
+  @override
+  Future<AIResponse> reflection({required String transactionId}) async {
+    return const AIResponse(
+      impulse: 'Treat it like a reward.',
+      reason: 'Pause and compare it with your goals.',
+      neutral: 'This purchase may be part of a pattern worth noticing.',
     );
   }
 }
@@ -236,7 +252,7 @@ void main() {
     expect(find.text('HOW DID THIS FEEL?'), findsNothing);
   });
 
-  testWidgets('detail regret picker uses labeled sentiment buttons',
+  testWidgets('detail regret picker uses large shared feeling buttons',
       (tester) async {
     final transaction = Transaction(
       id: 'tx-unreflected',
@@ -263,12 +279,58 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('HOW DID THIS FEEL?'), findsOneWidget);
-    expect(find.byIcon(Icons.sentiment_satisfied_alt), findsOneWidget);
-    expect(find.byIcon(Icons.sentiment_neutral), findsOneWidget);
-    expect(find.byIcon(Icons.sentiment_dissatisfied), findsOneWidget);
+    expect(find.byIcon(Icons.thumb_up_alt_outlined), findsOneWidget);
+    expect(find.byIcon(Icons.help_outline_rounded), findsOneWidget);
+    expect(find.byIcon(Icons.thumb_down_alt_outlined), findsOneWidget);
     expect(find.text('Worth It'), findsOneWidget);
     expect(find.text('Not Sure'), findsOneWidget);
     expect(find.text('Regret'), findsOneWidget);
+
+    for (final label in ['Worth It', 'Not Sure', 'Regret']) {
+      final button = tester.widget<FilledButton>(
+        find.ancestor(
+          of: find.text(label),
+          matching: find.byType(FilledButton),
+        ),
+      );
+      expect(button.style?.minimumSize?.resolve({})?.height, 72);
+    }
+  });
+
+  testWidgets('selected detail feeling shrinks to a compact changeable button',
+      (tester) async {
+    final transaction = Transaction(
+      id: 'tx-reflected',
+      amount: 280,
+      currencyCode: 'PHP',
+      category: 'Dining',
+      description: 'Starbucks',
+      type: 'expense',
+      date: DateTime(2026, 5, 11, 15, 12),
+      regretLevel: 0,
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          transactionDetailProvider
+              .overrideWith((ref, id) async => transaction),
+        ],
+        child: const MaterialApp(
+          home: TransactionDetailScreen(transactionId: 'tx-reflected'),
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    final selectedButton = tester.widget<FeelingChoiceButton>(
+      find.byType(FeelingChoiceButton),
+    );
+    expect(selectedButton.size, FeelingChoiceButtonSize.compact);
+    expect(find.byIcon(Icons.thumb_up_alt_outlined), findsOneWidget);
+    expect(find.text('Worth It'), findsOneWidget);
+    expect(find.byIcon(Icons.refresh), findsOneWidget);
   });
 
   testWidgets('detail header starts transparent and docks after scrolling',
@@ -613,7 +675,7 @@ void main() {
     expect(find.text('Subscriptions'), findsAtLeastNWidgets(1));
   });
 
-  testWidgets('shows shared loader while reflection is loading',
+  testWidgets('shows thinking cloud while reflection is loading',
       (tester) async {
     final transaction = Transaction(
       id: 'tx-reflect',
@@ -649,14 +711,75 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
 
-    expect(find.byType(ConscienceLoader), findsAtLeastNWidgets(1));
+    expect(find.byType(ThinkingCloudWidget), findsOneWidget);
     expect(find.text('Reflection is making sense of the moment...'),
         findsOneWidget);
     expect(find.byKey(const ValueKey('conscience-loader-reflection')),
-        findsOneWidget);
+        findsNothing);
 
     await tester.pump(const Duration(seconds: 5));
     await tester.pumpAndSettle();
+  });
+
+  testWidgets('reflection result uses shared guidance chat messages',
+      (tester) async {
+    final transaction = Transaction(
+      id: 'tx-reflect-chat',
+      amount: 1500,
+      currencyCode: 'PHP',
+      category: 'Dining',
+      description: 'Fridays',
+      type: 'expense',
+      date: DateTime(2026, 5, 7, 21, 0),
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          transactionDetailProvider
+              .overrideWith((ref, id) async => transaction),
+          aiServiceProvider.overrideWithValue(_ImmediateReflectionAIService()),
+          transactionServiceProvider
+              .overrideWithValue(_RecordingTransactionService()),
+          sharedPreferencesProvider.overrideWithValue(prefs),
+          currentUserProvider.overrideWith(
+            (ref) async => UserProfile(
+              id: 'user-1',
+              email: 'story@example.com',
+              currencyCode: 'PHP',
+              locale: 'en_US',
+              createdAt: DateTime(2026),
+              hasCompletedOnboarding: true,
+            ),
+          ),
+        ],
+        child: const MaterialApp(
+          home: TransactionDetailScreen(transactionId: 'tx-reflect-chat'),
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    await tester.ensureVisible(find.text('Reflect'));
+    await tester.tap(find.text('Reflect'));
+    await tester.pumpAndSettle();
+
+    expect(
+        find.byKey(const ValueKey('reflection-user-message')), findsOneWidget);
+    expect(
+        find.byKey(const ValueKey('reflection-devil-message')), findsOneWidget);
+    expect(
+        find.byKey(const ValueKey('reflection-angel-message')), findsOneWidget);
+    expect(find.byKey(const ValueKey('reflection-conscia-message')),
+        findsOneWidget);
+    final expectedAmount = CurrencyFormatter.format(
+      transaction.amount.abs(),
+      currencyCode: transaction.currencyCode,
+    );
+    expect(find.text('Help me reflect on $expectedAmount at Fridays.'),
+        findsOneWidget);
+    expect(find.byType(AiMessageBubble), findsNothing);
   });
 
   testWidgets('detail screen shows recurring provenance hint', (tester) async {
@@ -828,7 +951,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 300));
 
     expect(find.text('Reflect now'), findsNothing);
-    expect(find.byType(ConscienceLoader), findsAtLeastNWidgets(1));
+    expect(find.byType(ThinkingCloudWidget), findsOneWidget);
     expect(find.text('Reflection is making sense of the moment...'),
         findsOneWidget);
 

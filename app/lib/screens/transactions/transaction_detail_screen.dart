@@ -13,17 +13,18 @@ import '../../providers/auth_provider.dart';
 import '../../providers/budget_providers.dart';
 import '../../providers/transaction_providers.dart';
 import '../../providers/usage_provider.dart';
+import '../../providers/user_provider.dart';
 import '../../services/ai_service.dart';
 import '../../services/transaction_service.dart';
 import '../../core/constants/category_icons.dart';
-import '../../screens/assistant/widgets/ai_message_bubble.dart';
 import '../budgets/widgets/budget_form_sheet.dart';
-import '../../widgets/conscience_mark.dart';
+import '../../widgets/ai_guidance_chat.dart';
 import '../../widgets/editorial_sticky_header.dart';
 import '../../widgets/feeling_choice_button.dart';
 import '../../widgets/form_label.dart';
 import '../../widgets/premium_upgrade_dialog.dart';
 import '../../widgets/skeleton_loader.dart';
+import '../../widgets/thinking_cloud.dart';
 
 class TransactionDetailScreen extends ConsumerStatefulWidget {
   final String transactionId;
@@ -154,7 +155,14 @@ class _TransactionDetailScreenState
     }
   }
 
-  void _askAiReflection({bool dismissFollowUpAlert = false}) async {
+  void _askAiReflection({
+    bool dismissFollowUpAlert = false,
+    Transaction? transaction,
+  }) async {
+    final reflectionTransaction = transaction ??
+        _editedTransactionOverride ??
+        ref.read(transactionDetailProvider(widget.transactionId)).valueOrNull;
+
     setState(() => _loadingReflection = true);
 
     if (dismissFollowUpAlert) {
@@ -181,10 +189,10 @@ class _TransactionDetailScreenState
 
     if (!mounted) return;
     setState(() => _loadingReflection = false);
-    _showReflectionSheet();
+    _showReflectionSheet(reflectionTransaction);
   }
 
-  void _showReflectionSheet() {
+  void _showReflectionSheet(Transaction? transaction) {
     showModalBottomSheet(
       context: context,
       useRootNavigator: true,
@@ -198,6 +206,7 @@ class _TransactionDetailScreenState
         builder: (ctx, scrollController) => _ReflectionSheet(
           scrollController: scrollController,
           transactionId: widget.transactionId,
+          transaction: transaction,
         ),
       ),
     );
@@ -365,7 +374,10 @@ class _TransactionDetailScreenState
       _autoReflectHandled = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
-        _askAiReflection(dismissFollowUpAlert: true);
+        _askAiReflection(
+          dismissFollowUpAlert: true,
+          transaction: tx,
+        );
       });
     }
 
@@ -394,7 +406,9 @@ class _TransactionDetailScreenState
                 showAddBudget ? () => _openBudgetForm(displayCategory) : null,
             showReflect: !isIncome,
             loadingReflection: _loadingReflection,
-            onReflect: _loadingReflection ? null : _askAiReflection,
+            onReflect: _loadingReflection
+                ? null
+                : () => _askAiReflection(transaction: tx),
             topPadding: topPadding + 68,
           ),
           Padding(
@@ -467,7 +481,7 @@ class _TransactionDetailScreenState
                   ],
                 ),
                 const SizedBox(height: 24),
-                if (!isIncome) _buildRegretSection(colors, textTheme),
+                if (!isIncome) _buildRegretSection(textTheme),
                 if (_deleting) ...[
                   const SizedBox(height: 16),
                   const CircularProgressIndicator(),
@@ -485,7 +499,7 @@ class _TransactionDetailScreenState
     BudgetFormSheet.show(context, initialCategory: category);
   }
 
-  Widget _buildRegretSection(ColorScheme colors, TextTheme textTheme) {
+  Widget _buildRegretSection(TextTheme textTheme) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -499,10 +513,7 @@ class _TransactionDetailScreenState
           ),
         ),
         const SizedBox(height: 14),
-        if (_regretLevel != null)
-          _buildRegretChip(colors)
-        else
-          _buildRegretPicker(colors),
+        if (_regretLevel != null) _buildRegretChip() else _buildRegretPicker(),
       ],
     );
   }
@@ -532,16 +543,15 @@ class _TransactionDetailScreenState
     return '?';
   }
 
-  Widget _buildRegretChip(ColorScheme colors) {
-    final (icon, label, color) = _regretData(_regretLevel!);
+  Widget _buildRegretChip() {
+    final level = _regretLevel!;
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Chip(
-          avatar: Icon(icon, color: color, size: 18),
-          label: Text(label),
-          backgroundColor: color.withValues(alpha: 0.15),
-          side: BorderSide.none,
+        _feelingButtonForLevel(
+          level,
+          size: FeelingChoiceButtonSize.compact,
+          onPressed: () => setState(() => _regretLevel = null),
         ),
         const SizedBox(width: 8),
         IconButton(
@@ -553,23 +563,26 @@ class _TransactionDetailScreenState
     );
   }
 
-  Widget _buildRegretPicker(ColorScheme colors) {
+  Widget _buildRegretPicker() {
     return Row(
       children: [
         Expanded(
           child: FeelingChoiceButton.worthIt(
+            size: FeelingChoiceButtonSize.large,
             onPressed: () => _updateRegret(0),
           ),
         ),
         const SizedBox(width: 8),
         Expanded(
           child: FeelingChoiceButton.notSure(
+            size: FeelingChoiceButtonSize.large,
             onPressed: () => _updateRegret(1),
           ),
         ),
         const SizedBox(width: 8),
         Expanded(
           child: FeelingChoiceButton.regret(
+            size: FeelingChoiceButtonSize.large,
             onPressed: () => _updateRegret(2),
           ),
         ),
@@ -577,18 +590,18 @@ class _TransactionDetailScreenState
     );
   }
 
-  (IconData, String, Color) _regretData(int level) {
+  Widget _feelingButtonForLevel(
+    int level, {
+    required FeelingChoiceButtonSize size,
+    required VoidCallback onPressed,
+  }) {
     if (level == 0) {
-      return (
-        Icons.sentiment_satisfied_alt,
-        'Worth It',
-        const Color(0xFF4CAF50)
-      );
+      return FeelingChoiceButton.worthIt(size: size, onPressed: onPressed);
     }
     if (level == 1) {
-      return (Icons.sentiment_neutral, 'Not Sure', const Color(0xFFFFC107));
+      return FeelingChoiceButton.notSure(size: size, onPressed: onPressed);
     }
-    return (Icons.sentiment_dissatisfied, 'Regret', const Color(0xFFE53935));
+    return FeelingChoiceButton.regret(size: size, onPressed: onPressed);
   }
 }
 
@@ -933,10 +946,6 @@ class _TransactionActionSheet extends StatelessWidget {
               width: double.infinity,
               child: OutlinedButton(
                 onPressed: () => Navigator.of(context).pop(),
-                style: OutlinedButton.styleFrom(
-                  minimumSize: const Size.fromHeight(48),
-                  shape: const StadiumBorder(),
-                ),
                 child: const Text('Cancel'),
               ),
             ),
@@ -1008,10 +1017,6 @@ class _DeleteTransactionSheet extends StatelessWidget {
             const SizedBox(height: 10),
             OutlinedButton(
               onPressed: onCancel,
-              style: OutlinedButton.styleFrom(
-                minimumSize: const Size.fromHeight(48),
-                shape: const StadiumBorder(),
-              ),
               child: const Text('Cancel'),
             ),
           ],
@@ -1156,10 +1161,12 @@ class _DetailRow extends StatelessWidget {
 class _ReflectionSheet extends ConsumerStatefulWidget {
   final ScrollController scrollController;
   final String transactionId;
+  final Transaction? transaction;
 
   const _ReflectionSheet({
     required this.scrollController,
     required this.transactionId,
+    this.transaction,
   });
 
   @override
@@ -1213,28 +1220,48 @@ class _ReflectionSheetState extends ConsumerState<_ReflectionSheet> {
     }
   }
 
+  String _reflectionPrompt(Transaction? transaction) {
+    if (transaction == null) {
+      return 'Help me reflect on this purchase.';
+    }
+
+    final amount = CurrencyFormatter.format(
+      transaction.amount.abs(),
+      currencyCode: transaction.currencyCode,
+    );
+    final target = transaction.description.trim().isNotEmpty
+        ? transaction.description.trim()
+        : transaction.category.trim().isNotEmpty
+            ? transaction.category.trim()
+            : 'this purchase';
+    return 'Help me reflect on $amount at $target.';
+  }
+
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
+    final profile = ref.watch(currentUserProvider).valueOrNull;
 
     return Column(
       children: [
         const SizedBox(height: 8),
-        Container(
-          width: 32,
-          height: 4,
-          decoration: BoxDecoration(
-            color: colors.outlineVariant,
-            borderRadius: BorderRadius.circular(2),
-          ),
-        ),
+        const AiGuidanceSheetHandle(),
         Expanded(
           child: _loading
-              ? const Center(
-                  child: ConscienceLoader(
-                    size: 90,
-                    preset: ConscienceLoaderPreset.reflection,
-                    label: 'Reflection is making sense of the moment...',
+              ? Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const ThinkingCloudWidget(size: 184),
+                      const SizedBox(height: 18),
+                      Text(
+                        'Reflection is making sense of the moment...',
+                        textAlign: TextAlign.center,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: Theme.of(context).appColors.mutedInk,
+                            ),
+                      ),
+                    ],
                   ),
                 )
               : _error != null
@@ -1265,22 +1292,32 @@ class _ReflectionSheetState extends ConsumerState<_ReflectionSheet> {
                     )
                   : ListView(
                       controller: widget.scrollController,
-                      padding: const EdgeInsets.all(16),
+                      padding: const EdgeInsets.fromLTRB(20, 20, 20, 28),
                       children: [
-                        const SizedBox(height: 8),
-                        AiMessageBubble(
-                          type: BubbleType.devil,
+                        AiGuidanceChatMessage(
+                          keyPrefix: 'reflection',
+                          speaker: AiGuidanceSpeaker.user,
+                          message: _reflectionPrompt(widget.transaction),
+                          userProfile: profile,
+                        ),
+                        const SizedBox(height: 12),
+                        AiGuidanceChatMessage(
+                          keyPrefix: 'reflection',
+                          speaker: AiGuidanceSpeaker.devil,
                           message: _response!.impulse,
                         ),
                         const SizedBox(height: 12),
-                        AiMessageBubble(
-                          type: BubbleType.angel,
+                        AiGuidanceChatMessage(
+                          keyPrefix: 'reflection',
+                          speaker: AiGuidanceSpeaker.angel,
                           message: _response!.reason,
                         ),
                         const SizedBox(height: 12),
-                        AiMessageBubble(
-                          type: BubbleType.neutral,
+                        AiGuidanceChatMessage(
+                          keyPrefix: 'reflection',
+                          speaker: AiGuidanceSpeaker.conscia,
                           message: _response!.neutral,
+                          badgeLabel: 'Reflection',
                         ),
                       ],
                     ),

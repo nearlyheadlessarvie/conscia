@@ -59,12 +59,6 @@ class PremiumGate extends StatelessWidget {
               const SizedBox(height: 28),
               FilledButton(
                 onPressed: () => SubscriptionSheet.show(context),
-                style: FilledButton.styleFrom(
-                  minimumSize: const Size.fromHeight(48),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(24),
-                  ),
-                ),
                 child: const Text('Upgrade to Premium'),
               ),
               const SizedBox(height: 12),

@@ -221,11 +221,6 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
               SizedBox(
                 height: 48,
                 child: FilledButton(
-                  style: FilledButton.styleFrom(
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(24),
-                    ),
-                  ),
                   onPressed: _isLoading ? null : _submit,
                   child: _isLoading
                       ? const SizedBox(

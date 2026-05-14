@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'conscia_button_row.dart';
+
 class LocationAssistancePromptSheet extends StatelessWidget {
   const LocationAssistancePromptSheet({super.key});
 
@@ -39,22 +41,11 @@ class LocationAssistancePromptSheet extends StatelessWidget {
               style: textTheme.bodyMedium,
             ),
             const SizedBox(height: 24),
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: () => Navigator.of(context).pop(false),
-                    child: const Text('Not now'),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: FilledButton(
-                    onPressed: () => Navigator.of(context).pop(true),
-                    child: const Text('Turn on'),
-                  ),
-                ),
-              ],
+            ConsciaButtonRow(
+              secondaryLabel: 'Not now',
+              onSecondaryPressed: () => Navigator.of(context).pop(false),
+              primaryLabel: 'Turn on',
+              onPrimaryPressed: () => Navigator.of(context).pop(true),
             ),
           ],
         ),

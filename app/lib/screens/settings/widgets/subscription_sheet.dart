@@ -224,12 +224,8 @@ class _SubscriptionSheetBodyState
                   ? _manageSubscription
                   : _subscribe,
           style: FilledButton.styleFrom(
-            minimumSize: const Size.fromHeight(48),
             backgroundColor: theme.colorScheme.secondary,
             foregroundColor: theme.colorScheme.onSecondary,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(24),
-            ),
           ),
           child: _waitingForPurchase
               ? const SizedBox(

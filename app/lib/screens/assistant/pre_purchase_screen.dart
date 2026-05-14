@@ -6,7 +6,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/routing/app_router.dart';
-import '../../core/assets/mascot_sprite_sheet.dart';
 import '../../core/constants/generated/app_constants.g.dart';
 import '../../core/constants/category_icons.dart';
 import '../../core/errors/app_error.dart';
@@ -23,11 +22,13 @@ import '../../providers/subscription_provider.dart';
 import '../../providers/usage_provider.dart';
 import '../../providers/user_provider.dart';
 import '../../services/ai_service.dart';
-import '../../widgets/conscience_mark.dart';
+import '../../services/user_service.dart';
+import '../../widgets/ai_guidance_chat.dart';
 import '../../widgets/editorial_sticky_header.dart';
 import '../../widgets/floating_label_text_field.dart';
 import '../../widgets/hero_screen_scaffold.dart';
 import '../../widgets/conscia_app_bar.dart';
+import '../../widgets/conscia_button_row.dart';
 import '../../widgets/thinking_cloud.dart';
 import '../../widgets/location_assistance_prompt_sheet.dart';
 import '../../widgets/premium_upgrade_dialog.dart';
@@ -280,12 +281,15 @@ class _PrePurchaseScreenState extends ConsumerState<PrePurchaseScreen> {
                 }
 
                 final locale = ref.watch(userPreferencesProvider).locale;
+                final profile = ref.watch(currentUserProvider).valueOrNull;
                 return _VerdictSheetContent(
                   scrollController: scrollController,
                   response: snapshot.data!,
                   contextLabel: _selectedContextScope == 'family'
                       ? 'Family advice'
                       : 'Personal advice',
+                  purchaseDescription: _descriptionController.text.trim(),
+                  userProfile: profile,
                   selectedCategory: _selectedCategory,
                   amount: amount,
                   currencyCode: _currencyCode,
@@ -537,12 +541,12 @@ class _PrePurchaseScreenState extends ConsumerState<PrePurchaseScreen> {
                 16,
                 28 + _kDockNavOffset + bottomInset + keyboardInset,
               ),
-              child: FilledButton(
-                style: FilledButton.styleFrom(
-                  minimumSize: const Size(double.infinity, 52),
+              child: SizedBox(
+                width: double.infinity,
+                child: FilledButton(
+                  onPressed: _formValid ? _submit : null,
+                  child: const Text('Ask Conscia ✦'),
                 ),
-                onPressed: _formValid ? _submit : null,
-                child: const Text('Ask Conscia ✦'),
               ),
             ),
           ],
@@ -720,6 +724,8 @@ class _VerdictSheetContent extends StatelessWidget {
     required this.scrollController,
     required this.response,
     required this.contextLabel,
+    required this.purchaseDescription,
+    required this.userProfile,
     required this.amount,
     required this.currencyCode,
     required this.locale,
@@ -731,6 +737,8 @@ class _VerdictSheetContent extends StatelessWidget {
   final ScrollController scrollController;
   final AIResponse response;
   final String contextLabel;
+  final String purchaseDescription;
+  final UserProfile? userProfile;
   final double amount;
   final String currencyCode;
   final String? locale;
@@ -740,8 +748,14 @@ class _VerdictSheetContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).appColors;
-    final textTheme = Theme.of(context).textTheme;
+    final questionAmount = CurrencyFormatter.format(
+      amount,
+      currencyCode: currencyCode,
+      locale: locale,
+    );
+    final questionTarget = purchaseDescription.isNotEmpty
+        ? purchaseDescription
+        : selectedCategory ?? 'this';
 
     return Column(
       children: [
@@ -751,28 +765,32 @@ class _VerdictSheetContent extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
             child: Column(
               children: [
-                const _SheetHandle(),
-                const SizedBox(height: 18),
-                Text(
-                  'The verdict',
-                  textAlign: TextAlign.center,
-                  style: textTheme.titleLarge
-                      ?.copyWith(fontWeight: FontWeight.w800),
+                const AiGuidanceSheetHandle(),
+                const SizedBox(height: 20),
+                AiGuidanceChatMessage(
+                  keyPrefix: 'verdict',
+                  speaker: AiGuidanceSpeaker.user,
+                  message: 'Can I spend $questionAmount on $questionTarget?',
+                  userProfile: userProfile,
                 ),
-                const SizedBox(height: 22),
-                _VerdictBubble(
-                  tone: _VerdictTone.devil,
+                const SizedBox(height: 12),
+                AiGuidanceChatMessage(
+                  keyPrefix: 'verdict',
+                  speaker: AiGuidanceSpeaker.devil,
                   message: response.impulse,
                 ),
                 const SizedBox(height: 12),
-                _VerdictBubble(
-                  tone: _VerdictTone.angel,
+                AiGuidanceChatMessage(
+                  keyPrefix: 'verdict',
+                  speaker: AiGuidanceSpeaker.angel,
                   message: response.reason,
                 ),
                 const SizedBox(height: 12),
-                _ConsciaTakeCard(
+                AiGuidanceChatMessage(
+                  keyPrefix: 'verdict',
+                  speaker: AiGuidanceSpeaker.conscia,
                   message: response.neutral,
-                  contextLabel: contextLabel,
+                  badgeLabel: contextLabel,
                 ),
                 const SizedBox(height: 16),
                 if (selectedCategory != null && response.budget != null)
@@ -792,39 +810,11 @@ class _VerdictSheetContent extends StatelessWidget {
           top: false,
           child: Padding(
             padding: const EdgeInsets.fromLTRB(20, 10, 20, 16),
-            child: Row(
-              children: [
-                Expanded(
-                  flex: 3,
-                  child: FilledButton(
-                    style: FilledButton.styleFrom(
-                      minimumSize: const Size(0, 48),
-                      shape: const StadiumBorder(),
-                      backgroundColor: colors.deepNavy,
-                      foregroundColor: Colors.white,
-                    ),
-                    onPressed: () => unawaited(onBuy()),
-                    child: const Text('Buy it'),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  flex: 2,
-                  child: OutlinedButton(
-                    style: OutlinedButton.styleFrom(
-                      minimumSize: const Size(0, 48),
-                      shape: const StadiumBorder(),
-                      foregroundColor: colors.deepNavy,
-                      backgroundColor: colors.navySoft.withValues(alpha: 0.34),
-                      side: BorderSide(
-                        color: colors.deepNavy.withValues(alpha: 0.24),
-                      ),
-                    ),
-                    onPressed: onSkip,
-                    child: const Text('Skip'),
-                  ),
-                ),
-              ],
+            child: ConsciaButtonRow(
+              secondaryLabel: 'Skip',
+              onSecondaryPressed: onSkip,
+              primaryLabel: 'Buy it',
+              onPrimaryPressed: () => unawaited(onBuy()),
             ),
           ),
         ),
@@ -894,7 +884,7 @@ class _InsightSlideshowState extends State<_InsightSlideshow> {
     return Column(
       children: [
         SizedBox(
-          height: 176,
+          height: 136,
           child: PageView(
             controller: _controller,
             onPageChanged: (p) => setState(() => _page = p),
@@ -995,7 +985,7 @@ class _SlideCard extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 4),
       child: Container(
         width: double.infinity,
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           gradient: gradient,
           borderRadius: BorderRadius.circular(24),
@@ -1021,7 +1011,7 @@ class _SlideCard extends StatelessWidget {
                 ),
               ],
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 10),
             Expanded(
               child: Text(
                 body,
@@ -1035,148 +1025,6 @@ class _SlideCard extends StatelessWidget {
             ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-// ── Verdict cards ────────────────────────────────────────────────────
-
-enum _VerdictTone { devil, angel }
-
-class _VerdictAvatar extends StatelessWidget {
-  const _VerdictAvatar({required this.isDevil});
-  final bool isDevil;
-
-  @override
-  Widget build(BuildContext context) {
-    final atlas = isDevil ? devilMascotAtlas : angelMascotAtlas;
-    return ClipOval(
-      child: MascotSpriteFrame(
-        atlas: atlas,
-        frameName: '1_neutral.png',
-        width: 48,
-      ),
-    );
-  }
-}
-
-class _VerdictBubble extends StatelessWidget {
-  const _VerdictBubble({
-    required this.tone,
-    required this.message,
-  });
-
-  final _VerdictTone tone;
-  final String message;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).appColors;
-    final textTheme = Theme.of(context).textTheme;
-    final isDevil = tone == _VerdictTone.devil;
-
-    final bg = isDevil ? colors.devilBg : colors.angelBg;
-    final accent = isDevil ? colors.devilAccent : colors.angelAccent;
-    final label = isDevil ? 'THE DEVIL SAYS' : 'THE ANGEL SAYS';
-
-    return Container(
-      key: ValueKey(isDevil ? 'verdict-devil-card' : 'verdict-angel-card'),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: bg,
-        border: Border.all(color: accent.withValues(alpha: 0.38)),
-        borderRadius: BorderRadius.circular(22),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _VerdictAvatar(isDevil: isDevil),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  label,
-                  style: textTheme.labelSmall?.copyWith(
-                    color: accent,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 0.7,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  message,
-                  style: textTheme.bodyMedium?.copyWith(
-                    color: colors.ink,
-                    height: 1.42,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ConsciaTakeCard extends StatelessWidget {
-  const _ConsciaTakeCard({
-    required this.message,
-    required this.contextLabel,
-  });
-
-  final String message;
-  final String contextLabel;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).appColors;
-
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [colors.amberSoft, colors.navySoft],
-        ),
-        border: Border.all(color: colors.amber.withValues(alpha: 0.55)),
-        borderRadius: BorderRadius.circular(24),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const ConscienceBrandIcon(size: 24),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  "Conscia's take",
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        color: colors.deepNavy,
-                        fontWeight: FontWeight.w900,
-                      ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 14),
-          Text(
-            message,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  height: 1.45,
-                ),
-          ),
-          const SizedBox(height: 12),
-          Chip(
-            label: Text(contextLabel),
-            avatar: const Icon(Icons.auto_awesome, size: 16),
-          ),
-        ],
       ),
     );
   }

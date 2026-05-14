@@ -157,6 +157,52 @@ void main() {
     expect(find.byIcon(Icons.close_rounded), findsNothing);
   });
 
+  testWidgets('insights hero uses raised shortcut cards only for drilldowns',
+      (tester) async {
+    final summary = InsightsSummary(
+      regrettedAmount: 1890,
+      regrettedCategory: 'Shopping',
+      avgRegretRate: 0.33,
+      patternCount: 4,
+      updatedAt: DateTime(2026, 5, 8),
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          userPreferencesProvider.overrideWithValue(
+            (currency: 'PHP', locale: 'en_PH'),
+          ),
+          behavioralInsightsProvider.overrideWith((ref) async => null),
+          insightsSummaryProvider.overrideWith((ref) async => summary),
+          insightsMerchantsProvider.overrideWith((ref) async => const []),
+          insightsCategoriesProvider.overrideWith((ref) async => const []),
+        ],
+        child: const MaterialApp(home: InsightsScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    for (final id in [
+      'insights-categories-link',
+      'insights-merchants-link',
+    ]) {
+      final material = tester.widget<Material>(
+        find.descendant(
+          of: find.byKey(ValueKey(id)),
+          matching: find.byType(Material),
+        ),
+      );
+      expect(material.color, isNot(Colors.transparent));
+      expect(material.shape, isA<RoundedRectangleBorder>());
+    }
+
+    expect(find.byKey(const ValueKey('hero-shortcut-card-Shopping')),
+        findsNothing);
+    expect(find.byKey(const ValueKey('hero-shortcut-card-4 patterns')),
+        findsNothing);
+  });
+
   testWidgets('empty insights use the shared centered empty state',
       (tester) async {
     await tester.pumpWidget(

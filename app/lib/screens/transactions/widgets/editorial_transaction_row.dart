@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/constants/category_icons.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
+import '../../../widgets/feeling_choice_button.dart';
 import '../../../services/transaction_service.dart';
 
 class EditorialTransactionRowData {
@@ -184,8 +185,7 @@ class EditorialTransactionRow extends StatelessWidget {
                       if (data.regretLevel != null)
                         _RegretIconTag(
                           key: const ValueKey('regret-transaction-badge'),
-                          icon: _regretIcon(data.regretLevel!),
-                          color: _regretColor(data.regretLevel!, colors),
+                          level: data.regretLevel!,
                         ),
                     ],
                   ),
@@ -196,18 +196,6 @@ class EditorialTransactionRow extends StatelessWidget {
         ),
       ),
     );
-  }
-
-  Color _regretColor(int level, AppColors colors) {
-    if (level == 0) return colors.income;
-    if (level == 1) return colors.amber;
-    return colors.expense;
-  }
-
-  IconData _regretIcon(int level) {
-    if (level == 0) return Icons.sentiment_satisfied_alt;
-    if (level == 1) return Icons.sentiment_neutral;
-    return Icons.sentiment_dissatisfied;
   }
 
   String _formatSignedAmount(double signedAmount) {
@@ -250,18 +238,31 @@ class _IconTag extends StatelessWidget {
 class _RegretIconTag extends StatelessWidget {
   const _RegretIconTag({
     super.key,
-    required this.icon,
-    required this.color,
+    required this.level,
   });
 
-  final IconData icon;
-  final Color color;
+  final int level;
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(left: 4),
-      child: Icon(icon, size: 20, color: color),
+    final presentation = FeelingChoiceButton.presentationForLevel(
+      level,
+      Theme.of(context).appColors,
+    );
+
+    return Container(
+      margin: const EdgeInsets.only(left: 4),
+      width: 20,
+      height: 20,
+      decoration: BoxDecoration(
+        color: presentation.backgroundColor,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Icon(
+        presentation.icon,
+        size: 12,
+        color: presentation.color,
+      ),
     );
   }
 }

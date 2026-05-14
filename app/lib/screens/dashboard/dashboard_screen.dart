@@ -30,6 +30,7 @@ import 'package:conscia_app/services/budget_service.dart';
 import 'package:conscia_app/services/transaction_service.dart';
 import 'package:conscia_app/services/user_service.dart';
 import 'package:conscia_app/widgets/empty_state.dart';
+import 'package:conscia_app/widgets/hero_shortcut_card.dart';
 import 'package:conscia_app/widgets/premium_upgrade_dialog.dart';
 import 'package:conscia_app/widgets/skeleton_loader.dart';
 
@@ -657,8 +658,8 @@ class _DashboardEditorialHeroCard extends StatelessWidget {
           Row(
             children: [
               Expanded(
-                child: _DashboardQuickLink(
-                  buttonKey: const ValueKey('dashboard-journey-link'),
+                child: HeroShortcutCard(
+                  key: const ValueKey('dashboard-journey-link'),
                   icon: Icons.flag_rounded,
                   label: 'Journey',
                   onPressed: onJourneyTap,
@@ -666,8 +667,8 @@ class _DashboardEditorialHeroCard extends StatelessWidget {
               ),
               const SizedBox(width: 10),
               Expanded(
-                child: _DashboardQuickLink(
-                  buttonKey: const ValueKey('dashboard-insights-link'),
+                child: HeroShortcutCard(
+                  key: const ValueKey('dashboard-insights-link'),
                   icon: Icons.auto_graph_rounded,
                   label: 'Insights',
                   onPressed: onInsightsTap,
@@ -675,8 +676,8 @@ class _DashboardEditorialHeroCard extends StatelessWidget {
               ),
               const SizedBox(width: 10),
               Expanded(
-                child: _DashboardQuickLink(
-                  buttonKey: const ValueKey('dashboard-add-link'),
+                child: HeroShortcutCard(
+                  key: const ValueKey('dashboard-add-link'),
                   icon: Icons.add_rounded,
                   label: 'Add',
                   onPressed: onAddTransactionTap,
@@ -727,55 +728,6 @@ class _HeroMetricPill extends StatelessWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _DashboardQuickLink extends StatelessWidget {
-  const _DashboardQuickLink({
-    required this.buttonKey,
-    required this.icon,
-    required this.label,
-    required this.onPressed,
-  });
-
-  final Key buttonKey;
-  final IconData icon;
-  final String label;
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).appColors;
-
-    return Material(
-      key: buttonKey,
-      color: Colors.transparent,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(18),
-        onTap: onPressed,
-        child: Ink(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-          decoration: BoxDecoration(
-            color: colors.surfaceRaised.withValues(alpha: 0.82),
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: colors.border.withValues(alpha: 0.7)),
-          ),
-          child: Column(
-            children: [
-              Icon(icon, size: 18, color: colors.deepNavy),
-              const SizedBox(height: 6),
-              Text(
-                label,
-                style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                      color: colors.deepNavy,
-                      fontWeight: FontWeight.w700,
-                    ),
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }

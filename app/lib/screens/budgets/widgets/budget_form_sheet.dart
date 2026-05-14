@@ -9,7 +9,7 @@ import '../../../services/budget_service.dart';
 import '../../transactions/widgets/transaction_style_category_selector.dart';
 import '../../../widgets/currency_badge.dart';
 import '../../../widgets/floating_label_text_field.dart';
-import '../../../widgets/scope_selector.dart';
+import '../../../widgets/scope_pill_switch.dart';
 import '../../../widgets/screen_section.dart';
 import '../../../providers/user_provider.dart';
 
@@ -209,6 +209,7 @@ class _BudgetFormSheetState extends ConsumerState<BudgetFormSheet> {
                           ),
                         ],
                         onChanged: (_) => setState(() {}),
+                        prefixLabelInset: 84,
                         prefix: Padding(
                           padding: const EdgeInsets.only(right: 2),
                           child: CurrencyBadge(
@@ -223,7 +224,7 @@ class _BudgetFormSheetState extends ConsumerState<BudgetFormSheet> {
                         subtitle:
                             'Choose whether this budget stays personal or appears in ${familySpace.name}.',
                         compact: true,
-                        child: ScopeSelector(
+                        child: ScopePillSwitch(
                           value: _scope,
                           familyEnabled: true,
                           onChanged: (value) => setState(() => _scope = value),
@@ -235,12 +236,6 @@ class _BudgetFormSheetState extends ConsumerState<BudgetFormSheet> {
               const SizedBox(height: 16),
               FilledButton(
                 onPressed: _isValid && !_submitting ? _submit : null,
-                style: FilledButton.styleFrom(
-                  minimumSize: const Size.fromHeight(48),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(24),
-                  ),
-                ),
                 child: _submitting
                     ? const SizedBox(
                         width: 24,

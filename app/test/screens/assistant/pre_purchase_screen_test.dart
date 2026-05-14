@@ -8,12 +8,12 @@ import 'package:conscia_app/providers/subscription_provider.dart';
 import 'package:conscia_app/providers/usage_provider.dart';
 import 'package:conscia_app/providers/user_provider.dart';
 import 'package:conscia_app/providers/ai_provider.dart';
+import 'package:conscia_app/core/theme/app_theme.dart';
 import 'package:conscia_app/core/utils/currency_formatter.dart';
 import 'package:conscia_app/screens/assistant/pre_purchase_screen.dart';
 import 'package:conscia_app/screens/transactions/transaction_form_screen.dart';
 import 'package:conscia_app/screens/transactions/widgets/voice_input_button.dart';
 import 'package:conscia_app/services/ai_service.dart';
-import 'package:conscia_app/widgets/conscience_mark.dart';
 import 'package:conscia_app/widgets/editorial_sticky_header.dart';
 import 'package:conscia_app/widgets/floating_label_text_field.dart';
 import 'package:dio/dio.dart';
@@ -173,8 +173,9 @@ Future<void> _pumpPrePurchaseScreen(
               _FakeLocationAssistanceService(permissionGranted: true),
         ),
       ],
-      child: const MaterialApp(
-        home: TickerMode(
+      child: MaterialApp(
+        theme: AppTheme.light(),
+        home: const TickerMode(
           enabled: false,
           child: PrePurchaseScreen(),
         ),
@@ -239,8 +240,9 @@ Future<Widget> buildPrePurchaseAppForTier(
         _FakeLocationAssistanceService(permissionGranted: true),
       ),
     ],
-    child: const MaterialApp(
-      home: TickerMode(
+    child: MaterialApp(
+      theme: AppTheme.light(),
+      home: const TickerMode(
         enabled: false,
         child: PrePurchaseScreen(),
       ),
@@ -320,7 +322,7 @@ Future<void> _pumpPrePurchaseRouterApp(
           (ref) async => insightSummary,
         ),
       ],
-      child: MaterialApp.router(routerConfig: router),
+      child: MaterialApp.router(theme: AppTheme.light(), routerConfig: router),
     ),
   );
 }
@@ -449,6 +451,7 @@ void main() {
             ),
           ],
           child: MaterialApp(
+            theme: AppTheme.light(),
             home: PageStorage(
               bucket: bucket,
               child: const TickerMode(
@@ -994,14 +997,56 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets('verdict appears in a pull-up sheet with mascot cards',
+  testWidgets('verdict appears as chat messages with speaker avatars',
       (tester) async {
     await pumpWithResponse(tester);
 
     expect(find.byType(BottomSheet), findsOneWidget);
-    expect(find.text('The verdict'), findsOneWidget);
-    expect(find.byKey(const ValueKey('verdict-devil-card')), findsOneWidget);
-    expect(find.byKey(const ValueKey('verdict-angel-card')), findsOneWidget);
+    expect(find.text('The verdict'), findsNothing);
+    expect(find.byKey(const ValueKey('verdict-devil-card')), findsNothing);
+    expect(find.byKey(const ValueKey('verdict-angel-card')), findsNothing);
+    expect(find.byKey(const ValueKey('verdict-user-message')), findsOneWidget);
+    expect(find.byKey(const ValueKey('verdict-devil-message')), findsOneWidget);
+    expect(find.byKey(const ValueKey('verdict-angel-message')), findsOneWidget);
+    expect(
+        find.byKey(const ValueKey('verdict-conscia-message')), findsOneWidget);
+    expect(find.byKey(const ValueKey('verdict-user-avatar')), findsOneWidget);
+    expect(find.byKey(const ValueKey('verdict-devil-avatar')), findsOneWidget);
+    expect(find.byKey(const ValueKey('verdict-angel-avatar')), findsOneWidget);
+    expect(
+        find.byKey(const ValueKey('verdict-conscia-avatar')), findsOneWidget);
+    expect(find.text('Can I spend \$100.00 on Coffee?'), findsOneWidget);
+
+    final userBubble =
+        tester.getRect(find.byKey(const ValueKey('verdict-user-message')));
+    final devilBubble =
+        tester.getRect(find.byKey(const ValueKey('verdict-devil-message')));
+    final angelBubble =
+        tester.getRect(find.byKey(const ValueKey('verdict-angel-message')));
+    final consciaBubble =
+        tester.getRect(find.byKey(const ValueKey('verdict-conscia-message')));
+    final userAvatar =
+        tester.getRect(find.byKey(const ValueKey('verdict-user-avatar')));
+    final devilAvatar =
+        tester.getRect(find.byKey(const ValueKey('verdict-devil-avatar')));
+    final angelAvatar =
+        tester.getRect(find.byKey(const ValueKey('verdict-angel-avatar')));
+    final consciaAvatar =
+        tester.getRect(find.byKey(const ValueKey('verdict-conscia-avatar')));
+    expect(devilBubble.left, greaterThan(angelBubble.left));
+    expect(devilBubble.left, greaterThan(consciaBubble.left));
+    expect(devilBubble.width, greaterThan(500));
+    expect(angelBubble.left, lessThan(devilBubble.left));
+    expect(consciaBubble.left, lessThan(devilBubble.left));
+    expect(userBubble.right, lessThan(userAvatar.left + 2));
+    expect(devilBubble.left, greaterThan(devilAvatar.right - 2));
+    expect(angelBubble.right, lessThan(angelAvatar.left + 2));
+    expect(consciaBubble.right, lessThan(consciaAvatar.left + 2));
+    expect(devilAvatar.center.dy, greaterThan(devilBubble.center.dy));
+    expect(angelAvatar.center.dy, greaterThan(angelBubble.center.dy));
+    expect(find.byKey(const ValueKey('verdict-devil-tail')), findsNothing);
+    expect(find.byKey(const ValueKey('verdict-angel-tail')), findsNothing);
+    expect(find.byKey(const ValueKey('verdict-conscia-tail')), findsNothing);
   });
 
   testWidgets('verdict CTAs use one primary action and one honest secondary',
@@ -1012,39 +1057,24 @@ void main() {
     expect(find.text('Skip'), findsOneWidget);
     expect(find.text('Wait 24h'), findsNothing);
 
-    final buyButton = tester.widget<FilledButton>(
-      find.widgetWithText(FilledButton, 'Buy it'),
-    );
-    final skipButton = tester.widget<OutlinedButton>(
-      find.widgetWithText(OutlinedButton, 'Skip'),
-    );
+    final buyButton = find.widgetWithText(FilledButton, 'Buy it');
+    final skipButton = find.widgetWithText(OutlinedButton, 'Skip');
 
-    expect(
-      buyButton.style?.minimumSize?.resolve({}),
-      const Size(0, 48),
-    );
-    expect(
-      skipButton.style?.minimumSize?.resolve({}),
-      const Size(0, 48),
-    );
-    expect(
-      skipButton.style?.backgroundColor?.resolve({}),
-      isNotNull,
-    );
-    expect(
-      buyButton.style?.shape?.resolve({}),
-      isA<StadiumBorder>(),
-    );
-    expect(
-      skipButton.style?.shape?.resolve({}),
-      isA<StadiumBorder>(),
-    );
+    expect(tester.getSize(buyButton).height, 48);
+    expect(tester.getSize(skipButton).height, 48);
+    expect(tester.getTopLeft(buyButton).dy, tester.getTopLeft(skipButton).dy);
+    expect(tester.getSize(buyButton).width, tester.getSize(skipButton).width);
+    expect(tester.widget<FilledButton>(buyButton).style, isNull);
+    expect(tester.widget<OutlinedButton>(skipButton).style, isNull);
   });
 
-  testWidgets('ConscienceBrandIcon is shown in Conscia take card',
+  testWidgets('Conscia message uses the app icon avatar instead of a take card',
       (tester) async {
     await pumpWithResponse(tester);
-    expect(find.byType(ConscienceBrandIcon), findsOneWidget);
+
+    expect(find.text("Conscia's take"), findsNothing);
+    expect(
+        find.byKey(const ValueKey('verdict-conscia-app-icon')), findsOneWidget);
   });
 
   // Helper: pump the screen and leave it in the loading state.
@@ -1080,6 +1110,18 @@ void main() {
   testWidgets('loading sheet shows ThinkingCloudWidget', (tester) async {
     await pumpLoading(tester);
     expect(find.byType(ThinkingCloudWidget), findsWidgets);
+    // Drain the pending AI delay timer before the test ends.
+    await tester.pump(const Duration(seconds: 30));
+    await tester.pumpAndSettle();
+  });
+
+  testWidgets('loading sheet keeps the insight slideshow compact',
+      (tester) async {
+    await pumpLoading(tester);
+
+    final slideshowSize = tester.getSize(find.byType(PageView).first);
+    expect(slideshowSize.height, lessThanOrEqualTo(140));
+
     // Drain the pending AI delay timer before the test ends.
     await tester.pump(const Duration(seconds: 30));
     await tester.pumpAndSettle();

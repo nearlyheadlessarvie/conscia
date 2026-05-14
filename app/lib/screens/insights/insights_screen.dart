@@ -14,6 +14,7 @@ import '../dashboard/widgets/insight_feed_card.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/editorial_sticky_header.dart';
 import '../../widgets/feed_card.dart';
+import '../../widgets/hero_shortcut_card.dart';
 import '../../widgets/screen_section.dart';
 import 'widgets/category_trend_card.dart';
 import 'widgets/insights_formatting.dart';
@@ -465,18 +466,20 @@ class _InsightEditorialHighlight extends StatelessWidget {
           Row(
             children: [
               Expanded(
-                child: _InsightHeroQuickLink(
+                child: HeroShortcutCard(
+                  key: const ValueKey('insights-categories-link'),
                   icon: Icons.category_rounded,
                   label: 'Categories',
-                  onTap: () => context.push('/insights/categories'),
+                  onPressed: () => context.push('/insights/categories'),
                 ),
               ),
               const SizedBox(width: 10),
               Expanded(
-                child: _InsightHeroQuickLink(
+                child: HeroShortcutCard(
+                  key: const ValueKey('insights-merchants-link'),
                   icon: Icons.storefront_rounded,
                   label: 'Merchants',
-                  onTap: () => context.push('/insights/merchants'),
+                  onPressed: () => context.push('/insights/merchants'),
                 ),
               ),
             ],
@@ -521,52 +524,6 @@ class _InsightHeroMetricPill extends StatelessWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _InsightHeroQuickLink extends StatelessWidget {
-  const _InsightHeroQuickLink({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-  });
-
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).appColors;
-
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(18),
-        onTap: onTap,
-        child: Ink(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-          decoration: BoxDecoration(
-            color: colors.surfaceRaised.withValues(alpha: 0.82),
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: colors.border.withValues(alpha: 0.7)),
-          ),
-          child: Column(
-            children: [
-              Icon(icon, size: 18, color: colors.deepNavy),
-              const SizedBox(height: 6),
-              Text(
-                label,
-                style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                      color: colors.deepNavy,
-                      fontWeight: FontWeight.w700,
-                    ),
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }

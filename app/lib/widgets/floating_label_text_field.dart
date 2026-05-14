@@ -10,6 +10,7 @@ class FloatingLabelTextField extends StatefulWidget {
     required this.label,
     this.focusNode,
     this.prefix,
+    this.prefixLabelInset,
     this.keyboardType,
     this.textInputAction,
     this.textCapitalization = TextCapitalization.none,
@@ -37,6 +38,7 @@ class FloatingLabelTextField extends StatefulWidget {
   final String label;
   final FocusNode? focusNode;
   final Widget? prefix;
+  final double? prefixLabelInset;
   final TextInputType? keyboardType;
   final TextInputAction? textInputAction;
   final TextCapitalization textCapitalization;
@@ -115,7 +117,8 @@ class _FloatingLabelTextFieldState extends State<FloatingLabelTextField> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colors = theme.appColors;
-    final leadingInset = widget.prefix == null ? 14.0 : 48.0;
+    final leadingInset =
+        widget.prefix == null ? 14.0 : widget.prefixLabelInset ?? 48.0;
     final isFocused = _focusNode.hasFocus;
     final backgroundColor = _hasError
         ? theme.colorScheme.surface

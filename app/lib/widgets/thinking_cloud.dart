@@ -14,10 +14,12 @@ class ThinkingCloudWidget extends StatefulWidget {
     super.key,
     this.size = 220,
     this.animate = true,
+    @visibleForTesting this.initialPhase,
   });
 
   final double size;
   final bool animate;
+  final double? initialPhase;
 
   @override
   State<ThinkingCloudWidget> createState() => _ThinkingCloudWidgetState();
@@ -26,10 +28,18 @@ class ThinkingCloudWidget extends StatefulWidget {
 class _ThinkingCloudWidgetState extends State<ThinkingCloudWidget>
     with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
+  double? _phaseOffset;
+
+  double get _effectivePhaseOffset {
+    return _phaseOffset ??=
+        widget.initialPhase ?? math.Random().nextDouble() * math.pi * 2;
+  }
 
   @override
   void initState() {
     super.initState();
+    _phaseOffset =
+        widget.initialPhase ?? math.Random().nextDouble() * math.pi * 2;
     _controller = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 12),
@@ -47,7 +57,6 @@ class _ThinkingCloudWidgetState extends State<ThinkingCloudWidget>
       _controller.repeat();
     } else {
       _controller.stop();
-      _controller.value = 0;
     }
   }
 
@@ -65,7 +74,7 @@ class _ThinkingCloudWidgetState extends State<ThinkingCloudWidget>
         animation: _controller,
         builder: (_, __) => CustomPaint(
           painter: _ThinkingCloudPainter(
-            t: _controller.value * math.pi * 2,
+            t: _controller.value * math.pi * 2 + _effectivePhaseOffset,
           ),
         ),
       ),
@@ -104,8 +113,8 @@ class _Particle {
   final double radius;
 }
 
-/// Devil/angel/conscia colour palette — angel blue is dominant (~45 %)
-/// to give the "thinking" feel; devil and conscia are accents.
+/// Devil/angel/conscia colour palette — angel blue is dominant, devil and
+/// conscia are accents, and a quiet ink range adds neutral reasoning noise.
 const _palette = [
   // Angel — cyan / blue (dominant)
   Color(0xFF67D9FF),
@@ -122,15 +131,23 @@ const _palette = [
   // Neutral — soft lavender-white (blends all three)
   Color(0xFFE8ECFF),
   Color(0xFFDCE1FF),
+  // Ink — black/grey neutral thought particles
+  Color(0xFF141414),
+  Color(0xFF5C5C5C),
+  Color(0xFF9A9A9A),
 ];
 
+@visibleForTesting
+const debugThinkingCloudPalette = _palette;
+
 // Cumulative probability breakpoints matching the palette above.
-// Angel: 0.00–0.45, Devil: 0.45–0.65, Conscia: 0.65–0.83, Neutral: 0.83–1.00
+// Angel: 34 %, Devil: 15 %, Conscia: 14 %, Neutral: 14 %, Ink: 23 %
 const _paletteWeights = [
-  0.12, 0.12, 0.12, 0.09, // angel  (45 %)
-  0.08, 0.06, 0.06, // devil  (20 %)
-  0.10, 0.08, // conscia(18 %)
-  0.09, 0.08, // neutral(17 %)
+  0.09, 0.09, 0.08, 0.08, // angel  (34 %)
+  0.05, 0.05, 0.05, // devil  (15 %)
+  0.07, 0.07, // conscia(14 %)
+  0.07, 0.07, // neutral(14 %)
+  0.07, 0.08, 0.08, // ink    (23 %)
 ];
 
 List<_Particle> _buildParticles() {
@@ -157,9 +174,10 @@ List<_Particle> _buildParticles() {
     final ax = driftScale * (0.55 + rng.nextDouble() * 1.25);
     final ay = driftScale * (0.55 + rng.nextDouble() * 1.25);
 
-    // Independent frequencies — wide range drives chaos.
-    final sx = 0.18 + rng.nextDouble() * 2.0;
-    final sy = 0.18 + rng.nextDouble() * 2.0;
+    // Integer frequencies make the cycle seamless: the end frame is a
+    // natural continuation of the first, while phases keep motion varied.
+    final sx = (1 + rng.nextInt(3)).toDouble();
+    final sy = (1 + rng.nextInt(4)).toDouble();
     final phase = rng.nextDouble() * math.pi * 2;
 
     // Size: centre dots slightly larger for a soft-core feel.
@@ -203,6 +221,18 @@ List<_Particle> _buildParticles() {
 // Generated once and reused; fixed seed makes this deterministic.
 final _particles = _buildParticles();
 
+@visibleForTesting
+double get debugThinkingCloudNeutralWeight =>
+    _paletteWeights.skip(9).fold(0, (sum, weight) => sum + weight);
+
+@visibleForTesting
+double? debugThinkingCloudPainterPhase(CustomPainter? painter) {
+  if (painter is _ThinkingCloudPainter) {
+    return painter.t;
+  }
+  return null;
+}
+
 // ── Painter ───────────────────────────────────────────────────────────────
 
 class _ThinkingCloudPainter extends CustomPainter {
@@ -229,8 +259,8 @@ class _ThinkingCloudPainter extends CustomPainter {
           (p.by + math.cos(t * p.sy + p.phase * 1.3) * p.ay) * size.height;
 
       // Opacity pulses gently on a slow independent phase.
-      final op = (p.opacity + math.sin(t * 0.8 + p.phase * 0.6) * 0.11)
-          .clamp(0.0, 1.0);
+      final op =
+          (p.opacity + math.sin(t + p.phase * 0.6) * 0.11).clamp(0.0, 1.0);
 
       paint
         ..color = p.color.withValues(alpha: op)

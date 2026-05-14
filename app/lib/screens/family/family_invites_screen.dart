@@ -6,6 +6,7 @@ import '../../core/theme/app_colors.dart';
 import '../../models/family_invite.dart';
 import '../../providers/family_space_provider.dart';
 import '../../widgets/feed_card.dart';
+import '../../widgets/conscia_button_row.dart';
 import '../../widgets/floating_label_text_field.dart';
 import '../../widgets/hero_screen_scaffold.dart';
 import '../../widgets/conscia_app_bar.dart';
@@ -132,11 +133,6 @@ class _InviteComposerState extends ConsumerState<_InviteComposer> {
             height: 48,
             child: FilledButton(
               onPressed: _isSubmitting ? null : _submit,
-              style: FilledButton.styleFrom(
-                backgroundColor: colors.deepNavy,
-                foregroundColor: Colors.white,
-                shape: const StadiumBorder(),
-              ),
               child: Text(_isSubmitting ? 'Sending...' : 'Send invite'),
             ),
           ),
@@ -543,26 +539,12 @@ class _InviteCardState extends ConsumerState<_InviteCard> {
             ],
           ),
           const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: _isSubmitting ? null : () => _decline(context),
-                  child: const Text('Decline'),
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: FilledButton(
-                  onPressed: _isSubmitting ? null : () => _accept(context),
-                  style: FilledButton.styleFrom(
-                    minimumSize: const Size.fromHeight(48),
-                    shape: const StadiumBorder(),
-                  ),
-                  child: Text(_isSubmitting ? 'Saving...' : 'Accept'),
-                ),
-              ),
-            ],
+          ConsciaButtonRow(
+            secondaryLabel: 'Decline',
+            onSecondaryPressed: _isSubmitting ? null : () => _decline(context),
+            primaryLabel: _isSubmitting ? 'Saving...' : 'Accept',
+            onPrimaryPressed: _isSubmitting ? null : () => _accept(context),
+            gap: 10,
           ),
         ],
       ),

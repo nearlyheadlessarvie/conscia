@@ -346,9 +346,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 ),
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 backgroundColor: theme.appColors.surfaceRaised,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(18),
-                ),
               ),
               onPressed: () => _confirmSignOut(context, ref),
             ),
