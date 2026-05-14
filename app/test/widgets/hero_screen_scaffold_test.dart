@@ -83,4 +83,42 @@ void main() {
 
     expect(find.text('Second screen top'), findsOneWidget);
   });
+
+  testWidgets(
+      'HeroScreenScaffold bottom widget clears a simulated shell nav bar',
+      (tester) async {
+    // Simulate the shell nav bar by setting MediaQuery.padding.bottom
+    // (same effect as an outer Scaffold with a BottomNavigationBar of height 80).
+    const navBarHeight = 80.0;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: MediaQuery(
+          data: const MediaQueryData(
+            size: Size(390, 844),
+            padding: EdgeInsets.only(bottom: navBarHeight),
+          ),
+          child: const HeroScreenScaffold(
+            bottom: SizedBox(
+              key: ValueKey('cta'),
+              height: 52,
+              child: Placeholder(),
+            ),
+            child: SizedBox(height: 400),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final screenHeight = tester.getSize(find.byType(MaterialApp)).height;
+    final ctaBottom = tester.getBottomLeft(find.byKey(const ValueKey('cta'))).dy;
+
+    // The CTA's bottom edge must be at least navBarHeight above the screen bottom.
+    // This ensures the CTA is not obscured by the shell nav bar.
+    expect(
+      ctaBottom,
+      lessThanOrEqualTo(screenHeight - navBarHeight),
+      reason: 'CTA is obscured by the shell nav bar',
+    );
+  });
 }

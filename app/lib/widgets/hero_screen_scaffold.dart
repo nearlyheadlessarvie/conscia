@@ -11,6 +11,7 @@ class HeroScreenScaffold extends StatelessWidget {
     this.bottom,
     this.scrollable = true,
     this.scrollViewKey,
+    this.extraBottomPadding = 0.0,
   });
 
   final PreferredSizeWidget? appBar;
@@ -19,11 +20,14 @@ class HeroScreenScaffold extends StatelessWidget {
   final Widget? bottom;
   final bool scrollable;
   final Key? scrollViewKey;
+  // Extra bottom padding to clear floating overlays (e.g. floating dock nav ~72px)
+  final double extraBottomPadding;
 
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).appColors;
     final keyboardInset = MediaQuery.viewInsetsOf(context).bottom;
+    final mediaQueryPaddingBottom = MediaQuery.paddingOf(context).bottom;
     final resolvedPadding = padding.resolve(Directionality.of(context));
 
     return Scaffold(
@@ -75,7 +79,7 @@ class HeroScreenScaffold extends StatelessWidget {
                     16,
                     0,
                     16,
-                    20 + keyboardInset,
+                    20 + extraBottomPadding + keyboardInset + mediaQueryPaddingBottom,
                   ),
                   child: bottom!,
                 ),
