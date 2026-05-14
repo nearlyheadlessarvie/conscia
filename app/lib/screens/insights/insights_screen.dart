@@ -11,6 +11,7 @@ import '../../providers/user_provider.dart';
 import '../../core/theme/app_colors.dart';
 import '../budgets/widgets/budget_form_sheet.dart';
 import '../dashboard/widgets/insight_feed_card.dart';
+import '../../widgets/empty_state.dart';
 import '../../widgets/feed_card.dart';
 import '../../widgets/screen_section.dart';
 import 'widgets/category_trend_card.dart';
@@ -157,11 +158,11 @@ class _InsightsScreenState extends ConsumerState<InsightsScreen> {
           SliverPadding(
             padding: EdgeInsets.fromLTRB(20, 96, 20, 28),
             sliver: SliverToBoxAdapter(
-              child: _InsightMessageCard(
-                icon: Icons.timeline_rounded,
-                title: 'Patterns show up after a little history',
-                body:
-                    'Check back after your first week of tracking and Conscia will start surfacing your spending patterns.',
+              child: EmptyState(
+                icon: Icons.auto_graph_rounded,
+                title: 'No insights yet',
+                subtitle:
+                    'Keep tracking for a week and Conscia will surface your spending patterns.',
               ),
             ),
           ),

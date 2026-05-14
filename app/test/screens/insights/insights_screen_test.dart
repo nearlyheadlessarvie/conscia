@@ -14,6 +14,7 @@ import 'package:conscia_app/screens/insights/merchant_list_screen.dart';
 import 'package:conscia_app/screens/insights/widgets/insights_formatting.dart';
 import 'package:conscia_app/services/budget_service.dart';
 import 'package:conscia_app/services/user_service.dart';
+import 'package:conscia_app/widgets/empty_state.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -152,6 +153,36 @@ void main() {
     expect(find.text('Merchants'), findsOneWidget);
     expect(find.text('😇  ⚔️  😈'), findsNothing);
     expect(find.byIcon(Icons.close_rounded), findsNothing);
+  });
+
+  testWidgets('empty insights use the shared centered empty state',
+      (tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          userPreferencesProvider.overrideWithValue(
+            (currency: 'PHP', locale: 'en_PH'),
+          ),
+          behavioralInsightsProvider.overrideWith((ref) async => null),
+          insightsSummaryProvider.overrideWith((ref) async => null),
+          insightsMerchantsProvider.overrideWith((ref) async => const []),
+          insightsCategoriesProvider.overrideWith((ref) async => const []),
+        ],
+        child: const MaterialApp(home: InsightsScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byType(EmptyState), findsOneWidget);
+    expect(find.byIcon(Icons.auto_graph_rounded), findsOneWidget);
+    expect(find.text('No insights yet'), findsOneWidget);
+    expect(
+      find.text(
+        'Keep tracking for a week and Conscia will surface your spending patterns.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('Patterns show up after a little history'), findsNothing);
   });
 
   testWidgets('category list opens with a stat-backed editorial hero',

@@ -35,3 +35,4 @@ cdk.out/
 .superpowers/
 .tmp/
 .review/
+.claude/

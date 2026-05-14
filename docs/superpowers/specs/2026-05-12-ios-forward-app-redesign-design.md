@@ -419,6 +419,9 @@ Implementation note:
 - Keep them optimistic and instructional
 - Make the next action obvious
 - Avoid overly decorative illustrations that add no clarity
+- Do not wrap empty states in content cards; empty is a quiet centered state, not a feed item
+- Use the shared `EmptyState` pattern for icon + title + subtitle, matching the Transactions empty screen
+- Keep copy short: one confident title and one helper sentence
 
 ### Loading States
 
