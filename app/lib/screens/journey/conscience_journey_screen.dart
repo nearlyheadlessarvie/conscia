@@ -5,39 +5,119 @@ import '../../core/assets/mascot_sprite_sheet.dart';
 import '../../core/theme/app_colors.dart';
 import '../../models/conscience_journey.dart';
 import '../../providers/conscience_journey_provider.dart';
+import '../../widgets/editorial_sticky_header.dart';
 import '../../widgets/feed_card.dart';
-import '../../widgets/hero_screen_scaffold.dart';
-import '../../widgets/conscia_app_bar.dart';
 import '../../widgets/screen_section.dart';
 
-class ConscienceJourneyScreen extends ConsumerWidget {
+class ConscienceJourneyScreen extends ConsumerStatefulWidget {
   const ConscienceJourneyScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final journeyAsync = ref.watch(conscienceJourneyProvider);
+  ConsumerState<ConscienceJourneyScreen> createState() => _ConscienceJourneyScreenState();
+}
 
-    return HeroScreenScaffold(
-      padding: const EdgeInsets.fromLTRB(0, 0, 0, 24),
-      appBar: ConsciaAppBar(
-        title: const Text('Journey'),
-        centerTitle: true,
-        actions: [
-          IconButton(
-            tooltip: 'Journey guide',
-            icon: const Icon(Icons.help_outline_rounded),
-            onPressed: () => _showJourneyGuide(context),
+class _ConscienceJourneyScreenState extends ConsumerState<ConscienceJourneyScreen> {
+  final ScrollController _scrollController = ScrollController();
+  double _scrollOffset = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(_handleScroll);
+  }
+
+  @override
+  void dispose() {
+    _scrollController
+      ..removeListener(_handleScroll)
+      ..dispose();
+    super.dispose();
+  }
+
+  void _handleScroll() {
+    final nextOffset = _scrollController.hasClients ? _scrollController.offset : 0.0;
+    if ((nextOffset - _scrollOffset).abs() < 1) return;
+    setState(() => _scrollOffset = nextOffset);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final journeyAsync = ref.watch(conscienceJourneyProvider);
+    final colors = Theme.of(context).appColors;
+    final stickyProgress = ((_scrollOffset - 5) / 10).clamp(0.0, 1.0);
+    final topPadding = MediaQuery.paddingOf(context).top;
+
+    return Scaffold(
+      body: DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [colors.pageTop, colors.pageBottom],
           ),
-        ],
-      ),
-      child: journeyAsync.when(
-        loading: () => const _CenteredState(child: CircularProgressIndicator()),
-        error: (_, __) => const _JourneyMessageCard(
-          icon: Icons.auto_awesome_rounded,
-          title: 'Journey is taking a breather',
-          body: 'We could not load your achievements just now.',
         ),
-        data: (summary) => ConscienceJourneyContent(summary: summary),
+        child: Stack(
+          children: [
+            journeyAsync.when(
+              loading: () => _buildLoading(),
+              error: (_, __) => _buildError(),
+              data: (summary) => _buildContent(context, summary),
+            ),
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              child: EditorialStickyHeader(
+                key: const ValueKey('journey-sticky-header'),
+                title: 'Journey',
+                progress: stickyProgress,
+                topPadding: topPadding,
+                trailing: IconButton(
+                  tooltip: 'Journey guide',
+                  visualDensity: VisualDensity.compact,
+                  icon: const Icon(Icons.help_outline_rounded),
+                  onPressed: () => _showJourneyGuide(context),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLoading() {
+    return SingleChildScrollView(
+      controller: _scrollController,
+      physics: const AlwaysScrollableScrollPhysics(),
+      child: SizedBox(
+        height: MediaQuery.sizeOf(context).height * 0.58,
+        child: const Center(child: CircularProgressIndicator()),
+      ),
+    );
+  }
+
+  Widget _buildError() {
+    return SingleChildScrollView(
+      controller: _scrollController,
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: const EdgeInsets.fromLTRB(20, 96, 20, 28),
+      child: const _JourneyMessageCard(
+        icon: Icons.auto_awesome_rounded,
+        title: 'Journey is taking a breather',
+        body: 'We could not load your achievements just now.',
+      ),
+    );
+  }
+
+  Widget _buildContent(BuildContext context, ConscienceJourneySummary summary) {
+    final topPadding = MediaQuery.paddingOf(context).top;
+    return SingleChildScrollView(
+      controller: _scrollController,
+      physics: const AlwaysScrollableScrollPhysics(),
+      child: ConscienceJourneyContent(
+        summary: summary,
+        headerTopInset: topPadding + 60,
       ),
     );
   }
@@ -56,16 +136,18 @@ class ConscienceJourneyContent extends StatelessWidget {
   const ConscienceJourneyContent({
     super.key,
     required this.summary,
+    this.headerTopInset = 96,
   });
 
   final ConscienceJourneySummary summary;
+  final double headerTopInset;
 
   @override
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _JourneyHeroBleed(summary: summary),
+        _JourneyHeroBleed(summary: summary, topInset: headerTopInset),
         const SizedBox(height: 20),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -82,19 +164,7 @@ class ConscienceJourneyContent extends StatelessWidget {
                   ],
                 ),
               ),
-              ScreenSection(
-                title: 'Achievements',
-                compact: true,
-                trailing: GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTap: () => _showAllAchievements(context, summary.badges),
-                  child: const Padding(
-                    padding: EdgeInsets.all(4),
-                    child: Icon(Icons.chevron_right_rounded, size: 20),
-                  ),
-                ),
-                child: _BadgeRow(badges: summary.badges),
-              ),
+              _AchievementsSection(badges: summary.badges),
               if (summary.recentMascotMoment case final moment?)
                 ScreenSection(
                   title: 'Mascot moment',
@@ -105,25 +175,71 @@ class ConscienceJourneyContent extends StatelessWidget {
             ],
           ),
         ),
+        const SizedBox(height: 20),
       ],
     );
   }
 }
 
-void _showAllAchievements(
-    BuildContext context, List<ConscienceBadge> badges) {
-  showModalBottomSheet<void>(
-    context: context,
-    isScrollControlled: true,
-    showDragHandle: true,
-    builder: (context) => _AllAchievementsSheet(badges: badges),
-  );
+class _AchievementsSection extends StatelessWidget {
+  const _AchievementsSection({required this.badges});
+
+  final List<ConscienceBadge> badges;
+
+  void _showAllAchievements(BuildContext context) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (context) => _AllAchievementsSheet(badges: badges),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    final appColors = Theme.of(context).appColors;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 18),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () => _showAllAchievements(context),
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'ACHIEVEMENTS',
+                      style: textTheme.labelSmall?.copyWith(
+                        color: appColors.mutedInk,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 0.9,
+                      ),
+                    ),
+                  ),
+                  Icon(Icons.chevron_right_rounded, size: 18, color: appColors.mutedInk),
+                ],
+              ),
+            ),
+          ),
+          _BadgeRow(badges: badges),
+        ],
+      ),
+    );
+  }
 }
 
 class _JourneyHeroBleed extends StatelessWidget {
-  const _JourneyHeroBleed({required this.summary});
+  const _JourneyHeroBleed({required this.summary, this.topInset = 96});
 
   final ConscienceJourneySummary summary;
+  final double topInset;
 
   @override
   Widget build(BuildContext context) {
@@ -139,7 +255,7 @@ class _JourneyHeroBleed extends StatelessWidget {
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(20, 24, 20, 28),
+      padding: EdgeInsets.fromLTRB(20, topInset + 12, 20, 28),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
@@ -1092,16 +1208,3 @@ class _JourneyMessageCard extends StatelessWidget {
   }
 }
 
-class _CenteredState extends StatelessWidget {
-  const _CenteredState({required this.child});
-
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      height: MediaQuery.sizeOf(context).height * 0.58,
-      child: Center(child: child),
-    );
-  }
-}
