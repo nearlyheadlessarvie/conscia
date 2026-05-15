@@ -30,8 +30,10 @@ import 'package:conscia_app/services/budget_service.dart';
 import 'package:conscia_app/services/transaction_service.dart';
 import 'package:conscia_app/services/user_service.dart';
 import 'package:conscia_app/widgets/empty_state.dart';
+import 'package:conscia_app/widgets/budget_mix_visuals.dart';
 import 'package:conscia_app/widgets/hero_shortcut_card.dart';
 import 'package:conscia_app/widgets/premium_upgrade_dialog.dart';
+import 'package:conscia_app/widgets/scope_pill_switch.dart';
 import 'package:conscia_app/widgets/skeleton_loader.dart';
 
 class DashboardScreen extends ConsumerStatefulWidget {
@@ -46,6 +48,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   final ScrollController _scrollController = ScrollController();
   double _scrollOffset = 0;
   bool _hasRestoredScrollOffset = false;
+  String _budgetScope = 'personal';
 
   static const _scrollOffsetStorageIdentifier =
       'dashboard-header-scroll-offset';
@@ -302,6 +305,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                               background: const SizedBox.shrink(),
                               child: _NotificationListTile(
                                 alert: alert,
+                                onDismiss: dismiss,
                                 onAction: alert.actionLabel == null &&
                                         alert.type != 'budget_nudge'
                                     ? null
@@ -368,6 +372,18 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         _visibleAlerts(ref.watch(activeAlertsProvider), budgetState.budgets);
 
     final budgets = budgetState.budgets;
+    final hasPersonalBudgets = budgets.any((budget) => !budget.isFamily);
+    final hasFamilyBudgets = budgets.any((budget) => budget.isFamily);
+    final effectiveBudgetScope = hasPersonalBudgets ? _budgetScope : 'family';
+    final visibleBudgets = hasFamilyBudgets
+        ? budgets
+            .where(
+              (budget) => effectiveBudgetScope == 'family'
+                  ? budget.isFamily
+                  : !budget.isFamily,
+            )
+            .toList(growable: false)
+        : budgets;
     final transactions = txState.transactions;
     final recentTransactions = transactions.take(5).toList();
     final insightSummary = insightSummaryState.valueOrNull;
@@ -439,34 +455,15 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               else
                 SliverPadding(
                   padding: const EdgeInsets.symmetric(horizontal: 20),
-                  sliver: SliverList(
-                    delegate: SliverChildBuilderDelegate(
-                      (context, index) {
-                        final budget = budgets[index];
-                        return Column(
-                          children: [
-                            _BudgetSummaryRow(
-                              categoryBadge: TransactionTile.badgeFor(
-                                budget.category,
-                                size: 30,
-                                filled: false,
-                              ),
-                              categoryName: budget.category,
-                              isFamily: budget.isFamily,
-                              spent: budget.spent,
-                              limit: budget.monthlyLimit,
-                              currencyCode: budget.currencyCode,
-                              locale: userPreferences.locale,
-                              percentage: budget.percentage,
-                            ),
-                            if (index < budgets.take(4).length - 1)
-                              Divider(
-                                  height: 1,
-                                  color: Theme.of(context).appColors.border),
-                          ],
-                        );
-                      },
-                      childCount: budgets.take(4).length,
+                  sliver: SliverToBoxAdapter(
+                    child: _DashboardBudgetSummary(
+                      budgets: visibleBudgets,
+                      selectedScope: effectiveBudgetScope,
+                      showScopeSwitch: hasPersonalBudgets && hasFamilyBudgets,
+                      locale: userPreferences.locale,
+                      onScopeChanged: (value) =>
+                          setState(() => _budgetScope = value.toLowerCase()),
+                      onManageTap: () => context.push(AppRoutes.budgets),
                     ),
                   ),
                 ),
@@ -1058,157 +1055,166 @@ class _ProfileAvatar extends StatelessWidget {
   }
 }
 
-class _BudgetSummaryRow extends StatelessWidget {
-  const _BudgetSummaryRow({
-    required this.categoryBadge,
-    required this.categoryName,
-    required this.isFamily,
-    required this.spent,
-    required this.limit,
-    required this.currencyCode,
+class _DashboardBudgetSummary extends StatelessWidget {
+  const _DashboardBudgetSummary({
+    required this.budgets,
+    required this.selectedScope,
+    required this.showScopeSwitch,
     required this.locale,
-    required this.percentage,
+    required this.onScopeChanged,
+    required this.onManageTap,
   });
 
-  final Widget categoryBadge;
-  final String categoryName;
-  final bool isFamily;
-  final double spent;
-  final double limit;
-  final String currencyCode;
+  final List<Budget> budgets;
+  final String selectedScope;
+  final bool showScopeSwitch;
   final String? locale;
-  final double percentage;
+  final ValueChanged<String> onScopeChanged;
+  final VoidCallback onManageTap;
 
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).appColors;
     final textTheme = Theme.of(context).textTheme;
+    final mix = _budgetMix(budgets);
+    final totalSpent = budgets.fold<double>(0, (sum, b) => sum + b.spent);
+    final totalLimit =
+        budgets.fold<double>(0, (sum, b) => sum + b.monthlyLimit);
+    final currencyCode = budgets.isEmpty ? 'PHP' : budgets.first.currencyCode;
+    final usedPercent =
+        totalLimit <= 0 ? 0 : ((totalSpent / totalLimit) * 100).round();
 
-    return InkWell(
-      onTap: () => context.push('/settings/budgets'),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 14),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            categoryBadge,
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
+    return Column(
+      key: const ValueKey('dashboard-budget-summary'),
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        LayoutBuilder(
+          key: const ValueKey('dashboard-budget-top-row'),
+          builder: (context, constraints) {
+            final columnWidth = constraints.maxWidth / 2;
+            final donutSize = columnWidth.clamp(96.0, 120.0);
+
+            return Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                SizedBox(
+                  width: columnWidth,
+                  child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Flexible(
-                                  child: Text(
-                                    categoryName,
-                                    style: textTheme.titleSmall?.copyWith(
-                                      color: colors.ink,
-                                      fontWeight: FontWeight.w700,
-                                    ),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                                if (isFamily) ...[
-                                  const SizedBox(width: 8),
-                                  _FamilyBudgetPill(colors: colors),
-                                ],
-                              ],
-                            ),
-                            const SizedBox(height: 3),
-                            Text(
-                              '${CurrencyFormatter.format(
-                                spent,
-                                currencyCode: currencyCode,
-                                locale: locale,
-                              )} / ${CurrencyFormatter.format(
-                                limit,
-                                currencyCode: currencyCode,
-                                locale: locale,
-                              )}',
-                              style: textTheme.bodySmall?.copyWith(
-                                color: colors.mutedInk,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 12),
                       Text(
-                        '${(percentage * 100).round()}%',
-                        style: textTheme.titleSmall?.copyWith(
-                          color: _budgetColor(colors),
-                          fontWeight: FontWeight.w700,
+                        '${CurrencyFormatter.format(
+                          totalSpent,
+                          currencyCode: currencyCode,
+                          locale: locale,
+                        )} used',
+                        style: textTheme.headlineSmall?.copyWith(
+                          color: colors.deepNavy,
+                          fontWeight: FontWeight.w800,
+                          height: 1.0,
                         ),
                       ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'of ${CurrencyFormatter.format(
+                          totalLimit,
+                          currencyCode: currencyCode,
+                          locale: locale,
+                        )} monthly cap',
+                        style: textTheme.bodySmall?.copyWith(
+                          color: colors.mutedInk,
+                        ),
+                      ),
+                      if (showScopeSwitch) ...[
+                        const SizedBox(height: 12),
+                        ScopePillSwitch(
+                          value: selectedScope,
+                          familyEnabled: true,
+                          onChanged: onScopeChanged,
+                        ),
+                      ],
                     ],
                   ),
-                  const SizedBox(height: 10),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(999),
-                    child: LinearProgressIndicator(
-                      minHeight: 6,
-                      value: percentage.clamp(0.0, 1.0),
-                      backgroundColor: colors.border,
-                      valueColor:
-                          AlwaysStoppedAnimation<Color>(_budgetColor(colors)),
+                ),
+                SizedBox(
+                  key: const ValueKey('dashboard-budget-donut-lane'),
+                  width: columnWidth,
+                  child: Center(
+                    child: BudgetMixDonut(
+                      key: const ValueKey('dashboard-budget-donut'),
+                      size: donutSize,
+                      trackStrokeWidth: donutSize * 0.17,
+                      segmentStrokeWidth: donutSize * 0.125,
+                      segments: _budgetSegments(mix, totalSpent),
+                      center: Text(
+                        '$usedPercent%',
+                        style: textTheme.labelSmall?.copyWith(
+                          color: colors.deepNavy,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
                     ),
                   ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Color _budgetColor(AppColors colors) {
-    if (percentage >= 1) return colors.budgetDanger;
-    if (percentage >= 0.8) return colors.budgetWarning;
-    if (percentage >= 0.6) return colors.budgetCaution;
-    return colors.budgetHealthy;
-  }
-}
-
-class _FamilyBudgetPill extends StatelessWidget {
-  const _FamilyBudgetPill({required this.colors});
-
-  final AppColors colors;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: colors.familySoft,
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.groups_rounded, size: 12, color: colors.family),
-          const SizedBox(width: 4),
-          Text(
-            'Family budget',
-            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: colors.family,
-                  fontSize: 10,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: 0.2,
                 ),
+              ],
+            );
+          },
+        ),
+        if (mix.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          SingleChildScrollView(
+            key: const ValueKey('dashboard-budget-mix-pill-rail'),
+            scrollDirection: Axis.horizontal,
+            clipBehavior: Clip.none,
+            child: Row(
+              children: [
+                for (final entry in mix.indexed)
+                  Padding(
+                    padding: EdgeInsets.only(
+                      right: entry.$1 == mix.length - 1 ? 0 : 8,
+                    ),
+                    child: BudgetMixPill(
+                      index: entry.$1,
+                      category: entry.$2.category,
+                      share: totalSpent <= 0 ? 0 : entry.$2.spent / totalSpent,
+                    ),
+                  ),
+              ],
+            ),
           ),
         ],
-      ),
+        const SizedBox(height: 12),
+        HeroShortcutCard(
+          key: const ValueKey('dashboard-manage-budgets'),
+          icon: Icons.pie_chart_rounded,
+          label: 'Manage budgets',
+          subtitle: 'Tune caps and scope',
+          onPressed: onManageTap,
+        ),
+      ],
     );
+  }
+
+  List<Budget> _budgetMix(List<Budget> budgets) {
+    final copy = [...budgets]..sort((a, b) => b.spent.compareTo(a.spent));
+    return copy.toList(growable: false);
+  }
+
+  List<BudgetMixDonutSegment> _budgetSegments(
+    List<Budget> budgets,
+    double totalSpent,
+  ) {
+    if (totalSpent <= 0) return const [];
+    return budgets
+        .where((budget) => budget.spent > 0)
+        .indexed
+        .map(
+          (entry) => BudgetMixDonutSegment(
+            share: entry.$2.spent / totalSpent,
+            color: BudgetMixPalette.staticColorFor(entry.$1),
+          ),
+        )
+        .toList(growable: false);
   }
 }
 
@@ -1549,10 +1555,12 @@ class _NotificationListTile extends StatelessWidget {
   const _NotificationListTile({
     required this.alert,
     this.onAction,
+    this.onDismiss,
   });
 
   final AppAlert alert;
   final VoidCallback? onAction;
+  final VoidCallback? onDismiss;
 
   @override
   Widget build(BuildContext context) {
@@ -1595,27 +1603,50 @@ class _NotificationListTile extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    if (actionLabel != null && onAction != null) ...[
-                      GestureDetector(
-                        onTap: onAction,
-                        child: Text(
-                          actionLabel,
-                          style: textTheme.labelSmall?.copyWith(
-                            color: colors.primary,
-                            fontWeight: FontWeight.w700,
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          if (actionLabel != null && onAction != null) ...[
+                            GestureDetector(
+                              onTap: onAction,
+                              child: Text(
+                                actionLabel,
+                                style: textTheme.labelSmall?.copyWith(
+                                  color: colors.primary,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                          ],
+                          Text(
+                            _relativeTime(alert.createdAt),
+                            style: textTheme.labelSmall?.copyWith(
+                              color: colors.onSurfaceVariant,
+                            ),
                           ),
-                        ),
-                      ),
-                      const Spacer(),
-                    ] else
-                      const Spacer(),
-                    Text(
-                      _relativeTime(alert.createdAt),
-                      style: textTheme.labelSmall?.copyWith(
-                        color: colors.onSurfaceVariant,
+                        ],
                       ),
                     ),
+                    if (onDismiss != null)
+                      IconButton(
+                        tooltip: 'Dismiss notification',
+                        visualDensity: VisualDensity.compact,
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(
+                          minWidth: 32,
+                          minHeight: 32,
+                        ),
+                        icon: Icon(
+                          Icons.close_rounded,
+                          size: 18,
+                          color: colors.onSurfaceVariant,
+                        ),
+                        onPressed: onDismiss,
+                      ),
                   ],
                 ),
               ],

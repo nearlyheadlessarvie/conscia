@@ -802,7 +802,7 @@ void main() {
     expect(tester.getTopLeft(hero).dy, lessThan(tester.getTopLeft(budgets).dy));
   });
 
-  testWidgets('dashboard labels family budgets when categories repeat',
+  testWidgets('dashboard summarizes budgets by scope without detailed rows',
       (tester) async {
     final container = ProviderContainer(
       overrides: [
@@ -849,8 +849,39 @@ void main() {
     await tester.pumpWidget(_buildApp(container));
     await tester.pumpAndSettle();
 
-    expect(find.text('Dining'), findsNWidgets(2));
-    expect(find.text('Family budget'), findsOneWidget);
+    expect(
+        find.byKey(const ValueKey('dashboard-budget-summary')), findsOneWidget);
+    expect(
+        find.byKey(const ValueKey('dashboard-budget-donut')), findsOneWidget);
+    expect(find.text('PERSONAL BUDGET MIX'), findsNothing);
+    expect(find.text('FAMILY BUDGET MIX'), findsNothing);
+    expect(find.text('₱3,720.00 used'), findsOneWidget);
+    expect(find.text('of ₱4,000.00 monthly cap'), findsOneWidget);
+    expect(find.text('Dining 100%'), findsOneWidget);
+    expect(find.text('₱3,720.00 / ₱4,000.00'), findsNothing);
+    expect(find.text('Family budget'), findsNothing);
+    final personalToggleBottom = tester.getBottomLeft(find.text('Personal')).dy;
+    final donutBottom = tester
+        .getBottomLeft(find.byKey(const ValueKey('dashboard-budget-donut')))
+        .dy;
+    expect(donutBottom, greaterThanOrEqualTo(personalToggleBottom - 2));
+    final donutLaneRect = tester
+        .getRect(find.byKey(const ValueKey('dashboard-budget-donut-lane')));
+    final donutRect =
+        tester.getRect(find.byKey(const ValueKey('dashboard-budget-donut')));
+    expect(donutRect.center.dx, closeTo(donutLaneRect.center.dx, 1));
+    final summaryRect =
+        tester.getRect(find.byKey(const ValueKey('dashboard-budget-top-row')));
+    expect(
+      donutLaneRect.width,
+      closeTo(summaryRect.width / 2, 1),
+    );
+
+    await tester.tap(find.text('Family'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('FAMILY BUDGET MIX'), findsNothing);
+    expect(find.text('of ₱6,500.00 monthly cap'), findsOneWidget);
   });
 
   testWidgets('dashboard hero aggregates monthly spend in user currency',
