@@ -85,11 +85,13 @@ class ConscienceJourneyContent extends StatelessWidget {
               ScreenSection(
                 title: 'Achievements',
                 compact: true,
-                trailing: IconButton(
-                  icon: const Icon(Icons.chevron_right_rounded),
-                  tooltip: 'See all achievements',
-                  onPressed: () =>
-                      _showAllAchievements(context, summary.badges),
+                trailing: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () => _showAllAchievements(context, summary.badges),
+                  child: const Padding(
+                    padding: EdgeInsets.all(4),
+                    child: Icon(Icons.chevron_right_rounded, size: 20),
+                  ),
                 ),
                 child: _BadgeRow(badges: summary.badges),
               ),

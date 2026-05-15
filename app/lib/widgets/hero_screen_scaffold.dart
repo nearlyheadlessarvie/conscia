@@ -57,6 +57,8 @@ class _HeroScreenScaffoldState extends State<HeroScreenScaffold> {
     return ConsciaAppBarScrollScope(
       scrollProgress: _appBarScrollProgress,
       child: Scaffold(
+        backgroundColor: Colors.transparent,
+        extendBodyBehindAppBar: true,
         appBar: widget.appBar,
         body: NotificationListener<ScrollNotification>(
           onNotification: _handleScrollNotification,
@@ -74,6 +76,11 @@ class _HeroScreenScaffoldState extends State<HeroScreenScaffold> {
             child: SafeArea(
               child: Column(
                 children: [
+                  // Reserve space for the AppBar toolbar so content
+                  // starts below it (SafeArea only covers the status bar).
+                  SizedBox(
+                    height: widget.appBar?.preferredSize.height ?? 0,
+                  ),
                   Expanded(
                     child: widget.scrollable
                         ? SingleChildScrollView(
