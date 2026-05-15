@@ -8,10 +8,12 @@ namespace Conscia.Application.Services;
 public class ConscienceJourneyService : IConscienceJourneyService
 {
     private readonly IConscienceJourneyRepository _repository;
+    private readonly IConscienceJourneyRulesProvider _rules;
 
-    public ConscienceJourneyService(IConscienceJourneyRepository repository)
+    public ConscienceJourneyService(IConscienceJourneyRepository repository, IConscienceJourneyRulesProvider rules)
     {
         _repository = repository;
+        _rules = rules;
     }
 
     public async Task<ConscienceJourneySummaryDto> GetJourneyAsync(Guid userId, CancellationToken ct = default)
@@ -26,7 +28,7 @@ public class ConscienceJourneyService : IConscienceJourneyService
         string sourceId,
         CancellationToken ct = default)
     {
-        if (!ConscienceJourneyRules.XpByEventType.TryGetValue(eventType, out var eventXp))
+        if (!_rules.XpByEventType.TryGetValue(eventType, out var eventXp))
             throw new ArgumentException($"Unsupported conscience journey event type '{eventType}'.", nameof(eventType));
 
         if (string.IsNullOrWhiteSpace(sourceId))
@@ -105,7 +107,7 @@ public class ConscienceJourneyService : IConscienceJourneyService
         ICollection<string> completedQuestKeys,
         CancellationToken ct)
     {
-        var matchingRules = ConscienceJourneyRules.WeeklyQuests
+        var matchingRules = _rules.WeeklyQuests
             .Where(q => string.Equals(q.EventType, eventType, StringComparison.Ordinal))
             .ToList();
 
@@ -158,7 +160,7 @@ public class ConscienceJourneyService : IConscienceJourneyService
         ICollection<string> unlockedBadgeKeys,
         CancellationToken ct)
     {
-        var matchingRules = ConscienceJourneyRules.Badges
+        var matchingRules = _rules.Badges
             .Where(b => string.Equals(b.EventType, eventType, StringComparison.Ordinal))
             .ToList();
 
@@ -223,11 +225,11 @@ public class ConscienceJourneyService : IConscienceJourneyService
             recentMoment is null ? null : ToDto(recentMoment));
     }
 
-    private static IReadOnlyList<ConscienceQuestDto> BuildQuestDtos(IReadOnlyList<ConscienceQuestProgress> progress)
+    private IReadOnlyList<ConscienceQuestDto> BuildQuestDtos(IReadOnlyList<ConscienceQuestProgress> progress)
     {
         var byKey = progress.ToDictionary(q => q.QuestKey, StringComparer.Ordinal);
 
-        return ConscienceJourneyRules.WeeklyQuests
+        return _rules.WeeklyQuests
             .Select(rule =>
             {
                 byKey.TryGetValue(rule.Key, out var item);
@@ -247,11 +249,11 @@ public class ConscienceJourneyService : IConscienceJourneyService
             .ToList();
     }
 
-    private static IReadOnlyList<ConscienceBadgeDto> BuildBadgeDtos(IReadOnlyList<ConscienceBadgeProgress> progress)
+    private IReadOnlyList<ConscienceBadgeDto> BuildBadgeDtos(IReadOnlyList<ConscienceBadgeProgress> progress)
     {
         var byKey = progress.ToDictionary(b => b.BadgeKey, StringComparer.Ordinal);
 
-        return ConscienceJourneyRules.Badges
+        return _rules.Badges
             .Select(rule =>
             {
                 byKey.TryGetValue(rule.Key, out var item);
@@ -281,10 +283,10 @@ public class ConscienceJourneyService : IConscienceJourneyService
         }
     }
 
-    private static (ConscienceLevelRule Current, ConscienceLevelRule? Next) CalculateLevel(int xp)
+    private (ConscienceLevelRule Current, ConscienceLevelRule? Next) CalculateLevel(int xp)
     {
-        var current = ConscienceJourneyRules.Levels.Last(l => xp >= l.RequiredXp);
-        var next = ConscienceJourneyRules.Levels.FirstOrDefault(l => l.RequiredXp > xp);
+        var current = _rules.Levels.Last(l => xp >= l.RequiredXp);
+        var next = _rules.Levels.FirstOrDefault(l => l.RequiredXp > xp);
         return (current, next);
     }
 
@@ -294,9 +296,9 @@ public class ConscienceJourneyService : IConscienceJourneyService
         return DateOnly.FromDateTime(start);
     }
 
-    private static ConscienceMascotMomentDto? BuildMascotMoment(string key, DateTime now)
+    private ConscienceMascotMomentDto? BuildMascotMoment(string key, DateTime now)
     {
-        var rule = ConscienceJourneyRules.MascotMoments.FirstOrDefault(m =>
+        var rule = _rules.MascotMoments.FirstOrDefault(m =>
             string.Equals(m.Key, key, StringComparison.Ordinal));
 
         return rule is null

@@ -17,6 +17,7 @@ using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.RateLimiting;
 using Conscia.Api.Middleware;
 using Conscia.Application.Configuration;
+using Conscia.Application.Constants;
 using Conscia.Application.Interfaces;
 using Conscia.Application.Services;
 using Conscia.Application.Triggers;
@@ -176,6 +177,7 @@ builder.Services.AddScoped<IBehavioralInsightsService, BehavioralInsightsService
 builder.Services.AddScoped<IPurchaseSuggestionService, PurchaseSuggestionService>();
 builder.Services.AddScoped<IPurchasePatternService, PurchasePatternService>();
 builder.Services.AddScoped<IAlertService, AlertService>();
+builder.Services.AddSingleton<IConscienceJourneyRulesProvider, HardcodedJourneyRulesProvider>();
 builder.Services.AddScoped<IConscienceJourneyService, ConscienceJourneyService>();
 builder.Services.AddSingleton<IRecurringScheduleGenerator, RecurringScheduleGenerator>();
 builder.Services.AddScoped<ITriggerEvaluator, BudgetWarningEvaluator>();
