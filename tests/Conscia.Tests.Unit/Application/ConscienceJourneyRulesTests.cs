@@ -100,6 +100,20 @@ public class ConscienceJourneyRulesTests
     }
 
     [Fact]
+    public void NewBadgeKeys_ArePresent()
+    {
+        var keys = ConscienceJourneyRules.Badges.Select(b => b.Key);
+
+        Assert.Contains("insight_reader", keys);
+        Assert.Contains("deep_thinker", keys);
+        Assert.Contains("pre_purchase_habit", keys);
+        Assert.Contains("reflection_habit", keys);
+        Assert.Contains("family_connector", keys);
+        Assert.Contains("family_budget_tracker", keys);
+        Assert.Contains("budget_builder", keys);
+    }
+
+    [Fact]
     public void FamilyBadgesAndQuests_AreAvailable()
     {
         var badges = ConscienceJourneyRules.Badges.Select(b => b.Key).ToHashSet();
