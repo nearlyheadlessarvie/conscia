@@ -18,9 +18,10 @@ class ConscienceJourneyScreen extends ConsumerWidget {
     final journeyAsync = ref.watch(conscienceJourneyProvider);
 
     return HeroScreenScaffold(
-      padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
+      padding: const EdgeInsets.fromLTRB(0, 0, 0, 24),
       appBar: ConsciaAppBar(
         title: const Text('Journey'),
+        centerTitle: true,
         actions: [
           IconButton(
             tooltip: 'Journey guide',
@@ -64,63 +65,86 @@ class ConscienceJourneyContent extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _JourneyHeroCard(summary: summary),
-        const SizedBox(height: 18),
-        ScreenSection(
-          title: "This week's quests",
-          compact: true,
-          child: FeedCard(
-            padding: EdgeInsets.zero,
-            child: Column(
-              children: [
-                for (var i = 0; i < summary.weeklyQuests.length; i++) ...[
-                  _QuestTile(quest: summary.weeklyQuests[i]),
-                  if (i < summary.weeklyQuests.length - 1)
-                    const Divider(indent: 72, height: 1),
-                ],
-              ],
-            ),
+        _JourneyHeroBleed(summary: summary),
+        const SizedBox(height: 20),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              ScreenSection(
+                title: "This week's quests",
+                compact: true,
+                child: Column(
+                  children: [
+                    for (final quest in summary.weeklyQuests)
+                      _QuestCard(quest: quest),
+                  ],
+                ),
+              ),
+              ScreenSection(
+                title: 'Achievements',
+                compact: true,
+                trailing: IconButton(
+                  icon: const Icon(Icons.chevron_right_rounded),
+                  tooltip: 'See all achievements',
+                  onPressed: () =>
+                      _showAllAchievements(context, summary.badges),
+                ),
+                child: _BadgeRow(badges: summary.badges),
+              ),
+              if (summary.recentMascotMoment case final moment?)
+                ScreenSection(
+                  title: 'Mascot moment',
+                  subtitle:
+                      'A tiny dramatic reading from your financial conscience.',
+                  child: _MascotMomentCard(moment: moment),
+                ),
+            ],
           ),
         ),
-        ScreenSection(
-          title: 'Achievements',
-          trailing: TextButton(
-            onPressed: () {},
-            child: const Text('All ›'),
-          ),
-          compact: true,
-          child: _BadgeGrid(badges: summary.badges),
-        ),
-        if (summary.recentMascotMoment case final moment?)
-          ScreenSection(
-            title: 'Mascot moment',
-            subtitle: 'A tiny dramatic reading from your financial conscience.',
-            child: _MascotMomentCard(moment: moment),
-          ),
       ],
     );
   }
 }
 
-class _JourneyHeroCard extends StatelessWidget {
-  const _JourneyHeroCard({required this.summary});
+void _showAllAchievements(
+    BuildContext context, List<ConscienceBadge> badges) {
+  showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    showDragHandle: true,
+    builder: (context) => _AllAchievementsSheet(badges: badges),
+  );
+}
+
+class _JourneyHeroBleed extends StatelessWidget {
+  const _JourneyHeroBleed({required this.summary});
 
   final ConscienceJourneySummary summary;
 
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
+    final colors = Theme.of(context).appColors;
     final textTheme = Theme.of(context).textTheme;
     final nextLevel = summary.nextLevel;
-    final progress = _levelProgress(summary);
+    final levelSpan = nextLevel == null
+        ? 1
+        : (nextLevel.requiredXp - summary.currentLevel.requiredXp);
+    final progress = levelSpan <= 0
+        ? 1.0
+        : (summary.xpIntoLevel / levelSpan).clamp(0.0, 1.0);
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(20, 24, 20, 22),
+      padding: const EdgeInsets.fromLTRB(20, 24, 20, 28),
       decoration: BoxDecoration(
-        color: Theme.of(context).appColors.amberSoft,
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: Theme.of(context).appColors.amber),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [colors.navySoft, colors.amberSoft],
+        ),
+        borderRadius: const BorderRadius.vertical(bottom: Radius.circular(32)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.center,
@@ -159,52 +183,67 @@ class _JourneyHeroCard extends StatelessWidget {
           Text(
             'Level ${_levelNumber(summary.currentLevel)}',
             style: textTheme.labelLarge?.copyWith(
-              color: colors.onSurface,
+              color: colors.deepNavy,
               fontWeight: FontWeight.w800,
             ),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 6),
           Text(
             summary.currentLevel.title,
-            style: textTheme.headlineSmall?.copyWith(
-              fontWeight: FontWeight.w900,
-            ),
+            style:
+                textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w900),
             textAlign: TextAlign.center,
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 10),
           Text(
             nextLevel == null
                 ? '${summary.xpTotal} XP · Top level reached'
                 : '${summary.xpIntoLevel} / ${nextLevel.requiredXp - summary.currentLevel.requiredXp} XP to ${nextLevel.title}',
-            style: textTheme.bodySmall?.copyWith(
-              color: colors.onSurfaceVariant,
-            ),
+            style: textTheme.bodySmall
+                ?.copyWith(color: colors.ink.withValues(alpha: 0.7)),
           ),
           const SizedBox(height: 14),
           ClipRRect(
             borderRadius: BorderRadius.circular(999),
             child: LinearProgressIndicator(
-              minHeight: 10,
+              minHeight: 8,
               value: progress,
-              backgroundColor: colors.surfaceContainerHighest,
+              backgroundColor: colors.deepNavy.withValues(alpha: 0.15),
               valueColor: AlwaysStoppedAnimation<Color>(
-                Theme.of(context).appColors.amber,
+                colors.deepNavy.withValues(alpha: 0.55),
               ),
             ),
+          ),
+          const SizedBox(height: 14),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.local_fire_department_rounded,
+                size: 15,
+                color: colors.deepNavy.withValues(alpha: 0.7),
+              ),
+              const SizedBox(width: 5),
+              Text(
+                '${summary.momentumDays}-day streak',
+                style: textTheme.labelMedium?.copyWith(
+                  color: colors.deepNavy,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              if (summary.bestMomentumDays > summary.momentumDays) ...[
+                Text(
+                  '  ·  best ${summary.bestMomentumDays}',
+                  style: textTheme.labelSmall?.copyWith(
+                    color: colors.deepNavy.withValues(alpha: 0.6),
+                  ),
+                ),
+              ],
+            ],
           ),
         ],
       ),
     );
-  }
-
-  double _levelProgress(ConscienceJourneySummary summary) {
-    final next = summary.nextLevel;
-    if (next == null) return 1;
-
-    final levelSpan = next.requiredXp - summary.currentLevel.requiredXp;
-    if (levelSpan <= 0) return 0;
-
-    return (summary.xpIntoLevel / levelSpan).clamp(0, 1).toDouble();
   }
 
   int _levelNumber(ConscienceLevel level) {
@@ -220,79 +259,104 @@ class _JourneyHeroCard extends StatelessWidget {
   }
 }
 
-class _QuestTile extends StatelessWidget {
-  const _QuestTile({required this.quest});
+class _QuestCard extends StatelessWidget {
+  const _QuestCard({required this.quest});
 
   final ConscienceQuest quest;
+
+  static IconData _iconFor(String key) {
+    return switch (key) {
+      'reflect_three_purchases' => Icons.auto_stories_rounded,
+      'check_before_purchase' => Icons.psychology_rounded,
+      'review_regret_pattern' => Icons.loop_rounded,
+      'send_family_invite' => Icons.group_add_rounded,
+      'add_family_expense' => Icons.receipt_long_rounded,
+      _ => Icons.flag_rounded,
+    };
+  }
 
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
-    final progress = quest.target == 0
-        ? 0.0
-        : (quest.progress / quest.target).clamp(0, 1).toDouble();
+    final appColors = Theme.of(context).appColors;
+    final iconColor = quest.isCompleted ? colors.primary : colors.tertiary;
+    final isBinary = quest.target == 1;
+    final progress =
+        isBinary ? 0.0 : (quest.progress / quest.target).clamp(0.0, 1.0);
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
-      child: Row(
-        children: [
-          _IconBadge(
-            icon: quest.isCompleted ? Icons.check_rounded : Icons.flag_rounded,
-            color: quest.isCompleted ? colors.primary : colors.tertiary,
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  quest.title,
-                  style: textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  quest.description,
-                  style: textTheme.bodySmall?.copyWith(
-                    color: colors.onSurfaceVariant,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(999),
-                  child: LinearProgressIndicator(
-                    minHeight: 7,
-                    value: progress,
-                    backgroundColor: colors.surfaceContainerHighest,
-                  ),
-                ),
-                const SizedBox(height: 5),
-                Text(
-                  quest.isCompleted
-                      ? '✓ Complete!'
-                      : '${quest.progress} / ${quest.target} completed',
-                  style: textTheme.labelSmall?.copyWith(
-                    color: quest.isCompleted
-                        ? Theme.of(context).appColors.income
-                        : colors.onSurfaceVariant,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ],
+      padding: const EdgeInsets.only(bottom: 10),
+      child: FeedCard(
+        padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+        child: Row(
+          children: [
+            _IconBadge(
+              icon: quest.isCompleted ? Icons.check_rounded : _iconFor(quest.key),
+              color: iconColor,
             ),
-          ),
-          const SizedBox(width: 12),
-          _XpPill(label: '+${quest.xpReward} XP'),
-        ],
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    quest.title,
+                    style: textTheme.titleSmall
+                        ?.copyWith(fontWeight: FontWeight.w800),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    quest.description,
+                    style: textTheme.bodySmall
+                        ?.copyWith(color: colors.onSurfaceVariant),
+                  ),
+                  if (!isBinary) ...[
+                    const SizedBox(height: 10),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(999),
+                      child: LinearProgressIndicator(
+                        minHeight: 7,
+                        value: progress,
+                        backgroundColor: colors.surfaceContainerHighest,
+                      ),
+                    ),
+                    const SizedBox(height: 5),
+                    Text(
+                      quest.isCompleted
+                          ? '✓ Complete!'
+                          : '${quest.progress} / ${quest.target} completed',
+                      style: textTheme.labelSmall?.copyWith(
+                        color: quest.isCompleted
+                            ? appColors.income
+                            : colors.onSurfaceVariant,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ] else if (quest.isCompleted) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      '✓ Complete!',
+                      style: textTheme.labelSmall?.copyWith(
+                        color: appColors.income,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            const SizedBox(width: 12),
+            _XpPill(label: '+${quest.xpReward} XP'),
+          ],
+        ),
       ),
     );
   }
 }
 
-class _BadgeGrid extends StatelessWidget {
-  const _BadgeGrid({required this.badges});
+class _BadgeRow extends StatelessWidget {
+  const _BadgeRow({required this.badges});
 
   final List<ConscienceBadge> badges;
 
@@ -323,6 +387,26 @@ class _BadgeTile extends StatelessWidget {
 
   final ConscienceBadge badge;
 
+  static IconData _iconFor(String key) {
+    return switch (key) {
+      'first_reflection' => Icons.auto_stories_rounded,
+      'pause_before_purchase' => Icons.pause_circle_outline_rounded,
+      'budget_rescuer' => Icons.savings_rounded,
+      'regret_pattern_spotted' => Icons.loop_rounded,
+      'worth_it_week' => Icons.emoji_events_rounded,
+      'family_founder' => Icons.group_add_rounded,
+      'family_planner' => Icons.receipt_long_rounded,
+      'insight_reader' => Icons.lightbulb_outline_rounded,
+      'deep_thinker' => Icons.psychology_rounded,
+      'pre_purchase_habit' => Icons.check_circle_outline_rounded,
+      'reflection_habit' => Icons.local_fire_department_rounded,
+      'family_connector' => Icons.handshake_rounded,
+      'family_budget_tracker' => Icons.account_balance_wallet_rounded,
+      'budget_builder' => Icons.construction_rounded,
+      _ => Icons.workspace_premium_rounded,
+    };
+  }
+
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
@@ -348,9 +432,7 @@ class _BadgeTile extends StatelessWidget {
                   : null,
             ),
             child: Icon(
-              badge.isUnlocked
-                  ? Icons.pause_rounded
-                  : Icons.lock_outline_rounded,
+              badge.isUnlocked ? _iconFor(badge.key) : Icons.lock_outline_rounded,
               color: badge.isUnlocked
                   ? Theme.of(context).appColors.angelAccent
                   : colors.outline,
@@ -367,6 +449,141 @@ class _BadgeTile extends StatelessWidget {
               fontWeight: FontWeight.w800,
             ),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AllAchievementsSheet extends StatelessWidget {
+  const _AllAchievementsSheet({required this.badges});
+
+  final List<ConscienceBadge> badges;
+
+  static IconData _iconFor(String key) {
+    return switch (key) {
+      'first_reflection' => Icons.auto_stories_rounded,
+      'pause_before_purchase' => Icons.pause_circle_outline_rounded,
+      'budget_rescuer' => Icons.savings_rounded,
+      'regret_pattern_spotted' => Icons.loop_rounded,
+      'worth_it_week' => Icons.emoji_events_rounded,
+      'family_founder' => Icons.group_add_rounded,
+      'family_planner' => Icons.receipt_long_rounded,
+      'insight_reader' => Icons.lightbulb_outline_rounded,
+      'deep_thinker' => Icons.psychology_rounded,
+      'pre_purchase_habit' => Icons.check_circle_outline_rounded,
+      'reflection_habit' => Icons.local_fire_department_rounded,
+      'family_connector' => Icons.handshake_rounded,
+      'family_budget_tracker' => Icons.account_balance_wallet_rounded,
+      'budget_builder' => Icons.construction_rounded,
+      _ => Icons.workspace_premium_rounded,
+    };
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    final colors = Theme.of(context).colorScheme;
+
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'All Achievements',
+              style:
+                  textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              '${badges.where((b) => b.isUnlocked).length} of ${badges.length} unlocked',
+              style: textTheme.bodySmall
+                  ?.copyWith(color: colors.onSurfaceVariant),
+            ),
+            const SizedBox(height: 16),
+            Flexible(
+              child: SingleChildScrollView(
+                child: Column(
+                  children: [
+                    for (final badge in badges)
+                      _AchievementSheetRow(
+                          badge: badge, icon: _iconFor(badge.key)),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _AchievementSheetRow extends StatelessWidget {
+  const _AchievementSheetRow({required this.badge, required this.icon});
+
+  final ConscienceBadge badge;
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+    final appColors = Theme.of(context).appColors;
+    final iconColor =
+        badge.isUnlocked ? appColors.angelAccent : colors.outline;
+    final bgColor = badge.isUnlocked
+        ? appColors.angelSoft
+        : colors.surfaceContainerHighest.withValues(alpha: 0.5);
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Row(
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: bgColor,
+              borderRadius: BorderRadius.circular(14),
+              border: badge.isUnlocked
+                  ? Border.all(color: appColors.angelAccent, width: 1.5)
+                  : null,
+            ),
+            child: Icon(
+              badge.isUnlocked ? icon : Icons.lock_outline_rounded,
+              color: iconColor,
+              size: 20,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  badge.isUnlocked ? badge.title : '???',
+                  style: textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w800,
+                    color: badge.isUnlocked ? colors.onSurface : colors.outline,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  badge.isUnlocked
+                      ? badge.description
+                      : 'Keep using Conscia to unlock this.',
+                  style: textTheme.bodySmall
+                      ?.copyWith(color: colors.onSurfaceVariant),
+                ),
+              ],
+            ),
+          ),
+          if (badge.isUnlocked)
+            Icon(Icons.check_circle_rounded, color: appColors.angelAccent, size: 18),
         ],
       ),
     );
