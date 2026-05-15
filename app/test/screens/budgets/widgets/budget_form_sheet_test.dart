@@ -148,8 +148,11 @@ void main() {
 
     final badgeRect = tester.getRect(find.byType(CurrencyBadge));
     final labelRect = tester.getRect(find.text('Monthly limit'));
+    final inputRect = tester.getRect(find.byType(TextField));
 
     expect(labelRect.left, greaterThan(badgeRect.right + 8));
+    expect(labelRect.left - badgeRect.right, lessThanOrEqualTo(16));
+    expect(inputRect.left - badgeRect.right, lessThanOrEqualTo(16));
   });
 
   testWidgets('budget form uses the shared scope pill switch', (tester) async {

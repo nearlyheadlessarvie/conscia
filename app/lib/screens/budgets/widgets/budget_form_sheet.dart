@@ -209,7 +209,7 @@ class _BudgetFormSheetState extends ConsumerState<BudgetFormSheet> {
                           ),
                         ],
                         onChanged: (_) => setState(() {}),
-                        prefixLabelInset: 84,
+                        prefixLabelInset: 78,
                         prefix: Padding(
                           padding: const EdgeInsets.only(right: 2),
                           child: CurrencyBadge(
