@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../core/theme/app_colors.dart';
-import 'grouped_list_card.dart';
 
 class LocalePickerSheet {
   LocalePickerSheet._();
@@ -43,7 +42,7 @@ class _LocalePickerBody extends StatelessWidget {
   });
 
   static const _locales = [
-    ('en_US', 'Philippines / US', '1,234,567.89'),
+    ('en_US', 'Default', '1,234,567.89'),
     ('de_DE', 'European', '1.234.567,89'),
     ('fr_FR', 'French / Swiss', '1 234 567,89'),
     ('en_IN', 'Indian', '12,34,567.89'),
@@ -91,46 +90,56 @@ class _LocalePickerBody extends StatelessWidget {
             controller: scrollController,
             padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
             children: [
-              GroupedListCard(
-                children: _locales.map((locale) {
-                  final isSelected = locale.$1 == selectedLocale;
-                  return InkWell(
-                    onTap: () {
-                      onSelected(locale.$1);
-                      Navigator.of(context).pop();
-                    },
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 10),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(locale.$2, style: textTheme.titleSmall),
-                                const SizedBox(height: 4),
-                                Text(
-                                  locale.$3,
-                                  style: textTheme.bodySmall?.copyWith(
-                                    color: Theme.of(context).appColors.mutedInk,
-                                  ),
+              ..._locales.indexed.map((entry) {
+                final index = entry.$1;
+                final locale = entry.$2;
+                final isSelected = locale.$1 == selectedLocale;
+                final tile = InkWell(
+                  onTap: () {
+                    onSelected(locale.$1);
+                    Navigator.of(context).pop();
+                  },
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(locale.$2, style: textTheme.titleSmall),
+                              const SizedBox(height: 4),
+                              Text(
+                                locale.$3,
+                                style: textTheme.bodySmall?.copyWith(
+                                  color: Theme.of(context).appColors.mutedInk,
                                 ),
-                              ],
-                            ),
+                              ),
+                            ],
                           ),
-                          const SizedBox(width: 12),
-                          if (isSelected)
-                            Icon(
-                              Icons.check_rounded,
-                              color: Theme.of(context).appColors.deepNavy,
-                              size: 20,
-                            ),
-                        ],
-                      ),
+                        ),
+                        const SizedBox(width: 12),
+                        if (isSelected)
+                          Icon(
+                            Icons.check_rounded,
+                            color: Theme.of(context).appColors.deepNavy,
+                            size: 20,
+                          ),
+                      ],
                     ),
-                  );
-                }).toList(),
-              ),
+                  ),
+                );
+                if (index == _locales.length - 1) return tile;
+                return Column(
+                  children: [
+                    tile,
+                    Divider(
+                      height: 1,
+                      color: Theme.of(context).appColors.border,
+                    ),
+                  ],
+                );
+              }),
             ],
           ),
         ),

@@ -19,6 +19,12 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
         builder.Property(u => u.EmailConfirmed)
             .HasDefaultValue(true);
 
+        builder.Property(u => u.DisplayName)
+            .HasMaxLength(120);
+
+        builder.Property(u => u.ProfilePictureKey)
+            .HasMaxLength(512);
+
         builder.Property(u => u.PreferredCurrency)
             .IsRequired()
             .HasMaxLength(3);

@@ -27,7 +27,7 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
   late final TextEditingController _localeController;
 
   static const _regionLabels = {
-    'en_US': 'Philippines / US',
+    'en_US': 'Default',
     'de_DE': 'European',
     'fr_FR': 'French / Swiss',
     'en_IN': 'Indian',
@@ -61,7 +61,7 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
   }
 
   String _localeName() {
-    return _regionLabels[_locale] ?? 'Philippines / US';
+    return _regionLabels[_locale] ?? 'Default';
   }
 
   void _openCurrencyPicker() {

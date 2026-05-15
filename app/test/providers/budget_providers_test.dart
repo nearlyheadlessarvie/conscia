@@ -98,6 +98,24 @@ void main() {
     expect(budget.isOverBudget, isFalse);
   });
 
+  test('budget json preserves family scope metadata', () {
+    final budget = Budget.fromJson({
+      'id': 'budget-family-1',
+      'category': 'Dining',
+      'monthlyLimit': 6500,
+      'currentSpend': 3720,
+      'currencyCode': 'PHP',
+      'percentUsed': 57.23,
+      'isOverBudget': false,
+      'scope': 'Family',
+      'familySpaceId': 'family-1',
+    });
+
+    expect(budget.scope, 'family');
+    expect(budget.isFamily, isTrue);
+    expect(budget.familySpaceId, 'family-1');
+  });
+
   ProviderContainer buildContainer(_StaticBudgetService service) {
     return ProviderContainer(
       overrides: [

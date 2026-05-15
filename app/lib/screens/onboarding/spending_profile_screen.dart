@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 
 import '../../core/constants/app_icons.dart';
 import '../../core/routing/app_router.dart';
+import '../../core/theme/app_colors.dart';
 import '../../providers/user_provider.dart';
 import '../../widgets/hero_screen_scaffold.dart';
 import '../../widgets/conscia_app_bar.dart';
@@ -90,9 +91,10 @@ class _SpendingProfileScreenState extends ConsumerState<SpendingProfileScreen> {
         automaticallyImplyLeading: false,
         title: const Text('Spending Profile'),
         actions: [
-          TextButton(
+          IconButton(
+            tooltip: 'Skip',
             onPressed: _saving ? null : _skip,
-            child: const Text('Skip'),
+            icon: Icon(AppIcons.chevronRight, color: Theme.of(context).appColors.deepNavy),
           ),
         ],
       ),

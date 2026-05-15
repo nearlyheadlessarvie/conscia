@@ -85,7 +85,7 @@ public class InAppAlertRepository : DynamoRepository, IInAppAlertRepository
             Priority = item.TryGetValue("Priority", out var priority) && int.TryParse(priority.N, out var parsedPriority)
                 ? parsedPriority
                 : 0,
-            CreatedAt = DateTime.Parse(item["CreatedAt"].S),
+            CreatedAt = DateTime.Parse(item["CreatedAt"].S, null, System.Globalization.DateTimeStyles.RoundtripKind),
             TTL = long.Parse(item["TTL"].N)
         };
 

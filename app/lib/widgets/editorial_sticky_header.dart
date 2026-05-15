@@ -25,6 +25,7 @@ class EditorialStickyHeader extends StatelessWidget {
     final colors = Theme.of(context).appColors;
     final textTheme = Theme.of(context).textTheme;
     final opacity = progress >= 1.0 ? 1.0 : 0.0;
+    final horizontalInset = 8.0 * opacity;
     final canPop = alwaysShowBack || Navigator.of(context).canPop();
     final radius = BorderRadius.circular(999);
     final background = Color.lerp(
@@ -39,7 +40,12 @@ class EditorialStickyHeader extends StatelessWidget {
     )!;
 
     return Padding(
-      padding: EdgeInsets.fromLTRB(8, topPadding + 8, 8, 0),
+      padding: EdgeInsets.fromLTRB(
+        horizontalInset,
+        topPadding + 8,
+        horizontalInset,
+        0,
+      ),
       child: ClipRRect(
         borderRadius: radius,
         child: BackdropFilter(

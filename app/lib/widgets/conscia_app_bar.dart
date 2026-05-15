@@ -65,6 +65,7 @@ class ConsciaAppBar extends StatelessWidget implements PreferredSizeWidget {
     final canPop = Navigator.of(context).canPop();
     final progress = scrollProgress >= 1.0 ? 1.0 : 0.0;
     final radius = BorderRadius.circular(999 * progress);
+    final capsuleInset = 8.0 * progress;
     final leadingWidget = leading ??
         (automaticallyImplyLeading && canPop
             ? IconButton(
@@ -78,6 +79,7 @@ class ConsciaAppBar extends StatelessWidget implements PreferredSizeWidget {
                 ),
               )
             : null);
+    final sideSlotWidth = _sideSlotWidth(actions);
 
     return AppBar(
       automaticallyImplyLeading: false,
@@ -91,76 +93,79 @@ class ConsciaAppBar extends StatelessWidget implements PreferredSizeWidget {
       foregroundColor: colors.ink,
       leadingWidth: 0,
       leading: const SizedBox.shrink(),
-      titleSpacing: 6,
-      title: ClipRRect(
-        borderRadius: radius,
-        child: BackdropFilter(
-          filter: ui.ImageFilter.blur(
-            sigmaX: 18 * progress,
-            sigmaY: 18 * progress,
-          ),
-          child: Container(
-            key: const ValueKey('conscia-app-bar-capsule'),
-            height: 52,
-            padding: const EdgeInsets.symmetric(horizontal: 8),
-            decoration: BoxDecoration(
-              color: Color.lerp(
-                Colors.transparent,
-                backgroundColor ?? colors.paper.withValues(alpha: 0.64),
-                progress,
-              ),
-              borderRadius: radius,
-              border: Border.all(
+      titleSpacing: 0,
+      title: Padding(
+        padding: EdgeInsets.symmetric(horizontal: capsuleInset),
+        child: ClipRRect(
+          borderRadius: radius,
+          child: BackdropFilter(
+            filter: ui.ImageFilter.blur(
+              sigmaX: 18 * progress,
+              sigmaY: 18 * progress,
+            ),
+            child: Container(
+              key: const ValueKey('conscia-app-bar-capsule'),
+              height: 52,
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              decoration: BoxDecoration(
                 color: Color.lerp(
                   Colors.transparent,
-                  colors.border.withValues(alpha: 0.84),
+                  backgroundColor ?? colors.paper.withValues(alpha: 0.64),
                   progress,
-                )!,
-              ),
-              boxShadow: progress > 0.02
-                  ? [
-                      BoxShadow(
-                        color: colors.ink.withValues(alpha: 0.05 * progress),
-                        blurRadius: 18,
-                        offset: const Offset(0, 8),
-                      ),
-                    ]
-                  : null,
-            ),
-            child: Row(
-              children: [
-                SizedBox(
-                  width: 40,
-                  height: 40,
-                  child: leadingWidget ?? const SizedBox.shrink(),
                 ),
-                Expanded(
-                  child: Align(
-                    alignment: (centerTitle ?? true)
-                        ? Alignment.center
-                        : Alignment.centerLeft,
-                    child: title == null
-                        ? const SizedBox.shrink()
-                        : _HeaderTitle(title: title!),
-                  ),
+                borderRadius: radius,
+                border: Border.all(
+                  color: Color.lerp(
+                    Colors.transparent,
+                    colors.border.withValues(alpha: 0.84),
+                    progress,
+                  )!,
                 ),
-                SizedBox(
-                  width: _actionsSlotWidth(actions),
-                  height: 40,
-                  child: actions == null || actions!.isEmpty
-                      ? const SizedBox.shrink()
-                      : Row(
-                          mainAxisAlignment: MainAxisAlignment.end,
-                          mainAxisSize: MainAxisSize.min,
-                          children: actions!,
+                boxShadow: progress > 0.02
+                    ? [
+                        BoxShadow(
+                          color: colors.ink.withValues(alpha: 0.05 * progress),
+                          blurRadius: 18,
+                          offset: const Offset(0, 8),
                         ),
-                ),
-              ],
+                      ]
+                    : null,
+              ),
+              child: Row(
+                children: [
+                  SizedBox(
+                    width: sideSlotWidth,
+                    height: 40,
+                    child: leadingWidget ?? const SizedBox.shrink(),
+                  ),
+                  Expanded(
+                    child: Align(
+                      alignment: (centerTitle ?? true)
+                          ? Alignment.center
+                          : Alignment.centerLeft,
+                      child: title == null
+                          ? const SizedBox.shrink()
+                          : _HeaderTitle(title: title!),
+                    ),
+                  ),
+                  SizedBox(
+                    width: sideSlotWidth,
+                    height: 40,
+                    child: actions == null || actions!.isEmpty
+                        ? const SizedBox.shrink()
+                        : Row(
+                            mainAxisAlignment: MainAxisAlignment.end,
+                            mainAxisSize: MainAxisSize.min,
+                            children: actions!,
+                          ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
       ),
-      actions: const [SizedBox(width: 6)],
+      actions: null,
       bottom: showBottomBorder
           ? PreferredSize(
               preferredSize: const Size.fromHeight(1),
@@ -174,10 +179,10 @@ class ConsciaAppBar extends StatelessWidget implements PreferredSizeWidget {
     );
   }
 
-  double _actionsSlotWidth(List<Widget>? actions) {
+  double _sideSlotWidth(List<Widget>? actions) {
     final count = actions?.length ?? 0;
     if (count == 0) return 40;
-    return (count * 96).clamp(96, 220).toDouble();
+    return (count * 48).clamp(48, 160).toDouble();
   }
 }
 

@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 
 import '../../core/constants/app_icons.dart';
 import '../../core/constants/category_icons.dart';
+import '../../core/theme/app_colors.dart';
 import '../../core/errors/app_error.dart';
 import '../../core/routing/app_router.dart';
 import '../../core/utils/localized_number_input.dart';
@@ -287,9 +288,10 @@ class _SuggestedBudgetsScreenState
         automaticallyImplyLeading: false,
         title: const Text('Suggested Budgets'),
         actions: [
-          TextButton(
+          IconButton(
+            tooltip: 'Skip',
             onPressed: _saving ? null : _skip,
-            child: const Text('Skip'),
+            icon: Icon(AppIcons.chevronRight, color: Theme.of(context).appColors.deepNavy),
           ),
         ],
       ),

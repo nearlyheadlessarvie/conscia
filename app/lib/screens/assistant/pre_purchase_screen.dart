@@ -33,7 +33,7 @@ import '../../widgets/thinking_cloud.dart';
 import '../../widgets/location_assistance_prompt_sheet.dart';
 import '../../widgets/premium_upgrade_dialog.dart';
 import '../../widgets/screen_section.dart';
-import '../../widgets/smart_suggestions_card.dart';
+import '../../widgets/smart_merchant_suggestion_strip.dart';
 import '../transactions/widgets/transaction_style_category_selector.dart';
 import '../transactions/widgets/voice_input_button.dart';
 import 'widgets/budget_context_card.dart';
@@ -63,7 +63,10 @@ class _PrePurchaseScreenState extends ConsumerState<PrePurchaseScreen> {
 
   // Form
   final _descriptionController = TextEditingController();
+  final _descriptionFocusNode = FocusNode();
   final _amountController = TextEditingController();
+  final _amountFocusNode = FocusNode();
+  final _categorySectionKey = GlobalKey();
   String _currencyCode = 'USD';
   bool _currencyManuallyChanged = false;
   String? _selectedCategory;
@@ -120,12 +123,34 @@ class _PrePurchaseScreenState extends ConsumerState<PrePurchaseScreen> {
 
   @override
   void dispose() {
+    _descriptionFocusNode.dispose();
+    _amountFocusNode.dispose();
     _inputScrollController
       ..removeListener(_handleInputScroll)
       ..dispose();
     _descriptionController.dispose();
     _amountController.dispose();
     super.dispose();
+  }
+
+  void _focusAmount() {
+    _amountFocusNode.requestFocus();
+  }
+
+  void _scrollCategoryIntoView() {
+    _amountFocusNode.unfocus();
+    final categoryContext = _categorySectionKey.currentContext;
+    final targetBox = categoryContext?.findRenderObject() as RenderBox?;
+    if (targetBox == null || !_inputScrollController.hasClients) return;
+
+    final topInset = MediaQuery.paddingOf(context).top;
+    final desiredTop = topInset + 104;
+    final delta = targetBox.localToGlobal(Offset.zero).dy - desiredTop;
+    final targetOffset = (_inputScrollController.offset + delta).clamp(
+      0.0,
+      _inputScrollController.position.maxScrollExtent,
+    );
+    _inputScrollController.jumpTo(targetOffset);
   }
 
   bool get _formValid {
@@ -367,8 +392,7 @@ class _PrePurchaseScreenState extends ConsumerState<PrePurchaseScreen> {
     final locationAssistance = ref.watch(locationAssistanceProvider);
     final suggestions = ref.watch(locationAssistanceSuggestionsProvider);
     final familySpace = ref.watch(familySpaceProvider).valueOrNull;
-    final hasSuggestions = suggestions.nearbyMerchants.isNotEmpty ||
-        suggestions.likelyCategories.isNotEmpty;
+    final hasSuggestions = suggestions.nearbyMerchants.isNotEmpty;
 
     if (familySpace == null && _selectedContextScope != 'personal') {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -401,7 +425,9 @@ class _PrePurchaseScreenState extends ConsumerState<PrePurchaseScreen> {
                     key: const PageStorageKey('assistant-shell-scroll'),
                     controller: _inputScrollController,
                     physics: const AlwaysScrollableScrollPhysics(),
-                    padding: const EdgeInsets.only(bottom: 24),
+                    padding: const EdgeInsets.only(
+                      bottom: 24 + _kDockNavOffset + 96,
+                    ),
                     child: Column(
                       children: [
                         const _AssistantHeroBleed(),
@@ -420,27 +446,65 @@ class _PrePurchaseScreenState extends ConsumerState<PrePurchaseScreen> {
                                   crossAxisAlignment:
                                       CrossAxisAlignment.stretch,
                                   children: [
-                                    FloatingLabelTextField(
-                                      controller: _descriptionController,
-                                      label: 'What are you thinking of buying?',
-                                      textInputAction: TextInputAction.next,
-                                      textCapitalization:
-                                          TextCapitalization.sentences,
-                                      trailing: VoiceInputButton(
-                                        onTranscriptReady:
-                                            _applyVoiceTranscript,
+                                    SmartMerchantSuggestionStrip(
+                                      focusNode: _descriptionFocusNode,
+                                      suggestions: suggestions,
+                                      enabled: locationAssistance.isEnabled &&
+                                          hasSuggestions,
+                                      onMerchantSelected: (merchant) {
+                                        setState(() {
+                                          _descriptionController.text =
+                                              merchant;
+                                          final category =
+                                              suggestions.categoryForMerchant(
+                                            merchant,
+                                          );
+                                          if (category != null) {
+                                            _selectedCategory = category;
+                                          }
+                                        });
+                                        _focusAmount();
+                                        final category =
+                                            suggestions.categoryForMerchant(
+                                          merchant,
+                                        );
+                                        if (category != null) {
+                                          ref
+                                              .read(recentCategoryProvider
+                                                  .notifier)
+                                              .record(category);
+                                        }
+                                      },
+                                      child: FloatingLabelTextField(
+                                        controller: _descriptionController,
+                                        focusNode: _descriptionFocusNode,
+                                        label:
+                                            'What are you thinking of buying?',
+                                        textInputAction: TextInputAction.next,
+                                        autofocus: true,
+                                        onSubmitted: (_) => _focusAmount(),
+                                        textCapitalization:
+                                            TextCapitalization.sentences,
+                                        trailing: VoiceInputButton(
+                                          onTranscriptReady:
+                                              _applyVoiceTranscript,
+                                        ),
+                                        onChanged: (_) => setState(() {}),
                                       ),
-                                      onChanged: (_) => setState(() {}),
                                     ),
                                     const SizedBox(height: 18),
                                     AmountHeroField(
                                       controller: _amountController,
+                                      focusNode: _amountFocusNode,
                                       currencyCode: _currencyCode,
                                       locale: ref
                                           .watch(userPreferencesProvider)
                                           .locale,
                                       isExpense: true,
                                       isPremium: isPremium,
+                                      textInputAction: TextInputAction.next,
+                                      onSubmitted: (_) =>
+                                          _scrollCategoryIntoView(),
                                       onChanged: (_) => setState(() {}),
                                       onCurrencyChanged: (code) => setState(() {
                                         _currencyManuallyChanged = true;
@@ -450,22 +514,8 @@ class _PrePurchaseScreenState extends ConsumerState<PrePurchaseScreen> {
                                   ],
                                 ),
                               ),
-                              if (familySpace != null)
-                                ScreenSection(
-                                  title: 'Classify',
-                                  subtitle:
-                                      'Where should this live in your money story?',
-                                  compact: true,
-                                  child: ScopePillSwitch(
-                                    value: _selectedContextScope,
-                                    familyEnabled: true,
-                                    onChanged: (scope) => setState(
-                                      () => _selectedContextScope =
-                                          scope.toLowerCase(),
-                                    ),
-                                  ),
-                                ),
                               ScreenSection(
+                                key: _categorySectionKey,
                                 title: 'Category',
                                 subtitle:
                                     'Where do you think this belongs so we can give you better insights?',
@@ -486,32 +536,21 @@ class _PrePurchaseScreenState extends ConsumerState<PrePurchaseScreen> {
                                   },
                                 ),
                               ),
-                              if (locationAssistance.isEnabled &&
-                                  hasSuggestions) ...[
-                                SmartSuggestionsCard(
-                                  suggestions: suggestions,
+                              if (familySpace != null)
+                                ScreenSection(
+                                  title: 'Classify',
                                   subtitle:
-                                      'Need a nudge? Try a nearby merchant or likely category, then edit anything you want.',
-                                  onMerchantSelected: (merchant) {
-                                    setState(() {
-                                      _descriptionController.text = merchant;
-                                    });
-                                  },
-                                  onCategorySelected: (category) {
-                                    setState(() {
-                                      _selectedCategory = category;
-                                    });
-                                    ref
-                                        .read(recentCategoryProvider.notifier)
-                                        .record(category);
-                                  },
-                                  categoryAvatarBuilder: (category) =>
-                                      CategoryIcons.badge(
-                                    category,
-                                    size: 14,
+                                      'Where should this live in your money story?',
+                                  compact: true,
+                                  child: ScopePillSwitch(
+                                    value: _selectedContextScope,
+                                    familyEnabled: true,
+                                    onChanged: (scope) => setState(
+                                      () => _selectedContextScope =
+                                          scope.toLowerCase(),
+                                    ),
                                   ),
                                 ),
-                              ],
                               const SizedBox(height: 20),
                             ],
                           ),

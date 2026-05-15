@@ -1,5 +1,6 @@
 import 'package:conscia_app/providers/auth_provider.dart';
 import 'package:conscia_app/providers/transaction_providers.dart';
+import 'package:conscia_app/providers/user_provider.dart';
 import 'package:conscia_app/screens/transactions/transaction_list_screen.dart';
 import 'package:conscia_app/services/auth_service.dart';
 import 'package:conscia_app/services/transaction_service.dart';
@@ -95,11 +96,16 @@ Future<void> _pumpTransactionList(
   WidgetTester tester, {
   required List<Transaction> transactions,
   String scope = 'personal',
+  ({
+    String currency,
+    String locale
+  }) preferences = (currency: 'PHP', locale: 'en_US'),
 }) async {
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
         _authenticatedOverride,
+        userPreferencesProvider.overrideWithValue(preferences),
         transactionScopeFilterProvider.overrideWith((ref) => scope),
         transactionServiceProvider.overrideWithValue(
           _StaticTransactionService(transactions),
@@ -275,6 +281,30 @@ void main() {
     expect(find.byKey(const ValueKey('selection-chip-button-All')),
         findsOneWidget);
     expect(find.byType(GroupedListCard), findsNothing);
+  });
+
+  testWidgets('money trail aggregates transactions in the user currency', (
+    tester,
+  ) async {
+    await _pumpTransactionList(
+      tester,
+      preferences: (currency: 'PHP', locale: 'de_DE'),
+      transactions: [
+        Transaction.fromJson({
+          'id': 'tx-usd',
+          'amount': 100,
+          'currencyCode': 'USD',
+          'category': 'Dining',
+          'counterparty': 'Cafe',
+          'type': 'Expense',
+          'date': DateTime(2026, 5, 8).toIso8601String(),
+          'exchangeRateToBase': 56,
+        }),
+      ],
+    );
+
+    expect(find.text('₱5.600,00'), findsOneWidget);
+    expect(find.text('-\$100,00'), findsOneWidget);
   });
 
   testWidgets('selected transaction filters stay compact without overflow', (

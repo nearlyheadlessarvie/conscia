@@ -10,6 +10,8 @@ class Budget {
   final String currencyCode;
   final double percentage;
   final bool isOverBudget;
+  final String scope;
+  final String? familySpaceId;
 
   const Budget({
     required this.id,
@@ -19,7 +21,11 @@ class Budget {
     required this.currencyCode,
     required this.percentage,
     required this.isOverBudget,
+    this.scope = 'personal',
+    this.familySpaceId,
   });
+
+  bool get isFamily => scope == 'family';
 
   factory Budget.fromJson(Map<String, dynamic> json) {
     final limit = (json['monthlyLimit'] as num).toDouble();
@@ -38,8 +44,13 @@ class Budget {
       currencyCode: json['currencyCode'] as String? ?? 'USD',
       percentage: normalizedPercentage,
       isOverBudget: json['isOverBudget'] as bool? ?? spend > limit,
+      scope: _parseScope(json['scope']),
+      familySpaceId: json['familySpaceId'] as String?,
     );
   }
+
+  static String _parseScope(Object? value) =>
+      value?.toString().toLowerCase() == 'family' ? 'family' : 'personal';
 
   Budget copyWith({
     String? id,
@@ -49,6 +60,8 @@ class Budget {
     String? currencyCode,
     double? percentage,
     bool? isOverBudget,
+    String? scope,
+    String? familySpaceId,
   }) {
     final nextLimit = monthlyLimit ?? this.monthlyLimit;
     final nextSpent = spent ?? this.spent;
@@ -60,6 +73,8 @@ class Budget {
       currencyCode: currencyCode ?? this.currencyCode,
       percentage: percentage ?? (nextLimit > 0 ? nextSpent / nextLimit : 0),
       isOverBudget: isOverBudget ?? nextSpent > nextLimit,
+      scope: scope ?? this.scope,
+      familySpaceId: familySpaceId ?? this.familySpaceId,
     );
   }
 }

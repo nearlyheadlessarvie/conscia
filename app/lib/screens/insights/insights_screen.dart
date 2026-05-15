@@ -398,7 +398,6 @@ class _InsightEditorialHighlight extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const SizedBox(height: 16),
           Row(children: [
             Text(
               'REGRET SIGNAL',
@@ -445,20 +444,17 @@ class _InsightEditorialHighlight extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 18),
-          Row(
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
             children: [
-              Expanded(
-                child: _InsightHeroMetricPill(
-                  icon: Icons.category_rounded,
-                  label: summary.regrettedCategory,
-                ),
+              _InsightHeroMetricPill(
+                icon: Icons.category_rounded,
+                label: summary.regrettedCategory,
               ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: _InsightHeroMetricPill(
-                  icon: Icons.auto_graph_rounded,
-                  label: '${summary.patternCount} patterns',
-                ),
+              _InsightHeroMetricPill(
+                icon: Icons.auto_graph_rounded,
+                label: '${summary.patternCount} patterns',
               ),
             ],
           ),
@@ -470,6 +466,8 @@ class _InsightEditorialHighlight extends StatelessWidget {
                   key: const ValueKey('insights-categories-link'),
                   icon: Icons.category_rounded,
                   label: 'Categories',
+                  subtitle: 'Regret by category',
+                  minHeight: 54,
                   onPressed: () => context.push('/insights/categories'),
                 ),
               ),
@@ -479,6 +477,8 @@ class _InsightEditorialHighlight extends StatelessWidget {
                   key: const ValueKey('insights-merchants-link'),
                   icon: Icons.storefront_rounded,
                   label: 'Merchants',
+                  subtitle: 'Places to watch',
+                  minHeight: 54,
                   onPressed: () => context.push('/insights/merchants'),
                 ),
               ),
@@ -509,7 +509,7 @@ class _InsightHeroMetricPill extends StatelessWidget {
         borderRadius: BorderRadius.circular(999),
       ),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisSize: MainAxisSize.min,
         children: [
           Icon(icon, size: 15, color: colors.deepNavy),
           const SizedBox(width: 6),

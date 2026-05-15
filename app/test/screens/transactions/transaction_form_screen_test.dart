@@ -18,6 +18,7 @@ import 'package:conscia_app/services/recurring_service.dart';
 import 'package:conscia_app/services/subscription_service.dart';
 import 'package:conscia_app/services/transaction_service.dart';
 import 'package:conscia_app/services/user_service.dart';
+import 'package:conscia_app/widgets/amount_hero_field.dart';
 import 'package:conscia_app/widgets/floating_label_text_field.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
@@ -33,6 +34,7 @@ class _FakeLocationAssistanceService extends LocationAssistanceService {
       nearbyMerchants: ['Blue Bottle Coffee'],
       likelyCategories: ['Coffee'],
     ),
+    this.merchantCategories = const {},
   });
 
   final bool permissionGranted;
@@ -40,6 +42,7 @@ class _FakeLocationAssistanceService extends LocationAssistanceService {
     List<String> nearbyMerchants,
     List<String> likelyCategories
   }) suggestions;
+  final Map<String, String> merchantCategories;
 
   @override
   Future<bool> requestPermission() async => permissionGranted;
@@ -47,6 +50,9 @@ class _FakeLocationAssistanceService extends LocationAssistanceService {
   @override
   ({List<String> nearbyMerchants, List<String> likelyCategories})
       getTransactionSuggestions() => suggestions;
+
+  @override
+  String? categoryForMerchant(String merchant) => merchantCategories[merchant];
 }
 
 class _FakeAuthService extends AuthService {
@@ -161,6 +167,7 @@ class _FakeUserService extends UserService {
     String? preferredCurrency,
     String? locale,
     String? displayName,
+    String? profilePictureKey,
     String? photoUrl,
     String? spendingPersonality,
     String? incomeRange,
@@ -271,6 +278,13 @@ Finder _floatingLabelInput(String label) {
     of: find.byWidgetPredicate(
       (widget) => widget is FloatingLabelTextField && widget.label == label,
     ),
+    matching: find.byType(TextField),
+  );
+}
+
+Finder _amountInput() {
+  return find.descendant(
+    of: find.byType(AmountHeroField),
     matching: find.byType(TextField),
   );
 }
@@ -429,6 +443,96 @@ void main() {
 
     expect(find.text('Source (optional)'), findsOneWidget);
     expect(find.text('Merchant (optional)'), findsNothing);
+  });
+
+  testWidgets('transaction form asks details before amount and category', (
+    tester,
+  ) async {
+    await _pumpTransactionForm(tester);
+    await tester.pumpAndSettle();
+
+    expect(find.text('AMOUNT'), findsNothing);
+    expect(find.text('TRANSACTION DETAILS'), findsOneWidget);
+
+    final detailsTop = tester.getTopLeft(find.text('TRANSACTION DETAILS')).dy;
+    final merchantTop =
+        tester.getTopLeft(_floatingLabelInput('Merchant (optional)')).dy;
+    final amountTop = tester.getTopLeft(find.byType(AmountHeroField)).dy;
+    final categoryTop = tester.getTopLeft(find.text('CATEGORY')).dy;
+
+    expect(detailsTop, lessThan(merchantTop));
+    expect(merchantTop, lessThan(amountTop));
+    expect(amountTop, lessThan(categoryTop));
+  });
+
+  testWidgets('transaction form advances from merchant to amount', (
+    tester,
+  ) async {
+    await _pumpTransactionForm(tester);
+    await tester.pumpAndSettle();
+
+    final merchantField = tester.widget<TextField>(
+      _floatingLabelInput('Merchant (optional)'),
+    );
+    expect(merchantField.focusNode?.hasFocus, isTrue);
+
+    merchantField.onSubmitted?.call('Corner Bakery');
+    await tester.pumpAndSettle();
+
+    final amountField = tester.widget<TextField>(_amountInput());
+    expect(amountField.focusNode?.hasFocus, isTrue);
+  });
+
+  testWidgets('transaction amount submit brings category into view', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(390, 420));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await _pumpTransactionForm(tester);
+    await tester.pumpAndSettle();
+
+    final categoryTitle = find.text('CATEGORY', skipOffstage: false);
+    final before = tester.getTopLeft(categoryTitle).dy;
+
+    tester.widget<TextField>(_amountInput()).onSubmitted?.call('12.50');
+    await tester.pumpAndSettle();
+
+    final after = tester.getTopLeft(categoryTitle).dy;
+    expect(after, lessThan(before));
+  });
+
+  testWidgets('income transactions do not show merchant autosuggestions', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({
+      'location_suggestions_enabled': true,
+      'location_suggestions_prompted': true,
+    });
+    final prefs = await SharedPreferences.getInstance();
+
+    await _pumpTransactionForm(
+      tester,
+      prefs: prefs,
+      locationSuggestionsEnabled: true,
+      locationService: _FakeLocationAssistanceService(
+        permissionGranted: true,
+        suggestions: const (
+          nearbyMerchants: ['Corner Bakery', 'Local Grocer'],
+          likelyCategories: ['Groceries', 'Dining'],
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Income'));
+    await tester.pumpAndSettle();
+    await tester.tap(_floatingLabelInput('Source (optional)'));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey('smart-merchant-suggestion-strip')),
+        findsNothing);
+    expect(find.text('Corner Bakery'), findsNothing);
   });
 
   testWidgets('transaction form does not show a voice mic button', (
@@ -708,7 +812,8 @@ void main() {
     expect(find.text('Turn on smart location help?'), findsNothing);
   });
 
-  testWidgets('transaction form shows merchant suggestion UI when enabled', (
+  testWidgets('transaction form shows quiet merchant suggestions when enabled',
+      (
     tester,
   ) async {
     SharedPreferences.setMockInitialValues({
@@ -732,16 +837,18 @@ void main() {
 
     await tester.pumpAndSettle();
 
-    expect(find.text('Smart suggestions nearby'), findsOneWidget);
-    expect(find.text('Nearby merchants'), findsOneWidget);
-    expect(find.text('Likely categories'), findsOneWidget);
+    expect(find.text('Smart suggestions nearby'), findsNothing);
+    expect(find.byKey(const ValueKey('smart-merchant-suggestion-strip')),
+        findsOneWidget);
+    expect(find.text('Likely categories'), findsNothing);
     expect(find.text('Corner Bakery'), findsOneWidget);
     expect(find.text('Local Grocer'), findsOneWidget);
-    expect(find.text('Groceries'), findsWidgets);
     expect(find.text('Blue Bottle Coffee'), findsNothing);
   });
 
-  testWidgets('tapping suggestion chips fills the form fields', (tester) async {
+  testWidgets('merchant suggestions stay open while horizontally scrolling', (
+    tester,
+  ) async {
     SharedPreferences.setMockInitialValues({
       'location_suggestions_enabled': true,
       'location_suggestions_prompted': true,
@@ -755,9 +862,53 @@ void main() {
       locationService: _FakeLocationAssistanceService(
         permissionGranted: true,
         suggestions: const (
+          nearbyMerchants: [
+            'Corner Bakery',
+            'Local Grocer',
+            'Starbucks',
+            'Manam',
+            'Grab',
+          ],
+          likelyCategories: ['Groceries', 'Dining'],
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    final strip = find.byKey(
+      const ValueKey('smart-merchant-suggestion-strip'),
+    );
+    expect(strip, findsOneWidget);
+
+    await tester.drag(strip, const Offset(-120, 0));
+    await tester.pumpAndSettle();
+
+    expect(strip, findsOneWidget);
+    expect(find.text('Grab'), findsOneWidget);
+  });
+
+  testWidgets('tapping a merchant suggestion fills merchant and category',
+      (tester) async {
+    SharedPreferences.setMockInitialValues({
+      'location_suggestions_enabled': true,
+      'location_suggestions_prompted': true,
+    });
+    final prefs = await SharedPreferences.getInstance();
+    final transactionService = _RecordingTransactionService();
+
+    await _pumpTransactionForm(
+      tester,
+      prefs: prefs,
+      transactionService: transactionService,
+      locationSuggestionsEnabled: true,
+      locationService: _FakeLocationAssistanceService(
+        permissionGranted: true,
+        suggestions: const (
           nearbyMerchants: ['Corner Bakery'],
           likelyCategories: ['Groceries'],
         ),
+        merchantCategories: const {'Corner Bakery': 'Groceries'},
       ),
     );
 
@@ -775,12 +926,18 @@ void main() {
       ),
     );
     expect(merchantField.controller.text, 'Corner Bakery');
+    expect(find.text('Groceries'), findsWidgets);
+    expect(
+        tester.widget<TextField>(_amountInput()).focusNode?.hasFocus, isTrue);
 
-    await tester.ensureVisible(find.widgetWithText(ActionChip, 'Groceries'));
-    await tester.tap(find.widgetWithText(ActionChip, 'Groceries'));
+    await tester.enterText(_amountInput(), '12.50');
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Save Transaction'));
+    await tester.tap(find.text('Save Transaction'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Groceries'), findsWidgets);
+    expect(transactionService.lastCreated?.counterparty, 'Corner Bakery');
+    expect(transactionService.lastCreated?.category, 'Groceries');
   });
 
   testWidgets(
@@ -808,7 +965,8 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Smart suggestions nearby'), findsNothing);
-    expect(find.text('Nearby merchants'), findsNothing);
+    expect(find.byKey(const ValueKey('smart-merchant-suggestion-strip')),
+        findsNothing);
     expect(find.text('Likely categories'), findsNothing);
   });
 
@@ -836,8 +994,9 @@ void main() {
 
     await tester.pumpAndSettle();
 
-    expect(find.text('Smart suggestions nearby'), findsOneWidget);
-    expect(find.text('Nearby merchants'), findsOneWidget);
+    expect(find.text('Smart suggestions nearby'), findsNothing);
+    expect(find.byKey(const ValueKey('smart-merchant-suggestion-strip')),
+        findsOneWidget);
     expect(find.text('Corner Bakery'), findsOneWidget);
     expect(find.text('Likely categories'), findsNothing);
   });
@@ -865,7 +1024,7 @@ void main() {
 
     await tester.pumpAndSettle();
 
-    await tester.enterText(find.byType(TextField).first, '12.50');
+    await tester.enterText(_amountInput(), '12.50');
     await tester.tap(find.text('Dining'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Save Transaction'));
@@ -902,7 +1061,7 @@ void main() {
 
     await tester.pumpAndSettle();
 
-    await tester.enterText(find.byType(TextField).first, '1.234,56');
+    await tester.enterText(_amountInput(), '1.234,56');
     await tester.tap(find.text('Dining'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Save Transaction'));
@@ -956,9 +1115,10 @@ void main() {
 
     await tester.pumpAndSettle();
 
+    await tester.ensureVisible(find.text('Family'));
     await tester.tap(find.text('Family'));
     await tester.pumpAndSettle();
-    await tester.enterText(find.byType(TextField).first, '1500');
+    await tester.enterText(_amountInput(), '1500');
     await tester.tap(find.text('Groceries'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Save Transaction'));
@@ -1034,7 +1194,7 @@ void main() {
 
     await tester.pumpAndSettle();
 
-    await tester.enterText(find.byType(TextField).first, '12.50');
+    await tester.enterText(_amountInput(), '12.50');
     await tester.tap(find.text('Groceries'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Save Transaction'));
@@ -1130,7 +1290,7 @@ void main() {
     await tester.tap(find.text('Open edit'));
     await tester.pumpAndSettle();
 
-    await tester.enterText(find.byType(TextField).first, '18.25');
+    await tester.enterText(_amountInput(), '18.25');
     await tester.enterText(
         _floatingLabelInput('Merchant (optional)'), 'Morning Brew');
     await tester.tap(find.text('Update Transaction'));
@@ -1208,7 +1368,7 @@ void main() {
 
     await tester.pumpAndSettle();
 
-    await tester.enterText(find.byType(TextField).first, '18.25');
+    await tester.enterText(_amountInput(), '18.25');
     await tester.tap(find.text('Update Transaction'));
     await tester.pumpAndSettle();
 

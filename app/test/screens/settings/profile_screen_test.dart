@@ -1,6 +1,7 @@
 import 'package:conscia_app/providers/user_provider.dart';
 import 'package:conscia_app/screens/settings/profile_screen.dart';
 import 'package:conscia_app/services/user_service.dart';
+import 'package:conscia_app/widgets/hero_shortcut_card.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -16,6 +17,7 @@ class _RecordingUserService extends UserService {
     String? preferredCurrency,
     String? locale,
     String? displayName,
+    String? profilePictureKey,
     String? photoUrl,
     String? spendingPersonality,
     String? incomeRange,
@@ -29,6 +31,7 @@ class _RecordingUserService extends UserService {
       'preferredCurrency': preferredCurrency,
       'locale': locale,
       'displayName': displayName,
+      'profilePictureKey': profilePictureKey,
       'photoUrl': photoUrl,
       'spendingPersonality': spendingPersonality,
       'incomeRange': incomeRange,
@@ -45,6 +48,7 @@ class _RecordingUserService extends UserService {
       currencyCode: 'USD',
       locale: 'en_US',
       displayName: displayName,
+      profilePictureKey: profilePictureKey,
       photoUrl: photoUrl,
       createdAt: DateTime(2026),
       hasCompletedOnboarding: true,
@@ -59,7 +63,7 @@ class _RecordingUserService extends UserService {
 }
 
 void main() {
-  testWidgets('profile saves display name without legacy profile fields', (
+  testWidgets('profile saves display name and editable onboarding facts', (
     tester,
   ) async {
     final userService = _RecordingUserService();
@@ -95,15 +99,44 @@ void main() {
       find.byType(TextField).first,
       'Arvie Updated',
     );
+    await tester.drag(
+      find.byKey(const PageStorageKey('profile-shell-scroll')),
+      const Offset(0, -420),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Spending style'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Saver'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Monthly income'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Prefer not to say'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Occupation'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Student'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Household'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Shared'));
+    await tester.pumpAndSettle();
+    await tester.drag(
+      find.byKey(const PageStorageKey('profile-shell-scroll')),
+      const Offset(0, -520),
+    );
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Save'));
     await tester.pumpAndSettle();
 
     expect(userService.lastUpdate?['displayName'], 'Arvie Updated');
-    expect(userService.lastUpdate?['spendingPersonality'], isNull);
-    expect(userService.lastUpdate?['incomeRange'], isNull);
+    expect(userService.lastUpdate?['spendingPersonality'], 'saver');
+    expect(userService.lastUpdate?['incomeRange'], 'prefer_not_to_say');
+    expect(userService.lastUpdate?['occupationType'], 'student');
+    expect(userService.lastUpdate?['householdSize'], 'shared');
   });
 
-  testWidgets('profile shows photo affordance and read-only account fields', (
+  testWidgets('profile uses bleeding hero and removes preferences-only fields',
+      (
     tester,
   ) async {
     final userService = _RecordingUserService();
@@ -136,13 +169,37 @@ void main() {
 
     await tester.pumpAndSettle();
 
-    expect(find.text('Change photo'), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('profile-editorial-hero')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('conscia-app-bar-capsule')),
+      findsOneWidget,
+    );
+    expect(find.text('PROFILE HUB'), findsOneWidget);
+    expect(find.text('Keep your money profile personal'), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('profile-hero-display-name-pill')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('profile-hero-email-pill')),
+      findsOneWidget,
+    );
+    expect(find.text('PERSONAL DETAILS'), findsOneWidget);
+    expect(find.text('MONEY PROFILE'), findsOneWidget);
+    expect(find.byKey(const ValueKey('profile-photo-action')), findsOneWidget);
+    expect(find.text('profile@example.com'), findsOneWidget);
     expect(find.text('Display name'), findsOneWidget);
-    expect(find.text('Email'), findsOneWidget);
-    expect(find.text('AI Personality Intensity'), findsOneWidget);
+    expect(find.byType(HeroShortcutCard), findsNothing);
+    expect(find.text('Currency'), findsNothing);
+    expect(find.text('AI Personality Intensity'), findsNothing);
   });
 
-  testWidgets('profile can save AI personality intensity', (tester) async {
+  testWidgets('profile photo affordance is available in personal details', (
+    tester,
+  ) async {
     final userService = _RecordingUserService();
 
     await tester.pumpWidget(
@@ -173,11 +230,7 @@ void main() {
 
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Intense'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Save'));
-    await tester.pumpAndSettle();
-
-    expect(userService.lastUpdate?['aiPersonalityIntensity'], 'intense');
+    expect(find.byKey(const ValueKey('profile-photo-action')), findsOneWidget);
+    expect(userService.lastUpdate, isNull);
   });
 }

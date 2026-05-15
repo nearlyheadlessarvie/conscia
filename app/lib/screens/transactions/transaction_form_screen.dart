@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/constants/app_icons.dart';
-import '../../core/constants/category_icons.dart';
 import '../../core/errors/app_error.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/utils/localized_date_format.dart';
@@ -25,13 +24,12 @@ import '../../widgets/location_assistance_prompt_sheet.dart';
 import '../../widgets/recurring_schedule_section.dart';
 import '../../widgets/scope_pill_switch.dart';
 import '../../widgets/skeleton_loader.dart';
-import '../../widgets/smart_suggestions_card.dart';
+import '../../widgets/smart_merchant_suggestion_strip.dart';
 import '../../widgets/amount_hero_field.dart';
 import '../../widgets/floating_label_text_field.dart';
 import '../../widgets/screen_section.dart';
 import 'widgets/transaction_style_category_selector.dart';
 import '../../widgets/segmented_switch.dart';
-import '../../widgets/form_label.dart';
 
 class TransactionFormScreen extends ConsumerStatefulWidget {
   final String? transactionId;
@@ -64,6 +62,9 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
   bool _currencyManuallyChanged = false;
   String? _selectedCategory;
   final _counterpartyController = TextEditingController();
+  final _counterpartyFocusNode = FocusNode();
+  final _amountFocusNode = FocusNode();
+  final _categorySectionKey = GlobalKey();
   DateTime _selectedDate = DateTime.now();
   bool _submitting = false;
   bool _prefilled = false;
@@ -156,10 +157,29 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
 
   @override
   void dispose() {
+    _counterpartyFocusNode.dispose();
+    _amountFocusNode.dispose();
     _amountController.dispose();
     _exchangeRateController.dispose();
     _counterpartyController.dispose();
     super.dispose();
+  }
+
+  void _focusAmount() {
+    _amountFocusNode.requestFocus();
+  }
+
+  void _scrollCategoryIntoView() {
+    _amountFocusNode.unfocus();
+    final categoryContext = _categorySectionKey.currentContext;
+    if (categoryContext == null) return;
+
+    Scrollable.ensureVisible(
+      categoryContext,
+      duration: const Duration(milliseconds: 240),
+      curve: Curves.easeOutCubic,
+      alignment: 0.08,
+    );
   }
 
   bool get _isValid {
@@ -331,8 +351,7 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
     final familySpace = ref.watch(familySpaceProvider).valueOrNull;
     final locationAssistance = ref.watch(locationAssistanceProvider);
     final suggestions = ref.watch(locationAssistanceSuggestionsProvider);
-    final hasSuggestions = suggestions.nearbyMerchants.isNotEmpty ||
-        suggestions.likelyCategories.isNotEmpty;
+    final hasSuggestions = suggestions.nearbyMerchants.isNotEmpty;
     final categorySubtitle = _isExpense
         ? 'Choose where this transaction belongs so budgets and insights stay accurate.'
         : 'Choose where this money came from so Conscia can understand your income rhythm separately from spending.';
@@ -392,15 +411,66 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
                     _selectedCategory = null;
                   }),
                 ),
-                const SizedBox(height: 18),
-                const FormLabel(label: 'AMOUNT'),
-                const SizedBox(height: 8),
+              ],
+            ),
+          ),
+          ScreenSection(
+            title: 'Transaction Details',
+            subtitle:
+                'Add who this involves first, then the amount that changed.',
+            compact: true,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                SmartMerchantSuggestionStrip(
+                  focusNode: _counterpartyFocusNode,
+                  suggestions: suggestions,
+                  enabled: _isExpense &&
+                      !_isEditing &&
+                      locationAssistance.isEnabled &&
+                      hasSuggestions,
+                  onMerchantSelected: (counterpartySuggestion) {
+                    setState(() {
+                      _counterpartyController.text = counterpartySuggestion;
+                      final category = suggestions.categoryForMerchant(
+                        counterpartySuggestion,
+                      );
+                      if (category != null) {
+                        _selectedCategory = category;
+                      }
+                    });
+                    _focusAmount();
+                    final category = suggestions.categoryForMerchant(
+                      counterpartySuggestion,
+                    );
+                    if (category != null) {
+                      ref
+                          .read(recentCategoryProvider.notifier)
+                          .record(category);
+                    }
+                  },
+                  child: FloatingLabelTextField(
+                    controller: _counterpartyController,
+                    focusNode: _counterpartyFocusNode,
+                    onChanged: (_) => setState(() {}),
+                    onSubmitted: (_) => _focusAmount(),
+                    textInputAction: TextInputAction.next,
+                    autofocus: !_isEditing,
+                    label: _isExpense
+                        ? 'Merchant (optional)'
+                        : 'Source (optional)',
+                  ),
+                ),
+                const SizedBox(height: 12),
                 AmountHeroField(
                   controller: _amountController,
+                  focusNode: _amountFocusNode,
                   currencyCode: _currencyCode,
                   locale: userPrefs.locale,
                   isExpense: _isExpense,
                   isPremium: isPremium,
+                  textInputAction: TextInputAction.next,
+                  onSubmitted: (_) => _scrollCategoryIntoView(),
                   onChanged: (_) => setState(() {}),
                   onCurrencyChanged: (code) => setState(() {
                     _currencyManuallyChanged = true;
@@ -469,19 +539,8 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
               ],
             ),
           ),
-          if (familySpace != null)
-            ScreenSection(
-              title: 'Classify',
-              subtitle: 'Where should this live in your money story?',
-              compact: true,
-              child: ScopePillSwitch(
-                value: _scope,
-                familyEnabled: true,
-                onChanged: (value) =>
-                    setState(() => _scope = value.toLowerCase()),
-              ),
-            ),
           ScreenSection(
+            key: _categorySectionKey,
             title: 'Category',
             subtitle: categorySubtitle,
             compact: true,
@@ -502,65 +561,38 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
               },
             ),
           ),
-          if (!_isEditing &&
-              locationAssistance.isEnabled &&
-              hasSuggestions) ...[
-            SmartSuggestionsCard(
-              suggestions: suggestions,
-              subtitle:
-                  'Suggestions only help you fill things faster. You can still edit everything manually.',
-              onMerchantSelected: (counterpartySuggestion) {
-                setState(() {
-                  _counterpartyController.text = counterpartySuggestion;
-                });
-              },
-              onCategorySelected: (category) {
-                setState(() {
-                  _selectedCategory = category;
-                });
-                ref.read(recentCategoryProvider.notifier).record(category);
-              },
-              categoryAvatarBuilder: (category) => CategoryIcons.badge(
-                category,
-                size: 14,
+          if (familySpace != null)
+            ScreenSection(
+              title: 'Classify',
+              subtitle: 'Where should this live in your money story?',
+              compact: true,
+              child: ScopePillSwitch(
+                value: _scope,
+                familyEnabled: true,
+                onChanged: (value) =>
+                    setState(() => _scope = value.toLowerCase()),
               ),
             ),
-            const SizedBox(height: 18),
-          ],
           ScreenSection(
-            title: 'Details',
-            subtitle:
-                'Add the merchant or source and date when it helps your history make sense.',
+            title: 'Timing',
+            subtitle: 'Choose the date for your money history.',
             compact: true,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                FloatingLabelTextField(
-                  controller: _counterpartyController,
-                  onChanged: (_) => setState(() {}),
-                  textInputAction: TextInputAction.done,
-                  label:
-                      _isExpense ? 'Merchant (optional)' : 'Source (optional)',
+            child: InkWell(
+              onTap: _pickDate,
+              borderRadius: BorderRadius.circular(12),
+              child: InputDecorator(
+                decoration: const InputDecoration(),
+                child: Row(
+                  children: [
+                    Expanded(
+                        child: Text(
+                      dateLabel,
+                      style: textTheme.bodyMedium,
+                    )),
+                    const Icon(Icons.calendar_today_outlined, size: 18),
+                  ],
                 ),
-                const SizedBox(height: 18),
-                InkWell(
-                  onTap: _pickDate,
-                  borderRadius: BorderRadius.circular(12),
-                  child: InputDecorator(
-                    decoration: const InputDecoration(),
-                    child: Row(
-                      children: [
-                        Expanded(
-                            child: Text(
-                          dateLabel,
-                          style: textTheme.bodyMedium,
-                        )),
-                        const Icon(Icons.calendar_today_outlined, size: 18),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
+              ),
             ),
           ),
           if (!_isEditing) ...[

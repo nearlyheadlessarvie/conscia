@@ -15,6 +15,7 @@ import 'package:conscia_app/screens/transactions/transaction_form_screen.dart';
 import 'package:conscia_app/screens/transactions/widgets/voice_input_button.dart';
 import 'package:conscia_app/services/ai_service.dart';
 import 'package:conscia_app/widgets/editorial_sticky_header.dart';
+import 'package:conscia_app/widgets/amount_hero_field.dart';
 import 'package:conscia_app/widgets/floating_label_text_field.dart';
 import 'package:dio/dio.dart';
 import 'package:conscia_app/services/location_assistance_service.dart';
@@ -42,6 +43,13 @@ Finder purchaseDescriptionField() {
   );
 }
 
+Finder purchaseAmountField() {
+  return find.descendant(
+    of: find.byType(AmountHeroField),
+    matching: find.byType(TextField),
+  );
+}
+
 class _FakeLocationAssistanceService extends LocationAssistanceService {
   _FakeLocationAssistanceService({
     required this.permissionGranted,
@@ -49,6 +57,7 @@ class _FakeLocationAssistanceService extends LocationAssistanceService {
       nearbyMerchants: ['Corner Bakery'],
       likelyCategories: ['Groceries'],
     ),
+    this.merchantCategories = const {},
   });
 
   final bool permissionGranted;
@@ -56,6 +65,7 @@ class _FakeLocationAssistanceService extends LocationAssistanceService {
     List<String> nearbyMerchants,
     List<String> likelyCategories
   }) suggestions;
+  final Map<String, String> merchantCategories;
 
   @override
   Future<bool> requestPermission() async => permissionGranted;
@@ -63,6 +73,9 @@ class _FakeLocationAssistanceService extends LocationAssistanceService {
   @override
   ({List<String> nearbyMerchants, List<String> likelyCategories})
       getTransactionSuggestions() => suggestions;
+
+  @override
+  String? categoryForMerchant(String merchant) => merchantCategories[merchant];
 }
 
 class _FakeAIService extends AIService {
@@ -104,6 +117,7 @@ class _FakeUserService extends UserService {
     String? preferredCurrency,
     String? locale,
     String? displayName,
+    String? profilePictureKey,
     String? photoUrl,
     String? spendingPersonality,
     String? incomeRange,
@@ -336,6 +350,62 @@ void main() {
     );
     return (header.decoration! as BoxDecoration).color!;
   }
+
+  testWidgets('pre-purchase asks purchase details before amount and category',
+      (tester) async {
+    await tester.pumpWidget(await buildPrePurchaseApp(tester));
+    await pumpAssistantFrame(tester);
+
+    expect(find.text('AMOUNT'), findsNothing);
+
+    final detailsTop = tester.getTopLeft(find.text('DECISION DETAILS')).dy;
+    final descriptionTop = tester.getTopLeft(purchaseDescriptionField()).dy;
+    final amountTop = tester.getTopLeft(find.byType(AmountHeroField)).dy;
+    final categoryTop =
+        tester.getTopLeft(find.text('CATEGORY', skipOffstage: false)).dy;
+
+    expect(detailsTop, lessThan(descriptionTop));
+    expect(descriptionTop, lessThan(amountTop));
+    expect(amountTop, lessThan(categoryTop));
+  });
+
+  testWidgets('pre-purchase advances from purchase prompt to amount',
+      (tester) async {
+    await tester.pumpWidget(await buildPrePurchaseApp(tester));
+    await pumpAssistantFrame(tester);
+
+    final promptField = tester.widget<TextField>(purchaseDescriptionField());
+    expect(promptField.focusNode?.hasFocus, isTrue);
+
+    promptField.onSubmitted?.call('Coffee');
+    await tester.pumpAndSettle();
+
+    final amountField = tester.widget<TextField>(purchaseAmountField());
+    expect(amountField.focusNode?.hasFocus, isTrue);
+  });
+
+  testWidgets('pre-purchase amount submit brings category into view',
+      (tester) async {
+    await tester.binding.setSurfaceSize(const Size(390, 540));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(await buildPrePurchaseApp(tester));
+    await pumpAssistantFrame(tester);
+
+    final scrollView = find.byKey(
+      const PageStorageKey('assistant-shell-scroll'),
+    );
+    final before =
+        tester.widget<SingleChildScrollView>(scrollView).controller!.offset;
+
+    tester.widget<TextField>(purchaseAmountField()).onSubmitted?.call('12.50');
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 260));
+
+    final after =
+        tester.widget<SingleChildScrollView>(scrollView).controller!.offset;
+    expect(after, greaterThan(before));
+  });
 
   testWidgets(
       'pre-purchase assistant shows category picker entrypoint and orders sheet by recent categories',
@@ -708,7 +778,7 @@ void main() {
     expect(find.text('Turn on smart location help?'), findsNothing);
   });
 
-  testWidgets('pre-purchase can suggest merchant and category when enabled',
+  testWidgets('pre-purchase suggests merchants and infers their category',
       (tester) async {
     SharedPreferences.setMockInitialValues({
       'location_suggestions_enabled': true,
@@ -726,18 +796,19 @@ void main() {
           nearbyMerchants: ['Corner Bakery'],
           likelyCategories: ['Groceries'],
         ),
+        merchantCategories: const {'Corner Bakery': 'Groceries'},
       ),
     );
 
     await tester.pumpAndSettle();
 
-    expect(find.text('Smart suggestions nearby'), findsOneWidget);
+    expect(find.text('Smart suggestions nearby'), findsNothing);
+    expect(find.byKey(const ValueKey('smart-merchant-suggestion-strip')),
+        findsOneWidget);
     expect(find.text('Corner Bakery'), findsOneWidget);
-    expect(find.text('Groceries'), findsWidgets);
+    expect(find.text('Likely categories'), findsNothing);
 
-    await tester
-        .ensureVisible(find.widgetWithText(ActionChip, 'Corner Bakery'));
-    await tester.tap(find.text('Corner Bakery'));
+    await tester.tap(find.widgetWithText(ActionChip, 'Corner Bakery'));
     await tester.pumpAndSettle();
 
     final descriptionField = tester.widget<TextField>(
@@ -745,11 +816,9 @@ void main() {
     );
     expect(descriptionField.controller?.text, 'Corner Bakery');
 
-    await tester.ensureVisible(find.widgetWithText(ActionChip, 'Groceries'));
-    await tester.tap(find.widgetWithText(ActionChip, 'Groceries'));
-    await tester.pumpAndSettle();
-
     expect(find.text('Groceries'), findsWidgets);
+    expect(tester.widget<TextField>(purchaseAmountField()).focusNode?.hasFocus,
+        isTrue);
   });
 
   testWidgets('pre-purchase sends dashboard insight summary as AI context',
@@ -779,8 +848,13 @@ void main() {
       'Starbucks coffee',
     );
     await tester.enterText(find.byType(TextField).at(1), '600');
-    await tester.ensureVisible(find.text('Dining').first);
-    await tester.tap(find.text('Dining').first);
+    final diningChip = find.text('Dining').first;
+    await Scrollable.ensureVisible(
+      tester.element(diningChip),
+      alignment: 0.7,
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(diningChip);
     await tester.pumpAndSettle();
 
     await tester.ensureVisible(find.textContaining('Ask Conscia'));
@@ -822,7 +896,7 @@ void main() {
 
     await Scrollable.ensureVisible(
       tester.element(find.text('Family')),
-      alignment: 0.35,
+      alignment: 0.7,
     );
     await tester.pumpAndSettle();
     await tester.tap(find.text('Family'));
@@ -832,8 +906,13 @@ void main() {
       'Dinner delivery',
     );
     await tester.enterText(find.byType(TextField).at(1), '1200');
-    await tester.ensureVisible(find.text('Dining').first);
-    await tester.tap(find.text('Dining').first);
+    final diningChip = find.text('Dining').first;
+    await Scrollable.ensureVisible(
+      tester.element(diningChip),
+      alignment: 0.7,
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(diningChip);
     await tester.pumpAndSettle();
 
     await tester.ensureVisible(find.textContaining('Ask Conscia'));

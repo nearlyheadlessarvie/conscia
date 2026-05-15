@@ -7,6 +7,7 @@ import '../../core/routing/app_router.dart';
 import '../../providers/user_provider.dart';
 import '../../widgets/hero_screen_scaffold.dart';
 import '../../widgets/conscia_app_bar.dart';
+import '../../widgets/floating_label_text_field.dart';
 import '../../widgets/screen_section.dart';
 import '../../widgets/selection_chip_group.dart';
 
@@ -18,14 +19,19 @@ class AboutYouScreen extends ConsumerStatefulWidget {
 }
 
 class _AboutYouScreenState extends ConsumerState<AboutYouScreen> {
+  final _displayNameController = TextEditingController();
   String? _occupation;
   String? _household;
   bool _saving = false;
+
+  bool get _canFinish =>
+      !_saving && _displayNameController.text.trim().isNotEmpty;
 
   Future<void> _finish() async {
     setState(() => _saving = true);
     try {
       await ref.read(userServiceProvider).updateProfile(
+            displayName: _displayNameController.text.trim(),
             occupationType: _occupation,
             householdSize: _household,
             hasCompletedOnboarding: true,
@@ -38,16 +44,10 @@ class _AboutYouScreenState extends ConsumerState<AboutYouScreen> {
     context.go(AppRoutes.home);
   }
 
-  Future<void> _skip() async {
-    try {
-      await ref.read(userServiceProvider).updateProfile(
-            hasCompletedOnboarding: true,
-          );
-      ref.invalidate(currentUserProvider);
-    } catch (_) {}
-    await markOnboardingComplete();
-    if (!mounted) return;
-    context.go(AppRoutes.home);
+  @override
+  void dispose() {
+    _displayNameController.dispose();
+    super.dispose();
   }
 
   @override
@@ -56,18 +56,12 @@ class _AboutYouScreenState extends ConsumerState<AboutYouScreen> {
     final colors = Theme.of(context).colorScheme;
 
     return HeroScreenScaffold(
-      appBar: ConsciaAppBar(
+      appBar: const ConsciaAppBar(
         automaticallyImplyLeading: false,
-        title: const Text('About You'),
-        actions: [
-          TextButton(
-            onPressed: _saving ? null : _skip,
-            child: const Text('Skip'),
-          ),
-        ],
+        title: Text('About You'),
       ),
       bottom: FilledButton(
-        onPressed: _saving ? null : _finish,
+        onPressed: _canFinish ? _finish : null,
         child: _saving
             ? const SizedBox(
                 width: 20,
@@ -92,12 +86,42 @@ class _AboutYouScreenState extends ConsumerState<AboutYouScreen> {
           Text('A bit more about you', style: textTheme.headlineSmall),
           const SizedBox(height: 4),
           Text(
-            'All optional. Helps us personalise your experience.',
+            'Tell us what to call you. The rest is optional and helps us personalise your experience.',
             style: textTheme.bodyMedium?.copyWith(
               color: colors.onSurfaceVariant,
             ),
           ),
           const SizedBox(height: 28),
+          Padding(
+            padding: const EdgeInsets.only(bottom: 26),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'What should we call you?',
+                  style: textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'This is the name Conscia will use around the app.',
+                  style: textTheme.bodySmall?.copyWith(
+                    color: colors.onSurfaceVariant,
+                    height: 1.35,
+                  ),
+                ),
+                const SizedBox(height: 14),
+                FloatingLabelTextField(
+                  controller: _displayNameController,
+                  label: 'Display name',
+                  textCapitalization: TextCapitalization.words,
+                  textInputAction: TextInputAction.next,
+                  onChanged: (_) => setState(() {}),
+                ),
+              ],
+            ),
+          ),
           ScreenSection(
             title: 'Occupation',
             subtitle: 'Pick the closest fit for how you usually earn or spend.',

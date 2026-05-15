@@ -58,7 +58,7 @@ class _CurrencyPickerBodyState extends State<_CurrencyPickerBody> {
   String _query = '';
 
   List<CurrencyInfo> get _filtered {
-    final currencies = _prioritizedCurrencies(widget.priorityCode);
+    final currencies = _prioritizedCurrencies(widget.priorityCode ?? widget.selectedCode);
     if (_query.isEmpty) return currencies;
     final q = _query.toLowerCase();
     return currencies

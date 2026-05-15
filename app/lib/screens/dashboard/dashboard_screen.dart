@@ -199,68 +199,123 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               builder: (context, setSheetState) {
                 final colors = Theme.of(context).colorScheme;
                 final textTheme = Theme.of(context).textTheme;
+                final grouped = _groupAlerts(sheetAlerts);
 
-                return ListView(
+                return CustomScrollView(
                   controller: scrollController,
-                  padding: const EdgeInsets.fromLTRB(20, 12, 20, 28),
-                  children: [
-                    Center(
-                      child: Container(
-                        width: 36,
-                        height: 4,
-                        decoration: BoxDecoration(
-                          color: colors.outlineVariant,
-                          borderRadius: BorderRadius.circular(99),
+                  slivers: [
+                    SliverPadding(
+                      padding: const EdgeInsets.fromLTRB(20, 16, 20, 4),
+                      sliver: SliverToBoxAdapter(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Notifications',
+                              style: textTheme.titleLarge?.copyWith(
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              sheetAlerts.isEmpty
+                                  ? 'Nothing needs your attention right now.'
+                                  : 'The latest nudges and reminders from Conscia.',
+                              style: textTheme.bodySmall?.copyWith(
+                                color: colors.onSurfaceVariant,
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                          ],
                         ),
                       ),
                     ),
-                    const SizedBox(height: 18),
-                    Text(
-                      'Notifications',
-                      style: textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      sheetAlerts.isEmpty
-                          ? 'Nothing needs your attention right now.'
-                          : 'The latest nudges and reminders from Conscia.',
-                      style: textTheme.bodySmall?.copyWith(
-                        color: colors.onSurfaceVariant,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
                     if (sheetAlerts.isEmpty)
-                      const EmptyState(
-                        icon: Icons.notifications_none_rounded,
-                        title: 'All clear',
-                        subtitle: 'New reminders will show up here.',
+                      const SliverPadding(
+                        padding: EdgeInsets.symmetric(horizontal: 20),
+                        sliver: SliverToBoxAdapter(
+                          child: EmptyState(
+                            icon: Icons.notifications_none_rounded,
+                            title: 'All clear',
+                            subtitle: 'New reminders will show up here.',
+                          ),
+                        ),
                       )
                     else
-                      for (final alert in sheetAlerts) ...[
-                        _NotificationListTile(
-                          alert: alert,
-                          onAction: alert.actionLabel == null &&
-                                  alert.type != 'budget_nudge'
-                              ? null
-                              : () {
-                                  Navigator.of(sheetContext).pop();
-                                  _handleAlertAction(alert);
-                                },
-                          onDismiss: () {
-                            ref
-                                .read(dismissedAlertIdsProvider.notifier)
-                                .dismiss(alert.id);
-                            setSheetState(() {
-                              sheetAlerts = sheetAlerts
-                                  .where((item) => item.id != alert.id)
-                                  .toList(growable: false);
-                            });
+                      for (final entry in grouped.entries) ...[
+                        SliverPadding(
+                          padding: const EdgeInsets.fromLTRB(20, 4, 20, 6),
+                          sliver: SliverToBoxAdapter(
+                            child: Text(
+                              entry.key,
+                              style: textTheme.labelSmall?.copyWith(
+                                color: colors.onSurfaceVariant,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 0.6,
+                              ),
+                            ),
+                          ),
+                        ),
+                        SliverToBoxAdapter(
+                          child: Divider(
+                            height: 1,
+                            indent: 20,
+                            endIndent: 20,
+                            color: colors.outlineVariant,
+                          ),
+                        ),
+                        SliverList.separated(
+                          itemCount: entry.value.length,
+                          separatorBuilder: (_, __) => Divider(
+                            height: 1,
+                            indent: 76,
+                            endIndent: 20,
+                            color: colors.outlineVariant.withValues(alpha: 0.6),
+                          ),
+                          itemBuilder: (context, i) {
+                            final alert = entry.value[i];
+                            void dismiss() {
+                              ref
+                                  .read(dismissedAlertIdsProvider.notifier)
+                                  .dismiss(alert.id);
+                              setSheetState(() {
+                                sheetAlerts = sheetAlerts
+                                    .where((item) => item.id != alert.id)
+                                    .toList(growable: false);
+                              });
+                            }
+
+                            return Dismissible(
+                              key: ValueKey(alert.id),
+                              direction: DismissDirection.endToStart,
+                              onDismissed: (_) => dismiss(),
+                              secondaryBackground: Container(
+                                color: Theme.of(context).appColors.expense,
+                                alignment: Alignment.centerRight,
+                                padding: const EdgeInsets.only(right: 24),
+                                child: const Icon(
+                                  Icons.delete_sweep_rounded,
+                                  color: Colors.white,
+                                  size: 24,
+                                ),
+                              ),
+                              background: const SizedBox.shrink(),
+                              child: _NotificationListTile(
+                                alert: alert,
+                                onAction: alert.actionLabel == null &&
+                                        alert.type != 'budget_nudge'
+                                    ? null
+                                    : () {
+                                        Navigator.of(sheetContext).pop();
+                                        _handleAlertAction(alert);
+                                      },
+                              ),
+                            );
                           },
                         ),
-                        const SizedBox(height: 10),
+                        const SliverToBoxAdapter(child: SizedBox(height: 12)),
                       ],
+                    const SliverToBoxAdapter(child: SizedBox(height: 16)),
                   ],
                 );
               },
@@ -269,6 +324,36 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         );
       },
     );
+  }
+
+  static Map<String, List<AppAlert>> _groupAlerts(List<AppAlert> alerts) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final yesterday = today.subtract(const Duration(days: 1));
+    final weekAgo = today.subtract(const Duration(days: 7));
+
+    final groups = <String, List<AppAlert>>{
+      'Today': [],
+      'Yesterday': [],
+      'A week ago': [],
+      'Older': [],
+    };
+
+    for (final alert in alerts) {
+      final d = DateTime(
+          alert.createdAt.year, alert.createdAt.month, alert.createdAt.day);
+      if (!d.isBefore(today)) {
+        groups['Today']!.add(alert);
+      } else if (!d.isBefore(yesterday)) {
+        groups['Yesterday']!.add(alert);
+      } else if (d.isAfter(weekAgo)) {
+        groups['A week ago']!.add(alert);
+      } else {
+        groups['Older']!.add(alert);
+      }
+    }
+
+    return Map.fromEntries(groups.entries.where((e) => e.value.isNotEmpty));
   }
 
   @override
@@ -295,7 +380,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         .take(3)
         .toList();
     final greetingName = _greetingName(profile);
-    final monthExpenseTotal = _currentMonthExpenseTotal(transactions);
+    final monthExpenseTotal = _currentMonthExpenseTotal(
+      transactions,
+      userPreferences.currency,
+    );
     final stickyProgress = ((_scrollOffset - 5) / 10).clamp(0.0, 1.0);
 
     return Stack(
@@ -318,8 +406,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                       (insightSummaryState.isLoading && insightSummary == null),
                   onJourneyTap: () => context.push(AppRoutes.journey),
                   onInsightsTap: () => context.push(AppRoutes.insights),
-                  onAddTransactionTap: () =>
-                      context.push(AppRoutes.addTransaction),
                 ),
               ),
               SliverToBoxAdapter(
@@ -366,6 +452,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                                 filled: false,
                               ),
                               categoryName: budget.category,
+                              isFamily: budget.isFamily,
                               spent: budget.spent,
                               limit: budget.monthlyLimit,
                               currencyCode: budget.currencyCode,
@@ -508,12 +595,23 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     return 'there';
   }
 
-  double _currentMonthExpenseTotal(List<Transaction> transactions) {
+  double _currentMonthExpenseTotal(
+    List<Transaction> transactions,
+    String currencyCode,
+  ) {
     final now = DateTime.now();
     return transactions
         .where((t) => t.type != 'income')
         .where((t) => t.date.year == now.year && t.date.month == now.month)
-        .fold(0.0, (sum, t) => sum + t.amount.abs());
+        .fold(0.0, (sum, t) => sum + _amountInUserCurrency(t, currencyCode));
+  }
+
+  double _amountInUserCurrency(Transaction tx, String currencyCode) {
+    final amount = tx.amount.abs();
+    if (tx.currencyCode == currencyCode) return amount;
+    final rate = tx.exchangeRateToBase;
+    if (rate == null || rate <= 0) return amount;
+    return amount * rate;
   }
 
   List<AppAlert> _visibleAlerts(List<AppAlert> alerts, List<Budget> budgets) {
@@ -554,7 +652,6 @@ class _DashboardEditorialHeroCard extends StatelessWidget {
     required this.loading,
     required this.onJourneyTap,
     required this.onInsightsTap,
-    required this.onAddTransactionTap,
   });
 
   final double monthExpenseTotal;
@@ -565,7 +662,6 @@ class _DashboardEditorialHeroCard extends StatelessWidget {
   final bool loading;
   final VoidCallback onJourneyTap;
   final VoidCallback onInsightsTap;
-  final VoidCallback onAddTransactionTap;
 
   @override
   Widget build(BuildContext context) {
@@ -629,28 +725,25 @@ class _DashboardEditorialHeroCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 18),
-          Row(
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
             children: [
-              Expanded(
-                child: _HeroMetricPill(
-                  icon: Icons.local_fire_department_rounded,
-                  label: journey == null
-                      ? '0-day streak'
-                      : '${journey!.momentumDays}-day streak',
-                  backgroundColor: colors.surfaceRaised.withValues(alpha: 0.75),
-                  foregroundColor: colors.deepNavy,
-                ),
+              _HeroMetricPill(
+                icon: Icons.local_fire_department_rounded,
+                label: journey == null
+                    ? '0-day streak'
+                    : '${journey!.momentumDays}-day streak',
+                backgroundColor: colors.surfaceRaised.withValues(alpha: 0.75),
+                foregroundColor: colors.deepNavy,
               ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: _HeroMetricPill(
-                  icon: Icons.flag_rounded,
-                  label: journey == null
-                      ? '0/0 quests'
-                      : '${_DashboardJourneyCard._completedQuestCount(journey!.weeklyQuests)}/${journey!.weeklyQuests.length} quests',
-                  backgroundColor: colors.surfaceRaised.withValues(alpha: 0.75),
-                  foregroundColor: colors.deepNavy,
-                ),
+              _HeroMetricPill(
+                icon: Icons.flag_rounded,
+                label: journey == null
+                    ? '0/0 quests'
+                    : '${_DashboardJourneyCard._completedQuestCount(journey!.weeklyQuests)}/${journey!.weeklyQuests.length} quests',
+                backgroundColor: colors.surfaceRaised.withValues(alpha: 0.75),
+                foregroundColor: colors.deepNavy,
               ),
             ],
           ),
@@ -662,6 +755,8 @@ class _DashboardEditorialHeroCard extends StatelessWidget {
                   key: const ValueKey('dashboard-journey-link'),
                   icon: Icons.flag_rounded,
                   label: 'Journey',
+                  subtitle: 'Momentum and quests',
+                  minHeight: 54,
                   onPressed: onJourneyTap,
                 ),
               ),
@@ -671,16 +766,9 @@ class _DashboardEditorialHeroCard extends StatelessWidget {
                   key: const ValueKey('dashboard-insights-link'),
                   icon: Icons.auto_graph_rounded,
                   label: 'Insights',
+                  subtitle: 'Patterns and signals',
+                  minHeight: 54,
                   onPressed: onInsightsTap,
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: HeroShortcutCard(
-                  key: const ValueKey('dashboard-add-link'),
-                  icon: Icons.add_rounded,
-                  label: 'Add',
-                  onPressed: onAddTransactionTap,
                 ),
               ),
             ],
@@ -713,7 +801,7 @@ class _HeroMetricPill extends StatelessWidget {
         borderRadius: BorderRadius.circular(999),
       ),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisSize: MainAxisSize.min,
         children: [
           Icon(icon, size: 15, color: foregroundColor),
           const SizedBox(width: 6),
@@ -754,6 +842,7 @@ class _DashboardStickyOverlayHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).appColors;
     final opacity = progress >= 1.0 ? 1.0 : 0.0;
+    final horizontalInset = 8.0 * opacity;
     final radius = BorderRadius.circular(999);
     final headerBackground = Color.lerp(
       Colors.transparent,
@@ -767,7 +856,12 @@ class _DashboardStickyOverlayHeader extends StatelessWidget {
     )!;
 
     return Padding(
-      padding: EdgeInsets.fromLTRB(5, topPadding + 8, 5, 0),
+      padding: EdgeInsets.fromLTRB(
+        horizontalInset,
+        topPadding + 8,
+        horizontalInset,
+        0,
+      ),
       child: ClipRRect(
         borderRadius: radius,
         child: BackdropFilter(
@@ -968,6 +1062,7 @@ class _BudgetSummaryRow extends StatelessWidget {
   const _BudgetSummaryRow({
     required this.categoryBadge,
     required this.categoryName,
+    required this.isFamily,
     required this.spent,
     required this.limit,
     required this.currencyCode,
@@ -977,6 +1072,7 @@ class _BudgetSummaryRow extends StatelessWidget {
 
   final Widget categoryBadge;
   final String categoryName;
+  final bool isFamily;
   final double spent;
   final double limit;
   final String currencyCode;
@@ -1008,12 +1104,24 @@ class _BudgetSummaryRow extends StatelessWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              categoryName,
-                              style: textTheme.titleSmall?.copyWith(
-                                color: colors.ink,
-                                fontWeight: FontWeight.w700,
-                              ),
+                            Row(
+                              children: [
+                                Flexible(
+                                  child: Text(
+                                    categoryName,
+                                    style: textTheme.titleSmall?.copyWith(
+                                      color: colors.ink,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                                if (isFamily) ...[
+                                  const SizedBox(width: 8),
+                                  _FamilyBudgetPill(colors: colors),
+                                ],
+                              ],
                             ),
                             const SizedBox(height: 3),
                             Text(
@@ -1068,6 +1176,39 @@ class _BudgetSummaryRow extends StatelessWidget {
     if (percentage >= 0.8) return colors.budgetWarning;
     if (percentage >= 0.6) return colors.budgetCaution;
     return colors.budgetHealthy;
+  }
+}
+
+class _FamilyBudgetPill extends StatelessWidget {
+  const _FamilyBudgetPill({required this.colors});
+
+  final AppColors colors;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: colors.familySoft,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.groups_rounded, size: 12, color: colors.family),
+          const SizedBox(width: 4),
+          Text(
+            'Family budget',
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: colors.family,
+                  fontSize: 10,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 0.2,
+                ),
+          ),
+        ],
+      ),
+    );
   }
 }
 
@@ -1407,83 +1548,119 @@ class _NotificationBell extends StatelessWidget {
 class _NotificationListTile extends StatelessWidget {
   const _NotificationListTile({
     required this.alert,
-    required this.onDismiss,
     this.onAction,
   });
 
   final AppAlert alert;
   final VoidCallback? onAction;
-  final VoidCallback onDismiss;
 
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
+    final appColors = Theme.of(context).appColors;
     final textTheme = Theme.of(context).textTheme;
     final actionLabel = alert.actionLabel ??
         (alert.type == 'budget_nudge' ? 'Add budget' : null);
+    final (iconBg, iconFg) = _iconColors(alert.type, appColors, colors);
 
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(color: iconBg, shape: BoxShape.circle),
+            child: Icon(_iconFor(alert.type), color: iconFg, size: 20),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Container(
-                  width: 36,
-                  height: 36,
-                  decoration: BoxDecoration(
-                    color: colors.primaryContainer.withValues(alpha: 0.6),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Icon(
-                    _iconFor(alert.type),
-                    color: colors.primary,
-                    size: 20,
+                Text(
+                  alert.title,
+                  style: textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w800,
                   ),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        alert.title,
-                        style: textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        alert.message,
-                        style: textTheme.bodySmall?.copyWith(
-                          color: colors.onSurfaceVariant,
-                        ),
-                      ),
-                    ],
+                const SizedBox(height: 3),
+                Text(
+                  alert.message,
+                  style: textTheme.bodySmall?.copyWith(
+                    color: colors.onSurfaceVariant,
+                    height: 1.4,
                   ),
                 ),
-                IconButton(
-                  tooltip: 'Dismiss notification',
-                  visualDensity: VisualDensity.compact,
-                  icon: const Icon(Icons.close_rounded),
-                  onPressed: onDismiss,
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    if (actionLabel != null && onAction != null) ...[
+                      GestureDetector(
+                        onTap: onAction,
+                        child: Text(
+                          actionLabel,
+                          style: textTheme.labelSmall?.copyWith(
+                            color: colors.primary,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                      const Spacer(),
+                    ] else
+                      const Spacer(),
+                    Text(
+                      _relativeTime(alert.createdAt),
+                      style: textTheme.labelSmall?.copyWith(
+                        color: colors.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
-            if (actionLabel != null && onAction != null) ...[
-              const SizedBox(height: 10),
-              TextButton(
-                onPressed: onAction,
-                child: Text(actionLabel),
-              ),
-            ],
-          ],
-        ),
+          ),
+        ],
       ),
     );
+  }
+
+  String _relativeTime(DateTime dt) {
+    final diff = DateTime.now().difference(dt);
+    if (diff.inMinutes < 1) return 'just now';
+    if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
+    if (diff.inHours < 24) return '${diff.inHours}h ago';
+    if (diff.inDays == 1) return 'Yesterday';
+    if (diff.inDays < 7) return '${diff.inDays}d ago';
+    final months = [
+      '',
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
+    return '${months[dt.month]} ${dt.day}';
+  }
+
+  (Color, Color) _iconColors(String type, AppColors a, ColorScheme c) {
+    return switch (type) {
+      'budget_nudge' => (a.amberSoft, a.amber),
+      'journey_level_up' => (a.navySoft, a.deepNavy),
+      'journey_badge' => (a.familySoft, a.family),
+      'journey_quest' => (a.amberSoft, a.amber),
+      'ReflectionFollowUp' => (a.angelSoft, a.angelAccent),
+      'recurring_transaction_created' => (a.incomeSoft, a.income),
+      _ => (c.primaryContainer.withValues(alpha: 0.7), c.primary),
+    };
   }
 
   IconData _iconFor(String type) {

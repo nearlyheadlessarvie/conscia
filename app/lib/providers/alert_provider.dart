@@ -7,6 +7,11 @@ import '../models/conscience_journey.dart';
 import 'auth_provider.dart';
 import 'budget_providers.dart';
 
+DateTime _parseAsUtc(String s) {
+  final normalized = s.endsWith('Z') || s.contains('+') ? s : '${s}Z';
+  return DateTime.parse(normalized).toLocal();
+}
+
 class AppAlert {
   final String id;
   final String type;
@@ -49,7 +54,7 @@ class AppAlert {
       category: json['category'] as String?,
       counterparty: json['counterparty'] as String?,
       isDismissed: json['isDismissed'] as bool? ?? false,
-      createdAt: DateTime.parse(json['createdAt'] as String),
+      createdAt: _parseAsUtc(json['createdAt'] as String),
     );
   }
 

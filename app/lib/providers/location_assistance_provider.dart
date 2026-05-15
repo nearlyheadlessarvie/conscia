@@ -9,11 +9,15 @@ import 'user_provider.dart';
 class LocationAssistanceSuggestions {
   final List<String> nearbyMerchants;
   final List<String> likelyCategories;
+  final Map<String, String> merchantCategories;
 
   const LocationAssistanceSuggestions({
     required this.nearbyMerchants,
     required this.likelyCategories,
+    this.merchantCategories = const {},
   });
+
+  String? categoryForMerchant(String merchant) => merchantCategories[merchant];
 }
 
 class LocationAssistanceState {
@@ -135,5 +139,10 @@ final locationAssistanceSuggestionsProvider =
   return LocationAssistanceSuggestions(
     nearbyMerchants: suggestions.nearbyMerchants,
     likelyCategories: suggestions.likelyCategories,
+    merchantCategories: {
+      for (final merchant in suggestions.nearbyMerchants)
+        if (service.categoryForMerchant(merchant) case final category?)
+          merchant: category,
+    },
   );
 });

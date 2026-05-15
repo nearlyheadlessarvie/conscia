@@ -197,6 +197,8 @@ void main() {
       expect(material.shape, isA<RoundedRectangleBorder>());
     }
 
+    expect(find.text('Regret by category'), findsOneWidget);
+    expect(find.text('Places to watch'), findsOneWidget);
     expect(find.byKey(const ValueKey('hero-shortcut-card-Shopping')),
         findsNothing);
     expect(find.byKey(const ValueKey('hero-shortcut-card-4 patterns')),

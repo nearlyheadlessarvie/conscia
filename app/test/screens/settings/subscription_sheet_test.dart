@@ -83,7 +83,11 @@ void main() {
     expect(find.textContaining('Premium access stays active until 6/7/2026'),
         findsOneWidget);
     expect(find.text('Restore Purchases'), findsNothing);
-    expect(find.byIcon(Icons.check_circle), findsOneWidget);
+    expect(find.byIcon(Icons.check_circle), findsNothing);
+    expect(find.byKey(const ValueKey('subscription-plan-premium-radio')),
+        findsOneWidget);
+    expect(find.byKey(const ValueKey('subscription-comparison-list')),
+        findsOneWidget);
   });
 
   testWidgets('subscription sheet highlights free plan for free users', (
@@ -103,7 +107,46 @@ void main() {
     expect(find.text('Unlock Conscia Premium'), findsOneWidget);
     expect(find.text('Subscribe Now'), findsOneWidget);
     expect(find.text('Restore Purchases'), findsOneWidget);
-    expect(find.byIcon(Icons.check_circle), findsOneWidget);
+    expect(find.byIcon(Icons.check_circle), findsNothing);
+    expect(find.byKey(const ValueKey('subscription-plan-free-radio')),
+        findsOneWidget);
+    expect(find.byKey(const ValueKey('subscription-comparison-list')),
+        findsOneWidget);
+  });
+
+  testWidgets('subscription comparison uses flat separators instead of table card',
+      (
+    tester,
+  ) async {
+    final iapService = _FakeIAPService();
+
+    await _pumpSheetHost(
+      tester,
+      status: const SubscriptionStatus(
+        tier: 'free',
+        isPremium: false,
+      ),
+      iapService: iapService,
+    );
+
+    final listMaterial = tester.widget<Material>(
+      find.byKey(const ValueKey('subscription-comparison-list')),
+    );
+    expect(listMaterial.color, Colors.transparent);
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('subscription-comparison-list')),
+        matching: find.byType(Divider),
+      ),
+      findsWidgets,
+    );
+
+    final cta = tester.widget<FilledButton>(
+      find.widgetWithText(FilledButton, 'Subscribe Now'),
+    );
+    final background =
+        cta.style?.backgroundColor?.resolve(<WidgetState>{});
+    expect(background, const Color(0xFF18245C));
   });
 
   testWidgets('subscription sheet shows inline dev-mode management notice', (

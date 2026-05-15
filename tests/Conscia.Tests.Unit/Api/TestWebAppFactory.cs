@@ -41,6 +41,7 @@ public class TestWebAppFactory : WebApplicationFactory<Program>
     public Mock<IWeeklyInsightsRepository> WeeklyInsightsRepoMock { get; } = new();
     public Mock<IPurchasePatternRepository> PurchasePatternRepoMock { get; } = new();
     public Mock<IMonthlyCategorySpendRepository> MonthlyCategorySpendRepoMock { get; } = new();
+    public Mock<IS3StorageService> S3StorageServiceMock { get; } = new();
     private readonly string _dbName = $"ConsciaTest-{Guid.NewGuid()}";
 
     private const string SigningKey = "this-is-a-test-signing-key-at-least-32-chars!!";
@@ -80,6 +81,7 @@ public class TestWebAppFactory : WebApplicationFactory<Program>
             ReplaceService<IWeeklyInsightsRepository>(services, WeeklyInsightsRepoMock.Object);
             ReplaceService<IPurchasePatternRepository>(services, PurchasePatternRepoMock.Object);
             ReplaceService<IMonthlyCategorySpendRepository>(services, MonthlyCategorySpendRepoMock.Object);
+            ReplaceService<IS3StorageService>(services, S3StorageServiceMock.Object);
         });
 
         builder.UseSetting("Auth:UseMock", "true");

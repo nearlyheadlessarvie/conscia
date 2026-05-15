@@ -8,6 +8,7 @@ import '../../core/constants/category_icons.dart';
 import '../../core/routing/app_router.dart';
 import '../../core/theme/app_colors.dart';
 import '../../providers/transaction_providers.dart';
+import '../../providers/user_provider.dart';
 import '../../services/transaction_service.dart';
 import '../../core/utils/currency_formatter.dart';
 import '../../widgets/editorial_sticky_header.dart';
@@ -99,6 +100,7 @@ class _TransactionListScreenState extends ConsumerState<TransactionListScreen> {
   Widget build(BuildContext context) {
     final state = ref.watch(filteredTransactionListProvider);
     final selectedCategory = ref.watch(categoryFilterProvider);
+    final userPreferences = ref.watch(userPreferencesProvider);
     final categories = {
       if (selectedCategory != null) selectedCategory,
       ...state.transactions.map(_displayCategory),
@@ -138,6 +140,7 @@ class _TransactionListScreenState extends ConsumerState<TransactionListScreen> {
                 slivers: _buildSlivers(
                   state,
                   selectedCategory,
+                  userPreferences,
                 ),
               ),
             ),
@@ -185,6 +188,7 @@ class _TransactionListScreenState extends ConsumerState<TransactionListScreen> {
   List<Widget> _buildSlivers(
     TransactionListState state,
     String? selectedCategory,
+    ({String currency, String locale}) userPreferences,
   ) {
     if (state.error != null && state.transactions.isEmpty) {
       return [
@@ -193,6 +197,8 @@ class _TransactionListScreenState extends ConsumerState<TransactionListScreen> {
             transactions: state.transactions,
             selectedCategory: selectedCategory,
             topPadding: MediaQuery.paddingOf(context).top,
+            currencyCode: userPreferences.currency,
+            locale: userPreferences.locale,
           ),
         ),
         _buildFilterRailSpacer(),
@@ -237,10 +243,12 @@ class _TransactionListScreenState extends ConsumerState<TransactionListScreen> {
           transactions: state.transactions,
           selectedCategory: selectedCategory,
           topPadding: MediaQuery.paddingOf(context).top,
+          currencyCode: userPreferences.currency,
+          locale: userPreferences.locale,
         ),
       ),
       _buildFilterRailSpacer(),
-      ..._buildListSlivers(state),
+      ..._buildListSlivers(state, userPreferences.locale),
     ];
   }
 
@@ -253,7 +261,10 @@ class _TransactionListScreenState extends ConsumerState<TransactionListScreen> {
     );
   }
 
-  List<Widget> _buildListSlivers(TransactionListState state) {
+  List<Widget> _buildListSlivers(
+    TransactionListState state,
+    String locale,
+  ) {
     if (state.isLoading && state.transactions.isEmpty) {
       return [
         SliverPadding(
@@ -286,7 +297,7 @@ class _TransactionListScreenState extends ConsumerState<TransactionListScreen> {
     }
 
     return [
-      ..._buildGroupedSections(state.transactions),
+      ..._buildGroupedSections(state.transactions, locale),
       if (state.isLoading)
         const SliverToBoxAdapter(
           child: Padding(
@@ -298,7 +309,10 @@ class _TransactionListScreenState extends ConsumerState<TransactionListScreen> {
     ];
   }
 
-  List<Widget> _buildGroupedSections(List<Transaction> transactions) {
+  List<Widget> _buildGroupedSections(
+    List<Transaction> transactions,
+    String locale,
+  ) {
     final groups = <String, List<Transaction>>{};
     for (final tx in transactions) {
       final key =
@@ -328,6 +342,7 @@ class _TransactionListScreenState extends ConsumerState<TransactionListScreen> {
                           displayCategory:
                               _displayCategory(groups[key]![index]),
                         ),
+                        locale: locale,
                       ),
                   ],
                 ),
@@ -494,11 +509,15 @@ class _TransactionsEditorialHero extends StatelessWidget {
     required this.transactions,
     required this.selectedCategory,
     required this.topPadding,
+    required this.currencyCode,
+    required this.locale,
   });
 
   final List<Transaction> transactions;
   final String? selectedCategory;
   final double topPadding;
+  final String currencyCode;
+  final String locale;
 
   @override
   Widget build(BuildContext context) {
@@ -514,8 +533,7 @@ class _TransactionsEditorialHero extends StatelessWidget {
         monthTransactions.isNotEmpty ? monthTransactions : visibleTransactions;
     final totalSpent = basis
         .where((tx) => tx.type != 'income')
-        .fold(0.0, (sum, tx) => sum + tx.amount.abs());
-    final currencyCode = basis.isNotEmpty ? basis.first.currencyCode : 'PHP';
+        .fold(0.0, (sum, tx) => sum + _amountInUserCurrency(tx));
     final topCategory = _topExpenseCategory(basis);
     final repeatCount = basis
         .where((tx) => tx.type != 'income')
@@ -563,6 +581,7 @@ class _TransactionsEditorialHero extends StatelessWidget {
             CurrencyFormatter.format(
               totalSpent,
               currencyCode: currencyCode,
+              locale: locale,
             ),
             style: GoogleFonts.inter(
               textStyle: textTheme.displaySmall,
@@ -638,6 +657,14 @@ class _TransactionsEditorialHero extends StatelessWidget {
       return 'Income is landing here. Expense patterns will appear as your spending history grows.';
     }
     return '$topCategory is carrying the strongest activity lately. Scan the trail below for repeats and reflection cues.';
+  }
+
+  double _amountInUserCurrency(Transaction tx) {
+    final amount = tx.amount.abs();
+    if (tx.currencyCode == currencyCode) return amount;
+    final rate = tx.exchangeRateToBase;
+    if (rate == null || rate <= 0) return amount;
+    return amount * rate;
   }
 
   String _displayCategory(Transaction tx) {

@@ -6,8 +6,13 @@ namespace Conscia.Api.Middleware;
 public class GlobalExceptionHandler : IExceptionHandler
 {
     private readonly ILogger<GlobalExceptionHandler> _logger;
+    private readonly IHostEnvironment _environment;
 
-    public GlobalExceptionHandler(ILogger<GlobalExceptionHandler> logger) => _logger = logger;
+    public GlobalExceptionHandler(ILogger<GlobalExceptionHandler> logger, IHostEnvironment environment)
+    {
+        _logger = logger;
+        _environment = environment;
+    }
 
     public async ValueTask<bool> TryHandleAsync(HttpContext context, Exception exception, CancellationToken ct)
     {
@@ -23,6 +28,11 @@ public class GlobalExceptionHandler : IExceptionHandler
         };
 
         _logger.LogError(exception, "Unhandled exception: {StatusCode} {ErrorMessage}", statusCode, error.Error);
+
+        if (_environment.IsDevelopment() && error.Details is null)
+        {
+            error = error with { Details = exception.ToString() };
+        }
 
         context.Response.StatusCode = statusCode;
         await context.Response.WriteAsJsonAsync(error, ct);

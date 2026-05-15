@@ -29,6 +29,76 @@ void main() {
     expect(find.text('Settings'), findsOneWidget);
   });
 
+  testWidgets('keeps title centered with a trailing action', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light(),
+        home: Scaffold(
+          appBar: ConsciaAppBar(
+            title: const Text('Settings'),
+            automaticallyImplyLeading: false,
+            actions: [
+              IconButton(
+                tooltip: 'Sign out',
+                onPressed: () {},
+                icon: const Icon(Icons.logout_rounded),
+              ),
+            ],
+          ),
+          body: const SizedBox.shrink(),
+        ),
+      ),
+    );
+
+    final titleCenter = tester.getCenter(find.text('Settings')).dx;
+    final screenCenter = tester.getSize(find.byType(Scaffold)).width / 2;
+
+    expect(titleCenter, closeTo(screenCenter, 1));
+  });
+
+  testWidgets('uses edge alignment at rest and inset only when docked', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light(),
+        home: const HeroScreenScaffold(
+          appBar: ConsciaAppBar(title: Text('Settings')),
+          child: SizedBox(height: 1000),
+        ),
+      ),
+    );
+
+    var capsuleLeft = tester
+        .getTopLeft(find.byKey(const ValueKey('conscia-app-bar-capsule')))
+        .dx;
+    var capsuleRight = tester
+        .getTopRight(find.byKey(const ValueKey('conscia-app-bar-capsule')))
+        .dx;
+    final screenWidth = tester.getSize(find.byType(Scaffold)).width;
+
+    expect(capsuleLeft, 0);
+    expect(screenWidth - capsuleRight, 0);
+
+    await tester.drag(
+      find.byType(SingleChildScrollView),
+      const Offset(0, -80),
+    );
+    await tester.pumpAndSettle();
+
+    capsuleLeft = tester
+        .getTopLeft(find.byKey(const ValueKey('conscia-app-bar-capsule')))
+        .dx;
+    capsuleRight = tester
+        .getTopRight(find.byKey(const ValueKey('conscia-app-bar-capsule')))
+        .dx;
+
+    expect(capsuleLeft, 8);
+    expect(screenWidth - capsuleRight, 8);
+  });
+
   testWidgets('morphs into a floating capsule after scroll', (
     tester,
   ) async {
@@ -109,6 +179,65 @@ void main() {
     final decoration = header.decoration! as BoxDecoration;
 
     expect(decoration.color, Colors.transparent);
+  });
+
+  testWidgets('editorial sticky header only insets when docked', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light(),
+        home: const Scaffold(
+          body: EditorialStickyHeader(
+            title: 'Transactions',
+            progress: 0,
+            topPadding: 0,
+          ),
+        ),
+      ),
+    );
+
+    var headerLeft = tester
+        .getTopLeft(
+          find.byKey(const ValueKey('editorial-sticky-header-Transactions')),
+        )
+        .dx;
+    var headerRight = tester
+        .getTopRight(
+          find.byKey(const ValueKey('editorial-sticky-header-Transactions')),
+        )
+        .dx;
+    final screenWidth = tester.getSize(find.byType(Scaffold)).width;
+
+    expect(headerLeft, 0);
+    expect(screenWidth - headerRight, 0);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light(),
+        home: const Scaffold(
+          body: EditorialStickyHeader(
+            title: 'Transactions',
+            progress: 1,
+            topPadding: 0,
+          ),
+        ),
+      ),
+    );
+
+    headerLeft = tester
+        .getTopLeft(
+          find.byKey(const ValueKey('editorial-sticky-header-Transactions')),
+        )
+        .dx;
+    headerRight = tester
+        .getTopRight(
+          find.byKey(const ValueKey('editorial-sticky-header-Transactions')),
+        )
+        .dx;
+
+    expect(headerLeft, 8);
+    expect(screenWidth - headerRight, 8);
   });
 
   testWidgets('editorial sticky header uses the same frosted docked surface', (

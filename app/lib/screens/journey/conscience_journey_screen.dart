@@ -6,8 +6,8 @@ import '../../core/theme/app_colors.dart';
 import '../../models/conscience_journey.dart';
 import '../../providers/conscience_journey_provider.dart';
 import '../../widgets/editorial_sticky_header.dart';
-import '../../widgets/feed_card.dart';
 import '../../widgets/screen_section.dart';
+import '../../widgets/feed_card.dart';
 
 class ConscienceJourneyScreen extends ConsumerStatefulWidget {
   const ConscienceJourneyScreen({super.key});
@@ -59,7 +59,7 @@ class _ConscienceJourneyScreenState extends ConsumerState<ConscienceJourneyScree
         child: Stack(
           children: [
             journeyAsync.when(
-              loading: () => _buildLoading(),
+              loading: _buildLoading,
               error: (_, __) => _buildError(),
               data: (summary) => _buildContent(context, summary),
             ),
@@ -72,12 +72,6 @@ class _ConscienceJourneyScreenState extends ConsumerState<ConscienceJourneyScree
                 title: 'Journey',
                 progress: stickyProgress,
                 topPadding: topPadding,
-                trailing: IconButton(
-                  tooltip: 'Journey guide',
-                  visualDensity: VisualDensity.compact,
-                  icon: const Icon(Icons.help_outline_rounded),
-                  onPressed: () => _showJourneyGuide(context),
-                ),
               ),
             ),
           ],
@@ -122,14 +116,6 @@ class _ConscienceJourneyScreenState extends ConsumerState<ConscienceJourneyScree
     );
   }
 
-  void _showJourneyGuide(BuildContext context) {
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      showDragHandle: true,
-      builder: (context) => const _JourneyGuideSheet(),
-    );
-  }
 }
 
 class ConscienceJourneyContent extends StatelessWidget {
@@ -156,6 +142,7 @@ class ConscienceJourneyContent extends StatelessWidget {
             children: [
               ScreenSection(
                 title: "This week's quests",
+                subtitle: 'Habits to focus on this week. They reset every Sunday.',
                 compact: true,
                 child: Column(
                   children: [
@@ -165,13 +152,6 @@ class ConscienceJourneyContent extends StatelessWidget {
                 ),
               ),
               _AchievementsSection(badges: summary.badges),
-              if (summary.recentMascotMoment case final moment?)
-                ScreenSection(
-                  title: 'Mascot moment',
-                  subtitle:
-                      'A tiny dramatic reading from your financial conscience.',
-                  child: _MascotMomentCard(moment: moment),
-                ),
             ],
           ),
         ),
@@ -191,46 +171,45 @@ class _AchievementsSection extends StatelessWidget {
       context: context,
       isScrollControlled: true,
       showDragHandle: true,
-      builder: (context) => _AllAchievementsSheet(badges: badges),
+      builder: (context) => DraggableScrollableSheet(
+        expand: false,
+        initialChildSize: 0.6,
+        minChildSize: 0.4,
+        maxChildSize: 0.92,
+        builder: (context, scrollController) => _AllAchievementsSheet(
+          badges: badges,
+          scrollController: scrollController,
+        ),
+      ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
     final appColors = Theme.of(context).appColors;
+    final textTheme = Theme.of(context).textTheme;
 
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 18),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTap: () => _showAllAchievements(context),
-            child: Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      'ACHIEVEMENTS',
-                      style: textTheme.labelSmall?.copyWith(
-                        color: appColors.mutedInk,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: 0.9,
-                      ),
-                    ),
-                  ),
-                  Icon(Icons.chevron_right_rounded, size: 18, color: appColors.mutedInk),
-                ],
+    return ScreenSection(
+      title: 'Achievements',
+      subtitle: 'Badges earned by sticking to better money habits.',
+      compact: true,
+      trailing: GestureDetector(
+        onTap: () => _showAllAchievements(context),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'See all',
+              style: textTheme.labelSmall?.copyWith(
+                color: appColors.mutedInk,
+                fontWeight: FontWeight.w700,
               ),
             ),
-          ),
-          _BadgeRow(badges: badges),
-        ],
+            Icon(Icons.chevron_right_rounded, size: 16, color: appColors.mutedInk),
+          ],
+        ),
       ),
+      child: _BadgeRow(badges: badges),
     );
   }
 }
@@ -539,12 +518,12 @@ class _BadgeTile extends StatelessWidget {
             height: 58,
             decoration: BoxDecoration(
               color: badge.isUnlocked
-                  ? Theme.of(context).appColors.angelSoft
+                  ? Theme.of(context).appColors.familySoft
                   : colors.surfaceContainerHighest.withValues(alpha: 0.7),
               borderRadius: BorderRadius.circular(16),
               border: badge.isUnlocked
                   ? Border.all(
-                      color: Theme.of(context).appColors.angelAccent,
+                      color: Theme.of(context).appColors.family,
                       width: 2,
                     )
                   : null,
@@ -552,7 +531,7 @@ class _BadgeTile extends StatelessWidget {
             child: Icon(
               badge.isUnlocked ? _iconFor(badge.key) : Icons.lock_outline_rounded,
               color: badge.isUnlocked
-                  ? Theme.of(context).appColors.angelAccent
+                  ? Theme.of(context).appColors.family
                   : colors.outline,
             ),
           ),
@@ -574,9 +553,13 @@ class _BadgeTile extends StatelessWidget {
 }
 
 class _AllAchievementsSheet extends StatelessWidget {
-  const _AllAchievementsSheet({required this.badges});
+  const _AllAchievementsSheet({
+    required this.badges,
+    required this.scrollController,
+  });
 
   final List<ConscienceBadge> badges;
+  final ScrollController scrollController;
 
   static IconData _iconFor(String key) {
     return switch (key) {
@@ -602,39 +585,79 @@ class _AllAchievementsSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
     final colors = Theme.of(context).colorScheme;
+    final unlocked = badges.where((b) => b.isUnlocked).toList();
+    final locked = badges.where((b) => !b.isUnlocked).toList();
 
     return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'All Achievements',
-              style:
-                  textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
+      child: CustomScrollView(
+        controller: scrollController,
+        slivers: [
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 4),
+            sliver: SliverToBoxAdapter(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'All Achievements',
+                    style: textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '${unlocked.length} of ${badges.length} unlocked',
+                    style: textTheme.bodySmall?.copyWith(color: colors.onSurfaceVariant),
+                  ),
+                  const SizedBox(height: 16),
+                ],
+              ),
             ),
-            const SizedBox(height: 4),
-            Text(
-              '${badges.where((b) => b.isUnlocked).length} of ${badges.length} unlocked',
-              style: textTheme.bodySmall
-                  ?.copyWith(color: colors.onSurfaceVariant),
+          ),
+          if (unlocked.isNotEmpty)
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 0),
+              sliver: SliverList.builder(
+                itemCount: unlocked.length,
+                itemBuilder: (context, i) => _AchievementSheetRow(
+                  badge: unlocked[i],
+                  icon: _iconFor(unlocked[i].key),
+                ),
+              ),
             ),
-            const SizedBox(height: 16),
-            Flexible(
-              child: SingleChildScrollView(
-                child: Column(
+          if (locked.isNotEmpty) ...[
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 8),
+              sliver: SliverToBoxAdapter(
+                child: Row(
                   children: [
-                    for (final badge in badges)
-                      _AchievementSheetRow(
-                          badge: badge, icon: _iconFor(badge.key)),
+                    Expanded(child: Divider(color: colors.outlineVariant)),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 10),
+                      child: Text(
+                        'LOCKED',
+                        style: textTheme.labelSmall?.copyWith(
+                          color: colors.onSurfaceVariant,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 0.8,
+                        ),
+                      ),
+                    ),
+                    Expanded(child: Divider(color: colors.outlineVariant)),
                   ],
                 ),
               ),
             ),
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+              sliver: SliverList.builder(
+                itemCount: locked.length,
+                itemBuilder: (context, i) => _AchievementSheetRow(
+                  badge: locked[i],
+                  icon: _iconFor(locked[i].key),
+                ),
+              ),
+            ),
           ],
-        ),
+        ],
       ),
     );
   }
@@ -651,10 +674,11 @@ class _AchievementSheetRow extends StatelessWidget {
     final colors = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
     final appColors = Theme.of(context).appColors;
-    final iconColor =
-        badge.isUnlocked ? appColors.angelAccent : colors.outline;
+    final hasPartialProgress = !badge.isUnlocked && badge.progress > 0;
+
+    final iconColor = badge.isUnlocked ? appColors.family : colors.outline;
     final bgColor = badge.isUnlocked
-        ? appColors.angelSoft
+        ? appColors.familySoft
         : colors.surfaceContainerHighest.withValues(alpha: 0.5);
 
     return Padding(
@@ -668,7 +692,7 @@ class _AchievementSheetRow extends StatelessWidget {
               color: bgColor,
               borderRadius: BorderRadius.circular(14),
               border: badge.isUnlocked
-                  ? Border.all(color: appColors.angelAccent, width: 1.5)
+                  ? Border.all(color: appColors.family, width: 1.5)
                   : null,
             ),
             child: Icon(
@@ -693,421 +717,13 @@ class _AchievementSheetRow extends StatelessWidget {
                 Text(
                   badge.isUnlocked
                       ? badge.description
-                      : 'Keep using Conscia to unlock this.',
-                  style: textTheme.bodySmall
-                      ?.copyWith(color: colors.onSurfaceVariant),
-                ),
-              ],
-            ),
-          ),
-          if (badge.isUnlocked)
-            Icon(Icons.check_circle_rounded, color: appColors.angelAccent, size: 18),
-        ],
-      ),
-    );
-  }
-}
-
-class _MascotMomentCard extends StatelessWidget {
-  const _MascotMomentCard({required this.moment});
-
-  final ConscienceMascotMoment moment;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
-
-    return FeedCard(
-      child: Row(
-        children: [
-          _JourneyMascot(persona: moment.persona, width: 86),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  moment.title,
-                  style: textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  moment.message,
-                  style: textTheme.bodyMedium?.copyWith(
-                    color: colors.onSurfaceVariant,
-                    height: 1.35,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _JourneyMascot extends StatelessWidget {
-  const _JourneyMascot({
-    required this.persona,
-    required this.width,
-  });
-
-  final String persona;
-  final double width;
-
-  @override
-  Widget build(BuildContext context) {
-    if (persona == 'both') {
-      return SizedBox(
-        width: width,
-        child: Stack(
-          clipBehavior: Clip.none,
-          children: [
-            Positioned(
-              left: width * 0.34,
-              child: MascotSpriteFrame(
-                atlas: angelMascotAtlas,
-                frameName: '4_win.png',
-                width: width * 0.7,
-              ),
-            ),
-            MascotSpriteFrame(
-              atlas: devilMascotAtlas,
-              frameName: '9_coin.png',
-              width: width * 0.7,
-            ),
-          ],
-        ),
-      );
-    }
-
-    final isAngel = persona == 'angel';
-    return MascotSpriteFrame(
-      atlas: isAngel ? angelMascotAtlas : devilMascotAtlas,
-      frameName: isAngel ? '4_win.png' : '5_win.png',
-      width: width,
-    );
-  }
-}
-
-class _JourneyGuideSheet extends StatelessWidget {
-  const _JourneyGuideSheet();
-
-  static const _levels = [
-    _GuideLevel(
-        'Awakening', '0 XP', 'The first step into your conscience path.'),
-    _GuideLevel(
-        'Impulse Spotter', '120 XP', 'Early awareness starts to stick.'),
-    _GuideLevel(
-        'Budget Guardian', '400 XP', 'You are protecting money with intent.'),
-    _GuideLevel(
-        'Conscience Captain', '1000 XP', 'Consistency is becoming identity.'),
-    _GuideLevel('Money Monk', '2200 XP', 'The current top of the path.'),
-  ];
-
-  static const _achievementHints = [
-    'Reflected on your first purchase.',
-    'Checked with Conscia before buying.',
-    'Created a budget from a nudge.',
-    'Reviewed a regret pattern before it repeated.',
-    'Built a week of reflective spending awareness.',
-    'Invited someone into a family space.',
-  ];
-
-  static const _questHints = [
-    _GuideQuest(
-      'Reflect on recent purchases.',
-      'Counts reflections that turn spending into signal.',
-    ),
-    _GuideQuest(
-      'Check with Conscia before buying.',
-      'Rewards pausing before the money leaves.',
-    ),
-    _GuideQuest(
-      'Review regret patterns.',
-      'Builds awareness around repeat spending traps.',
-    ),
-    _GuideQuest(
-      'Create a budget from a nudge.',
-      'Turns a warning into a protective guardrail.',
-    ),
-    _GuideQuest(
-      'Visit insights when new signals appear.',
-      'Keeps your bigger money story visible.',
-    ),
-    _GuideQuest(
-      'Keep your momentum alive.',
-      'Celebrates consistency without punishing missed days.',
-    ),
-    _GuideQuest(
-      'Invite a family member.',
-      'Helps a household coordinate without mixing up identities.',
-    ),
-    _GuideQuest(
-      'Check a family purchase first.',
-      'Rewards pausing when a purchase affects shared budgets.',
-    ),
-  ];
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
-
-    return SafeArea(
-      child: SingleChildScrollView(
-        padding: EdgeInsets.fromLTRB(
-          18,
-          0,
-          18,
-          18 + MediaQuery.viewInsetsOf(context).bottom,
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const _JourneyMascot(persona: 'both', width: 86),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'How Journey works',
-                        style: textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.w900,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        'Small money decisions become XP, levels, quests, achievements, and mascot moments.',
-                        style: textTheme.bodyMedium?.copyWith(
-                          color: colors.onSurfaceVariant,
-                          height: 1.35,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 18),
-            _GuideSection(
-              icon: Icons.stairs_rounded,
-              title: 'Levels',
-              child: Column(
-                children: [
-                  for (final level in _levels)
-                    _GuideRow(
-                      icon: Icons.circle_rounded,
-                      title: level.title,
-                      trailing: level.requiredXp,
-                      subtitle: level.description,
-                    ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'More levels can arrive in future updates.',
-                    style: textTheme.bodySmall?.copyWith(
-                      color: colors.onSurfaceVariant,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 12),
-            _GuideSection(
-              icon: Icons.workspace_premium_rounded,
-              title: 'Mystery achievements',
-              child: Column(
-                children: [
-                  for (final hint in _achievementHints)
-                    _GuideRow(
-                      icon: Icons.lock_outline_rounded,
-                      title: '????',
-                      subtitle: hint,
-                    ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 12),
-            _GuideSection(
-              icon: Icons.flag_rounded,
-              title: 'Weekly quests',
-              trailing: 'Only 3 quests show up each week.',
-              child: Column(
-                children: [
-                  for (final hint in _questHints)
-                    _GuideRow(
-                      icon: Icons.auto_awesome_rounded,
-                      title: hint.title,
-                      subtitle: hint.description,
-                    ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 12),
-            const _GuideSection(
-              icon: Icons.theater_comedy_rounded,
-              title: 'Mascot moments',
-              child: Column(
-                children: [
-                  _GuideRow(
-                    icon: Icons.wb_sunny_rounded,
-                    title: 'Reason moments',
-                    subtitle: 'Angel-flavored nudges for thoughtful wins.',
-                  ),
-                  _GuideRow(
-                    icon: Icons.local_fire_department_rounded,
-                    title: 'Impulse moments',
-                    subtitle: 'Devil-flavored drama when patterns get spicy.',
-                  ),
-                  _GuideRow(
-                    icon: Icons.bolt_rounded,
-                    title: 'Battle moments',
-                    subtitle:
-                        'Both mascots show up when choices feel contested.',
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _GuideLevel {
-  const _GuideLevel(this.title, this.requiredXp, this.description);
-
-  final String title;
-  final String requiredXp;
-  final String description;
-}
-
-class _GuideQuest {
-  const _GuideQuest(this.title, this.description);
-
-  final String title;
-  final String description;
-}
-
-class _GuideSection extends StatelessWidget {
-  const _GuideSection({
-    required this.icon,
-    required this.title,
-    required this.child,
-    this.trailing,
-  });
-
-  final IconData icon;
-  final String title;
-  final String? trailing;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
-
-    return FeedCard(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(icon, color: colors.primary, size: 19),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  title,
-                  style: textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          if (trailing != null) ...[
-            const SizedBox(height: 6),
-            Text(
-              trailing!,
-              style: textTheme.bodySmall?.copyWith(
-                color: colors.onSurfaceVariant,
-              ),
-            ),
-          ],
-          const SizedBox(height: 10),
-          child,
-        ],
-      ),
-    );
-  }
-}
-
-class _GuideRow extends StatelessWidget {
-  const _GuideRow({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-    this.trailing,
-  });
-
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final String? trailing;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 7),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, size: 17, color: colors.primary),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        title,
-                        style: textTheme.labelLarge?.copyWith(
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                    ),
-                    if (trailing case final trailing?)
-                      Text(
-                        trailing,
-                        style: textTheme.labelMedium?.copyWith(
-                          color: colors.primary,
-                          fontWeight: FontWeight.w900,
-                        ),
-                      ),
-                  ],
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  subtitle,
+                      : hasPartialProgress
+                          ? '${badge.progress} / ${badge.target} — keep going!'
+                          : 'Keep using Conscia to unlock this.',
                   style: textTheme.bodySmall?.copyWith(
-                    color: colors.onSurfaceVariant,
-                    height: 1.25,
+                    color: hasPartialProgress
+                        ? appColors.family
+                        : colors.onSurfaceVariant,
                   ),
                 ),
               ],
@@ -1207,4 +823,3 @@ class _JourneyMessageCard extends StatelessWidget {
     );
   }
 }
-

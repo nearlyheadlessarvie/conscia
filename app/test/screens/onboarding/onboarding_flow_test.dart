@@ -22,6 +22,7 @@ class _RecordingUserService extends UserService {
     String? preferredCurrency,
     String? locale,
     String? displayName,
+    String? profilePictureKey,
     String? photoUrl,
     String? spendingPersonality,
     String? incomeRange,
@@ -34,6 +35,7 @@ class _RecordingUserService extends UserService {
     updates.add({
       'preferredCurrency': preferredCurrency,
       'locale': locale,
+      'displayName': displayName,
       'spendingPersonality': spendingPersonality,
       'incomeRange': incomeRange,
       'occupationType': occupationType,
@@ -500,7 +502,7 @@ void main() {
     },
   );
 
-  testWidgets('about you skip marks onboarding complete and returns home', (
+  testWidgets('about you requires display name before completing onboarding', (
     tester,
   ) async {
     final userService = _RecordingUserService();
@@ -538,11 +540,30 @@ void main() {
     );
 
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Skip'));
+
+    expect(find.text('Skip'), findsNothing);
+    expect(find.text('What should we call you?'), findsOneWidget);
+    expect(find.text('Go to dashboard'), findsOneWidget);
+
+    var button = tester.widget<FilledButton>(
+      find.widgetWithText(FilledButton, 'Go to dashboard'),
+    );
+    expect(button.onPressed, isNull);
+
+    await tester.enterText(find.byType(TextField).first, 'Story Demo');
+    await tester.pumpAndSettle();
+
+    button = tester.widget<FilledButton>(
+      find.widgetWithText(FilledButton, 'Go to dashboard'),
+    );
+    expect(button.onPressed, isNotNull);
+
+    await tester.tap(find.text('Go to dashboard'));
     await tester.pumpAndSettle();
 
     expect(find.text('home-screen'), findsOneWidget);
     expect(userService.updates.single['hasCompletedOnboarding'], true);
+    expect(userService.updates.single['displayName'], 'Story Demo');
   });
 
   testWidgets('about you uses branded chip avatars instead of raw icons', (

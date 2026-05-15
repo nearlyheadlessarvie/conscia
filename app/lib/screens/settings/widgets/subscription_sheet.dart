@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/constants/api_constants.dart';
+import '../../../core/theme/app_colors.dart';
 import '../../../providers/iap_provider.dart';
 import '../../../providers/subscription_provider.dart';
 import '../../../services/iap_service.dart';
@@ -104,6 +105,7 @@ class _SubscriptionSheetBodyState
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final colors = theme.appColors;
     final textTheme = theme.textTheme;
 
     final iapAsync = ref.watch(iapStatusProvider);
@@ -116,143 +118,141 @@ class _SubscriptionSheetBodyState
 
     return ListView(
       controller: widget.scrollController,
-      padding: const EdgeInsets.all(24),
+      padding: EdgeInsets.zero,
       children: [
-        Center(
-          child: Container(
-            width: 32,
-            height: 4,
-            decoration: BoxDecoration(
-              color: theme.colorScheme.outlineVariant,
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-        ),
-        const SizedBox(height: 24),
-        Text(
-          isCurrentPremium
-              ? 'Manage Conscia Premium'
-              : 'Unlock Conscia Premium',
-          style: textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
-          textAlign: TextAlign.center,
-        ),
-        const SizedBox(height: 32),
-        _buildComparisonTable(
-          theme,
-          textTheme,
-          isPremiumActive: isCurrentPremium,
-        ),
-        const SizedBox(height: 32),
-        if (isCurrentPremium) ...[
-          Text(
-            expiresAt != null
-                ? 'Premium access stays active until ${_formatDate(expiresAt)}'
-                : 'Premium access is currently active.',
-            style: textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.w600,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 6),
-          Text(
-            'You can cancel renewal in the store and keep Premium until your paid period ends.',
-            style: textTheme.bodySmall?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
-            ),
-            textAlign: TextAlign.center,
-          ),
-        ] else ...[
-          Text(
-            priceLabel != null ? '$priceLabel / month' : '\$4.99 / month',
-            style:
-                textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold),
-            textAlign: TextAlign.center,
-          ),
-          if (priceLabel == null && !ApiConstants.useMockAuth)
-            Padding(
-              padding: const EdgeInsets.only(top: 4),
-              child: Text(
-                'Price loading from store...',
-                style: textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
+        _SubscriptionHero(isPremium: isCurrentPremium, expiresAt: expiresAt),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 24, 20, 28),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _buildComparisonList(theme, textTheme, isPremiumActive: isCurrentPremium),
+              const SizedBox(height: 24),
+              if (!isCurrentPremium) ...[
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.baseline,
+                  textBaseline: TextBaseline.alphabetic,
+                  children: [
+                    Text(
+                      priceLabel ?? '\$4.99',
+                      style: textTheme.displaySmall?.copyWith(
+                        color: colors.deepNavy,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      '/ month',
+                      style: textTheme.bodyMedium?.copyWith(
+                        color: colors.mutedInk,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
                 ),
-                textAlign: TextAlign.center,
-              ),
-            ),
-        ],
-        const SizedBox(height: 24),
-        if (_notice != null)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 16),
-            child: Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: theme.colorScheme.surfaceContainerHighest,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Text(
-                _notice!,
-                style: textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.onSurface,
+                if (priceLabel == null && !ApiConstants.useMockAuth)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Text(
+                      'Price loading from store...',
+                      style: textTheme.bodySmall?.copyWith(color: colors.mutedInk),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                const SizedBox(height: 6),
+                Text(
+                  'Cancel anytime from your App Store or Play Store settings.',
+                  style: textTheme.bodySmall?.copyWith(color: colors.mutedInk, height: 1.35),
+                  textAlign: TextAlign.center,
                 ),
-                textAlign: TextAlign.center,
-              ),
-            ),
-          ),
-        if (_error != null)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 16),
-            child: Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: theme.colorScheme.errorContainer,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Text(
-                _error!,
-                style: textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.onErrorContainer,
+                const SizedBox(height: 24),
+              ],
+              if (_notice != null)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 16),
+                  child: Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: colors.navySoft,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      _notice!,
+                      style: textTheme.bodySmall?.copyWith(
+                        color: colors.deepNavy,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
                 ),
-                textAlign: TextAlign.center,
+              if (_error != null)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 16),
+                  child: Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: colors.expenseSoft,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      _error!,
+                      style: textTheme.bodySmall?.copyWith(
+                        color: colors.expense,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ),
+              FilledButton(
+                onPressed: _waitingForPurchase
+                    ? null
+                    : isCurrentPremium
+                        ? _manageSubscription
+                        : _subscribe,
+                style: FilledButton.styleFrom(
+                  minimumSize: const Size.fromHeight(52),
+                  backgroundColor: colors.amber,
+                  foregroundColor: colors.ink,
+                  shape: const StadiumBorder(),
+                  textStyle: textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w800),
+                ),
+                child: _waitingForPurchase
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : Text(isCurrentPremium ? 'Manage Subscription' : 'Subscribe Now'),
               ),
-            ),
+              if (!isCurrentPremium) ...[
+                const SizedBox(height: 12),
+                Center(
+                  child: TextButton(
+                    onPressed: _waitingForPurchase ? null : _restorePurchases,
+                    style: TextButton.styleFrom(
+                      foregroundColor: colors.mutedInk,
+                      textStyle: textTheme.labelMedium?.copyWith(fontWeight: FontWeight.w600),
+                    ),
+                    child: const Text('Restore Purchases'),
+                  ),
+                ),
+              ],
+            ],
           ),
-        FilledButton(
-          onPressed: _waitingForPurchase
-              ? null
-              : isCurrentPremium
-                  ? _manageSubscription
-                  : _subscribe,
-          style: FilledButton.styleFrom(
-            backgroundColor: theme.colorScheme.secondary,
-            foregroundColor: theme.colorScheme.onSecondary,
-          ),
-          child: _waitingForPurchase
-              ? const SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              : Text(
-                  isCurrentPremium ? 'Manage Subscription' : 'Subscribe Now'),
         ),
-        const SizedBox(height: 12),
-        if (!isCurrentPremium)
-          Center(
-            child: TextButton(
-              onPressed: _waitingForPurchase ? null : _restorePurchases,
-              child: const Text('Restore Purchases'),
-            ),
-          ),
       ],
     );
   }
 
-  Widget _buildComparisonTable(
+  Widget _buildComparisonList(
     ThemeData theme,
     TextTheme textTheme, {
     required bool isPremiumActive,
   }) {
+    final colors = theme.appColors;
     final features = [
       ('Transactions', 'Unlimited', 'Unlimited'),
       ('Budgets', '3', 'Unlimited'),
@@ -262,69 +262,19 @@ class _SubscriptionSheetBodyState
       ('Multi-Currency', '1', 'Unlimited'),
     ];
 
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceContainerLowest,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: theme.colorScheme.outlineVariant),
-      ),
-      child: Table(
-        columnWidths: const {
-          0: FlexColumnWidth(2),
-          1: FlexColumnWidth(1.5),
-          2: FlexColumnWidth(1.5),
-        },
-        children: [
-          TableRow(
-            children: [
-              const SizedBox.shrink(),
-              Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: _PlanHeader(
-                  label: 'Free',
-                  isActive: !isPremiumActive,
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: _PlanHeader(
-                  label: 'Premium',
-                  isActive: isPremiumActive,
-                ),
-              ),
-            ],
+    return Column(
+      key: const ValueKey('subscription-comparison-list'),
+      children: [
+        for (var i = 0; i < features.length; i++) ...[
+          _PlanFeatureRow(
+            label: features[i].$1,
+            freeValue: features[i].$2,
+            premiumValue: features[i].$3,
           ),
-          ...features.map(
-            (f) => TableRow(
-              children: [
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                  child: Text(f.$1, style: textTheme.bodyMedium),
-                ),
-                Padding(
-                  padding:
-                      const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
-                  child: _PlanValueCell(
-                    value: f.$2,
-                    isActive: !isPremiumActive,
-                    emphasize: false,
-                  ),
-                ),
-                Padding(
-                  padding:
-                      const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
-                  child: _PlanValueCell(
-                    value: f.$3,
-                    isActive: isPremiumActive,
-                    emphasize: true,
-                  ),
-                ),
-              ],
-            ),
-          ),
+          if (i != features.length - 1)
+            Divider(height: 1, color: colors.border),
         ],
-      ),
+      ],
     );
   }
 
@@ -416,104 +366,154 @@ class _SubscriptionSheetBodyState
     }
   }
 
-  String _formatDate(DateTime date) {
-    return '${date.month}/${date.day}/${date.year}';
-  }
 }
 
-class _PlanHeader extends StatelessWidget {
-  final String label;
-  final bool isActive;
+class _SubscriptionHero extends StatelessWidget {
+  const _SubscriptionHero({required this.isPremium, required this.expiresAt});
 
-  const _PlanHeader({
-    required this.label,
-    required this.isActive,
-  });
+  final bool isPremium;
+  final DateTime? expiresAt;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final textTheme = theme.textTheme;
+    final colors = Theme.of(context).appColors;
+    final textTheme = Theme.of(context).textTheme;
 
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 180),
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(24, 32, 24, 28),
       decoration: BoxDecoration(
-        color: isActive
-            ? theme.colorScheme.primaryContainer
-            : theme.colorScheme.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: isActive
-              ? theme.colorScheme.primary
-              : theme.colorScheme.outlineVariant,
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [colors.deepNavy, Color.lerp(colors.deepNavy, colors.amber, 0.18)!],
         ),
+        borderRadius: const BorderRadius.vertical(bottom: Radius.circular(32)),
       ),
-      child: FittedBox(
-        fit: BoxFit.scaleDown,
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (isActive) ...[
-              Icon(
-                Icons.check_circle,
-                size: 14,
-                color: theme.colorScheme.tertiary,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Container(
+            width: 56,
+            height: 56,
+            decoration: BoxDecoration(
+              color: colors.amber.withValues(alpha: 0.18),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(Icons.workspace_premium_rounded, color: colors.amber, size: 28),
+          ),
+          const SizedBox(height: 14),
+          Text(
+            isPremium ? 'Conscia Premium' : 'Unlock Conscia Premium',
+            style: textTheme.headlineSmall?.copyWith(
+              color: colors.paper,
+              fontWeight: FontWeight.w900,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 6),
+          if (isPremium) ...[
+            Container(
+              margin: const EdgeInsets.only(top: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
+              decoration: BoxDecoration(
+                color: colors.amber.withValues(alpha: 0.18),
+                borderRadius: BorderRadius.circular(999),
+                border: Border.all(color: colors.amber.withValues(alpha: 0.4)),
               ),
-              const SizedBox(width: 4),
-            ],
+              child: Text(
+                expiresAt != null
+                    ? 'Active · renews ${_fmt(expiresAt!)}'
+                    : 'Active',
+                style: textTheme.labelSmall?.copyWith(
+                  color: colors.amber,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ] else ...[
             Text(
-              label,
-              style: textTheme.labelMedium?.copyWith(
-                fontWeight: FontWeight.w700,
-                color: isActive
-                    ? theme.colorScheme.onPrimaryContainer
-                    : theme.colorScheme.onSurface,
+              'Unlimited everything. No compromises.',
+              style: textTheme.bodyMedium?.copyWith(
+                color: colors.paper.withValues(alpha: 0.7),
+                height: 1.35,
               ),
               textAlign: TextAlign.center,
             ),
           ],
-        ),
+        ],
       ),
     );
   }
+
+  String _fmt(DateTime d) {
+    const months = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+        'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return '${months[d.month]} ${d.day}, ${d.year}';
+  }
 }
 
-class _PlanValueCell extends StatelessWidget {
-  final String value;
-  final bool isActive;
-  final bool emphasize;
-
-  const _PlanValueCell({
-    required this.value,
-    required this.isActive,
-    required this.emphasize,
+class _PlanFeatureRow extends StatelessWidget {
+  const _PlanFeatureRow({
+    required this.label,
+    required this.freeValue,
+    required this.premiumValue,
   });
+
+  final String label;
+  final String freeValue;
+  final String premiumValue;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final textTheme = theme.textTheme;
+    final textTheme = Theme.of(context).textTheme;
+    final colors = Theme.of(context).appColors;
 
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 180),
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-      decoration: BoxDecoration(
-        color: isActive
-            ? theme.colorScheme.primaryContainer.withValues(alpha: 0.55)
-            : Colors.transparent,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Text(
-        value,
-        style: textTheme.bodySmall?.copyWith(
-          color: emphasize
-              ? theme.colorScheme.primary
-              : theme.colorScheme.onSurfaceVariant,
-          fontWeight: isActive || emphasize ? FontWeight.w600 : FontWeight.w400,
-        ),
-        textAlign: TextAlign.center,
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 11),
+      child: Row(
+        children: [
+          Expanded(
+            flex: 12,
+            child: Text(
+              label,
+              style: textTheme.bodyMedium?.copyWith(
+                color: colors.ink,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+          Expanded(
+            flex: 8,
+            child: Text(
+              freeValue,
+              style: textTheme.bodySmall?.copyWith(
+                color: colors.softInk,
+                fontWeight: FontWeight.w500,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ),
+          const SizedBox(width: 4),
+          Expanded(
+            flex: 9,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+              decoration: BoxDecoration(
+                color: colors.amberSoft,
+                borderRadius: BorderRadius.circular(999),
+              ),
+              child: Text(
+                premiumValue,
+                style: textTheme.bodySmall?.copyWith(
+                  color: colors.deepNavy,
+                  fontWeight: FontWeight.w800,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

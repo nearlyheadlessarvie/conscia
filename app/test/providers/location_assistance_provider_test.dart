@@ -15,6 +15,7 @@ class _FakeLocationAssistanceService extends LocationAssistanceService {
       nearbyMerchants: ['Blue Bottle Coffee'],
       likelyCategories: ['Coffee'],
     ),
+    this.merchantCategories = const {},
   });
 
   final bool permissionGranted;
@@ -22,6 +23,7 @@ class _FakeLocationAssistanceService extends LocationAssistanceService {
     List<String> nearbyMerchants,
     List<String> likelyCategories
   }) suggestions;
+  final Map<String, String> merchantCategories;
 
   @override
   Future<bool> requestPermission() async => permissionGranted;
@@ -29,6 +31,9 @@ class _FakeLocationAssistanceService extends LocationAssistanceService {
   @override
   ({List<String> nearbyMerchants, List<String> likelyCategories})
       getTransactionSuggestions() => suggestions;
+
+  @override
+  String? categoryForMerchant(String merchant) => merchantCategories[merchant];
 }
 
 class _FakeUserService extends UserService {
@@ -41,6 +46,7 @@ class _FakeUserService extends UserService {
     String? preferredCurrency,
     String? locale,
     String? displayName,
+    String? profilePictureKey,
     String? photoUrl,
     String? spendingPersonality,
     String? incomeRange,
@@ -228,6 +234,7 @@ void main() {
           nearbyMerchants: ['Corner Bakery'],
           likelyCategories: ['Groceries'],
         ),
+        merchantCategories: const {'Corner Bakery': 'Groceries'},
       ),
     );
     addTearDown(container.dispose);
@@ -236,6 +243,7 @@ void main() {
 
     expect(suggestions.nearbyMerchants, ['Corner Bakery']);
     expect(suggestions.likelyCategories, ['Groceries']);
+    expect(suggestions.categoryForMerchant('Corner Bakery'), 'Groceries');
   });
 
   test('shared suggestion provider hides suggestions when assistance disabled',

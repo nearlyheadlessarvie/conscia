@@ -8,8 +8,15 @@ namespace Conscia.Application.Services;
 public class UserService : IUserService
 {
     private readonly IUserRepository _repo;
+    private readonly ITransactionRepository _transactions;
 
-    public UserService(IUserRepository repo) => _repo = repo;
+    public UserService(
+        IUserRepository repo,
+        ITransactionRepository transactions)
+    {
+        _repo = repo;
+        _transactions = transactions;
+    }
 
     public Task<User?> GetByIdAsync(Guid id, CancellationToken ct = default) =>
         _repo.GetByIdAsync(id, ct);
@@ -22,7 +29,26 @@ public class UserService : IUserService
         var user = await _repo.GetByIdAsync(id, ct)
             ?? throw new KeyNotFoundException($"User {id} not found");
 
-        if (dto.PreferredCurrency is not null) user.PreferredCurrency = dto.PreferredCurrency;
+        if (dto.PreferredCurrency is not null
+            && !string.Equals(dto.PreferredCurrency, user.PreferredCurrency, StringComparison.OrdinalIgnoreCase))
+        {
+            var (transactions, _) = await _transactions.QueryByUserAsync(
+                id,
+                null,
+                null,
+                null,
+                1,
+                null,
+                ct);
+
+            if (transactions.Count > 0)
+                throw new InvalidOperationException(
+                    "Default currency is locked after your first transaction.");
+
+            user.PreferredCurrency = dto.PreferredCurrency;
+        }
+        if (dto.DisplayName is not null) user.DisplayName = dto.DisplayName.Trim();
+        if (dto.ProfilePictureKey is not null) user.ProfilePictureKey = dto.ProfilePictureKey;
         if (dto.Locale is not null) user.Locale = dto.Locale;
         if (dto.SpendingPersonality is not null) user.SpendingPersonality = dto.SpendingPersonality;
         if (dto.IncomeRange is not null) user.IncomeRange = dto.IncomeRange;

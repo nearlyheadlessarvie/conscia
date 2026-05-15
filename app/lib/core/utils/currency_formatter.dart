@@ -1,5 +1,7 @@
 import 'package:intl/intl.dart';
 
+import 'localized_number_input.dart';
+
 class CurrencyFormatter {
   CurrencyFormatter._();
 
@@ -12,7 +14,13 @@ class CurrencyFormatter {
       name: currencyCode,
       locale: locale,
     );
-    return formatter.format(amount);
+    final sign = amount < 0 ? '-' : '';
+    final number = LocalizedNumberInput.formatForInput(
+      amount.abs(),
+      locale: locale,
+      decimalDigits: formatter.decimalDigits ?? 2,
+    );
+    return '$sign${formatter.currencySymbol}$number';
   }
 
   static String formatCompact(
@@ -32,7 +40,8 @@ class CurrencyFormatter {
     required String currencyCode,
     String? locale,
   }) {
-    final formatted = format(amount.abs(), currencyCode: currencyCode, locale: locale);
+    final formatted =
+        format(amount.abs(), currencyCode: currencyCode, locale: locale);
     return amount >= 0 ? '+$formatted' : '-$formatted';
   }
 }
