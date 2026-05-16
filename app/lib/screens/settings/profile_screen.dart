@@ -200,6 +200,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       scrollProgress: _appBarScrollProgress,
       child: Scaffold(
         extendBodyBehindAppBar: true,
+        resizeToAvoidBottomInset: false,
         appBar: const ConsciaAppBar(title: Text('Profile')),
         body: NotificationListener<ScrollNotification>(
           onNotification: _handleScrollNotification,
@@ -217,121 +218,117 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               data: (profile) {
                 _loadFromProfile(profile);
                 final incomeOptions = _incomeOptions(profile);
-                return CustomScrollView(
-                  key: const PageStorageKey('profile-shell-scroll'),
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  slivers: [
-                    SliverToBoxAdapter(
-                      child: _ProfileEditorialHero(
-                        displayName: _nameController.text.trim().isEmpty
-                            ? _nameFromEmail(profile.email)
-                            : _nameController.text.trim(),
-                        email: profile.email,
-                      ),
+                return Stack(
+                  children: [
+                    CustomScrollView(
+                      key: const PageStorageKey('profile-shell-scroll'),
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      slivers: [
+                        SliverToBoxAdapter(
+                          child: _ProfileEditorialHero(
+                            displayName: _nameController.text.trim().isEmpty
+                                ? _nameFromEmail(profile.email)
+                                : _nameController.text.trim(),
+                            email: profile.email,
+                          ),
+                        ),
+                        SliverPadding(
+                          padding: const EdgeInsets.fromLTRB(20, 22, 20, 112),
+                          sliver: SliverList.list(
+                            children: [
+                              const _ProfileSectionLabel(
+                                title: 'Personal details',
+                                subtitle:
+                                    'The name and account identity Conscia uses.',
+                              ),
+                              const SizedBox(height: 10),
+                              _ProfilePhotoBlock(
+                                profile: profile,
+                                initials: _initials(
+                                  _nameController.text,
+                                  profile.email,
+                                ),
+                                onPhotoTap: _saving ? null : _pickAndSavePhoto,
+                              ),
+                              const SizedBox(height: 16),
+                              FloatingLabelTextField(
+                                controller: _nameController,
+                                label: 'Display name',
+                                textInputAction: TextInputAction.done,
+                                textCapitalization: TextCapitalization.words,
+                                onSubmitted: (_) => _save(),
+                              ),
+                              const SizedBox(height: 24),
+                              const _ProfileSectionLabel(
+                                title: 'Money profile',
+                                subtitle:
+                                    'Keep guidance tuned to your real-world context.',
+                              ),
+                              const SizedBox(height: 10),
+                              _ProfileSelectField(
+                                label: 'Spending style',
+                                value: _labelForOption(
+                                  _spendingOptions,
+                                  _spendingPersonality,
+                                ),
+                                onTap: () => _selectOption(
+                                  title: 'Spending style',
+                                  options: _spendingOptions,
+                                  value: _spendingPersonality,
+                                  onChanged: (value) =>
+                                      _spendingPersonality = value,
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              _ProfileSelectField(
+                                label: 'Monthly income',
+                                value: _labelForOption(
+                                  incomeOptions,
+                                  _incomeRange,
+                                ),
+                                onTap: () => _selectOption(
+                                  title: 'Monthly income',
+                                  options: incomeOptions,
+                                  value: _incomeRange,
+                                  onChanged: (value) => _incomeRange = value,
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              _ProfileSelectField(
+                                label: 'Occupation',
+                                value: _labelForOption(
+                                  _occupationOptions,
+                                  _occupationType,
+                                ),
+                                onTap: () => _selectOption(
+                                  title: 'Occupation',
+                                  options: _occupationOptions,
+                                  value: _occupationType,
+                                  onChanged: (value) => _occupationType = value,
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              _ProfileSelectField(
+                                label: 'Household',
+                                value: _labelForOption(
+                                  _householdOptions,
+                                  _householdSize,
+                                ),
+                                onTap: () => _selectOption(
+                                  title: 'Household',
+                                  options: _householdOptions,
+                                  value: _householdSize,
+                                  onChanged: (value) => _householdSize = value,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
-                    SliverPadding(
-                      padding: const EdgeInsets.fromLTRB(20, 22, 20, 40),
-                      sliver: SliverList.list(
-                        children: [
-                          const _ProfileSectionLabel(
-                            title: 'Personal details',
-                            subtitle:
-                                'The name and account identity Conscia uses.',
-                          ),
-                          const SizedBox(height: 10),
-                          _ProfilePhotoBlock(
-                            profile: profile,
-                            initials:
-                                _initials(_nameController.text, profile.email),
-                            onPhotoTap: _saving ? null : _pickAndSavePhoto,
-                          ),
-                          const SizedBox(height: 16),
-                          FloatingLabelTextField(
-                            controller: _nameController,
-                            label: 'Display name',
-                            textInputAction: TextInputAction.done,
-                            textCapitalization: TextCapitalization.words,
-                            onSubmitted: (_) => _save(),
-                          ),
-                          const SizedBox(height: 24),
-                          const _ProfileSectionLabel(
-                            title: 'Money profile',
-                            subtitle:
-                                'Keep guidance tuned to your real-world context.',
-                          ),
-                          const SizedBox(height: 10),
-                          _ProfileSelectField(
-                            label: 'Spending style',
-                            value: _labelForOption(
-                              _spendingOptions,
-                              _spendingPersonality,
-                            ),
-                            onTap: () => _selectOption(
-                              title: 'Spending style',
-                              options: _spendingOptions,
-                              value: _spendingPersonality,
-                              onChanged: (value) =>
-                                  _spendingPersonality = value,
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          _ProfileSelectField(
-                            label: 'Monthly income',
-                            value: _labelForOption(incomeOptions, _incomeRange),
-                            onTap: () => _selectOption(
-                              title: 'Monthly income',
-                              options: incomeOptions,
-                              value: _incomeRange,
-                              onChanged: (value) => _incomeRange = value,
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          _ProfileSelectField(
-                            label: 'Occupation',
-                            value: _labelForOption(
-                              _occupationOptions,
-                              _occupationType,
-                            ),
-                            onTap: () => _selectOption(
-                              title: 'Occupation',
-                              options: _occupationOptions,
-                              value: _occupationType,
-                              onChanged: (value) => _occupationType = value,
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          _ProfileSelectField(
-                            label: 'Household',
-                            value: _labelForOption(
-                              _householdOptions,
-                              _householdSize,
-                            ),
-                            onTap: () => _selectOption(
-                              title: 'Household',
-                              options: _householdOptions,
-                              value: _householdSize,
-                              onChanged: (value) => _householdSize = value,
-                            ),
-                          ),
-                          const SizedBox(height: 28),
-                          SizedBox(
-                            height: 48,
-                            child: FilledButton(
-                              onPressed: _saving ? null : _save,
-                              child: _saving
-                                  ? const SizedBox(
-                                      width: 20,
-                                      height: 20,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                        color: Colors.white,
-                                      ),
-                                    )
-                                  : const Text('Save'),
-                            ),
-                          ),
-                        ],
-                      ),
+                    _ProfileSaveCta(
+                      saving: _saving,
+                      onPressed: _saving ? null : _save,
                     ),
                   ],
                 );
@@ -397,6 +394,58 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     if (lower.endsWith('.png')) return 'image/png';
     if (lower.endsWith('.webp')) return 'image/webp';
     return 'image/jpeg';
+  }
+}
+
+class _ProfileSaveCta extends StatelessWidget {
+  const _ProfileSaveCta({
+    required this.saving,
+    required this.onPressed,
+  });
+
+  final bool saving;
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final bottomInset = MediaQuery.paddingOf(context).bottom;
+    final keyboardInset = MediaQuery.viewInsetsOf(context).bottom;
+
+    return Positioned(
+      left: 0,
+      right: 0,
+      bottom: 0,
+      child: IgnorePointer(
+        ignoring: onPressed == null,
+        child: AnimatedPadding(
+          duration: const Duration(milliseconds: 180),
+          curve: Curves.easeOutCubic,
+          padding: EdgeInsets.fromLTRB(
+            20,
+            12,
+            20,
+            20 + bottomInset + keyboardInset,
+          ),
+          child: SizedBox(
+            key: const ValueKey('profile-save-cta'),
+            height: 48,
+            child: FilledButton(
+              onPressed: onPressed,
+              child: saving
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : const Text('Save'),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }
 

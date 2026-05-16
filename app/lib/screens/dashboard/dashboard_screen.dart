@@ -559,7 +559,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     ],
                   ),
                 ),
-              const SliverPadding(padding: EdgeInsets.only(bottom: 112)),
+              const SliverPadding(padding: EdgeInsets.only(bottom: 32)),
             ],
           ),
         ),

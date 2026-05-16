@@ -1259,7 +1259,7 @@ class _VersionFooter extends StatelessWidget {
     );
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 8, 20, 96),
+      padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
       child: Column(
         children: [
           Divider(color: colors.border),

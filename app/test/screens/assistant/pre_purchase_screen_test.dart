@@ -407,6 +407,29 @@ void main() {
     expect(after, greaterThan(before));
   });
 
+  testWidgets('pre-purchase CTA stays in form flow with docker-safe padding',
+      (tester) async {
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(await buildPrePurchaseApp(tester));
+    await pumpAssistantFrame(tester);
+
+    final scrollViewFinder = find.byKey(
+      const PageStorageKey('assistant-shell-scroll'),
+    );
+    final ctaFinder = find.byKey(const ValueKey('assistant-submit-cta'));
+    final scrollView = tester.widget<SingleChildScrollView>(scrollViewFinder);
+
+    expect(ctaFinder, findsOneWidget);
+    expect(
+      find.descendant(of: scrollViewFinder, matching: ctaFinder),
+      findsOneWidget,
+    );
+    expect(
+        (scrollView.padding as EdgeInsets).bottom, greaterThanOrEqualTo(112));
+  });
+
   testWidgets(
       'pre-purchase assistant shows category picker entrypoint and orders sheet by recent categories',
       (tester) async {

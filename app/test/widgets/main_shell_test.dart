@@ -60,6 +60,46 @@ GoRouter _router({String initialLocation = '/'}) => GoRouter(
             ),
           ),
         ),
+        GoRoute(
+          path: '/scroll-demo',
+          builder: (_, __) => MainShell(
+            child: Scaffold(
+              body: ListView.builder(
+                key: const ValueKey('shell-scroll-demo-list'),
+                itemCount: 40,
+                itemBuilder: (_, index) => SizedBox(
+                  height: 64,
+                  child: Text('Row $index'),
+                ),
+              ),
+            ),
+          ),
+        ),
+        GoRoute(
+          path: '/short-scroll-demo',
+          builder: (_, __) => const MainShell(
+            child: Scaffold(
+              body: SingleChildScrollView(
+                key: ValueKey('shell-short-scroll-demo-list'),
+                child: SizedBox(
+                  height: 620,
+                  child: Text('Short scroll range'),
+                ),
+              ),
+            ),
+          ),
+        ),
+        GoRoute(
+          path: '/keyboard-demo',
+          builder: (context, __) => MediaQuery(
+            data: MediaQuery.of(context).copyWith(
+              viewInsets: const EdgeInsets.only(bottom: 260),
+            ),
+            child: const MainShell(
+              child: Scaffold(body: Text('keyboard')),
+            ),
+          ),
+        ),
       ],
     );
 
@@ -137,7 +177,84 @@ void main() {
       (tester) async {
     await _pumpShell(tester);
 
-    expect(find.byKey(const ValueKey('main-shell-dock-overlay')), findsOneWidget);
+    expect(
+        find.byKey(const ValueKey('main-shell-dock-overlay')), findsOneWidget);
+  });
+
+  testWidgets('MainShell slides dock away when scrolling down and restores up',
+      (tester) async {
+    await _pumpShell(tester, initialLocation: '/scroll-demo');
+
+    AnimatedSlide dockSlide() => tester.widget<AnimatedSlide>(
+          find.byKey(const ValueKey('main-shell-dock-motion')),
+        );
+
+    expect(dockSlide().offset, Offset.zero);
+
+    await tester.drag(
+      find.byKey(const ValueKey('shell-scroll-demo-list')),
+      const Offset(0, -180),
+    );
+    await tester.pump();
+
+    expect(dockSlide().offset.dy, greaterThan(0));
+
+    await tester.drag(
+      find.byKey(const ValueKey('shell-scroll-demo-list')),
+      const Offset(0, 80),
+    );
+    await tester.pump();
+
+    expect(dockSlide().offset, Offset.zero);
+  });
+
+  testWidgets('MainShell hides dock even when little scroll range remains',
+      (tester) async {
+    await _pumpShell(
+      tester,
+      initialLocation: '/short-scroll-demo',
+      windowSize: const Size(375, 600),
+    );
+
+    AnimatedSlide dockSlide() => tester.widget<AnimatedSlide>(
+          find.byKey(const ValueKey('main-shell-dock-motion')),
+        );
+
+    expect(dockSlide().offset, Offset.zero);
+
+    await tester.drag(
+      find.byKey(const ValueKey('shell-short-scroll-demo-list')),
+      const Offset(0, -120),
+    );
+    await tester.pump();
+
+    expect(dockSlide().offset.dy, greaterThan(0));
+  });
+
+  testWidgets('MainShell keeps dock hidden while keyboard is open',
+      (tester) async {
+    await _pumpShell(tester, initialLocation: '/keyboard-demo');
+
+    final dockSlide = tester.widget<AnimatedSlide>(
+      find.byKey(const ValueKey('main-shell-dock-motion')),
+    );
+
+    expect(dockSlide.offset.dy, greaterThan(0));
+  });
+
+  testWidgets('MainShell keeps dock available on assistant for navigation',
+      (tester) async {
+    await _pumpShell(tester, initialLocation: '/assistant');
+
+    final dockSlide = tester.widget<AnimatedSlide>(
+      find.byKey(const ValueKey('main-shell-dock-motion')),
+    );
+    final dockOpacity = tester.widget<AnimatedOpacity>(
+      find.byType(AnimatedOpacity),
+    );
+
+    expect(dockSlide.offset, Offset.zero);
+    expect(dockOpacity.opacity, 1);
   });
 
   testWidgets('MainShell does not show a shared add FAB on mobile',

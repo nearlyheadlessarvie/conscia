@@ -230,7 +230,7 @@ class _InsightsScreenState extends ConsumerState<InsightsScreen> {
                   subtitle: 'Small changes that may deserve a pause.',
                   items: sections[InsightFeedSection.recentSignals] ?? const [],
                 ),
-                const SizedBox(height: 112),
+                const SizedBox(height: 32),
               ],
             ),
           ),

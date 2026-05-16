@@ -4,6 +4,7 @@ import '../core/network/dio_client.dart';
 import '../models/conscience_journey.dart';
 import '../services/conscience_journey_service.dart';
 import 'alert_provider.dart';
+import 'auth_provider.dart';
 
 final conscienceJourneyServiceProvider =
     Provider<ConscienceJourneyService>((ref) {
@@ -13,13 +14,19 @@ final conscienceJourneyServiceProvider =
 final conscienceJourneyProvider =
     AsyncNotifierProvider<ConscienceJourneyNotifier, ConscienceJourneySummary>(
   ConscienceJourneyNotifier.new,
-  dependencies: [conscienceJourneyServiceProvider],
+  dependencies: [authProvider, conscienceJourneyServiceProvider],
 );
 
 class ConscienceJourneyNotifier
     extends AsyncNotifier<ConscienceJourneySummary> {
   @override
   Future<ConscienceJourneySummary> build() {
+    final authState = ref.watch(authProvider);
+    if (!authState.isAuthenticated) {
+      throw StateError(
+        'Cannot load conscience journey without an authenticated session.',
+      );
+    }
     return ref.watch(conscienceJourneyServiceProvider).fetchJourney();
   }
 

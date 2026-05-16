@@ -268,7 +268,7 @@ class _TransactionListScreenState extends ConsumerState<TransactionListScreen> {
     if (state.isLoading && state.transactions.isEmpty) {
       return [
         SliverPadding(
-          padding: const EdgeInsets.fromLTRB(20, 0, 20, 112),
+          padding: const EdgeInsets.fromLTRB(20, 0, 20, 32),
           sliver: SliverList.builder(
             itemCount: 8,
             itemBuilder: (_, __) => const Padding(
@@ -285,7 +285,7 @@ class _TransactionListScreenState extends ConsumerState<TransactionListScreen> {
         const SliverFillRemaining(
           hasScrollBody: false,
           child: Padding(
-            padding: EdgeInsets.fromLTRB(20, 0, 20, 112),
+            padding: EdgeInsets.fromLTRB(20, 0, 20, 32),
             child: EmptyState(
               icon: Icons.receipt_long_outlined,
               title: 'No transactions yet',
@@ -301,11 +301,11 @@ class _TransactionListScreenState extends ConsumerState<TransactionListScreen> {
       if (state.isLoading)
         const SliverToBoxAdapter(
           child: Padding(
-            padding: EdgeInsets.fromLTRB(20, 0, 20, 112),
+            padding: EdgeInsets.fromLTRB(20, 0, 20, 32),
             child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
           ),
         ),
-      const SliverPadding(padding: EdgeInsets.only(bottom: 112)),
+      const SliverPadding(padding: EdgeInsets.only(bottom: 32)),
     ];
   }
 

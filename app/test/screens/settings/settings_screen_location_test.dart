@@ -239,7 +239,7 @@ void main() {
     expect(decoration.color, isNot(Colors.transparent));
   });
 
-  testWidgets('settings version footer keeps only dock clearance', (
+  testWidgets('settings version footer keeps only safe breathing room', (
     tester,
   ) async {
     SharedPreferences.setMockInitialValues({});
@@ -278,7 +278,7 @@ void main() {
           .first,
     );
 
-    expect((footerPadding.padding as EdgeInsets).bottom, 96);
+    expect((footerPadding.padding as EdgeInsets).bottom, 32);
   });
 
   testWidgets('settings can toggle smart location suggestions', (

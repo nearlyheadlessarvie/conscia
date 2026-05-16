@@ -157,6 +157,42 @@ void main() {
     expect(find.text('On pace'), findsOneWidget);
   });
 
+  testWidgets('budgets hero does not invent a strongest signal at zero spend',
+      (tester) async {
+    await _pumpBudgetsScreen(
+      tester,
+      budgets: const [
+        Budget(
+          id: 'budget-1',
+          category: 'Groceries',
+          monthlyLimit: 14000,
+          spent: 0,
+          currencyCode: 'PHP',
+          percentage: 0,
+          isOverBudget: false,
+        ),
+        Budget(
+          id: 'budget-2',
+          category: 'Bills',
+          monthlyLimit: 12000,
+          spent: 0,
+          currencyCode: 'PHP',
+          percentage: 0,
+          isOverBudget: false,
+        ),
+      ],
+    );
+
+    expect(
+        find.textContaining('currently carrying your strongest budget signal'),
+        findsNothing);
+    expect(
+      find.text(
+          'Your budgets are ready. Spending will start shaping this story.'),
+      findsOneWidget,
+    );
+  });
+
   testWidgets('budgets screen uses a bleeding editorial hero and flat rows',
       (tester) async {
     await _pumpBudgetsScreen(
@@ -243,7 +279,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('₱6,500.00'), findsOneWidget);
-    expect(find.text('Family budget'), findsOneWidget);
+    expect(find.text('Family budget'), findsNothing);
   });
 
   testWidgets('tapping a budget donut segment calls out its mix pill',
@@ -399,7 +435,7 @@ void main() {
     expect(find.byType(CustomScrollView), findsOneWidget);
   });
 
-  testWidgets('budgets screen keeps only nav-shell-safe bottom breathing room',
+  testWidgets('budgets screen keeps only safe bottom breathing room',
       (tester) async {
     await _pumpBudgetsScreen(
       tester,
@@ -419,7 +455,7 @@ void main() {
     final spacer = tester.widget<SizedBox>(
       find.byKey(const ValueKey('budgets-bottom-nav-spacer')),
     );
-    expect(spacer.height, 88);
+    expect(spacer.height, 32);
   });
 
   testWidgets('add budget waits for premium status before showing limit dialog',

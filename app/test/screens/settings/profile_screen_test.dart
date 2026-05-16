@@ -233,4 +233,47 @@ void main() {
     expect(find.byKey(const ValueKey('profile-photo-action')), findsOneWidget);
     expect(userService.lastUpdate, isNull);
   });
+
+  testWidgets('profile save action is a keyboard-safe bottom CTA', (
+    tester,
+  ) async {
+    final userService = _RecordingUserService();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          currentUserProvider.overrideWith(
+            (ref) async => UserProfile(
+              id: 'user-1',
+              email: 'profile@example.com',
+              currencyCode: 'PHP',
+              locale: 'en_US',
+              displayName: 'Arvie Aguirre',
+              createdAt: DateTime(2026),
+              hasCompletedOnboarding: true,
+              spendingPersonality: 'balanced',
+              incomeRange: 'high',
+              occupationType: 'employed',
+              householdSize: 'family',
+            ),
+          ),
+          userServiceProvider.overrideWithValue(userService),
+        ],
+        child: const MaterialApp(
+          home: ProfileScreen(),
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    final ctaFinder = find.byKey(const ValueKey('profile-save-cta'));
+
+    expect(ctaFinder, findsOneWidget);
+    expect(tester.widget<FilledButton>(find.byType(FilledButton)).onPressed,
+        isNotNull);
+
+    final ctaBottom = tester.getBottomLeft(ctaFinder).dy;
+    expect(ctaBottom, lessThanOrEqualTo(580));
+  });
 }

@@ -16,6 +16,13 @@ class MainShell extends ConsumerStatefulWidget {
 
 class _MainShellState extends ConsumerState<MainShell> {
   String? _lastLocation;
+  bool _dockVisible = true;
+  double _downwardScrollAccumulation = 0;
+  double _upwardScrollAccumulation = 0;
+
+  static const _hideDockThreshold = 32.0;
+  static const _showDockThreshold = 12.0;
+  static const _edgeHideThreshold = 8.0;
 
   static final _tabs = [
     (
@@ -72,11 +79,18 @@ class _MainShellState extends ConsumerState<MainShell> {
     }
     _lastLocation = location;
     final currentIndex = _selectedIndex(location);
+    final keyboardOpen = MediaQuery.viewInsetsOf(context).bottom > 0;
+    final dockShown = _dockVisible && !keyboardOpen;
 
     return Scaffold(
       body: Stack(
         children: [
-          Positioned.fill(child: widget.child),
+          Positioned.fill(
+            child: NotificationListener<ScrollNotification>(
+              onNotification: _handleScrollNotification,
+              child: widget.child,
+            ),
+          ),
           Positioned.fill(
             child: IgnorePointer(
               ignoring: true,
@@ -92,15 +106,72 @@ class _MainShellState extends ConsumerState<MainShell> {
             left: 0,
             right: 0,
             bottom: 0,
-            child: FloatingDockNav(
-              currentIndex: currentIndex,
-              onDestinationSelected: (index) =>
-                  _onDestinationSelected(context, index),
+            child: IgnorePointer(
+              ignoring: !dockShown,
+              child: AnimatedSlide(
+                key: const ValueKey('main-shell-dock-motion'),
+                duration: const Duration(milliseconds: 220),
+                curve: Curves.easeOutCubic,
+                offset: dockShown ? Offset.zero : const Offset(0, 1.35),
+                child: AnimatedOpacity(
+                  duration: const Duration(milliseconds: 160),
+                  curve: Curves.easeOut,
+                  opacity: dockShown ? 1 : 0,
+                  child: FloatingDockNav(
+                    currentIndex: currentIndex,
+                    onDestinationSelected: (index) =>
+                        _onDestinationSelected(context, index),
+                  ),
+                ),
+              ),
             ),
           ),
         ],
       ),
     );
+  }
+
+  bool _handleScrollNotification(ScrollNotification notification) {
+    if (notification.metrics.axis != Axis.vertical) return false;
+    if (notification.metrics.pixels <= 0) {
+      _setDockVisible(true);
+      _resetScrollAccumulation();
+      return false;
+    }
+
+    final delta = notification is ScrollUpdateNotification
+        ? notification.scrollDelta ?? 0
+        : 0.0;
+    if (delta > 0) {
+      _downwardScrollAccumulation += delta;
+      _upwardScrollAccumulation = 0;
+      final reachedLowerEdge =
+          notification.metrics.extentAfter <= _edgeHideThreshold;
+      if (_downwardScrollAccumulation >= _hideDockThreshold ||
+          reachedLowerEdge) {
+        _setDockVisible(false);
+        _downwardScrollAccumulation = 0;
+      }
+    } else if (delta < 0) {
+      _upwardScrollAccumulation += -delta;
+      _downwardScrollAccumulation = 0;
+      if (_upwardScrollAccumulation >= _showDockThreshold) {
+        _setDockVisible(true);
+        _upwardScrollAccumulation = 0;
+      }
+    }
+
+    return false;
+  }
+
+  void _setDockVisible(bool visible) {
+    if (_dockVisible == visible) return;
+    setState(() => _dockVisible = visible);
+  }
+
+  void _resetScrollAccumulation() {
+    _downwardScrollAccumulation = 0;
+    _upwardScrollAccumulation = 0;
   }
 
   void _onDestinationSelected(BuildContext context, int index) {

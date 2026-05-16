@@ -205,10 +205,16 @@ void main() {
 
     await tester.pumpAndSettle();
 
-    expect(find.text('SCAN THE RECEIPT, THEN SANITY-CHECK THE DETAILS'),
-        findsOneWidget);
+    expect(find.byKey(const ValueKey('receipt-scan-hero')), findsOneWidget);
+    expect(find.text('SCAN RECEIPT'), findsOneWidget);
+    expect(find.text('Snap it. Review it. Done.'), findsOneWidget);
+    expect(find.text('CHOOSE A SOURCE'), findsOneWidget);
     expect(find.text('Take photo'), findsOneWidget);
     expect(find.text('Choose from gallery'), findsOneWidget);
+    expect(find.byKey(const ValueKey('receipt-scan-camera-action')),
+        findsOneWidget);
+    expect(find.byKey(const ValueKey('receipt-scan-gallery-action')),
+        findsOneWidget);
   });
 
   testWidgets('receipt maybe later opens add expense form for free users',

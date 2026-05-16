@@ -8,6 +8,7 @@ obj/
 *.exe
 *.pdb
 *.log
+*.lscache
 
 ## IDE
 .vs/

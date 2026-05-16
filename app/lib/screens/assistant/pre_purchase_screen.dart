@@ -40,9 +40,6 @@ import 'widgets/budget_context_card.dart';
 import '../../widgets/amount_hero_field.dart';
 import '../../../widgets/scope_pill_switch.dart';
 
-// Dock nav height (container) without system safe-area, used by HeroScreenScaffold.
-const _kDockNavOffset = 72.0;
-
 enum _ScreenState { input, error }
 
 class PrePurchaseScreen extends ConsumerStatefulWidget {
@@ -402,8 +399,8 @@ class _PrePurchaseScreenState extends ConsumerState<PrePurchaseScreen> {
 
     final colors = Theme.of(context).appColors;
     final stickyProgress = ((_inputScrollOffset - 5) / 10).clamp(0.0, 1.0);
-    final bottomInset = MediaQuery.paddingOf(context).bottom;
     final keyboardInset = MediaQuery.viewInsetsOf(context).bottom;
+    final ctaBottomSpacer = keyboardInset > 0 ? keyboardInset + 28 : 112.0;
 
     _scheduleInputScrollSync();
 
@@ -416,176 +413,149 @@ class _PrePurchaseScreenState extends ConsumerState<PrePurchaseScreen> {
             colors: [colors.pageTop, colors.pageBottom],
           ),
         ),
-        child: Column(
+        child: Stack(
           children: [
-            Expanded(
-              child: Stack(
+            SingleChildScrollView(
+              key: const PageStorageKey('assistant-shell-scroll'),
+              controller: _inputScrollController,
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: EdgeInsets.only(bottom: ctaBottomSpacer),
+              child: Column(
                 children: [
-                  SingleChildScrollView(
-                    key: const PageStorageKey('assistant-shell-scroll'),
-                    controller: _inputScrollController,
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    padding: const EdgeInsets.only(
-                      bottom: 24 + _kDockNavOffset + 96,
-                    ),
+                  const _AssistantHeroBleed(),
+                  const SizedBox(height: 20),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
                     child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        const _AssistantHeroBleed(),
-                        const SizedBox(height: 20),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                        ScreenSection(
+                          title: 'Decision details',
+                          subtitle:
+                              "Tell Conscia what you're considering so it can weigh both sides.",
+                          compact: true,
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
-                              ScreenSection(
-                                title: 'Decision details',
-                                subtitle:
-                                    "Tell Conscia what you're considering so it can weigh both sides.",
-                                compact: true,
-                                child: Column(
-                                  crossAxisAlignment:
-                                      CrossAxisAlignment.stretch,
-                                  children: [
-                                    SmartMerchantSuggestionStrip(
-                                      focusNode: _descriptionFocusNode,
-                                      suggestions: suggestions,
-                                      enabled: locationAssistance.isEnabled &&
-                                          hasSuggestions,
-                                      onMerchantSelected: (merchant) {
-                                        setState(() {
-                                          _descriptionController.text =
-                                              merchant;
-                                          final category =
-                                              suggestions.categoryForMerchant(
-                                            merchant,
-                                          );
-                                          if (category != null) {
-                                            _selectedCategory = category;
-                                          }
-                                        });
-                                        _focusAmount();
-                                        final category =
-                                            suggestions.categoryForMerchant(
-                                          merchant,
-                                        );
-                                        if (category != null) {
-                                          ref
-                                              .read(recentCategoryProvider
-                                                  .notifier)
-                                              .record(category);
-                                        }
-                                      },
-                                      child: FloatingLabelTextField(
-                                        controller: _descriptionController,
-                                        focusNode: _descriptionFocusNode,
-                                        label:
-                                            'What are you thinking of buying?',
-                                        textInputAction: TextInputAction.next,
-                                        autofocus: true,
-                                        onSubmitted: (_) => _focusAmount(),
-                                        textCapitalization:
-                                            TextCapitalization.sentences,
-                                        trailing: VoiceInputButton(
-                                          onTranscriptReady:
-                                              _applyVoiceTranscript,
-                                        ),
-                                        onChanged: (_) => setState(() {}),
-                                      ),
-                                    ),
-                                    const SizedBox(height: 18),
-                                    AmountHeroField(
-                                      controller: _amountController,
-                                      focusNode: _amountFocusNode,
-                                      currencyCode: _currencyCode,
-                                      locale: ref
-                                          .watch(userPreferencesProvider)
-                                          .locale,
-                                      isExpense: true,
-                                      isPremium: isPremium,
-                                      textInputAction: TextInputAction.next,
-                                      onSubmitted: (_) =>
-                                          _scrollCategoryIntoView(),
-                                      onChanged: (_) => setState(() {}),
-                                      onCurrencyChanged: (code) => setState(() {
-                                        _currencyManuallyChanged = true;
-                                        _currencyCode = code;
-                                      }),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              ScreenSection(
-                                key: _categorySectionKey,
-                                title: 'Category',
-                                subtitle:
-                                    'Where do you think this belongs so we can give you better insights?',
-                                compact: true,
-                                child: TransactionStyleCategorySelector(
-                                  selectedCategory: _selectedCategory,
-                                  isExpense: true,
-                                  isPremium: isPremium,
-                                  showHeader: false,
-                                  onCategorySelected: (category) {
-                                    setState(
-                                        () => _selectedCategory = category);
+                              SmartMerchantSuggestionStrip(
+                                focusNode: _descriptionFocusNode,
+                                suggestions: suggestions,
+                                enabled: locationAssistance.isEnabled &&
+                                    hasSuggestions,
+                                onMerchantSelected: (merchant) {
+                                  setState(() {
+                                    _descriptionController.text = merchant;
+                                    final category =
+                                        suggestions.categoryForMerchant(
+                                      merchant,
+                                    );
                                     if (category != null) {
-                                      ref
-                                          .read(recentCategoryProvider.notifier)
-                                          .record(category);
+                                      _selectedCategory = category;
                                     }
-                                  },
+                                  });
+                                  _focusAmount();
+                                  final category =
+                                      suggestions.categoryForMerchant(merchant);
+                                  if (category != null) {
+                                    ref
+                                        .read(recentCategoryProvider.notifier)
+                                        .record(category);
+                                  }
+                                },
+                                child: FloatingLabelTextField(
+                                  controller: _descriptionController,
+                                  focusNode: _descriptionFocusNode,
+                                  label: 'What are you thinking of buying?',
+                                  textInputAction: TextInputAction.next,
+                                  autofocus: true,
+                                  onSubmitted: (_) => _focusAmount(),
+                                  textCapitalization:
+                                      TextCapitalization.sentences,
+                                  trailing: VoiceInputButton(
+                                    onTranscriptReady: _applyVoiceTranscript,
+                                  ),
+                                  onChanged: (_) => setState(() {}),
                                 ),
                               ),
-                              if (familySpace != null)
-                                ScreenSection(
-                                  title: 'Classify',
-                                  subtitle:
-                                      'Where should this live in your money story?',
-                                  compact: true,
-                                  child: ScopePillSwitch(
-                                    value: _selectedContextScope,
-                                    familyEnabled: true,
-                                    onChanged: (scope) => setState(
-                                      () => _selectedContextScope =
-                                          scope.toLowerCase(),
-                                    ),
-                                  ),
-                                ),
-                              const SizedBox(height: 20),
+                              const SizedBox(height: 18),
+                              AmountHeroField(
+                                controller: _amountController,
+                                focusNode: _amountFocusNode,
+                                currencyCode: _currencyCode,
+                                locale:
+                                    ref.watch(userPreferencesProvider).locale,
+                                isExpense: true,
+                                isPremium: isPremium,
+                                textInputAction: TextInputAction.next,
+                                onSubmitted: (_) => _scrollCategoryIntoView(),
+                                onChanged: (_) => setState(() {}),
+                                onCurrencyChanged: (code) => setState(() {
+                                  _currencyManuallyChanged = true;
+                                  _currencyCode = code;
+                                }),
+                              ),
                             ],
+                          ),
+                        ),
+                        ScreenSection(
+                          key: _categorySectionKey,
+                          title: 'Category',
+                          subtitle:
+                              'Where do you think this belongs so we can give you better insights?',
+                          compact: true,
+                          child: TransactionStyleCategorySelector(
+                            selectedCategory: _selectedCategory,
+                            isExpense: true,
+                            isPremium: isPremium,
+                            showHeader: false,
+                            onCategorySelected: (category) {
+                              setState(() => _selectedCategory = category);
+                              if (category != null) {
+                                ref
+                                    .read(recentCategoryProvider.notifier)
+                                    .record(category);
+                              }
+                            },
+                          ),
+                        ),
+                        if (familySpace != null)
+                          ScreenSection(
+                            title: 'Classify',
+                            subtitle:
+                                'Where should this live in your money story?',
+                            compact: true,
+                            child: ScopePillSwitch(
+                              value: _selectedContextScope,
+                              familyEnabled: true,
+                              onChanged: (scope) => setState(
+                                () =>
+                                    _selectedContextScope = scope.toLowerCase(),
+                              ),
+                            ),
+                          ),
+                        const SizedBox(height: 18),
+                        SizedBox(
+                          key: const ValueKey('assistant-submit-cta'),
+                          width: double.infinity,
+                          child: FilledButton(
+                            onPressed: _formValid ? _submit : null,
+                            child: const Text('Ask Conscia ✦'),
                           ),
                         ),
                       ],
                     ),
                   ),
-                  Positioned(
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    child: EditorialStickyHeader(
-                      title: 'Purchase Assistant',
-                      progress: stickyProgress,
-                      topPadding: MediaQuery.paddingOf(context).top,
-                    ),
-                  ),
                 ],
               ),
             ),
-            AnimatedPadding(
-              duration: const Duration(milliseconds: 180),
-              curve: Curves.easeOutCubic,
-              padding: EdgeInsets.fromLTRB(
-                16,
-                0,
-                16,
-                28 + _kDockNavOffset + bottomInset + keyboardInset,
-              ),
-              child: SizedBox(
-                width: double.infinity,
-                child: FilledButton(
-                  onPressed: _formValid ? _submit : null,
-                  child: const Text('Ask Conscia ✦'),
-                ),
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              child: EditorialStickyHeader(
+                title: 'Purchase Assistant',
+                progress: stickyProgress,
+                topPadding: MediaQuery.paddingOf(context).top,
               ),
             ),
           ],
@@ -599,7 +569,6 @@ class _PrePurchaseScreenState extends ConsumerState<PrePurchaseScreen> {
 
     return HeroScreenScaffold(
       appBar: const ConsciaAppBar(title: Text('Purchase Assistant')),
-      extraBottomPadding: _kDockNavOffset,
       child: Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,

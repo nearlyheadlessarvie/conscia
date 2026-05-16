@@ -130,7 +130,7 @@ class _BudgetsScreenState extends ConsumerState<BudgetsScreen> {
                   const SliverToBoxAdapter(
                     child: SizedBox(
                       key: ValueKey('budgets-bottom-nav-spacer'),
-                      height: 88,
+                      height: 32,
                     ),
                   ),
                 ],
@@ -305,7 +305,9 @@ class _BudgetsEditorialHeroState extends State<_BudgetsEditorialHero> {
     final strongest = ordered.isEmpty ? null : ordered.first;
     final summary = strongest == null
         ? 'Start with a few calm monthly limits and let Conscia watch the pace.'
-        : '${strongest.category} is currently carrying your strongest budget signal.';
+        : totalSpent <= 0
+            ? 'Your budgets are ready. Spending will start shaping this story.'
+            : '${strongest.category} is currently carrying your strongest budget signal.';
 
     return Container(
       key: const ValueKey('budgets-editorial-hero'),
@@ -645,22 +647,14 @@ class _BudgetLedgerRow extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Expanded(
-                        child: Wrap(
-                          spacing: 8,
-                          runSpacing: 6,
-                          crossAxisAlignment: WrapCrossAlignment.center,
-                          children: [
-                            Text(
-                              budget.category,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: textTheme.titleMedium?.copyWith(
-                                color: colors.ink,
-                                fontWeight: FontWeight.w800,
-                              ),
-                            ),
-                            if (budget.isFamily) const _FamilyBudgetPill(),
-                          ],
+                        child: Text(
+                          budget.category,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: textTheme.titleMedium?.copyWith(
+                            color: colors.ink,
+                            fontWeight: FontWeight.w800,
+                          ),
                         ),
                       ),
                       const SizedBox(width: 8),
@@ -770,40 +764,6 @@ class _BudgetLedgerRow extends StatelessWidget {
     if (budget.percentage >= 0.8) return 'Close to cap';
     if (budget.percentage >= 0.6) return 'Watch this';
     return 'On pace';
-  }
-}
-
-class _FamilyBudgetPill extends StatelessWidget {
-  const _FamilyBudgetPill();
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).appColors;
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: colors.familySoft,
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.groups_rounded, size: 12, color: colors.family),
-            const SizedBox(width: 4),
-            Text(
-              'Family budget',
-              style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: colors.family,
-                    fontSize: 10,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 0.2,
-                  ),
-            ),
-          ],
-        ),
-      ),
-    );
   }
 }
 
