@@ -1,18 +1,4 @@
 services:
-  postgres:
-    image: postgres:16.6-alpine
-    ports:
-      - "5432:5432"
-    environment:
-      POSTGRES_DB: conscia
-      POSTGRES_USER: conscia
-      POSTGRES_PASSWORD: conscia_dev
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U conscia"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-
   dynamodb-local:
     image: amazon/dynamodb-local:2.5.3
     command: "-jar DynamoDBLocal.jar -sharedDb -inMemory"

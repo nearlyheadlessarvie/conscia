@@ -7,9 +7,11 @@ public class DynamoDbHealthCheck(IAmazonDynamoDB dynamoDb) : IHealthCheck
 {
     private static readonly (string TableName, string[] RequiredIndexes)[] RequiredTables =
     [
+        ("ControlPlane", ["GSI1", "GSI2"]),
         ("Transactions", ["GSI-UserId-Category-Date"]),
         ("RecurringSchedules", []),
         ("AIInteractions", ["GSI-TransactionId-Date"]),
+        ("OutboxEvents", ["GSI-Status-CreatedAt"]),
         ("WeeklyInsights", []),
         ("PurchasePatterns", []),
         ("InAppAlerts", ["GSI-Trigger-Date"]),

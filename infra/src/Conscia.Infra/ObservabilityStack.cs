@@ -8,7 +8,6 @@ namespace Conscia.Infra;
 public class ObservabilityStackProps : StackProps
 {
     public required IFunction ApiLambda { get; set; }
-    public required IFunction DbAccessLambda { get; set; }
     public required IFunction OutboxLambda { get; set; }
 }
 
@@ -18,7 +17,6 @@ public class ObservabilityStack : Stack
         : base(scope, id, props)
     {
         CreateLogGroup("ApiLogGroup", props.ApiLambda);
-        CreateLogGroup("DbAccessLogGroup", props.DbAccessLambda);
         CreateLogGroup("OutboxLogGroup", props.OutboxLambda);
     }
 

@@ -1,7 +1,5 @@
 using Conscia.Tools.Seeder.Profiles;
 using Conscia.Tools.Seeder.Story;
-using Microsoft.EntityFrameworkCore;
-using Conscia.Infrastructure.Persistence;
 using Conscia.Domain.Entities;
 using Conscia.Domain.Enums;
 
@@ -117,52 +115,5 @@ public class StoryDemoScenarioTests
             evt => evt.EventType == "reflection_completed" && evt.SourceId == scenario.Transactions[0].Id.ToString());
     }
 
-    [Fact]
-    public async Task SeedAsync_ReplacesOnlyTheStoryDemoRelationalSlice()
-    {
-        var options = new DbContextOptionsBuilder<ConsciaDbContext>()
-            .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
-            .Options;
-
-        await using var db = new ConsciaDbContext(options);
-        await db.Database.EnsureCreatedAsync();
-
-        var otherUserId = Guid.NewGuid();
-        db.Users.Add(new User
-        {
-            Id = otherUserId,
-            Email = "other@example.com",
-            PreferredCurrency = "PHP",
-            Locale = "en_PH"
-        });
-
-        var now = DateTime.Parse("2026-05-11T00:00:00Z");
-        var scenario = StoryDemoScenario.Build(now);
-        await StoryDemoRdsSeeder.SeedAsync(db, scenario, CancellationToken.None);
-
-        db.Budgets.Add(new Budget
-        {
-            Id = Guid.NewGuid(),
-            UserId = scenario.User.Id,
-            Category = "Coffee",
-            MonthlyLimit = 999m,
-            CurrencyCode = "PHP"
-        });
-        await db.SaveChangesAsync();
-
-        await StoryDemoRdsSeeder.SeedAsync(db, scenario, CancellationToken.None);
-
-        Assert.Equal(
-            2 + scenario.AdditionalUsers.Count,
-            await db.Users.CountAsync());
-        Assert.Equal(1, await db.Users.CountAsync(u => u.Email == scenario.User.Email));
-        foreach (var user in scenario.AdditionalUsers)
-        {
-            Assert.Equal(1, await db.Users.CountAsync(u => u.Email == user.Email));
-        }
-        Assert.Equal(1, await db.UserIdentities.CountAsync(ui => ui.UserId == scenario.User.Id));
-        Assert.Equal(1, await db.UserSubscriptions.CountAsync(us => us.UserId == scenario.User.Id));
-        Assert.Equal(scenario.Budgets.Count, await db.Budgets.CountAsync(b => b.UserId == scenario.User.Id));
-        Assert.DoesNotContain(await db.Budgets.Where(b => b.UserId == scenario.User.Id).ToListAsync(), b => b.Category == "Coffee");
-    }
+    // Dynamo-backed seeding is covered by local seeder smoke runs because it needs DynamoDB Local.
 }

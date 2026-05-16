@@ -2,30 +2,22 @@ using Amazon.CognitoIdentityProvider;
 using Amazon.CognitoIdentityProvider.Model;
 using Conscia.Domain.Entities;
 using Conscia.Domain.Enums;
-using Conscia.Infrastructure.Persistence;
-using Conscia.Infrastructure.Repositories;
 using Conscia.Infrastructure.Services;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 
 namespace Conscia.Tests.Unit.Infrastructure;
 
-public class CognitoAuthServiceTests : IDisposable
+public class CognitoAuthServiceTests
 {
     private readonly Mock<IAmazonCognitoIdentityProvider> _cognito = new();
     private readonly FakeExternalSocialTokenVerifier _socialVerifier = new();
-    private readonly ConsciaDbContext _db;
+    private readonly InMemoryUserRepository _repo = new();
     private readonly CognitoAuthService _auth;
 
     public CognitoAuthServiceTests()
     {
-        var options = new DbContextOptionsBuilder<ConsciaDbContext>()
-            .UseInMemoryDatabase(Guid.NewGuid().ToString())
-            .Options;
-        _db = new ConsciaDbContext(options);
-
         var config = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
@@ -39,14 +31,8 @@ public class CognitoAuthServiceTests : IDisposable
             config,
             _cognito.Object,
             _socialVerifier,
-            new UserRepository(_db),
+            _repo,
             NullLogger<CognitoAuthService>.Instance);
-    }
-
-    public void Dispose()
-    {
-        _db.Dispose();
-        GC.SuppressFinalize(this);
     }
 
     [Fact]
@@ -74,12 +60,12 @@ public class CognitoAuthServiceTests : IDisposable
         Assert.Equal(userSub.ToString(), result.UserId);
         Assert.Equal("new@example.com", result.Email);
 
-        var user = await _db.Users.SingleAsync();
+        var user = _repo.Users.Single();
         Assert.Equal(userSub, user.Id);
         Assert.Equal("new@example.com", user.Email);
         Assert.False(user.EmailConfirmed);
 
-        var identity = await _db.UserIdentities.SingleAsync();
+        var identity = _repo.Identities.Single();
         Assert.Equal(AuthProvider.Email, identity.Provider);
         Assert.Equal("new@example.com", identity.ProviderSub);
         Assert.Equal(userSub, identity.UserId);
@@ -120,8 +106,7 @@ public class CognitoAuthServiceTests : IDisposable
             Email = "new@example.com",
             EmailConfirmed = false
         };
-        _db.Users.Add(user);
-        await _db.SaveChangesAsync();
+        await _repo.AddAsync(user);
 
         _cognito
             .Setup(c => c.ConfirmSignUpAsync(
@@ -138,7 +123,7 @@ public class CognitoAuthServiceTests : IDisposable
         Assert.False(result.RequiresConfirmation);
         Assert.Equal("new@example.com", result.Email);
 
-        var updatedUser = await _db.Users.SingleAsync(u => u.Email == "new@example.com");
+        var updatedUser = _repo.Users.Single(u => u.Email == "new@example.com");
         Assert.True(updatedUser.EmailConfirmed);
     }
 
@@ -185,11 +170,11 @@ public class CognitoAuthServiceTests : IDisposable
         Assert.False(string.IsNullOrWhiteSpace(result.AccessToken));
         Assert.False(string.IsNullOrWhiteSpace(result.RefreshToken));
 
-        var user = await _db.Users.SingleAsync();
+        var user = _repo.Users.Single();
         Assert.Equal("social@example.com", user.Email);
         Assert.True(user.EmailConfirmed);
 
-        var identity = await _db.UserIdentities.SingleAsync();
+        var identity = _repo.Identities.Single();
         Assert.Equal(AuthProvider.Google, identity.Provider);
         Assert.Equal("google-sub-123", identity.ProviderSub);
         Assert.Equal(user.Id, identity.UserId);
@@ -208,15 +193,14 @@ public class CognitoAuthServiceTests : IDisposable
             Email = "apple@example.com",
             EmailConfirmed = true
         };
-        _db.Users.Add(user);
-        _db.UserIdentities.Add(new UserIdentity
+        await _repo.AddAsync(user);
+        await _repo.AddIdentityAsync(new UserIdentity
         {
             Id = Guid.NewGuid(),
             UserId = user.Id,
             Provider = AuthProvider.Apple,
             ProviderSub = "apple-sub-123"
         });
-        await _db.SaveChangesAsync();
 
         _socialVerifier.ApplePayload = new SocialTokenPayload(
             ProviderSub: "apple-sub-123",

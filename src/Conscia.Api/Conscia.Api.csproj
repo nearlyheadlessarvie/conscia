@@ -33,18 +33,12 @@
     <PackageReference Include="System.Threading.RateLimiting" Version="8.*" />
 
     <!-- Health Checks -->
-    <PackageReference Include="AspNetCore.HealthChecks.NpgSql" Version="8.*" />
     <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks" Version="8.*" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.11">
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-      <PrivateAssets>all</PrivateAssets>
-    </PackageReference>
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\Conscia.Application\Conscia.Application.csproj" />
     <ProjectReference Include="..\Conscia.Infrastructure\Conscia.Infrastructure.csproj" />
-    <ProjectReference Include="..\Conscia.Infrastructure.Db\Conscia.Infrastructure.Db.csproj" />
     <ProjectReference Include="..\Conscia.AI\Conscia.AI.csproj" />
   </ItemGroup>
 

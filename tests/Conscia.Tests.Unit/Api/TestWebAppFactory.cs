@@ -6,10 +6,9 @@ using Conscia.Application.Models;
 using Conscia.Domain.Entities;
 using Conscia.Domain.Enums;
 using Conscia.Domain.ValueObjects;
-using Conscia.Infrastructure.Persistence;
+using Conscia.Tests.Unit.Infrastructure;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
 using Moq;
@@ -41,7 +40,8 @@ public class TestWebAppFactory : WebApplicationFactory<Program>
     public Mock<IWeeklyInsightsRepository> WeeklyInsightsRepoMock { get; } = new();
     public Mock<IPurchasePatternRepository> PurchasePatternRepoMock { get; } = new();
     public Mock<IMonthlyCategorySpendRepository> MonthlyCategorySpendRepoMock { get; } = new();
-    private readonly string _dbName = $"ConsciaTest-{Guid.NewGuid()}";
+    public Mock<IS3StorageService> S3StorageServiceMock { get; } = new();
+    public InMemoryUserRepository UserRepo { get; } = new();
 
     private const string SigningKey = "this-is-a-test-signing-key-at-least-32-chars!!";
 
@@ -51,13 +51,8 @@ public class TestWebAppFactory : WebApplicationFactory<Program>
 
         builder.ConfigureServices(services =>
         {
-            // Replace real DbContext with InMemory for tests
-            var dbDescriptor = services.FirstOrDefault(d => d.ServiceType == typeof(DbContextOptions<ConsciaDbContext>));
-            if (dbDescriptor is not null) services.Remove(dbDescriptor);
-            services.AddDbContext<ConsciaDbContext>(options =>
-                options.UseInMemoryDatabase(_dbName));
-
             ReplaceService<IUserService>(services, UserServiceMock.Object);
+            ReplaceService<IUserRepository>(services, UserRepo);
             ReplaceService<IBudgetService>(services, BudgetServiceMock.Object);
             ReplaceService<ITransactionService>(services, TransactionServiceMock.Object);
             ReplaceService<IRecurringScheduleService>(services, RecurringScheduleServiceMock.Object);

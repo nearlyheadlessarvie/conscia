@@ -13,29 +13,18 @@ sealed class Program
             Account = System.Environment.GetEnvironmentVariable("CDK_DEFAULT_ACCOUNT"),
             Region = System.Environment.GetEnvironmentVariable("CDK_DEFAULT_REGION") ?? "ap-southeast-1"
         };
+        var domainSettings = DomainSettings.FromEnvironment();
 
-        var network = new NetworkStack(app, "Conscia-Network", new StackProps { Env = env });
+        var database = new DatabaseStack(app, "Conscia-Database", new StackProps { Env = env });
 
-        var database = new DatabaseStack(app, "Conscia-Database", new DatabaseStackProps
+        var storage = new StorageStack(app, "Conscia-Storage", new StorageStackProps
         {
             Env = env,
-            Vpc = network.Vpc,
-            DbSecurityGroup = network.DbSecurityGroup
+            AllowedCorsOrigins = domainSettings?.AllowedCorsOrigins ?? ["*"]
         });
-
-        var storage = new StorageStack(app, "Conscia-Storage", new StackProps { Env = env });
         var auth = new AuthStack(app, "Conscia-Auth", new StackProps { Env = env });
 
         var ai = new AIStack(app, "Conscia-AI", new StackProps { Env = env });
-
-        var dbAccess = new DbAccessStack(app, "Conscia-DbAccess", new DbAccessStackProps
-        {
-            Env = env,
-            Vpc = network.Vpc,
-            DbSecurityGroup = network.DbSecurityGroup,
-            DbInstance = database.DbInstance,
-            DbPasswordSecret = database.DbPasswordSecret
-        });
 
         var compute = new ComputeStack(app, "Conscia-Compute", new ComputeStackProps
         {
@@ -43,33 +32,36 @@ sealed class Program
             ReceiptBucket = storage.ReceiptBucket,
             UserPool = auth.UserPool,
             UserPoolClient = auth.UserPoolClient,
+            ControlPlaneTable = database.ControlPlaneTable,
             TransactionsTable = database.TransactionsTable,
+            RecurringSchedulesTable = database.RecurringSchedulesTable,
             AiInteractionsTable = database.AiInteractionsTable,
             OutboxEventsTable = database.OutboxEventsTable,
             InAppAlertsTable = database.InAppAlertsTable,
             WeeklyInsightsTable = database.WeeklyInsightsTable,
             PurchasePatternsTable = database.PurchasePatternsTable,
+            MonthlyCategorySpendsTable = database.MonthlyCategorySpendsTable,
             PushDeviceTokensTable = database.PushDeviceTokensTable,
+            ConscienceJourneyTable = database.ConscienceJourneyTable,
             AiQueue = ai.AiQueue,
-            DbAccessLambda = dbAccess.DbAccessLambda
+            DomainSettings = domainSettings
         });
 
         var outbox = new OutboxStack(app, "Conscia-Outbox", new OutboxStackProps
         {
             Env = env,
+            ControlPlaneTable = database.ControlPlaneTable,
             TransactionsTable = database.TransactionsTable,
             OutboxEventsTable = database.OutboxEventsTable,
-            DbPasswordSecret = database.DbPasswordSecret,
-            Vpc = network.Vpc,
-            DbSecurityGroup = network.DbSecurityGroup,
-            DbInstance = database.DbInstance
+            InAppAlertsTable = database.InAppAlertsTable,
+            MonthlyCategorySpendsTable = database.MonthlyCategorySpendsTable,
+            DomainSettings = domainSettings
         });
 
         _ = new ObservabilityStack(app, "Conscia-Observability", new ObservabilityStackProps
         {
             Env = env,
             ApiLambda = compute.ApiLambda,
-            DbAccessLambda = dbAccess.DbAccessLambda,
             OutboxLambda = outbox.OutboxLambda
         });
 
@@ -81,9 +73,19 @@ sealed class Program
             PurchasePatternsTable = database.PurchasePatternsTable
         });
 
-        var web = new WebStack(app, "Conscia-Web", new StackProps { Env = env });
+        _ = new EmailStack(app, "Conscia-Email", new EmailStackProps
+        {
+            Env = env,
+            DomainSettings = domainSettings
+        });
 
-        var cicd = new CiCdStack(app, "Conscia-CiCd", new CiCdStackProps
+        _ = new WebStack(app, "Conscia-Web", new WebStackProps
+        {
+            Env = env,
+            DomainSettings = domainSettings
+        });
+
+        _ = new CiCdStack(app, "Conscia-CiCd", new CiCdStackProps
         {
             Env = env,
             GitHubOrg = "nearlyheadlessarvie",
