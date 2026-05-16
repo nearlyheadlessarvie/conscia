@@ -1,28 +1,19 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
-using Conscia.Domain.Entities;
 using Conscia.Domain.Enums;
-using Conscia.Infrastructure.Persistence;
-using Conscia.Infrastructure.Repositories;
 using Conscia.Infrastructure.Services;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 
 namespace Conscia.Tests.Unit.Infrastructure;
 
-public class MockAuthServiceTests : IDisposable
+public class MockAuthServiceTests
 {
     private readonly MockAuthService _auth;
-    private readonly ConsciaDbContext _db;
+    private readonly InMemoryUserRepository _repo = new();
     private const string SigningKey = "super-secret-dev-key-at-least-32-chars-long!!";
 
     public MockAuthServiceTests()
     {
-        var options = new DbContextOptionsBuilder<ConsciaDbContext>()
-            .UseInMemoryDatabase(Guid.NewGuid().ToString())
-            .Options;
-        _db = new ConsciaDbContext(options);
-
         var config = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
@@ -30,14 +21,7 @@ public class MockAuthServiceTests : IDisposable
             })
             .Build();
 
-        var repo = new UserRepository(_db);
-        _auth = new MockAuthService(config, repo);
-    }
-
-    public void Dispose()
-    {
-        _db.Dispose();
-        GC.SuppressFinalize(this);
+        _auth = new MockAuthService(config, _repo);
     }
 
     [Fact]
@@ -52,7 +36,7 @@ public class MockAuthServiceTests : IDisposable
         Assert.Null(result.RefreshToken);
         Assert.NotNull(result.UserId);
 
-        var user = await _db.Users.SingleAsync(u => u.Email == "new@test.com");
+        var user = _repo.Users.Single(u => u.Email == "new@test.com");
         Assert.False(user.EmailConfirmed);
     }
 
@@ -67,7 +51,7 @@ public class MockAuthServiceTests : IDisposable
         Assert.False(result.RequiresConfirmation);
         Assert.Equal("confirm@test.com", result.Email);
 
-        var user = await _db.Users.SingleAsync(u => u.Email == "confirm@test.com");
+        var user = _repo.Users.Single(u => u.Email == "confirm@test.com");
         Assert.True(user.EmailConfirmed);
     }
 
@@ -88,7 +72,7 @@ public class MockAuthServiceTests : IDisposable
     {
         await _auth.RegisterAsync("identity@test.com", "pass");
 
-        var identity = await _db.UserIdentities.FirstOrDefaultAsync(i => i.ProviderSub == "identity@test.com");
+        var identity = _repo.Identities.FirstOrDefault(i => i.ProviderSub == "identity@test.com");
         Assert.NotNull(identity);
         Assert.Equal(AuthProvider.Email, identity.Provider);
     }
@@ -202,7 +186,7 @@ public class MockAuthServiceTests : IDisposable
         Assert.NotNull(result.AccessToken);
         Assert.NotNull(result.UserId);
 
-        var identity = await _db.UserIdentities.FirstOrDefaultAsync(i => i.Provider == AuthProvider.Google);
+        var identity = _repo.Identities.FirstOrDefault(i => i.Provider == AuthProvider.Google);
         Assert.NotNull(identity);
     }
 
@@ -224,7 +208,7 @@ public class MockAuthServiceTests : IDisposable
         Assert.NotNull(result.AccessToken);
         Assert.NotNull(result.UserId);
 
-        var identity = await _db.UserIdentities.FirstOrDefaultAsync(i => i.Provider == AuthProvider.Apple);
+        var identity = _repo.Identities.FirstOrDefault(i => i.Provider == AuthProvider.Apple);
         Assert.NotNull(identity);
     }
 

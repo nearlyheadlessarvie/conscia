@@ -1,15 +1,13 @@
 using Conscia.Application.Interfaces;
 using Conscia.Domain.Entities;
 using Conscia.Domain.Enums;
-using Conscia.Infrastructure.Persistence;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 namespace Conscia.Infrastructure.Services;
 
 public class SubscriptionService : ISubscriptionService
 {
-    private readonly ConsciaDbContext _db;
+    private readonly IUserSubscriptionRepository _subscriptions;
     private readonly ILogger<SubscriptionService> _logger;
     private readonly IAppleReceiptValidator _appleValidator;
     private readonly IGooglePlayValidator _googleValidator;
@@ -17,12 +15,12 @@ public class SubscriptionService : ISubscriptionService
     private const string DefaultSubscriptionId = "conscia_premium_monthly";
 
     public SubscriptionService(
-        ConsciaDbContext db,
+        IUserSubscriptionRepository subscriptions,
         ILogger<SubscriptionService> logger,
         IAppleReceiptValidator appleValidator,
         IGooglePlayValidator googleValidator)
     {
-        _db = db;
+        _subscriptions = subscriptions;
         _logger = logger;
         _appleValidator = appleValidator;
         _googleValidator = googleValidator;
@@ -30,8 +28,7 @@ public class SubscriptionService : ISubscriptionService
 
     public async Task<UserSubscription> VerifyiOSReceiptAsync(Guid userId, string receiptData, CancellationToken ct = default)
     {
-        var existing = await _db.UserSubscriptions
-            .FirstOrDefaultAsync(s => s.OriginalTransactionId == receiptData, ct);
+        var existing = await _subscriptions.GetByOriginalTransactionIdAsync(receiptData, ct);
         if (existing is not null)
         {
             await TryRefreshAppleExpiry(existing, receiptData, ct);
@@ -73,15 +70,13 @@ public class SubscriptionService : ISubscriptionService
             ExpiresAt = expiresAt
         };
 
-        _db.UserSubscriptions.Add(sub);
-        await _db.SaveChangesAsync(ct);
+        await _subscriptions.AddAsync(sub, ct);
         return sub;
     }
 
     public async Task<UserSubscription> VerifyAndroidTokenAsync(Guid userId, string purchaseToken, CancellationToken ct = default)
     {
-        var existing = await _db.UserSubscriptions
-            .FirstOrDefaultAsync(s => s.OriginalTransactionId == purchaseToken, ct);
+        var existing = await _subscriptions.GetByOriginalTransactionIdAsync(purchaseToken, ct);
         if (existing is not null)
         {
             await TryRefreshGoogleExpiry(existing, purchaseToken, ct);
@@ -123,16 +118,12 @@ public class SubscriptionService : ISubscriptionService
             ExpiresAt = expiresAt
         };
 
-        _db.UserSubscriptions.Add(sub);
-        await _db.SaveChangesAsync(ct);
+        await _subscriptions.AddAsync(sub, ct);
         return sub;
     }
 
     public async Task<UserSubscription?> GetStatusAsync(Guid userId, CancellationToken ct = default) =>
-        await _db.UserSubscriptions
-            .Where(s => s.UserId == userId)
-            .OrderByDescending(s => s.ExpiresAt)
-            .FirstOrDefaultAsync(ct);
+        await _subscriptions.GetLatestByUserAsync(userId, ct);
 
     public async Task<bool> IsPremiumAsync(Guid userId, CancellationToken ct = default)
     {
@@ -151,7 +142,7 @@ public class SubscriptionService : ISubscriptionService
             {
                 existing.ExpiresAt = txnInfo.ExpiresDate;
                 existing.Tier = txnInfo.IsRevoked ? SubscriptionTier.Free : SubscriptionTier.Premium;
-                await _db.SaveChangesAsync(ct);
+                await _subscriptions.UpdateAsync(existing, ct);
             }
         }
         catch (Exception ex)
@@ -171,7 +162,7 @@ public class SubscriptionService : ISubscriptionService
             {
                 existing.ExpiresAt = subInfo.ExpiryTime;
                 existing.Tier = subInfo.IsCanceled ? SubscriptionTier.Free : SubscriptionTier.Premium;
-                await _db.SaveChangesAsync(ct);
+                await _subscriptions.UpdateAsync(existing, ct);
             }
         }
         catch (Exception ex)

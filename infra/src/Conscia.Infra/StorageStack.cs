@@ -4,13 +4,20 @@ using Constructs;
 
 namespace Conscia.Infra;
 
+public class StorageStackProps : StackProps
+{
+    public string[] AllowedCorsOrigins { get; set; } = ["*"];
+}
+
 public class StorageStack : Stack
 {
     public IBucket ReceiptBucket { get; }
 
-    public StorageStack(Construct scope, string id, IStackProps? props = null)
+    public StorageStack(Construct scope, string id, StorageStackProps? props = null)
         : base(scope, id, props)
     {
+        props ??= new StorageStackProps();
+
         ReceiptBucket = new Bucket(this, "ReceiptBucket", new BucketProps
         {
             BucketName = $"conscia-receipts-{Account}",
@@ -23,7 +30,7 @@ public class StorageStack : Stack
                 new CorsRule
                 {
                     AllowedMethods = [HttpMethods.PUT, HttpMethods.GET],
-                    AllowedOrigins = ["*"],
+                    AllowedOrigins = props.AllowedCorsOrigins,
                     AllowedHeaders = ["*"],
                     MaxAge = 3600
                 }

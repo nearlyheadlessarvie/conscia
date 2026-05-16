@@ -1,6 +1,7 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
+using Amazon.DynamoDBv2.Model;
 using Conscia.Application.Interfaces;
 using Conscia.Domain.Entities;
 using Conscia.Domain.Enums;
@@ -299,7 +300,7 @@ public class MockAuthService : IAuthService
                     ProviderSub = providerSub
                 }, ct);
             }
-            catch (Microsoft.EntityFrameworkCore.DbUpdateException)
+            catch (TransactionCanceledException)
             {
                 user = await _repo.GetByProviderAsync(provider, providerSub, ct);
                 if (user is null)

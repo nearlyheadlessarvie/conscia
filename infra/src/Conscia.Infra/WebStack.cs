@@ -1,16 +1,26 @@
 using Amazon.CDK;
 using Amazon.CDK.AWS.S3;
+using Amazon.CDK.AWS.CertificateManager;
 using Amazon.CDK.AWS.CloudFront;
 using Amazon.CDK.AWS.CloudFront.Origins;
+using Amazon.CDK.AWS.Route53;
+using Amazon.CDK.AWS.Route53.Targets;
 using Constructs;
 
 namespace Conscia.Infra;
 
+public class WebStackProps : StackProps
+{
+    public DomainSettings? DomainSettings { get; set; }
+}
+
 public class WebStack : Stack
 {
-    public WebStack(Construct scope, string id, IStackProps? props = null)
+    public WebStack(Construct scope, string id, WebStackProps? props = null)
         : base(scope, id, props)
     {
+        props ??= new WebStackProps();
+
         var websiteBucket = new Bucket(this, "WebsiteBucket", new BucketProps
         {
             BucketName = $"conscia-website-{Account}",
@@ -20,7 +30,7 @@ public class WebStack : Stack
             Encryption = BucketEncryption.S3_MANAGED
         });
 
-        var distribution = new Distribution(this, "WebsiteDistribution", new DistributionProps
+        var distributionProps = new DistributionProps
         {
             DefaultBehavior = new BehaviorOptions
             {
@@ -50,7 +60,44 @@ public class WebStack : Stack
             },
             PriceClass = PriceClass.PRICE_CLASS_100,
             Comment = "Conscia Marketing Site (getconscia.com)"
-        });
+        };
+
+        IHostedZone? hostedZone = null;
+        if (props.DomainSettings is not null)
+        {
+            hostedZone = HostedZone.FromHostedZoneAttributes(this, "HostedZone", new HostedZoneAttributes
+            {
+                HostedZoneId = props.DomainSettings.HostedZoneId,
+                ZoneName = props.DomainSettings.RootDomainName
+            });
+
+            var certificate = new DnsValidatedCertificate(this, "WebsiteCertificate", new DnsValidatedCertificateProps
+            {
+                DomainName = props.DomainSettings.RootDomainName,
+                SubjectAlternativeNames = [props.DomainSettings.WwwDomainName],
+                HostedZone = hostedZone,
+                Region = "us-east-1",
+                CleanupRoute53Records = true
+            });
+
+            distributionProps.Certificate = certificate;
+            distributionProps.DomainNames = props.DomainSettings.WebDomainNames;
+        }
+
+        var distribution = new Distribution(this, "WebsiteDistribution", distributionProps);
+
+        if (hostedZone is not null && props.DomainSettings is not null)
+        {
+            foreach (var domainName in props.DomainSettings.WebDomainNames)
+            {
+                new ARecord(this, $"WebsiteAlias{SanitizeId(domainName)}", new ARecordProps
+                {
+                    Zone = hostedZone,
+                    RecordName = domainName,
+                    Target = RecordTarget.FromAlias(new CloudFrontTarget(distribution))
+                });
+            }
+        }
 
         new CfnOutput(this, "WebsiteBucketName", new CfnOutputProps
         {
@@ -72,5 +119,10 @@ public class WebStack : Stack
             Description = "CloudFront domain name",
             ExportName = "ConsciaWebDomain"
         });
+    }
+
+    private static string SanitizeId(string value)
+    {
+        return value.Replace(".", string.Empty).Replace("-", string.Empty);
     }
 }

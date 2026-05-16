@@ -6,7 +6,6 @@ using Amazon;
 using Amazon.BedrockRuntime;
 using Amazon.CognitoIdentityProvider;
 using Amazon.DynamoDBv2;
-using Amazon.Lambda;
 using Amazon.Runtime;
 using Amazon.S3;
 using Amazon.SQS;
@@ -22,14 +21,11 @@ using Conscia.Application.Interfaces;
 using Conscia.Application.Services;
 using Conscia.Application.Triggers;
 using Conscia.Application.Validators;
-using Conscia.Infrastructure.Db.LambdaProxy;
-using Conscia.Infrastructure.Persistence;
 using Conscia.Infrastructure.Repositories;
 using Conscia.Infrastructure.Services;
 using FluentValidation;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.IdentityModel.Tokens;
 using OpenTelemetry.Metrics;
@@ -119,34 +115,13 @@ else
     builder.Services.AddAWSService<IAmazonCognitoIdentityProvider>();
 }
 
-// --- EF Core + DB Repositories ---
-if (builder.Environment.IsDevelopment())
-{
-    builder.Services.AddDbContext<ConsciaDbContext>(options =>
-        options.UseNpgsql(builder.Configuration.GetConnectionString("PostgreSQL")));
-
-    builder.Services.AddScoped<IUserRepository, UserRepository>();
-    builder.Services.AddScoped<IBudgetRepository, BudgetRepository>();
-    builder.Services.AddScoped<IReceiptRepository, ReceiptRepository>();
-    builder.Services.AddScoped<IFamilySpaceRepository, FamilySpaceRepository>();
-    builder.Services.AddScoped<ICategoryRepository, CategoryRepository>();
-}
-else
-{
-    builder.Services.AddAWSService<IAmazonLambda>();
-    var dbFunctionName = builder.Configuration["AWS:Lambda:DbAccessFunctionName"] ?? "conscia-db-access";
-
-    builder.Services.AddScoped<IBudgetRepository>(sp =>
-        new LambdaProxyBudgetRepository(sp.GetRequiredService<IAmazonLambda>(), dbFunctionName));
-    builder.Services.AddScoped<IUserRepository>(sp =>
-        new LambdaProxyUserRepository(sp.GetRequiredService<IAmazonLambda>(), dbFunctionName));
-    builder.Services.AddScoped<IReceiptRepository>(sp =>
-        new LambdaProxyReceiptRepository(sp.GetRequiredService<IAmazonLambda>(), dbFunctionName));
-    builder.Services.AddScoped<IFamilySpaceRepository>(sp =>
-        new LambdaProxyFamilySpaceRepository(sp.GetRequiredService<IAmazonLambda>(), dbFunctionName));
-    builder.Services.AddScoped<ICategoryRepository>(sp =>
-        new LambdaProxyCategoryRepository(sp.GetRequiredService<IAmazonLambda>(), dbFunctionName));
-}
+// --- DynamoDB Repositories ---
+builder.Services.AddScoped<IUserRepository, UserRepository>();
+builder.Services.AddScoped<IUserSubscriptionRepository, UserSubscriptionRepository>();
+builder.Services.AddScoped<IBudgetRepository, BudgetRepository>();
+builder.Services.AddScoped<IReceiptRepository, ReceiptRepository>();
+builder.Services.AddScoped<IFamilySpaceRepository, FamilySpaceRepository>();
+builder.Services.AddScoped<ICategoryRepository, CategoryRepository>();
 builder.Services.AddScoped<ITransactionRepository, TransactionRepository>();
 builder.Services.AddScoped<IRecurringScheduleRepository, RecurringScheduleRepository>();
 builder.Services.AddScoped<IAIInteractionRepository, AIInteractionRepository>();
@@ -384,14 +359,6 @@ var healthChecks = builder.Services.AddHealthChecks()
     .AddCheck("self", () => HealthCheckResult.Healthy(), tags: new[] { "live" })
     .AddCheck<DynamoDbHealthCheck>("dynamodb", tags: new[] { "ready", "db" })
     .AddCheck<AIServiceHealthCheck>("ai-service", tags: new[] { "ready" });
-
-if (builder.Environment.IsDevelopment())
-{
-    healthChecks.AddNpgSql(
-        connectionString: builder.Configuration.GetConnectionString("PostgreSQL") ?? "",
-        name: "postgresql",
-        tags: new[] { "ready", "db" });
-}
 
 var app = builder.Build();
 

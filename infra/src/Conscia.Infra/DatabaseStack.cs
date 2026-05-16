@@ -1,91 +1,70 @@
 using Amazon.CDK;
 using Amazon.CDK.AWS.DynamoDB;
-using Amazon.CDK.AWS.EC2;
-using Amazon.CDK.AWS.RDS;
-using Amazon.CDK.AWS.SecretsManager;
 using Constructs;
 using Attribute = Amazon.CDK.AWS.DynamoDB.Attribute;
 
 namespace Conscia.Infra;
 
-public class DatabaseStackProps : StackProps
-{
-    public required IVpc Vpc { get; set; }
-    public required ISecurityGroup DbSecurityGroup { get; set; }
-}
-
 public class DatabaseStack : Stack
 {
-    public IDatabaseInstance DbInstance { get; }
-    public ISecret DbPasswordSecret { get; }
+    public ITable ControlPlaneTable { get; }
     public ITable TransactionsTable { get; }
+    public ITable RecurringSchedulesTable { get; }
     public ITable AiInteractionsTable { get; }
     public ITable OutboxEventsTable { get; }
     public ITable InAppAlertsTable { get; }
     public ITable WeeklyInsightsTable { get; }
     public ITable PurchasePatternsTable { get; }
+    public ITable MonthlyCategorySpendsTable { get; }
     public ITable PushDeviceTokensTable { get; }
+    public ITable ConscienceJourneyTable { get; }
 
-    public DatabaseStack(Construct scope, string id, DatabaseStackProps props)
+    public DatabaseStack(Construct scope, string id, IStackProps? props = null)
         : base(scope, id, props)
     {
-        DbPasswordSecret = new Secret(this, "DbPassword", new SecretProps
-        {
-            SecretName = "conscia/db-password",
-            Description = "PostgreSQL master password for Conscia RDS",
-            GenerateSecretString = new SecretStringGenerator
-            {
-                SecretStringTemplate = $"{{\"username\":\"{InfraConstants.DatabaseUsername}\"}}",
-                GenerateStringKey = "password",
-                ExcludePunctuation = true,
-                PasswordLength = 32
-            }
-        });
-
-        DbInstance = new DatabaseInstance(this, "ConsciaDb", new DatabaseInstanceProps
-        {
-            Engine = DatabaseInstanceEngine.Postgres(new PostgresInstanceEngineProps
-            {
-                Version = PostgresEngineVersion.VER_16_4
-            }),
-            InstanceType = Amazon.CDK.AWS.EC2.InstanceType.Of(InstanceClass.BURSTABLE4_GRAVITON, InstanceSize.MICRO),
-            Vpc = props.Vpc,
-            VpcSubnets = new SubnetSelection { SubnetType = SubnetType.PRIVATE_ISOLATED },
-            SecurityGroups = [props.DbSecurityGroup],
-            Credentials = Credentials.FromSecret(DbPasswordSecret),
-            DatabaseName = InfraConstants.DatabaseName,
-            AllocatedStorage = 20,
-            MaxAllocatedStorage = 50,
-            MultiAz = false,
-            StorageEncrypted = true,
-            BackupRetention = Duration.Days(7),
-            DeletionProtection = false,
-            RemovalPolicy = RemovalPolicy.DESTROY
-        });
+        ControlPlaneTable = CreateTable(
+            "ControlPlane",
+            "PK",
+            "SK",
+            [
+                new GlobalSecondaryIndexProps
+                {
+                    IndexName = "GSI1",
+                    PartitionKey = new Attribute { Name = "GSI1PK", Type = AttributeType.STRING },
+                    SortKey = new Attribute { Name = "GSI1SK", Type = AttributeType.STRING },
+                    ProjectionType = ProjectionType.ALL
+                },
+                new GlobalSecondaryIndexProps
+                {
+                    IndexName = "GSI2",
+                    PartitionKey = new Attribute { Name = "GSI2PK", Type = AttributeType.STRING },
+                    SortKey = new Attribute { Name = "GSI2SK", Type = AttributeType.STRING },
+                    ProjectionType = ProjectionType.ALL
+                }
+            ]);
 
         TransactionsTable = CreateTable(
             "Transactions",
             "PK",
             "SK",
-            new[]
-            {
+            [
                 new GlobalSecondaryIndexProps
                 {
-                    IndexName = "GSI-Date",
+                    IndexName = "GSI-UserId-Category-Date",
                     PartitionKey = new Attribute { Name = "UserId", Type = AttributeType.STRING },
-                    SortKey = new Attribute { Name = "Date", Type = AttributeType.STRING },
+                    SortKey = new Attribute { Name = "GSI1SK", Type = AttributeType.STRING },
                     ProjectionType = ProjectionType.ALL
                 },
-            },
-            stream: StreamViewType.NEW_AND_OLD_IMAGES
-        );
+            ],
+            stream: StreamViewType.NEW_AND_OLD_IMAGES);
+
+        RecurringSchedulesTable = CreateTable("RecurringSchedules", "PK", "SK");
 
         AiInteractionsTable = CreateTable(
             "AIInteractions",
             "PK",
             "SK",
-            new[]
-            {
+            [
                 new GlobalSecondaryIndexProps
                 {
                     IndexName = "GSI-TransactionId-Date",
@@ -93,15 +72,13 @@ public class DatabaseStack : Stack
                     SortKey = new Attribute { Name = "CreatedAt", Type = AttributeType.STRING },
                     ProjectionType = ProjectionType.ALL
                 }
-            }
-        );
+            ]);
 
         OutboxEventsTable = CreateTable(
             "OutboxEvents",
             "PK",
             "SK",
-            new[]
-            {
+            [
                 new GlobalSecondaryIndexProps
                 {
                     IndexName = "GSI-Status-CreatedAt",
@@ -109,16 +86,14 @@ public class DatabaseStack : Stack
                     SortKey = new Attribute { Name = "CreatedAt", Type = AttributeType.STRING },
                     ProjectionType = ProjectionType.ALL
                 }
-            },
-            ttl: "TTL"
-        );
+            ],
+            ttl: "TTL");
 
         InAppAlertsTable = CreateTable(
             "InAppAlerts",
             "PK",
             "SK",
-            new[]
-            {
+            [
                 new GlobalSecondaryIndexProps
                 {
                     IndexName = "GSI-Trigger-Date",
@@ -126,27 +101,14 @@ public class DatabaseStack : Stack
                     SortKey = new Attribute { Name = "CreatedAt", Type = AttributeType.STRING },
                     ProjectionType = ProjectionType.ALL
                 }
-            },
-            ttl: "TTL"
-        );
+            ],
+            ttl: "TTL");
 
-        WeeklyInsightsTable = CreateTable(
-            "WeeklyInsights",
-            "PK",
-            "SK"
-        );
-
-        PurchasePatternsTable = CreateTable(
-            "PurchasePatterns",
-            "PK",
-            "SK"
-        );
-
-        PushDeviceTokensTable = CreateTable(
-            "PushDeviceTokens",
-            "PK",
-            "SK"
-        );
+        WeeklyInsightsTable = CreateTable("WeeklyInsights", "PK", "SK");
+        PurchasePatternsTable = CreateTable("PurchasePatterns", "PK", "SK");
+        MonthlyCategorySpendsTable = CreateTable("MonthlyCategorySpends", "PK", "SK");
+        PushDeviceTokensTable = CreateTable("PushDeviceTokens", "PK", "SK");
+        ConscienceJourneyTable = CreateTable("ConscienceJourney", "PK", "SK");
     }
 
     private Table CreateTable(
@@ -159,7 +121,7 @@ public class DatabaseStack : Stack
     {
         var props = new TableProps
         {
-            TableName = $"Conscia-{name}",
+            TableName = name,
             PartitionKey = new Attribute { Name = pk, Type = AttributeType.STRING },
             BillingMode = BillingMode.PAY_PER_REQUEST,
             RemovalPolicy = RemovalPolicy.DESTROY,
