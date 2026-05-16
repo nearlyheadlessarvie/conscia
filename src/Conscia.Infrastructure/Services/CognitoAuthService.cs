@@ -1,6 +1,7 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
+using Amazon.DynamoDBv2.Model;
 using Amazon.CognitoIdentityProvider;
 using Amazon.CognitoIdentityProvider.Model;
 using Conscia.Application.Interfaces;
@@ -332,7 +333,7 @@ public class CognitoAuthService : IAuthService
                     ProviderSub = payload.ProviderSub
                 }, ct);
             }
-            catch (Microsoft.EntityFrameworkCore.DbUpdateException)
+            catch (TransactionCanceledException)
             {
                 user = await _users.GetByProviderAsync(provider, payload.ProviderSub, ct);
                 if (user is null)

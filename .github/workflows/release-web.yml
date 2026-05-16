@@ -12,6 +12,10 @@ permissions:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    env:
+      CONSCIA_DOMAIN_NAME: ${{ vars.CONSCIA_DOMAIN_NAME }}
+      CONSCIA_WWW_DOMAIN_NAME: ${{ vars.CONSCIA_WWW_DOMAIN_NAME }}
+      ROUTE53_HOSTED_ZONE_ID: ${{ vars.ROUTE53_HOSTED_ZONE_ID }}
     steps:
       - uses: actions/checkout@v4
 
@@ -31,7 +35,7 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
-          aws-region: ap-southeast-1
+          aws-region: ${{ vars.AWS_REGION || 'ap-southeast-1' }}
 
       - name: Get S3 bucket and distribution ID
         id: infra
@@ -52,7 +56,10 @@ jobs:
 
       - name: Smoke test
         run: |
-          DOMAIN=$(aws cloudformation describe-stacks --stack-name Conscia-Web --query "Stacks[0].Outputs[?ExportName=='ConsciaWebDomain'].OutputValue" --output text)
+          DOMAIN="${CONSCIA_DOMAIN_NAME:-}"
+          if [ -z "$DOMAIN" ]; then
+            DOMAIN=$(aws cloudformation describe-stacks --stack-name Conscia-Web --query "Stacks[0].Outputs[?ExportName=='ConsciaWebDomain'].OutputValue" --output text)
+          fi
           curl -sf "https://$DOMAIN" || exit 1
           echo "Site is live"
 

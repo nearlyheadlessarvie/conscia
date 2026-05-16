@@ -19,8 +19,10 @@ public class DynamoDbHealthCheckTests
                 TableNames =
                 [
                     "Transactions",
+                    "ControlPlane",
                     "RecurringSchedules",
                     "AIInteractions",
+                    "OutboxEvents",
                     "WeeklyInsights",
                     "PurchasePatterns",
                     "InAppAlerts",
@@ -30,10 +32,14 @@ public class DynamoDbHealthCheckTests
                 ]
             });
 
+        _dynamoMock.Setup(d => d.DescribeTableAsync("ControlPlane", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(DescribeTableResponseFor("ControlPlane", "GSI1", "GSI2"));
         _dynamoMock.Setup(d => d.DescribeTableAsync("Transactions", It.IsAny<CancellationToken>()))
             .ReturnsAsync(DescribeTableResponseFor("Transactions", "GSI-UserId-Category-Date"));
         _dynamoMock.Setup(d => d.DescribeTableAsync("AIInteractions", It.IsAny<CancellationToken>()))
             .ReturnsAsync(DescribeTableResponseFor("AIInteractions", "GSI-TransactionId-Date"));
+        _dynamoMock.Setup(d => d.DescribeTableAsync("OutboxEvents", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(DescribeTableResponseFor("OutboxEvents", "GSI-Status-CreatedAt"));
         _dynamoMock.Setup(d => d.DescribeTableAsync("InAppAlerts", It.IsAny<CancellationToken>()))
             .ReturnsAsync(DescribeTableResponseFor("InAppAlerts", "GSI-Trigger-Date"));
         _dynamoMock.Setup(d => d.DescribeTableAsync("RecurringSchedules", It.IsAny<CancellationToken>()))
@@ -63,8 +69,10 @@ public class DynamoDbHealthCheckTests
                 TableNames =
                 [
                     "Transactions",
+                    "ControlPlane",
                     "RecurringSchedules",
                     "AIInteractions",
+                    "OutboxEvents",
                     "WeeklyInsights",
                     "PurchasePatterns",
                     "MonthlyCategorySpends",
@@ -90,8 +98,10 @@ public class DynamoDbHealthCheckTests
                 TableNames =
                 [
                     "Transactions",
+                    "ControlPlane",
                     "RecurringSchedules",
                     "AIInteractions",
+                    "OutboxEvents",
                     "WeeklyInsights",
                     "PurchasePatterns",
                     "InAppAlerts",
@@ -101,10 +111,14 @@ public class DynamoDbHealthCheckTests
                 ]
             });
 
+        _dynamoMock.Setup(d => d.DescribeTableAsync("ControlPlane", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(DescribeTableResponseFor("ControlPlane", "GSI1", "GSI2"));
         _dynamoMock.Setup(d => d.DescribeTableAsync("Transactions", It.IsAny<CancellationToken>()))
             .ReturnsAsync(DescribeTableResponseFor("Transactions", "GSI-Date"));
         _dynamoMock.Setup(d => d.DescribeTableAsync("AIInteractions", It.IsAny<CancellationToken>()))
             .ReturnsAsync(DescribeTableResponseFor("AIInteractions", "GSI-TransactionId-Date"));
+        _dynamoMock.Setup(d => d.DescribeTableAsync("OutboxEvents", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(DescribeTableResponseFor("OutboxEvents", "GSI-Status-CreatedAt"));
         _dynamoMock.Setup(d => d.DescribeTableAsync("InAppAlerts", It.IsAny<CancellationToken>()))
             .ReturnsAsync(DescribeTableResponseFor("InAppAlerts", "GSI-Trigger-Date"));
         _dynamoMock.Setup(d => d.DescribeTableAsync("RecurringSchedules", It.IsAny<CancellationToken>()))
@@ -135,8 +149,10 @@ public class DynamoDbHealthCheckTests
                 TableNames =
                 [
                     "Transactions",
+                    "ControlPlane",
                     "RecurringSchedules",
                     "AIInteractions",
+                    "OutboxEvents",
                     "WeeklyInsights",
                     "PurchasePatterns",
                     "InAppAlerts",

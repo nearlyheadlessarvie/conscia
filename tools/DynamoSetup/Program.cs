@@ -9,6 +9,50 @@ Console.WriteLine($"Creating DynamoDB tables at {serviceUrl}...");
 
 var tables = new (string Name, CreateTableRequest Request)[]
 {
+    // ---------------- CONTROL PLANE ----------------
+    ("ControlPlane", new CreateTableRequest
+    {
+        TableName = "ControlPlane",
+        KeySchema =
+        [
+            new("PK", KeyType.HASH),
+            new("SK", KeyType.RANGE)
+        ],
+        AttributeDefinitions =
+        [
+            new("PK", ScalarAttributeType.S),
+            new("SK", ScalarAttributeType.S),
+            new("GSI1PK", ScalarAttributeType.S),
+            new("GSI1SK", ScalarAttributeType.S),
+            new("GSI2PK", ScalarAttributeType.S),
+            new("GSI2SK", ScalarAttributeType.S)
+        ],
+        GlobalSecondaryIndexes =
+        [
+            new GlobalSecondaryIndex
+            {
+                IndexName = "GSI1",
+                KeySchema =
+                [
+                    new("GSI1PK", KeyType.HASH),
+                    new("GSI1SK", KeyType.RANGE)
+                ],
+                Projection = new Projection { ProjectionType = ProjectionType.ALL }
+            },
+            new GlobalSecondaryIndex
+            {
+                IndexName = "GSI2",
+                KeySchema =
+                [
+                    new("GSI2PK", KeyType.HASH),
+                    new("GSI2SK", KeyType.RANGE)
+                ],
+                Projection = new Projection { ProjectionType = ProjectionType.ALL }
+            }
+        ],
+        BillingMode = BillingMode.PAY_PER_REQUEST
+    }),
+
     // ---------------- TRANSACTIONS ----------------
     ("Transactions", new CreateTableRequest
     {

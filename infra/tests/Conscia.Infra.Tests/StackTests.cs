@@ -12,78 +12,28 @@ public class StackTests
         Region = "us-east-1"
     };
 
-    [Fact]
-    public void NetworkStack_CreatesVpc()
-    {
-        var app = new App();
-        var stack = new NetworkStack(app, "TestNetwork", new StackProps { Env = TestEnv });
-        var template = Template.FromStack(stack);
-        template.ResourceCountIs("AWS::EC2::VPC", 1);
-    }
+    private static DomainSettings TestDomainSettings => new(
+        "getconscia.com",
+        "www.getconscia.com",
+        "api.getconscia.com",
+        "Z1234567890");
 
     [Fact]
-    public void NetworkStack_HasTwoAZs_WithPublicAndPrivateSubnets()
-    {
-        var app = new App();
-        var stack = new NetworkStack(app, "TestNetwork", new StackProps { Env = TestEnv });
-        var template = Template.FromStack(stack);
-        template.ResourceCountIs("AWS::EC2::Subnet", 4);
-    }
-
-    [Fact]
-    public void NetworkStack_HasNoNatGateway()
-    {
-        var app = new App();
-        var stack = new NetworkStack(app, "TestNetwork", new StackProps { Env = TestEnv });
-        var template = Template.FromStack(stack);
-        template.ResourceCountIs("AWS::EC2::NatGateway", 0);
-    }
-
-    [Fact]
-    public void NetworkStack_CreatesDbSecurityGroup()
-    {
-        var app = new App();
-        var stack = new NetworkStack(app, "TestNetwork", new StackProps { Env = TestEnv });
-        var template = Template.FromStack(stack);
-        template.ResourceCountIs("AWS::EC2::SecurityGroup", 1);
-    }
-
-    [Fact]
-    public void DatabaseStack_CreatesDbSecret()
+    public void DatabaseStack_CreatesDynamoOnlyControlPlane()
     {
         var template = CreateDatabaseTemplate();
-        template.ResourceCountIs("AWS::SecretsManager::Secret", 1);
-        template.HasResourceProperties("AWS::SecretsManager::Secret", new Dictionary<string, object>
+
+        template.ResourceCountIs("AWS::DynamoDB::Table", 11);
+        template.ResourceCountIs("AWS::RDS::DBInstance", 0);
+        template.ResourceCountIs("AWS::SecretsManager::Secret", 0);
+        template.HasResourceProperties("AWS::DynamoDB::Table", new Dictionary<string, object>
         {
-            ["Name"] = "conscia/db-password"
+            ["TableName"] = "ControlPlane",
+            ["GlobalSecondaryIndexes"] = Match.ArrayWith([
+                Match.ObjectLike(new Dictionary<string, object> { ["IndexName"] = "GSI1" }),
+                Match.ObjectLike(new Dictionary<string, object> { ["IndexName"] = "GSI2" })
+            ])
         });
-    }
-
-    private static Template CreateDatabaseTemplate()
-    {
-        var app = new App();
-        var network = new NetworkStack(app, "N", new StackProps { Env = TestEnv });
-        var db = new DatabaseStack(app, "D", new DatabaseStackProps
-        {
-            Env = TestEnv,
-            Vpc = network.Vpc,
-            DbSecurityGroup = network.DbSecurityGroup
-        });
-        return Template.FromStack(db);
-    }
-
-    [Fact]
-    public void DatabaseStack_CreatesRdsInstance()
-    {
-        var template = CreateDatabaseTemplate();
-        template.ResourceCountIs("AWS::RDS::DBInstance", 1);
-    }
-
-    [Fact]
-    public void DatabaseStack_CreatesSevenDynamoDbTables()
-    {
-        var template = CreateDatabaseTemplate();
-        template.ResourceCountIs("AWS::DynamoDB::Table", 7);
     }
 
     [Fact]
@@ -92,7 +42,7 @@ public class StackTests
         var template = CreateDatabaseTemplate();
         template.HasResourceProperties("AWS::DynamoDB::Table", new Dictionary<string, object>
         {
-            ["TableName"] = "Conscia-Transactions",
+            ["TableName"] = "Transactions",
             ["StreamSpecification"] = new Dictionary<string, object>
             {
                 ["StreamViewType"] = "NEW_AND_OLD_IMAGES"
@@ -105,7 +55,7 @@ public class StackTests
     {
         var template = CreateDatabaseTemplate();
         var tables = template.FindResources("AWS::DynamoDB::Table");
-        Assert.Equal(7, tables.Count);
+        Assert.Equal(11, tables.Count);
 
         foreach (var (_, resource) in tables)
         {
@@ -115,20 +65,17 @@ public class StackTests
     }
 
     [Fact]
-    public void StorageStack_CreatesS3Bucket()
+    public void StorageStack_CreatesPrivateS3BucketWithCors()
     {
         var app = new App();
-        var stack = new StorageStack(app, "TestStorage", new StackProps { Env = TestEnv });
+        var stack = new StorageStack(app, "TestStorage", new StorageStackProps
+        {
+            Env = TestEnv,
+            AllowedCorsOrigins = TestDomainSettings.AllowedCorsOrigins
+        });
         var template = Template.FromStack(stack);
-        template.ResourceCountIs("AWS::S3::Bucket", 1);
-    }
 
-    [Fact]
-    public void StorageStack_BlocksPublicAccess()
-    {
-        var app = new App();
-        var stack = new StorageStack(app, "TestStorage", new StackProps { Env = TestEnv });
-        var template = Template.FromStack(stack);
+        template.ResourceCountIs("AWS::S3::Bucket", 1);
         template.HasResourceProperties("AWS::S3::Bucket", new Dictionary<string, object>
         {
             ["PublicAccessBlockConfiguration"] = new Dictionary<string, object>
@@ -137,30 +84,32 @@ public class StackTests
                 ["BlockPublicPolicy"] = true,
                 ["IgnorePublicAcls"] = true,
                 ["RestrictPublicBuckets"] = true
+            },
+            ["CorsConfiguration"] = new Dictionary<string, object>
+            {
+                ["CorsRules"] = Match.ArrayWith([
+                    Match.ObjectLike(new Dictionary<string, object>
+                    {
+                        ["AllowedOrigins"] = TestDomainSettings.AllowedCorsOrigins
+                    })
+                ])
             }
         });
     }
 
     [Fact]
-    public void AuthStack_CreatesUserPool()
+    public void AuthStack_CreatesUserPoolAndClient()
     {
         var app = new App();
         var stack = new AuthStack(app, "TestAuth", new StackProps { Env = TestEnv });
         var template = Template.FromStack(stack);
+
         template.ResourceCountIs("AWS::Cognito::UserPool", 1);
+        template.ResourceCountIs("AWS::Cognito::UserPoolClient", 1);
         template.HasResourceProperties("AWS::Cognito::UserPool", new Dictionary<string, object>
         {
             ["UserPoolName"] = "conscia-users"
         });
-    }
-
-    [Fact]
-    public void AuthStack_CreatesUserPoolClient()
-    {
-        var app = new App();
-        var stack = new AuthStack(app, "TestAuth", new StackProps { Env = TestEnv });
-        var template = Template.FromStack(stack);
-        template.ResourceCountIs("AWS::Cognito::UserPoolClient", 1);
     }
 
     [Fact]
@@ -169,6 +118,7 @@ public class StackTests
         var app = new App();
         var stack = new AIStack(app, "TestAI", new StackProps { Env = TestEnv });
         var template = Template.FromStack(stack);
+
         template.ResourceCountIs("AWS::SQS::Queue", 2);
         template.HasResourceProperties("AWS::SQS::Queue", new Dictionary<string, object>
         {
@@ -181,154 +131,161 @@ public class StackTests
     }
 
     [Fact]
-    public void ComputeStack_CreatesApiLambda()
+    public void ComputeStack_CreatesApiLambdaWithDirectDynamoAccess()
     {
-        var app = new App();
-        var network = new NetworkStack(app, "N", new StackProps { Env = TestEnv });
-        var database = new DatabaseStack(app, "D", new DatabaseStackProps
-        {
-            Env = TestEnv,
-            Vpc = network.Vpc,
-            DbSecurityGroup = network.DbSecurityGroup
-        });
-        var storage = new StorageStack(app, "S", new StackProps { Env = TestEnv });
-        var auth = new AuthStack(app, "A", new StackProps { Env = TestEnv });
-        var ai = new AIStack(app, "AI", new StackProps { Env = TestEnv });
-
-        var dbAccess = new DbAccessStack(app, "DA", new DbAccessStackProps
-        {
-            Env = TestEnv,
-            Vpc = network.Vpc,
-            DbSecurityGroup = network.DbSecurityGroup,
-            DbInstance = database.DbInstance,
-            DbPasswordSecret = database.DbPasswordSecret,
-            AssetPath = CreateAssetStub("db-access")
-        });
-
+        var (app, database, storage, auth, ai) = CreateCoreStacks();
         var stack = new ComputeStack(app, "C", new ComputeStackProps
         {
             Env = TestEnv,
             ReceiptBucket = storage.ReceiptBucket,
             UserPool = auth.UserPool,
             UserPoolClient = auth.UserPoolClient,
+            ControlPlaneTable = database.ControlPlaneTable,
             TransactionsTable = database.TransactionsTable,
+            RecurringSchedulesTable = database.RecurringSchedulesTable,
             AiInteractionsTable = database.AiInteractionsTable,
             OutboxEventsTable = database.OutboxEventsTable,
             InAppAlertsTable = database.InAppAlertsTable,
             WeeklyInsightsTable = database.WeeklyInsightsTable,
             PurchasePatternsTable = database.PurchasePatternsTable,
+            MonthlyCategorySpendsTable = database.MonthlyCategorySpendsTable,
             PushDeviceTokensTable = database.PushDeviceTokensTable,
+            ConscienceJourneyTable = database.ConscienceJourneyTable,
             AiQueue = ai.AiQueue,
-            DbAccessLambda = dbAccess.DbAccessLambda,
             ApiAssetPath = CreateAssetStub("api")
         });
 
         Assert.NotNull(stack.ApiLambda);
+
+        var template = Template.FromStack(stack);
+        template.ResourceCountIs("AWS::Lambda::Function", 1);
+        template.ResourceCountIs("AWS::EC2::SecurityGroup", 0);
+        template.HasResourceProperties("AWS::Lambda::Function", new Dictionary<string, object>
+        {
+            ["Environment"] = new Dictionary<string, object>
+            {
+                ["Variables"] = Match.ObjectLike(new Dictionary<string, object>
+                {
+                    ["AWS__DynamoDB__ControlPlaneTable"] = Match.AnyValue(),
+                    ["AWS__DynamoDB__TransactionsTable"] = Match.AnyValue()
+                })
+            }
+        });
     }
 
     [Fact]
-    public void DbAccessStack_CreatesLambda()
+    public void OutboxStack_CreatesNonVpcLambdaWithEventSource()
     {
         var app = new App();
-        var network = new NetworkStack(app, "N", new StackProps { Env = TestEnv });
-        var database = new DatabaseStack(app, "D", new DatabaseStackProps
-        {
-            Env = TestEnv,
-            Vpc = network.Vpc,
-            DbSecurityGroup = network.DbSecurityGroup
-        });
-
-        // Instantiate the stack — cyclic ref only triggers on Template.FromStack synth,
-        // so we verify construction succeeds and spot-check the Lambda function name.
-        var stack = new DbAccessStack(app, "DA", new DbAccessStackProps
-        {
-            Env = TestEnv,
-            Vpc = network.Vpc,
-            DbSecurityGroup = network.DbSecurityGroup,
-            DbInstance = database.DbInstance,
-            DbPasswordSecret = database.DbPasswordSecret,
-            AssetPath = CreateAssetStub("db-access")
-        });
-
-        Assert.NotNull(stack.DbAccessLambda);
-    }
-
-    [Fact]
-    public void OutboxStack_CreatesLambdaWithEventSource()
-    {
-        var app = new App();
-        var network = new NetworkStack(app, "N", new StackProps { Env = TestEnv });
-        var database = new DatabaseStack(app, "D", new DatabaseStackProps
-        {
-            Env = TestEnv,
-            Vpc = network.Vpc,
-            DbSecurityGroup = network.DbSecurityGroup
-        });
-
+        var database = new DatabaseStack(app, "D", new StackProps { Env = TestEnv });
         var stack = new OutboxStack(app, "O", new OutboxStackProps
         {
             Env = TestEnv,
+            ControlPlaneTable = database.ControlPlaneTable,
             TransactionsTable = database.TransactionsTable,
             OutboxEventsTable = database.OutboxEventsTable,
-            DbPasswordSecret = database.DbPasswordSecret,
-            Vpc = network.Vpc,
-            DbSecurityGroup = network.DbSecurityGroup,
-            DbInstance = database.DbInstance,
-            AssetPath = CreateAssetStub("outbox")
+            InAppAlertsTable = database.InAppAlertsTable,
+            MonthlyCategorySpendsTable = database.MonthlyCategorySpendsTable,
+            AssetPath = CreateAssetStub("outbox"),
+            DomainSettings = TestDomainSettings
         });
 
         Assert.NotNull(stack.OutboxLambda);
+
+        var template = Template.FromStack(stack);
+        template.ResourceCountIs("AWS::Lambda::Function", 1);
+        template.ResourceCountIs("AWS::EC2::SecurityGroup", 0);
+        template.HasResourceProperties("AWS::Lambda::EventSourceMapping", new Dictionary<string, object>
+        {
+            ["StartingPosition"] = "TRIM_HORIZON"
+        });
     }
 
     [Fact]
-    public void WebStack_CreatesBucketAndDistribution()
+    public void WebStack_WithDomain_CreatesAliasesAndRoute53Records()
     {
         var app = new App();
-        var stack = new WebStack(app, "TestWeb", new StackProps { Env = TestEnv });
+        var stack = new WebStack(app, "TestWeb", new WebStackProps
+        {
+            Env = TestEnv,
+            DomainSettings = TestDomainSettings
+        });
         var template = Template.FromStack(stack);
+
         template.ResourceCountIs("AWS::S3::Bucket", 1);
         template.ResourceCountIs("AWS::CloudFront::Distribution", 1);
+        template.HasResourceProperties("AWS::CloudFront::Distribution", new Dictionary<string, object>
+        {
+            ["DistributionConfig"] = new Dictionary<string, object>
+            {
+                ["Aliases"] = Match.ArrayWith(TestDomainSettings.WebDomainNames)
+            }
+        });
+        template.ResourceCountIs("AWS::Route53::RecordSet", 2);
     }
 
     [Fact]
-    public void ObservabilityStack_CreatesThreeLogGroups()
+    public void EmailStack_WithDomain_CreatesSesIdentity()
     {
         var app = new App();
+        var stack = new EmailStack(app, "TestEmail", new EmailStackProps
+        {
+            Env = TestEnv,
+            DomainSettings = TestDomainSettings
+        });
+        var template = Template.FromStack(stack);
 
+        template.HasResourceProperties("AWS::SES::EmailIdentity", new Dictionary<string, object>
+        {
+            ["EmailIdentity"] = "getconscia.com"
+        });
+        template.ResourceCountIs("AWS::SES::ConfigurationSet", 1);
+    }
+
+    [Fact]
+    public void ObservabilityStack_CreatesApiAndOutboxLogGroups()
+    {
+        var app = new App();
         var helperStack = new Stack(app, "Helper", new StackProps { Env = TestEnv });
 
-        var stubLambda1 = new Amazon.CDK.AWS.Lambda.Function(helperStack, "Stub1", new Amazon.CDK.AWS.Lambda.FunctionProps
-        {
-            FunctionName = "conscia-api",
-            Runtime = Amazon.CDK.AWS.Lambda.Runtime.PYTHON_3_12,
-            Handler = "handler.handler",
-            Code = Amazon.CDK.AWS.Lambda.Code.FromInline("def handler(e,c): pass")
-        });
-        var stubLambda2 = new Amazon.CDK.AWS.Lambda.Function(helperStack, "Stub2", new Amazon.CDK.AWS.Lambda.FunctionProps
-        {
-            FunctionName = "conscia-db-access",
-            Runtime = Amazon.CDK.AWS.Lambda.Runtime.PYTHON_3_12,
-            Handler = "handler.handler",
-            Code = Amazon.CDK.AWS.Lambda.Code.FromInline("def handler(e,c): pass")
-        });
-        var stubLambda3 = new Amazon.CDK.AWS.Lambda.Function(helperStack, "Stub3", new Amazon.CDK.AWS.Lambda.FunctionProps
-        {
-            FunctionName = "conscia-outbox-processor",
-            Runtime = Amazon.CDK.AWS.Lambda.Runtime.PYTHON_3_12,
-            Handler = "handler.handler",
-            Code = Amazon.CDK.AWS.Lambda.Code.FromInline("def handler(e,c): pass")
-        });
-
+        var api = CreateStubLambda(helperStack, "ApiStub", "conscia-api");
+        var outbox = CreateStubLambda(helperStack, "OutboxStub", "conscia-outbox-processor");
         var stack = new ObservabilityStack(app, "TestObs", new ObservabilityStackProps
         {
             Env = TestEnv,
-            ApiLambda = stubLambda1,
-            DbAccessLambda = stubLambda2,
-            OutboxLambda = stubLambda3
+            ApiLambda = api,
+            OutboxLambda = outbox
         });
+
         var template = Template.FromStack(stack);
-        template.ResourceCountIs("AWS::Logs::LogGroup", 3);
+        template.ResourceCountIs("AWS::Logs::LogGroup", 2);
     }
+
+    private static Template CreateDatabaseTemplate()
+    {
+        var app = new App();
+        var db = new DatabaseStack(app, "D", new StackProps { Env = TestEnv });
+        return Template.FromStack(db);
+    }
+
+    private static (App App, DatabaseStack Database, StorageStack Storage, AuthStack Auth, AIStack Ai) CreateCoreStacks()
+    {
+        var app = new App();
+        var database = new DatabaseStack(app, "D", new StackProps { Env = TestEnv });
+        var storage = new StorageStack(app, "S", new StorageStackProps { Env = TestEnv });
+        var auth = new AuthStack(app, "A", new StackProps { Env = TestEnv });
+        var ai = new AIStack(app, "AI", new StackProps { Env = TestEnv });
+        return (app, database, storage, auth, ai);
+    }
+
+    private static Amazon.CDK.AWS.Lambda.Function CreateStubLambda(Stack stack, string id, string functionName) =>
+        new(stack, id, new Amazon.CDK.AWS.Lambda.FunctionProps
+        {
+            FunctionName = functionName,
+            Runtime = Amazon.CDK.AWS.Lambda.Runtime.PYTHON_3_12,
+            Handler = "handler.handler",
+            Code = Amazon.CDK.AWS.Lambda.Code.FromInline("def handler(e,c): pass")
+        });
 
     private static string CreateAssetStub(string name)
     {

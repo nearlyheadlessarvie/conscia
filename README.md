@@ -28,20 +28,19 @@ Conscia uses two AI personas — **Impulse** (the spender) and **Reason** (the s
                             │
              ┌──────────────┼──────────────┐
              ▼              ▼              ▼
-      ┌────────────┐ ┌───────────┐ ┌────────────┐
-      │ API Lambda │ │ DB Access │ │  Outbox    │
-      │ (non-VPC)  │ │  Lambda   │ │  Lambda    │
-      │            │ │  (VPC)    │ │  (VPC)     │
-      └─────┬──────┘ └─────┬─────┘ └─────┬──────┘
-            │              │              │
-     ┌──────┼──────┐       │         DynamoDB
-     │      │      │       │         Streams
-     ▼      ▼      ▼       ▼
- DynamoDB  S3   Bedrock  PostgreSQL
+      ┌────────────┐ ┌────────────┐
+      │ API Lambda │ │  Outbox    │
+      │ (non-VPC)  │ │  Lambda    │
+      └─────┬──────┘ └─────┬──────┘
+            │              │
+     ┌──────┼──────┐  DynamoDB
+     │      │      │  Streams
+     ▼      ▼      ▼
+ DynamoDB  S3   Bedrock
  SQS    Textract
 ```
 
-**Locally**, the API runs as a standard ASP.NET 8 process backed by Docker-managed services (PostgreSQL, DynamoDB Local, MinIO, ElasticMQ, Ollama, Seq). **In production**, AWS CDK deploys a split-Lambda architecture where the API Lambda stays outside the VPC for fast cold starts and the DB-access Lambda runs inside the VPC for RDS connectivity.
+**Locally**, the API runs as a standard ASP.NET 8 process backed by Docker-managed services (DynamoDB Local, MinIO, ElasticMQ, Ollama, Seq). **In production**, AWS CDK deploys non-VPC Lambdas that talk directly to DynamoDB, S3, SQS, Bedrock, Textract, Cognito, and SES. The old RDS/DbAccess path has been removed to keep standby cost and networking complexity low.
 
 ---
 
@@ -53,8 +52,8 @@ conscia/
 │   ├── Conscia.Api/              # ASP.NET 8 Minimal API (Lambda entry point)
 │   ├── Conscia.Domain/           # Entities, value objects (Money, RegretLevel)
 │   ├── Conscia.Application/      # Interfaces, DTOs, services, validators
-│   ├── Conscia.Infrastructure/   # DynamoDB repos, outbox processor, S3/SQS services
-│   ├── Conscia.Infrastructure.Db/# EF Core 8 + PostgreSQL repos
+│   ├── Conscia.Infrastructure/   # DynamoDB repos, S3/SQS services, auth integrations
+│   ├── Conscia.OutboxProcessor/  # DynamoDB stream/outbox processing Lambda
 │   └── Conscia.AI/               # AI services (Ollama + Bedrock), prompt templates
 ├── tests/
 │   ├── Conscia.Tests.Unit/
@@ -88,7 +87,7 @@ conscia/
 | Tool | Version | Purpose | Install |
 |------|---------|---------|---------|
 | [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0) | 8.0.x | Backend API, CDK infrastructure | [Download](https://dotnet.microsoft.com/download/dotnet/8.0) |
-| [Docker Desktop](https://www.docker.com/products/docker-desktop) | Latest | PostgreSQL, DynamoDB Local, MinIO, ElasticMQ, Ollama, Seq | [Download](https://www.docker.com/products/docker-desktop/) |
+| [Docker Desktop](https://www.docker.com/products/docker-desktop) | Latest | DynamoDB Local, MinIO, ElasticMQ, Ollama, Seq | [Download](https://www.docker.com/products/docker-desktop/) |
 | [Flutter SDK](https://flutter.dev/docs/get-started/install) | 3.2+ | Mobile app (iOS/Android) | [Download](https://docs.flutter.dev/get-started/install) |
 | [Node.js](https://nodejs.org/) | 20 LTS | Marketing site (Astro) + CDK CLI | [Download](https://nodejs.org/) |
 | [Git](https://git-scm.com/) | Latest | Version control | [Download](https://git-scm.com/) |
@@ -132,7 +131,7 @@ git --version           # should show 2.x+
 # 1. Clone the repo
 git clone <repo-url> && cd conscia
 
-# 2. Start local services (PostgreSQL, DynamoDB Local, MinIO, ElasticMQ, Ollama, Seq)
+# 2. Start local services (DynamoDB Local, MinIO, ElasticMQ, Ollama, Seq)
 docker compose up -d
 
 # 3. Pull an LLM model for Ollama (first time only)
@@ -206,8 +205,7 @@ Swagger UI is available at `http://localhost:5000/swagger` in development mode.
 
 | Service | Port(s) | Purpose |
 |---------|---------|---------|
-| PostgreSQL 16 | `5432` | Relational data (users, budgets, subscriptions) |
-| DynamoDB Local | `8000` | Document store (transactions, AI interactions, alerts) |
+| DynamoDB Local | `8000` | App data, account/settings control plane, transactions, AI interactions, alerts |
 | MinIO | `9000`, `9001` (console) | S3-compatible object storage (receipts) |
 | ElasticMQ | `9324` | SQS-compatible message queue |
 | Ollama | `11434` | Local LLM for AI dual-personality responses |
@@ -225,7 +223,6 @@ All configuration is managed via `appsettings.json` / `appsettings.Development.j
 | Variable | Default (Dev) | Description |
 |----------|---------------|-------------|
 | `ASPNETCORE_ENVIRONMENT` | `Development` | Switches between local and AWS service clients |
-| `ConnectionStrings__PostgreSQL` | `Host=localhost;Port=5432;Database=conscia;Username=conscia;Password=conscia_dev` | PostgreSQL connection string |
 | `AWS__DynamoDB__ServiceURL` | `http://localhost:8000` | DynamoDB endpoint |
 | `AWS__S3__ServiceURL` | `http://localhost:9000` | S3/MinIO endpoint |
 | `AWS__S3__ForcePathStyle` | `true` | Required for MinIO |
