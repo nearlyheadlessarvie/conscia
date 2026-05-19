@@ -16,12 +16,16 @@ class JourneyLedHomeSections extends StatelessWidget {
     required this.presentation,
     required this.insightSummary,
     required this.insightTrend,
+    required this.onQuestSelected,
+    required this.onOpenInsights,
   });
 
   final ConscienceJourneySummary? summary;
   final JourneyHomePresentation presentation;
   final DashboardInsightSummary? insightSummary;
   final BudgetTrendInsight? insightTrend;
+  final ValueChanged<ConscienceQuest> onQuestSelected;
+  final VoidCallback onOpenInsights;
 
   @override
   Widget build(BuildContext context) {
@@ -35,6 +39,7 @@ class JourneyLedHomeSections extends StatelessWidget {
             subtitle: 'A gentle arc for building consistency.',
             child: _WeeklyArc(
               quests: summary?.weeklyQuests ?? const [],
+              onQuestSelected: onQuestSelected,
             ),
           ),
           _JourneyHomeSection(
@@ -43,6 +48,7 @@ class JourneyLedHomeSections extends StatelessWidget {
             child: _InsightSummaryCard(
               summary: insightSummary,
               trend: insightTrend,
+              onOpenInsights: onOpenInsights,
             ),
           ),
           if (presentation.milestones.isNotEmpty)
@@ -115,9 +121,13 @@ class _JourneyHomeSection extends StatelessWidget {
 }
 
 class _WeeklyArc extends StatelessWidget {
-  const _WeeklyArc({required this.quests});
+  const _WeeklyArc({
+    required this.quests,
+    required this.onQuestSelected,
+  });
 
   final List<ConscienceQuest> quests;
+  final ValueChanged<ConscienceQuest> onQuestSelected;
 
   @override
   Widget build(BuildContext context) {
@@ -141,8 +151,12 @@ class _WeeklyArc extends StatelessWidget {
         itemCount: quests.length,
         separatorBuilder: (_, __) => const SizedBox(width: 10),
         itemBuilder: (context, index) => SizedBox(
-          width: 128,
-          child: _QuestTile(quest: quests[index], index: index),
+          width: 164,
+          child: _QuestTile(
+            quest: quests[index],
+            index: index,
+            onTap: () => onQuestSelected(quests[index]),
+          ),
         ),
       ),
     );
@@ -150,10 +164,15 @@ class _WeeklyArc extends StatelessWidget {
 }
 
 class _QuestTile extends StatelessWidget {
-  const _QuestTile({required this.quest, required this.index});
+  const _QuestTile({
+    required this.quest,
+    required this.index,
+    required this.onTap,
+  });
 
   final ConscienceQuest quest;
   final int index;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -168,74 +187,78 @@ class _QuestTile extends StatelessWidget {
         ? 0.0
         : (quest.progress / quest.target).clamp(0.0, 1.0).toDouble();
 
-    return Container(
+    return InkWell(
       key: const ValueKey('journey-home-quest-card'),
-      height: 174,
-      padding: const EdgeInsets.fromLTRB(10, 12, 10, 10),
-      decoration: BoxDecoration(
-        color: colors.surfaceRaised,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: colors.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          _SoftIcon(icon: _questIcon(quest.key), color: accent),
-          const SizedBox(height: 10),
-          Text(
-            _compactQuestTitle(quest.title),
-            key: const ValueKey('journey-home-quest-title'),
-            textAlign: TextAlign.center,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: GoogleFonts.nunitoSans(
-              textStyle: textTheme.labelLarge,
-              color: colors.deepNavy,
-              fontWeight: FontWeight.w800,
-              height: 1.06,
-            ),
-          ),
-          const SizedBox(height: 7),
-          Expanded(
-            child: Text(
-              quest.description,
-              key: const ValueKey('journey-home-quest-description'),
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        height: 174,
+        padding: const EdgeInsets.fromLTRB(12, 12, 12, 10),
+        decoration: BoxDecoration(
+          color: colors.surfaceRaised,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: colors.border),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            _SoftIcon(icon: _questIcon(quest.key), color: accent),
+            const SizedBox(height: 10),
+            Text(
+              _compactQuestTitle(quest.title),
+              key: const ValueKey('journey-home-quest-title'),
               textAlign: TextAlign.center,
-              maxLines: 3,
+              maxLines: 2,
               overflow: TextOverflow.ellipsis,
               style: GoogleFonts.nunitoSans(
-                textStyle: textTheme.labelSmall,
-                color: colors.mutedInk,
-                fontWeight: FontWeight.w600,
-                height: 1.2,
+                textStyle: textTheme.labelLarge,
+                color: colors.deepNavy,
+                fontWeight: FontWeight.w800,
+                height: 1.06,
               ),
             ),
-          ),
-          const SizedBox(height: 10),
-          Row(
-            children: [
-              Icon(
-                quest.isCompleted
-                    ? Icons.check_circle_rounded
-                    : Icons.arrow_forward_rounded,
-                color: quest.isCompleted ? colors.income : colors.deepNavy,
-                size: 18,
-              ),
-              const SizedBox(width: 6),
-              Expanded(
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(999),
-                  child: LinearProgressIndicator(
-                    minHeight: 3,
-                    value: progress,
-                    backgroundColor: colors.border,
-                    valueColor: AlwaysStoppedAnimation<Color>(accent),
-                  ),
+            const SizedBox(height: 7),
+            Expanded(
+              child: Text(
+                quest.description,
+                key: const ValueKey('journey-home-quest-description'),
+                textAlign: TextAlign.center,
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+                style: GoogleFonts.nunitoSans(
+                  textStyle: textTheme.labelSmall,
+                  color: colors.mutedInk,
+                  fontWeight: FontWeight.w600,
+                  height: 1.2,
                 ),
               ),
-            ],
-          ),
-        ],
+            ),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                Icon(
+                  quest.isCompleted
+                      ? Icons.check_circle_rounded
+                      : Icons.arrow_forward_rounded,
+                  color: quest.isCompleted ? colors.income : colors.deepNavy,
+                  size: 18,
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(999),
+                    child: LinearProgressIndicator(
+                      minHeight: 3,
+                      value: progress,
+                      backgroundColor: colors.border,
+                      valueColor: AlwaysStoppedAnimation<Color>(accent),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -245,10 +268,12 @@ class _InsightSummaryCard extends StatelessWidget {
   const _InsightSummaryCard({
     required this.summary,
     required this.trend,
+    required this.onOpenInsights,
   });
 
   final DashboardInsightSummary? summary;
   final BudgetTrendInsight? trend;
+  final VoidCallback onOpenInsights;
 
   @override
   Widget build(BuildContext context) {
@@ -258,74 +283,79 @@ class _InsightSummaryCard extends StatelessWidget {
     final color = _insightToneColor(colors, tone);
     final hasGraph = (trend?.months.length ?? 0) >= 2;
 
-    return Container(
-      constraints: const BoxConstraints(minHeight: 136),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: _insightToneBackground(colors, tone),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: colors.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(_insightToneIcon(tone), color: color, size: 16),
-              const SizedBox(width: 6),
-              Expanded(
-                child: Text(
-                  _insightEyebrow(tone),
-                  style: GoogleFonts.nunitoSans(
-                    textStyle: textTheme.labelSmall,
-                    color: color,
-                    fontWeight: FontWeight.w800,
+    return InkWell(
+      key: const ValueKey('journey-home-insight-card'),
+      onTap: onOpenInsights,
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        constraints: const BoxConstraints(minHeight: 136),
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: _insightToneBackground(colors, tone),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: colors.border),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(_insightToneIcon(tone), color: color, size: 16),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    _insightEyebrow(tone),
+                    style: GoogleFonts.nunitoSans(
+                      textStyle: textTheme.labelSmall,
+                      color: color,
+                      fontWeight: FontWeight.w800,
+                    ),
                   ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              trend?.category ?? _insightTitle(tone),
+              key: const ValueKey('journey-home-insight-title'),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: GoogleFonts.nunitoSans(
+                textStyle: textTheme.labelLarge,
+                color: colors.ink,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            if (hasGraph) ...[
+              const SizedBox(height: 10),
+              SizedBox(
+                key: const ValueKey('journey-home-insight-graph'),
+                height: 42,
+                child: CustomPaint(
+                  painter: _InsightTrendPainter(
+                    color: color,
+                    values: trend!.months,
+                  ),
+                  child: const SizedBox.expand(),
                 ),
               ),
             ],
-          ),
-          const SizedBox(height: 8),
-          Text(
-            trend?.category ?? _insightTitle(tone),
-            key: const ValueKey('journey-home-insight-title'),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: GoogleFonts.nunitoSans(
-              textStyle: textTheme.labelLarge,
-              color: colors.ink,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-          if (hasGraph) ...[
-            const SizedBox(height: 10),
-            SizedBox(
-              key: const ValueKey('journey-home-insight-graph'),
-              height: 42,
-              child: CustomPaint(
-                painter: _InsightTrendPainter(
-                  color: color,
-                  values: trend!.months,
-                ),
-                child: const SizedBox.expand(),
+            const SizedBox(height: 8),
+            Text(
+              summary?.text ??
+                  'Insights are still taking shape as Conscia learns your weekly rhythm.',
+              key: const ValueKey('journey-home-insight-description'),
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+              style: GoogleFonts.nunitoSans(
+                textStyle: textTheme.labelSmall,
+                color: colors.mutedInk,
+                fontWeight: FontWeight.w600,
+                height: 1.2,
               ),
             ),
           ],
-          const SizedBox(height: 8),
-          Text(
-            summary?.text ??
-                'Insights are still taking shape as Conscia learns your weekly rhythm.',
-            key: const ValueKey('journey-home-insight-description'),
-            maxLines: 3,
-            overflow: TextOverflow.ellipsis,
-            style: GoogleFonts.nunitoSans(
-              textStyle: textTheme.labelSmall,
-              color: colors.mutedInk,
-              fontWeight: FontWeight.w600,
-              height: 1.2,
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }

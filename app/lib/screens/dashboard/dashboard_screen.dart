@@ -172,6 +172,25 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     context.push(AppRoutes.assistant);
   }
 
+  void _openJourneyQuest(ConscienceQuest quest) {
+    context.push(_journeyQuestRoute(quest));
+  }
+
+  void _openWeeklyInsights() {
+    context.push(AppRoutes.insights);
+  }
+
+  String _journeyQuestRoute(ConscienceQuest quest) {
+    return switch (quest.key) {
+      'reflect_three_purchases' => AppRoutes.transactions,
+      'check_before_purchase' => AppRoutes.assistant,
+      'review_regret_pattern' => AppRoutes.insights,
+      'send_family_invite' => AppRoutes.familyInvites,
+      'add_family_expense' => AppRoutes.addTransaction,
+      _ => AppRoutes.journey,
+    };
+  }
+
   BudgetTrendInsight? _graphableBudgetTrend(
     List<BudgetTrendInsight>? trends,
   ) {
@@ -450,6 +469,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                       presentation: journeyHome,
                       insightSummary: dashboardInsightSummary,
                       insightTrend: dashboardInsightTrend,
+                      onQuestSelected: _openJourneyQuest,
+                      onOpenInsights: _openWeeklyInsights,
                     ),
                   ),
                 ),

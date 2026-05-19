@@ -174,8 +174,37 @@ void main() {
       find.byKey(const ValueKey('journey-home-quest-card')).at(1),
     );
 
-    expect(firstCard.width, closeTo(128, 0.1));
+    expect(firstCard.width, closeTo(164, 0.1));
     expect(secondCard.width, firstCard.width);
+  });
+
+  testWidgets('Weekly quest cards invoke the selected quest', (tester) async {
+    ConscienceQuest? selectedQuest;
+    final summary = _summary(
+      weeklyQuests: const [
+        ConscienceQuest(
+          key: 'review_regret_pattern',
+          title: 'Review one regret pattern',
+          description: 'Spot one repeat spending signal.',
+          progress: 0,
+          target: 1,
+          xpReward: 10,
+          isCompleted: false,
+        ),
+      ],
+    );
+
+    await tester.pumpWidget(_buildSubject(
+      summary: summary,
+      insightSummary: null,
+      insightTrend: null,
+      onQuestSelected: (quest) => selectedQuest = quest,
+    ));
+
+    await tester.tap(find.byKey(const ValueKey('journey-home-quest-card')));
+    await tester.pump();
+
+    expect(selectedQuest?.key, 'review_regret_pattern');
   });
 
   testWidgets('Journey sections use locked storybook typography',
@@ -240,6 +269,8 @@ void main() {
 
   testWidgets('Insights section renders real summary and optional graph',
       (tester) async {
+    var openedInsights = false;
+
     await tester.pumpWidget(_buildSubject(
       summary: _summary(),
       insightSummary: const DashboardInsightSummary(
@@ -247,6 +278,7 @@ void main() {
         tone: InsightFeedTone.caution,
       ),
       insightTrend: _budgetTrend(),
+      onOpenInsights: () => openedInsights = true,
     ));
 
     expect(find.text('Insights'), findsOneWidget);
@@ -258,6 +290,11 @@ void main() {
         find.text('Dining is above your recent 3-month pace.'), findsOneWidget);
     expect(find.byKey(const ValueKey('journey-home-insight-graph')),
         findsOneWidget);
+
+    await tester.tap(find.byKey(const ValueKey('journey-home-insight-card')));
+    await tester.pump();
+
+    expect(openedInsights, isTrue);
   });
 
   testWidgets('Empty weekly state renders and milestones hide without badges',
@@ -288,6 +325,8 @@ Widget _buildSubject({
   JourneyHomePresentation? presentation,
   required DashboardInsightSummary? insightSummary,
   required BudgetTrendInsight? insightTrend,
+  ValueChanged<ConscienceQuest>? onQuestSelected,
+  VoidCallback? onOpenInsights,
 }) {
   return MaterialApp(
     theme: AppTheme.light(),
@@ -298,6 +337,8 @@ Widget _buildSubject({
           presentation: presentation ?? buildJourneyHomePresentation(summary),
           insightSummary: insightSummary,
           insightTrend: insightTrend,
+          onQuestSelected: onQuestSelected ?? (_) {},
+          onOpenInsights: onOpenInsights ?? () {},
         ),
       ),
     ),
