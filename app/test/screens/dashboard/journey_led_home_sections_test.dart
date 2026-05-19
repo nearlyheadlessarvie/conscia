@@ -10,52 +10,15 @@ void main() {
       (tester) async {
     await tester.pumpWidget(_buildSubject(
       summary: _summary(),
-      onContinueJourney: () {},
+      onOpenWeeklyArc: () {},
+      onOpenWeeklyInsights: () {},
     ));
 
-    expect(find.text('Today with Conscia'), findsOneWidget);
+    expect(find.text('Today with Conscia'), findsNothing);
+    expect(find.byKey(const ValueKey('journey-home-today-card')), findsNothing);
     expect(find.text('This Week'), findsOneWidget);
     expect(find.text('Patterns'), findsOneWidget);
     expect(find.text('Milestones'), findsOneWidget);
-    expect(
-        find.byKey(const ValueKey('journey-home-today-card')), findsOneWidget);
-  });
-
-  testWidgets('Today CTA invokes callback and renders presentation action copy',
-      (tester) async {
-    var continueCount = 0;
-    const presentation = JourneyHomePresentation(
-      todayAction: JourneyHomeAction(
-        icon: Icons.psychology_rounded,
-        title: 'Pause before buying',
-        description: 'Take one breath and name what this purchase is solving.',
-        ctaLabel: 'Start the pause',
-      ),
-      patterns: [],
-      milestones: [],
-      completedQuestCount: 0,
-      totalQuestCount: 0,
-      levelProgress: 0,
-    );
-
-    await tester.pumpWidget(_buildSubject(
-      summary: _summary(weeklyQuests: const []),
-      presentation: presentation,
-      onContinueJourney: () => continueCount++,
-    ));
-
-    expect(find.text('Pause before buying'), findsOneWidget);
-    expect(
-      find.text('Take one breath and name what this purchase is solving.'),
-      findsOneWidget,
-    );
-    expect(find.text('RECOMMENDED'), findsOneWidget);
-
-    await tester
-        .tap(find.byKey(const ValueKey('journey-home-today-action-button')));
-    await tester.pump();
-
-    expect(continueCount, 1);
   });
 
   testWidgets('Pattern preview renders presentation pattern copy',
@@ -84,7 +47,8 @@ void main() {
     await tester.pumpWidget(_buildSubject(
       summary: _summary(weeklyQuests: const [], badges: const []),
       presentation: presentation,
-      onContinueJourney: () {},
+      onOpenWeeklyArc: () {},
+      onOpenWeeklyInsights: () {},
     ));
 
     expect(find.text('Momentum is forming'), findsOneWidget);
@@ -152,7 +116,8 @@ void main() {
         totalQuestCount: 4,
         levelProgress: 0.5,
       ),
-      onContinueJourney: () {},
+      onOpenWeeklyArc: () {},
+      onOpenWeeklyInsights: () {},
     ));
 
     expect(find.text('1/4 commitments complete'), findsOneWidget);
@@ -160,6 +125,36 @@ void main() {
     expect(find.text('Second quest'), findsOneWidget);
     expect(find.text('Third quest'), findsOneWidget);
     expect(find.text('Fourth quest'), findsNothing);
+  });
+
+  testWidgets('Weekly arc opens the Journey quests board', (tester) async {
+    var openCount = 0;
+
+    await tester.pumpWidget(_buildSubject(
+      summary: _summary(),
+      onOpenWeeklyArc: () => openCount++,
+      onOpenWeeklyInsights: () {},
+    ));
+
+    await tester.tap(find.byKey(const ValueKey('journey-home-weekly-link')));
+    await tester.pump();
+
+    expect(openCount, 1);
+  });
+
+  testWidgets('Pattern signals open weekly insights', (tester) async {
+    var openCount = 0;
+
+    await tester.pumpWidget(_buildSubject(
+      summary: _summary(),
+      onOpenWeeklyArc: () {},
+      onOpenWeeklyInsights: () => openCount++,
+    ));
+
+    await tester.tap(find.byKey(const ValueKey('journey-home-patterns-link')));
+    await tester.pump();
+
+    expect(openCount, 1);
   });
 
   testWidgets('Empty weekly state renders and milestones hide without badges',
@@ -171,7 +166,8 @@ void main() {
 
     await tester.pumpWidget(_buildSubject(
       summary: summary,
-      onContinueJourney: () {},
+      onOpenWeeklyArc: () {},
+      onOpenWeeklyInsights: () {},
     ));
 
     expect(
@@ -180,15 +176,15 @@ void main() {
       findsOneWidget,
     );
     expect(find.text('Milestones'), findsNothing);
-    expect(
-        find.byKey(const ValueKey('journey-home-today-card')), findsOneWidget);
+    expect(find.byKey(const ValueKey('journey-home-today-card')), findsNothing);
   });
 }
 
 Widget _buildSubject({
   required ConscienceJourneySummary summary,
   JourneyHomePresentation? presentation,
-  required VoidCallback onContinueJourney,
+  required VoidCallback onOpenWeeklyArc,
+  required VoidCallback onOpenWeeklyInsights,
 }) {
   return MaterialApp(
     theme: AppTheme.light(),
@@ -197,7 +193,8 @@ Widget _buildSubject({
         child: JourneyLedHomeSections(
           summary: summary,
           presentation: presentation ?? buildJourneyHomePresentation(summary),
-          onContinueJourney: onContinueJourney,
+          onOpenWeeklyArc: onOpenWeeklyArc,
+          onOpenWeeklyInsights: onOpenWeeklyInsights,
         ),
       ),
     ),

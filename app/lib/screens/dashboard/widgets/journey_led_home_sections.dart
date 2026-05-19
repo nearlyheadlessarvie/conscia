@@ -10,12 +10,14 @@ class JourneyLedHomeSections extends StatelessWidget {
     super.key,
     required this.summary,
     required this.presentation,
-    required this.onContinueJourney,
+    required this.onOpenWeeklyArc,
+    required this.onOpenWeeklyInsights,
   });
 
   final ConscienceJourneySummary? summary;
   final JourneyHomePresentation presentation;
-  final VoidCallback onContinueJourney;
+  final VoidCallback onOpenWeeklyArc;
+  final VoidCallback onOpenWeeklyInsights;
 
   @override
   Widget build(BuildContext context) {
@@ -25,16 +27,10 @@ class JourneyLedHomeSections extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _JourneyHomeSection(
-            title: 'Today with Conscia',
-            subtitle: 'The smallest useful move for your money behavior today.',
-            child: _TodayWithConsciaCard(
-              action: presentation.todayAction,
-              onPressed: onContinueJourney,
-            ),
-          ),
-          _JourneyHomeSection(
             title: 'This Week',
             subtitle: 'A gentle arc for building consistency.',
+            linkKey: const ValueKey('journey-home-weekly-link'),
+            onTap: onOpenWeeklyArc,
             trailing: const _SectionHint(label: 'Your weekly arc'),
             child: _WeeklyArc(
               quests: summary?.weeklyQuests ?? const [],
@@ -45,6 +41,8 @@ class JourneyLedHomeSections extends StatelessWidget {
           _JourneyHomeSection(
             title: 'Patterns',
             subtitle: 'What Conscia is noticing without judging.',
+            linkKey: const ValueKey('journey-home-patterns-link'),
+            onTap: onOpenWeeklyInsights,
             trailing: const _SectionHint(label: 'Signals from your week'),
             child: _PatternPreview(patterns: presentation.patterns),
           ),
@@ -66,12 +64,16 @@ class _JourneyHomeSection extends StatelessWidget {
     required this.subtitle,
     required this.child,
     this.trailing,
+    this.linkKey,
+    this.onTap,
   });
 
   final String title;
   final String subtitle;
   final Widget child;
   final Widget? trailing;
+  final Key? linkKey;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -79,7 +81,7 @@ class _JourneyHomeSection extends StatelessWidget {
     final colors = Theme.of(context).appColors;
     final scheme = Theme.of(context).colorScheme;
 
-    return Padding(
+    final content = Padding(
       padding: const EdgeInsets.only(bottom: 18),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -115,83 +117,14 @@ class _JourneyHomeSection extends StatelessWidget {
         ],
       ),
     );
-  }
-}
 
-class _TodayWithConsciaCard extends StatelessWidget {
-  const _TodayWithConsciaCard({
-    required this.action,
-    required this.onPressed,
-  });
+    if (onTap == null) return content;
 
-  final JourneyHomeAction action;
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).appColors;
-    final textTheme = Theme.of(context).textTheme;
-
-    return Container(
-      key: const ValueKey('journey-home-today-card'),
-      padding: const EdgeInsets.fromLTRB(16, 14, 14, 14),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.centerLeft,
-          end: Alignment.centerRight,
-          colors: [
-            colors.devilSoft.withValues(alpha: 0.56),
-            colors.surfaceRaised,
-          ],
-        ),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: colors.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              _WarmIcon(icon: action.icon),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'RECOMMENDED',
-                      style: textTheme.labelSmall?.copyWith(
-                        color: colors.devilAccent,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: 0.8,
-                      ),
-                    ),
-                    const SizedBox(height: 3),
-                    Text(
-                      action.title,
-                      style: textTheme.titleMedium?.copyWith(
-                        color: colors.ink,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      action.description,
-                      style: textTheme.bodySmall?.copyWith(
-                        color: colors.mutedInk,
-                        height: 1.35,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 12),
-              _CoralArrowButton(onPressed: onPressed),
-            ],
-          ),
-        ],
-      ),
+    return GestureDetector(
+      key: linkKey,
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: content,
     );
   }
 }
@@ -580,54 +513,8 @@ class _SectionHint extends StatelessWidget {
               ),
         ),
         const SizedBox(width: 4),
-        Icon(Icons.info_outline_rounded, size: 13, color: colors.mutedInk),
+        Icon(Icons.chevron_right_rounded, size: 15, color: colors.mutedInk),
       ],
-    );
-  }
-}
-
-class _WarmIcon extends StatelessWidget {
-  const _WarmIcon({required this.icon});
-
-  final IconData icon;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).appColors;
-    return Container(
-      width: 52,
-      height: 52,
-      decoration: BoxDecoration(
-        color: colors.devilSoft,
-        shape: BoxShape.circle,
-      ),
-      child: Icon(icon, color: colors.devilAccent, size: 24),
-    );
-  }
-}
-
-class _CoralArrowButton extends StatelessWidget {
-  const _CoralArrowButton({required this.onPressed});
-
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: 44,
-      height: 44,
-      child: FilledButton(
-        key: const ValueKey('journey-home-today-action-button'),
-        style: FilledButton.styleFrom(
-          padding: EdgeInsets.zero,
-          backgroundColor: const Color(0xFFE97552),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(14),
-          ),
-        ),
-        onPressed: onPressed,
-        child: const Icon(Icons.arrow_forward_rounded, size: 22),
-      ),
     );
   }
 }

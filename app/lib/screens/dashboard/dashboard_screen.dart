@@ -171,6 +171,14 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     context.push(AppRoutes.assistant);
   }
 
+  void _openJourneyQuests() {
+    context.push(AppRoutes.journey);
+  }
+
+  void _openWeeklyInsights() {
+    context.push(AppRoutes.insights);
+  }
+
   void _handleAlertAction(AppAlert alert) {
     if (alert.type == 'budget_nudge') {
       BudgetFormSheet.show(
@@ -442,7 +450,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     child: JourneyLedHomeSections(
                       summary: journey,
                       presentation: journeyHome,
-                      onContinueJourney: _continueJourney,
+                      onOpenWeeklyArc: _openJourneyQuests,
+                      onOpenWeeklyInsights: _openWeeklyInsights,
                     ),
                   ),
                 ),

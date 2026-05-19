@@ -177,6 +177,12 @@ Widget _buildApp(
         ),
       ),
       GoRoute(
+        path: '/journey',
+        builder: (context, state) => const Scaffold(
+          body: Center(child: Text('Journey placeholder')),
+        ),
+      ),
+      GoRoute(
         path: '/assistant',
         builder: (context, state) => const Scaffold(
           body: Center(child: Text('Assistant placeholder')),
@@ -727,7 +733,7 @@ void main() {
       find.byKey(const ValueKey('dashboard-editorial-hero')),
       findsOneWidget,
     );
-    expect(find.text('Today with Conscia'), findsOneWidget);
+    expect(find.text('Today with Conscia'), findsNothing);
     expect(find.text('This Week'), findsOneWidget);
     expect(find.text('Patterns'), findsOneWidget);
     expect(find.text('BUDGETS'), findsOneWidget);
@@ -765,7 +771,7 @@ void main() {
       find.byKey(const ValueKey('dashboard-editorial-hero')),
       findsOneWidget,
     );
-    expect(find.text('Today with Conscia'), findsOneWidget);
+    expect(find.text('Today with Conscia'), findsNothing);
     expect(find.text('This Week'), findsOneWidget);
     expect(find.text('Patterns'), findsOneWidget);
     expect(find.text('BUDGETS'), findsOneWidget);
@@ -827,13 +833,13 @@ void main() {
     await tester.pumpWidget(_buildApp(container));
     await tester.pumpAndSettle();
 
-    final today = find.text('Today with Conscia');
+    final journeySection = find.text('This Week');
     final budgets = find.text('BUDGETS');
 
-    expect(today, findsOneWidget);
+    expect(journeySection, findsOneWidget);
     expect(budgets, findsOneWidget);
-    expect(
-        tester.getTopLeft(today).dy, lessThan(tester.getTopLeft(budgets).dy));
+    expect(tester.getTopLeft(journeySection).dy,
+        lessThan(tester.getTopLeft(budgets).dy));
   });
 
   testWidgets('dashboard summarizes budgets by scope without detailed rows',
@@ -1134,6 +1140,68 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Assistant placeholder'), findsOneWidget);
+  });
+
+  testWidgets('dashboard weekly arc opens journey board', (tester) async {
+    _useTallDashboardViewport(tester);
+
+    final container = ProviderContainer(
+      overrides: [
+        sharedPreferencesProvider.overrideWithValue(prefs),
+        budgetServiceProvider.overrideWithValue(_StaticBudgetService(const [])),
+        transactionServiceProvider
+            .overrideWithValue(_StaticTransactionService()),
+        behavioralInsightsProvider.overrideWith((ref) async => null),
+        insightsSummaryProvider.overrideWith((ref) async => null),
+        insightsCategoriesProvider.overrideWith((ref) async => const []),
+        insightsMerchantsProvider.overrideWith((ref) async => const []),
+        conscienceJourneyServiceProvider.overrideWithValue(_testJourneyService),
+        localAlertsProvider.overrideWith(
+          (ref) => _LocalAlertsTestNotifier(const []),
+        ),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    await tester.pumpWidget(_buildApp(container));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('journey-home-weekly-link')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Journey placeholder'), findsOneWidget);
+  });
+
+  testWidgets('dashboard pattern signals open insights', (tester) async {
+    _useTallDashboardViewport(tester);
+
+    final container = ProviderContainer(
+      overrides: [
+        sharedPreferencesProvider.overrideWithValue(prefs),
+        budgetServiceProvider.overrideWithValue(_StaticBudgetService(const [])),
+        transactionServiceProvider
+            .overrideWithValue(_StaticTransactionService()),
+        behavioralInsightsProvider.overrideWith((ref) async => null),
+        insightsSummaryProvider.overrideWith((ref) async => null),
+        insightsCategoriesProvider.overrideWith((ref) async => const []),
+        insightsMerchantsProvider.overrideWith((ref) async => const []),
+        conscienceJourneyServiceProvider.overrideWithValue(_testJourneyService),
+        localAlertsProvider.overrideWith(
+          (ref) => _LocalAlertsTestNotifier(const []),
+        ),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    await tester.pumpWidget(_buildApp(container));
+    await tester.pumpAndSettle();
+
+    await tester.ensureVisible(
+        find.byKey(const ValueKey('journey-home-patterns-link')));
+    await tester.tap(find.byKey(const ValueKey('journey-home-patterns-link')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Insights placeholder'), findsOneWidget);
   });
 
   testWidgets(
