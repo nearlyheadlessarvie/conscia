@@ -318,15 +318,19 @@ class _ReceiptReviewScreenState extends ConsumerState<ReceiptReviewScreen> {
                   onSelected: (cat) => setState(() => _selectedCategory = cat),
                 ),
                 const SizedBox(height: 16),
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: const Icon(Icons.calendar_today),
-                  title: Text(_formatDate(_date)),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: _pickDate,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    side: BorderSide(color: colors.outline),
+                Material(
+                  color: Colors.transparent,
+                  borderRadius: BorderRadius.circular(12),
+                  child: ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(Icons.calendar_today),
+                    title: Text(_formatDate(_date)),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: _pickDate,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      side: BorderSide(color: colors.outline),
+                    ),
                   ),
                 ),
               ],

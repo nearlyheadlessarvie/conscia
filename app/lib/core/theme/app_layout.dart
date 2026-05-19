@@ -38,7 +38,6 @@ abstract final class AppLayout {
   static const double transactionDetailHeroTopGap = 68;
   static const double assistantHeroTopGap = 68;
   static const double assistantScrollTargetTopGap = 104;
-  static const double receiptHeroTopGap = 92;
   static const double journeyHeaderTopGap = 60;
   static const double stickyHeaderTopGap = 8;
 
@@ -76,9 +75,6 @@ abstract final class AppLayout {
 
   static double assistantScrollTargetTop(BuildContext context) =>
       safeTop(context) + assistantScrollTargetTopGap;
-
-  static double receiptHeroTop(BuildContext context) =>
-      safeTop(context) + receiptHeroTopGap;
 
   static double journeyHeaderTop(BuildContext context) =>
       safeTop(context) + journeyHeaderTopGap;

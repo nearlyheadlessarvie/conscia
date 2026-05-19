@@ -47,7 +47,7 @@ Finder purchaseDescriptionField() {
 Finder purchaseAmountField() {
   return find.descendant(
     of: find.byType(AmountHeroField),
-    matching: find.byType(TextField),
+    matching: find.byType(EditableText),
   );
 }
 
@@ -384,8 +384,8 @@ void main() {
     promptField.onSubmitted?.call('Coffee');
     await tester.pumpAndSettle();
 
-    final amountField = tester.widget<TextField>(purchaseAmountField());
-    expect(amountField.focusNode?.hasFocus, isTrue);
+    final amountField = tester.widget<EditableText>(purchaseAmountField());
+    expect(amountField.focusNode.hasFocus, isTrue);
   });
 
   testWidgets('pre-purchase amount submit brings category into view',
@@ -402,7 +402,10 @@ void main() {
     final before =
         tester.widget<SingleChildScrollView>(scrollView).controller!.offset;
 
-    tester.widget<TextField>(purchaseAmountField()).onSubmitted?.call('12.50');
+    tester
+        .widget<EditableText>(purchaseAmountField())
+        .onSubmitted
+        ?.call('12.50');
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 260));
 
@@ -680,7 +683,7 @@ void main() {
       purchaseDescriptionField(),
       'Coffee',
     );
-    await tester.enterText(find.byType(TextField).at(1), '180');
+    await tester.enterText(purchaseAmountField(), '180');
     await tester.ensureVisible(find.text('Dining').first);
     await tester.tap(find.text('Dining').first);
     await tester.pump();
@@ -855,7 +858,8 @@ void main() {
     expect(descriptionField.controller?.text, 'Corner Bakery');
 
     expect(find.text('Groceries'), findsWidgets);
-    expect(tester.widget<TextField>(purchaseAmountField()).focusNode?.hasFocus,
+    expect(
+        tester.widget<EditableText>(purchaseAmountField()).focusNode.hasFocus,
         isTrue);
   });
 
@@ -885,7 +889,7 @@ void main() {
       purchaseDescriptionField(),
       'Starbucks coffee',
     );
-    await tester.enterText(find.byType(TextField).at(1), '600');
+    await tester.enterText(purchaseAmountField(), '600');
     final diningChip = find.text('Dining').first;
     await Scrollable.ensureVisible(
       tester.element(diningChip),
@@ -944,7 +948,7 @@ void main() {
       purchaseDescriptionField(),
       'Dinner delivery',
     );
-    await tester.enterText(find.byType(TextField).at(1), '1200');
+    await tester.enterText(purchaseAmountField(), '1200');
     final diningChip = find.text('Dining').first;
     await Scrollable.ensureVisible(
       tester.element(diningChip),
@@ -1002,7 +1006,7 @@ void main() {
       purchaseDescriptionField(),
       'Starbucks coffee',
     );
-    await tester.enterText(find.byType(TextField).at(1), '600');
+    await tester.enterText(purchaseAmountField(), '600');
     await tester.ensureVisible(find.text('Dining').first);
     await tester.tap(find.text('Dining').first);
     await tester.pumpAndSettle();
@@ -1060,7 +1064,7 @@ void main() {
       purchaseDescriptionField(),
       'Starbucks coffee',
     );
-    await tester.enterText(find.byType(TextField).at(1), '600');
+    await tester.enterText(purchaseAmountField(), '600');
     await tester.ensureVisible(find.text('Dining').first);
     await tester.tap(find.text('Dining').first);
     await tester.pumpAndSettle();
@@ -1103,7 +1107,7 @@ void main() {
       purchaseDescriptionField(),
       'Coffee',
     );
-    await tester.enterText(find.byType(TextField).at(1), '100');
+    await tester.enterText(purchaseAmountField(), '100');
     await tester.ensureVisible(find.text('Dining').first);
     await tester.tap(find.text('Dining').first);
     await tester.pumpAndSettle();
@@ -1216,7 +1220,7 @@ void main() {
       purchaseDescriptionField(),
       'Coffee',
     );
-    await tester.enterText(find.byType(TextField).at(1), '100');
+    await tester.enterText(purchaseAmountField(), '100');
     await tester.ensureVisible(find.text('Dining').first);
     await tester.tap(find.text('Dining').first);
     await tester.pump();

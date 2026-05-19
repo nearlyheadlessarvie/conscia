@@ -291,7 +291,7 @@ Finder _floatingLabelInput(String label) {
 Finder _amountInput() {
   return find.descendant(
     of: find.byType(AmountHeroField),
-    matching: find.byType(TextField),
+    matching: find.byType(EditableText),
   );
 }
 
@@ -501,8 +501,8 @@ void main() {
     merchantField.onSubmitted?.call('Corner Bakery');
     await tester.pumpAndSettle();
 
-    final amountField = tester.widget<TextField>(_amountInput());
-    expect(amountField.focusNode?.hasFocus, isTrue);
+    final amountField = tester.widget<EditableText>(_amountInput());
+    expect(amountField.focusNode.hasFocus, isTrue);
   });
 
   testWidgets('transaction amount submit brings category into view', (
@@ -517,7 +517,7 @@ void main() {
     final categoryTitle = find.text('CATEGORY', skipOffstage: false);
     final before = tester.getTopLeft(categoryTitle).dy;
 
-    tester.widget<TextField>(_amountInput()).onSubmitted?.call('12.50');
+    tester.widget<EditableText>(_amountInput()).onSubmitted?.call('12.50');
     await tester.pumpAndSettle();
 
     final after = tester.getTopLeft(categoryTitle).dy;
@@ -961,7 +961,7 @@ void main() {
     expect(merchantField.controller.text, 'Corner Bakery');
     expect(find.text('Groceries'), findsWidgets);
     expect(
-        tester.widget<TextField>(_amountInput()).focusNode?.hasFocus, isTrue);
+        tester.widget<EditableText>(_amountInput()).focusNode.hasFocus, isTrue);
 
     await tester.enterText(_amountInput(), '12.50');
     await tester.pumpAndSettle();

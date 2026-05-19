@@ -36,7 +36,19 @@ void main() {
             .getSize(find.byKey(const ValueKey('amount-hero-field-container')))
             .height,
         65);
-    expect(tester.getSize(find.byType(TextField)).height, 32);
+    expect(
+      tester.getSize(find.byKey(const ValueKey('amount-editable-line'))).height,
+      34,
+    );
+    final containerCenter = tester
+        .getRect(find.byKey(const ValueKey('amount-hero-field-container')))
+        .center
+        .dy;
+    final editableLineCenter = tester
+        .getRect(find.byKey(const ValueKey('amount-editable-line')))
+        .center
+        .dy;
+    expect(editableLineCenter, closeTo(containerCenter, 1));
     final containerLeft = tester
         .getTopLeft(find.byKey(const ValueKey('amount-hero-field-container')))
         .dx;
@@ -44,18 +56,16 @@ void main() {
         .getTopLeft(find.byKey(const ValueKey('amount-currency-label')))
         .dx;
     expect(currencyLeft - containerLeft, closeTo(16, 1));
-    final textFieldLeft = tester.getTopLeft(find.byType(TextField)).dx;
-    expect(textFieldLeft - containerLeft, closeTo(80, 1));
+    final editableLineLeft = tester
+        .getTopLeft(find.byKey(const ValueKey('amount-editable-line')))
+        .dx;
+    expect(editableLineLeft - containerLeft, closeTo(80, 1));
 
-    final textField = tester.widget<TextField>(find.byType(TextField));
-    expect(textField.focusNode, focusNode);
-    expect(textField.textAlign, TextAlign.end);
-    expect(textField.textAlignVertical, TextAlignVertical.center);
-    expect(textField.decoration?.prefixIcon, isNull);
-    expect(textField.decoration?.isCollapsed, isTrue);
-    expect(textField.decoration?.border, InputBorder.none);
-    expect(textField.decoration?.constraints, isNull);
-    expect(textField.decoration?.hintText, '0.00');
+    final editableText = tester.widget<EditableText>(find.byType(EditableText));
+    expect(editableText.focusNode, focusNode);
+    expect(editableText.maxLines, 1);
+    expect(editableText.textAlign, TextAlign.end);
+    expect(find.text('0.00'), findsOneWidget);
   });
 
   testWidgets('AmountHeroField localizes its empty amount placeholder',
@@ -79,8 +89,7 @@ void main() {
       ),
     );
 
-    final textField = tester.widget<TextField>(find.byType(TextField));
-    expect(textField.decoration?.hintText, '0,00');
+    expect(find.text('0,00'), findsOneWidget);
   });
 
   testWidgets('AmountHeroField blocks alphabetic input', (tester) async {
@@ -103,7 +112,7 @@ void main() {
       ),
     );
 
-    await tester.enterText(find.byType(TextField), 'dfdfd');
+    await tester.enterText(find.byType(EditableText), 'dfdfd');
 
     expect(controller.text, isEmpty);
   });
@@ -129,7 +138,7 @@ void main() {
       ),
     );
 
-    await tester.enterText(find.byType(TextField), '1212312.56465413');
+    await tester.enterText(find.byType(EditableText), '1212312.56465413');
 
     expect(controller.text, '1,212,312.56');
   });
@@ -155,7 +164,7 @@ void main() {
       ),
     );
 
-    await tester.enterText(find.byType(TextField), '1.234,56');
+    await tester.enterText(find.byType(EditableText), '1.234,56');
 
     expect(controller.text, '1.234,56');
   });

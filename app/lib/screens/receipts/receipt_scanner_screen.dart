@@ -98,8 +98,10 @@ class _ReceiptScannerScreenState extends ConsumerState<ReceiptScannerScreen> {
 
         return HeroScreenScaffold(
           appBar: const ConsciaAppBar(title: Text('Scan Receipt')),
+          padding: EdgeInsets.zero,
+          bleedBehindAppBar: true,
           child: PremiumGate(
-            icon: Icons.camera_alt,
+            icon: Icons.document_scanner_rounded,
             headline: 'Receipt Scanner',
             description:
                 'Automatically extract transaction details from receipts '
@@ -144,10 +146,8 @@ class _ReceiptScannerScreenState extends ConsumerState<ReceiptScannerScreen> {
             child: CustomScrollView(
               physics: const AlwaysScrollableScrollPhysics(),
               slivers: [
-                SliverToBoxAdapter(
-                  child: _ReceiptScanHero(
-                    topPadding: MediaQuery.paddingOf(context).top,
-                  ),
+                const SliverToBoxAdapter(
+                  child: _ReceiptScanHero(),
                 ),
                 SliverPadding(
                   padding: const EdgeInsets.fromLTRB(20, 24, 20, 36),
@@ -203,9 +203,7 @@ class _ReceiptScannerScreenState extends ConsumerState<ReceiptScannerScreen> {
 }
 
 class _ReceiptScanHero extends StatelessWidget {
-  const _ReceiptScanHero({required this.topPadding});
-
-  final double topPadding;
+  const _ReceiptScanHero();
 
   @override
   Widget build(BuildContext context) {
@@ -228,7 +226,7 @@ class _ReceiptScanHero extends StatelessWidget {
       child: Padding(
         padding: EdgeInsets.fromLTRB(
           AppLayout.screenPadding,
-          topPadding + AppLayout.receiptHeroTopGap,
+          AppLayout.bleedingHeroTop(context),
           AppLayout.screenPadding,
           AppLayout.heroBottomPadding,
         ),

@@ -47,6 +47,7 @@ class _AmountHeroFieldState extends State<AmountHeroField> {
     _ownsFocusNode = widget.focusNode == null;
     _focusNode = widget.focusNode ?? FocusNode();
     _focusNode.addListener(_handleFocusChanged);
+    widget.controller.addListener(_handleTextChanged);
   }
 
   @override
@@ -61,11 +62,16 @@ class _AmountHeroFieldState extends State<AmountHeroField> {
       _focusNode = widget.focusNode ?? FocusNode();
       _focusNode.addListener(_handleFocusChanged);
     }
+    if (oldWidget.controller != widget.controller) {
+      oldWidget.controller.removeListener(_handleTextChanged);
+      widget.controller.addListener(_handleTextChanged);
+    }
   }
 
   @override
   void dispose() {
     _focusNode.removeListener(_handleFocusChanged);
+    widget.controller.removeListener(_handleTextChanged);
     if (_ownsFocusNode) {
       _focusNode.dispose();
     }
@@ -76,6 +82,10 @@ class _AmountHeroFieldState extends State<AmountHeroField> {
     if (mounted) setState(() {});
   }
 
+  void _handleTextChanged() {
+    if (mounted) setState(() {});
+  }
+
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).appColors;
@@ -83,7 +93,12 @@ class _AmountHeroFieldState extends State<AmountHeroField> {
     final amountStyle = Theme.of(context).textTheme.headlineMedium?.copyWith(
           color: amountColor,
           fontWeight: FontWeight.w700,
+          height: 1,
         );
+    final hintText = LocalizedNumberInput.formatForInput(
+      0,
+      locale: widget.locale,
+    );
     return SizedBox(
       height: 65,
       child: AnimatedContainer(
@@ -105,13 +120,28 @@ class _AmountHeroFieldState extends State<AmountHeroField> {
             Positioned.fill(
               child: Padding(
                 padding: const EdgeInsets.only(left: 80, right: 16),
-                child: LayoutBuilder(
-                  builder: (context, constraints) {
-                    return Center(
-                      child: SizedBox(
-                        width: constraints.maxWidth,
-                        height: 32,
-                        child: TextField(
+                child: Center(
+                  child: SizedBox(
+                    key: const ValueKey('amount-editable-line'),
+                    height: 34,
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        if (widget.controller.text.isEmpty)
+                          IgnorePointer(
+                            child: Align(
+                              alignment: _alignmentFor(widget.textAlign),
+                              child: Text(
+                                hintText,
+                                maxLines: 1,
+                                overflow: TextOverflow.clip,
+                                style: amountStyle?.copyWith(
+                                  color: amountColor.withValues(alpha: 0.32),
+                                ),
+                              ),
+                            ),
+                          ),
+                        EditableText(
                           controller: widget.controller,
                           focusNode: _focusNode,
                           onChanged: widget.onChanged,
@@ -124,31 +154,17 @@ class _AmountHeroFieldState extends State<AmountHeroField> {
                           inputFormatters: [
                             LocalizedNumberInput.formatter(widget.locale)
                           ],
+                          maxLines: 1,
                           textAlign: widget.textAlign,
-                          textAlignVertical: TextAlignVertical.center,
-                          style: amountStyle,
-                          decoration: InputDecoration(
-                            isCollapsed: true,
-                            hintText: LocalizedNumberInput.formatForInput(
-                              0,
-                              locale: widget.locale,
-                            ),
-                            border: InputBorder.none,
-                            enabledBorder: InputBorder.none,
-                            focusedBorder: InputBorder.none,
-                            disabledBorder: InputBorder.none,
-                            errorBorder: InputBorder.none,
-                            focusedErrorBorder: InputBorder.none,
-                            contentPadding: EdgeInsets.zero,
-                            hintStyle: amountStyle?.copyWith(
-                              color: amountColor.withValues(alpha: 0.32),
-                            ),
-                            filled: false,
-                          ),
+                          style: amountStyle!,
+                          cursorColor: amountColor,
+                          backgroundCursorColor: colors.softInk,
+                          selectionColor: amountColor.withValues(alpha: 0.18),
+                          enableInteractiveSelection: true,
                         ),
-                      ),
-                    );
-                  },
+                      ],
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -189,5 +205,13 @@ class _AmountHeroFieldState extends State<AmountHeroField> {
         ),
       ),
     );
+  }
+
+  Alignment _alignmentFor(TextAlign textAlign) {
+    return switch (textAlign) {
+      TextAlign.left || TextAlign.start => Alignment.centerLeft,
+      TextAlign.center => Alignment.center,
+      _ => Alignment.centerRight,
+    };
   }
 }
