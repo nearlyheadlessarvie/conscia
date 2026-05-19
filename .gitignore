@@ -38,3 +38,6 @@ cdk.out/
 .tmp/
 .review/
 .claude/
+
+## Github
+.github/*.env

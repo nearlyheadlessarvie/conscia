@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../../../core/theme/app_colors.dart';
 import '../../../widgets/feeling_choice_button.dart';
+import '../../../widgets/swipe_action_tile.dart';
 
 class RegretPromptCard extends StatelessWidget {
   final Widget categoryBadge;
@@ -37,6 +39,7 @@ class RegretPromptCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
+    final appColors = Theme.of(context).appColors;
     final textTheme = Theme.of(context).textTheme;
 
     final formatter = NumberFormat.currency(
@@ -48,14 +51,18 @@ class RegretPromptCard extends StatelessWidget {
       key: ValueKey('regret_${counterparty}_${date.millisecondsSinceEpoch}'),
       direction: DismissDirection.startToEnd,
       onDismissed: (_) => onDismiss?.call(),
-      background: Container(
+      background: SwipeActionBackground(
         alignment: Alignment.centerLeft,
-        padding: const EdgeInsets.only(left: 24),
-        decoration: BoxDecoration(
-          color: const Color(0xFF4CAF50).withValues(alpha: 0.15),
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: const Icon(Icons.check, color: Color(0xFF4CAF50)),
+        padding: const EdgeInsets.only(left: 12),
+        children: [
+          SwipeActionTile(
+            icon: Icons.check_rounded,
+            label: 'Dismiss',
+            foregroundColor: appColors.income,
+            backgroundColor: appColors.incomeSoft,
+            onTap: () {},
+          ),
+        ],
       ),
       child: Card(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),

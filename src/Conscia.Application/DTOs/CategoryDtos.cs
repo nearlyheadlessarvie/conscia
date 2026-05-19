@@ -21,8 +21,8 @@ public record CreateCategoryDto(
     TransactionType Type,
     RecordScope Scope,
     Guid? FamilySpaceId,
-    string IconKey,
-    string ColorKey);
+    string? IconKey,
+    string? ColorKey);
 
 public record UpdateCategoryDto(
     string? Name,

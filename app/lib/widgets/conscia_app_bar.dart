@@ -28,6 +28,7 @@ class ConsciaAppBar extends StatelessWidget implements PreferredSizeWidget {
     this.leading,
     this.onBack,
     this.automaticallyImplyLeading = true,
+    this.alwaysShowBack = false,
     this.showBottomBorder = false,
     this.centerTitle,
     this.backgroundColor,
@@ -39,6 +40,7 @@ class ConsciaAppBar extends StatelessWidget implements PreferredSizeWidget {
   final Widget? leading;
   final VoidCallback? onBack;
   final bool automaticallyImplyLeading;
+  final bool alwaysShowBack;
   final bool showBottomBorder;
   final bool? centerTitle;
   final Color? backgroundColor;
@@ -66,8 +68,10 @@ class ConsciaAppBar extends StatelessWidget implements PreferredSizeWidget {
     final progress = scrollProgress >= 1.0 ? 1.0 : 0.0;
     final radius = BorderRadius.circular(999 * progress);
     final capsuleInset = 8.0 * progress;
+    final shouldShowBack =
+        automaticallyImplyLeading && (canPop || alwaysShowBack);
     final leadingWidget = leading ??
-        (automaticallyImplyLeading && canPop
+        (shouldShowBack
             ? IconButton(
                 tooltip: 'Back',
                 visualDensity: VisualDensity.compact,

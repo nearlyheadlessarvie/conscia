@@ -2,6 +2,8 @@ import 'package:conscia_app/providers/alert_provider.dart';
 import 'package:conscia_app/providers/auth_provider.dart';
 import 'package:conscia_app/providers/budget_providers.dart';
 import 'package:conscia_app/providers/category_frequency_provider.dart';
+import 'package:conscia_app/providers/category_provider.dart';
+import 'package:conscia_app/providers/exchange_rate_provider.dart';
 import 'package:conscia_app/models/family_space.dart';
 import 'package:conscia_app/models/recurring_schedule.dart';
 import 'package:conscia_app/providers/family_space_provider.dart';
@@ -10,6 +12,7 @@ import 'package:conscia_app/providers/transaction_providers.dart';
 import 'package:conscia_app/providers/usage_provider.dart';
 import 'package:conscia_app/providers/user_provider.dart';
 import 'package:conscia_app/screens/transactions/transaction_form_screen.dart';
+import 'package:conscia_app/screens/transactions/widgets/category_picker.dart';
 import 'package:conscia_app/screens/transactions/widgets/voice_input_button.dart';
 import 'package:conscia_app/services/auth_service.dart';
 import 'package:conscia_app/services/budget_service.dart';
@@ -19,6 +22,7 @@ import 'package:conscia_app/services/subscription_service.dart';
 import 'package:conscia_app/services/transaction_service.dart';
 import 'package:conscia_app/services/user_service.dart';
 import 'package:conscia_app/widgets/amount_hero_field.dart';
+import 'package:conscia_app/widgets/conscia_bottom_sheet.dart';
 import 'package:conscia_app/widgets/floating_label_text_field.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
@@ -249,6 +253,8 @@ Future<ProviderContainer> _pumpTransactionForm(
       recurringServiceProvider.overrideWithValue(_FakeRecurringService()),
       budgetServiceProvider.overrideWithValue(_StaticBudgetService(budgets)),
       budgetReconciliationEnabledProvider.overrideWithValue(false),
+      exchangeRateProvider.overrideWith((ref, pair) async => null),
+      managedCategoriesProvider.overrideWith((ref, query) async => const []),
       familySpaceProvider.overrideWith((ref) async => familySpace),
     ],
   );
@@ -332,6 +338,8 @@ Future<Widget> buildTransactionFormApp(
       recurringServiceProvider.overrideWithValue(_FakeRecurringService()),
       budgetServiceProvider.overrideWithValue(_StaticBudgetService(const [])),
       budgetReconciliationEnabledProvider.overrideWithValue(false),
+      exchangeRateProvider.overrideWith((ref, pair) async => null),
+      managedCategoriesProvider.overrideWith((ref, query) async => const []),
       familySpaceProvider.overrideWith((ref) async => null),
     ],
   );
@@ -405,6 +413,19 @@ void main() {
   });
 
   testWidgets(
+      'transaction form route presents as a Conscia pull-up sheet', (
+    tester,
+  ) async {
+    await _pumpTransactionForm(tester);
+
+    await tester.pumpAndSettle();
+
+    expect(find.byType(BottomSheet), findsAtLeastNWidgets(1));
+    expect(find.byType(ConsciaSheetHandle), findsOneWidget);
+    expect(find.text('Add transaction'), findsOneWidget);
+  });
+
+  testWidgets(
       'transaction form shows a single quick preset row when unselected', (
     tester,
   ) async {
@@ -437,6 +458,7 @@ void main() {
     tester,
   ) async {
     await tester.pumpWidget(await buildTransactionFormApp(tester));
+    await tester.pumpAndSettle();
 
     await tester.tap(find.text('Income'));
     await tester.pumpAndSettle();
@@ -577,20 +599,31 @@ void main() {
     await tester.tap(find.text('More'));
     await tester.pumpAndSettle();
 
-    expect(find.byType(BottomSheet), findsOneWidget);
+    expect(find.byType(BottomSheet), findsAtLeastNWidgets(1));
 
-    final choiceChips = tester.widgetList<ChoiceChip>(find.byType(ChoiceChip));
-    final labels = choiceChips
-        .map((chip) => (chip.label as Text).data)
-        .whereType<String>()
-        .toList();
+    final sheetPicker = find.byType(CategoryPicker).last;
+    final transport = find.descendant(
+      of: sheetPicker,
+      matching: find.text('Transport'),
+    );
+    final dining = find.descendant(
+      of: sheetPicker,
+      matching: find.text('Dining'),
+    );
 
-    expect(labels.take(2).toList(), ['Transport', 'Dining']);
+    expect(transport, findsOneWidget);
+    expect(dining, findsOneWidget);
+    expect(
+      tester.getTopLeft(transport).dx,
+      lessThan(tester.getTopLeft(dining).dx),
+    );
 
-    await tester.tap(find.widgetWithText(ChoiceChip, 'Groceries').last);
+    await tester.tap(
+      find.descendant(of: sheetPicker, matching: find.text('Groceries')),
+    );
     await tester.pumpAndSettle();
 
-    expect(find.byType(BottomSheet), findsNothing);
+    expect(find.byType(BottomSheet), findsOneWidget);
     expect(find.text('Groceries'), findsWidgets);
   });
 
@@ -1158,8 +1191,7 @@ void main() {
       ),
     );
 
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 250));
+    await tester.pumpAndSettle();
 
     expect(find.text('CLASSIFY'), findsOneWidget);
     expect(find.text('Family'), findsOneWidget);
@@ -1260,6 +1292,8 @@ void main() {
         transactionServiceProvider.overrideWithValue(transactionService),
         budgetServiceProvider.overrideWithValue(_StaticBudgetService(const [])),
         budgetReconciliationEnabledProvider.overrideWithValue(false),
+        exchangeRateProvider.overrideWith((ref, pair) async => null),
+        managedCategoriesProvider.overrideWith((ref, query) async => const []),
       ],
     );
     addTearDown(container.dispose);
@@ -1353,6 +1387,8 @@ void main() {
           ]),
         ),
         budgetReconciliationEnabledProvider.overrideWithValue(false),
+        exchangeRateProvider.overrideWith((ref, pair) async => null),
+        managedCategoriesProvider.overrideWith((ref, query) async => const []),
       ],
     );
     addTearDown(container.dispose);

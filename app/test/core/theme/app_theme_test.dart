@@ -66,4 +66,27 @@ void main() {
       );
     }
   });
+
+  test('AppTheme uses paper as the default pull-up sheet surface', () {
+    final source = File('lib/core/theme/app_theme.dart').readAsStringSync();
+
+    expect(
+      RegExp(
+        r'bottomSheetTheme:\s+const BottomSheetThemeData\(\s+backgroundColor:\s+Color\(0xFFFFFDF8\),\s+modalBackgroundColor:\s+Color\(0xFFFFFDF8\),',
+      ).hasMatch(source),
+      isTrue,
+    );
+    expect(
+      RegExp(
+        r'bottomSheetTheme:\s+const BottomSheetThemeData\(\s+backgroundColor:\s+Color\(0xFF0D1117\),\s+modalBackgroundColor:\s+Color\(0xFF0D1117\),',
+      ).hasMatch(source),
+      isTrue,
+    );
+    expect(
+      RegExp(r'borderRadius:\s+BorderRadius\.vertical\(top:\s+Radius\.circular\(28\)\)')
+          .allMatches(source)
+          .length,
+      2,
+    );
+  });
 }

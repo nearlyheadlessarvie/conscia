@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/constants/category_icons.dart';
 import '../../../core/constants/category_visibility.dart';
 import '../../../core/constants/generated/app_constants.g.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../providers/category_provider.dart';
 import '../../../providers/category_recents_provider.dart';
+import '../../../widgets/conscia_bottom_sheet.dart';
 import 'category_picker.dart';
 
 class TransactionStyleCategorySelector extends ConsumerStatefulWidget {
@@ -61,18 +61,33 @@ class _TransactionStyleCategorySelectorState
       isScrollControlled: true,
       builder: (context) => SafeArea(
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
           child: SingleChildScrollView(
-            child: CategoryPicker(
-              selected: widget.selectedCategory,
-              isExpense: widget.isExpense,
-              isPremium: widget.isPremium,
-              maxVisible: 100,
-              onSelected: (category) {
-                widget.onCategorySelected(category);
-                Navigator.of(context).pop();
-                _scrollToStart();
-              },
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const ConsciaSheetHandle(),
+                const SizedBox(height: 18),
+                ConsciaSheetHeader(
+                  title: 'Category',
+                  subtitle: widget.isExpense
+                      ? 'Choose where this spending belongs.'
+                      : 'Choose where this income belongs.',
+                ),
+                const SizedBox(height: 16),
+                CategoryPicker(
+                  selected: widget.selectedCategory,
+                  isExpense: widget.isExpense,
+                  isPremium: widget.isPremium,
+                  maxVisible: 100,
+                  showTitle: false,
+                  onSelected: (category) {
+                    widget.onCategorySelected(category);
+                    Navigator.of(context).pop();
+                    _scrollToStart();
+                  },
+                ),
+              ],
             ),
           ),
         ),
@@ -90,25 +105,35 @@ class _TransactionStyleCategorySelectorState
                   .where(
                     (c) => widget.isExpense ? c.isExpense : c.isIncome,
                   )
-                  .map((c) => c.name)
+                  .map(CategoryData.fromManaged)
                   .toList(growable: false),
-              orElse: () => const <String>[],
+              orElse: () => const <CategoryData>[],
             );
 
-    final List<String> quickCategories = managedCategories.isNotEmpty
-        ? orderCategoriesByRecency(
-            categories: managedCategories,
-            recents: recentCategories,
-          ).take(4).toList()
+    final List<CategoryData> quickCategories = managedCategories.isNotEmpty
+        ? [
+            for (final name in orderCategoriesByRecency(
+              categories:
+                  managedCategories.map((category) => category.name).toList(),
+              recents: recentCategories,
+            ).take(4))
+              managedCategories.firstWhere((category) => category.name == name),
+          ]
         : widget.isExpense
             ? _expenseQuick(recentCategories)
+                .map((name) => CategoryData(name, type: 'Expense'))
+                .toList()
             : orderCategoriesByRecency(
                 categories: incomeCategories,
                 recents: recentCategories,
-              ).take(4).toList();
+              )
+                .take(4)
+                .map((name) => CategoryData(name, type: 'Income'))
+                .toList();
 
-    final visibleQuick =
-        quickCategories.where((c) => c != widget.selectedCategory).toList();
+    final visibleQuick = quickCategories
+        .where((c) => c.name != widget.selectedCategory)
+        .toList();
 
     return SizedBox(
       height: 36,
@@ -117,8 +142,9 @@ class _TransactionStyleCategorySelectorState
         scrollDirection: Axis.horizontal,
         children: [
           if (widget.selectedCategory != null) ...[
-            _CategoryChip(
+            CategoryChoicePill(
               category: widget.selectedCategory!,
+              type: widget.isExpense ? 'Expense' : 'Income',
               selected: true,
               onTap: () {
                 widget.onCategorySelected(null);
@@ -130,11 +156,14 @@ class _TransactionStyleCategorySelectorState
           ...visibleQuick.map(
             (cat) => Padding(
               padding: const EdgeInsets.only(right: 8),
-              child: _CategoryChip(
-                category: cat,
+              child: CategoryChoicePill(
+                category: cat.name,
+                type: cat.type,
+                iconKey: cat.iconKey,
+                colorKey: cat.colorKey,
                 selected: false,
                 onTap: () {
-                  widget.onCategorySelected(cat);
+                  widget.onCategorySelected(cat.name);
                   _scrollToStart();
                 },
               ),
@@ -155,61 +184,6 @@ class _TransactionStyleCategorySelectorState
       categories: allowed,
       recents: recents,
     ).take(4).toList();
-  }
-}
-
-class _CategoryChip extends StatelessWidget {
-  const _CategoryChip({
-    required this.category,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final String category;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).appColors;
-    final accent = CategoryIcons.accentFor(category);
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 160),
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-        decoration: BoxDecoration(
-          color:
-              selected ? accent.withValues(alpha: 0.12) : colors.surfaceMuted,
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(
-            color:
-                selected ? accent.withValues(alpha: 0.3) : Colors.transparent,
-          ),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            CategoryIcons.rawIcon(category, size: 13),
-            const SizedBox(width: 6),
-            Text(
-              category,
-              style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-                    fontSize: 12,
-                    color: selected
-                        ? accent
-                        : Theme.of(context).colorScheme.onSurface,
-                  ),
-            ),
-            if (selected) ...[
-              const SizedBox(width: 4),
-              Icon(Icons.close_rounded, size: 12, color: accent),
-            ],
-          ],
-        ),
-      ),
-    );
   }
 }
 

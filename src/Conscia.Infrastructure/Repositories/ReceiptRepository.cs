@@ -23,7 +23,7 @@ public class ReceiptRepository : DynamoRepository, IReceiptRepository
             Key = Key(ReceiptPk(id), "PROFILE")
         }, ct);
 
-        return response.Item.Count == 0 ? null : FromItem(response.Item);
+        return IsMissingItem(response.Item) ? null : FromItem(response.Item);
     }
 
     public async Task<Receipt?> GetByTransactionIdAsync(Guid transactionId, CancellationToken ct = default)
@@ -40,7 +40,7 @@ public class ReceiptRepository : DynamoRepository, IReceiptRepository
             Limit = 1
         }, ct);
 
-        return response.Items.Count == 0 ? null : FromItem(response.Items[0]);
+        return FirstItem(response) is { } item ? FromItem(item) : null;
     }
 
     public async Task<Receipt> AddAsync(Receipt receipt, CancellationToken ct = default)

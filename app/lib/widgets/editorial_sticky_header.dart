@@ -3,6 +3,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 
 import '../core/theme/app_colors.dart';
+import '../core/theme/app_layout.dart';
 
 class EditorialStickyHeader extends StatelessWidget {
   const EditorialStickyHeader({
@@ -42,7 +43,7 @@ class EditorialStickyHeader extends StatelessWidget {
     return Padding(
       padding: EdgeInsets.fromLTRB(
         horizontalInset,
-        topPadding + 8,
+        topPadding + AppLayout.stickyHeaderTopGap,
         horizontalInset,
         0,
       ),

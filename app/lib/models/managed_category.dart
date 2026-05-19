@@ -30,6 +30,8 @@ class ManagedCategory {
   bool get isExpense => type.toLowerCase() == 'expense';
   bool get isIncome => type.toLowerCase() == 'income';
   bool get isPersonal => scope.toLowerCase() == 'personal';
+  String? get visualIconKey => isDefault ? null : iconKey;
+  String? get visualColorKey => isDefault ? null : colorKey;
 
   factory ManagedCategory.fromJson(Map<String, dynamic> json) {
     return ManagedCategory(

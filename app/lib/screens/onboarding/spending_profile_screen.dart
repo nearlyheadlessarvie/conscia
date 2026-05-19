@@ -7,10 +7,9 @@ import '../../core/constants/app_icons.dart';
 import '../../core/routing/app_router.dart';
 import '../../core/theme/app_colors.dart';
 import '../../providers/user_provider.dart';
-import '../../widgets/hero_screen_scaffold.dart';
-import '../../widgets/conscia_app_bar.dart';
 import '../../widgets/screen_section.dart';
-import '../../widgets/selection_card_group.dart';
+import '../../widgets/single_select_list.dart';
+import 'widgets/onboarding_step_scaffold.dart';
 
 class SpendingProfileScreen extends ConsumerStatefulWidget {
   final String? initialCurrencyCode;
@@ -31,6 +30,7 @@ class _SpendingProfileScreenState extends ConsumerState<SpendingProfileScreen> {
   String _personality = 'balanced';
   String? _incomeRange;
   bool _saving = false;
+  bool _showIncomeRequired = false;
 
   static const _incomeOptions = [
     ('low', 20000.0, 'Under'),
@@ -49,8 +49,12 @@ class _SpendingProfileScreenState extends ConsumerState<SpendingProfileScreen> {
   }
 
   Future<void> _next() async {
+    if (_incomeRange == null) {
+      setState(() => _showIncomeRequired = true);
+      return;
+    }
     setState(() => _saving = true);
-    final incomeRange = _incomeRange ?? 'prefer_not_to_say';
+    final incomeRange = _incomeRange!;
     try {
       await _persistSelection(incomeRangeOverride: incomeRange);
     } catch (_) {}
@@ -75,8 +79,6 @@ class _SpendingProfileScreenState extends ConsumerState<SpendingProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
     final prefs = ref.watch(userPreferencesProvider);
     final currencyCode = widget.initialCurrencyCode ?? prefs.currency;
     final locale = widget.initialLocale ?? prefs.locale;
@@ -86,20 +88,31 @@ class _SpendingProfileScreenState extends ConsumerState<SpendingProfileScreen> {
       decimalDigits: 0,
     );
 
-    return HeroScreenScaffold(
-      appBar: ConsciaAppBar(
-        automaticallyImplyLeading: false,
-        title: const Text('Spending Profile'),
-        actions: [
-          IconButton(
-            tooltip: 'Skip',
-            onPressed: _saving ? null : _skip,
-            icon: Icon(AppIcons.chevronRight, color: Theme.of(context).appColors.deepNavy),
+    return OnboardingStepScaffold(
+      appBarTitle: 'Spending Profile',
+      stepLabel: 'Step 1 of 3',
+      heroTitle: 'Shape your money starting point',
+      heroSubtitle:
+          'A quick read on your default rhythm helps Conscia suggest budgets that feel realistic.',
+      heroChips: const [
+        OnboardingHeroChip(label: '2 minute setup', icon: Icons.timer_outlined),
+        OnboardingHeroChip(label: 'Editable later', icon: Icons.tune_rounded),
+      ],
+      actions: [
+        IconButton(
+          tooltip: 'Skip',
+          onPressed: _saving ? null : _skip,
+          icon: Icon(
+            AppIcons.chevronRight,
+            color: Theme.of(context).appColors.deepNavy,
           ),
-        ],
-      ),
+        ),
+      ],
       bottom: FilledButton(
         onPressed: _saving ? null : _next,
+        style: FilledButton.styleFrom(
+          minimumSize: const Size.fromHeight(48),
+        ),
         child: _saving
             ? const SizedBox(
                 width: 20,
@@ -111,102 +124,71 @@ class _SpendingProfileScreenState extends ConsumerState<SpendingProfileScreen> {
               )
             : const Text('Next'),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text(
-            'Step 1 of 3',
-            style: textTheme.labelSmall?.copyWith(
-              color: colors.onSurfaceVariant,
+      children: [
+        ScreenSection(
+          title: 'Spending style',
+          subtitle:
+              'Choose the one that feels closest to your default spending instinct.',
+          child: SingleSelectList<String>(
+            value: _personality,
+            options: const ['saver', 'balanced', 'free_spender'],
+            titleBuilder: (option) => switch (option) {
+              'saver' => 'Planner',
+              'free_spender' => 'Flexible',
+              _ => 'Balanced',
+            },
+            subtitleBuilder: (option) => switch (option) {
+              'saver' => 'I like clear limits and steady progress',
+              'free_spender' => 'I want room for spontaneous choices',
+              _ => 'I want structure without feeling boxed in',
+            },
+            leadingBuilder: (context, option, selected) =>
+                AppIcons.spendingStyleBadge(
+              option,
+              size: 30,
+              selected: selected,
+            ),
+            onChanged: (value) => setState(() => _personality = value),
+          ),
+        ),
+        ScreenSection(
+          title: 'Monthly income',
+          subtitle:
+              'Required for suggestions. Choose Prefer not to say if you want to keep this private.',
+          child: OnboardingGroupedOptionList<(String, double, String)>(
+            options: _incomeOptions,
+            value: _selectedIncomeOption(),
+            labelBuilder: (option) => switch (option.$1) {
+              'low' => '${option.$3} ${formatter.format(option.$2)}',
+              'mid' =>
+                '${formatter.format(20000)} - ${formatter.format(option.$2)}',
+              'high' =>
+                '${formatter.format(50000)} - ${formatter.format(option.$2)}',
+              'very_high' => '${option.$3} ${formatter.format(option.$2)}',
+              _ => option.$3,
+            },
+            onChanged: (option) => setState(() {
+              _incomeRange = option.$1;
+              _showIncomeRequired = false;
+            }),
+          ),
+        ),
+        if (_showIncomeRequired)
+          const Padding(
+            padding: EdgeInsets.only(top: 4),
+            child: OnboardingInlineNote(
+              message:
+                  'Choose a monthly income range, or select Prefer not to say.',
             ),
           ),
-          const SizedBox(height: 16),
-          Text('How do you spend?', style: textTheme.headlineSmall),
-          const SizedBox(height: 4),
-          Text(
-            'Helps us suggest realistic budgets.',
-            style: textTheme.bodyMedium?.copyWith(
-              color: colors.onSurfaceVariant,
-            ),
-          ),
-          const SizedBox(height: 28),
-          ScreenSection(
-            title: 'Spending style',
-            subtitle:
-                'Choose the one that feels closest to your default spending instinct.',
-            child: SelectionCardGroup<String>(
-              value: _personality,
-              options: const ['saver', 'balanced', 'free_spender'],
-              semantics: SelectionCardSemantics.radio,
-              titleBuilder: (option) => switch (option) {
-                'saver' => 'Saver',
-                'free_spender' => 'Free spender',
-                _ => 'Balanced',
-              },
-              subtitleBuilder: (option) => switch (option) {
-                'saver' => 'Careful, deliberate, goal-focused',
-                'free_spender' => 'Live in the moment, worry later',
-                _ => 'Mix of saving and enjoying money',
-              },
-              leadingBuilder: (option, selected) => AppIcons.spendingStyleBadge(
-                option,
-                size: 24,
-                selected: selected,
-              ),
-              onChanged: (value) => setState(() => _personality = value),
-            ),
-          ),
-          ScreenSection(
-            title: 'Monthly income',
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: _incomeOptions.map((option) {
-                final selected = _incomeRange == option.$1;
-                final label = switch (option.$1) {
-                  'low' => '${option.$3} ${formatter.format(option.$2)}',
-                  'mid' =>
-                    '${formatter.format(20000)} - ${formatter.format(option.$2)}',
-                  'high' =>
-                    '${formatter.format(50000)} - ${formatter.format(option.$2)}',
-                  'very_high' => '${option.$3} ${formatter.format(option.$2)}',
-                  _ => option.$3,
-                };
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: InkWell(
-                    onTap: () => setState(() => _incomeRange = option.$1),
-                    borderRadius: BorderRadius.circular(12),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 14,
-                      ),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color:
-                              selected ? colors.primary : colors.outlineVariant,
-                          width: selected ? 2 : 1,
-                        ),
-                        color:
-                            selected ? colors.primaryContainer : colors.surface,
-                      ),
-                      child: Row(
-                        children: [
-                          Expanded(child: Text(label)),
-                          if (selected)
-                            Icon(AppIcons.check,
-                                size: 18, color: colors.primary),
-                        ],
-                      ),
-                    ),
-                  ),
-                );
-              }).toList(),
-            ),
-          ),
-        ],
-      ),
+      ],
     );
+  }
+
+  (String, double, String)? _selectedIncomeOption() {
+    for (final option in _incomeOptions) {
+      if (option.$1 == _incomeRange) return option;
+    }
+    return null;
   }
 }

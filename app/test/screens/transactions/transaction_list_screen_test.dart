@@ -1,9 +1,18 @@
 import 'package:conscia_app/providers/auth_provider.dart';
+import 'package:conscia_app/providers/budget_providers.dart';
+import 'package:conscia_app/providers/category_provider.dart';
+import 'package:conscia_app/providers/exchange_rate_provider.dart';
+import 'package:conscia_app/providers/family_space_provider.dart';
+import 'package:conscia_app/providers/subscription_provider.dart';
 import 'package:conscia_app/providers/transaction_providers.dart';
+import 'package:conscia_app/providers/usage_provider.dart';
 import 'package:conscia_app/providers/user_provider.dart';
+import 'package:conscia_app/services/budget_service.dart';
 import 'package:conscia_app/screens/transactions/transaction_list_screen.dart';
 import 'package:conscia_app/services/auth_service.dart';
+import 'package:conscia_app/services/subscription_service.dart';
 import 'package:conscia_app/services/transaction_service.dart';
+import 'package:conscia_app/services/user_service.dart';
 import 'package:conscia_app/widgets/grouped_list_card.dart';
 import 'package:conscia_app/widgets/skeleton_loader.dart';
 import 'package:dio/dio.dart';
@@ -11,7 +20,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class _FakeAuthService extends AuthService {
   _FakeAuthService() : super(Dio());
@@ -50,6 +59,7 @@ class _StaticTransactionService extends TransactionService {
   final List<Transaction> transactions;
   String? lastScope;
   String? lastCategory;
+  String? deletedId;
 
   @override
   Future<PaginatedTransactions> list({
@@ -78,6 +88,25 @@ class _StaticTransactionService extends TransactionService {
       hasMore: false,
     );
   }
+
+  @override
+  Future<void> delete(String id) async {
+    deletedId = id;
+  }
+
+  @override
+  Future<Transaction> getById(String id) async {
+    return transactions.firstWhere((transaction) => transaction.id == id);
+  }
+}
+
+class _StaticBudgetService extends BudgetService {
+  _StaticBudgetService(this.budgets) : super(Dio());
+
+  final List<Budget> budgets;
+
+  @override
+  Future<List<Budget>> list() async => budgets;
 }
 
 class _LoadingTransactionListNotifier extends TransactionListNotifier {
@@ -101,10 +130,14 @@ Future<void> _pumpTransactionList(
     String locale
   }) preferences = (currency: 'PHP', locale: 'en_US'),
 }) async {
+  SharedPreferences.setMockInitialValues({});
+  final prefs = await SharedPreferences.getInstance();
+
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
         _authenticatedOverride,
+        sharedPreferencesProvider.overrideWithValue(prefs),
         userPreferencesProvider.overrideWithValue(preferences),
         transactionScopeFilterProvider.overrideWith((ref) => scope),
         transactionServiceProvider.overrideWithValue(
@@ -199,30 +232,19 @@ void main() {
   testWidgets('transaction list exposes add action in the header', (
     tester,
   ) async {
-    final router = GoRouter(
-      routes: [
-        GoRoute(
-          path: '/',
-          builder: (_, __) => const TransactionListScreen(),
-        ),
-        GoRoute(
-          path: '/transactions/add',
-          builder: (_, __) => const Scaffold(
-            body: Text('Add transaction screen'),
-          ),
-        ),
-      ],
-    );
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
 
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
           _authenticatedOverride,
+          sharedPreferencesProvider.overrideWithValue(prefs),
           transactionServiceProvider.overrideWithValue(
             _StaticTransactionService(const []),
           ),
         ],
-        child: MaterialApp.router(routerConfig: router),
+        child: const MaterialApp(home: TransactionListScreen()),
       ),
     );
     await tester.pumpAndSettle();
@@ -233,7 +255,8 @@ void main() {
     await tester.tap(find.byTooltip('Add transaction'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Add transaction screen'), findsOneWidget);
+    expect(find.text('Add transaction'), findsOneWidget);
+    expect(find.byType(BottomSheet), findsWidgets);
   });
 
   testWidgets('transaction list leads with editorial hero and open date groups',
@@ -305,6 +328,129 @@ void main() {
 
     expect(find.text('₱5.600,00'), findsOneWidget);
     expect(find.text('-\$100,00'), findsOneWidget);
+  });
+
+  testWidgets('transaction rows delete through a swipe pull-up confirmation', (
+    tester,
+  ) async {
+    final service = _StaticTransactionService([
+      Transaction(
+        id: 'tx-delete',
+        amount: 280,
+        currencyCode: 'PHP',
+        category: 'Dining',
+        description: 'Starbucks',
+        type: 'expense',
+        date: DateTime(2026, 5, 8),
+      ),
+    ]);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          _authenticatedOverride,
+          transactionServiceProvider.overrideWithValue(service),
+        ],
+        child: const MaterialApp(home: TransactionListScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.drag(find.text('Starbucks').first, const Offset(-500, 0));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Delete this transaction?'), findsOneWidget);
+
+    await tester.tap(find.widgetWithText(FilledButton, 'Delete transaction'));
+    await tester.pumpAndSettle();
+
+    expect(service.deletedId, 'tx-delete');
+  });
+
+  testWidgets('swiping transaction rows right exposes contextual actions', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          _authenticatedOverride,
+          sharedPreferencesProvider.overrideWithValue(prefs),
+          transactionServiceProvider.overrideWithValue(
+            _StaticTransactionService([
+              Transaction(
+                id: 'tx-actions',
+                amount: 300,
+                currencyCode: 'PHP',
+                category: 'Subscriptions',
+                description: 'OpenAI',
+                type: 'expense',
+                date: DateTime(2026, 5, 8),
+              ),
+            ]),
+          ),
+          budgetServiceProvider
+              .overrideWithValue(_StaticBudgetService(const [])),
+          currentUserProvider.overrideWith(
+            (ref) async => UserProfile(
+              id: 'user-1',
+              email: 'tester@example.com',
+              currencyCode: 'PHP',
+              locale: 'en_US',
+              createdAt: DateTime(2026),
+              hasCompletedOnboarding: true,
+            ),
+          ),
+          familySpaceProvider.overrideWith((ref) async => null),
+          subscriptionProvider.overrideWith(
+            (ref) async => const SubscriptionStatus(
+              tier: 'premium',
+              isPremium: true,
+            ),
+          ),
+          exchangeRateProvider.overrideWith((ref, pair) async => null),
+          managedCategoriesProvider.overrideWith(
+            (ref, query) async => const [],
+          ),
+        ],
+        child: const MaterialApp(home: TransactionListScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Edit'), findsNothing);
+    expect(find.text('Reflect'), findsNothing);
+    expect(find.text('Add budget'), findsNothing);
+
+    await tester.drag(find.text('OpenAI').first, const Offset(500, 0));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const ValueKey('transaction-swipe-foreground-tx-actions')),
+      findsOneWidget,
+    );
+    expect(
+        find.byKey(const ValueKey('swipe-action-tile-Edit')), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('swipe-action-tile-Reflect')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('swipe-action-tile-Add budget')),
+      findsOneWidget,
+    );
+    expect(find.text('Edit'), findsOneWidget);
+    expect(find.text('Reflect'), findsOneWidget);
+    expect(find.text('Add budget'), findsOneWidget);
+    expect(find.byType(BottomSheet), findsNothing);
+
+    await tester.tap(find.byKey(const ValueKey('swipe-action-tile-Edit')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+
+    expect(find.text('Edit transaction'), findsWidgets);
   });
 
   testWidgets('selected transaction filters stay compact without overflow', (

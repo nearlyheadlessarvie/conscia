@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../core/theme/app_colors.dart';
+import 'conscia_bottom_sheet.dart';
+import 'single_select_list.dart';
 
 class LocalePickerSheet {
   LocalePickerSheet._();
@@ -15,16 +16,9 @@ class LocalePickerSheet {
       useRootNavigator: true,
       isScrollControlled: true,
       useSafeArea: true,
-      builder: (_) => DraggableScrollableSheet(
-        initialChildSize: 0.6,
-        minChildSize: 0.3,
-        maxChildSize: 0.85,
-        expand: false,
-        builder: (_, controller) => _LocalePickerBody(
-          selectedLocale: selectedLocale,
-          onSelected: onSelected,
-          scrollController: controller,
-        ),
+      builder: (_) => _LocalePickerBody(
+        selectedLocale: selectedLocale,
+        onSelected: onSelected,
       ),
     );
   }
@@ -33,12 +27,10 @@ class LocalePickerSheet {
 class _LocalePickerBody extends StatelessWidget {
   final String selectedLocale;
   final ValueChanged<String> onSelected;
-  final ScrollController scrollController;
 
   const _LocalePickerBody({
     required this.selectedLocale,
     required this.onSelected,
-    required this.scrollController,
   });
 
   static const _locales = [
@@ -50,100 +42,29 @@ class _LocalePickerBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
+    (String, String, String)? selectedOption;
+    for (final locale in _locales) {
+      if (locale.$1 == selectedLocale) {
+        selectedOption = locale;
+        break;
+      }
+    }
 
-    return Column(
-      children: [
-        const SizedBox(height: 8),
-        Container(
-          width: 32,
-          height: 4,
-          decoration: BoxDecoration(
-            color: colors.outlineVariant,
-            borderRadius: BorderRadius.circular(2),
-          ),
-        ),
-        const SizedBox(height: 16),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Region Format',
-                style: textTheme.titleLarge,
-              ),
-              const SizedBox(height: 6),
-              Text(
-                'Changes how numbers and dates are shown. App language stays in English.',
-                style: textTheme.bodySmall?.copyWith(
-                  color: textTheme.bodySmall?.color?.withValues(alpha: 0.8),
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 14),
-        Expanded(
-          child: ListView(
-            controller: scrollController,
-            padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-            children: [
-              ..._locales.indexed.map((entry) {
-                final index = entry.$1;
-                final locale = entry.$2;
-                final isSelected = locale.$1 == selectedLocale;
-                final tile = InkWell(
-                  onTap: () {
-                    onSelected(locale.$1);
-                    Navigator.of(context).pop();
-                  },
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 10),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(locale.$2, style: textTheme.titleSmall),
-                              const SizedBox(height: 4),
-                              Text(
-                                locale.$3,
-                                style: textTheme.bodySmall?.copyWith(
-                                  color: Theme.of(context).appColors.mutedInk,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        if (isSelected)
-                          Icon(
-                            Icons.check_rounded,
-                            color: Theme.of(context).appColors.deepNavy,
-                            size: 20,
-                          ),
-                      ],
-                    ),
-                  ),
-                );
-                if (index == _locales.length - 1) return tile;
-                return Column(
-                  children: [
-                    tile,
-                    Divider(
-                      height: 1,
-                      color: Theme.of(context).appColors.border,
-                    ),
-                  ],
-                );
-              }),
-            ],
-          ),
-        ),
-      ],
+    return ConsciaBottomSheetScaffold(
+      title: 'Region Format',
+      subtitle:
+          'Changes how numbers and dates are shown. App language stays in English.',
+      child: SingleSelectList<(String, String, String)>(
+        options: _locales,
+        value: selectedOption,
+        titleBuilder: (locale) => locale.$2,
+        subtitleBuilder: (locale) => locale.$3,
+        rowPadding: const EdgeInsets.symmetric(vertical: 10),
+        onChanged: (locale) {
+          onSelected(locale.$1);
+          Navigator.of(context).pop();
+        },
+      ),
     );
   }
 }

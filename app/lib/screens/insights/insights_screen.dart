@@ -9,6 +9,7 @@ import '../../providers/insight_feed_provider.dart';
 import '../../providers/insights_provider.dart';
 import '../../providers/user_provider.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_layout.dart';
 import '../budgets/widgets/budget_form_sheet.dart';
 import '../dashboard/widgets/insight_feed_card.dart';
 import '../../widgets/empty_state.dart';
@@ -378,12 +379,15 @@ class _InsightEditorialHighlight extends StatelessWidget {
       locale: locale,
     );
 
-    final topInset = MediaQuery.paddingOf(context).top;
-
     return Container(
       key: const ValueKey('insights-editorial-hero'),
       width: double.infinity,
-      padding: EdgeInsets.fromLTRB(20, topInset + 70, 20, 28),
+      padding: EdgeInsets.fromLTRB(
+        AppLayout.screenPadding,
+        AppLayout.insightsHeroTop(context),
+        AppLayout.screenPadding,
+        AppLayout.heroBottomPadding,
+      ),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,

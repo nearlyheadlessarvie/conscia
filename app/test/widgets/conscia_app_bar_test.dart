@@ -290,4 +290,31 @@ void main() {
 
     expect(find.text('Home'), findsOneWidget);
   });
+
+  testWidgets('can show an explicit fallback back control on deep links', (
+    tester,
+  ) async {
+    var fallbackPressed = false;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light(),
+        home: Scaffold(
+          appBar: ConsciaAppBar(
+            title: const Text('Shared Conscia'),
+            alwaysShowBack: true,
+            onBack: () => fallbackPressed = true,
+          ),
+          body: const Text('Family body'),
+        ),
+      ),
+    );
+
+    expect(find.byTooltip('Back'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Back'));
+    await tester.pump();
+
+    expect(fallbackPressed, isTrue);
+  });
 }

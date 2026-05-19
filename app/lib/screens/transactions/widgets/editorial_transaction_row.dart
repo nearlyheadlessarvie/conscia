@@ -133,7 +133,11 @@ class EditorialTransactionRow extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            CategoryIcons.badge(data.category, size: 30),
+            CategoryIcons.badge(
+              data.category,
+              size: 30,
+              type: data.isIncome ? 'Income' : 'Expense',
+            ),
             const SizedBox(width: 12),
             Expanded(
               child: Column(

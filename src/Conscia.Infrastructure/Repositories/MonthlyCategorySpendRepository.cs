@@ -6,16 +6,17 @@ using Conscia.Domain.Entities;
 
 namespace Conscia.Infrastructure.Repositories;
 
-public class MonthlyCategorySpendRepository : IMonthlyCategorySpendRepository
+public class MonthlyCategorySpendRepository : DynamoRepository, IMonthlyCategorySpendRepository
 {
     private const string TableName = "MonthlyCategorySpends";
-    private readonly IAmazonDynamoDB _dynamo;
 
-    public MonthlyCategorySpendRepository(IAmazonDynamoDB dynamo) => _dynamo = dynamo;
+    public MonthlyCategorySpendRepository(IAmazonDynamoDB dynamo) : base(dynamo)
+    {
+    }
 
     public async Task UpsertAsync(MonthlyCategorySpend projection, CancellationToken ct = default)
     {
-        await _dynamo.PutItemAsync(new PutItemRequest
+        await Dynamo.PutItemAsync(new PutItemRequest
         {
             TableName = TableName,
             Item = ToItem(projection),
@@ -31,7 +32,7 @@ public class MonthlyCategorySpendRepository : IMonthlyCategorySpendRepository
 
         foreach (var monthKey in monthKeys)
         {
-            var response = await _dynamo.QueryAsync(new QueryRequest
+            var response = await Dynamo.QueryAsync(new QueryRequest
             {
                 TableName = TableName,
                 KeyConditionExpression = "PK = :pk AND begins_with(SK, :prefix)",
@@ -42,7 +43,7 @@ public class MonthlyCategorySpendRepository : IMonthlyCategorySpendRepository
                 }
             }, ct);
 
-            results.AddRange(response.Items.Select(FromItem));
+            results.AddRange(Items(response).Select(FromItem));
         }
 
         return results;
@@ -50,7 +51,7 @@ public class MonthlyCategorySpendRepository : IMonthlyCategorySpendRepository
 
     public async Task<IReadOnlyList<MonthlyCategorySpend>> ListByUserAsync(Guid userId, CancellationToken ct = default)
     {
-        var response = await _dynamo.QueryAsync(new QueryRequest
+        var response = await Dynamo.QueryAsync(new QueryRequest
         {
             TableName = TableName,
             KeyConditionExpression = "PK = :pk",
@@ -60,7 +61,7 @@ public class MonthlyCategorySpendRepository : IMonthlyCategorySpendRepository
             }
         }, ct);
 
-        return response.Items.Select(FromItem).ToList();
+        return Items(response).Select(FromItem).ToList();
     }
 
     private static Dictionary<string, AttributeValue> ToItem(MonthlyCategorySpend projection) =>

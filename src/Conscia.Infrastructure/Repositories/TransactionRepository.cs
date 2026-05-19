@@ -141,8 +141,8 @@ public class TransactionRepository : DynamoRepository, ITransactionRepository
                 ExclusiveStartKey = lastEvaluatedKey
             }, ct);
 
-            if (response.Items.Count > 0)
-                return FromItem(response.Items[0]);
+            if (FirstItem(response) is { } item)
+                return FromItem(item);
 
             lastEvaluatedKey = response.LastEvaluatedKey;
         }
@@ -203,7 +203,7 @@ public class TransactionRepository : DynamoRepository, ITransactionRepository
 
         var response = await Dynamo.QueryAsync(request, ct);
 
-        var items = response.Items.Select(FromItem);
+        var items = Items(response).Select(FromItem);
 
         // small-set filter only (UI case)
         if (!string.IsNullOrEmpty(category))
@@ -243,7 +243,7 @@ public class TransactionRepository : DynamoRepository, ITransactionRepository
             ScanIndexForward = false
         }, ct);
 
-        return response.Items.Select(FromItem).ToList();
+        return Items(response).Select(FromItem).ToList();
     }
 
     public async Task<IReadOnlyList<Transaction>> GetByUserIdAndDateRangeAsync(
@@ -265,7 +265,7 @@ public class TransactionRepository : DynamoRepository, ITransactionRepository
             ScanIndexForward = false
         }, ct);
 
-        return response.Items.Select(FromItem).ToList();
+        return Items(response).Select(FromItem).ToList();
     }
 
     public async Task<IReadOnlyList<Transaction>> GetByFamilySpaceAndDateRangeAsync(
@@ -298,7 +298,7 @@ public class TransactionRepository : DynamoRepository, ITransactionRepository
                 ExclusiveStartKey = lastEvaluatedKey
             }, ct);
 
-            transactions.AddRange(response.Items.Select(FromItem));
+            transactions.AddRange(Items(response).Select(FromItem));
             lastEvaluatedKey = response.LastEvaluatedKey;
         }
         while (lastEvaluatedKey is { Count: > 0 });
@@ -396,7 +396,7 @@ public class TransactionRepository : DynamoRepository, ITransactionRepository
                 ExclusiveStartKey = lastEvaluatedKey
             }, ct);
 
-            keys.AddRange(response.Items
+            keys.AddRange(Items(response)
                 .Where(item => item.ContainsKey("PK") && item.ContainsKey("SK"))
                 .Select(item => Key(item["PK"].S, item["SK"].S)));
 

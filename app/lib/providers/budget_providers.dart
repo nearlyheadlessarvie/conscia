@@ -77,8 +77,9 @@ class BudgetListNotifier extends StateNotifier<BudgetListState> {
       state = state.copyWith(budgets: [...state.budgets, budget]);
     } catch (e, s) {
       if (!mounted) return;
-      state =
-          state.copyWith(error: AppError.from(e, stackTrace: s).userMessage);
+      final error = AppError.from(e, stackTrace: s, log: false);
+      state = state.copyWith(error: error.userMessage);
+      throw error;
     }
   }
 
@@ -93,8 +94,9 @@ class BudgetListNotifier extends StateNotifier<BudgetListState> {
       );
     } catch (e, s) {
       if (!mounted) return;
-      state =
-          state.copyWith(error: AppError.from(e, stackTrace: s).userMessage);
+      final error = AppError.from(e, stackTrace: s, log: false);
+      state = state.copyWith(error: error.userMessage);
+      throw error;
     }
   }
 
@@ -109,8 +111,9 @@ class BudgetListNotifier extends StateNotifier<BudgetListState> {
       );
     } catch (e, s) {
       if (!mounted) return;
-      state =
-          state.copyWith(error: AppError.from(e, stackTrace: s).userMessage);
+      final error = AppError.from(e, stackTrace: s, log: false);
+      state = state.copyWith(error: error.userMessage);
+      throw error;
     }
   }
 

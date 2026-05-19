@@ -37,7 +37,12 @@ class InsightTransactionCard extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          leading ?? CategoryIcons.badge(tx.category, size: 18),
+          leading ??
+              CategoryIcons.badge(
+                tx.category,
+                size: 18,
+                type: 'Expense',
+              ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(

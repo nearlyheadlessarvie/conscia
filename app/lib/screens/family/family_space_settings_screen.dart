@@ -4,47 +4,141 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/constants/app_icons.dart';
 import '../../core/routing/app_router.dart';
+import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_layout.dart';
 import '../../models/family_space.dart';
 import '../../providers/family_space_provider.dart';
-import '../../widgets/feed_card.dart';
+import '../../providers/health_provider.dart';
+import '../../widgets/conscia_bottom_sheet.dart';
 import '../../widgets/floating_label_text_field.dart';
-import '../../widgets/hero_screen_scaffold.dart';
 import '../../widgets/conscia_app_bar.dart';
 import '../../widgets/screen_section.dart';
 import '../../widgets/skeleton_loader.dart';
 
-class FamilySpaceSettingsScreen extends ConsumerWidget {
+class FamilySpaceSettingsScreen extends ConsumerStatefulWidget {
   const FamilySpaceSettingsScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final familySpace = ref.watch(familySpaceProvider);
+  ConsumerState<FamilySpaceSettingsScreen> createState() =>
+      _FamilySpaceSettingsScreenState();
+}
 
-    return HeroScreenScaffold(
-      appBar: const ConsciaAppBar(title: Text('Shared Conscia')),
-      child: familySpace.when(
-        data: (space) => space == null
-            ? const _NoFamilySpaceSettingsView()
-            : _FamilySpaceSettingsView(space: space),
-        loading: () => const Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            SkeletonCard(),
-            SizedBox(height: 14),
-            SkeletonCard(),
-          ],
+class _FamilySpaceSettingsScreenState
+    extends ConsumerState<FamilySpaceSettingsScreen> {
+  final _scrollProgress = ValueNotifier<double>(0);
+
+  @override
+  void dispose() {
+    _scrollProgress.dispose();
+    super.dispose();
+  }
+
+  bool _handleScrollNotification(ScrollNotification notification) {
+    if (notification.metrics.axis != Axis.vertical) return false;
+    final nextProgress = (notification.metrics.pixels / 10).clamp(0.0, 1.0);
+    if (_scrollProgress.value != nextProgress) {
+      _scrollProgress.value = nextProgress;
+    }
+    return false;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final familySpace = ref.watch(familySpaceProvider);
+    final colors = Theme.of(context).appColors;
+
+    return ConsciaAppBarScrollScope(
+      scrollProgress: _scrollProgress,
+      child: Scaffold(
+        extendBodyBehindAppBar: true,
+        appBar: ConsciaAppBar(
+          title: const Text('Shared Conscia'),
+          alwaysShowBack: true,
+          onBack: () {
+            if (context.canPop()) {
+              context.pop();
+            } else {
+              context.go(AppRoutes.settings);
+            }
+          },
         ),
-        error: (_, __) => FeedCard(
-          child: Row(
-            children: [
-              const Expanded(child: Text('Unable to load Shared Conscia')),
-              OutlinedButton(
-                onPressed: () => ref.invalidate(familySpaceProvider),
-                child: const Text('Retry'),
+        body: NotificationListener<ScrollNotification>(
+          onNotification: _handleScrollNotification,
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [colors.pageTop, colors.pageBottom],
               ),
-            ],
+            ),
+            child: familySpace.when(
+              data: (space) => _SharedConsciaScrollView(
+                child: space == null
+                    ? const _NoFamilySpaceSettingsView()
+                    : _FamilySpaceSettingsView(space: space),
+              ),
+              loading: () => const _SharedConsciaScrollView(
+                child: Padding(
+                  padding: EdgeInsets.fromLTRB(20, 96, 20, 28),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      SkeletonCard(),
+                      SizedBox(height: 14),
+                      SkeletonCard(),
+                    ],
+                  ),
+                ),
+              ),
+              error: (_, __) {
+                final isOffline = ref.watch(
+                  healthStatusProvider.select((state) => state.isOffline),
+                );
+
+                if (isOffline) {
+                  return const _SharedConsciaScrollView(
+                    child: SizedBox.shrink(),
+                  );
+                }
+
+                return _SharedConsciaScrollView(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 96, 20, 28),
+                    child: Row(
+                      children: [
+                        const Expanded(
+                          child: Text('Unable to load Shared Conscia'),
+                        ),
+                        OutlinedButton(
+                          onPressed: () => ref.invalidate(familySpaceProvider),
+                          child: const Text('Retry'),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _SharedConsciaScrollView extends StatelessWidget {
+  const _SharedConsciaScrollView({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      top: false,
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        child: child,
       ),
     );
   }
@@ -55,43 +149,43 @@ class _NoFamilySpaceSettingsView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text(
-          'Create your household space.',
-          style: theme.textTheme.titleLarge?.copyWith(
-            fontWeight: FontWeight.w900,
-          ),
+        _SharedConsciaHero(
+          eyebrow: 'SHARED HOUSEHOLD',
+          title: 'Create your household space',
+          body:
+              'Plan together without exposing everything personal. Family records only appear when you mark them as Family.',
+          pills: const ['Private by default', 'Family only'],
+          shortcuts: [
+            _HeroShortcutData(
+              icon: AppIcons.family,
+              title: 'Create space',
+              subtitle: 'Start sharing safely',
+              onTap: () => context.push(AppRoutes.familySetup),
+            ),
+          ],
         ),
-        const SizedBox(height: 8),
-        Text(
-          'Shared Conscia is where family budgets and explicitly shared household records live.',
-          style: theme.textTheme.bodyMedium?.copyWith(
-            color: theme.colorScheme.onSurfaceVariant,
-            height: 1.35,
-          ),
-        ),
-        const SizedBox(height: 18),
-        FeedCard(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Icon(AppIcons.family, size: 34),
-              const SizedBox(height: 12),
-              Text(
-                'Start with one household space. Nothing personal is shared unless you choose it.',
-                style: theme.textTheme.titleMedium,
-              ),
-              const SizedBox(height: 14),
-              FilledButton.icon(
-                onPressed: () => context.push(AppRoutes.familySetup),
-                icon: const Icon(Icons.add),
-                label: const Text('Create Family Space'),
-              ),
-            ],
+        const Padding(
+          padding: EdgeInsets.fromLTRB(20, 24, 20, 28),
+          child: ScreenSection(
+            title: 'What gets shared',
+            subtitle: 'Shared Conscia keeps personal records out by default.',
+            child: _SettingsGroup(
+              rows: [
+                _SettingsRowData(
+                  icon: Icons.lock_outline_rounded,
+                  title: 'Personal stays personal',
+                  subtitle: 'Only Family-marked records enter the household.',
+                ),
+                _SettingsRowData(
+                  icon: Icons.account_balance_wallet_outlined,
+                  title: 'Shared planning',
+                  subtitle: 'Family budgets and household activity live here.',
+                ),
+              ],
+            ),
           ),
         ),
       ],
@@ -108,71 +202,110 @@ class _FamilySpaceSettingsView extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final role = space.role.toLowerCase();
     final canManage = role == 'owner' && !space.isReadOnly;
+    final canInvite = role == 'owner' && !space.isReadOnly;
+    final inviteStatus = space.isReadOnly
+        ? 'Premium inactive'
+        : role == 'owner'
+            ? 'Owner access'
+            : 'Owner only';
+
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        ScreenSection(
-          title: 'Household',
-          subtitle: 'Identity and access for this Family Space.',
-          child: FeedCard(
-            child: Column(
-              children: [
-                _SettingsRow(
-                  icon: Icons.home_outlined,
-                  title: 'Household name',
-                  subtitle: space.name,
-                  actionIcon: canManage ? Icons.edit_outlined : null,
-                  onTap: canManage
-                      ? () => _RenameFamilySpaceSheet.show(
-                            context,
-                            initialName: space.name,
-                          )
-                      : null,
-                ),
-                const Divider(height: 24),
-                _SettingsRow(
-                  icon: Icons.verified_user_outlined,
-                  title: 'Your access',
-                  subtitle: '${space.role} · ${space.currencyCode}',
-                ),
-                if (space.isReadOnly) ...[
-                  const Divider(height: 24),
-                  const _ReadOnlyNotice(),
-                ],
-              ],
+        _SharedConsciaHero(
+          eyebrow: 'SHARED HOUSEHOLD',
+          title: space.name,
+          body: 'Plan together without exposing everything personal.',
+          pills: [
+            space.isReadOnly ? 'View-only' : _roleLabel(space.role),
+            space.currencyCode,
+            if (space.isReadOnly) 'Premium inactive',
+          ],
+          shortcuts: [
+            _HeroShortcutData(
+              icon: AppIcons.family,
+              title: 'Members',
+              subtitle: 'Roles & access',
+              onTap: () => context.push(AppRoutes.familyMembers),
             ),
-          ),
+            if (role == 'owner')
+              _HeroShortcutData(
+                icon: Icons.person_add_alt_1_outlined,
+                title: 'Invite family',
+                subtitle: space.isReadOnly ? 'Premium inactive' : 'Owner tool',
+                onTap: canInvite
+                    ? () => context.push(AppRoutes.familyInvites)
+                    : null,
+              ),
+          ],
         ),
-        ScreenSection(
-          title: 'Manage',
-          subtitle: 'Actions that change what belongs to the household.',
-          child: FeedCard(
-            child: Column(
-              children: [
-                _SettingsRow(
-                  icon: Icons.dashboard_outlined,
-                  title: 'View family overview',
-                  subtitle: 'Shared budgets, recurring items, and activity.',
-                  onTap: () => context.push(AppRoutes.familyOverview),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 24, 20, 28),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              ScreenSection(
+                title: 'Household',
+                subtitle: 'Identity and access for this Family Space.',
+                child: _SettingsGroup(
+                  rows: [
+                    _SettingsRowData(
+                      icon: Icons.home_outlined,
+                      title: 'Household name',
+                      subtitle: space.name,
+                      onTap: canManage
+                          ? () => _RenameFamilySpaceSheet.show(
+                                context,
+                                initialName: space.name,
+                              )
+                          : null,
+                    ),
+                    _SettingsRowData(
+                      icon: Icons.verified_user_outlined,
+                      title: 'Your access',
+                      subtitle: '${space.role} · ${space.currencyCode}',
+                    ),
+                    const _SettingsRowData(
+                      icon: Icons.lock_outline_rounded,
+                      title: 'Privacy boundary',
+                      subtitle: 'Only records marked Family are shared here.',
+                    ),
+                    if (space.isReadOnly)
+                      const _SettingsRowData(
+                        icon: Icons.lock_outline_rounded,
+                        title: 'Premium lock',
+                        subtitle:
+                            'Shared Conscia is view-only while Premium is inactive.',
+                      ),
+                  ],
                 ),
-                const Divider(height: 24),
-                _SettingsRow(
-                  icon: AppIcons.family,
-                  title: 'Members',
-                  subtitle: 'View access, roles, and leaving rules.',
-                  onTap: () => context.push(AppRoutes.familyMembers),
+              ),
+              ScreenSection(
+                title: 'Manage',
+                subtitle: 'Actions that change what belongs to the household.',
+                child: _SettingsGroup(
+                  rows: [
+                    _SettingsRowData(
+                      icon: AppIcons.family,
+                      title: 'Members',
+                      subtitle: 'View access, roles, and leaving rules.',
+                      onTap: () => context.push(AppRoutes.familyMembers),
+                    ),
+                    _SettingsRowData(
+                      icon: Icons.person_add_alt_1_outlined,
+                      title: 'Invites',
+                      subtitle: canInvite
+                          ? 'Invite registered family members by email.'
+                          : 'Only owners can invite registered family members.',
+                      status: inviteStatus,
+                      onTap: canInvite
+                          ? () => context.push(AppRoutes.familyInvites)
+                          : null,
+                    ),
+                  ],
                 ),
-                if (canManage) ...[
-                  const Divider(height: 24),
-                  _SettingsRow(
-                    icon: Icons.person_add_alt_1_outlined,
-                    title: 'Invites',
-                    subtitle: 'Invite registered family members by email.',
-                    onTap: () => context.push(AppRoutes.familyInvites),
-                  ),
-                ],
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ],
@@ -192,7 +325,6 @@ class _RenameFamilySpaceSheet extends ConsumerStatefulWidget {
     return showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      showDragHandle: true,
       builder: (_) => _RenameFamilySpaceSheet(initialName: initialName),
     );
   }
@@ -226,20 +358,20 @@ class _RenameFamilySpaceSheetState
     return SafeArea(
       child: Padding(
         padding: EdgeInsets.fromLTRB(
-          18,
-          0,
-          18,
+          20,
+          8,
+          20,
           18 + MediaQuery.viewInsetsOf(context).bottom,
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text(
-              'Edit household name',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w900,
-                  ),
+            const ConsciaSheetHandle(),
+            const SizedBox(height: 18),
+            const ConsciaSheetHeader(
+              title: 'Edit household name',
+              subtitle: 'This is how the shared space appears to members.',
             ),
             const SizedBox(height: 12),
             FloatingLabelTextField(
@@ -300,41 +432,293 @@ class _RenameFamilySpaceSheetState
   }
 }
 
-class _SettingsRow extends StatelessWidget {
-  const _SettingsRow({
+class _HeroShortcutData {
+  const _HeroShortcutData({
     required this.icon,
     required this.title,
     required this.subtitle,
-    this.actionIcon,
     this.onTap,
   });
 
   final IconData icon;
   final String title;
   final String subtitle;
-  final IconData? actionIcon;
   final VoidCallback? onTap;
+}
+
+class _SharedConsciaHero extends StatelessWidget {
+  const _SharedConsciaHero({
+    required this.eyebrow,
+    required this.title,
+    required this.body,
+    required this.pills,
+    required this.shortcuts,
+  });
+
+  final String eyebrow;
+  final String title;
+  final String body;
+  final List<String> pills;
+  final List<_HeroShortcutData> shortcuts;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final colors = theme.colorScheme;
+    final colors = theme.appColors;
+
+    return Container(
+      key: const ValueKey('shared-conscia-hero'),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            colors.familySoft,
+            colors.paper,
+            colors.amberSoft.withValues(alpha: 0.86),
+          ],
+        ),
+        borderRadius: const BorderRadius.only(
+          bottomLeft: Radius.circular(28),
+          bottomRight: Radius.circular(28),
+        ),
+      ),
+      padding: EdgeInsets.fromLTRB(
+        AppLayout.screenPadding,
+        AppLayout.bleedingHeroTop(context),
+        AppLayout.screenPadding,
+        AppLayout.heroBottomPadding,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            eyebrow,
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: colors.deepNavy,
+              fontSize: 11,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 1.2,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            title,
+            style: theme.textTheme.headlineSmall?.copyWith(
+              color: colors.deepNavy,
+              fontWeight: FontWeight.w800,
+              height: 1.05,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            body,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: colors.ink,
+              height: 1.32,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: [
+              for (final pill in pills) _HeroPill(label: pill),
+            ],
+          ),
+          if (shortcuts.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            _HeroShortcutGrid(shortcuts: shortcuts),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _HeroPill extends StatelessWidget {
+  const _HeroPill({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).appColors;
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: colors.surfaceRaised.withValues(alpha: 0.88),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        child: Text(
+          label,
+          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                color: colors.deepNavy,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 0.2,
+              ),
+        ),
+      ),
+    );
+  }
+}
+
+class _HeroShortcutGrid extends StatelessWidget {
+  const _HeroShortcutGrid({required this.shortcuts});
+
+  final List<_HeroShortcutData> shortcuts;
+
+  @override
+  Widget build(BuildContext context) {
+    return Wrap(
+      spacing: 12,
+      runSpacing: 12,
+      children: [
+        for (final shortcut in shortcuts)
+          SizedBox(
+            width: shortcuts.length == 1
+                ? double.infinity
+                : (MediaQuery.sizeOf(context).width - 52) / 2,
+            child: _HeroShortcutCard(shortcut: shortcut),
+          ),
+      ],
+    );
+  }
+}
+
+class _HeroShortcutCard extends StatelessWidget {
+  const _HeroShortcutCard({required this.shortcut});
+
+  final _HeroShortcutData shortcut;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).appColors;
+    final enabled = shortcut.onTap != null;
+
+    return Material(
+      color: colors.surfaceRaised.withValues(alpha: enabled ? 0.9 : 0.52),
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
+        onTap: shortcut.onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+          child: Row(
+            children: [
+              Icon(
+                shortcut.icon,
+                size: 18,
+                color: enabled ? colors.deepNavy : colors.softInk,
+              ),
+              const SizedBox(width: 9),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      shortcut.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                            color: enabled ? colors.deepNavy : colors.mutedInk,
+                            fontWeight: FontWeight.w800,
+                          ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      shortcut.subtitle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                            color: colors.mutedInk,
+                            fontWeight: FontWeight.w600,
+                          ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(
+                Icons.chevron_right_rounded,
+                size: 18,
+                color: enabled ? colors.softInk : Colors.transparent,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SettingsGroup extends StatelessWidget {
+  const _SettingsGroup({required this.rows});
+
+  final List<_SettingsRowData> rows;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        for (var index = 0; index < rows.length; index++) ...[
+          _SettingsRow(data: rows[index]),
+          if (index != rows.length - 1)
+            Divider(
+              height: 1,
+              thickness: 1,
+              indent: 58,
+              color: Theme.of(context).appColors.border,
+            ),
+        ],
+      ],
+    );
+  }
+}
+
+class _SettingsRowData {
+  const _SettingsRowData({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    this.status,
+    this.onTap,
+  });
+
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final String? status;
+  final VoidCallback? onTap;
+}
+
+class _SettingsRow extends StatelessWidget {
+  const _SettingsRow({required this.data});
+
+  final _SettingsRowData data;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.appColors;
+    final enabled = data.onTap != null;
 
     return InkWell(
-      onTap: onTap,
+      onTap: data.onTap,
       borderRadius: BorderRadius.circular(16),
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 4),
+        padding: const EdgeInsets.symmetric(vertical: 14),
         child: Row(
           children: [
             Container(
-              width: 42,
-              height: 42,
+              width: 38,
+              height: 38,
               decoration: BoxDecoration(
-                color: colors.primaryContainer.withValues(alpha: 0.45),
-                borderRadius: BorderRadius.circular(14),
+                color: colors.familySoft,
+                borderRadius: BorderRadius.circular(13),
               ),
-              child: Icon(icon, color: colors.primary, size: 21),
+              child: Icon(data.icon, color: colors.family, size: 20),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -342,37 +726,36 @@ class _SettingsRow extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    title,
+                    data.title,
                     style: theme.textTheme.titleSmall?.copyWith(
+                      color: colors.ink,
                       fontWeight: FontWeight.w800,
                     ),
                   ),
                   const SizedBox(height: 3),
                   Text(
-                    subtitle,
+                    data.subtitle,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                     style: theme.textTheme.bodySmall?.copyWith(
-                      color: colors.onSurfaceVariant,
+                      color: colors.mutedInk,
                       height: 1.3,
                     ),
                   ),
                 ],
               ),
             ),
-            if (actionIcon != null)
-              IconButton(
-                onPressed: onTap,
-                icon: Icon(actionIcon),
-                color: colors.primary,
-                tooltip: 'Edit household name',
-                visualDensity: VisualDensity.compact,
-                style: IconButton.styleFrom(
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                ),
-              )
-            else if (onTap != null)
+            if (data.status != null) ...[
+              const SizedBox(width: 8),
+              _RowStatusPill(label: data.status!),
               Icon(
-                Icons.chevron_right,
-                color: colors.onSurfaceVariant,
+                Icons.chevron_right_rounded,
+                color: colors.softInk,
+              ),
+            ] else if (enabled)
+              Icon(
+                Icons.chevron_right_rounded,
+                color: colors.softInk,
               ),
           ],
         ),
@@ -381,28 +764,36 @@ class _SettingsRow extends StatelessWidget {
   }
 }
 
-class _ReadOnlyNotice extends StatelessWidget {
-  const _ReadOnlyNotice();
+class _RowStatusPill extends StatelessWidget {
+  const _RowStatusPill({required this.label});
+
+  final String label;
 
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
+    final colors = Theme.of(context).appColors;
 
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Icon(Icons.lock_outline, color: colors.onSurfaceVariant),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Text(
-            'Shared Conscia is read-only while Premium is inactive.',
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: colors.onSurfaceVariant,
-                  height: 1.3,
-                ),
-          ),
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: colors.navySoft,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
+        child: Text(
+          label,
+          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                color: colors.deepNavy,
+                fontWeight: FontWeight.w800,
+              ),
         ),
-      ],
+      ),
     );
   }
+}
+
+String _roleLabel(String role) {
+  final normalized = role.trim();
+  if (normalized.isEmpty) return 'Viewer';
+  return normalized[0].toUpperCase() + normalized.substring(1).toLowerCase();
 }

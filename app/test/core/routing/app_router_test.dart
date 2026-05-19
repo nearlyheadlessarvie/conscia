@@ -18,6 +18,7 @@ import 'package:conscia_app/services/location_assistance_service.dart';
 import 'package:conscia_app/services/subscription_service.dart';
 import 'package:conscia_app/services/transaction_service.dart';
 import 'package:conscia_app/services/user_service.dart';
+import 'package:conscia_app/widgets/amount_hero_field.dart';
 import 'package:conscia_app/widgets/floating_label_text_field.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
@@ -207,7 +208,7 @@ void main() {
       await tester.pump(const Duration(milliseconds: 100));
       await tester.pump(const Duration(milliseconds: 100));
 
-      expect(find.text('How do you spend?'), findsOneWidget);
+      expect(find.text('Shape your money starting point'), findsOneWidget);
       expect(find.text('Under EUR 20,000'), findsOneWidget);
     },
   );
@@ -275,8 +276,12 @@ void main() {
       expect(find.text('Add transaction'), findsOneWidget);
       expect(find.text('Dining'), findsOneWidget);
 
-      final amountField =
-          tester.widget<TextField>(find.byType(TextField).first);
+      final amountField = tester.widget<TextField>(
+        find.descendant(
+          of: find.byType(AmountHeroField),
+          matching: find.byType(TextField),
+        ),
+      );
       expect(amountField.controller?.text, '600');
 
       final merchantField = tester.widget<FloatingLabelTextField>(

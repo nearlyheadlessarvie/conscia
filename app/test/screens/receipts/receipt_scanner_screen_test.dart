@@ -3,7 +3,6 @@ import 'package:conscia_app/providers/category_frequency_provider.dart';
 import 'package:conscia_app/providers/usage_provider.dart';
 import 'package:conscia_app/providers/subscription_provider.dart';
 import 'package:conscia_app/providers/user_provider.dart';
-import 'package:conscia_app/core/constants/app_icons.dart';
 import 'package:conscia_app/screens/receipts/receipt_scanner_screen.dart';
 import 'package:conscia_app/screens/transactions/transaction_form_screen.dart';
 import 'package:conscia_app/services/budget_service.dart';
@@ -248,7 +247,7 @@ void main() {
 
     expect(find.text('Add transaction'), findsOneWidget);
 
-    await tester.tap(find.byIcon(AppIcons.chevronLeft));
+    Navigator.of(tester.element(find.text('Add transaction'))).pop();
     await tester.pumpAndSettle();
 
     expect(find.text('Open Scan'), findsOneWidget);

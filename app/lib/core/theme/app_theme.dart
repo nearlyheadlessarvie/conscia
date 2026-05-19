@@ -122,6 +122,15 @@ class AppTheme {
         type: BottomNavigationBarType.fixed,
         elevation: 0,
       ),
+      bottomSheetTheme: const BottomSheetThemeData(
+        backgroundColor: Color(0xFFFFFDF8),
+        modalBackgroundColor: Color(0xFFFFFDF8),
+        surfaceTintColor: Colors.transparent,
+        dragHandleColor: Color(0xFFE1E3EF),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+        ),
+      ),
       navigationBarTheme: NavigationBarThemeData(
         height: 84,
         indicatorShape: RoundedRectangleBorder(
@@ -259,6 +268,15 @@ class AppTheme {
       bottomNavigationBarTheme: const BottomNavigationBarThemeData(
         type: BottomNavigationBarType.fixed,
         elevation: 0,
+      ),
+      bottomSheetTheme: const BottomSheetThemeData(
+        backgroundColor: Color(0xFF0D1117),
+        modalBackgroundColor: Color(0xFF0D1117),
+        surfaceTintColor: Colors.transparent,
+        dragHandleColor: Color(0xFF334155),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+        ),
       ),
       navigationBarTheme: NavigationBarThemeData(
         height: 84,

@@ -8,19 +8,32 @@ import '../core/theme/app_colors.dart';
 class BudgetMixPalette {
   const BudgetMixPalette._();
 
-  static const _colors = [
-    Color(0xFF43A047),
-    Color(0xFFFF9800),
-    Color(0xFFEC407A),
-    Color(0xFF2563EB),
-    Color(0xFF00ACC1),
-    Color(0xFF7E57C2),
-  ];
+  static final _colors =
+      CategoryIcons.colorOptions.map((option) => option.accent).toList();
 
   static Color staticColorFor(int index) => _colors[index % _colors.length];
 
+  static Color staticColorForCategory(
+    String category, {
+    String? type,
+    String? colorKey,
+  }) =>
+      CategoryIcons.accentFor(category, type: type, colorKey: colorKey);
+
   static Color colorFor(int index, BuildContext context) {
     final color = staticColorFor(index);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return isDark ? Color.lerp(color, Colors.white, 0.18)! : color;
+  }
+
+  static Color colorForCategory(
+    String category,
+    BuildContext context, {
+    String? type,
+    String? colorKey,
+  }) {
+    final color =
+        staticColorForCategory(category, type: type, colorKey: colorKey);
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return isDark ? Color.lerp(color, Colors.white, 0.18)! : color;
   }
@@ -146,8 +159,6 @@ class BudgetMixDonutPainter extends CustomPainter {
     final rect = Offset.zero & size;
     final arcRect = rect.deflate(trackStrokeWidth / 2);
     final radius = arcRect.width / 2;
-    final capAwareGap = (segmentStrokeWidth + visibleGapPx) / radius;
-    const start = -math.pi / 2;
     const full = math.pi * 2;
 
     final track = Paint()
@@ -159,21 +170,106 @@ class BudgetMixDonutPainter extends CustomPainter {
     canvas.drawArc(arcRect, 0, full, false, track);
     if (segments.isEmpty) return;
 
-    var cursor = start;
-    for (final segment in segments) {
-      final rawSweep = full * segment.share.clamp(0.0, 1.0);
-      if (rawSweep <= 0) continue;
-      final gap = math.min(capAwareGap, rawSweep * 0.45);
-      final sweep = math.max(0.02, rawSweep - gap);
+    for (final arc in _layoutArcs(size)) {
       final paint = Paint()
-        ..color = segment.color
+        ..color = arc.color
         ..style = PaintingStyle.stroke
         ..strokeWidth = segmentStrokeWidth
-        ..strokeCap = StrokeCap.round;
+        ..strokeCap = arc.strokeCap;
 
-      canvas.drawArc(arcRect, cursor + gap / 2, sweep, false, paint);
+      if (arc.isDot) {
+        final center = Offset(
+          size.width / 2 + math.cos(arc.centerAngle) * radius,
+          size.height / 2 + math.sin(arc.centerAngle) * radius,
+        );
+        canvas.drawCircle(
+            center, arc.dotRadius, paint..style = PaintingStyle.fill);
+      } else {
+        canvas.drawArc(arcRect, arc.startAngle, arc.sweepAngle, false, paint);
+      }
+    }
+  }
+
+  @visibleForTesting
+  List<double> debugBoundaryGapPx(Size size) {
+    final rect = Offset.zero & size;
+    final arcRect = rect.deflate(trackStrokeWidth / 2);
+    final radius = arcRect.width / 2;
+    final arcs = _layoutArcs(size);
+    if (arcs.length < 2) return const [];
+
+    final gaps = <double>[];
+    for (var index = 0; index < arcs.length; index++) {
+      final current = arcs[index];
+      final next = arcs[(index + 1) % arcs.length];
+      final rawGap = index == arcs.length - 1
+          ? next.visualStartAngle + math.pi * 2 - current.visualEndAngle
+          : next.visualStartAngle - current.visualEndAngle;
+      gaps.add(rawGap * radius);
+    }
+    return gaps;
+  }
+
+  @visibleForTesting
+  List<double> debugDotRadii(Size size) => _layoutArcs(size)
+      .where((arc) => arc.isDot)
+      .map((arc) => arc.dotRadius)
+      .toList(growable: false);
+
+  List<_BudgetMixDonutArc> _layoutArcs(Size size) {
+    final rect = Offset.zero & size;
+    final arcRect = rect.deflate(trackStrokeWidth / 2);
+    final radius = arcRect.width / 2;
+    final visibleGapAngle = visibleGapPx / radius;
+    final capExtensionAngle = (segmentStrokeWidth / 2) / radius;
+    const start = -math.pi / 2;
+    const full = math.pi * 2;
+    const minimumRoundedSweep = 0.02;
+
+    var cursor = start;
+    final arcs = <_BudgetMixDonutArc>[];
+    final positiveSegments =
+        segments.where((segment) => segment.share > 0).toList(growable: false);
+
+    for (final segment in positiveSegments) {
+      final rawSweep = full * segment.share.clamp(0.0, 1.0);
+      if (rawSweep <= 0) continue;
+
+      final canUseRoundCaps = positiveSegments.length == 1 ||
+          rawSweep >=
+              visibleGapAngle + (capExtensionAngle * 2) + minimumRoundedSweep;
+
+      if (!canUseRoundCaps && positiveSegments.length > 1) {
+        final maxDotRadius =
+            math.max(2.0, ((rawSweep - visibleGapAngle) * radius) / 2);
+        final dotRadius = math.min(segmentStrokeWidth / 2, maxDotRadius);
+        arcs.add(
+          _BudgetMixDonutArc.dot(
+            color: segment.color,
+            centerAngle: cursor + rawSweep / 2,
+            dotRadius: dotRadius,
+            dotArcRadius: radius,
+          ),
+        );
+      } else {
+        final gap = positiveSegments.length == 1
+            ? 0.0
+            : visibleGapAngle + capExtensionAngle * 2;
+        final sweep = math.max(0.0, rawSweep - gap);
+        arcs.add(
+          _BudgetMixDonutArc(
+            color: segment.color,
+            startAngle: cursor + gap / 2,
+            sweepAngle: sweep,
+            strokeCap: StrokeCap.round,
+            capExtensionAngle: capExtensionAngle,
+          ),
+        );
+      }
       cursor += rawSweep;
     }
+
+    return arcs;
   }
 
   @override
@@ -187,12 +283,54 @@ class BudgetMixDonutPainter extends CustomPainter {
   }
 }
 
+class _BudgetMixDonutArc {
+  const _BudgetMixDonutArc({
+    required this.color,
+    required this.startAngle,
+    required this.sweepAngle,
+    required this.strokeCap,
+    required this.capExtensionAngle,
+  })  : isDot = false,
+        centerAngle = 0,
+        dotRadius = 0,
+        dotArcRadius = 0;
+
+  const _BudgetMixDonutArc.dot({
+    required this.color,
+    required this.centerAngle,
+    required this.dotRadius,
+    required this.dotArcRadius,
+  })  : startAngle = centerAngle,
+        sweepAngle = 0,
+        strokeCap = StrokeCap.round,
+        capExtensionAngle = 0,
+        isDot = true;
+
+  final Color color;
+  final double startAngle;
+  final double sweepAngle;
+  final StrokeCap strokeCap;
+  final double capExtensionAngle;
+  final bool isDot;
+  final double centerAngle;
+  final double dotRadius;
+  final double dotArcRadius;
+
+  double get visualStartAngle => isDot
+      ? centerAngle - (dotRadius / dotArcRadius)
+      : startAngle - capExtensionAngle;
+  double get visualEndAngle => isDot
+      ? centerAngle + (dotRadius / dotArcRadius)
+      : startAngle + sweepAngle + capExtensionAngle;
+}
+
 class BudgetMixPill extends StatefulWidget {
   const BudgetMixPill({
     super.key,
     required this.index,
     required this.category,
     required this.share,
+    this.type,
     this.active = false,
     this.shakeSerial = 0,
   });
@@ -200,6 +338,7 @@ class BudgetMixPill extends StatefulWidget {
   final int index;
   final String category;
   final double share;
+  final String? type;
   final bool active;
   final int shakeSerial;
 
@@ -237,7 +376,11 @@ class _BudgetMixPillState extends State<BudgetMixPill>
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).appColors;
-    final accent = BudgetMixPalette.colorFor(widget.index, context);
+    final accent = BudgetMixPalette.colorForCategory(
+      widget.category,
+      context,
+      type: widget.type,
+    );
     return AnimatedBuilder(
       animation: _shakeController,
       builder: (context, child) {

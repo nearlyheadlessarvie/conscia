@@ -23,7 +23,7 @@ public class FamilySpaceRepository : DynamoRepository, IFamilySpaceRepository
             Key = Key(FamilyPk(familySpaceId), "PROFILE")
         }, ct);
 
-        return response.Item.Count == 0 ? null : FromSpaceItem(response.Item);
+        return IsMissingItem(response.Item) ? null : FromSpaceItem(response.Item);
     }
 
     public async Task<FamilyMember?> GetMembershipByUserIdAsync(Guid userId, CancellationToken ct = default)
@@ -34,7 +34,7 @@ public class FamilySpaceRepository : DynamoRepository, IFamilySpaceRepository
             Key = Key(MemberUserPk(userId), "MEMBERSHIP")
         }, ct);
 
-        if (response.Item.Count == 0 ||
+        if (IsMissingItem(response.Item) ||
             !response.Item.TryGetValue("FamilySpaceId", out var familySpaceId) ||
             !response.Item.TryGetValue("MemberId", out var memberId))
         {
@@ -58,7 +58,7 @@ public class FamilySpaceRepository : DynamoRepository, IFamilySpaceRepository
             }
         }, ct);
 
-        return response.Items
+        return Items(response)
             .Select(FromMemberItem)
             .OrderBy(member => member.JoinedAt)
             .ToList();
@@ -135,7 +135,7 @@ public class FamilySpaceRepository : DynamoRepository, IFamilySpaceRepository
             Key = Key(InvitePk(inviteId), "PROFILE")
         }, ct);
 
-        return response.Item.Count == 0 ? null : FromInviteItem(response.Item);
+        return IsMissingItem(response.Item) ? null : FromInviteItem(response.Item);
     }
 
     public async Task<FamilyInvite?> GetActiveInviteByEmailAsync(string normalizedEmail, CancellationToken ct = default)
@@ -157,7 +157,7 @@ public class FamilySpaceRepository : DynamoRepository, IFamilySpaceRepository
             }
         }, ct);
 
-        return response.Items.Select(FromInviteItem).Where(IsActiveInvite).OrderByDescending(i => i.CreatedAt).ToList();
+        return Items(response).Select(FromInviteItem).Where(IsActiveInvite).OrderByDescending(i => i.CreatedAt).ToList();
     }
 
     public async Task<IReadOnlyList<FamilyInvite>> ListActiveInvitesByFamilySpaceAsync(Guid familySpaceId, CancellationToken ct = default)
@@ -173,7 +173,7 @@ public class FamilySpaceRepository : DynamoRepository, IFamilySpaceRepository
             }
         }, ct);
 
-        return response.Items
+        return Items(response)
             .Where(item => item.TryGetValue("EntityType", out var type) && type.S == "FamilyInvite")
             .Select(FromInviteItem)
             .Where(IsActiveInvite)
@@ -236,6 +236,40 @@ public class FamilySpaceRepository : DynamoRepository, IFamilySpaceRepository
         {
             TableName = TableName,
             Item = ToMemberItem(member)
+        }, ct);
+    }
+
+    public async Task TransferOwnershipAsync(
+        FamilyMember previousOwner,
+        FamilyMember newOwner,
+        CancellationToken ct = default)
+    {
+        if (previousOwner.FamilySpaceId != newOwner.FamilySpaceId)
+            throw new InvalidOperationException("Members must belong to the same Family Space.");
+
+        await Dynamo.TransactWriteItemsAsync(new TransactWriteItemsRequest
+        {
+            TransactItems =
+            [
+                new()
+                {
+                    Put = new Put
+                    {
+                        TableName = TableName,
+                        Item = ToMemberItem(previousOwner),
+                        ConditionExpression = "attribute_exists(PK) AND attribute_exists(SK)"
+                    }
+                },
+                new()
+                {
+                    Put = new Put
+                    {
+                        TableName = TableName,
+                        Item = ToMemberItem(newOwner),
+                        ConditionExpression = "attribute_exists(PK) AND attribute_exists(SK)"
+                    }
+                }
+            ]
         }, ct);
     }
 
@@ -392,7 +426,7 @@ public class FamilySpaceRepository : DynamoRepository, IFamilySpaceRepository
             }
         }, ct);
 
-        return response.Items.Count == 0 ? null : FromMemberItem(response.Items[0]);
+        return FirstItem(response) is { } item ? FromMemberItem(item) : null;
     }
 
     private static bool IsActiveInvite(FamilyInvite invite)

@@ -41,7 +41,11 @@ class CategoryTrendCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              CategoryIcons.badge(category.category, size: 18),
+              CategoryIcons.badge(
+                category.category,
+                size: 18,
+                type: 'Expense',
+              ),
               const SizedBox(width: 10),
               Expanded(
                 child: Text(

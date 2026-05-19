@@ -64,10 +64,12 @@ class AIService {
     required String category,
     String? insightContext,
     String contextScope = 'personal',
+    CancelToken? cancelToken,
   }) async {
     try {
       final response = await _dio.post(
         ApiConstants.aiAdvice,
+        cancelToken: cancelToken,
         data: {
           'description': description,
           'amount': amount,
@@ -84,10 +86,14 @@ class AIService {
     }
   }
 
-  Future<AIResponse> reflection({required String transactionId}) async {
+  Future<AIResponse> reflection({
+    required String transactionId,
+    CancelToken? cancelToken,
+  }) async {
     try {
       final response = await _dio.post(
         ApiConstants.aiReflection,
+        cancelToken: cancelToken,
         data: {'transactionId': transactionId},
       );
       return AIResponse.fromJson(response.data as Map<String, dynamic>);

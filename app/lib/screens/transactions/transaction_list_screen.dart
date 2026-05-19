@@ -5,18 +5,26 @@ import 'package:intl/intl.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../core/constants/category_icons.dart';
+import '../../core/errors/app_error.dart';
 import '../../core/routing/app_router.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_layout.dart';
+import '../../providers/budget_providers.dart';
 import '../../providers/transaction_providers.dart';
 import '../../providers/user_provider.dart';
+import '../../services/budget_service.dart';
 import '../../services/transaction_service.dart';
 import '../../core/utils/currency_formatter.dart';
+import '../../widgets/conscia_confirm_sheet.dart';
 import '../../widgets/editorial_sticky_header.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/feed_card.dart';
 import '../../widgets/selection_chip_group.dart';
 import '../../widgets/skeleton_loader.dart';
+import '../../widgets/swipe_action_tile.dart';
 import '../../../widgets/form_label.dart';
+import '../budgets/widgets/budget_form_sheet.dart';
+import 'transaction_form_screen.dart';
 import 'widgets/editorial_transaction_row.dart';
 
 class TransactionListScreen extends ConsumerStatefulWidget {
@@ -78,6 +86,32 @@ class _TransactionListScreenState extends ConsumerState<TransactionListScreen> {
     });
   }
 
+  Future<void> _confirmDeleteTransaction(Transaction transaction) async {
+    final confirmed = await ConsciaConfirmSheet.show(
+      context,
+      title: 'Delete this transaction?',
+      message: "This can't be undone.",
+      confirmLabel: 'Delete transaction',
+    );
+    if (!confirmed || !mounted) return;
+
+    try {
+      await ref.read(transactionServiceProvider).delete(transaction.id);
+      ref.invalidate(transactionListProvider);
+      ref.invalidate(filteredTransactionListProvider);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Transaction deleted')),
+      );
+    } catch (e, s) {
+      if (!mounted) return;
+      final error = AppError.from(e, stackTrace: s);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error.userMessage)),
+      );
+    }
+  }
+
   void _syncFilterOverlayTop(double pinnedTop) {
     final renderObject = _filterAnchorKey.currentContext?.findRenderObject();
     final anchorTop = renderObject is RenderBox && renderObject.attached
@@ -99,6 +133,7 @@ class _TransactionListScreenState extends ConsumerState<TransactionListScreen> {
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(filteredTransactionListProvider);
+    final budgetState = ref.watch(budgetListProvider);
     final selectedCategory = ref.watch(categoryFilterProvider);
     final userPreferences = ref.watch(userPreferencesProvider);
     final categories = {
@@ -110,7 +145,7 @@ class _TransactionListScreenState extends ConsumerState<TransactionListScreen> {
     final effectiveScrollOffset =
         _scrollController.hasClients ? _scrollController.offset : _scrollOffset;
     final stickyProgress = ((effectiveScrollOffset - 5) / 10).clamp(0.0, 1.0);
-    final filterPinnedTop = MediaQuery.paddingOf(context).top + 62;
+    final filterPinnedTop = AppLayout.transactionFilterPinnedTop(context);
     final isFilterPinned = _filterOverlayTop != null &&
         _filterOverlayTop! <= filterPinnedTop + 0.5;
     final showSkeletonPills = state.isLoading && state.transactions.isEmpty;
@@ -139,6 +174,7 @@ class _TransactionListScreenState extends ConsumerState<TransactionListScreen> {
                 physics: const AlwaysScrollableScrollPhysics(),
                 slivers: _buildSlivers(
                   state,
+                  budgetState.budgets,
                   selectedCategory,
                   userPreferences,
                 ),
@@ -175,7 +211,7 @@ class _TransactionListScreenState extends ConsumerState<TransactionListScreen> {
                   tooltip: 'Add transaction',
                   visualDensity: VisualDensity.compact,
                   icon: const Icon(Icons.add_rounded),
-                  onPressed: () => context.push(AppRoutes.addTransaction),
+                  onPressed: () => TransactionFormSheet.show(context),
                 ),
               ),
             ),
@@ -187,6 +223,7 @@ class _TransactionListScreenState extends ConsumerState<TransactionListScreen> {
 
   List<Widget> _buildSlivers(
     TransactionListState state,
+    List<Budget> budgets,
     String? selectedCategory,
     ({String currency, String locale}) userPreferences,
   ) {
@@ -248,7 +285,7 @@ class _TransactionListScreenState extends ConsumerState<TransactionListScreen> {
         ),
       ),
       _buildFilterRailSpacer(),
-      ..._buildListSlivers(state, userPreferences.locale),
+      ..._buildListSlivers(state, budgets, userPreferences.locale),
     ];
   }
 
@@ -263,6 +300,7 @@ class _TransactionListScreenState extends ConsumerState<TransactionListScreen> {
 
   List<Widget> _buildListSlivers(
     TransactionListState state,
+    List<Budget> budgets,
     String locale,
   ) {
     if (state.isLoading && state.transactions.isEmpty) {
@@ -297,7 +335,7 @@ class _TransactionListScreenState extends ConsumerState<TransactionListScreen> {
     }
 
     return [
-      ..._buildGroupedSections(state.transactions, locale),
+      ..._buildGroupedSections(state.transactions, budgets, locale),
       if (state.isLoading)
         const SliverToBoxAdapter(
           child: Padding(
@@ -311,6 +349,7 @@ class _TransactionListScreenState extends ConsumerState<TransactionListScreen> {
 
   List<Widget> _buildGroupedSections(
     List<Transaction> transactions,
+    List<Budget> budgets,
     String locale,
   ) {
     final groups = <String, List<Transaction>>{};
@@ -336,13 +375,38 @@ class _TransactionListScreenState extends ConsumerState<TransactionListScreen> {
                 EditorialTransactionRowsGroup(
                   children: [
                     for (var index = 0; index < groups[key]!.length; index++)
-                      EditorialTransactionRow(
-                        data: EditorialTransactionRowData.fromTransaction(
-                          groups[key]![index],
-                          displayCategory:
+                      _SwipeableTransactionActionRow(
+                        key: ValueKey(
+                          'transaction-row-${groups[key]![index].id}',
+                        ),
+                        canReflect: groups[key]![index].type != 'income',
+                        canAddBudget:
+                            _canAddBudget(groups[key]![index], budgets),
+                        onEdit: () => TransactionFormSheet.show(
+                          context,
+                          transactionId: groups[key]![index].id,
+                        ),
+                        onReflect: () => context.push(
+                          AppRoutes.transactionDetail(
+                            groups[key]![index].id,
+                            autoReflect: true,
+                          ),
+                        ),
+                        onAddBudget: () => BudgetFormSheet.show(
+                          context,
+                          initialCategory:
                               _displayCategory(groups[key]![index]),
                         ),
-                        locale: locale,
+                        onDelete: () =>
+                            _confirmDeleteTransaction(groups[key]![index]),
+                        child: EditorialTransactionRow(
+                          data: EditorialTransactionRowData.fromTransaction(
+                            groups[key]![index],
+                            displayCategory:
+                                _displayCategory(groups[key]![index]),
+                          ),
+                          locale: locale,
+                        ),
                       ),
                   ],
                 ),
@@ -358,6 +422,14 @@ class _TransactionListScreenState extends ConsumerState<TransactionListScreen> {
       return tx.category.substring('Family '.length);
     }
     return tx.category;
+  }
+
+  bool _canAddBudget(Transaction tx, List<Budget> budgets) {
+    if (tx.type == 'income') return false;
+    final normalizedCategory = _displayCategory(tx).trim().toLowerCase();
+    return !budgets.any(
+      (budget) => budget.category.trim().toLowerCase() == normalizedCategory,
+    );
   }
 
   String _formatDateLabel(DateTime date) {
@@ -388,6 +460,177 @@ class _TransactionListScreenState extends ConsumerState<TransactionListScreen> {
       'Dec',
     ];
     return '${weekdays[date.weekday - 1]}, ${months[date.month - 1]} ${date.day}';
+  }
+}
+
+class _SwipeableTransactionActionRow extends StatefulWidget {
+  const _SwipeableTransactionActionRow({
+    super.key,
+    required this.child,
+    required this.canReflect,
+    required this.canAddBudget,
+    required this.onEdit,
+    required this.onReflect,
+    required this.onAddBudget,
+    required this.onDelete,
+  });
+
+  final Widget child;
+  final bool canReflect;
+  final bool canAddBudget;
+  final VoidCallback onEdit;
+  final VoidCallback onReflect;
+  final VoidCallback onAddBudget;
+  final VoidCallback onDelete;
+
+  @override
+  State<_SwipeableTransactionActionRow> createState() =>
+      _SwipeableTransactionActionRowState();
+}
+
+class _SwipeableTransactionActionRowState
+    extends State<_SwipeableTransactionActionRow> {
+  static const _actionWidth = 82.0;
+  static const _deleteRevealWidth = 88.0;
+
+  double _dragExtent = 0;
+
+  int get _actionCount =>
+      1 + (widget.canReflect ? 1 : 0) + (widget.canAddBudget ? 1 : 0);
+
+  double get _rightRevealWidth => (_actionCount * _actionWidth)
+      .clamp(
+        _actionWidth,
+        _actionWidth * 3,
+      )
+      .toDouble();
+
+  void _close() {
+    if (_dragExtent == 0) return;
+    setState(() => _dragExtent = 0);
+  }
+
+  void _handleDragUpdate(DragUpdateDetails details) {
+    final delta = details.primaryDelta ?? 0;
+    setState(() {
+      _dragExtent = (_dragExtent + delta).clamp(
+        -_deleteRevealWidth,
+        _rightRevealWidth,
+      );
+    });
+  }
+
+  void _handleDragEnd(DragEndDetails details) {
+    if (_dragExtent <= -44) {
+      _close();
+      widget.onDelete();
+      return;
+    }
+
+    setState(() {
+      _dragExtent = _dragExtent >= 44 ? _rightRevealWidth : 0;
+    });
+  }
+
+  void _runAction(VoidCallback action) {
+    _close();
+    action();
+  }
+
+  String get _rowId {
+    final rawKey = widget.key;
+    if (rawKey is ValueKey<String>) {
+      return rawKey.value.replaceFirst('transaction-row-', '');
+    }
+    return 'row';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).appColors;
+    final actionBg = colors.navySoft.withValues(alpha: 0.72);
+
+    return ClipRect(
+      child: Stack(
+        children: [
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 120),
+            curve: Curves.easeOutCubic,
+            transform: Matrix4.translationValues(_dragExtent, 0, 0),
+            child: GestureDetector(
+              behavior: HitTestBehavior.translucent,
+              onTap: _dragExtent > 0 ? _close : null,
+              onHorizontalDragUpdate: _handleDragUpdate,
+              onHorizontalDragEnd: _handleDragEnd,
+              child: ColoredBox(
+                key: ValueKey('transaction-swipe-foreground-$_rowId'),
+                color: colors.paper,
+                child: widget.child,
+              ),
+            ),
+          ),
+          if (_dragExtent > 0)
+            Positioned.fill(
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: SizedBox(
+                  width: _rightRevealWidth,
+                  child: Row(
+                    children: [
+                      SwipeActionTile(
+                        icon: Icons.edit_rounded,
+                        label: 'Edit',
+                        foregroundColor: colors.deepNavy,
+                        backgroundColor: actionBg,
+                        width: _actionWidth,
+                        onTap: () => _runAction(widget.onEdit),
+                      ),
+                      if (widget.canReflect)
+                        SwipeActionTile(
+                          icon: Icons.auto_awesome_rounded,
+                          label: 'Reflect',
+                          foregroundColor: colors.deepNavy,
+                          backgroundColor: actionBg,
+                          width: _actionWidth,
+                          onTap: () => _runAction(widget.onReflect),
+                        ),
+                      if (widget.canAddBudget)
+                        SwipeActionTile(
+                          icon: Icons.flag_rounded,
+                          label: 'Add budget',
+                          foregroundColor: colors.deepNavy,
+                          backgroundColor: colors.amberSoft,
+                          width: _actionWidth,
+                          onTap: () => _runAction(widget.onAddBudget),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          if (_dragExtent < 0)
+            Positioned.fill(
+              child: Align(
+                alignment: Alignment.centerRight,
+                child: SwipeActionBackground(
+                  alignment: Alignment.centerRight,
+                  padding: const EdgeInsets.only(right: 6),
+                  children: [
+                    SwipeActionTile(
+                      icon: Icons.delete_outline_rounded,
+                      label: 'Delete',
+                      foregroundColor: colors.expense,
+                      backgroundColor: colors.expenseSoft,
+                      width: _deleteRevealWidth,
+                      onTap: () => _runAction(widget.onDelete),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
   }
 }
 
@@ -464,8 +707,9 @@ class _TransactionFilterRailContent extends StatelessWidget {
         options: ['All', ...categories.take(4)],
         value: selectedCategory ?? 'All',
         scrollable: true,
-        avatarBuilder: (option, _) =>
-            option == 'All' ? null : CategoryIcons.rawIcon(option, size: 13),
+        avatarBuilder: (option, _) => option == 'All'
+            ? null
+            : CategoryIcons.rawIcon(option, size: 13, type: 'Expense'),
         onSelected: onSelected,
       );
     }
@@ -480,7 +724,11 @@ class _TransactionFilterRailContent extends StatelessWidget {
             selected: true,
             avatar: visibleOption == 'All'
                 ? null
-                : CategoryIcons.rawIcon(visibleOption, size: 13),
+                : CategoryIcons.rawIcon(
+                    visibleOption,
+                    size: 13,
+                    type: 'Expense',
+                  ),
             onTap: () => onSelected(visibleOption),
           ),
           const SizedBox(width: 10),
@@ -546,7 +794,12 @@ class _TransactionsEditorialHero extends StatelessWidget {
 
     return Container(
       width: double.infinity,
-      padding: EdgeInsets.fromLTRB(20, topPadding + 75, 20, 26),
+      padding: EdgeInsets.fromLTRB(
+        AppLayout.screenPadding,
+        topPadding + AppLayout.transactionListHeroTopGap,
+        AppLayout.screenPadding,
+        26,
+      ),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,

@@ -57,11 +57,14 @@ public class S3StorageService : IS3StorageService
     {
         await EnsureBucketReadyAsync(ct);
 
+        using var bufferedContent = await BufferIfNeededAsync(content, ct);
+        var uploadStream = bufferedContent ?? content;
+
         await _s3.PutObjectAsync(new PutObjectRequest
         {
             BucketName = _bucketName,
             Key = key,
-            InputStream = content,
+            InputStream = uploadStream,
             ContentType = contentType
         }, ct);
     }
@@ -111,5 +114,16 @@ public class S3StorageService : IS3StorageService
         {
             _bucketEnsureLock.Release();
         }
+    }
+
+    private static async Task<MemoryStream?> BufferIfNeededAsync(Stream content, CancellationToken ct)
+    {
+        if (content.CanSeek)
+            return null;
+
+        var buffer = new MemoryStream();
+        await content.CopyToAsync(buffer, ct);
+        buffer.Position = 0;
+        return buffer;
     }
 }

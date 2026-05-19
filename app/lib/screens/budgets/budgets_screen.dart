@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/constants/generated/app_constants.g.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_layout.dart';
 import '../../core/utils/currency_formatter.dart';
 import '../../providers/budget_providers.dart';
 import '../../providers/subscription_provider.dart';
@@ -10,10 +11,12 @@ import '../../services/budget_service.dart';
 import '../../services/subscription_service.dart';
 import '../../widgets/conscia_app_bar.dart';
 import '../../widgets/budget_mix_visuals.dart';
+import '../../widgets/conscia_confirm_sheet.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/premium_upgrade_dialog.dart';
 import '../../widgets/scope_pill_switch.dart';
 import '../../widgets/skeleton_loader.dart';
+import '../../widgets/swipe_action_tile.dart';
 import 'widgets/budget_form_sheet.dart';
 
 class BudgetsScreen extends ConsumerStatefulWidget {
@@ -212,7 +215,7 @@ class _BudgetsScreenState extends ConsumerState<BudgetsScreen> {
     final subAsync = ref.read(subscriptionProvider);
     SubscriptionStatus? subscription = subAsync.valueOrNull;
 
-    if (subscription == null) {
+    if (subAsync.isLoading || subscription == null) {
       try {
         subscription = await ref.read(subscriptionProvider.future);
       } catch (_) {
@@ -235,26 +238,19 @@ class _BudgetsScreenState extends ConsumerState<BudgetsScreen> {
     if (context.mounted) BudgetFormSheet.show(context);
   }
 
-  void _confirmDelete(BuildContext context, WidgetRef ref, String id) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Delete Budget'),
-        content: const Text('Are you sure you want to delete this budget?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () {
-              ref.read(budgetListProvider.notifier).delete(id);
-              Navigator.of(ctx).pop();
-            },
-            child: const Text('Delete', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
+  Future<void> _confirmDelete(
+      BuildContext context, WidgetRef ref, String id) async {
+    final confirmed = await ConsciaConfirmSheet.show(
+      context,
+      title: 'Delete this budget?',
+      message: "This can't be undone.",
+      confirmLabel: 'Delete budget',
+    );
+    if (!confirmed) return;
+    await ref.read(budgetListProvider.notifier).delete(id);
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Budget deleted.')),
     );
   }
 }
@@ -292,7 +288,6 @@ class _BudgetsEditorialHeroState extends State<_BudgetsEditorialHero> {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).appColors;
     final textTheme = Theme.of(context).textTheme;
-    final topInset = MediaQuery.paddingOf(context).top;
     final budgets = widget.budgets;
     final mix = _budgetMix(budgets);
     _syncPillKeys(mix.length);
@@ -312,7 +307,12 @@ class _BudgetsEditorialHeroState extends State<_BudgetsEditorialHero> {
     return Container(
       key: const ValueKey('budgets-editorial-hero'),
       width: double.infinity,
-      padding: EdgeInsets.fromLTRB(20, topInset + 24, 20, 28),
+      padding: EdgeInsets.fromLTRB(
+        AppLayout.screenPadding,
+        AppLayout.budgetHeroTop(context),
+        AppLayout.screenPadding,
+        AppLayout.heroBottomPadding,
+      ),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
@@ -403,6 +403,7 @@ class _BudgetsEditorialHeroState extends State<_BudgetsEditorialHero> {
                         key: _pillKeys[entry.$1],
                         index: entry.$1,
                         category: entry.$2.category,
+                        type: 'Expense',
                         share:
                             totalSpent <= 0 ? 0 : entry.$2.spent / totalSpent,
                         active: _calledOutMixIndex == entry.$1,
@@ -463,7 +464,10 @@ class _BudgetsEditorialHeroState extends State<_BudgetsEditorialHero> {
         .map(
           (entry) => BudgetMixDonutSegment(
             share: entry.$2.spent / totalSpent,
-            color: BudgetMixPalette.staticColorFor(entry.$1),
+            color: BudgetMixPalette.staticColorForCategory(
+              entry.$2.category,
+              type: 'Expense',
+            ),
           ),
         )
         .toList(growable: false);
@@ -581,11 +585,30 @@ class _BudgetLedger extends StatelessWidget {
       child: Column(
         children: [
           for (var index = 0; index < budgets.length; index++) ...[
-            _BudgetLedgerRow(
-              budget: budgets[index],
-              mixIndex: colorIndexByBudgetId[budgets[index].id] ?? index,
-              onEdit: () => onEdit(budgets[index]),
-              onDelete: () => onDelete(budgets[index]),
+            Dismissible(
+              key: ValueKey('budget-row-${budgets[index].id}'),
+              direction: DismissDirection.endToStart,
+              confirmDismiss: (_) async {
+                onDelete(budgets[index]);
+                return false;
+              },
+              background: const SizedBox.shrink(),
+              secondaryBackground: _SwipeDeleteBackground(
+                key: const ValueKey('budget-swipe-action-delete'),
+                label: 'Delete',
+                color: colors.expense,
+              ),
+              child: ColoredBox(
+                key: ValueKey(
+                  'budget-swipe-foreground-${budgets[index].id}',
+                ),
+                color: colors.paper,
+                child: _BudgetLedgerRow(
+                  budget: budgets[index],
+                  mixIndex: colorIndexByBudgetId[budgets[index].id] ?? index,
+                  onEdit: () => onEdit(budgets[index]),
+                ),
+              ),
             ),
             if (index < budgets.length - 1)
               Divider(
@@ -612,13 +635,11 @@ class _BudgetLedgerRow extends StatelessWidget {
     required this.budget,
     required this.mixIndex,
     required this.onEdit,
-    required this.onDelete,
   });
 
   final Budget budget;
   final int mixIndex;
   final VoidCallback onEdit;
-  final VoidCallback onDelete;
 
   @override
   Widget build(BuildContext context) {
@@ -636,7 +657,11 @@ class _BudgetLedgerRow extends StatelessWidget {
             BudgetCategoryGlyph(
               iconKey: ValueKey('budget-row-icon-${budget.id}'),
               category: budget.category,
-              color: BudgetMixPalette.colorFor(mixIndex, context),
+              color: BudgetMixPalette.colorForCategory(
+                budget.category,
+                context,
+                type: 'Expense',
+              ),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -703,50 +728,7 @@ class _BudgetLedgerRow extends StatelessWidget {
                 ],
               ),
             ),
-            const SizedBox(width: 4),
-            IconButton(
-              tooltip: 'Budget actions',
-              visualDensity: VisualDensity.compact,
-              icon: Icon(Icons.more_horiz_rounded, color: colors.deepNavy),
-              onPressed: () => _showRowActions(context),
-            ),
           ],
-        ),
-      ),
-    );
-  }
-
-  void _showRowActions(BuildContext context) {
-    final colors = Theme.of(context).appColors;
-    showModalBottomSheet<void>(
-      context: context,
-      useRootNavigator: true,
-      showDragHandle: true,
-      builder: (sheetContext) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _BudgetActionTile(
-                icon: Icons.edit_rounded,
-                label: 'Edit ${budget.category}',
-                onTap: () {
-                  Navigator.of(sheetContext).pop();
-                  onEdit();
-                },
-              ),
-              _BudgetActionTile(
-                icon: Icons.delete_outline_rounded,
-                label: 'Delete budget',
-                color: colors.expense,
-                onTap: () {
-                  Navigator.of(sheetContext).pop();
-                  onDelete();
-                },
-              ),
-            ],
-          ),
         ),
       ),
     );
@@ -767,33 +749,31 @@ class _BudgetLedgerRow extends StatelessWidget {
   }
 }
 
-class _BudgetActionTile extends StatelessWidget {
-  const _BudgetActionTile({
-    required this.icon,
+class _SwipeDeleteBackground extends StatelessWidget {
+  const _SwipeDeleteBackground({
+    super.key,
     required this.label,
-    required this.onTap,
-    this.color,
+    required this.color,
   });
 
-  final IconData icon;
   final String label;
-  final VoidCallback onTap;
-  final Color? color;
+  final Color color;
 
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).appColors;
-    final foreground = color ?? colors.deepNavy;
-    return ListTile(
-      leading: Icon(icon, color: foreground),
-      title: Text(
-        label,
-        style: Theme.of(context).textTheme.titleSmall?.copyWith(
-              color: foreground,
-              fontWeight: FontWeight.w700,
-            ),
-      ),
-      onTap: onTap,
+    return SwipeActionBackground(
+      alignment: Alignment.centerRight,
+      padding: const EdgeInsets.only(right: 10),
+      children: [
+        SwipeActionTile(
+          icon: Icons.delete_outline_rounded,
+          label: label,
+          foregroundColor: color,
+          backgroundColor: colors.expenseSoft,
+          onTap: () {},
+        ),
+      ],
     );
   }
 }

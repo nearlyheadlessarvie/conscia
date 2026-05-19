@@ -233,13 +233,16 @@ class _AiGuidanceSpeakerAvatar extends StatelessWidget {
               profileAtlas: angelProfileSpriteAtlas,
               fallbackAtlas: angelMascotAtlas,
             ),
-          AiGuidanceSpeaker.conscia => Padding(
-              padding: const EdgeInsets.all(5),
-              child: SvgPicture.asset(
-                'assets/images/app_icon.svg',
-                key: ValueKey('$keyPrefix-conscia-app-icon'),
-                width: 26,
-                height: 26,
+          AiGuidanceSpeaker.conscia => Center(
+              child: Transform.scale(
+                scale: 1.45,
+                child: SvgPicture.asset(
+                  'assets/images/app_icon.svg',
+                  key: ValueKey('$keyPrefix-conscia-app-icon'),
+                  width: 34,
+                  height: 34,
+                  fit: BoxFit.cover,
+                ),
               ),
             ),
         },

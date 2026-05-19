@@ -24,19 +24,41 @@ class _StaticBudgetService extends BudgetService {
   Future<List<Budget>> list() async => const [];
 }
 
+class _FailingBudgetService extends _StaticBudgetService {
+  @override
+  Future<Budget> create(CreateBudgetDto dto) async {
+    throw DioException(
+      requestOptions: RequestOptions(path: '/budgets'),
+      response: Response(
+        requestOptions: RequestOptions(path: '/budgets'),
+        statusCode: 409,
+        data: {'error': 'A budget for that category already exists.'},
+      ),
+      type: DioExceptionType.badResponse,
+    );
+  }
+}
+
 Future<void> _pumpBudgetFormSheet(
   WidgetTester tester, {
   required bool isPremium,
   String? initialCategory,
   bool hasFamilySpace = false,
+  BudgetService? budgetService,
 }) async {
   SharedPreferences.setMockInitialValues({});
   final prefs = await SharedPreferences.getInstance();
+  final resolvedBudgetService = budgetService ?? _StaticBudgetService();
 
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
-        budgetServiceProvider.overrideWithValue(_StaticBudgetService()),
+        budgetServiceProvider.overrideWithValue(
+          resolvedBudgetService,
+        ),
+        budgetListProvider.overrideWith(
+          (ref) => BudgetListNotifier(resolvedBudgetService),
+        ),
         sharedPreferencesProvider.overrideWithValue(prefs),
         subscriptionProvider.overrideWith(
           (ref) async => SubscriptionStatus(
@@ -165,5 +187,24 @@ void main() {
     expect(find.byType(ScopePillSwitch), findsOneWidget);
     expect(find.text('Personal'), findsOneWidget);
     expect(find.text('Family'), findsOneWidget);
+  });
+
+  testWidgets('budget form shows create conflicts inline', (tester) async {
+    await _pumpBudgetFormSheet(
+      tester,
+      isPremium: true,
+      initialCategory: 'Dining',
+      budgetService: _FailingBudgetService(),
+    );
+
+    await tester.enterText(find.byType(TextField), '4000');
+    await tester.pump();
+    await tester.tap(find.widgetWithText(FilledButton, 'Create Budget'));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('A budget for that category already exists.'),
+      findsOneWidget,
+    );
   });
 }

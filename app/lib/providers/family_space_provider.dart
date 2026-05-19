@@ -6,7 +6,13 @@ import '../models/family_overview.dart';
 import '../models/family_invite.dart';
 import '../models/family_member.dart';
 import '../models/family_space.dart';
+import 'alert_provider.dart';
 import 'auth_provider.dart';
+import 'behavioral_insights_provider.dart';
+import 'budget_providers.dart';
+import 'insight_feed_provider.dart';
+import 'insights_provider.dart';
+import 'transaction_providers.dart';
 
 final familySpaceProvider = FutureProvider<FamilySpace?>((ref) async {
   final authState = ref.watch(authProvider);
@@ -80,6 +86,30 @@ final familySpaceActionsProvider = Provider<FamilySpaceActions>((ref) {
   return FamilySpaceActions(ref);
 });
 
+void invalidateFamilyScopedProviders(Ref ref, {bool resetScope = false}) {
+  if (resetScope) {
+    ref.read(selectedScopeProvider.notifier).state = 'personal';
+    ref.read(transactionScopeFilterProvider.notifier).state = 'personal';
+  }
+
+  ref.invalidate(familySpaceProvider);
+  ref.invalidate(familyOverviewProvider);
+  ref.invalidate(familyMembersProvider);
+  ref.invalidate(familyInvitesProvider);
+  ref.invalidate(familyOutgoingInvitesProvider);
+  ref.invalidate(budgetListProvider);
+  ref.invalidate(transactionListProvider);
+  ref.invalidate(filteredTransactionListProvider);
+  ref.invalidate(alertsProvider);
+  ref.invalidate(behavioralInsightsProvider);
+  ref.invalidate(insightsSummaryProvider);
+  ref.invalidate(insightsCategoriesProvider);
+  ref.invalidate(insightsMerchantsProvider);
+  ref.invalidate(insightFeedProvider);
+  ref.invalidate(dashboardInsightFeedProvider);
+  ref.invalidate(dashboardInsightSummaryProvider);
+}
+
 class FamilySpaceActions {
   FamilySpaceActions([this._ref]);
 
@@ -107,8 +137,7 @@ class FamilySpaceActions {
       },
     );
 
-    ref.invalidate(familySpaceProvider);
-    ref.invalidate(familyOverviewProvider);
+    invalidateFamilyScopedProviders(ref);
     return FamilySpace.fromJson(
         Map<String, dynamic>.from(response.data as Map));
   }
@@ -121,8 +150,7 @@ class FamilySpaceActions {
       data: {'name': name},
     );
 
-    ref.invalidate(familySpaceProvider);
-    ref.invalidate(familyOverviewProvider);
+    invalidateFamilyScopedProviders(ref);
     return FamilySpace.fromJson(
       Map<String, dynamic>.from(response.data as Map),
     );
@@ -148,10 +176,7 @@ class FamilySpaceActions {
     final ref = _requireRef;
     final dio = ref.read(dioProvider);
     await dio.post(ApiConstants.familyInviteAccept(inviteId));
-    ref.invalidate(familyInvitesProvider);
-    ref.invalidate(familySpaceProvider);
-    ref.invalidate(familyOverviewProvider);
-    ref.invalidate(familyMembersProvider);
+    invalidateFamilyScopedProviders(ref, resetScope: true);
   }
 
   Future<void> declineInvite(String inviteId) async {
@@ -179,9 +204,20 @@ class FamilySpaceActions {
       data: {'role': role},
     );
 
-    ref.invalidate(familyMembersProvider);
-    ref.invalidate(familySpaceProvider);
-    ref.invalidate(familyOverviewProvider);
+    invalidateFamilyScopedProviders(ref);
+    return FamilyMember.fromJson(
+      Map<String, dynamic>.from(response.data as Map),
+    );
+  }
+
+  Future<FamilyMember> transferOwnership(String memberId) async {
+    final ref = _requireRef;
+    final dio = ref.read(dioProvider);
+    final response = await dio.post(
+      ApiConstants.familyTransferOwnership(memberId),
+    );
+
+    invalidateFamilyScopedProviders(ref);
     return FamilyMember.fromJson(
       Map<String, dynamic>.from(response.data as Map),
     );
@@ -191,16 +227,13 @@ class FamilySpaceActions {
     final ref = _requireRef;
     final dio = ref.read(dioProvider);
     await dio.delete(ApiConstants.familyMember(memberId));
-    ref.invalidate(familyMembersProvider);
-    ref.invalidate(familyOverviewProvider);
+    invalidateFamilyScopedProviders(ref);
   }
 
   Future<void> leaveFamilySpace() async {
     final ref = _requireRef;
     final dio = ref.read(dioProvider);
     await dio.post(ApiConstants.familyLeave);
-    ref.invalidate(familyMembersProvider);
-    ref.invalidate(familySpaceProvider);
-    ref.invalidate(familyOverviewProvider);
+    invalidateFamilyScopedProviders(ref, resetScope: true);
   }
 }

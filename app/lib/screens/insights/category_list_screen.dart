@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/constants/category_icons.dart';
+import '../../core/theme/app_layout.dart';
 import '../../models/insights_models.dart';
 import '../../providers/insights_provider.dart';
 import '../../providers/user_provider.dart';
@@ -99,8 +100,12 @@ class _CategoryEditorialHero extends StatelessWidget {
 
     return InsightListEditorialHero(
       bleed: true,
-      topPadding: MediaQuery.paddingOf(context).top + 85,
-      leading: CategoryIcons.badge(category.category, size: 30),
+      topPadding: AppLayout.drilldownHeroTop(context),
+      leading: CategoryIcons.badge(
+        category.category,
+        size: 30,
+        type: 'Expense',
+      ),
       label: 'TOP REGRET CATEGORY',
       primary: regrettedText,
       body:
@@ -150,7 +155,11 @@ class _CategoryCard extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          CategoryIcons.badge(category.category, size: 20),
+          CategoryIcons.badge(
+            category.category,
+            size: 20,
+            type: 'Expense',
+          ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -235,7 +244,7 @@ class _StatePadding extends StatelessWidget {
     return Padding(
       padding: EdgeInsets.fromLTRB(
         16,
-        MediaQuery.paddingOf(context).top + 85,
+        AppLayout.drilldownHeroTop(context),
         16,
         28,
       ),

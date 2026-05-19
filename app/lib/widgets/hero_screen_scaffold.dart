@@ -13,6 +13,7 @@ class HeroScreenScaffold extends StatefulWidget {
     this.scrollable = true,
     this.scrollViewKey,
     this.extraBottomPadding = 0.0,
+    this.bleedBehindAppBar = false,
   });
 
   final PreferredSizeWidget? appBar;
@@ -23,6 +24,7 @@ class HeroScreenScaffold extends StatefulWidget {
   final Key? scrollViewKey;
   // Extra bottom padding to clear floating overlays (e.g. floating dock nav ~72px)
   final double extraBottomPadding;
+  final bool bleedBehindAppBar;
 
   @override
   State<HeroScreenScaffold> createState() => _HeroScreenScaffoldState();
@@ -57,6 +59,7 @@ class _HeroScreenScaffoldState extends State<HeroScreenScaffold> {
     return ConsciaAppBarScrollScope(
       scrollProgress: _appBarScrollProgress,
       child: Scaffold(
+        extendBodyBehindAppBar: widget.bleedBehindAppBar,
         appBar: widget.appBar,
         body: NotificationListener<ScrollNotification>(
           onNotification: _handleScrollNotification,
@@ -72,6 +75,7 @@ class _HeroScreenScaffoldState extends State<HeroScreenScaffold> {
               ),
             ),
             child: SafeArea(
+              top: !widget.bleedBehindAppBar,
               child: Column(
                 children: [
                   Expanded(

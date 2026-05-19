@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_layout.dart';
 import '../../models/insights_models.dart';
 import '../../providers/insights_provider.dart';
 import '../../providers/user_provider.dart';
@@ -90,7 +91,7 @@ class _MerchantEditorialHero extends StatelessWidget {
 
     return InsightListEditorialHero(
       bleed: true,
-      topPadding: MediaQuery.paddingOf(context).top + 85,
+      topPadding: AppLayout.drilldownHeroTop(context),
       leading: Container(
         width: 42,
         height: 42,
@@ -240,7 +241,7 @@ class _StatePadding extends StatelessWidget {
     return Padding(
       padding: EdgeInsets.fromLTRB(
         16,
-        MediaQuery.paddingOf(context).top + 85,
+        AppLayout.drilldownHeroTop(context),
         16,
         28,
       ),

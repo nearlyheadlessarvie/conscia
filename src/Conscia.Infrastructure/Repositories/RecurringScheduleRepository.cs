@@ -41,7 +41,7 @@ public class RecurringScheduleRepository : DynamoRepository, IRecurringScheduleR
             }
         }, ct);
 
-        return response.Items.Count > 0 ? FromItem(response.Items[0]) : null;
+        return FirstItem(response) is { } item ? FromItem(item) : null;
     }
 
     public async Task<IReadOnlyList<RecurringSchedule>> ListAsync(Guid userId, CancellationToken ct = default)
@@ -56,7 +56,7 @@ public class RecurringScheduleRepository : DynamoRepository, IRecurringScheduleR
             }
         }, ct);
 
-        return response.Items.Select(FromItem).ToList();
+        return Items(response).Select(FromItem).ToList();
     }
 
     public async Task<IReadOnlyList<RecurringSchedule>> ListByFamilySpaceAsync(Guid familySpaceId, CancellationToken ct = default)
@@ -82,7 +82,7 @@ public class RecurringScheduleRepository : DynamoRepository, IRecurringScheduleR
                 ExclusiveStartKey = lastEvaluatedKey
             }, ct);
 
-            schedules.AddRange(response.Items.Select(FromItem));
+            schedules.AddRange(Items(response).Select(FromItem));
             lastEvaluatedKey = response.LastEvaluatedKey;
         }
         while (lastEvaluatedKey is { Count: > 0 });
@@ -121,7 +121,7 @@ public class RecurringScheduleRepository : DynamoRepository, IRecurringScheduleR
             }
         }, ct);
 
-        return response.Items.Select(FromItem).ToList();
+        return Items(response).Select(FromItem).ToList();
     }
 
     private static Dictionary<string, AttributeValue> ToItem(RecurringSchedule schedule)

@@ -13,6 +13,7 @@ import '../../core/utils/currency_formatter.dart';
 import '../../core/utils/localized_number_input.dart';
 import '../../core/utils/voice_input_parser.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_layout.dart';
 import '../../providers/ai_provider.dart';
 import '../../providers/family_space_provider.dart';
 import '../../providers/insight_feed_provider.dart';
@@ -24,6 +25,7 @@ import '../../providers/user_provider.dart';
 import '../../services/ai_service.dart';
 import '../../services/user_service.dart';
 import '../../widgets/ai_guidance_chat.dart';
+import '../../widgets/ai_guidance_loading_sheet.dart';
 import '../../widgets/editorial_sticky_header.dart';
 import '../../widgets/floating_label_text_field.dart';
 import '../../widgets/hero_screen_scaffold.dart';
@@ -140,8 +142,7 @@ class _PrePurchaseScreenState extends ConsumerState<PrePurchaseScreen> {
     final targetBox = categoryContext?.findRenderObject() as RenderBox?;
     if (targetBox == null || !_inputScrollController.hasClients) return;
 
-    final topInset = MediaQuery.paddingOf(context).top;
-    final desiredTop = topInset + 104;
+    final desiredTop = AppLayout.assistantScrollTargetTop(context);
     final delta = targetBox.localToGlobal(Offset.zero).dy - desiredTop;
     final targetOffset = (_inputScrollController.offset + delta).clamp(
       0.0,
@@ -224,7 +225,9 @@ class _PrePurchaseScreenState extends ConsumerState<PrePurchaseScreen> {
     await _showConscienceCheckSheet();
   }
 
-  Future<AIResponse> _requestPrePurchaseVerdict() async {
+  Future<AIResponse> _requestPrePurchaseVerdict({
+    CancelToken? cancelToken,
+  }) async {
     try {
       final aiService = ref.read(aiServiceProvider);
       String? insightContext;
@@ -246,11 +249,15 @@ class _PrePurchaseScreenState extends ConsumerState<PrePurchaseScreen> {
         category: _selectedCategory!,
         insightContext: insightContext,
         contextScope: _selectedContextScope,
+        cancelToken: cancelToken,
       );
 
       ref.read(monthlyUsageProvider.notifier).recordAiAssist();
       return response;
     } on DioException catch (e, s) {
+      if (CancelToken.isCancel(e)) {
+        rethrow;
+      }
       if (e.response?.statusCode == 403) {
         throw AppError.from(e, stackTrace: s).userMessage;
       }
@@ -266,7 +273,10 @@ class _PrePurchaseScreenState extends ConsumerState<PrePurchaseScreen> {
           locale: ref.read(userPreferencesProvider).locale,
         ) ??
         0;
-    final responseFuture = _requestPrePurchaseVerdict();
+    final cancelToken = CancelToken();
+    final responseFuture = _requestPrePurchaseVerdict(
+      cancelToken: cancelToken,
+    );
 
     await showModalBottomSheet<void>(
       context: context,
@@ -331,6 +341,9 @@ class _PrePurchaseScreenState extends ConsumerState<PrePurchaseScreen> {
         );
       },
     );
+    if (!cancelToken.isCancelled) {
+      cancelToken.cancel('Conscience check closed.');
+    }
   }
 
   void _reset() {
@@ -644,40 +657,22 @@ class _ConscienceCheckSheetContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).appColors;
-    final textTheme = Theme.of(context).textTheme;
-
-    return ListView(
-      controller: scrollController,
-      padding: const EdgeInsets.fromLTRB(20, 12, 20, 28),
-      children: [
-        const _SheetHandle(),
-        const SizedBox(height: 18),
-        Text(
-          'Conscience Check',
-          textAlign: TextAlign.center,
-          style: textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
-        ),
-        const SizedBox(height: 28),
-        Text(
-          'Reviewing your ${CurrencyFormatter.format(
-            amount,
-            currencyCode: currencyCode,
-          )} ${description.trim()} decision...',
-          textAlign: TextAlign.center,
-          style: textTheme.bodySmall?.copyWith(color: colors.mutedInk),
-        ),
-        const SizedBox(height: 14),
-        const Center(child: ThinkingCloudWidget(size: 224)),
-        const SizedBox(height: 18),
-        _InsightSlideshow(
-          description: description,
-          amount: amount,
-          currencyCode: currencyCode,
-          category: category,
-          insightText: insightText,
-        ),
-      ],
+    return AiGuidanceLoadingSheet(
+      keyPrefix: 'prepurchase',
+      scrollController: scrollController,
+      title: 'Conscience Check',
+      message: 'Reviewing your ${CurrencyFormatter.format(
+        amount,
+        currencyCode: currencyCode,
+      )} ${description.trim()} decision...',
+      cloudSize: 216,
+      detail: _InsightSlideshow(
+        description: description,
+        amount: amount,
+        currencyCode: currencyCode,
+        category: category,
+        insightText: insightText,
+      ),
     );
   }
 }
@@ -906,7 +901,11 @@ class _InsightSlideshowState extends State<_InsightSlideshow> {
                 icon: widget.category.isNotEmpty
                     ? IconTheme(
                         data: const IconThemeData(color: Colors.white),
-                        child: CategoryIcons.rawIcon(widget.category, size: 22),
+                        child: CategoryIcons.rawIcon(
+                          widget.category,
+                          size: 22,
+                          type: 'Expense',
+                        ),
                       )
                     : const Icon(Icons.shopping_bag_outlined,
                         size: 22, color: Colors.white),
@@ -1047,7 +1046,6 @@ class _AssistantHeroBleed extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).appColors;
     final textTheme = Theme.of(context).textTheme;
-    final topInset = MediaQuery.paddingOf(context).top;
 
     return Container(
       key: const ValueKey('assistant-hero-bleed'),
@@ -1063,7 +1061,12 @@ class _AssistantHeroBleed extends StatelessWidget {
         ),
       ),
       child: Padding(
-        padding: EdgeInsets.fromLTRB(20, topInset + 68, 20, 24),
+        padding: EdgeInsets.fromLTRB(
+          AppLayout.screenPadding,
+          AppLayout.assistantHeroTop(context),
+          AppLayout.screenPadding,
+          24,
+        ),
         child: Column(
           children: [
             const ThinkingCloudWidget(size: 124),

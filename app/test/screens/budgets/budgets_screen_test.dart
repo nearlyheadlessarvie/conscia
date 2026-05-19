@@ -12,6 +12,7 @@ import 'package:conscia_app/services/budget_service.dart';
 import 'package:conscia_app/services/subscription_service.dart';
 import 'package:conscia_app/services/user_service.dart';
 import 'package:conscia_app/providers/user_provider.dart';
+import 'package:conscia_app/widgets/budget_mix_visuals.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -45,6 +46,19 @@ class _TestAuthNotifier extends AuthNotifier {
   }
 }
 
+class _MutableAuthNotifier extends AuthNotifier {
+  _MutableAuthNotifier() : super(_FakeAuthService(), _FakeSecureStorage());
+
+  void authenticate() {
+    state = const AuthState(
+      status: AuthStatus.authenticated,
+      userId: 'user-1',
+      accessToken: 'token',
+      refreshToken: 'refresh',
+    );
+  }
+}
+
 final _authenticatedOverride = authProvider.overrideWith(
   (ref) => _TestAuthNotifier(
     const AuthState(status: AuthStatus.authenticated, userId: 'user-1'),
@@ -61,12 +75,14 @@ class _StaticBudgetService extends BudgetService {
 }
 
 class _RecordingBudgetService extends BudgetService {
-  _RecordingBudgetService() : super(Dio());
+  _RecordingBudgetService([this.initialBudgets = const []]) : super(Dio());
 
+  final List<Budget> initialBudgets;
   CreateBudgetDto? lastCreated;
+  String? deletedId;
 
   @override
-  Future<List<Budget>> list() async => const [];
+  Future<List<Budget>> list() async => initialBudgets;
 
   @override
   Future<Budget> create(CreateBudgetDto dto) async {
@@ -81,6 +97,20 @@ class _RecordingBudgetService extends BudgetService {
       isOverBudget: false,
     );
   }
+
+  @override
+  Future<void> delete(String id) async {
+    deletedId = id;
+  }
+}
+
+class _CompletingSubscriptionService extends SubscriptionService {
+  _CompletingSubscriptionService(this.status) : super(Dio());
+
+  final Completer<SubscriptionStatus> status;
+
+  @override
+  Future<SubscriptionStatus> getStatus() => status.future;
 }
 
 Future<void> _pumpBudgetsScreen(
@@ -243,6 +273,7 @@ void main() {
     expect(find.text('1 family'), findsNothing);
     expect(find.byType(BudgetCard), findsNothing);
     expect(find.text('Family budget'), findsNothing);
+    expect(find.byTooltip('Budget actions'), findsNothing);
     final painter = tester.widget<CustomPaint>(
       find.descendant(
         of: find.byKey(const ValueKey('budgets-hero-donut')),
@@ -256,7 +287,7 @@ void main() {
       containsAllInOrder(
         const [
           Color(0xFF43A047),
-          Color(0xFFFF9800),
+          Color(0xFFEC407A),
         ],
       ),
     );
@@ -280,6 +311,55 @@ void main() {
 
     expect(find.text('₱6,500.00'), findsOneWidget);
     expect(find.text('Family budget'), findsNothing);
+  });
+
+  testWidgets('budget rows delete through a swipe pull-up confirmation',
+      (tester) async {
+    final budgetService = _RecordingBudgetService(const [
+      Budget(
+        id: 'budget-delete',
+        category: 'Coffee',
+        monthlyLimit: 2000,
+        spent: 250,
+        currencyCode: 'PHP',
+        percentage: 0.125,
+        isOverBudget: false,
+      ),
+    ]);
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          _authenticatedOverride,
+          budgetServiceProvider.overrideWithValue(budgetService),
+          sharedPreferencesProvider.overrideWithValue(prefs),
+          subscriptionProvider.overrideWith(
+            (ref) async => const SubscriptionStatus(
+              tier: 'premium',
+              isPremium: true,
+            ),
+          ),
+        ],
+        child: const MaterialApp(home: BudgetsScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byType(Dismissible), findsOneWidget);
+
+    await tester.drag(find.text('Coffee').first, const Offset(-500, 0));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Delete this budget?'), findsOneWidget);
+    expect(find.text("This can't be undone."), findsOneWidget);
+
+    await tester.tap(find.widgetWithText(FilledButton, 'Delete budget'));
+    await tester.pumpAndSettle();
+
+    expect(budgetService.deletedId, 'budget-delete');
+    expect(find.text('Budget deleted.'), findsOneWidget);
   });
 
   testWidgets('tapping a budget donut segment calls out its mix pill',
@@ -327,6 +407,55 @@ void main() {
 
     expect(
         find.byKey(const ValueKey('budget-mix-chip-0-active')), findsOneWidget);
+  });
+
+  test('budget donut preserves visible gaps with small adjacent segments', () {
+    const painter = BudgetMixDonutPainter(
+      segments: [
+        BudgetMixDonutSegment(share: 0.64, color: Color(0xFF43A047)),
+        BudgetMixDonutSegment(share: 0.17, color: Color(0xFFFF9800)),
+        BudgetMixDonutSegment(share: 0.10, color: Color(0xFFEC407A)),
+        BudgetMixDonutSegment(share: 0.09, color: Color(0xFF2563EB)),
+      ],
+      trackColor: Color(0x33000000),
+      trackOpacity: 0.2,
+      trackStrokeWidth: 22,
+      segmentStrokeWidth: 16,
+      visibleGapPx: 1.5,
+    );
+
+    final gaps = painter.debugBoundaryGapPx(const Size.square(124));
+
+    expect(gaps, isNotEmpty);
+    for (final gap in gaps) {
+      expect(gap, greaterThanOrEqualTo(1.49));
+    }
+  });
+
+  test('budget donut renders tiny segments as circular dots', () {
+    const painter = BudgetMixDonutPainter(
+      segments: [
+        BudgetMixDonutSegment(share: 0.70, color: Color(0xFF43A047)),
+        BudgetMixDonutSegment(share: 0.20, color: Color(0xFFFF9800)),
+        BudgetMixDonutSegment(share: 0.05, color: Color(0xFFEC407A)),
+        BudgetMixDonutSegment(share: 0.05, color: Color(0xFF2563EB)),
+      ],
+      trackColor: Color(0x33000000),
+      trackOpacity: 0.2,
+      trackStrokeWidth: 22,
+      segmentStrokeWidth: 16,
+      visibleGapPx: 1.5,
+    );
+
+    final dotRadii = painter.debugDotRadii(const Size.square(124));
+    final gaps = painter.debugBoundaryGapPx(const Size.square(124));
+
+    expect(dotRadii.length, 2);
+    expect(dotRadii.every((radius) => radius > 0), isTrue);
+    expect(dotRadii.every((radius) => radius <= 8), isTrue);
+    for (final gap in gaps) {
+      expect(gap, greaterThanOrEqualTo(1.49));
+    }
   });
 
   testWidgets('budgets hero donut spans the headline story block',
@@ -494,6 +623,101 @@ void main() {
       ],
       subscriptionBuilder: () => subscription.future,
     );
+
+    await tester.tap(find.byTooltip('Add budget'));
+    await tester.pump();
+
+    expect(find.text('Premium Feature'), findsNothing);
+
+    subscription.complete(
+      const SubscriptionStatus(tier: 'premium', isPremium: true),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('New Budget'), findsOneWidget);
+    expect(find.text('Premium Feature'), findsNothing);
+  });
+
+  testWidgets(
+      'add budget ignores stale free status while premium status reloads',
+      (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+    final auth = _MutableAuthNotifier();
+    final subscription = Completer<SubscriptionStatus>();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          authProvider.overrideWith((ref) => auth),
+          budgetServiceProvider.overrideWithValue(
+            _StaticBudgetService(
+              const [
+                Budget(
+                  id: 'budget-1',
+                  category: 'Dining',
+                  monthlyLimit: 4000,
+                  spent: 1200,
+                  currencyCode: 'PHP',
+                  percentage: 0.3,
+                  isOverBudget: false,
+                ),
+                Budget(
+                  id: 'budget-2',
+                  category: 'Bills',
+                  monthlyLimit: 12000,
+                  spent: 2195,
+                  currencyCode: 'PHP',
+                  percentage: 0.18,
+                  isOverBudget: false,
+                ),
+                Budget(
+                  id: 'budget-3',
+                  category: 'Shopping',
+                  monthlyLimit: 3500,
+                  spent: 1890,
+                  currencyCode: 'PHP',
+                  percentage: 0.54,
+                  isOverBudget: false,
+                ),
+              ],
+            ),
+          ),
+          subscriptionServiceProvider.overrideWithValue(
+            _CompletingSubscriptionService(subscription),
+          ),
+          currentUserProvider.overrideWith(
+            (ref) async => UserProfile(
+              id: 'user-1',
+              email: 'premium@example.com',
+              currencyCode: 'PHP',
+              locale: 'en_PH',
+              createdAt: DateTime(2026),
+              hasCompletedOnboarding: true,
+            ),
+          ),
+          familySpaceProvider.overrideWith((ref) async => null),
+          sharedPreferencesProvider.overrideWithValue(prefs),
+        ],
+        child: MaterialApp(
+          home: Stack(
+            children: [
+              const BudgetsScreen(),
+              Consumer(
+                builder: (context, ref, child) {
+                  ref.watch(subscriptionProvider);
+                  return const SizedBox.shrink();
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    auth.authenticate();
+    await tester.pump();
 
     await tester.tap(find.byTooltip('Add budget'));
     await tester.pump();

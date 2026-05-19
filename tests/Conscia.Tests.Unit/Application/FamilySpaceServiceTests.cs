@@ -438,6 +438,70 @@ public class FamilySpaceServiceTests
     }
 
     [Fact]
+    public async Task TransferOwnershipAsync_OwnerTransfersToContributor()
+    {
+        var ownerId = Guid.NewGuid();
+        var targetUserId = Guid.NewGuid();
+        var familySpaceId = Guid.NewGuid();
+        var ownerMemberId = Guid.NewGuid();
+        var targetMemberId = Guid.NewGuid();
+        var ownerMember = new FamilyMember
+        {
+            Id = ownerMemberId,
+            UserId = ownerId,
+            FamilySpaceId = familySpaceId,
+            Role = FamilyMemberRole.Owner,
+            JoinedAt = DateTime.UtcNow.AddDays(-10)
+        };
+        var targetMember = new FamilyMember
+        {
+            Id = targetMemberId,
+            UserId = targetUserId,
+            FamilySpaceId = familySpaceId,
+            Role = FamilyMemberRole.Contributor,
+            JoinedAt = DateTime.UtcNow.AddDays(-2)
+        };
+        _repo.Setup(r => r.GetMembershipByUserIdAsync(ownerId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(ownerMember);
+        _repo.Setup(r => r.ListMembersAsync(familySpaceId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync([ownerMember, targetMember]);
+        _users.Setup(r => r.GetByIdAsync(targetUserId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new User { Id = targetUserId, Email = "spouse@example.com" });
+
+        var updated = await CreateService().TransferOwnershipAsync(ownerId, targetMemberId);
+
+        Assert.Equal("Owner", updated.Role);
+        Assert.Equal(targetMemberId, updated.Id);
+        _repo.Verify(r => r.TransferOwnershipAsync(
+            It.Is<FamilyMember>(m => m.Id == ownerMemberId && m.Role == FamilyMemberRole.Contributor),
+            It.Is<FamilyMember>(m => m.Id == targetMemberId && m.Role == FamilyMemberRole.Owner),
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task TransferOwnershipAsync_ContributorCannotTransferOwnership()
+    {
+        var userId = Guid.NewGuid();
+        _repo.Setup(r => r.GetMembershipByUserIdAsync(userId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new FamilyMember
+            {
+                Id = Guid.NewGuid(),
+                UserId = userId,
+                FamilySpaceId = Guid.NewGuid(),
+                Role = FamilyMemberRole.Contributor
+            });
+
+        var error = await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
+            CreateService().TransferOwnershipAsync(userId, Guid.NewGuid()));
+
+        Assert.Equal("Only Family Space owners can manage invites.", error.Message);
+        _repo.Verify(r => r.TransferOwnershipAsync(
+            It.IsAny<FamilyMember>(),
+            It.IsAny<FamilyMember>(),
+            It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
     public async Task RemoveMemberAsync_OwnerRemovesContributor()
     {
         var ownerId = Guid.NewGuid();

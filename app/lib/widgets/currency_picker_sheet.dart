@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../core/constants/generated/app_constants.g.dart';
 import '../screens/settings/widgets/subscription_sheet.dart';
+import 'conscia_bottom_sheet.dart';
 
 class CurrencyPickerSheet {
   CurrencyPickerSheet._();
@@ -58,7 +59,8 @@ class _CurrencyPickerBodyState extends State<_CurrencyPickerBody> {
   String _query = '';
 
   List<CurrencyInfo> get _filtered {
-    final currencies = _prioritizedCurrencies(widget.priorityCode ?? widget.selectedCode);
+    final currencies =
+        _prioritizedCurrencies(widget.priorityCode ?? widget.selectedCode);
     if (_query.isEmpty) return currencies;
     final q = _query.toLowerCase();
     return currencies
@@ -94,28 +96,32 @@ class _CurrencyPickerBodyState extends State<_CurrencyPickerBody> {
     return Column(
       children: [
         const SizedBox(height: 8),
-        Container(
-          width: 32,
-          height: 4,
-          decoration: BoxDecoration(
-            color: colors.outlineVariant,
-            borderRadius: BorderRadius.circular(2),
-          ),
-        ),
+        const ConsciaSheetHandle(),
         const SizedBox(height: 16),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: TextField(
-            decoration: InputDecoration(
-              hintText: 'Search currencies...',
-              prefixIcon: const Icon(Icons.search),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const ConsciaSheetHeader(
+                title: 'Currency',
+                subtitle:
+                    'Choose the currency Conscia uses for new records and summaries.',
               ),
-              filled: true,
-              fillColor: colors.surfaceContainerHighest,
-            ),
-            onChanged: (v) => setState(() => _query = v),
+              const SizedBox(height: 16),
+              TextField(
+                decoration: InputDecoration(
+                  hintText: 'Search currencies...',
+                  prefixIcon: const Icon(Icons.search),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  filled: true,
+                  fillColor: colors.surfaceContainerHighest,
+                ),
+                onChanged: (v) => setState(() => _query = v),
+              ),
+            ],
           ),
         ),
         const SizedBox(height: 8),
@@ -156,7 +162,8 @@ class _CurrencyPickerBodyState extends State<_CurrencyPickerBody> {
               final isLocked = !widget.isPremium && !isSelected;
 
               return ListTile(
-                leading: Text(currency.flag, style: const TextStyle(fontSize: 24)),
+                leading:
+                    Text(currency.flag, style: const TextStyle(fontSize: 24)),
                 title: Text(currency.code),
                 subtitle: Text(currency.name),
                 trailing: isSelected

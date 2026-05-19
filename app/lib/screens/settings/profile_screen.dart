@@ -4,11 +4,14 @@ import 'package:image_picker/image_picker.dart';
 
 import '../../core/errors/app_error.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_layout.dart';
 import '../../core/utils/currency_formatter.dart';
 import '../../providers/user_provider.dart';
 import '../../services/user_service.dart';
 import '../../widgets/conscia_app_bar.dart';
+import '../../widgets/conscia_bottom_sheet.dart';
 import '../../widgets/floating_label_text_field.dart';
+import '../../widgets/single_select_list.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
@@ -174,7 +177,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
-      showDragHandle: true,
       backgroundColor: Theme.of(context).appColors.paper,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
@@ -428,7 +430,6 @@ class _ProfileSaveCta extends StatelessWidget {
           ),
           child: SizedBox(
             key: const ValueKey('profile-save-cta'),
-            height: 48,
             child: FilledButton(
               onPressed: onPressed,
               child: saving
@@ -462,12 +463,16 @@ class _ProfileEditorialHero extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).appColors;
     final textTheme = Theme.of(context).textTheme;
-    final topInset = MediaQuery.paddingOf(context).top;
 
     return Container(
       key: const ValueKey('profile-editorial-hero'),
       width: double.infinity,
-      padding: EdgeInsets.fromLTRB(20, topInset + 12, 20, 28),
+      padding: EdgeInsets.fromLTRB(
+        AppLayout.screenPadding,
+        AppLayout.bleedingHeroTop(context),
+        AppLayout.screenPadding,
+        AppLayout.heroBottomPadding,
+      ),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
@@ -791,142 +796,35 @@ class _ProfileOptionSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).appColors;
-    final textTheme = Theme.of(context).textTheme;
+    _ProfileOption? selectedOption;
+    for (final option in options) {
+      if (option.value == value) {
+        selectedOption = option;
+        break;
+      }
+    }
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 0, 20, 28),
+      padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(
-            title,
-            style: textTheme.titleLarge?.copyWith(
-              color: colors.ink,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            'Choose the option that best fits your profile.',
-            style: textTheme.bodyMedium?.copyWith(color: colors.mutedInk),
+          const ConsciaSheetHandle(),
+          const SizedBox(height: 18),
+          ConsciaSheetHeader(
+            title: title,
+            subtitle: 'Choose the option that best fits your profile.',
           ),
           const SizedBox(height: 18),
-          DecoratedBox(
-            decoration: BoxDecoration(
-              border: Border.all(color: colors.border),
-              borderRadius: BorderRadius.circular(22),
-              color: colors.paper,
-            ),
-            child: Column(
-              children: [
-                for (var index = 0; index < options.length; index++) ...[
-                  _ProfileOptionRow(
-                    option: options[index],
-                    selected: value == options[index].value,
-                    onTap: () =>
-                        Navigator.of(context).pop(options[index].value),
-                  ),
-                  if (index != options.length - 1)
-                    Divider(
-                      height: 1,
-                      indent: 16,
-                      endIndent: 16,
-                      color: colors.border,
-                    ),
-                ],
-              ],
-            ),
+          SingleSelectList<_ProfileOption>(
+            options: options,
+            value: selectedOption,
+            titleBuilder: (option) => option.title,
+            subtitleBuilder: (option) => option.subtitle,
+            onChanged: (option) => Navigator.of(context).pop(option.value),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _ProfileOptionRow extends StatelessWidget {
-  const _ProfileOptionRow({
-    required this.option,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final _ProfileOption option;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).appColors;
-    final textTheme = Theme.of(context).textTheme;
-
-    return InkWell(
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        child: Row(
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    option.title,
-                    style: textTheme.bodyMedium?.copyWith(
-                      color: selected ? colors.deepNavy : colors.ink,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  if (option.subtitle != null) ...[
-                    const SizedBox(height: 3),
-                    Text(
-                      option.subtitle!,
-                      style: textTheme.bodySmall?.copyWith(
-                        color: colors.mutedInk,
-                        height: 1.25,
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-            _RadioDot(selected: selected),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _RadioDot extends StatelessWidget {
-  const _RadioDot({required this.selected});
-
-  final bool selected;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).appColors;
-    return Container(
-      width: 20,
-      height: 20,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        border: Border.all(
-          color: selected ? colors.deepNavy : colors.border,
-          width: 2,
-        ),
-      ),
-      child: Center(
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 140),
-          width: selected ? 10 : 0,
-          height: selected ? 10 : 0,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: colors.deepNavy,
-          ),
-        ),
       ),
     );
   }

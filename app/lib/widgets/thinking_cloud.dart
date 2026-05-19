@@ -241,14 +241,37 @@ class _ThinkingCloudPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width * 0.5, size.height * 0.5);
+    final sphereRadius = size.width * 0.39;
+
     // Soft background glow — a single large translucent blob anchored at
     // centre so the particle cloud reads as a cohesive sphere.
     canvas.drawCircle(
-      Offset(size.width * 0.5, size.height * 0.5),
-      size.width * 0.38,
+      center,
+      sphereRadius,
       Paint()
         ..color = const Color(0xFF67D9FF).withValues(alpha: 0.06)
         ..maskFilter = MaskFilter.blur(BlurStyle.normal, size.width * 0.22),
+    );
+
+    canvas.drawCircle(
+      center,
+      sphereRadius * 0.98,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = size.width * 0.012
+        ..color = const Color(0xFF18245C).withValues(alpha: 0.055)
+        ..maskFilter = MaskFilter.blur(BlurStyle.normal, size.width * 0.018),
+    );
+
+    canvas.drawCircle(
+      center,
+      sphereRadius * 0.74,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = size.width * 0.006
+        ..color = const Color(0xFFFFB300).withValues(alpha: 0.045)
+        ..maskFilter = MaskFilter.blur(BlurStyle.normal, size.width * 0.012),
     );
 
     final paint = Paint();

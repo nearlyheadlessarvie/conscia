@@ -40,7 +40,7 @@ public class PushDeviceTokenRepository : DynamoRepository, IPushDeviceTokenRepos
             }
         }, ct);
 
-        return response.Items.Select(FromItem).ToList();
+        return Items(response).Select(FromItem).ToList();
     }
 
     private async Task<PushDeviceToken?> GetExistingTokenAsync(Guid userId, string token, CancellationToken ct)
@@ -51,7 +51,7 @@ public class PushDeviceTokenRepository : DynamoRepository, IPushDeviceTokenRepos
             Key = Key(DynamoKeys.User(userId), TokenSortKey(token))
         }, ct);
 
-        return response.Item is null || response.Item.Count == 0 ? null : FromItem(response.Item);
+        return IsMissingItem(response.Item) ? null : FromItem(response.Item);
     }
 
     private static Dictionary<string, AttributeValue> ToItem(PushDeviceToken token, DateTime createdAt)

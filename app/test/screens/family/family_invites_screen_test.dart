@@ -68,7 +68,7 @@ void main() {
 
     await tester.pumpAndSettle();
 
-    expect(find.text('Invite a family member'), findsOneWidget);
+    expect(find.text('INVITE A FAMILY MEMBER'), findsOneWidget);
     expect(find.text('Email address'), findsOneWidget);
     expect(find.text('Contributor'), findsOneWidget);
     expect(find.text('Viewer'), findsOneWidget);
@@ -146,9 +146,15 @@ void main() {
 
     expect(find.text('SENT'), findsOneWidget);
     expect(find.text('wife@example.com'), findsOneWidget);
-    expect(find.widgetWithText(TextButton, 'Cancel'), findsOneWidget);
+    expect(find.text('Contributor · Expires May 15'), findsOneWidget);
+    expect(find.widgetWithText(TextButton, 'Cancel'), findsNothing);
+    expect(find.byType(Dismissible), findsAtLeastNWidgets(1));
 
-    await tester.tap(find.widgetWithText(TextButton, 'Cancel'));
+    final outgoingInvite =
+        find.byKey(const ValueKey('outgoing-invite-invite-outgoing'));
+    await tester.ensureVisible(outgoingInvite);
+    await tester.pumpAndSettle();
+    await tester.drag(outgoingInvite, const Offset(-500, 0));
     await tester.pumpAndSettle();
 
     expect(actions.cancelledInviteIds, ['invite-outgoing']);
@@ -203,6 +209,11 @@ class _RecordingFamilySpaceActions implements FamilySpaceActions {
     required String memberId,
     required String role,
   }) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<FamilyMember> transferOwnership(String memberId) {
     throw UnimplementedError();
   }
 }

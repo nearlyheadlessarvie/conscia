@@ -30,6 +30,24 @@ class _RecordingTransactionService extends TransactionService {
   _RecordingTransactionService() : super(Dio());
 
   String? deletedId;
+  Transaction? transaction;
+  Transaction? updatedTransaction;
+  CreateTransactionDto? updateDto;
+
+  @override
+  Future<Transaction> getById(String id) async {
+    final result = transaction;
+    if (result == null) throw StateError('No transaction configured for $id');
+    return result;
+  }
+
+  @override
+  Future<Transaction> update(String id, CreateTransactionDto dto) async {
+    updateDto = dto;
+    final result = updatedTransaction;
+    if (result == null) throw StateError('No updated transaction configured');
+    return result;
+  }
 
   @override
   Future<void> delete(String id) async {
@@ -75,8 +93,14 @@ class _RecordingBudgetService extends BudgetService {
 class _DelayedReflectionAIService extends AIService {
   _DelayedReflectionAIService() : super(Dio());
 
+  CancelToken? receivedCancelToken;
+
   @override
-  Future<AIResponse> reflection({required String transactionId}) async {
+  Future<AIResponse> reflection({
+    required String transactionId,
+    CancelToken? cancelToken,
+  }) async {
+    receivedCancelToken = cancelToken;
     await Future<void>.delayed(const Duration(seconds: 5));
     return const AIResponse(
       impulse: 'Impulse',
@@ -90,7 +114,10 @@ class _ImmediateReflectionAIService extends AIService {
   _ImmediateReflectionAIService() : super(Dio());
 
   @override
-  Future<AIResponse> reflection({required String transactionId}) async {
+  Future<AIResponse> reflection({
+    required String transactionId,
+    CancelToken? cancelToken,
+  }) async {
     return const AIResponse(
       impulse: 'Treat it like a reward.',
       reason: 'Pause and compare it with your goals.',
@@ -180,8 +207,16 @@ void main() {
     expect(find.text('PURCHASE SNAPSHOT'), findsOneWidget);
     expect(find.text('DETAILS'), findsOneWidget);
     expect(find.text('HOW DID THIS FEEL?'), findsOneWidget);
-    expect(find.text('Reflect'), findsOneWidget);
+    expect(find.text('Reflect'), findsNothing);
     expect(find.text('Reflect with Conscia'), findsNothing);
+    expect(find.byTooltip('Transaction actions'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Transaction actions'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Reflect with Conscia'), findsOneWidget);
+    expect(find.text('Edit transaction'), findsWidgets);
+    expect(find.text('Delete transaction'), findsOneWidget);
   });
 
   testWidgets('detail loading skeleton uses the same bleed hero shape',
@@ -250,6 +285,46 @@ void main() {
     expect(find.text('PURCHASE SNAPSHOT'), findsNothing);
     expect(find.text('Reflect'), findsNothing);
     expect(find.text('HOW DID THIS FEEL?'), findsNothing);
+  });
+
+  testWidgets('income transaction actions do not mention reflection patterns',
+      (tester) async {
+    final transaction = Transaction(
+      id: 'tx-income-actions',
+      amount: 3500,
+      currencyCode: 'PHP',
+      category: 'Salary',
+      description: 'Freelance Client',
+      type: 'income',
+      date: DateTime(2026, 5, 15, 3, 25),
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          transactionDetailProvider
+              .overrideWith((ref, id) async => transaction),
+        ],
+        child: const MaterialApp(
+          home: TransactionDetailScreen(transactionId: 'tx-income-actions'),
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Transaction actions'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Transaction actions'), findsOneWidget);
+    expect(
+      find.text('Edit or remove this income record from your history.'),
+      findsOneWidget,
+    );
+    expect(
+      find.text('Edit this record or ask Conscia to read the pattern.'),
+      findsNothing,
+    );
+    expect(find.text('Reflect with Conscia'), findsNothing);
   });
 
   testWidgets('detail regret picker uses large shared feeling buttons',
@@ -377,8 +452,7 @@ void main() {
     expect(headerColor(), isNot(Colors.transparent));
   });
 
-  testWidgets('detail screen shows edited transaction returned from edit route',
-      (
+  testWidgets('detail screen opens edit transaction in a sheet', (
     tester,
   ) async {
     final originalTransaction = Transaction(
@@ -401,40 +475,24 @@ void main() {
       date: DateTime(2026, 5, 7, 13, 25),
     );
 
-    final router = GoRouter(
-      initialLocation: '/transactions/tx-1',
-      routes: [
-        GoRoute(
-          path: '/transactions/:id',
-          builder: (_, state) => TransactionDetailScreen(
-            transactionId: state.pathParameters['id']!,
-          ),
-          routes: [
-            GoRoute(
-              path: 'edit',
-              builder: (context, state) => Scaffold(
-                body: Center(
-                  child: FilledButton(
-                    onPressed: () =>
-                        Navigator.of(context).pop(updatedTransaction),
-                    child: const Text('Return updated'),
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
+    final transactionService = _RecordingTransactionService()
+      ..transaction = originalTransaction
+      ..updatedTransaction = updatedTransaction;
 
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          sharedPreferencesProvider.overrideWithValue(prefs),
+          transactionServiceProvider.overrideWithValue(transactionService),
+          budgetServiceProvider
+              .overrideWithValue(_StaticBudgetService(const [])),
           transactionDetailProvider.overrideWith(
             (ref, id) async => originalTransaction,
           ),
         ],
-        child: MaterialApp.router(routerConfig: router),
+        child: const MaterialApp(
+          home: TransactionDetailScreen(transactionId: 'tx-1'),
+        ),
       ),
     );
 
@@ -444,13 +502,11 @@ void main() {
 
     await tester.tap(find.byTooltip('Transaction actions'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Edit Transaction'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Return updated'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Ippudo'), findsOneWidget);
-    expect(find.text('Watami'), findsNothing);
+    await tester.tap(find.text('Edit transaction'));
+    await tester.pump(const Duration(milliseconds: 350));
+    expect(find.text('Edit transaction'), findsWidgets);
+    expect(find.byType(BottomSheet), findsWidgets);
+    expect(find.text('Watami'), findsOneWidget);
   });
 
   testWidgets('detail screen delete updates local budget usage immediately', (
@@ -521,7 +577,7 @@ void main() {
 
     await tester.tap(find.byTooltip('Transaction actions'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Delete Transaction'));
+    await tester.tap(find.text('Delete transaction'));
     await tester.pumpAndSettle();
     await tester.tap(find.widgetWithText(FilledButton, 'Delete transaction'));
     await tester.pump();
@@ -624,7 +680,7 @@ void main() {
     expect(find.text('View transaction'), findsNothing);
   });
 
-  testWidgets('detail hero opens create budget form for unbudgeted expenses',
+  testWidgets('detail actions open create budget form for unbudgeted expenses',
       (tester) async {
     final transaction = Transaction(
       id: 'tx-unbudgeted',
@@ -666,9 +722,13 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('No budget for Subscriptions yet'), findsNothing);
-    expect(find.widgetWithText(OutlinedButton, 'Add Budget'), findsOneWidget);
+    expect(find.text('Add budget'), findsNothing);
 
-    await tester.tap(find.widgetWithText(OutlinedButton, 'Add Budget'));
+    await tester.tap(find.byTooltip('Transaction actions'));
+    await tester.pumpAndSettle();
+    expect(find.text('Add budget'), findsOneWidget);
+
+    await tester.tap(find.text('Add budget'));
     await tester.pumpAndSettle();
 
     expect(find.text('New Budget'), findsOneWidget);
@@ -689,12 +749,14 @@ void main() {
 
     final transactionService = _RecordingTransactionService();
 
+    final aiService = _DelayedReflectionAIService();
+
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
           transactionDetailProvider
               .overrideWith((ref, id) async => transaction),
-          aiServiceProvider.overrideWithValue(_DelayedReflectionAIService()),
+          aiServiceProvider.overrideWithValue(aiService),
           transactionServiceProvider.overrideWithValue(transactionService),
           sharedPreferencesProvider.overrideWithValue(prefs),
         ],
@@ -706,16 +768,20 @@ void main() {
 
     await tester.pumpAndSettle();
 
-    await tester.ensureVisible(find.text('Reflect'));
-    await tester.tap(find.text('Reflect'));
+    await tester.tap(find.byTooltip('Transaction actions'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Reflect with Conscia'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
 
     expect(find.byType(ThinkingCloudWidget), findsOneWidget);
     expect(find.text('Reflection is making sense of the moment...'),
         findsOneWidget);
-    expect(find.byKey(const ValueKey('conscience-loader-reflection')),
-        findsNothing);
+    expect(
+      find.byKey(const ValueKey('ai-guidance-loading-sheet-reflection')),
+      findsOneWidget,
+    );
+    expect(aiService.receivedCancelToken, isNotNull);
 
     await tester.pump(const Duration(seconds: 5));
     await tester.pumpAndSettle();
@@ -761,8 +827,9 @@ void main() {
 
     await tester.pumpAndSettle();
 
-    await tester.ensureVisible(find.text('Reflect'));
-    await tester.tap(find.text('Reflect'));
+    await tester.tap(find.byTooltip('Transaction actions'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Reflect with Conscia'));
     await tester.pumpAndSettle();
 
     expect(

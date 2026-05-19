@@ -499,7 +499,7 @@ void main() {
     expect(userService.lastAiPersonalityIntensity, 'intense');
   });
 
-  testWidgets('ai personality uses radio dots for mode selection',
+  testWidgets('ai personality uses flat checkmark rows for mode selection',
       (tester) async {
     SharedPreferences.setMockInitialValues({});
     final prefs = await SharedPreferences.getInstance();
@@ -521,8 +521,9 @@ void main() {
     await tester.tap(find.text('AI Personality'));
     await tester.pumpAndSettle();
 
-    expect(find.byType(Radio<String>), findsNWidgets(3));
-    expect(find.byIcon(Icons.check_circle), findsNothing);
+    expect(find.byType(Radio<String>), findsNothing);
+    expect(find.byIcon(Icons.check_rounded), findsOneWidget);
+    expect(find.byType(Divider), findsWidgets);
   });
 
   testWidgets('shared conscia appears in the settings hero', (
@@ -718,6 +719,29 @@ void main() {
     expect(find.widgetWithText(OutlinedButton, 'Sign Out'), findsNothing);
   });
 
+  testWidgets('sign out confirmation uses a pull-up sheet', (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+    final locationService =
+        _RecordingLocationAssistanceService(permissionGranted: true);
+
+    await _pumpSettingsScreen(
+      tester,
+      prefs: prefs,
+      locationService: locationService,
+    );
+
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('Sign out'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(AlertDialog), findsNothing);
+    expect(find.text('Sign out?'), findsOneWidget);
+    expect(find.widgetWithText(FilledButton, 'Sign out'), findsOneWidget);
+    expect(find.widgetWithText(OutlinedButton, 'Cancel'), findsOneWidget);
+  });
+
   testWidgets('settings shows data and privacy actions directly',
       (tester) async {
     SharedPreferences.setMockInitialValues({});
@@ -741,6 +765,33 @@ void main() {
     expect(find.text('DATA & PRIVACY'), findsOneWidget);
     expect(find.text('Download my data'), findsOneWidget);
     expect(find.text('Delete account'), findsOneWidget);
+  });
+
+  testWidgets('delete account confirmation uses a pull-up sheet',
+      (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+    final locationService =
+        _RecordingLocationAssistanceService(permissionGranted: true);
+
+    await _pumpSettingsScreen(
+      tester,
+      prefs: prefs,
+      locationService: locationService,
+    );
+
+    await tester.pumpAndSettle();
+
+    await tester.scrollUntilVisible(find.text('Delete account'), 280);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Delete account'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(AlertDialog), findsNothing);
+    expect(find.text('Delete this account?'), findsOneWidget);
+    expect(find.widgetWithText(FilledButton, 'Delete account'), findsOneWidget);
+    expect(find.widgetWithText(OutlinedButton, 'Cancel'), findsOneWidget);
   });
 
   testWidgets('settings list groups are flat with separators, not cards',

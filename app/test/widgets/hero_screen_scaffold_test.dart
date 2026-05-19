@@ -1,8 +1,40 @@
 import 'package:conscia_app/widgets/hero_screen_scaffold.dart';
+import 'package:conscia_app/widgets/conscia_app_bar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  testWidgets('HeroScreenScaffold can let a hero bleed behind the app bar',
+      (tester) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: MediaQuery(
+          data: MediaQueryData(
+            size: Size(390, 844),
+            padding: EdgeInsets.only(top: 24),
+          ),
+          child: HeroScreenScaffold(
+            bleedBehindAppBar: true,
+            padding: EdgeInsets.zero,
+            appBar: ConsciaAppBar(title: Text('Categories')),
+            child: SizedBox(
+              key: ValueKey('bleeding-hero'),
+              height: 200,
+            ),
+          ),
+        ),
+      ),
+    );
+
+    final scaffold = tester.widget<Scaffold>(find.byType(Scaffold));
+
+    expect(scaffold.extendBodyBehindAppBar, isTrue);
+    expect(
+      tester.getTopLeft(find.byKey(const ValueKey('bleeding-hero'))).dy,
+      0,
+    );
+  });
+
   testWidgets('HeroScreenScaffold lifts the bottom action above the keyboard',
       (tester) async {
     Future<double> pumpWithInset(double bottomInset) async {

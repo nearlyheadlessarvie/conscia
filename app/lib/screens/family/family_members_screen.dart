@@ -1,13 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
-import '../../core/constants/app_icons.dart';
+import '../../core/routing/app_router.dart';
 import '../../core/errors/app_error.dart';
+import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_layout.dart';
 import '../../models/family_member.dart';
 import '../../providers/family_space_provider.dart';
-import '../../widgets/feed_card.dart';
-import '../../widgets/hero_screen_scaffold.dart';
 import '../../widgets/conscia_app_bar.dart';
+import '../../widgets/conscia_bottom_sheet.dart';
+import '../../widgets/conscia_confirm_sheet.dart';
+import '../../widgets/hero_screen_scaffold.dart';
+import '../../widgets/inline_notice.dart';
+import '../../widgets/screen_section.dart';
 import '../../widgets/skeleton_loader.dart';
 
 class FamilyMembersScreen extends ConsumerWidget {
@@ -17,67 +23,265 @@ class FamilyMembersScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final familySpace = ref.watch(familySpaceProvider);
     final members = ref.watch(familyMembersProvider);
-    final currentRole = familySpace.valueOrNull?.role.toLowerCase() ?? '';
-    final canManage = currentRole == 'owner' &&
-        !(familySpace.valueOrNull?.isReadOnly ?? true);
+    final space = familySpace.valueOrNull;
+    final currentRole = space?.role.toLowerCase() ?? '';
+    final canManage = currentRole == 'owner' && !(space?.isReadOnly ?? true);
 
     return HeroScreenScaffold(
-      appBar: const ConsciaAppBar(title: Text('Family members')),
+      appBar: ConsciaAppBar(
+        title: const Text('Family members'),
+        alwaysShowBack: true,
+        onBack: () {
+          if (context.canPop()) {
+            context.pop();
+          } else {
+            context.go(AppRoutes.familySpace);
+          }
+        },
+      ),
+      padding: EdgeInsets.zero,
+      bleedBehindAppBar: true,
       child: members.when(
         data: (items) => Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text(
-              'People in this Family Space',
-              style: Theme.of(context).textTheme.titleMedium,
+            _FamilyMembersHero(
+              familyName: space?.name ?? 'Family Space',
+              role: space?.role ?? 'Member',
+              currencyCode: space?.currencyCode ?? '',
+              memberCount: items.length,
+              isReadOnly: space?.isReadOnly ?? false,
             ),
-            const SizedBox(height: 8),
-            Text(
-              canManage
-                  ? 'Owners can change member access or remove someone from the household.'
-                  : 'You can see who belongs here. Owners manage roles and removals.',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    height: 1.35,
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 24, 20, 28),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  ScreenSection(
+                    title: 'Members',
+                    subtitle: canManage
+                        ? 'Change access for contributors and viewers.'
+                        : 'Owners manage access. You can still see who belongs here.',
+                    child: _MembersLedger(
+                      members: items,
+                      canManage: canManage,
+                    ),
                   ),
-            ),
-            const SizedBox(height: 14),
-            for (final member in items) ...[
-              _MemberCard(member: member, canManage: canManage),
-              if (member != items.last) const SizedBox(height: 10),
-            ],
-            const SizedBox(height: 18),
-            _LeaveFamilySection(
-              isOwner: currentRole == 'owner',
-              isReadOnly: familySpace.valueOrNull?.isReadOnly ?? false,
-            ),
-          ],
-        ),
-        loading: () => const Column(
-          children: [
-            SkeletonCard(),
-            SizedBox(height: 10),
-            SkeletonCard(),
-          ],
-        ),
-        error: (_, __) => FeedCard(
-          child: Row(
-            children: [
-              const Expanded(child: Text('Unable to load family members')),
-              OutlinedButton(
-                onPressed: () => ref.invalidate(familyMembersProvider),
-                child: const Text('Retry'),
+                  _LeaveFamilySection(
+                    isOwner: currentRole == 'owner',
+                    isReadOnly: space?.isReadOnly ?? false,
+                  ),
+                ],
               ),
-            ],
-          ),
+            ),
+          ],
+        ),
+        loading: () => Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _FamilyMembersHero(
+              familyName: space?.name ?? 'Family Space',
+              role: space?.role ?? 'Member',
+              currencyCode: space?.currencyCode ?? '',
+              memberCount: 0,
+              isReadOnly: space?.isReadOnly ?? false,
+            ),
+            const Padding(
+              padding: EdgeInsets.fromLTRB(20, 24, 20, 28),
+              child: Column(
+                children: [
+                  SkeletonCard(),
+                  SizedBox(height: 10),
+                  SkeletonCard(),
+                ],
+              ),
+            ),
+          ],
+        ),
+        error: (_, __) => Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _FamilyMembersHero(
+              familyName: space?.name ?? 'Family Space',
+              role: space?.role ?? 'Member',
+              currencyCode: space?.currencyCode ?? '',
+              memberCount: 0,
+              isReadOnly: space?.isReadOnly ?? false,
+            ),
+            const Padding(
+              padding: EdgeInsets.fromLTRB(20, 24, 20, 28),
+              child: InlineNotice(
+                message: 'Unable to load family members.',
+                tone: InlineNoticeTone.error,
+                icon: Icon(Icons.error_outline_rounded),
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
 }
 
-class _MemberCard extends ConsumerStatefulWidget {
-  const _MemberCard({
+class _FamilyMembersHero extends StatelessWidget {
+  const _FamilyMembersHero({
+    required this.familyName,
+    required this.role,
+    required this.currencyCode,
+    required this.memberCount,
+    required this.isReadOnly,
+  });
+
+  final String familyName;
+  final String role;
+  final String currencyCode;
+  final int memberCount;
+  final bool isReadOnly;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.appColors;
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            colors.familySoft,
+            colors.paper,
+            colors.amberSoft.withValues(alpha: 0.86),
+          ],
+        ),
+        borderRadius: const BorderRadius.only(
+          bottomLeft: Radius.circular(28),
+          bottomRight: Radius.circular(28),
+        ),
+      ),
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(
+          AppLayout.screenPadding,
+          AppLayout.bleedingHeroTop(context),
+          AppLayout.screenPadding,
+          AppLayout.heroBottomPadding,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'FAMILY ACCESS',
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: colors.deepNavy,
+                fontSize: 11,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 1.2,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'People in $familyName',
+              style: theme.textTheme.headlineSmall?.copyWith(
+                color: colors.deepNavy,
+                fontWeight: FontWeight.w800,
+                height: 1.05,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Keep household access clear without exposing personal records.',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: colors.ink,
+                height: 1.32,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Wrap(
+              spacing: 10,
+              runSpacing: 10,
+              children: [
+                _HeroPill(label: _roleLabel(role)),
+                if (currencyCode.isNotEmpty) _HeroPill(label: currencyCode),
+                _HeroPill(
+                  label:
+                      '$memberCount ${memberCount == 1 ? 'member' : 'members'}',
+                ),
+                if (isReadOnly) const _HeroPill(label: 'View-only'),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _HeroPill extends StatelessWidget {
+  const _HeroPill({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).appColors;
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: colors.surfaceRaised.withValues(alpha: 0.88),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        child: Text(
+          label,
+          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                color: colors.deepNavy,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 0.2,
+              ),
+        ),
+      ),
+    );
+  }
+}
+
+class _MembersLedger extends StatelessWidget {
+  const _MembersLedger({
+    required this.members,
+    required this.canManage,
+  });
+
+  final List<FamilyMember> members;
+  final bool canManage;
+
+  @override
+  Widget build(BuildContext context) {
+    if (members.isEmpty) {
+      return const InlineNotice(
+        message: 'No members are attached to this Family Space yet.',
+        tone: InlineNoticeTone.neutral,
+        icon: Icon(Icons.group_outlined),
+      );
+    }
+
+    return Column(
+      children: [
+        for (var index = 0; index < members.length; index++) ...[
+          _MemberRow(member: members[index], canManage: canManage),
+          if (index != members.length - 1)
+            Divider(
+              height: 20,
+              thickness: 1,
+              color: Theme.of(context).appColors.border,
+            ),
+        ],
+      ],
+    );
+  }
+}
+
+class _MemberRow extends ConsumerStatefulWidget {
+  const _MemberRow({
     required this.member,
     required this.canManage,
   });
@@ -86,109 +290,97 @@ class _MemberCard extends ConsumerStatefulWidget {
   final bool canManage;
 
   @override
-  ConsumerState<_MemberCard> createState() => _MemberCardState();
+  ConsumerState<_MemberRow> createState() => _MemberRowState();
 }
 
-class _MemberCardState extends ConsumerState<_MemberCard> {
+class _MemberRowState extends ConsumerState<_MemberRow> {
   bool _isSubmitting = false;
+  String? _errorText;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final colors = theme.colorScheme;
+    final colors = theme.appColors;
     final canManageThisMember = widget.canManage &&
         !widget.member.isCurrentUser &&
         !widget.member.isOwner;
-    final alternateRole =
-        widget.member.role.toLowerCase() == 'viewer' ? 'Contributor' : 'Viewer';
 
-    return FeedCard(
-      padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          CircleAvatar(
-            radius: 22,
-            backgroundColor: colors.primaryContainer.withValues(alpha: 0.55),
-            child: Text(
-              widget.member.initials,
-              style: theme.textTheme.labelLarge?.copyWith(
-                color: colors.primary,
-                fontWeight: FontWeight.w900,
-              ),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: Text(
-                        widget.member.email,
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            _MemberAvatar(member: widget.member),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    widget.member.email,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.titleSmall?.copyWith(
+                      color: colors.ink,
+                      fontWeight: FontWeight.w800,
+                      height: 1.15,
                     ),
-                    if (widget.member.isCurrentUser) const _YouPill(),
-                  ],
-                ),
-                const SizedBox(height: 7),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    _RolePill(role: widget.member.role),
-                    _JoinedPill(joinedAt: widget.member.joinedAt),
-                  ],
-                ),
-                if (canManageThisMember) ...[
-                  const SizedBox(height: 12),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      OutlinedButton.icon(
-                        onPressed: _isSubmitting
-                            ? null
-                            : () => _changeRole(alternateRole),
-                        icon: const Icon(Icons.admin_panel_settings_outlined,
-                            size: 17),
-                        label: Text('Make ${alternateRole.toLowerCase()}'),
-                        style: OutlinedButton.styleFrom(
-                          minimumSize: const Size(0, 34),
-                          padding: const EdgeInsets.symmetric(horizontal: 12),
-                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        ),
-                      ),
-                      OutlinedButton.icon(
-                        onPressed: _isSubmitting ? null : _remove,
-                        icon:
-                            const Icon(Icons.person_remove_outlined, size: 17),
-                        label: const Text('Remove'),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: colors.error,
-                          side: BorderSide(
-                            color: colors.error.withValues(alpha: 0.34),
-                          ),
-                          minimumSize: const Size(0, 34),
-                          padding: const EdgeInsets.symmetric(horizontal: 12),
-                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        ),
-                      ),
-                    ],
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    '${_roleLabel(widget.member.role)} · Joined ${_formatMonthDay(widget.member.joinedAt)}',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: colors.mutedInk,
+                    ),
                   ),
                 ],
-              ],
+              ),
             ),
+            const SizedBox(width: 8),
+            if (widget.member.isCurrentUser)
+              const _YouPill()
+            else if (canManageThisMember)
+              _ManageMemberButton(
+                isBusy: _isSubmitting,
+                onPressed: _showMemberActions,
+              ),
+          ],
+        ),
+        if (_errorText != null) ...[
+          const SizedBox(height: 10),
+          InlineNotice(
+            message: _errorText!,
+            tone: InlineNoticeTone.error,
+            icon: const Icon(Icons.error_outline_rounded),
           ),
         ],
+      ],
+    );
+  }
+
+  Future<void> _showMemberActions() async {
+    final alternateRole =
+        widget.member.role.toLowerCase() == 'viewer' ? 'Contributor' : 'Viewer';
+    final action = await showModalBottomSheet<_MemberAction>(
+      context: context,
+      builder: (context) => _MemberActionsSheet(
+        member: widget.member,
+        alternateRole: alternateRole,
       ),
     );
+
+    if (action == null || !mounted) return;
+    switch (action) {
+      case _MemberAction.changeRole:
+        await _changeRole(alternateRole);
+      case _MemberAction.transferOwnership:
+        await _transferOwnership();
+      case _MemberAction.remove:
+        await _remove();
+    }
   }
 
   Future<void> _changeRole(String role) async {
@@ -197,57 +389,184 @@ class _MemberCardState extends ConsumerState<_MemberCard> {
             memberId: widget.member.id,
             role: role,
           ),
-      'Member role updated.',
+    );
+  }
+
+  Future<void> _transferOwnership() async {
+    final confirmed = await ConsciaConfirmSheet.show(
+      context,
+      title: 'Transfer ownership?',
+      message:
+          '${widget.member.email} will become the Family Space owner. Your access will change to Contributor.',
+      confirmLabel: 'Transfer ownership',
+      destructive: false,
+    );
+    if (!confirmed || !mounted) return;
+
+    await _run(
+      () => ref
+          .read(familySpaceActionsProvider)
+          .transferOwnership(widget.member.id),
+      successMessage: 'Family ownership transferred.',
     );
   }
 
   Future<void> _remove() async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Remove family member?'),
-        content: Text(
-          '${widget.member.email} will lose access to this Family Space. Existing shared records stay in the household history.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Remove'),
-          ),
-        ],
-      ),
+    final confirmed = await ConsciaConfirmSheet.show(
+      context,
+      title: 'Remove family member?',
+      message:
+          '${widget.member.email} will lose access. Existing shared records stay in household history.',
+      confirmLabel: 'Remove member',
     );
-    if (confirmed != true) return;
+    if (!confirmed) return;
 
     await _run(
       () => ref.read(familySpaceActionsProvider).removeMember(widget.member.id),
-      'Family member removed.',
+      successMessage: 'Family member removed.',
     );
   }
 
   Future<void> _run(
-    Future<void> Function() action,
-    String successMessage,
-  ) async {
-    setState(() => _isSubmitting = true);
-    final messenger = ScaffoldMessenger.of(context);
+    Future<void> Function() action, {
+    String? successMessage,
+  }) async {
+    setState(() {
+      _errorText = null;
+      _isSubmitting = true;
+    });
     try {
       await action();
       if (!mounted) return;
-      messenger.showSnackBar(SnackBar(content: Text(successMessage)));
+      if (successMessage != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(successMessage)),
+        );
+      }
     } catch (e, s) {
       if (!mounted) return;
-      final error = AppError.from(e, stackTrace: s);
-      messenger.showSnackBar(SnackBar(content: Text(error.userMessage)));
+      final error = AppError.from(e, stackTrace: s, log: false);
+      setState(() => _errorText = error.userMessage);
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }
   }
 }
+
+class _MemberActionsSheet extends StatelessWidget {
+  const _MemberActionsSheet({
+    required this.member,
+    required this.alternateRole,
+  });
+
+  final FamilyMember member;
+  final String alternateRole;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const ConsciaSheetHandle(),
+          const SizedBox(height: 18),
+          ConsciaSheetHeader(
+            title: member.email,
+            subtitle:
+                'Choose what access this person should have in the household.',
+          ),
+          const SizedBox(height: 18),
+          _SheetActionRow(
+            icon: Icons.admin_panel_settings_outlined,
+            title: 'Make ${alternateRole.toLowerCase()}',
+            subtitle: alternateRole.toLowerCase() == 'viewer'
+                ? 'Can view shared household history.'
+                : 'Can add and manage Family records.',
+            onTap: () => Navigator.of(context).pop(_MemberAction.changeRole),
+          ),
+          _SheetActionRow(
+            icon: Icons.workspace_premium_outlined,
+            title: 'Transfer ownership',
+            subtitle: 'Make this person the household owner.',
+            onTap: () =>
+                Navigator.of(context).pop(_MemberAction.transferOwnership),
+          ),
+          _SheetActionRow(
+            icon: Icons.person_remove_outlined,
+            title: 'Remove from household',
+            subtitle: 'Existing shared records stay in Family history.',
+            destructive: true,
+            onTap: () => Navigator.of(context).pop(_MemberAction.remove),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SheetActionRow extends StatelessWidget {
+  const _SheetActionRow({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+    this.destructive = false,
+  });
+
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+  final bool destructive;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).appColors;
+    final accent = destructive ? colors.expense : colors.deepNavy;
+    final bg = destructive ? colors.expenseSoft : colors.navySoft;
+
+    return InkWell(
+      borderRadius: BorderRadius.circular(16),
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        child: Row(
+          children: [
+            _IconBubble(icon: icon, background: bg, foreground: accent),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          color: accent,
+                          fontWeight: FontWeight.w800,
+                        ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: colors.mutedInk,
+                          height: 1.3,
+                        ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(Icons.chevron_right_rounded, color: colors.softInk),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+enum _MemberAction { changeRole, transferOwnership, remove }
 
 class _LeaveFamilySection extends ConsumerStatefulWidget {
   const _LeaveFamilySection({
@@ -265,68 +584,90 @@ class _LeaveFamilySection extends ConsumerStatefulWidget {
 
 class _LeaveFamilySectionState extends ConsumerState<_LeaveFamilySection> {
   bool _isSubmitting = false;
+  String? _errorText;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colors = theme.colorScheme;
+    final colors = Theme.of(context).appColors;
+    final isActionable =
+        !widget.isOwner && !widget.isReadOnly && !_isSubmitting;
 
-    return FeedCard(
+    return ScreenSection(
+      title: 'Leaving',
+      subtitle: 'What happens if someone steps out of the household.',
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Icon(AppIcons.family, color: colors.primary),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Leaving the Family Space',
-                      style: theme.textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w800,
-                      ),
+          InkWell(
+            borderRadius: BorderRadius.circular(16),
+            onTap: isActionable ? _leaveFamily : null,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 10),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _IconBubble(
+                    icon: widget.isOwner
+                        ? Icons.lock_outline_rounded
+                        : Icons.logout_rounded,
+                    background:
+                        widget.isOwner ? colors.navySoft : colors.expenseSoft,
+                    foreground:
+                        widget.isOwner ? colors.deepNavy : colors.expense,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          widget.isOwner
+                              ? 'Transfer ownership before leaving'
+                              : 'Leave Family Space',
+                          style:
+                              Theme.of(context).textTheme.titleSmall?.copyWith(
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          widget.isOwner
+                              ? 'Pick another member as owner first. Then you can leave without stranding the household.'
+                              : 'Your personal records remain private. Shared records you already added stay in household history.',
+                          style:
+                              Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: colors.mutedInk,
+                                    height: 1.35,
+                                  ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 5),
-                    Text(
-                      widget.isOwner
-                          ? 'Owners must transfer ownership before leaving. Ownership transfer is not part of this MVP yet.'
-                          : 'Your personal records remain private. Shared records you already added stay in the household history.',
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: colors.onSurfaceVariant,
-                        height: 1.35,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          if (!widget.isOwner) ...[
-            const SizedBox(height: 14),
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton.icon(
-                onPressed:
-                    _isSubmitting || widget.isReadOnly ? null : _leaveFamily,
-                icon: _isSubmitting
-                    ? const SizedBox(
-                        width: 16,
-                        height: 16,
+                  ),
+                  if (!widget.isOwner) ...[
+                    const SizedBox(width: 8),
+                    if (_isSubmitting)
+                      const SizedBox(
+                        width: 18,
+                        height: 18,
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
-                    : const Icon(Icons.logout_outlined),
-                label: Text(
-                  _isSubmitting ? 'Leaving...' : 'Leave Family Space',
-                ),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: colors.error,
-                  side: BorderSide(color: colors.error.withValues(alpha: 0.34)),
-                ),
+                    else
+                      Icon(
+                        Icons.chevron_right_rounded,
+                        color:
+                            widget.isReadOnly ? colors.border : colors.softInk,
+                      ),
+                  ],
+                ],
               ),
+            ),
+          ),
+          if (_errorText != null) ...[
+            const SizedBox(height: 12),
+            InlineNotice(
+              message: _errorText!,
+              tone: InlineNoticeTone.error,
+              icon: const Icon(Icons.error_outline_rounded),
             ),
           ],
         ],
@@ -335,72 +676,94 @@ class _LeaveFamilySectionState extends ConsumerState<_LeaveFamilySection> {
   }
 
   Future<void> _leaveFamily() async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Leave Family Space?'),
-        content: const Text(
-          'You will lose access to shared household views. Records already shared stay in the Family Space history.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Leave'),
-          ),
-        ],
-      ),
+    final confirmed = await ConsciaConfirmSheet.show(
+      context,
+      title: 'Leave Family Space?',
+      message:
+          'You will lose access to shared household views. Records already shared stay in Family history.',
+      confirmLabel: 'Leave Family Space',
     );
-    if (confirmed != true) return;
+    if (!confirmed) return;
     if (!mounted) return;
 
-    setState(() => _isSubmitting = true);
-    final messenger = ScaffoldMessenger.of(context);
+    setState(() {
+      _errorText = null;
+      _isSubmitting = true;
+    });
     try {
       await ref.read(familySpaceActionsProvider).leaveFamilySpace();
       if (!mounted) return;
-      messenger.showSnackBar(
-        const SnackBar(content: Text('You left the Family Space.')),
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Left Family Space.')),
       );
+      final router = GoRouter.maybeOf(context);
+      if (router != null) {
+        context.go(AppRoutes.familySpace);
+      } else {
+        Navigator.of(context).maybePop();
+      }
     } catch (e, s) {
       if (!mounted) return;
-      final error = AppError.from(e, stackTrace: s);
-      messenger.showSnackBar(SnackBar(content: Text(error.userMessage)));
+      final error = AppError.from(e, stackTrace: s, log: false);
+      setState(() => _errorText = error.userMessage);
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }
   }
 }
 
-class _RolePill extends StatelessWidget {
-  const _RolePill({required this.role});
+class _MemberAvatar extends StatelessWidget {
+  const _MemberAvatar({required this.member});
 
-  final String role;
+  final FamilyMember member;
 
   @override
   Widget build(BuildContext context) {
-    return _MemberPill(
-      icon: Icons.admin_panel_settings_outlined,
-      label: role,
-      emphasized: role.toLowerCase() == 'owner',
+    final colors = Theme.of(context).appColors;
+    return Container(
+      width: 42,
+      height: 42,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: colors.navySoft,
+        shape: BoxShape.circle,
+      ),
+      child: Text(
+        member.initials,
+        style: Theme.of(context).textTheme.labelLarge?.copyWith(
+              color: colors.deepNavy,
+              fontWeight: FontWeight.w900,
+            ),
+      ),
     );
   }
 }
 
-class _JoinedPill extends StatelessWidget {
-  const _JoinedPill({required this.joinedAt});
+class _ManageMemberButton extends StatelessWidget {
+  const _ManageMemberButton({
+    required this.isBusy,
+    required this.onPressed,
+  });
 
-  final DateTime joinedAt;
+  final bool isBusy;
+  final VoidCallback onPressed;
 
   @override
   Widget build(BuildContext context) {
-    return _MemberPill(
-      icon: Icons.schedule_outlined,
-      label: 'Joined ${_formatMonthDay(joinedAt)}',
-      quiet: true,
+    final colors = Theme.of(context).appColors;
+
+    return IconButton(
+      onPressed: isBusy ? null : onPressed,
+      icon: isBusy
+          ? const SizedBox(
+              width: 14,
+              height: 14,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )
+          : const Icon(Icons.more_vert_rounded, size: 20),
+      color: colors.deepNavy,
+      tooltip: 'More member actions',
+      visualDensity: VisualDensity.compact,
     );
   }
 }
@@ -410,10 +773,12 @@ class _YouPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const _MemberPill(
-      icon: Icons.person_outline,
+    final colors = Theme.of(context).appColors;
+    return _MemberPill(
+      icon: Icons.person_outline_rounded,
       label: 'You',
-      quiet: true,
+      background: colors.surfaceMuted,
+      foreground: colors.mutedInk,
     );
   }
 }
@@ -422,51 +787,77 @@ class _MemberPill extends StatelessWidget {
   const _MemberPill({
     required this.icon,
     required this.label,
-    this.emphasized = false,
-    this.quiet = false,
+    required this.background,
+    required this.foreground,
   });
 
   final IconData icon;
   final String label;
-  final bool emphasized;
-  final bool quiet;
+  final Color background;
+  final Color foreground;
 
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-    final foreground = quiet
-        ? colors.onSurfaceVariant
-        : emphasized
-            ? colors.primary
-            : colors.secondary;
-    final background = quiet
-        ? colors.surfaceContainerHighest
-        : emphasized
-            ? colors.primaryContainer
-            : colors.secondaryContainer;
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
+    return DecoratedBox(
       decoration: BoxDecoration(
-        color: background.withValues(alpha: quiet ? 0.55 : 0.72),
+        color: background.withValues(alpha: 0.88),
         borderRadius: BorderRadius.circular(999),
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 13, color: foreground),
-          const SizedBox(width: 5),
-          Text(
-            label,
-            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: foreground,
-                  fontWeight: FontWeight.w800,
-                ),
-          ),
-        ],
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 13, color: foreground),
+            const SizedBox(width: 5),
+            Text(
+              label,
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: foreground,
+                    fontWeight: FontWeight.w800,
+                  ),
+            ),
+          ],
+        ),
       ),
     );
   }
+}
+
+class _IconBubble extends StatelessWidget {
+  const _IconBubble({
+    required this.icon,
+    required this.background,
+    required this.foreground,
+  });
+
+  final IconData icon;
+  final Color background;
+  final Color foreground;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: AppLayout.listIconSize,
+      height: AppLayout.listIconSize,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Icon(icon, size: 18, color: foreground),
+    );
+  }
+}
+
+String _roleLabel(String role) {
+  final normalized = role.trim().toLowerCase();
+  return switch (normalized) {
+    'owner' => 'Owner',
+    'contributor' => 'Contributor',
+    'viewer' => 'Viewer',
+    _ => role.trim().isEmpty ? 'Member' : role.trim(),
+  };
 }
 
 String _formatMonthDay(DateTime date) {

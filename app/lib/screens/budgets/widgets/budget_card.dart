@@ -60,6 +60,7 @@ class BudgetCard extends StatelessWidget {
                   CategoryIcons.badge(
                     budget.category,
                     size: 18,
+                    type: 'Expense',
                   ),
                   const SizedBox(width: 10),
                   Expanded(

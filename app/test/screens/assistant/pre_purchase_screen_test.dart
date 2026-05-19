@@ -12,6 +12,7 @@ import 'package:conscia_app/core/theme/app_theme.dart';
 import 'package:conscia_app/core/utils/currency_formatter.dart';
 import 'package:conscia_app/screens/assistant/pre_purchase_screen.dart';
 import 'package:conscia_app/screens/transactions/transaction_form_screen.dart';
+import 'package:conscia_app/screens/transactions/widgets/category_picker.dart';
 import 'package:conscia_app/screens/transactions/widgets/voice_input_button.dart';
 import 'package:conscia_app/services/ai_service.dart';
 import 'package:conscia_app/widgets/editorial_sticky_header.dart';
@@ -89,6 +90,7 @@ class _FakeAIService extends AIService {
   String? receivedInsightContext;
   String? receivedCurrencyCode;
   String? receivedContextScope;
+  CancelToken? receivedCancelToken;
 
   @override
   Future<AIResponse> prePurchase({
@@ -98,10 +100,12 @@ class _FakeAIService extends AIService {
     required String category,
     String? insightContext,
     String contextScope = 'personal',
+    CancelToken? cancelToken,
   }) async {
     receivedInsightContext = insightContext;
     receivedCurrencyCode = currencyCode;
     receivedContextScope = contextScope;
+    receivedCancelToken = cancelToken;
     if (delay > Duration.zero) {
       await Future<void>.delayed(delay);
     }
@@ -454,15 +458,26 @@ void main() {
 
     expect(find.byType(BottomSheet), findsOneWidget);
 
-    final choiceChips = tester.widgetList<ChoiceChip>(find.byType(ChoiceChip));
-    final labels = choiceChips
-        .map((chip) => (chip.label as Text).data)
-        .whereType<String>()
-        .toList();
+    final sheetPicker = find.byType(CategoryPicker).last;
+    final transport = find.descendant(
+      of: sheetPicker,
+      matching: find.text('Transport'),
+    );
+    final dining = find.descendant(
+      of: sheetPicker,
+      matching: find.text('Dining'),
+    );
 
-    expect(labels.take(2).toList(), ['Transport', 'Dining']);
+    expect(transport, findsOneWidget);
+    expect(dining, findsOneWidget);
+    expect(
+      tester.getTopLeft(transport).dx,
+      lessThan(tester.getTopLeft(dining).dx),
+    );
 
-    await tester.tap(find.widgetWithText(ChoiceChip, 'Groceries').last);
+    await tester.tap(
+      find.descendant(of: sheetPicker, matching: find.text('Groceries')),
+    );
     await tester.pumpAndSettle();
 
     expect(find.byType(BottomSheet), findsNothing);
@@ -890,6 +905,7 @@ void main() {
       aiService.receivedInsightContext,
       'Dining is above your recent 3-month pace.',
     );
+    expect(aiService.receivedCancelToken, isNotNull);
   });
 
   testWidgets('pre-purchase can send family context when family space exists',
@@ -1211,6 +1227,10 @@ void main() {
 
   testWidgets('loading sheet shows ThinkingCloudWidget', (tester) async {
     await pumpLoading(tester);
+    expect(
+      find.byKey(const ValueKey('ai-guidance-loading-sheet-prepurchase')),
+      findsOneWidget,
+    );
     expect(find.byType(ThinkingCloudWidget), findsWidgets);
     // Drain the pending AI delay timer before the test ends.
     await tester.pump(const Duration(seconds: 30));

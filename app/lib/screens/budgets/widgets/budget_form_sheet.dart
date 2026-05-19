@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/errors/app_error.dart';
 import '../../../core/utils/localized_number_input.dart';
 import '../../../providers/budget_providers.dart';
 import '../../../providers/family_space_provider.dart';
@@ -8,7 +9,10 @@ import '../../../providers/subscription_provider.dart';
 import '../../../services/budget_service.dart';
 import '../../transactions/widgets/transaction_style_category_selector.dart';
 import '../../../widgets/currency_badge.dart';
+import '../../../widgets/conscia_bottom_sheet.dart';
+import '../../../widgets/conscia_confirm_sheet.dart';
 import '../../../widgets/floating_label_text_field.dart';
+import '../../../widgets/inline_notice.dart';
 import '../../../widgets/scope_pill_switch.dart';
 import '../../../widgets/screen_section.dart';
 import '../../../providers/user_provider.dart';
@@ -43,6 +47,7 @@ class BudgetFormSheet extends ConsumerStatefulWidget {
 class _BudgetFormSheetState extends ConsumerState<BudgetFormSheet> {
   late final TextEditingController _amountController;
   String? _selectedCategory;
+  String? _errorText;
   bool _submitting = false;
   String _scope = 'personal';
   bool get _isEditing => widget.existing != null;
@@ -77,13 +82,19 @@ class _BudgetFormSheetState extends ConsumerState<BudgetFormSheet> {
 
   Future<void> _submit() async {
     if (!_isValid || _submitting) return;
-    setState(() => _submitting = true);
+    setState(() {
+      _errorText = null;
+      _submitting = true;
+    });
 
     final amount = LocalizedNumberInput.parseAmount(
       _amountController.text,
       locale: ref.read(userPreferencesProvider).locale,
     );
-    if (_selectedCategory == null || amount == null || amount <= 0) return;
+    if (_selectedCategory == null || amount == null || amount <= 0) {
+      if (mounted) setState(() => _submitting = false);
+      return;
+    }
     final user = ref.read(currentUserProvider);
     final currency =
         widget.existing?.currencyCode ?? user.value?.currencyCode ?? 'USD';
@@ -99,47 +110,49 @@ class _BudgetFormSheetState extends ConsumerState<BudgetFormSheet> {
     );
 
     final notifier = ref.read(budgetListProvider.notifier);
-    if (_isEditing) {
-      await notifier.update(widget.existing!.id, dto);
-    } else {
-      await notifier.create(dto);
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      if (_isEditing) {
+        await notifier.update(widget.existing!.id, dto);
+        messenger.showSnackBar(
+          const SnackBar(content: Text('Budget updated.')),
+        );
+      } else {
+        await notifier.create(dto);
+        messenger.showSnackBar(
+          const SnackBar(content: Text('Budget created.')),
+        );
+      }
+      if (mounted) Navigator.of(context).pop();
+    } catch (e, s) {
+      final error = AppError.from(e, stackTrace: s, log: false);
+      if (!mounted) return;
+      setState(() => _errorText = error.userMessage);
+    } finally {
+      if (mounted) setState(() => _submitting = false);
     }
-
-    setState(() => _submitting = false);
-    if (mounted) Navigator.of(context).pop();
   }
 
   Future<void> _confirmDelete() async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Delete Budget'),
-        content: const Text(
-          'Are you sure you want to delete this budget? This cannot be undone.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text('Delete', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
+    final confirmed = await ConsciaConfirmSheet.show(
+      context,
+      title: 'Delete this budget?',
+      message: "This can't be undone.",
+      confirmLabel: 'Delete budget',
     );
 
-    if (confirmed == true && mounted) {
+    if (confirmed && mounted) {
+      final messenger = ScaffoldMessenger.of(context);
       await ref.read(budgetListProvider.notifier).delete(widget.existing!.id);
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Budget deleted.')),
+      );
       if (mounted) Navigator.of(context).pop();
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final textTheme = theme.textTheme;
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
     final user = ref.read(currentUserProvider);
     final currency =
@@ -156,21 +169,15 @@ class _BudgetFormSheetState extends ConsumerState<BudgetFormSheet> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Center(
-                child: Container(
-                  width: 32,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.outlineVariant,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
+              const Center(
+                child: ConsciaSheetHandle(),
               ),
               const SizedBox(height: 16),
-              Text(
-                _isEditing ? 'Edit Budget' : 'New Budget',
-                style: textTheme.titleLarge,
-                textAlign: TextAlign.center,
+              ConsciaSheetHeader(
+                title: _isEditing ? 'Edit Budget' : 'New Budget',
+                subtitle: _isEditing
+                    ? 'Tune the monthly cap Conscia tracks for this category.'
+                    : 'Create a spending ceiling for a category and scope.',
               ),
               const SizedBox(height: 20),
               Expanded(
@@ -189,8 +196,10 @@ class _BudgetFormSheetState extends ConsumerState<BudgetFormSheet> {
                         showHeader: false,
                         onCategorySelected: _isEditing
                             ? (_) {}
-                            : (value) =>
-                                setState(() => _selectedCategory = value),
+                            : (value) => setState(() {
+                                  _errorText = null;
+                                  _selectedCategory = value;
+                                }),
                       ),
                     ),
                     ScreenSection(
@@ -208,7 +217,7 @@ class _BudgetFormSheetState extends ConsumerState<BudgetFormSheet> {
                             ref.watch(userPreferencesProvider).locale,
                           ),
                         ],
-                        onChanged: (_) => setState(() {}),
+                        onChanged: (_) => setState(() => _errorText = null),
                         prefixLabelInset: 78,
                         prefix: Padding(
                           padding: const EdgeInsets.only(right: 2),
@@ -227,9 +236,20 @@ class _BudgetFormSheetState extends ConsumerState<BudgetFormSheet> {
                         child: ScopePillSwitch(
                           value: _scope,
                           familyEnabled: true,
-                          onChanged: (value) => setState(() => _scope = value),
+                          onChanged: (value) => setState(() {
+                            _errorText = null;
+                            _scope = value;
+                          }),
                         ),
                       ),
+                    if (_errorText != null) ...[
+                      const SizedBox(height: 12),
+                      InlineNotice(
+                        message: _errorText!,
+                        tone: InlineNoticeTone.error,
+                        icon: const Icon(Icons.error_outline_rounded),
+                      ),
+                    ],
                   ],
                 ),
               ),

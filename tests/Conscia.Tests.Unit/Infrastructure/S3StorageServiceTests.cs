@@ -61,11 +61,61 @@ public class S3StorageServiceTests
             It.IsAny<CancellationToken>()), Times.Never);
     }
 
+    [Fact]
+    public async Task UploadAsync_BuffersNonSeekableStreamsBeforePuttingObject()
+    {
+        var sawSeekableUploadStream = false;
+        var s3 = new Mock<IAmazonS3>();
+        s3.Setup(client => client.PutObjectAsync(
+                It.IsAny<PutObjectRequest>(),
+                It.IsAny<CancellationToken>()))
+            .Callback<PutObjectRequest, CancellationToken>((request, _) =>
+            {
+                sawSeekableUploadStream = request.InputStream.CanSeek &&
+                    request.InputStream.Length == 4 &&
+                    request.InputStream.Position == 0;
+            })
+            .ReturnsAsync(new PutObjectResponse());
+
+        var service = new S3StorageService(s3.Object, BuildConfig(
+            ("AWS:S3:BucketName", "conscia-receipts"),
+            ("AWS:S3:EnsureBucketExists", "false")));
+
+        await using var stream = new NonSeekableReadStream([1, 2, 3, 4]);
+        await service.UploadAsync(
+            "profile-pictures/user/avatar.png",
+            stream,
+            "image/png");
+
+        Assert.True(sawSeekableUploadStream);
+    }
+
     private static IConfiguration BuildConfig(params (string Key, string Value)[] values)
     {
         return new ConfigurationBuilder()
             .AddInMemoryCollection(values.Select(value =>
                 new KeyValuePair<string, string?>(value.Key, value.Value)))
             .Build();
+    }
+
+    private sealed class NonSeekableReadStream : MemoryStream
+    {
+        public NonSeekableReadStream(byte[] buffer) : base(buffer)
+        {
+        }
+
+        public override bool CanSeek => false;
+
+        public override long Length =>
+            throw new NotSupportedException("This stream does not support seeking.");
+
+        public override long Position
+        {
+            get => base.Position;
+            set => throw new NotSupportedException("This stream does not support seeking.");
+        }
+
+        public override long Seek(long offset, SeekOrigin loc) =>
+            throw new NotSupportedException("This stream does not support seeking.");
     }
 }

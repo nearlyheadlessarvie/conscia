@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/assets/mascot_sprite_sheet.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_layout.dart';
 import '../../models/conscience_journey.dart';
 import '../../providers/conscience_journey_provider.dart';
 import '../../widgets/editorial_sticky_header.dart';
@@ -13,10 +14,12 @@ class ConscienceJourneyScreen extends ConsumerStatefulWidget {
   const ConscienceJourneyScreen({super.key});
 
   @override
-  ConsumerState<ConscienceJourneyScreen> createState() => _ConscienceJourneyScreenState();
+  ConsumerState<ConscienceJourneyScreen> createState() =>
+      _ConscienceJourneyScreenState();
 }
 
-class _ConscienceJourneyScreenState extends ConsumerState<ConscienceJourneyScreen> {
+class _ConscienceJourneyScreenState
+    extends ConsumerState<ConscienceJourneyScreen> {
   final ScrollController _scrollController = ScrollController();
   double _scrollOffset = 0;
 
@@ -35,7 +38,8 @@ class _ConscienceJourneyScreenState extends ConsumerState<ConscienceJourneyScree
   }
 
   void _handleScroll() {
-    final nextOffset = _scrollController.hasClients ? _scrollController.offset : 0.0;
+    final nextOffset =
+        _scrollController.hasClients ? _scrollController.offset : 0.0;
     if ((nextOffset - _scrollOffset).abs() < 1) return;
     setState(() => _scrollOffset = nextOffset);
   }
@@ -105,17 +109,15 @@ class _ConscienceJourneyScreenState extends ConsumerState<ConscienceJourneyScree
   }
 
   Widget _buildContent(BuildContext context, ConscienceJourneySummary summary) {
-    final topPadding = MediaQuery.paddingOf(context).top;
     return SingleChildScrollView(
       controller: _scrollController,
       physics: const AlwaysScrollableScrollPhysics(),
       child: ConscienceJourneyContent(
         summary: summary,
-        headerTopInset: topPadding + 60,
+        headerTopInset: AppLayout.journeyHeaderTop(context),
       ),
     );
   }
-
 }
 
 class ConscienceJourneyContent extends StatelessWidget {
@@ -142,7 +144,8 @@ class ConscienceJourneyContent extends StatelessWidget {
             children: [
               ScreenSection(
                 title: "This week's quests",
-                subtitle: 'Habits to focus on this week. They reset every Sunday.',
+                subtitle:
+                    'Habits to focus on this week. They reset every Sunday.',
                 compact: true,
                 child: Column(
                   children: [
@@ -205,7 +208,8 @@ class _AchievementsSection extends StatelessWidget {
                 fontWeight: FontWeight.w700,
               ),
             ),
-            Icon(Icons.chevron_right_rounded, size: 16, color: appColors.mutedInk),
+            Icon(Icons.chevron_right_rounded,
+                size: 16, color: appColors.mutedInk),
           ],
         ),
       ),
@@ -234,7 +238,12 @@ class _JourneyHeroBleed extends StatelessWidget {
 
     return Container(
       width: double.infinity,
-      padding: EdgeInsets.fromLTRB(20, topInset + 12, 20, 28),
+      padding: EdgeInsets.fromLTRB(
+        AppLayout.screenPadding,
+        topInset + AppLayout.bleedingHeroTopGap,
+        AppLayout.screenPadding,
+        AppLayout.heroBottomPadding,
+      ),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
@@ -389,7 +398,8 @@ class _QuestCard extends StatelessWidget {
         child: Row(
           children: [
             _IconBadge(
-              icon: quest.isCompleted ? Icons.check_rounded : _iconFor(quest.key),
+              icon:
+                  quest.isCompleted ? Icons.check_rounded : _iconFor(quest.key),
               color: iconColor,
             ),
             const SizedBox(width: 12),
@@ -529,7 +539,9 @@ class _BadgeTile extends StatelessWidget {
                   : null,
             ),
             child: Icon(
-              badge.isUnlocked ? _iconFor(badge.key) : Icons.lock_outline_rounded,
+              badge.isUnlocked
+                  ? _iconFor(badge.key)
+                  : Icons.lock_outline_rounded,
               color: badge.isUnlocked
                   ? Theme.of(context).appColors.family
                   : colors.outline,
@@ -600,12 +612,14 @@ class _AllAchievementsSheet extends StatelessWidget {
                 children: [
                   Text(
                     'All Achievements',
-                    style: textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
+                    style: textTheme.titleLarge
+                        ?.copyWith(fontWeight: FontWeight.w800),
                   ),
                   const SizedBox(height: 4),
                   Text(
                     '${unlocked.length} of ${badges.length} unlocked',
-                    style: textTheme.bodySmall?.copyWith(color: colors.onSurfaceVariant),
+                    style: textTheme.bodySmall
+                        ?.copyWith(color: colors.onSurfaceVariant),
                   ),
                   const SizedBox(height: 16),
                 ],

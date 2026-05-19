@@ -34,7 +34,7 @@ public class InAppAlertRepository : DynamoRepository, IInAppAlertRepository
             ScanIndexForward = false
         }, ct);
 
-        return response.Items.Select(FromItem).ToList();
+        return Items(response).Select(FromItem).ToList();
     }
 
     private static Dictionary<string, AttributeValue> ToItem(InAppAlert a)

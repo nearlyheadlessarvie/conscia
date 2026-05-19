@@ -1366,7 +1366,10 @@ void main() {
     await tester.tap(find.byTooltip('Notifications').hitTestable().first);
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byTooltip('Dismiss notification').first);
+    expect(find.byTooltip('Dismiss notification'), findsNothing);
+
+    await tester.drag(
+        find.text('No budget for Dining yet'), const Offset(-500, 0));
     await tester.pumpAndSettle();
 
     expect(find.text('No budget for Dining yet'), findsNothing);

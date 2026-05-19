@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/constants/category_icons.dart';
+import '../../core/theme/app_layout.dart';
 import '../../models/insights_models.dart';
 import '../../providers/insights_provider.dart';
 import '../../providers/user_provider.dart';
@@ -68,8 +69,11 @@ class CategoryDetailScreen extends ConsumerWidget {
                             for (final tx in detail.recentTransactions)
                               RecentTransactionTile(
                                 id: tx.id,
-                                categoryBadge:
-                                    CategoryIcons.badge(tx.category, size: 30),
+                                categoryBadge: CategoryIcons.badge(
+                                  tx.category,
+                                  size: 30,
+                                  type: 'Expense',
+                                ),
                                 counterparty: tx.merchant ?? tx.category,
                                 category: tx.category,
                                 date: tx.date,
@@ -124,8 +128,12 @@ class _CategorySummaryCard extends StatelessWidget {
 
     return InsightListEditorialHero(
       bleed: true,
-      topPadding: MediaQuery.paddingOf(context).top + 85,
-      leading: CategoryIcons.badge(stats.category, size: 30),
+      topPadding: AppLayout.drilldownHeroTop(context),
+      leading: CategoryIcons.badge(
+        stats.category,
+        size: 30,
+        type: 'Expense',
+      ),
       label: 'TOP REGRET CATEGORY',
       primary: regrettedText,
       body:
@@ -149,7 +157,7 @@ class _StatePadding extends StatelessWidget {
     return Padding(
       padding: EdgeInsets.fromLTRB(
         16,
-        MediaQuery.paddingOf(context).top + 85,
+        AppLayout.drilldownHeroTop(context),
         16,
         28,
       ),

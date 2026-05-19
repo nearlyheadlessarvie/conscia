@@ -5,27 +5,28 @@ using Conscia.Domain.Entities;
 
 namespace Conscia.Infrastructure.Repositories;
 
-public class PurchasePatternRepository : IPurchasePatternRepository
+public class PurchasePatternRepository : DynamoRepository, IPurchasePatternRepository
 {
     private const string TableName = "PurchasePatterns";
-    private readonly IAmazonDynamoDB _dynamo;
 
-    public PurchasePatternRepository(IAmazonDynamoDB dynamo) => _dynamo = dynamo;
+    public PurchasePatternRepository(IAmazonDynamoDB dynamo) : base(dynamo)
+    {
+    }
 
     public async Task<PurchasePatternSummary?> GetSummaryAsync(Guid userId, CancellationToken ct = default)
     {
-        var response = await _dynamo.GetItemAsync(new GetItemRequest
+        var response = await Dynamo.GetItemAsync(new GetItemRequest
         {
             TableName = TableName,
             Key = Key(userId, DynamoKeys.PurchasePatternSummary())
         }, ct);
 
-        return response.Item?.Count > 0 ? SummaryFromItem(response.Item) : null;
+        return IsMissingItem(response.Item) ? null : SummaryFromItem(response.Item);
     }
 
     public async Task<IReadOnlyList<CategoryPattern>> GetCategoriesAsync(Guid userId, CancellationToken ct = default)
     {
-        var response = await _dynamo.QueryAsync(new QueryRequest
+        var response = await Dynamo.QueryAsync(new QueryRequest
         {
             TableName = TableName,
             KeyConditionExpression = "PK = :pk AND begins_with(SK, :prefix)",
@@ -36,12 +37,12 @@ public class PurchasePatternRepository : IPurchasePatternRepository
             }
         }, ct);
 
-        return response.Items.Select(CategoryFromItem).ToList();
+        return Items(response).Select(CategoryFromItem).ToList();
     }
 
     public async Task<IReadOnlyList<MerchantPattern>> GetMerchantsAsync(Guid userId, CancellationToken ct = default)
     {
-        var response = await _dynamo.QueryAsync(new QueryRequest
+        var response = await Dynamo.QueryAsync(new QueryRequest
         {
             TableName = TableName,
             KeyConditionExpression = "PK = :pk AND begins_with(SK, :prefix)",
@@ -52,7 +53,7 @@ public class PurchasePatternRepository : IPurchasePatternRepository
             }
         }, ct);
 
-        return response.Items.Select(MerchantFromItem).ToList();
+        return Items(response).Select(MerchantFromItem).ToList();
     }
 
     public async Task UpsertManyAsync(
@@ -77,7 +78,7 @@ public class PurchasePatternRepository : IPurchasePatternRepository
                 PutRequest = new PutRequest { Item = item }
             }).ToList();
 
-            await _dynamo.BatchWriteItemAsync(new BatchWriteItemRequest
+            await Dynamo.BatchWriteItemAsync(new BatchWriteItemRequest
             {
                 RequestItems = new Dictionary<string, List<WriteRequest>>
                 {

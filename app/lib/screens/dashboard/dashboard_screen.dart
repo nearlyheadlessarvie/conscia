@@ -10,6 +10,7 @@ import 'package:conscia_app/core/constants/category_icons.dart';
 import 'package:conscia_app/core/assets/mascot_sprite_sheet.dart';
 import 'package:conscia_app/core/routing/app_router.dart';
 import 'package:conscia_app/core/theme/app_colors.dart';
+import 'package:conscia_app/core/theme/app_layout.dart';
 import 'package:conscia_app/core/utils/currency_formatter.dart';
 import 'package:conscia_app/models/conscience_journey.dart';
 import 'package:conscia_app/providers/alert_provider.dart';
@@ -31,10 +32,12 @@ import 'package:conscia_app/services/transaction_service.dart';
 import 'package:conscia_app/services/user_service.dart';
 import 'package:conscia_app/widgets/empty_state.dart';
 import 'package:conscia_app/widgets/budget_mix_visuals.dart';
+import 'package:conscia_app/widgets/conscia_bottom_sheet.dart';
 import 'package:conscia_app/widgets/hero_shortcut_card.dart';
 import 'package:conscia_app/widgets/premium_upgrade_dialog.dart';
 import 'package:conscia_app/widgets/scope_pill_switch.dart';
 import 'package:conscia_app/widgets/skeleton_loader.dart';
+import 'package:conscia_app/widgets/swipe_action_tile.dart';
 
 class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
@@ -208,25 +211,18 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   controller: scrollController,
                   slivers: [
                     SliverPadding(
-                      padding: const EdgeInsets.fromLTRB(20, 16, 20, 4),
+                      padding: const EdgeInsets.fromLTRB(20, 8, 20, 4),
                       sliver: SliverToBoxAdapter(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              'Notifications',
-                              style: textTheme.titleLarge?.copyWith(
-                                fontWeight: FontWeight.w800,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              sheetAlerts.isEmpty
+                            const ConsciaSheetHandle(),
+                            const SizedBox(height: 18),
+                            ConsciaSheetHeader(
+                              title: 'Notifications',
+                              subtitle: sheetAlerts.isEmpty
                                   ? 'Nothing needs your attention right now.'
                                   : 'The latest nudges and reminders from Conscia.',
-                              style: textTheme.bodySmall?.copyWith(
-                                color: colors.onSurfaceVariant,
-                              ),
                             ),
                             const SizedBox(height: 16),
                           ],
@@ -292,27 +288,34 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                               key: ValueKey(alert.id),
                               direction: DismissDirection.endToStart,
                               onDismissed: (_) => dismiss(),
-                              secondaryBackground: Container(
-                                color: Theme.of(context).appColors.expense,
+                              secondaryBackground: SwipeActionBackground(
                                 alignment: Alignment.centerRight,
-                                padding: const EdgeInsets.only(right: 24),
-                                child: const Icon(
-                                  Icons.delete_sweep_rounded,
-                                  color: Colors.white,
-                                  size: 24,
-                                ),
+                                padding: const EdgeInsets.only(right: 12),
+                                children: [
+                                  SwipeActionTile(
+                                    icon: Icons.delete_sweep_rounded,
+                                    label: 'Dismiss',
+                                    foregroundColor:
+                                        Theme.of(context).appColors.expense,
+                                    backgroundColor:
+                                        Theme.of(context).appColors.expenseSoft,
+                                    onTap: () {},
+                                  ),
+                                ],
                               ),
                               background: const SizedBox.shrink(),
-                              child: _NotificationListTile(
-                                alert: alert,
-                                onDismiss: dismiss,
-                                onAction: alert.actionLabel == null &&
-                                        alert.type != 'budget_nudge'
-                                    ? null
-                                    : () {
-                                        Navigator.of(sheetContext).pop();
-                                        _handleAlertAction(alert);
-                                      },
+                              child: ColoredBox(
+                                color: Theme.of(context).appColors.paper,
+                                child: _NotificationListTile(
+                                  alert: alert,
+                                  onAction: alert.actionLabel == null &&
+                                          alert.type != 'budget_nudge'
+                                      ? null
+                                      : () {
+                                          Navigator.of(sheetContext).pop();
+                                          _handleAlertAction(alert);
+                                        },
+                                ),
                               ),
                             );
                           },
@@ -542,6 +545,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                           categoryBadge: CategoryIcons.badge(
                             displayCategoryForTransaction(transaction),
                             size: 30,
+                            type: transaction.type == 'income'
+                                ? 'Income'
+                                : 'Expense',
                           ),
                           counterparty: transaction.description.trim().isEmpty
                               ? 'Unknown'
@@ -669,10 +675,12 @@ class _DashboardEditorialHeroCard extends StatelessWidget {
       return const _DashboardHeroSkeleton();
     }
 
+    final heroTopPadding = AppLayout.dashboardHeroTop(context);
+
     return Container(
       key: const ValueKey('dashboard-editorial-hero'),
       width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(20, 90, 20, 28),
+      padding: EdgeInsets.fromLTRB(20, heroTopPadding, 20, 28),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
@@ -855,7 +863,7 @@ class _DashboardStickyOverlayHeader extends StatelessWidget {
     return Padding(
       padding: EdgeInsets.fromLTRB(
         horizontalInset,
-        topPadding + 8,
+        topPadding + AppLayout.stickyHeaderTopGap,
         horizontalInset,
         0,
       ),
@@ -1176,6 +1184,7 @@ class _DashboardBudgetSummary extends StatelessWidget {
                     child: BudgetMixPill(
                       index: entry.$1,
                       category: entry.$2.category,
+                      type: 'Expense',
                       share: totalSpent <= 0 ? 0 : entry.$2.spent / totalSpent,
                     ),
                   ),
@@ -1211,7 +1220,10 @@ class _DashboardBudgetSummary extends StatelessWidget {
         .map(
           (entry) => BudgetMixDonutSegment(
             share: entry.$2.spent / totalSpent,
-            color: BudgetMixPalette.staticColorFor(entry.$1),
+            color: BudgetMixPalette.staticColorForCategory(
+              entry.$2.category,
+              type: 'Expense',
+            ),
           ),
         )
         .toList(growable: false);
@@ -1290,10 +1302,12 @@ class _DashboardHeroSkeleton extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).appColors;
 
+    final heroTopPadding = AppLayout.dashboardHeroTop(context);
+
     return Container(
       key: const ValueKey('dashboard-hero-skeleton'),
       width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(20, 90, 20, 28),
+      padding: EdgeInsets.fromLTRB(20, heroTopPadding, 20, 28),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
@@ -1555,12 +1569,10 @@ class _NotificationListTile extends StatelessWidget {
   const _NotificationListTile({
     required this.alert,
     this.onAction,
-    this.onDismiss,
   });
 
   final AppAlert alert;
   final VoidCallback? onAction;
-  final VoidCallback? onDismiss;
 
   @override
   Widget build(BuildContext context) {
@@ -1631,22 +1643,6 @@ class _NotificationListTile extends StatelessWidget {
                         ],
                       ),
                     ),
-                    if (onDismiss != null)
-                      IconButton(
-                        tooltip: 'Dismiss notification',
-                        visualDensity: VisualDensity.compact,
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(
-                          minWidth: 32,
-                          minHeight: 32,
-                        ),
-                        icon: Icon(
-                          Icons.close_rounded,
-                          size: 18,
-                          color: colors.onSurfaceVariant,
-                        ),
-                        onPressed: onDismiss,
-                      ),
                   ],
                 ),
               ],

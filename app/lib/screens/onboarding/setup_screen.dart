@@ -3,14 +3,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import 'package:conscia_app/core/theme/app_colors.dart';
 import 'package:conscia_app/providers/user_provider.dart';
-import 'package:conscia_app/widgets/conscia_app_bar.dart';
 import 'package:conscia_app/widgets/currency_picker_sheet.dart';
-import 'package:conscia_app/widgets/floating_label_text_field.dart';
-import 'package:conscia_app/widgets/hero_screen_scaffold.dart';
 import 'package:conscia_app/widgets/inline_notice.dart';
 import 'package:conscia_app/widgets/locale_picker_sheet.dart';
 import 'package:conscia_app/widgets/screen_section.dart';
+
+import 'widgets/onboarding_step_scaffold.dart';
 
 class SetupScreen extends ConsumerStatefulWidget {
   const SetupScreen({super.key});
@@ -23,8 +23,6 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
   late String _currencyCode;
   late String _locale;
   late String _deviceCurrencyCode;
-  late final TextEditingController _currencyController;
-  late final TextEditingController _localeController;
 
   static const _regionLabels = {
     'en_US': 'Default',
@@ -40,15 +38,6 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
     _locale = defaults.locale;
     _currencyCode = defaults.currency;
     _deviceCurrencyCode = defaults.currency;
-    _currencyController = TextEditingController(text: _currencyCode);
-    _localeController = TextEditingController(text: _localeName());
-  }
-
-  @override
-  void dispose() {
-    _currencyController.dispose();
-    _localeController.dispose();
-    super.dispose();
   }
 
   String _formattedSample() {
@@ -72,7 +61,6 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
       isPremium: true,
       onSelected: (code) => setState(() {
         _currencyCode = code;
-        _currencyController.text = code;
       }),
     );
   }
@@ -83,103 +71,164 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
       selectedLocale: _locale,
       onSelected: (locale) => setState(() {
         _locale = locale;
-        _localeController.text = _localeName();
       }),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
 
-    return HeroScreenScaffold(
-      appBar: const ConsciaAppBar(
-        title: Text('Set Up Your Profile'),
-        automaticallyImplyLeading: false,
-      ),
-      bottom: SizedBox(
-        height: 48,
-        child: FilledButton(
-          onPressed: () async {
-            try {
-              final userService = ref.read(userServiceProvider);
-              await userService.updateProfile(
-                preferredCurrency: _currencyCode,
-                locale: _locale,
-              );
-              ref.invalidate(currentUserProvider);
-            } catch (_) {
-              // Best-effort save; user can update later in Settings
-            }
-            if (!mounted) return;
-            GoRouter.of(this.context).go(
-              '/onboarding/profile',
-              extra: {
-                'currencyCode': _currencyCode,
-                'locale': _locale,
-              },
+    return OnboardingStepScaffold(
+      appBarTitle: 'Set Up Your Profile',
+      stepLabel: 'Before we start',
+      heroTitle: 'Make money feel native',
+      heroSubtitle:
+          'Choose the currency and number format Conscia should use from the first screen onward.',
+      heroChips: [
+        OnboardingHeroChip(label: '$_currencyCode currency'),
+        OnboardingHeroChip(label: '${_localeName()} numbers'),
+      ],
+      bottom: FilledButton(
+        onPressed: () async {
+          try {
+            final userService = ref.read(userServiceProvider);
+            await userService.updateProfile(
+              preferredCurrency: _currencyCode,
+              locale: _locale,
             );
-          },
-          child: const Text("Let's Go!"),
+            ref.invalidate(currentUserProvider);
+          } catch (_) {
+            // Best-effort save; user can update later in Settings
+          }
+          if (!mounted) return;
+          GoRouter.of(this.context).go(
+            '/onboarding/profile',
+            extra: {
+              'currencyCode': _currencyCode,
+              'locale': _locale,
+            },
+          );
+        },
+        style: FilledButton.styleFrom(
+          minimumSize: const Size.fromHeight(48),
         ),
+        child: const Text("Let's Go!"),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const SizedBox(height: 10),
-          ScreenSection(
-            title: 'Your defaults',
-            subtitle:
-                'Pick the currency and region format that should feel native from the very first screen.',
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                FloatingLabelTextField(
-                  controller: _currencyController,
-                  label: 'Currency',
-                  prefix: const Icon(Icons.monetization_on_outlined),
-                  readOnly: true,
-                  onTap: _openCurrencyPicker,
-                  trailing: const Icon(Icons.expand_more_rounded),
-                ),
-                const SizedBox(height: 16),
-                FloatingLabelTextField(
-                  controller: _localeController,
-                  label: 'Region Format',
-                  prefix: const Icon(Icons.language),
-                  readOnly: true,
-                  onTap: _openLocalePicker,
-                  trailing: const Icon(Icons.expand_more_rounded),
-                ),
-              ],
+      children: [
+        ScreenSection(
+          title: 'Your defaults',
+          subtitle:
+              'These only affect currency, numbers, and dates. App language stays English.',
+          child: OnboardingActionList(
+            children: [
+              _SetupActionRow(
+                icon: Icons.monetization_on_outlined,
+                label: 'Currency',
+                value: _currencyCode,
+                onTap: _openCurrencyPicker,
+              ),
+              _SetupActionRow(
+                icon: Icons.language,
+                label: 'Region Format',
+                value: _localeName(),
+                onTap: _openLocalePicker,
+              ),
+            ],
+          ),
+        ),
+        const InlineNotice(
+          message:
+              'Changes how numbers and dates are shown. App language stays in English.',
+          tone: InlineNoticeTone.info,
+          icon: Icon(Icons.info_outline_rounded),
+        ),
+        const SizedBox(height: 22),
+        ScreenSection(
+          title: 'Preview',
+          compact: true,
+          child: Center(
+            child: Text(
+              _formattedSample(),
+              style: textTheme.headlineLarge?.copyWith(
+                color: Theme.of(context).appColors.deepNavy,
+                fontWeight: FontWeight.w800,
+                fontFeatures: const [FontFeature.tabularFigures()],
+              ),
             ),
           ),
-          const InlineNotice(
-            message:
-                'Changes how numbers and dates are shown. App language stays in English.',
-            tone: InlineNoticeTone.info,
-            icon: Icon(Icons.info_outline_rounded),
-          ),
-          const SizedBox(height: 16),
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+        ),
+      ],
+    );
+  }
+}
+
+class _SetupActionRow extends StatelessWidget {
+  const _SetupActionRow({
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final String value;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).appColors;
+    final textTheme = Theme.of(context).textTheme;
+
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(14),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 12),
+        child: Row(
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: colors.navySoft.withValues(alpha: 0.68),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Icon(icon, size: 20, color: colors.deepNavy),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
               child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Preview', style: textTheme.labelMedium),
-                  const SizedBox(height: 8),
                   Text(
-                    _formattedSample(),
-                    style: textTheme.headlineLarge?.copyWith(
-                      color: colors.primary,
+                    label,
+                    style: textTheme.labelSmall?.copyWith(
+                      color: colors.mutedInk,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 0.7,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    value,
+                    style: textTheme.bodyLarge?.copyWith(
+                      color: colors.ink,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
                 ],
               ),
             ),
-          ),
-        ],
+            const SizedBox(width: 12),
+            Icon(
+              Icons.chevron_right_rounded,
+              size: 20,
+              color: colors.deepNavy.withValues(alpha: 0.5),
+            ),
+          ],
+        ),
       ),
     );
   }

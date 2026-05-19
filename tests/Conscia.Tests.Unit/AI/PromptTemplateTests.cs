@@ -18,6 +18,21 @@ public class PromptTemplateTests
     }
 
     [Fact]
+    public void BuildPrePurchaseUserPrompt_WithDisplayName_IncludesUserName()
+    {
+        var result = PromptTemplates.BuildPrePurchaseUserPrompt(
+            49.99m,
+            "USD",
+            "Food",
+            72m,
+            3,
+            5,
+            userDisplayName: "Story Demo");
+
+        Assert.Contains("- User name: Story Demo", result);
+    }
+
+    [Fact]
     public void BuildPrePurchaseUserPrompt_WithNonUsdCurrency_InstructsModelToPreserveCurrency()
     {
         var result = PromptTemplates.BuildPrePurchaseUserPrompt(1000m, "PHP", "Dining", 7m, 0, 0);
@@ -60,6 +75,20 @@ public class PromptTemplateTests
         Assert.Contains("85%", result);
         Assert.Contains("2", result);
         Assert.Contains("reflect", result);
+    }
+
+    [Fact]
+    public void BuildReflectionUserPrompt_WithDisplayName_IncludesUserName()
+    {
+        var result = PromptTemplates.BuildReflectionUserPrompt(
+            120m,
+            "EUR",
+            "Entertainment",
+            85m,
+            2,
+            userDisplayName: "Story Demo");
+
+        Assert.Contains("- User name: Story Demo", result);
     }
 
     [Fact]

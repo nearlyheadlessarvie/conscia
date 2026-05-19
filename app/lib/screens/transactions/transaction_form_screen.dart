@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
 import '../../core/constants/app_icons.dart';
 import '../../core/errors/app_error.dart';
@@ -18,8 +17,7 @@ import '../../providers/transaction_providers.dart';
 import '../../providers/user_provider.dart';
 import '../../models/recurring_schedule.dart';
 import '../../services/transaction_service.dart';
-import '../../widgets/hero_screen_scaffold.dart';
-import '../../widgets/conscia_app_bar.dart';
+import '../../widgets/conscia_bottom_sheet.dart';
 import '../../widgets/location_assistance_prompt_sheet.dart';
 import '../../widgets/recurring_schedule_section.dart';
 import '../../widgets/scope_pill_switch.dart';
@@ -31,7 +29,7 @@ import '../../widgets/screen_section.dart';
 import 'widgets/transaction_style_category_selector.dart';
 import '../../widgets/segmented_switch.dart';
 
-class TransactionFormScreen extends ConsumerStatefulWidget {
+class TransactionFormScreen extends StatefulWidget {
   final String? transactionId;
   final String? initialAmount;
   final String? initialCurrencyCode;
@@ -48,11 +46,102 @@ class TransactionFormScreen extends ConsumerStatefulWidget {
   });
 
   @override
-  ConsumerState<TransactionFormScreen> createState() =>
+  State<TransactionFormScreen> createState() =>
       _TransactionFormScreenState();
 }
 
-class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
+class _TransactionFormScreenState extends State<TransactionFormScreen> {
+  bool _opened = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_opened) return;
+    _opened = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) => _openSheet());
+  }
+
+  Future<void> _openSheet() async {
+    if (!mounted) return;
+    final result = await TransactionFormSheet.show(
+      context,
+      transactionId: widget.transactionId,
+      initialAmount: widget.initialAmount,
+      initialCurrencyCode: widget.initialCurrencyCode,
+      initialCategory: widget.initialCategory,
+      initialCounterparty: widget.initialCounterparty,
+    );
+    if (!mounted) return;
+
+    final navigator = Navigator.of(context);
+    if (navigator.canPop()) {
+      navigator.pop(result);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Theme.of(context).appColors.paper,
+      body: const SizedBox.expand(),
+    );
+  }
+}
+
+class TransactionFormSheet extends ConsumerStatefulWidget {
+  final String? transactionId;
+  final String? initialAmount;
+  final String? initialCurrencyCode;
+  final String? initialCategory;
+  final String? initialCounterparty;
+  final ScrollController? scrollController;
+
+  const TransactionFormSheet({
+    super.key,
+    this.transactionId,
+    this.initialAmount,
+    this.initialCurrencyCode,
+    this.initialCategory,
+    this.initialCounterparty,
+    this.scrollController,
+  });
+
+  static Future<Transaction?> show(
+    BuildContext context, {
+    String? transactionId,
+    String? initialAmount,
+    String? initialCurrencyCode,
+    String? initialCategory,
+    String? initialCounterparty,
+  }) {
+    return showModalBottomSheet<Transaction>(
+      context: context,
+      useRootNavigator: true,
+      isScrollControlled: true,
+      useSafeArea: true,
+      builder: (_) => DraggableScrollableSheet(
+        initialChildSize: 0.98,
+        minChildSize: 0.56,
+        maxChildSize: 1,
+        expand: false,
+        builder: (_, controller) => TransactionFormSheet(
+          transactionId: transactionId,
+          initialAmount: initialAmount,
+          initialCurrencyCode: initialCurrencyCode,
+          initialCategory: initialCategory,
+          initialCounterparty: initialCounterparty,
+          scrollController: controller,
+        ),
+      ),
+    );
+  }
+
+  @override
+  ConsumerState<TransactionFormSheet> createState() =>
+      _TransactionFormSheetState();
+}
+
+class _TransactionFormSheetState extends ConsumerState<TransactionFormSheet> {
   bool get _isEditing => widget.transactionId != null;
 
   bool _isExpense = true;
@@ -324,8 +413,9 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
     }
 
     if (_isEditing && !_prefilled) {
-      return const HeroScreenScaffold(
-        appBar: ConsciaAppBar(title: Text('Edit Transaction')),
+      return const ConsciaBottomSheetScaffold(
+        title: 'Edit transaction',
+        subtitle: 'Loading the record so you can update it safely.',
         child: Column(
           children: [
             SkeletonLoader(height: 48),
@@ -361,17 +451,14 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
       locale: userPrefs.locale,
     );
 
-    return HeroScreenScaffold(
-      padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
-      appBar: ConsciaAppBar(
-        centerTitle: true,
-        title: Text(_isEditing ? 'Edit transaction' : 'Add transaction'),
-        leading: IconButton(
-          icon: Icon(AppIcons.chevronLeft),
-          onPressed: () => context.pop(),
-        ),
-      ),
-      bottom: SizedBox(
+    return ConsciaBottomSheetScaffold(
+      title: _isEditing ? 'Edit transaction' : 'Add transaction',
+      subtitle: _isEditing
+          ? 'Update the money story without losing the original context.'
+          : 'Capture who, how much, and where this belongs.',
+      expand: true,
+      scrollController: widget.scrollController,
+      footer: SizedBox(
         width: double.infinity,
         child: FilledButton(
           onPressed: _isValid && !_submitting ? _submit : null,

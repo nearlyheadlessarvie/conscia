@@ -15,6 +15,7 @@ import '../../core/errors/app_error.dart';
 import '../../core/network/dio_client.dart';
 import '../../core/routing/app_router.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_layout.dart';
 import '../../models/family_space.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/family_space_provider.dart';
@@ -24,8 +25,11 @@ import '../../providers/transaction_providers.dart';
 import '../../providers/user_provider.dart';
 import '../../services/user_service.dart';
 import '../../widgets/conscia_app_bar.dart';
+import '../../widgets/conscia_bottom_sheet.dart';
+import '../../widgets/conscia_confirm_sheet.dart';
 import '../../widgets/currency_picker_sheet.dart';
 import '../../widgets/locale_picker_sheet.dart';
+import '../../widgets/single_select_list.dart';
 import 'widgets/subscription_sheet.dart';
 
 final _packageInfoProvider = FutureProvider<PackageInfo>(
@@ -435,27 +439,34 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     showModalBottomSheet<void>(
       context: context,
       useRootNavigator: true,
-      showDragHandle: true,
       builder: (sheetContext) {
-        final theme = Theme.of(sheetContext);
         return SafeArea(
           child: ListView(
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
             shrinkWrap: true,
             children: [
-              const ListTile(
-                title: Text('AI Personality Intensity'),
-                subtitle: Text(
-                  'Applies across Pre-Purchase, Reflection, and future AI guidance.',
-                ),
+              const ConsciaSheetHandle(),
+              const SizedBox(height: 18),
+              const ConsciaSheetHeader(
+                title: 'AI personality intensity',
+                subtitle:
+                    'Applies across Pre-Purchase, Reflection, and future AI guidance.',
               ),
-              RadioGroup<String>(
-                groupValue: current.aiPersonalityIntensity,
-                onChanged: (value) async {
-                  if (value == null) return;
+              const SizedBox(height: 18),
+              SingleSelectList<
+                  ({String value, String label, String description})>(
+                options: _aiIntensityOptions,
+                value: _aiIntensityOptions.firstWhere(
+                  (option) => option.value == current.aiPersonalityIntensity,
+                  orElse: () => _aiIntensityOptions[1],
+                ),
+                titleBuilder: (option) => option.label,
+                subtitleBuilder: (option) => option.description,
+                onChanged: (option) async {
                   Navigator.of(sheetContext).pop();
                   try {
                     await ref.read(userServiceProvider).updateProfile(
-                          aiPersonalityIntensity: value,
+                          aiPersonalityIntensity: option.value,
                         );
                     ref.invalidate(currentUserProvider);
                   } catch (e, s) {
@@ -467,22 +478,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                           SnackBar(content: Text(error.userMessage)));
                   }
                 },
-                child: Column(
-                  children: [
-                    for (final option in _aiIntensityOptions)
-                      RadioListTile<String>(
-                        contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 2),
-                        title: Text(option.label),
-                        subtitle: Text(option.description),
-                        value: option.value,
-                        activeColor: theme.appColors.deepNavy,
-                        controlAffinity: ListTileControlAffinity.trailing,
-                        selected:
-                            option.value == current.aiPersonalityIntensity,
-                      ),
-                  ],
-                ),
               ),
             ],
           ),
@@ -653,70 +648,46 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     );
   }
 
-  void _confirmDeleteAccount(BuildContext context, WidgetRef ref) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Delete Account'),
-        content: const Text(
-          'This will permanently delete your account and all associated data '
-          '(transactions, budgets, AI interactions, receipts). '
-          'This action cannot be undone.\n\n'
-          'We recommend exporting your data first.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () async {
-              Navigator.of(ctx).pop();
-              try {
-                final dio = ref.read(dioProvider);
-                await dio.delete('users/me');
-                if (!context.mounted) return;
-                ref.read(authProvider.notifier).logout();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Account deleted.')),
-                );
-              } catch (e, s) {
-                if (!context.mounted) return;
-                final error = AppError.from(e, stackTrace: s);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text(error.userMessage)),
-                );
-              }
-            },
-            child: Text('Delete',
-                style: TextStyle(color: Theme.of(context).colorScheme.error)),
-          ),
-        ],
-      ),
+  Future<void> _confirmDeleteAccount(
+    BuildContext context,
+    WidgetRef ref,
+  ) async {
+    final confirmed = await ConsciaConfirmSheet.show(
+      context,
+      title: 'Delete this account?',
+      message:
+          'This permanently removes your account, transactions, budgets, AI interactions, receipts, and profile data. This can\'t be undone. Export your data first if you want a copy.',
+      confirmLabel: 'Delete account',
     );
+    if (!confirmed) return;
+
+    try {
+      final dio = ref.read(dioProvider);
+      await dio.delete('users/me');
+      if (!context.mounted) return;
+      ref.read(authProvider.notifier).logout();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Account deleted.')),
+      );
+    } catch (e, s) {
+      if (!context.mounted) return;
+      final error = AppError.from(e, stackTrace: s);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error.userMessage)),
+      );
+    }
   }
 
-  void _confirmSignOut(BuildContext context, WidgetRef ref) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Sign Out'),
-        content: const Text('Are you sure you want to sign out?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.of(ctx).pop();
-              ref.read(authProvider.notifier).logout();
-            },
-            child: const Text('Sign Out', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
+  Future<void> _confirmSignOut(BuildContext context, WidgetRef ref) async {
+    final confirmed = await ConsciaConfirmSheet.show(
+      context,
+      title: 'Sign out?',
+      message: 'You can sign back in anytime.',
+      confirmLabel: 'Sign out',
     );
+    if (!confirmed || !context.mounted) return;
+
+    ref.read(authProvider.notifier).logout();
   }
 
   String _labelForAiIntensity(String intensity) {
@@ -788,14 +759,18 @@ class _SettingsEditorialHero extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).appColors;
     final textTheme = Theme.of(context).textTheme;
-    final topInset = MediaQuery.paddingOf(context).top;
     final workspaceLabel =
         familySpace == null ? 'Create or join' : familySpace!.name;
 
     return Container(
       key: const ValueKey('settings-editorial-hero'),
       width: double.infinity,
-      padding: EdgeInsets.fromLTRB(20, topInset + 12, 20, 26),
+      padding: EdgeInsets.fromLTRB(
+        AppLayout.screenPadding,
+        AppLayout.bleedingHeroTop(context),
+        AppLayout.screenPadding,
+        26,
+      ),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,

@@ -64,8 +64,8 @@ public partial class CategoryService : ICategoryService
             Type = dto.Type,
             Scope = dto.Scope,
             FamilySpaceId = familySpaceId,
-            IconKey = CleanOptional(dto.IconKey, "other"),
-            ColorKey = CleanOptional(dto.ColorKey, "blue"),
+            IconKey = CleanOptional(dto.IconKey, DefaultIconKey(name)),
+            ColorKey = CleanOptional(dto.ColorKey, DefaultColorKey(name, dto.Type)),
             IsDefault = false,
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow
@@ -217,8 +217,8 @@ public partial class CategoryService : ICategoryService
             Type = type,
             Scope = scope,
             FamilySpaceId = familySpaceId,
-            IconKey = NormalizeName(name),
-            ColorKey = "blue",
+            IconKey = DefaultIconKey(name),
+            ColorKey = DefaultColorKey(name, type),
             IsDefault = true,
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow
@@ -262,10 +262,78 @@ public partial class CategoryService : ICategoryService
         return cleaned;
     }
 
-    private static string CleanOptional(string value, string fallback)
+    private static string CleanOptional(string? value, string fallback)
     {
-        var cleaned = value.Trim();
+        var cleaned = value?.Trim() ?? string.Empty;
         return string.IsNullOrWhiteSpace(cleaned) ? fallback : cleaned[..Math.Min(cleaned.Length, 40)];
+    }
+
+    private static string DefaultIconKey(string name)
+    {
+        var normalized = NormalizeName(name);
+        return KnownIconKeys.Contains(normalized) ? normalized : "other";
+    }
+
+    private static readonly HashSet<string> KnownIconKeys = new(StringComparer.Ordinal)
+    {
+        "groceries",
+        "dining",
+        "transport",
+        "entertainment",
+        "gaming",
+        "shopping",
+        "health",
+        "bills",
+        "education",
+        "travel",
+        "coffee",
+        "subscriptions",
+        "salary",
+        "freelance",
+        "business",
+        "investment",
+        "rental-income",
+        "bonus",
+        "gift",
+        "other"
+    };
+
+    private static string DefaultColorKey(string name, TransactionType type)
+    {
+        var normalized = NormalizeName(name);
+        return normalized switch
+        {
+            "dining" => "green",
+            "groceries" => "orange",
+            "bills" => "pink",
+            "shopping" => "blue",
+            "transport" => "cyan",
+            "entertainment" => "violet",
+            "education" => "blue",
+            "coffee" => "orange",
+            "gift" => "pink",
+            "travel" => "cyan",
+            "gaming" => "violet",
+            "health" => "pink",
+            "subscriptions" => "blue",
+            "salary" => "teal",
+            "freelance" => "orange",
+            "business" => "violet",
+            "investment" => "green",
+            "rental-income" => "cyan",
+            "bonus" => "amber",
+            "other" => type == TransactionType.Income ? "teal" : "cyan",
+            _ => DeterministicColorKey(normalized, type)
+        };
+    }
+
+    private static string DeterministicColorKey(string normalized, TransactionType type)
+    {
+        var palette = type == TransactionType.Income
+            ? new[] { "teal", "green", "amber", "cyan", "violet" }
+            : new[] { "green", "orange", "pink", "blue", "cyan", "violet" };
+        var sum = normalized.Aggregate(0, (current, ch) => current + ch);
+        return palette[Math.Abs(sum) % palette.Length];
     }
 
     private static string NormalizeName(string name) =>

@@ -1,4 +1,4 @@
-package com.example.conscia_app
+package com.getconscia.app
 
 import io.flutter.embedding.android.FlutterActivity
 

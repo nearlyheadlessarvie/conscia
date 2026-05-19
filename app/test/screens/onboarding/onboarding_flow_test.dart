@@ -4,7 +4,7 @@ import 'package:conscia_app/screens/onboarding/onboarding_screen.dart';
 import 'package:conscia_app/screens/onboarding/setup_screen.dart';
 import 'package:conscia_app/screens/onboarding/spending_profile_screen.dart';
 import 'package:conscia_app/services/user_service.dart';
-import 'package:conscia_app/widgets/selection_chip_group.dart';
+import 'package:conscia_app/widgets/single_select_list.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -178,7 +178,7 @@ void main() {
 
       expect(find.text('PHP'), findsWidgets);
 
-      await tester.tap(find.byType(TextField).first);
+      await tester.tap(find.text('Currency'));
       await tester.pumpAndSettle();
 
       final currencyTiles = tester
@@ -392,7 +392,7 @@ void main() {
   });
 
   testWidgets(
-    'spending profile next persists prefer-not-to-say and routes to budgets',
+    'spending profile requires income selection before routing to budgets',
     (tester) async {
       final userService = _RecordingUserService();
       final router = GoRouter(
@@ -435,6 +435,24 @@ void main() {
         ),
       );
 
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.text('Next'));
+      await tester.tap(find.text('Next'));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text(
+            'Choose a monthly income range, or select Prefer not to say.'),
+        findsOneWidget,
+      );
+      expect(userService.updates, isEmpty);
+
+      await tester.drag(
+        find.byType(CustomScrollView),
+        const Offset(0, -520),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Prefer not to say'));
       await tester.pumpAndSettle();
       await tester.ensureVisible(find.text('Next'));
       await tester.tap(find.text('Next'));
@@ -542,7 +560,11 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Skip'), findsNothing);
-    expect(find.text('What should we call you?'), findsOneWidget);
+    expect(find.text('PERSONAL DETAILS'), findsOneWidget);
+    expect(
+      find.text('This is the name Conscia will use around the app.'),
+      findsOneWidget,
+    );
     expect(find.text('Go to dashboard'), findsOneWidget);
 
     var button = tester.widget<FilledButton>(
@@ -566,7 +588,7 @@ void main() {
     expect(userService.updates.single['displayName'], 'Story Demo');
   });
 
-  testWidgets('about you uses branded chip avatars instead of raw icons', (
+  testWidgets('about you uses flat check lists for single-select facts', (
     tester,
   ) async {
     await tester.pumpWidget(
@@ -592,12 +614,18 @@ void main() {
 
     await tester.pumpAndSettle();
 
-    final chips = tester
-        .widgetList<SelectionChipButton>(find.byType(SelectionChipButton))
+    final lists = tester
+        .widgetList<SingleSelectList<String>>(
+            find.byType(SingleSelectList<String>))
         .toList();
 
-    expect(chips, isNotEmpty);
-    expect(chips.first.avatar, isNotNull);
-    expect(chips.first.avatar, isNot(isA<Icon>()));
+    expect(lists.length, 2);
+    expect(find.byType(Radio<String>), findsNothing);
+    expect(find.byType(Divider), findsWidgets);
+
+    await tester.tap(find.text('Employed'));
+    await tester.pumpAndSettle();
+
+    expect(find.byIcon(Icons.check_rounded), findsOneWidget);
   });
 }

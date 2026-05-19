@@ -8,6 +8,7 @@ import '../../core/errors/app_error.dart';
 import '../../core/network/dio_client.dart';
 import '../../core/routing/app_router.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_layout.dart';
 import '../../providers/subscription_provider.dart';
 import '../../widgets/conscia_app_bar.dart';
 import '../../widgets/hero_screen_scaffold.dart';
@@ -225,7 +226,12 @@ class _ReceiptScanHero extends StatelessWidget {
         ),
       ),
       child: Padding(
-        padding: EdgeInsets.fromLTRB(20, topPadding + 92, 20, 28),
+        padding: EdgeInsets.fromLTRB(
+          AppLayout.screenPadding,
+          topPadding + AppLayout.receiptHeroTopGap,
+          AppLayout.screenPadding,
+          AppLayout.heroBottomPadding,
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [

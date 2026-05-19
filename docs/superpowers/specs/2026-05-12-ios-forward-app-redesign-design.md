@@ -186,6 +186,17 @@ Avoid using large title-case section headings when the heading is only grouping 
 - Large grouped lists should prefer one rounded card with internal separators
 - Avoid stacking many isolated micro-cards when the content is really one list
 
+### Swipe Actions
+
+Swipe gestures should reveal actions without visually bleeding through row content.
+
+- The foreground row must remain opaque while it moves; use the screen canvas (`paper`) or the row's actual surface as the sliding layer background.
+- Revealed actions use separate rounded tiles, not one full-width flat color strip.
+- Destructive swipe actions use `expenseSoft` tile backgrounds with `expense` icon/text.
+- Neutral utility actions use `navySoft` or another approved soft token with `deepNavy` icon/text.
+- Swipe actions should stay compact and icon-led, with a short label for clarity.
+- Apply the same treatment across transaction rows, budget rows, notification rows, and any future swipeable list item.
+
 ## Navigation Shell
 
 The bottom navigation should use the approved **floating integrated dock** pattern.
@@ -236,37 +247,25 @@ Auth and field validation must switch to the approved v2 patterns:
 
 ## Selection Semantics
 
-We approved a distinction between **radio** and **check** rather than forcing one pattern everywhere.
+Single-select lists use the **flat settings-list + trailing checkmark** pattern.
 
-### Use Radio Dots When
+Rules:
 
-The choice is:
-
-- Single-select
-- Small in count
-- Distinct, unrelated options
-- Common in onboarding/profile questions
-
-Examples:
-
-- Spending style
-- Household type
-- Similar question modules in profile/setup
-
-### Use Checkmarks When
-
-The choice is:
-
-- One selected item inside a grouped list card
-- Options are presented as related rows within the same container
-- The mental model is “pick one from this structured list”
+- Use flat rows with internal separators, not radio dots.
+- Selected row shows one trailing `check_rounded` icon in `deepNavy`.
+- Unselected rows reserve no visible indicator.
+- Primary option title is bold, usually 14sp Inter / 700, `ink` or `deepNavy` when selected.
+- Optional subtitle is regular-weight, muted, and smaller than the title.
+- Do not wrap these lists in extra cards unless the surrounding surface already requires it.
 
 Examples:
 
-- Currency picker
 - Region format picker
+- AI personality intensity picker
+- Profile spending style / income / occupation / household pickers
+- Onboarding spending style, monthly income, occupation, and household choices
 
-This keeps onboarding/profile questions feeling like radio groups while allowing grouped pickers to remain compact and readable.
+Use chips only for compact horizontal rails where the item set is browse/filter-like rather than a vertical “choose one” list.
 
 ## Lists, Rows, And Grouped Cards
 
@@ -438,9 +437,10 @@ Implementation note:
 
 ### Confirmations
 
-- Destructive confirmations should feel iOS-ish
-- Use cleaner, more native-feeling alert typography and button hierarchy
-- No need for hyper-custom dialogs if the system-style feel is preserved
+- App-owned destructive confirmations use a pull-up confirmation sheet, not a centered dialog
+- Use the shared confirmation sheet language: `paper` surface, 28px top corners, centered handle, concise title, muted helper text, full-width destructive pill button, and outlined cancel button below
+- Keep copy specific and calm: state what will be deleted, say it cannot be undone, and avoid paragraph-heavy legal text
+- Reserve native/system alerts for OS permissions or platform-owned prompts only
 
 ## Sheets And Overlays
 
@@ -448,6 +448,7 @@ All bottom sheets should share one language:
 
 - 28px top radius
 - centered drag handle
+- `paper` background surface, not default Material white
 - clearer hierarchy
 - same field treatment as full screens
 

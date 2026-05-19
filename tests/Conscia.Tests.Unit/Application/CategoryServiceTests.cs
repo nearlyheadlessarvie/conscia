@@ -33,6 +33,18 @@ public class CategoryServiceTests
 
         Assert.Contains(result, c => c.Name == "Dining" && c.Type == TransactionType.Expense.ToString());
         Assert.Contains(result, c => c.Name == "Salary" && c.Type == TransactionType.Income.ToString());
+        Assert.Contains(result, c =>
+            c.Name == "Dining" &&
+            c.IconKey == "dining" &&
+            c.ColorKey == "green");
+        Assert.Contains(result, c =>
+            c.Name == "Bills" &&
+            c.IconKey == "bills" &&
+            c.ColorKey == "pink");
+        Assert.Contains(result, c =>
+            c.Name == "Salary" &&
+            c.IconKey == "salary" &&
+            c.ColorKey == "teal");
         _categories.Verify(
             r => r.AddAsync(It.Is<ManagedCategory>(c => c.Name == "Dining" && c.UserId == userId), It.IsAny<CancellationToken>()),
             Times.Once);
@@ -66,6 +78,30 @@ public class CategoryServiceTests
                 c.NormalizedName == "home-repair" &&
                 c.Scope == RecordScope.Personal),
             It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task CreateAsync_AssignsVibrantDefaultsWhenVisualKeysAreMissing()
+    {
+        var userId = Guid.NewGuid();
+        _categories.Setup(r => r.GetByNormalizedNameAsync(
+                userId,
+                null,
+                RecordScope.Personal,
+                TransactionType.Expense,
+                "pet-care",
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync((ManagedCategory?)null);
+        _categories.Setup(r => r.AddAsync(It.IsAny<ManagedCategory>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((ManagedCategory category, CancellationToken _) => category);
+
+        var result = await CreateService().CreateAsync(
+            userId,
+            new CreateCategoryDto("Pet care", TransactionType.Expense, RecordScope.Personal, null, "", ""));
+
+        Assert.Equal("other", result.IconKey);
+        Assert.NotEqual("blue", result.ColorKey);
+        Assert.NotEmpty(result.ColorKey);
     }
 
     [Fact]
