@@ -56,7 +56,22 @@ void main() {
     expect(alerts.map((alert) => alert.type), contains('journey_level_up'));
     expect(alerts.map((alert) => alert.type), contains('journey_badge'));
     expect(alerts.map((alert) => alert.type), contains('journey_quest'));
-    expect(alerts.first.actionRoute, '/');
+
+    final journeyAlertTypes = {
+      'journey_level_up',
+      'journey_badge',
+      'journey_quest',
+    };
+    final journeyAlerts = alerts
+        .where((alert) => journeyAlertTypes.contains(alert.type))
+        .toList();
+
+    expect(journeyAlerts, hasLength(3));
+    expect(journeyAlerts.map((alert) => alert.actionRoute), everyElement('/'));
+    expect(
+      journeyAlerts.map((alert) => alert.actionLabel),
+      everyElement('Open Journey Home'),
+    );
   });
 
   test('conscienceJourneyProvider refreshes when authenticated user changes',
