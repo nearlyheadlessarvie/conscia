@@ -1,5 +1,4 @@
 using Conscia.Api.Extensions;
-using Conscia.Application.Constants;
 using Conscia.Application.DTOs;
 using Conscia.Application.Interfaces;
 using FluentValidation;
@@ -27,21 +26,6 @@ public static class BudgetEndpoints
                 return Results.ValidationProblem(validation.ToDictionary());
 
             var userId = ctx.User.GetUserId();
-
-            var isPremium = await subSvc.IsPremiumAsync(userId, ctx.RequestAborted);
-            if (!isPremium)
-            {
-                var user = await userSvc.GetByIdAsync(userId, ctx.RequestAborted);
-                var categoryLimit = user?.HasCompletedOnboarding == false
-                    ? 5
-                    : FreemiumLimits.FreeBudgetCategories;
-                var existing = await svc.ListByUserAsync(userId, ctx.RequestAborted);
-                if (existing.Count >= categoryLimit)
-                    return Results.Json(
-                        new { error = $"Free tier limit: {categoryLimit} budget categories", upgradeRequired = true },
-                        statusCode: 403);
-            }
-
             var budget = await svc.CreateAsync(userId, dto, ctx.RequestAborted);
             var status = await svc.GetStatusByIdAsync(userId, budget.Id, ct: ctx.RequestAborted);
             return Results.Created($"/api/v1/budgets/{budget.Id}", new

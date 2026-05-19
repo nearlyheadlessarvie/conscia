@@ -113,7 +113,7 @@ void main() {
     expect(find.byIcon(Icons.close_rounded), findsOneWidget);
   });
 
-  testWidgets('budget form hides upgrade-only categories for free users',
+  testWidgets('budget form shows all expense categories for free users',
       (tester) async {
     await _pumpBudgetFormSheet(tester, isPremium: false);
 
@@ -123,7 +123,7 @@ void main() {
     expect(find.text('Groceries'), findsWidgets);
     expect(find.text('Dining'), findsWidgets);
     expect(find.text('Transport'), findsWidgets);
-    expect(find.text('Travel'), findsNothing);
+    expect(find.text('Travel'), findsOneWidget);
     expect(find.text('Salary'), findsNothing);
   });
 

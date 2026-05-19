@@ -96,6 +96,7 @@ class _Particle {
     required this.color,
     required this.opacity,
     required this.radius,
+    required this.isBoundaryHalo,
   });
 
   // base position as fraction of canvas (0–1)
@@ -111,6 +112,7 @@ class _Particle {
   final double opacity;
   // dot radius in logical pixels
   final double radius;
+  final bool isBoundaryHalo;
 }
 
 /// Devil/angel/conscia colour palette — angel blue is dominant, devil and
@@ -152,15 +154,18 @@ const _paletteWeights = [
 
 List<_Particle> _buildParticles() {
   final rng = math.Random(0xC0A5C1A); // fixed seed → deterministic layout
-  const count = 168;
+  const count = 262;
   const maxR = 0.44; // sphere radius as fraction of widget dimension
 
   final particles = <_Particle>[];
   for (var i = 0; i < count; i++) {
     // Uniform spherical-disc distribution, biased toward centre via pow.
     final angle = rng.nextDouble() * math.pi * 2;
-    final coreRadial = math.pow(rng.nextDouble(), 0.55).toDouble();
-    final isSpill = rng.nextDouble() < 0.16;
+    final isBoundaryHalo = rng.nextDouble() < 0.24;
+    final coreRadial = isBoundaryHalo
+        ? 0.84 + rng.nextDouble() * 0.18
+        : math.pow(rng.nextDouble(), 0.55).toDouble();
+    final isSpill = !isBoundaryHalo && rng.nextDouble() < 0.16;
     final radial = isSpill
         ? 1.02 + rng.nextDouble() * 0.22
         : coreRadial; // 0=centre, >1=outside sphere
@@ -181,14 +186,18 @@ List<_Particle> _buildParticles() {
     final phase = rng.nextDouble() * math.pi * 2;
 
     // Size: centre dots slightly larger for a soft-core feel.
-    final radius = isSpill
-        ? 0.9 + rng.nextDouble() * 1.25
-        : 1.2 + (1 - radial) * 2.3 + rng.nextDouble() * 1.35;
+    final radius = isBoundaryHalo
+        ? 0.55 + rng.nextDouble() * 0.7
+        : isSpill
+            ? 0.78 + rng.nextDouble() * 1.0
+            : 1.0 + (1 - radial) * 1.95 + rng.nextDouble() * 1.1;
 
     // Opacity: core more opaque; edge particles are wisps.
-    final opacity = (isSpill
-            ? 0.18 + rng.nextDouble() * 0.22
-            : 0.28 + (1 - radial) * 0.40 + rng.nextDouble() * 0.15)
+    final opacity = (isBoundaryHalo
+            ? 0.12 + rng.nextDouble() * 0.16
+            : isSpill
+                ? 0.18 + rng.nextDouble() * 0.22
+                : 0.28 + (1 - radial) * 0.40 + rng.nextDouble() * 0.15)
         .clamp(0.14, 0.90);
 
     // Colour from weighted palette.
@@ -213,6 +222,7 @@ List<_Particle> _buildParticles() {
       color: _palette[colorIdx],
       opacity: opacity,
       radius: radius,
+      isBoundaryHalo: isBoundaryHalo,
     ));
   }
   return particles;
@@ -224,6 +234,10 @@ final _particles = _buildParticles();
 @visibleForTesting
 double get debugThinkingCloudNeutralWeight =>
     _paletteWeights.skip(9).fold(0, (sum, weight) => sum + weight);
+
+@visibleForTesting
+int get debugThinkingCloudBoundaryHaloCount =>
+    _particles.where((particle) => particle.isBoundaryHalo).length;
 
 @visibleForTesting
 double? debugThinkingCloudPainterPhase(CustomPainter? painter) {

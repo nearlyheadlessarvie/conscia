@@ -7,6 +7,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../providers/category_provider.dart';
 import '../../../providers/category_recents_provider.dart';
 import '../../../widgets/conscia_bottom_sheet.dart';
+import '../../../widgets/premium_upgrade_dialog.dart';
 import 'category_picker.dart';
 
 class TransactionStyleCategorySelector extends ConsumerStatefulWidget {
@@ -16,6 +17,7 @@ class TransactionStyleCategorySelector extends ConsumerStatefulWidget {
     required this.isExpense,
     required this.isPremium,
     required this.onCategorySelected,
+    this.allowAllCategories = false,
     this.labelStyle,
     this.moreCategoriesIcon = Icons.add,
     this.showHeader = true,
@@ -24,6 +26,7 @@ class TransactionStyleCategorySelector extends ConsumerStatefulWidget {
   final String? selectedCategory;
   final bool isExpense;
   final bool isPremium;
+  final bool allowAllCategories;
   final ValueChanged<String?> onCategorySelected;
   final TextStyle? labelStyle;
   final IconData moreCategoriesIcon;
@@ -79,6 +82,7 @@ class _TransactionStyleCategorySelectorState
                   selected: widget.selectedCategory,
                   isExpense: widget.isExpense,
                   isPremium: widget.isPremium,
+                  allowAllCategories: widget.allowAllCategories,
                   maxVisible: 100,
                   showTitle: false,
                   onSelected: (category) {
@@ -104,6 +108,12 @@ class _TransactionStyleCategorySelectorState
                   .where((c) => !c.isArchived)
                   .where(
                     (c) => widget.isExpense ? c.isExpense : c.isIncome,
+                  )
+                  .where(
+                    (c) =>
+                        widget.allowAllCategories ||
+                        widget.isPremium ||
+                        isFreeTransactionCategory(c.name),
                   )
                   .map(CategoryData.fromManaged)
                   .toList(growable: false),
@@ -169,17 +179,33 @@ class _TransactionStyleCategorySelectorState
               ),
             ),
           ),
-          _MoreChip(onTap: _showCategoryPickerSheet),
+          widget.allowAllCategories || widget.isPremium
+              ? _MoreChip(onTap: _showCategoryPickerSheet)
+              : widget.isExpense
+                  ? _PremiumCategoriesChip(
+                      onTap: () => PremiumUpgradeDialog.show(
+                        context,
+                        feature:
+                            'Free users can only log transactions in Dining, Groceries, and Salary.',
+                      ),
+                    )
+                  : const SizedBox.shrink(),
         ],
       ),
     );
   }
 
   List<String> _expenseQuick(List<String> recents) {
-    final allowed = visibleBudgetCategories(
-      isPremium: widget.isPremium,
-      categories: expenseCategories,
-    );
+    final allowed = widget.allowAllCategories
+        ? visibleBudgetCategories(
+            isPremium: widget.isPremium,
+            categories: expenseCategories,
+          )
+        : visibleTransactionCategories(
+            isPremium: widget.isPremium,
+            isExpense: true,
+            categories: expenseCategories,
+          );
     return orderCategoriesByRecency(
       categories: allowed,
       recents: recents,
@@ -216,6 +242,48 @@ class _MoreChip extends StatelessWidget {
               'More',
               style: Theme.of(context).textTheme.labelSmall?.copyWith(
                     fontWeight: FontWeight.w500,
+                    fontSize: 12,
+                  ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PremiumCategoriesChip extends StatelessWidget {
+  const _PremiumCategoriesChip({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).appColors;
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: colors.surfaceMuted,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(
+            color: colors.deepNavy.withValues(alpha: 0.12),
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.workspace_premium_rounded,
+              size: 13,
+              color: colors.deepNavy,
+            ),
+            const SizedBox(width: 4),
+            Text(
+              'Premium categories',
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    fontWeight: FontWeight.w600,
                     fontSize: 12,
                   ),
             ),

@@ -1,6 +1,8 @@
 import 'package:conscia_app/models/managed_category.dart';
 import 'package:conscia_app/providers/category_provider.dart';
+import 'package:conscia_app/providers/subscription_provider.dart';
 import 'package:conscia_app/screens/settings/category_management_screen.dart';
+import 'package:conscia_app/services/subscription_service.dart';
 import 'package:conscia_app/widgets/feed_card.dart';
 import 'package:conscia_app/widgets/floating_label_text_field.dart';
 import 'package:conscia_app/core/network/api_exception.dart';
@@ -69,6 +71,7 @@ Future<void> _pumpScreen(
   WidgetTester tester, {
   required _RecordingCategoryActions actions,
   List<ManagedCategory> categories = const [],
+  bool isPremium = false,
 }) async {
   await tester.pumpWidget(
     ProviderScope(
@@ -76,6 +79,12 @@ Future<void> _pumpScreen(
         managedCategoriesProvider(const CategoryQuery(includeArchived: true))
             .overrideWith((ref) async => categories),
         categoryActionsProvider.overrideWithValue(actions),
+        subscriptionProvider.overrideWith(
+          (ref) async => SubscriptionStatus(
+            tier: isPremium ? 'premium' : 'free',
+            isPremium: isPremium,
+          ),
+        ),
       ],
       child: const MaterialApp(home: CategoryManagementScreen()),
     ),
@@ -115,7 +124,7 @@ void main() {
 
   testWidgets('creates a custom category from settings', (tester) async {
     final actions = _RecordingCategoryActions();
-    await _pumpScreen(tester, actions: actions);
+    await _pumpScreen(tester, actions: actions, isPremium: true);
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('Add category'));
@@ -133,7 +142,7 @@ void main() {
 
   testWidgets('category sheet uses Conscia v2 floating input', (tester) async {
     final actions = _RecordingCategoryActions();
-    await _pumpScreen(tester, actions: actions);
+    await _pumpScreen(tester, actions: actions, isPremium: true);
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('Add category'));
@@ -160,7 +169,7 @@ void main() {
   testWidgets('category sheet uses Conscia controls for type and visuals',
       (tester) async {
     final actions = _RecordingCategoryActions();
-    await _pumpScreen(tester, actions: actions);
+    await _pumpScreen(tester, actions: actions, isPremium: true);
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('Add category'));
@@ -177,7 +186,7 @@ void main() {
   testWidgets('more icon choice opens the full icon picker sheet',
       (tester) async {
     final actions = _RecordingCategoryActions();
-    await _pumpScreen(tester, actions: actions);
+    await _pumpScreen(tester, actions: actions, isPremium: true);
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('Add category'));
@@ -199,7 +208,7 @@ void main() {
         message: 'A category with that name already exists.',
         statusCode: 409,
       );
-    await _pumpScreen(tester, actions: actions);
+    await _pumpScreen(tester, actions: actions, isPremium: true);
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('Add category'));
@@ -215,6 +224,22 @@ void main() {
     );
     expect(find.byType(SnackBar), findsNothing);
     expect(find.text('New category'), findsOneWidget);
+  });
+
+  testWidgets('free users see a premium gate instead of the category sheet',
+      (tester) async {
+    final actions = _RecordingCategoryActions();
+    await _pumpScreen(tester, actions: actions, isPremium: false);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Add category'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Premium Feature'), findsOneWidget);
+    expect(
+        find.text('Custom categories are a Premium feature.'), findsOneWidget);
+    expect(find.text('New category'), findsNothing);
+    expect(actions.createdName, isNull);
   });
 
   testWidgets('archives a custom category with a left swipe confirmation',

@@ -16,6 +16,9 @@ public class CategoryEndpointTests
     public async Task ListCategories_ReturnsManagedCategories()
     {
         await using var factory = new TestWebAppFactory();
+        factory.SubscriptionServiceMock
+            .Setup(s => s.IsPremiumAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
         factory.CategoryServiceMock
             .Setup(s => s.ListAsync(UserId, RecordScope.Personal, null, false, It.IsAny<CancellationToken>()))
             .ReturnsAsync([
@@ -47,6 +50,9 @@ public class CategoryEndpointTests
     public async Task CreateCategory_ValidRequest_ReturnsCreated()
     {
         await using var factory = new TestWebAppFactory();
+        factory.SubscriptionServiceMock
+            .Setup(s => s.IsPremiumAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
         var categoryId = Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
         factory.CategoryServiceMock
             .Setup(s => s.CreateAsync(
@@ -88,6 +94,9 @@ public class CategoryEndpointTests
     public async Task CreateCategory_Duplicate_ReturnsBadRequest()
     {
         await using var factory = new TestWebAppFactory();
+        factory.SubscriptionServiceMock
+            .Setup(s => s.IsPremiumAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
         factory.CategoryServiceMock
             .Setup(s => s.CreateAsync(
                 It.IsAny<Guid>(),
@@ -109,9 +118,38 @@ public class CategoryEndpointTests
     }
 
     [Fact]
+    public async Task CreateCategory_FreeUser_ReturnsForbiddenUpgradeRequired()
+    {
+        await using var factory = new TestWebAppFactory();
+        factory.SubscriptionServiceMock
+            .Setup(s => s.IsPremiumAsync(UserId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
+
+        var client = CreateAuthorizedClient(factory);
+        var response = await client.PostAsJsonAsync("/api/v1/categories", new
+        {
+            name = "Pet care",
+            type = "Expense",
+            scope = "Personal",
+            iconKey = "other",
+            colorKey = "green"
+        });
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        var json = await response.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.True(json.GetProperty("upgradeRequired").GetBoolean());
+        factory.CategoryServiceMock.Verify(
+            s => s.CreateAsync(It.IsAny<Guid>(), It.IsAny<CreateCategoryDto>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
     public async Task ArchiveCategory_ValidRequest_ReturnsNoContent()
     {
         await using var factory = new TestWebAppFactory();
+        factory.SubscriptionServiceMock
+            .Setup(s => s.IsPremiumAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
         var categoryId = Guid.Parse("cccccccc-cccc-cccc-cccc-cccccccccccc");
         factory.CategoryServiceMock
             .Setup(s => s.ArchiveAsync(UserId, categoryId, It.IsAny<CancellationToken>()))

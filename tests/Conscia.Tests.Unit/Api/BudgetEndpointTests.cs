@@ -115,28 +115,11 @@ public class BudgetEndpointTests : IClassFixture<TestWebAppFactory>
     }
 
     [Fact]
-    public async Task CreateBudget_FreeUserDuringOnboarding_AllowsFifthStarterBudget()
+    public async Task CreateBudget_FreeUser_AllowsAdditionalBudgetCategories()
     {
         _factory.SubscriptionServiceMock
             .Setup(s => s.IsPremiumAsync(UserId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(false);
-        _factory.UserServiceMock
-            .Setup(s => s.GetByIdAsync(UserId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new User
-            {
-                Id = UserId,
-                Email = "alice@example.com",
-                HasCompletedOnboarding = false
-            });
-        _factory.BudgetServiceMock
-            .Setup(s => s.ListByUserAsync(UserId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<Budget>
-            {
-                new() { Id = Guid.NewGuid(), UserId = UserId, Category = "Groceries", MonthlyLimit = 274m, CurrencyCode = "USD" },
-                new() { Id = Guid.NewGuid(), UserId = UserId, Category = "Bills", MonthlyLimit = 196m, CurrencyCode = "USD" },
-                new() { Id = Guid.NewGuid(), UserId = UserId, Category = "Dining", MonthlyLimit = 176m, CurrencyCode = "USD" },
-                new() { Id = Guid.NewGuid(), UserId = UserId, Category = "Transport", MonthlyLimit = 137m, CurrencyCode = "USD" },
-            });
         _factory.BudgetServiceMock
             .Setup(s => s.CreateAsync(UserId, It.Is<CreateBudgetDto>(dto =>
                 dto.Category == "Shopping" &&
@@ -170,5 +153,11 @@ public class BudgetEndpointTests : IClassFixture<TestWebAppFactory>
         });
 
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        _factory.UserServiceMock.Verify(
+            s => s.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        _factory.BudgetServiceMock.Verify(
+            s => s.ListByUserAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()),
+            Times.Never);
     }
 }

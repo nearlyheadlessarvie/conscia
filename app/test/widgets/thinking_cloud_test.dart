@@ -47,6 +47,10 @@ void main() {
     );
   });
 
+  test('ThinkingCloudWidget includes a denser boundary halo', () {
+    expect(debugThinkingCloudBoundaryHaloCount, greaterThanOrEqualTo(40));
+  });
+
   testWidgets('ThinkingCloudWidget supports a non-zero starting phase',
       (tester) async {
     await tester.pumpWidget(
