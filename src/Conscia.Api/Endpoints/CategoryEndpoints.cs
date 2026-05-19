@@ -1,4 +1,5 @@
 using Conscia.Api.Extensions;
+using Conscia.Application.Constants;
 using Conscia.Application.DTOs;
 using Conscia.Application.Interfaces;
 using Conscia.Domain.Enums;
@@ -36,11 +37,28 @@ public static class CategoryEndpoints
             }
         }).WithName("ListCategories");
 
-        group.MapPost("/", async (HttpContext ctx, CreateCategoryDto dto, ICategoryService svc) =>
+        group.MapPost("/", async (
+            HttpContext ctx,
+            CreateCategoryDto dto,
+            ICategoryService svc,
+            ISubscriptionService subSvc) =>
         {
             try
             {
-                var category = await svc.CreateAsync(ctx.User.GetUserId(), dto, ctx.RequestAborted);
+                var userId = ctx.User.GetUserId();
+                var isPremium = await subSvc.IsPremiumAsync(userId, ctx.RequestAborted);
+                if (!isPremium)
+                {
+                    return Results.Json(
+                        new
+                        {
+                            error = "Custom categories are a Premium feature.",
+                            upgradeRequired = true
+                        },
+                        statusCode: StatusCodes.Status403Forbidden);
+                }
+
+                var category = await svc.CreateAsync(userId, dto, ctx.RequestAborted);
                 return Results.Created($"/api/v1/categories/{category.Id}", category);
             }
             catch (UnauthorizedAccessException ex)

@@ -126,7 +126,8 @@ class _SubscriptionSheetBodyState
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              _buildComparisonList(theme, textTheme, isPremiumActive: isCurrentPremium),
+              _buildComparisonList(theme, textTheme,
+                  isPremiumActive: isCurrentPremium),
               const SizedBox(height: 24),
               if (!isCurrentPremium) ...[
                 Row(
@@ -156,14 +157,16 @@ class _SubscriptionSheetBodyState
                     padding: const EdgeInsets.only(top: 4),
                     child: Text(
                       'Price loading from store...',
-                      style: textTheme.bodySmall?.copyWith(color: colors.mutedInk),
+                      style:
+                          textTheme.bodySmall?.copyWith(color: colors.mutedInk),
                       textAlign: TextAlign.center,
                     ),
                   ),
                 const SizedBox(height: 6),
                 Text(
                   'Cancel anytime from your App Store or Play Store settings.',
-                  style: textTheme.bodySmall?.copyWith(color: colors.mutedInk, height: 1.35),
+                  style: textTheme.bodySmall
+                      ?.copyWith(color: colors.mutedInk, height: 1.35),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 24),
@@ -217,7 +220,8 @@ class _SubscriptionSheetBodyState
                   backgroundColor: colors.amber,
                   foregroundColor: colors.ink,
                   shape: const StadiumBorder(),
-                  textStyle: textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w800),
+                  textStyle: textTheme.labelLarge
+                      ?.copyWith(fontWeight: FontWeight.w800),
                 ),
                 child: _waitingForPurchase
                     ? const SizedBox(
@@ -225,7 +229,9 @@ class _SubscriptionSheetBodyState
                         height: 20,
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
-                    : Text(isCurrentPremium ? 'Manage Subscription' : 'Subscribe Now'),
+                    : Text(isCurrentPremium
+                        ? 'Manage Subscription'
+                        : 'Subscribe Now'),
               ),
               if (!isCurrentPremium) ...[
                 const SizedBox(height: 12),
@@ -234,7 +240,8 @@ class _SubscriptionSheetBodyState
                     onPressed: _waitingForPurchase ? null : _restorePurchases,
                     style: TextButton.styleFrom(
                       foregroundColor: colors.mutedInk,
-                      textStyle: textTheme.labelMedium?.copyWith(fontWeight: FontWeight.w600),
+                      textStyle: textTheme.labelMedium
+                          ?.copyWith(fontWeight: FontWeight.w600),
                     ),
                     child: const Text('Restore Purchases'),
                   ),
@@ -254,8 +261,9 @@ class _SubscriptionSheetBodyState
   }) {
     final colors = theme.appColors;
     final features = [
-      ('Transactions', 'Unlimited', 'Unlimited'),
-      ('Budgets', '3', 'Unlimited'),
+      ('Transaction categories', '3', 'Unlimited'),
+      ('Budgets', 'Unlimited', 'Unlimited'),
+      ('Custom categories', '—', 'Included'),
       ('AI Assists', '5/month', 'Unlimited'),
       ('Reflections', '10/month', 'Unlimited'),
       ('Receipt Scanner', '—', 'Included'),
@@ -365,7 +373,6 @@ class _SubscriptionSheetBodyState
       });
     }
   }
-
 }
 
 class _SubscriptionHero extends StatelessWidget {
@@ -386,7 +393,10 @@ class _SubscriptionHero extends StatelessWidget {
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [colors.deepNavy, Color.lerp(colors.deepNavy, colors.amber, 0.18)!],
+          colors: [
+            colors.deepNavy,
+            Color.lerp(colors.deepNavy, colors.amber, 0.18)!
+          ],
         ),
         borderRadius: const BorderRadius.vertical(bottom: Radius.circular(32)),
       ),
@@ -400,7 +410,8 @@ class _SubscriptionHero extends StatelessWidget {
               color: colors.amber.withValues(alpha: 0.18),
               shape: BoxShape.circle,
             ),
-            child: Icon(Icons.workspace_premium_rounded, color: colors.amber, size: 28),
+            child: Icon(Icons.workspace_premium_rounded,
+                color: colors.amber, size: 28),
           ),
           const SizedBox(height: 14),
           Text(
@@ -447,8 +458,21 @@ class _SubscriptionHero extends StatelessWidget {
   }
 
   String _fmt(DateTime d) {
-    const months = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-        'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const months = [
+      '',
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec'
+    ];
     return '${months[d.month]} ${d.day}, ${d.year}';
   }
 }

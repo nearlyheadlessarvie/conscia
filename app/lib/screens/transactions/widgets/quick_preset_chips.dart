@@ -78,8 +78,9 @@ class QuickPresetChips extends ConsumerWidget {
   }
 
   List<String> _expenseQuickCategories(List<String> recentCategories) {
-    final allowedCategories = visibleBudgetCategories(
+    final allowedCategories = visibleTransactionCategories(
       isPremium: isPremium,
+      isExpense: true,
       categories: expenseCategories,
     );
     return orderCategoriesByRecency(
@@ -92,6 +93,8 @@ class QuickPresetChips extends ConsumerWidget {
     return categories
         .where((category) => !category.isArchived)
         .where((category) => isExpense ? category.isExpense : category.isIncome)
+        .where(
+            (category) => isPremium || isFreeTransactionCategory(category.name))
         .map(CategoryData.fromManaged)
         .toList(growable: false);
   }

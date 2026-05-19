@@ -1,19 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../core/constants/generated/app_constants.g.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_layout.dart';
 import '../../core/utils/currency_formatter.dart';
 import '../../providers/budget_providers.dart';
-import '../../providers/subscription_provider.dart';
 import '../../services/budget_service.dart';
-import '../../services/subscription_service.dart';
 import '../../widgets/conscia_app_bar.dart';
 import '../../widgets/budget_mix_visuals.dart';
 import '../../widgets/conscia_confirm_sheet.dart';
 import '../../widgets/empty_state.dart';
-import '../../widgets/premium_upgrade_dialog.dart';
 import '../../widgets/scope_pill_switch.dart';
 import '../../widgets/skeleton_loader.dart';
 import '../../widgets/swipe_action_tile.dart';
@@ -211,30 +207,6 @@ class _BudgetsScreenState extends ConsumerState<BudgetsScreen> {
   }
 
   Future<void> _onAddBudget(BuildContext context, WidgetRef ref) async {
-    final budgetState = ref.read(budgetListProvider);
-    final subAsync = ref.read(subscriptionProvider);
-    SubscriptionStatus? subscription = subAsync.valueOrNull;
-
-    if (subAsync.isLoading || subscription == null) {
-      try {
-        subscription = await ref.read(subscriptionProvider.future);
-      } catch (_) {
-        subscription = null;
-      }
-      if (!context.mounted) return;
-    }
-
-    final isPremium = subscription?.isPremium ?? false;
-    if (!isPremium &&
-        budgetState.budgets.length >= FreemiumLimits.freeBudgetCategories) {
-      PremiumUpgradeDialog.show(
-        context,
-        feature:
-            'You\'ve reached the free tier limit of ${FreemiumLimits.freeBudgetCategories} budget categories.',
-      );
-      return;
-    }
-
     if (context.mounted) BudgetFormSheet.show(context);
   }
 

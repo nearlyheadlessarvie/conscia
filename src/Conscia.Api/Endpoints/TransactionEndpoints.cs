@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using Conscia.Api.Extensions;
 using Conscia.Api.Telemetry;
+using Conscia.Application.Constants;
 using Conscia.Application.DTOs;
 using Conscia.Application.Interfaces;
 using Conscia.Domain.Enums;
@@ -20,6 +21,7 @@ public static class TransactionEndpoints
             HttpContext ctx,
             CreateTransactionDto dto,
             ITransactionService svc,
+            ISubscriptionService subSvc,
             IValidator<CreateTransactionDto> validator) =>
         {
             using var activity = ConsciaActivitySources.Transactions.StartActivity("CreateTransaction");
@@ -33,6 +35,18 @@ public static class TransactionEndpoints
             activity?.SetTag("transaction.category", dto.Category);
 
             var userId = ctx.User.GetUserId();
+            var isPremium = await subSvc.IsPremiumAsync(userId, ctx.RequestAborted);
+            if (!isPremium && !FreemiumCategoryPolicy.IsFreeTransactionCategory(dto.Category))
+            {
+                return Results.Json(
+                    new
+                    {
+                        error = "Free users can only create transactions in Dining, Groceries, and Salary.",
+                        upgradeRequired = true
+                    },
+                    statusCode: StatusCodes.Status403Forbidden);
+            }
+
             var txn = await svc.CreateAsync(userId, dto, ctx.RequestAborted);
             ConsciaMetrics.TransactionsCreated.Add(1);
             return Results.Created($"/api/v1/transactions/{txn.Id}", new
@@ -133,6 +147,7 @@ public static class TransactionEndpoints
             Guid id,
             UpdateTransactionDto dto,
             ITransactionService svc,
+            ISubscriptionService subSvc,
             IValidator<UpdateTransactionDto> validator) =>
         {
             var validation = await validator.ValidateAsync(dto, ctx.RequestAborted);
@@ -140,6 +155,24 @@ public static class TransactionEndpoints
                 return Results.ValidationProblem(validation.ToDictionary());
 
             var userId = ctx.User.GetUserId();
+            var isPremium = await subSvc.IsPremiumAsync(userId, ctx.RequestAborted);
+            if (!isPremium && dto.Category is not null)
+            {
+                var existing = await svc.GetByIdAsync(userId, id, ctx.RequestAborted);
+                if (existing is null) return Results.NotFound();
+
+                if (!FreemiumCategoryPolicy.IsFreeTransactionCategory(dto.Category))
+                {
+                    return Results.Json(
+                        new
+                        {
+                            error = "Free users can only create transactions in Dining, Groceries, and Salary.",
+                            upgradeRequired = true
+                        },
+                        statusCode: StatusCodes.Status403Forbidden);
+                }
+            }
+
             var txn = await svc.UpdateAsync(userId, id, dto, ctx.RequestAborted);
             return Results.Ok(new
             {

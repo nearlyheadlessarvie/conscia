@@ -12,7 +12,6 @@ import 'package:conscia_app/core/theme/app_theme.dart';
 import 'package:conscia_app/core/utils/currency_formatter.dart';
 import 'package:conscia_app/screens/assistant/pre_purchase_screen.dart';
 import 'package:conscia_app/screens/transactions/transaction_form_screen.dart';
-import 'package:conscia_app/screens/transactions/widgets/category_picker.dart';
 import 'package:conscia_app/screens/transactions/widgets/voice_input_button.dart';
 import 'package:conscia_app/services/ai_service.dart';
 import 'package:conscia_app/widgets/editorial_sticky_header.dart';
@@ -438,7 +437,7 @@ void main() {
   });
 
   testWidgets(
-      'pre-purchase assistant shows category picker entrypoint and orders sheet by recent categories',
+      'pre-purchase assistant shows premium categories entrypoint for free users',
       (tester) async {
     await tester.pumpWidget(await buildPrePurchaseApp(
       tester,
@@ -452,40 +451,22 @@ void main() {
 
     expect(find.text('Salary'), findsNothing);
     expect(find.text('More categories'), findsNothing);
-    expect(find.text('More'), findsOneWidget);
+    expect(find.text('More'), findsNothing);
+    expect(find.text('Premium categories'), findsOneWidget);
     expect(find.text('Dining'), findsWidgets);
 
-    await tester.ensureVisible(find.text('More'));
-    await tester.tap(find.text('More'));
+    await tester.ensureVisible(find.text('Premium categories'));
+    await tester.tap(find.text('Premium categories'));
     await tester.pumpAndSettle();
 
     expect(find.byType(BottomSheet), findsOneWidget);
-
-    final sheetPicker = find.byType(CategoryPicker).last;
-    final transport = find.descendant(
-      of: sheetPicker,
-      matching: find.text('Transport'),
-    );
-    final dining = find.descendant(
-      of: sheetPicker,
-      matching: find.text('Dining'),
-    );
-
-    expect(transport, findsOneWidget);
-    expect(dining, findsOneWidget);
+    expect(find.text('Premium Feature'), findsOneWidget);
     expect(
-      tester.getTopLeft(transport).dx,
-      lessThan(tester.getTopLeft(dining).dx),
+      find.text(
+        'Free users can only log transactions in Dining, Groceries, and Salary.',
+      ),
+      findsOneWidget,
     );
-
-    await tester.tap(
-      find.descendant(of: sheetPicker, matching: find.text('Groceries')),
-    );
-    await tester.pumpAndSettle();
-
-    expect(find.byType(BottomSheet), findsNothing);
-    expect(find.text('Groceries'), findsOneWidget);
-    expect(find.text('Dining'), findsWidgets);
   });
 
   testWidgets('pre-purchase assistant keeps category chips compact',
@@ -494,7 +475,8 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Category'), findsNothing);
-    expect(find.text('More'), findsOneWidget);
+    expect(find.text('More'), findsNothing);
+    expect(find.text('Premium categories'), findsOneWidget);
   });
 
   testWidgets(
@@ -706,7 +688,7 @@ void main() {
     await tester.pumpAndSettle();
 
     final chipsTopLeft = tester.getTopLeft(find.text('Dining').first);
-    final actionTopLeft = tester.getTopLeft(find.text('More'));
+    final actionTopLeft = tester.getTopLeft(find.text('Premium categories'));
 
     expect(chipsTopLeft.dy, actionTopLeft.dy);
     expect(chipsTopLeft.dx, lessThan(actionTopLeft.dx));
@@ -724,13 +706,15 @@ void main() {
     expect(find.text('Health'), findsNothing);
     expect(find.text('Shopping'), findsNothing);
     expect(find.text('Dining'), findsOneWidget);
+    expect(find.text('Premium categories'), findsOneWidget);
+    expect(find.text('More'), findsNothing);
 
-    await tester.ensureVisible(find.text('More'));
-    await tester.tap(find.text('More'));
+    await tester.ensureVisible(find.text('Premium categories'));
+    await tester.tap(find.text('Premium categories'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Groceries'), findsWidgets);
-    expect(find.text('Transport'), findsWidgets);
+    expect(find.text('Premium Feature'), findsOneWidget);
+    expect(find.text('Groceries'), findsOneWidget);
     expect(find.text('Travel'), findsNothing);
   });
 

@@ -193,6 +193,7 @@ class _BudgetFormSheetState extends ConsumerState<BudgetFormSheet> {
                         selectedCategory: _selectedCategory,
                         isExpense: true,
                         isPremium: isPremium,
+                        allowAllCategories: true,
                         showHeader: false,
                         onCategorySelected: _isEditing
                             ? (_) {}

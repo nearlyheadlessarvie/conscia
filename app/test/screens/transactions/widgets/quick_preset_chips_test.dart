@@ -144,7 +144,7 @@ void main() {
     expect(find.text('Salary'), findsNothing);
   });
 
-  testWidgets('free-tier expense chips hide categories beyond the cap',
+  testWidgets('free-tier expense chips only show allowed transaction categories',
       (tester) async {
     await tester.pumpWidget(await _buildQuickPresetChipsApp(
       initialPrefs: const {
@@ -171,6 +171,7 @@ void main() {
     expect(find.text('Shopping'), findsNothing);
     expect(find.text('Dining'), findsOneWidget);
     expect(find.text('Groceries'), findsOneWidget);
-    expect(find.text('Transport'), findsOneWidget);
+    expect(find.text('Transport'), findsNothing);
+    expect(find.text('Coffee'), findsNothing);
   });
 }

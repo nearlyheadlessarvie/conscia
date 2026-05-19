@@ -36,6 +36,7 @@ class CategoryPicker extends ConsumerStatefulWidget {
   final ValueChanged<String?> onSelected;
   final bool isExpense;
   final bool isPremium;
+  final bool allowAllCategories;
   final int maxVisible;
   final bool showTitle;
 
@@ -45,6 +46,7 @@ class CategoryPicker extends ConsumerStatefulWidget {
     required this.onSelected,
     this.isExpense = true,
     this.isPremium = true,
+    this.allowAllCategories = false,
     this.maxVisible = 9,
     this.showTitle = true,
   });
@@ -65,10 +67,7 @@ class _CategoryPickerState extends ConsumerState<CategoryPicker> {
     final categories = managed.isNotEmpty
         ? managed
         : widget.isExpense
-            ? visibleBudgetCategories(
-                isPremium: widget.isPremium,
-                categories: expenseCategories,
-              )
+            ? _visibleExpenseCategories()
                 .map(
                   (name) => CategoryData(name, type: 'Expense'),
                 )
@@ -99,8 +98,27 @@ class _CategoryPickerState extends ConsumerState<CategoryPicker> {
         .where((category) => !category.isArchived)
         .where((category) =>
             widget.isExpense ? category.isExpense : category.isIncome)
+        .where((category) =>
+            widget.allowAllCategories ||
+            widget.isPremium ||
+            isFreeTransactionCategory(category.name))
         .map(CategoryData.fromManaged)
         .toList(growable: false);
+  }
+
+  List<String> _visibleExpenseCategories() {
+    if (widget.allowAllCategories) {
+      return visibleBudgetCategories(
+        isPremium: widget.isPremium,
+        categories: expenseCategories,
+      );
+    }
+
+    return visibleTransactionCategories(
+      isPremium: widget.isPremium,
+      isExpense: true,
+      categories: expenseCategories,
+    );
   }
 
   @override

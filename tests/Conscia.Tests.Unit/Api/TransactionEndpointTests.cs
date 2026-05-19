@@ -24,6 +24,9 @@ public class TransactionEndpointTests : IClassFixture<TestWebAppFactory>
         _client = factory.CreateClient();
         _client.DefaultRequestHeaders.Authorization =
             new AuthenticationHeaderValue("Bearer", factory.GenerateTestToken());
+        _factory.SubscriptionServiceMock
+            .Setup(s => s.IsPremiumAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
     }
 
     [Fact]
@@ -257,5 +260,63 @@ public class TransactionEndpointTests : IClassFixture<TestWebAppFactory>
         });
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task CreateTransaction_FreeUserLockedCategory_ReturnsForbiddenUpgradeRequired()
+    {
+        _factory.SubscriptionServiceMock
+            .Setup(s => s.IsPremiumAsync(UserId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
+
+        var response = await _client.PostAsJsonAsync("/api/v1/transactions", new
+        {
+            type = 0,
+            amount = 42.50,
+            currencyCode = "USD",
+            category = "Shopping",
+            counterparty = "Corner Store",
+            date = DateTime.UtcNow.ToString("O")
+        });
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        Assert.True(body.RootElement.GetProperty("upgradeRequired").GetBoolean());
+        _factory.TransactionServiceMock.Verify(
+            s => s.CreateAsync(It.IsAny<Guid>(), It.IsAny<CreateTransactionDto>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task UpdateTransaction_FreeUserLockedCategory_ReturnsForbiddenUpgradeRequired()
+    {
+        _factory.SubscriptionServiceMock
+            .Setup(s => s.IsPremiumAsync(UserId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
+        var transactionId = Guid.NewGuid();
+        _factory.TransactionServiceMock
+            .Setup(s => s.GetByIdAsync(UserId, transactionId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Transaction
+            {
+                Id = transactionId,
+                UserId = UserId,
+                Type = TransactionType.Expense,
+                Amount = new Money(24.50m, "USD"),
+                Category = "Dining",
+                Counterparty = "Existing Cafe",
+                Date = DateTime.UtcNow
+            });
+
+        var response = await _client.PutAsJsonAsync($"/api/v1/transactions/{transactionId}", new
+        {
+            category = "Travel"
+        });
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        Assert.True(body.RootElement.GetProperty("upgradeRequired").GetBoolean());
+        _factory.TransactionServiceMock.Verify(
+            s => s.UpdateAsync(UserId, transactionId, It.IsAny<UpdateTransactionDto>(), It.IsAny<CancellationToken>()),
+            Times.Never);
     }
 }

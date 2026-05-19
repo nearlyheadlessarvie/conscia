@@ -1,15 +1,34 @@
-import 'generated/app_constants.g.dart';
+const Set<String> freeTransactionCategories = {
+  'Dining',
+  'Groceries',
+  'Salary',
+};
 
-List<String> visibleBudgetCategories({
+bool isFreeTransactionCategory(String category) {
+  return freeTransactionCategories.contains(category);
+}
+
+List<String> visibleTransactionCategories({
   required bool isPremium,
+  required bool isExpense,
   required List<String> categories,
 }) {
   if (isPremium) {
     return List<String>.unmodifiable(categories);
   }
 
-  final freeCategories =
-      expenseCategories.take(FreemiumLimits.freeBudgetCategories).toSet();
+  return categories
+      .where(
+        (category) => isExpense
+            ? category != 'Salary' && isFreeTransactionCategory(category)
+            : category == 'Salary',
+      )
+      .toList(growable: false);
+}
 
-  return categories.where(freeCategories.contains).toList(growable: false);
+List<String> visibleBudgetCategories({
+  required bool isPremium,
+  required List<String> categories,
+}) {
+  return List<String>.unmodifiable(categories);
 }

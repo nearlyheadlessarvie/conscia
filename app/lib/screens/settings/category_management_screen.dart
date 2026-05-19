@@ -8,12 +8,14 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_layout.dart';
 import '../../models/managed_category.dart';
 import '../../providers/category_provider.dart';
+import '../../providers/subscription_provider.dart';
 import '../../widgets/conscia_bottom_sheet.dart';
 import '../../widgets/conscia_confirm_sheet.dart';
 import '../../widgets/floating_label_text_field.dart';
 import '../../widgets/hero_screen_scaffold.dart';
 import '../../widgets/conscia_app_bar.dart';
 import '../../widgets/hero_shortcut_card.dart';
+import '../../widgets/premium_upgrade_dialog.dart';
 import '../../widgets/segmented_switch.dart';
 import '../../widgets/skeleton_loader.dart';
 import '../../widgets/swipe_action_tile.dart';
@@ -95,6 +97,25 @@ class CategoryManagementScreen extends ConsumerWidget {
     WidgetRef ref, {
     ManagedCategory? category,
   }) async {
+    final subAsync = ref.read(subscriptionProvider);
+    var isPremium = subAsync.valueOrNull?.isPremium;
+    if (isPremium == null) {
+      try {
+        isPremium = (await ref.read(subscriptionProvider.future)).isPremium;
+      } catch (_) {
+        isPremium = false;
+      }
+      if (!context.mounted) return;
+    }
+
+    if (category == null && !isPremium) {
+      await PremiumUpgradeDialog.show(
+        context,
+        feature: 'Custom categories are a Premium feature.',
+      );
+      return;
+    }
+
     final messenger = ScaffoldMessenger.of(context);
     await showModalBottomSheet<void>(
       context: context,

@@ -12,7 +12,6 @@ import 'package:conscia_app/providers/transaction_providers.dart';
 import 'package:conscia_app/providers/usage_provider.dart';
 import 'package:conscia_app/providers/user_provider.dart';
 import 'package:conscia_app/screens/transactions/transaction_form_screen.dart';
-import 'package:conscia_app/screens/transactions/widgets/category_picker.dart';
 import 'package:conscia_app/screens/transactions/widgets/voice_input_button.dart';
 import 'package:conscia_app/services/auth_service.dart';
 import 'package:conscia_app/services/budget_service.dart';
@@ -433,7 +432,8 @@ void main() {
 
     await tester.pumpAndSettle();
 
-    expect(find.text('More'), findsOneWidget);
+    expect(find.text('Premium categories'), findsOneWidget);
+    expect(find.text('More'), findsNothing);
     expect(find.text('Quick add'), findsNothing);
   });
 
@@ -573,15 +573,15 @@ void main() {
     await tester.pumpWidget(await buildTransactionFormApp(tester));
     await tester.pumpAndSettle();
 
-    // 'Dining' chip and 'More' button are in the same horizontal chip rail row
+    // 'Dining' chip and premium affordance are in the same horizontal chip rail row
     final chipsY = tester.getCenter(find.text('Dining').first).dy;
-    final actionY = tester.getCenter(find.text('More')).dy;
+    final actionY = tester.getCenter(find.text('Premium categories')).dy;
 
     expect((chipsY - actionY).abs(), lessThan(8));
   });
 
   testWidgets(
-      'transaction form shows all categories entrypoint and orders sheet by recent categories',
+      'transaction form shows premium categories entrypoint for free users',
       (tester) async {
     await tester.pumpWidget(await buildTransactionFormApp(
       tester,
@@ -594,37 +594,20 @@ void main() {
 
     await tester.pumpAndSettle();
 
-    expect(find.text('More'), findsOneWidget);
+    expect(find.text('More'), findsNothing);
+    expect(find.text('Premium categories'), findsOneWidget);
 
-    await tester.tap(find.text('More'));
+    await tester.tap(find.text('Premium categories'));
     await tester.pumpAndSettle();
 
     expect(find.byType(BottomSheet), findsAtLeastNWidgets(1));
-
-    final sheetPicker = find.byType(CategoryPicker).last;
-    final transport = find.descendant(
-      of: sheetPicker,
-      matching: find.text('Transport'),
-    );
-    final dining = find.descendant(
-      of: sheetPicker,
-      matching: find.text('Dining'),
-    );
-
-    expect(transport, findsOneWidget);
-    expect(dining, findsOneWidget);
+    expect(find.text('Premium Feature'), findsOneWidget);
     expect(
-      tester.getTopLeft(transport).dx,
-      lessThan(tester.getTopLeft(dining).dx),
+      find.text(
+        'Free users can only log transactions in Dining, Groceries, and Salary.',
+      ),
+      findsOneWidget,
     );
-
-    await tester.tap(
-      find.descendant(of: sheetPicker, matching: find.text('Groceries')),
-    );
-    await tester.pumpAndSettle();
-
-    expect(find.byType(BottomSheet), findsOneWidget);
-    expect(find.text('Groceries'), findsWidgets);
   });
 
   testWidgets('transaction form keeps category separate from scope',
@@ -689,7 +672,7 @@ void main() {
     await tester.pumpWidget(await buildTransactionFormApp(tester));
     await tester.pumpAndSettle();
 
-    expect(find.text('More'), findsOneWidget);
+    expect(find.text('Premium categories'), findsOneWidget);
     expect(find.text('Merchant (optional)'), findsOneWidget);
   });
 
@@ -699,7 +682,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('CATEGORY'), findsOneWidget);
-    expect(find.text('More'), findsOneWidget);
+    expect(find.text('Premium categories'), findsOneWidget);
   });
 
   testWidgets('merchant field and date are always visible', (tester) async {
