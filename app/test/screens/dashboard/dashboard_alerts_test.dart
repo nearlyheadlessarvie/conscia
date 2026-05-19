@@ -1047,7 +1047,7 @@ void main() {
 
     expect(momentumValue.data, '18 day streak');
     expect(momentumDetail.data, '2 more days to strengthen your stride.');
-    expect(find.text('0/5 quests'), findsOneWidget);
+    expect(find.text('0/5 quests'), findsNothing);
     expect(title.style?.fontFamily, contains('Lora'));
     expect(subtitle.style?.fontFamily, contains('Nunito'));
     expect(momentumValue.style?.fontFamily, contains('Nunito'));
@@ -1280,8 +1280,7 @@ void main() {
     expect(find.text('Insights placeholder'), findsOneWidget);
   });
 
-  testWidgets(
-      'dashboard keeps budget trend summaries out of the Journey hero',
+  testWidgets('dashboard keeps budget trend summaries out of the Journey hero',
       (tester) async {
     final container = ProviderContainer(
       overrides: [

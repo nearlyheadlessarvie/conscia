@@ -120,11 +120,68 @@ void main() {
       onOpenWeeklyInsights: () {},
     ));
 
-    expect(find.text('1/4 commitments complete'), findsOneWidget);
+    expect(find.text('1/4 commitments complete'), findsNothing);
     expect(find.text('First quest'), findsOneWidget);
     expect(find.text('Second quest'), findsOneWidget);
     expect(find.text('Third quest'), findsOneWidget);
     expect(find.text('Fourth quest'), findsNothing);
+  });
+
+  testWidgets('Journey sections use locked storybook typography',
+      (tester) async {
+    const presentation = JourneyHomePresentation(
+      todayAction: JourneyHomeAction(
+        icon: Icons.auto_stories_rounded,
+        title: 'Separate today action',
+        description: 'Today copy stays outside typography assertions.',
+        ctaLabel: 'Continue journey',
+      ),
+      patterns: [
+        JourneyHomePatternSignal(
+          icon: Icons.local_fire_department_rounded,
+          title: 'Momentum is forming',
+          description: 'Three mindful days are starting to look like a rhythm.',
+          tone: JourneyHomePatternTone.positive,
+        ),
+      ],
+      milestones: [],
+      completedQuestCount: 1,
+      totalQuestCount: 1,
+      levelProgress: 0,
+    );
+
+    await tester.pumpWidget(_buildSubject(
+      summary: _summary(),
+      presentation: presentation,
+      onOpenWeeklyArc: () {},
+      onOpenWeeklyInsights: () {},
+    ));
+
+    final sectionTitle = tester.widget<Text>(
+      find.byKey(const ValueKey('journey-home-section-title-This Week')),
+    );
+    final sectionSubtitle = tester.widget<Text>(
+      find.byKey(const ValueKey('journey-home-section-subtitle-This Week')),
+    );
+    final questTitle = tester.widget<Text>(
+      find.byKey(const ValueKey('journey-home-quest-title')),
+    );
+    final questDescription = tester.widget<Text>(
+      find.byKey(const ValueKey('journey-home-quest-description')),
+    );
+    final patternTitle = tester.widget<Text>(
+      find.byKey(const ValueKey('journey-home-pattern-title')),
+    );
+    final patternDescription = tester.widget<Text>(
+      find.byKey(const ValueKey('journey-home-pattern-description')),
+    );
+
+    expect(sectionTitle.style?.fontFamily, contains('Lora'));
+    expect(sectionSubtitle.style?.fontFamily, contains('Nunito'));
+    expect(questTitle.style?.fontFamily, contains('Lora'));
+    expect(questDescription.style?.fontFamily, contains('Nunito'));
+    expect(patternTitle.style?.fontFamily, contains('Lora'));
+    expect(patternDescription.style?.fontFamily, contains('Nunito'));
   });
 
   testWidgets('Weekly arc opens the Journey quests board', (tester) async {

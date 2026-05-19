@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../models/conscience_journey.dart';
@@ -34,8 +35,6 @@ class JourneyLedHomeSections extends StatelessWidget {
             trailing: const _SectionHint(label: 'Your weekly arc'),
             child: _WeeklyArc(
               quests: summary?.weeklyQuests ?? const [],
-              completed: presentation.completedQuestCount,
-              total: presentation.totalQuestCount,
             ),
           ),
           _JourneyHomeSection(
@@ -79,7 +78,6 @@ class _JourneyHomeSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
     final colors = Theme.of(context).appColors;
-    final scheme = Theme.of(context).colorScheme;
 
     final content = Padding(
       padding: const EdgeInsets.only(bottom: 18),
@@ -92,9 +90,12 @@ class _JourneyHomeSection extends StatelessWidget {
               Expanded(
                 child: Text(
                   title,
-                  style: textTheme.titleLarge?.copyWith(
+                  key: ValueKey('journey-home-section-title-$title'),
+                  style: GoogleFonts.lora(
+                    textStyle: textTheme.titleLarge,
                     color: colors.deepNavy,
-                    fontWeight: FontWeight.w900,
+                    fontWeight: FontWeight.w700,
+                    height: 1.05,
                   ),
                 ),
               ),
@@ -107,8 +108,11 @@ class _JourneyHomeSection extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             subtitle,
-            style: textTheme.bodySmall?.copyWith(
-              color: scheme.onSurfaceVariant,
+            key: ValueKey('journey-home-section-subtitle-$title'),
+            style: GoogleFonts.nunitoSans(
+              textStyle: textTheme.bodySmall,
+              color: colors.mutedInk,
+              fontWeight: FontWeight.w500,
               height: 1.35,
             ),
           ),
@@ -130,15 +134,9 @@ class _JourneyHomeSection extends StatelessWidget {
 }
 
 class _WeeklyArc extends StatelessWidget {
-  const _WeeklyArc({
-    required this.quests,
-    required this.completed,
-    required this.total,
-  });
+  const _WeeklyArc({required this.quests});
 
   final List<ConscienceQuest> quests;
-  final int completed;
-  final int total;
 
   @override
   Widget build(BuildContext context) {
@@ -158,14 +156,6 @@ class _WeeklyArc extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          '$completed/$total commitments complete',
-          style: textTheme.labelMedium?.copyWith(
-            color: colors.deepNavy,
-            fontWeight: FontWeight.w800,
-          ),
-        ),
-        const SizedBox(height: 10),
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -219,24 +209,29 @@ class _QuestTile extends StatelessWidget {
           const SizedBox(height: 10),
           Text(
             _compactQuestTitle(quest.title),
+            key: const ValueKey('journey-home-quest-title'),
             textAlign: TextAlign.center,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
-            style: textTheme.labelLarge?.copyWith(
+            style: GoogleFonts.lora(
+              textStyle: textTheme.labelLarge,
               color: colors.deepNavy,
-              fontWeight: FontWeight.w900,
-              height: 1.05,
+              fontWeight: FontWeight.w700,
+              height: 1.04,
             ),
           ),
           const SizedBox(height: 7),
           Expanded(
             child: Text(
               quest.description,
+              key: const ValueKey('journey-home-quest-description'),
               textAlign: TextAlign.center,
               maxLines: 3,
               overflow: TextOverflow.ellipsis,
-              style: textTheme.labelSmall?.copyWith(
+              style: GoogleFonts.nunitoSans(
+                textStyle: textTheme.labelSmall,
                 color: colors.mutedInk,
+                fontWeight: FontWeight.w600,
                 height: 1.2,
               ),
             ),
@@ -339,7 +334,8 @@ class _PatternSignalCard extends StatelessWidget {
                   pattern.tone == JourneyHomePatternTone.positive
                       ? 'Improving'
                       : 'Watch this',
-                  style: textTheme.labelSmall?.copyWith(
+                  style: GoogleFonts.nunitoSans(
+                    textStyle: textTheme.labelSmall,
                     color: color,
                     fontWeight: FontWeight.w800,
                   ),
@@ -350,11 +346,13 @@ class _PatternSignalCard extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             pattern.title,
+            key: const ValueKey('journey-home-pattern-title'),
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
-            style: textTheme.labelLarge?.copyWith(
+            style: GoogleFonts.lora(
+              textStyle: textTheme.labelLarge,
               color: colors.ink,
-              fontWeight: FontWeight.w900,
+              fontWeight: FontWeight.w700,
             ),
           ),
           const SizedBox(height: 8),
@@ -371,10 +369,13 @@ class _PatternSignalCard extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             pattern.description,
+            key: const ValueKey('journey-home-pattern-description'),
             maxLines: 3,
             overflow: TextOverflow.ellipsis,
-            style: textTheme.labelSmall?.copyWith(
+            style: GoogleFonts.nunitoSans(
+              textStyle: textTheme.labelSmall,
               color: colors.mutedInk,
+              fontWeight: FontWeight.w600,
               height: 1.2,
             ),
           ),
@@ -462,10 +463,11 @@ class _MilestoneStrip extends StatelessWidget {
                 badge.title,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                      color: colors.deepNavy,
-                      fontWeight: FontWeight.w800,
-                    ),
+                style: GoogleFonts.lora(
+                  textStyle: Theme.of(context).textTheme.labelMedium,
+                  color: colors.deepNavy,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
             ),
         ],
@@ -507,10 +509,11 @@ class _SectionHint extends StatelessWidget {
       children: [
         Text(
           label,
-          style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                color: colors.mutedInk,
-                fontWeight: FontWeight.w600,
-              ),
+          style: GoogleFonts.nunitoSans(
+            textStyle: Theme.of(context).textTheme.labelSmall,
+            color: colors.mutedInk,
+            fontWeight: FontWeight.w700,
+          ),
         ),
         const SizedBox(width: 4),
         Icon(Icons.chevron_right_rounded, size: 15, color: colors.mutedInk),

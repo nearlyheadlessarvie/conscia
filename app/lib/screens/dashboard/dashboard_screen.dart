@@ -724,8 +724,6 @@ class _DashboardEditorialHeroCard extends StatelessWidget {
                 const SizedBox(height: 20),
                 _JourneyHeroMomentum(
                   journey: journey,
-                  completedQuestCount: presentation.completedQuestCount,
-                  totalQuestCount: presentation.totalQuestCount,
                 ),
                 const SizedBox(height: 20),
                 _JourneyHeroNextStepCard(
@@ -742,15 +740,9 @@ class _DashboardEditorialHeroCard extends StatelessWidget {
 }
 
 class _JourneyHeroMomentum extends StatelessWidget {
-  const _JourneyHeroMomentum({
-    required this.journey,
-    required this.completedQuestCount,
-    required this.totalQuestCount,
-  });
+  const _JourneyHeroMomentum({required this.journey});
 
   final ConscienceJourneySummary? journey;
-  final int completedQuestCount;
-  final int totalQuestCount;
 
   @override
   Widget build(BuildContext context) {
@@ -779,46 +771,31 @@ class _JourneyHeroMomentum extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 8),
-        Wrap(
-          spacing: 12,
-          runSpacing: 8,
-          crossAxisAlignment: WrapCrossAlignment.center,
+        Row(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 21,
-                  height: 21,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFE97552),
-                    borderRadius: BorderRadius.circular(999),
-                  ),
-                  child: const Icon(
-                    Icons.local_fire_department_rounded,
-                    color: Colors.white,
-                    size: 14,
-                  ),
-                ),
-                const SizedBox(width: 7),
-                Text(
-                  '$momentumDays day streak',
-                  key: const ValueKey('dashboard-journey-momentum-value'),
-                  style: GoogleFonts.nunitoSans(
-                    textStyle: textTheme.titleMedium,
-                    color: colors.deepNavy,
-                    fontWeight: FontWeight.w800,
-                    height: 1.0,
-                  ),
-                ),
-              ],
+            Container(
+              width: 21,
+              height: 21,
+              decoration: BoxDecoration(
+                color: const Color(0xFFE97552),
+                borderRadius: BorderRadius.circular(999),
+              ),
+              child: const Icon(
+                Icons.local_fire_department_rounded,
+                color: Colors.white,
+                size: 14,
+              ),
             ),
+            const SizedBox(width: 7),
             Text(
-              '$completedQuestCount/$totalQuestCount quests',
+              '$momentumDays day streak',
+              key: const ValueKey('dashboard-journey-momentum-value'),
               style: GoogleFonts.nunitoSans(
-                textStyle: textTheme.labelLarge,
-                color: colors.deepNavy.withValues(alpha: 0.86),
+                textStyle: textTheme.titleMedium,
+                color: colors.deepNavy,
                 fontWeight: FontWeight.w800,
+                height: 1.0,
               ),
             ),
           ],
