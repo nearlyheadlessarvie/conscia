@@ -57,6 +57,42 @@ void main() {
     expect(continueCount, 1);
   });
 
+  testWidgets('Pattern preview renders presentation pattern copy',
+      (tester) async {
+    const presentation = JourneyHomePresentation(
+      todayAction: JourneyHomeAction(
+        icon: Icons.auto_stories_rounded,
+        title: 'Separate today action',
+        description: 'Today copy stays outside the pattern assertions.',
+        ctaLabel: 'Continue journey',
+      ),
+      patterns: [
+        JourneyHomePatternSignal(
+          icon: Icons.local_fire_department_rounded,
+          title: 'Momentum is forming',
+          description: 'Three mindful days are starting to look like a rhythm.',
+          tone: JourneyHomePatternTone.positive,
+        ),
+      ],
+      milestones: [],
+      completedQuestCount: 0,
+      totalQuestCount: 0,
+      levelProgress: 0,
+    );
+
+    await tester.pumpWidget(_buildSubject(
+      summary: _summary(weeklyQuests: const [], badges: const []),
+      presentation: presentation,
+      onContinueJourney: () {},
+    ));
+
+    expect(find.text('Momentum is forming'), findsOneWidget);
+    expect(
+      find.text('Three mindful days are starting to look like a rhythm.'),
+      findsOneWidget,
+    );
+  });
+
   testWidgets('Weekly arc renders progress and only first three quests',
       (tester) async {
     final summary = _summary(
