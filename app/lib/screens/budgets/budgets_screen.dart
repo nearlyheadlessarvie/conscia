@@ -203,7 +203,7 @@ class _BudgetsScreenState extends ConsumerState<BudgetsScreen> {
           child: _BudgetLedger(
             budgets: visibleBudgets,
             onEdit: (budget) => BudgetFormSheet.show(context, existing: budget),
-            onDelete: (budget) => _confirmDelete(context, ref, budget.id),
+            onDelete: (budget) => _confirmDelete(context, ref, budget),
           ),
         ),
       ),
@@ -239,15 +239,15 @@ class _BudgetsScreenState extends ConsumerState<BudgetsScreen> {
   }
 
   Future<void> _confirmDelete(
-      BuildContext context, WidgetRef ref, String id) async {
+      BuildContext context, WidgetRef ref, Budget budget) async {
     final confirmed = await ConsciaConfirmSheet.show(
       context,
-      title: 'Delete this budget?',
+      title: 'Delete ${budget.category} budget?',
       message: "This can't be undone.",
       confirmLabel: 'Delete budget',
     );
     if (!confirmed) return;
-    await ref.read(budgetListProvider.notifier).delete(id);
+    await ref.read(budgetListProvider.notifier).delete(budget.id);
     if (!context.mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Budget deleted.')),

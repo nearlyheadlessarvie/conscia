@@ -81,6 +81,12 @@ class _ReceiptScannerScreenState extends ConsumerState<ReceiptScannerScreen> {
       setState(() {
         _error = error.userMessage;
       });
+    } catch (e, s) {
+      if (!mounted) return;
+      final error = AppError.from(e, stackTrace: s);
+      setState(() {
+        _error = error.userMessage;
+      });
     } finally {
       if (mounted) setState(() => _uploading = false);
     }

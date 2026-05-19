@@ -217,7 +217,8 @@ void main() {
     expect(find.text('New category'), findsOneWidget);
   });
 
-  testWidgets('archives a custom category after confirmation', (tester) async {
+  testWidgets('archives a custom category with a left swipe confirmation',
+      (tester) async {
     final actions = _RecordingCategoryActions();
     await _pumpScreen(
       tester,
@@ -226,8 +227,12 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byTooltip('Archive Coffee'));
+    expect(find.byTooltip('Archive Coffee'), findsNothing);
+
+    await tester.drag(find.text('Coffee').first, const Offset(-500, 0));
     await tester.pumpAndSettle();
+
+    expect(find.text('Archive'), findsOneWidget);
     await tester.tap(find.widgetWithText(FilledButton, 'Archive category'));
     await tester.pumpAndSettle();
 

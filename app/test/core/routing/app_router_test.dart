@@ -270,19 +270,19 @@ void main() {
       );
 
       await tester.pump();
-      await tester.pump(const Duration(milliseconds: 100));
-      await tester.pump(const Duration(milliseconds: 100));
+      await tester.pump(const Duration(milliseconds: 350));
+      await tester.pump(const Duration(milliseconds: 350));
 
       expect(find.text('Add transaction'), findsOneWidget);
       expect(find.text('Dining'), findsOneWidget);
 
-      final amountField = tester.widget<TextField>(
+      final amountField = tester.widget<EditableText>(
         find.descendant(
           of: find.byType(AmountHeroField),
-          matching: find.byType(TextField),
+          matching: find.byType(EditableText),
         ),
       );
-      expect(amountField.controller?.text, '600');
+      expect(amountField.controller.text, '600');
 
       final merchantField = tester.widget<FloatingLabelTextField>(
         find.byWidgetPredicate(

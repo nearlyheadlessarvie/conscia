@@ -360,6 +360,10 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Delete this transaction?'), findsOneWidget);
+    expect(find.text('Starbucks'), findsWidgets);
+    expect(find.text('Dining'), findsWidgets);
+    expect(find.text('-₱280.00'), findsWidgets);
+    expect(find.text("This can't be undone."), findsOneWidget);
 
     await tester.tap(find.widgetWithText(FilledButton, 'Delete transaction'));
     await tester.pumpAndSettle();
@@ -451,6 +455,68 @@ void main() {
     await tester.pump(const Duration(milliseconds: 400));
 
     expect(find.text('Edit transaction'), findsWidgets);
+  });
+
+  testWidgets('full right swipe on income opens edit directly', (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          _authenticatedOverride,
+          sharedPreferencesProvider.overrideWithValue(prefs),
+          transactionServiceProvider.overrideWithValue(
+            _StaticTransactionService([
+              Transaction(
+                id: 'tx-income-edit',
+                amount: 3500,
+                currencyCode: 'PHP',
+                category: 'Salary',
+                description: 'Freelance Client',
+                type: 'income',
+                date: DateTime(2026, 5, 8),
+              ),
+            ]),
+          ),
+          budgetServiceProvider.overrideWithValue(
+            _StaticBudgetService(const []),
+          ),
+          currentUserProvider.overrideWith(
+            (ref) async => UserProfile(
+              id: 'user-1',
+              email: 'tester@example.com',
+              currencyCode: 'PHP',
+              locale: 'en_US',
+              createdAt: DateTime(2026),
+              hasCompletedOnboarding: true,
+            ),
+          ),
+          familySpaceProvider.overrideWith((ref) async => null),
+          subscriptionProvider.overrideWith(
+            (ref) async => const SubscriptionStatus(
+              tier: 'premium',
+              isPremium: true,
+            ),
+          ),
+          exchangeRateProvider.overrideWith((ref, pair) async => null),
+          managedCategoriesProvider.overrideWith(
+            (ref, query) async => const [],
+          ),
+        ],
+        child: const MaterialApp(home: TransactionListScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.drag(
+        find.text('Freelance Client').first, const Offset(500, 0));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+
+    expect(find.text('Edit transaction'), findsWidgets);
+    expect(find.text('Reflect'), findsNothing);
+    expect(find.text('Add budget'), findsNothing);
   });
 
   testWidgets('selected transaction filters stay compact without overflow', (

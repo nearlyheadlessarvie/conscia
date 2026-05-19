@@ -10,12 +10,14 @@ class ConsciaConfirmSheet extends StatelessWidget {
     required this.message,
     required this.confirmLabel,
     this.destructive = true,
+    this.preview,
   });
 
   final String title;
   final String message;
   final String confirmLabel;
   final bool destructive;
+  final Widget? preview;
 
   static Future<bool> show(
     BuildContext context, {
@@ -23,6 +25,7 @@ class ConsciaConfirmSheet extends StatelessWidget {
     required String message,
     required String confirmLabel,
     bool destructive = true,
+    Widget? preview,
   }) async {
     final result = await showModalBottomSheet<bool>(
       context: context,
@@ -33,6 +36,7 @@ class ConsciaConfirmSheet extends StatelessWidget {
         message: message,
         confirmLabel: confirmLabel,
         destructive: destructive,
+        preview: preview,
       ),
     );
     return result ?? false;
@@ -43,6 +47,14 @@ class ConsciaConfirmSheet extends StatelessWidget {
     final colors = Theme.of(context).appColors;
     final textTheme = Theme.of(context).textTheme;
     final confirmColor = destructive ? colors.expense : colors.deepNavy;
+    final messageLines = message
+        .split('\n')
+        .map((line) => line.trim())
+        .where((line) => line.isNotEmpty)
+        .toList(growable: false);
+    final primaryMessage = messageLines.isEmpty ? message : messageLines.first;
+    final supportingMessage =
+        messageLines.length > 1 ? messageLines.skip(1).join('\n') : null;
 
     return SafeArea(
       child: Padding(
@@ -62,13 +74,38 @@ class ConsciaConfirmSheet extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 8),
-            Text(
-              message,
-              textAlign: TextAlign.center,
-              style: textTheme.bodyMedium?.copyWith(
-                color: colors.mutedInk,
-                height: 1.3,
+            Container(
+              padding: EdgeInsets.symmetric(
+                horizontal: preview == null ? 16 : 14,
+                vertical: preview == null ? 12 : 10,
               ),
+              decoration: BoxDecoration(
+                color: destructive ? colors.expenseSoft.withAlpha(120) : null,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: preview == null
+                  ? _ConfirmMessage(
+                      primaryMessage: primaryMessage,
+                      supportingMessage: supportingMessage,
+                      destructive: destructive,
+                    )
+                  : Column(
+                      children: [
+                        Material(
+                          color: Colors.transparent,
+                          child: preview!,
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          message,
+                          textAlign: TextAlign.center,
+                          style: textTheme.bodySmall?.copyWith(
+                            color: colors.mutedInk,
+                            height: 1.3,
+                          ),
+                        ),
+                      ],
+                    ),
             ),
             const SizedBox(height: 22),
             FilledButton(
@@ -89,6 +126,50 @@ class ConsciaConfirmSheet extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _ConfirmMessage extends StatelessWidget {
+  const _ConfirmMessage({
+    required this.primaryMessage,
+    required this.supportingMessage,
+    required this.destructive,
+  });
+
+  final String primaryMessage;
+  final String? supportingMessage;
+  final bool destructive;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).appColors;
+    final textTheme = Theme.of(context).textTheme;
+
+    return Column(
+      children: [
+        Text(
+          primaryMessage,
+          textAlign: TextAlign.center,
+          style: textTheme.bodyMedium?.copyWith(
+            color: destructive ? colors.ink : colors.mutedInk,
+            fontWeight:
+                supportingMessage == null ? FontWeight.w500 : FontWeight.w700,
+            height: 1.25,
+          ),
+        ),
+        if (supportingMessage != null) ...[
+          const SizedBox(height: 4),
+          Text(
+            supportingMessage!,
+            textAlign: TextAlign.center,
+            style: textTheme.bodySmall?.copyWith(
+              color: colors.mutedInk,
+              height: 1.3,
+            ),
+          ),
+        ],
+      ],
     );
   }
 }

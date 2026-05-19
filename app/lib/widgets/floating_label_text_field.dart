@@ -113,6 +113,16 @@ class _FloatingLabelTextFieldState extends State<FloatingLabelTextField> {
     }
   }
 
+  void _handleChromeTap() {
+    if (!widget.enabled) return;
+    if (!_focusNode.hasFocus) {
+      _focusNode.requestFocus();
+    }
+    if (widget.readOnly) {
+      widget.onTap?.call();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -138,104 +148,108 @@ class _FloatingLabelTextFieldState extends State<FloatingLabelTextField> {
                 ? colors.mutedInk
                 : colors.softInk;
 
-    final field = AnimatedContainer(
-      duration: const Duration(milliseconds: 160),
-      curve: Curves.easeOut,
-      constraints: const BoxConstraints(minHeight: 52),
-      decoration: BoxDecoration(
-        color: backgroundColor,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: borderColor,
-          width: isFocused || _hasError ? 2 : 1.5,
+    final field = GestureDetector(
+      behavior: HitTestBehavior.translucent,
+      onTap: _handleChromeTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 160),
+        curve: Curves.easeOut,
+        constraints: const BoxConstraints(minHeight: 52),
+        decoration: BoxDecoration(
+          color: backgroundColor,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: borderColor,
+            width: isFocused || _hasError ? 2 : 1.5,
+          ),
         ),
-      ),
-      child: Stack(
-        children: [
-          AnimatedPositioned(
-            duration: const Duration(milliseconds: 160),
-            curve: Curves.easeOut,
-            left: leadingInset,
-            top: _isRaised ? 8 : 15,
-            child: AnimatedDefaultTextStyle(
+        child: Stack(
+          children: [
+            AnimatedPositioned(
               duration: const Duration(milliseconds: 160),
               curve: Curves.easeOut,
-              style: (_isRaised
-                          ? theme.textTheme.labelSmall
-                          : theme.textTheme.bodyMedium)
-                      ?.copyWith(
-                    fontWeight: _isRaised ? FontWeight.w600 : FontWeight.w400,
-                    color: labelColor,
-                  ) ??
-                  TextStyle(
-                    fontSize: _isRaised ? 11 : 14,
-                    fontWeight: _isRaised ? FontWeight.w600 : FontWeight.w400,
-                    color: labelColor,
-                  ),
-              child: Text(widget.label),
-            ),
-          ),
-          Padding(
-            padding: EdgeInsets.fromLTRB(
-              leadingInset,
-              22,
-              widget.trailing == null ? 14 : 48,
-              8,
-            ),
-            child: TextField(
-              controller: widget.controller,
-              focusNode: _focusNode,
-              keyboardType: widget.keyboardType,
-              textInputAction: widget.textInputAction,
-              textCapitalization: widget.textCapitalization,
-              onChanged: widget.onChanged,
-              onSubmitted: widget.onSubmitted,
-              onTap: widget.onTap,
-              obscureText: widget.obscureText,
-              enabled: widget.enabled,
-              readOnly: widget.readOnly,
-              autofocus: widget.autofocus,
-              maxLines: widget.maxLines,
-              minLines: widget.minLines,
-              autofillHints: widget.autofillHints,
-              textAlign: widget.textAlign,
-              inputFormatters: widget.inputFormatters,
-              maxLength: widget.maxLength,
-              enableSuggestions: widget.enableSuggestions,
-              autocorrect: widget.autocorrect,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: colors.ink,
-                fontWeight: FontWeight.w500,
-              ),
-              decoration: InputDecoration(
-                isDense: true,
-                border: InputBorder.none,
-                enabledBorder: InputBorder.none,
-                focusedBorder: InputBorder.none,
-                disabledBorder: InputBorder.none,
-                errorBorder: InputBorder.none,
-                focusedErrorBorder: InputBorder.none,
-                filled: false,
-                contentPadding: EdgeInsets.zero,
-                counterText: widget.counterText,
+              left: leadingInset,
+              top: _isRaised ? 8 : 15,
+              child: AnimatedDefaultTextStyle(
+                duration: const Duration(milliseconds: 160),
+                curve: Curves.easeOut,
+                style: (_isRaised
+                            ? theme.textTheme.labelSmall
+                            : theme.textTheme.bodyMedium)
+                        ?.copyWith(
+                      fontWeight: _isRaised ? FontWeight.w600 : FontWeight.w400,
+                      color: labelColor,
+                    ) ??
+                    TextStyle(
+                      fontSize: _isRaised ? 11 : 14,
+                      fontWeight: _isRaised ? FontWeight.w600 : FontWeight.w400,
+                      color: labelColor,
+                    ),
+                child: Text(widget.label),
               ),
             ),
-          ),
-          if (widget.prefix != null)
-            Positioned(
-              left: 14,
-              top: 0,
-              bottom: 0,
-              child: Center(child: widget.prefix!),
+            Padding(
+              padding: EdgeInsets.fromLTRB(
+                leadingInset,
+                22,
+                widget.trailing == null ? 14 : 48,
+                8,
+              ),
+              child: TextField(
+                controller: widget.controller,
+                focusNode: _focusNode,
+                keyboardType: widget.keyboardType,
+                textInputAction: widget.textInputAction,
+                textCapitalization: widget.textCapitalization,
+                onChanged: widget.onChanged,
+                onSubmitted: widget.onSubmitted,
+                onTap: widget.onTap,
+                obscureText: widget.obscureText,
+                enabled: widget.enabled,
+                readOnly: widget.readOnly,
+                autofocus: widget.autofocus,
+                maxLines: widget.maxLines,
+                minLines: widget.minLines,
+                autofillHints: widget.autofillHints,
+                textAlign: widget.textAlign,
+                inputFormatters: widget.inputFormatters,
+                maxLength: widget.maxLength,
+                enableSuggestions: widget.enableSuggestions,
+                autocorrect: widget.autocorrect,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: colors.ink,
+                  fontWeight: FontWeight.w500,
+                ),
+                decoration: InputDecoration(
+                  isDense: true,
+                  border: InputBorder.none,
+                  enabledBorder: InputBorder.none,
+                  focusedBorder: InputBorder.none,
+                  disabledBorder: InputBorder.none,
+                  errorBorder: InputBorder.none,
+                  focusedErrorBorder: InputBorder.none,
+                  filled: false,
+                  contentPadding: EdgeInsets.zero,
+                  counterText: widget.counterText,
+                ),
+              ),
             ),
-          if (widget.trailing != null)
-            Positioned(
-              right: 14,
-              top: 0,
-              bottom: 0,
-              child: Center(child: widget.trailing!),
-            ),
-        ],
+            if (widget.prefix != null)
+              Positioned(
+                left: 14,
+                top: 0,
+                bottom: 0,
+                child: Center(child: widget.prefix!),
+              ),
+            if (widget.trailing != null)
+              Positioned(
+                right: 14,
+                top: 0,
+                bottom: 0,
+                child: Center(child: widget.trailing!),
+              ),
+          ],
+        ),
       ),
     );
 

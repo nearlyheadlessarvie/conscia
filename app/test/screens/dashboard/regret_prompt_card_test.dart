@@ -48,16 +48,13 @@ void main() {
     expect(find.byIcon(Icons.thumb_up_alt_outlined), findsOneWidget);
     expect(find.byIcon(Icons.help_outline_rounded), findsOneWidget);
     expect(find.byIcon(Icons.thumb_down_alt_outlined), findsOneWidget);
-    expect(find.text('Worth It'), findsOneWidget);
+    expect(find.text('Worth It'), findsWidgets);
     expect(find.text('Not Sure'), findsOneWidget);
-    expect(find.text('Regret'), findsOneWidget);
+    expect(find.text('Regret'), findsWidgets);
 
     for (final label in ['Worth It', 'Not Sure', 'Regret']) {
       final button = tester.widget<FilledButton>(
-        find.ancestor(
-          of: find.text(label),
-          matching: find.byType(FilledButton),
-        ),
+        find.widgetWithText(FilledButton, label),
       );
       expect(button.style?.minimumSize?.resolve({})?.height, 72);
     }
@@ -65,5 +62,61 @@ void main() {
     expect(find.byIcon(Icons.sentiment_satisfied_alt), findsNothing);
     expect(find.byIcon(Icons.sentiment_neutral), findsNothing);
     expect(find.byIcon(Icons.sentiment_dissatisfied), findsNothing);
+  });
+
+  testWidgets('right swipe tags the prompt as worth it', (tester) async {
+    var worthItCount = 0;
+    var regretCount = 0;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: RegretPromptCard(
+            categoryBadge: CategoryIcons.badge('Dining', size: 16),
+            counterparty: 'Starbucks',
+            amount: 280,
+            currencyCode: 'PHP',
+            date: DateTime.now(),
+            onWorthIt: () => worthItCount += 1,
+            onRegret: () => regretCount += 1,
+          ),
+        ),
+      ),
+    );
+
+    await tester.drag(find.text('Starbucks'), const Offset(220, 0));
+    await tester.pumpAndSettle();
+
+    expect(worthItCount, 1);
+    expect(regretCount, 0);
+    expect(find.text('Dismiss'), findsNothing);
+  });
+
+  testWidgets('left swipe tags the prompt as regret', (tester) async {
+    var worthItCount = 0;
+    var regretCount = 0;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: RegretPromptCard(
+            categoryBadge: CategoryIcons.badge('Dining', size: 16),
+            counterparty: 'Starbucks',
+            amount: 280,
+            currencyCode: 'PHP',
+            date: DateTime.now(),
+            onWorthIt: () => worthItCount += 1,
+            onRegret: () => regretCount += 1,
+          ),
+        ),
+      ),
+    );
+
+    await tester.drag(find.text('Starbucks'), const Offset(-220, 0));
+    await tester.pumpAndSettle();
+
+    expect(worthItCount, 0);
+    expect(regretCount, 1);
+    expect(find.text('Dismiss'), findsNothing);
   });
 }

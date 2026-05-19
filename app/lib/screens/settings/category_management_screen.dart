@@ -16,6 +16,7 @@ import '../../widgets/conscia_app_bar.dart';
 import '../../widgets/hero_shortcut_card.dart';
 import '../../widgets/segmented_switch.dart';
 import '../../widgets/skeleton_loader.dart';
+import '../../widgets/swipe_action_tile.dart';
 
 const _personalCategoryQuery = CategoryQuery(includeArchived: true);
 
@@ -456,7 +457,7 @@ class _CategoryRow extends StatelessWidget {
             ? 'Default'
             : 'Custom';
 
-    return Padding(
+    final row = Padding(
       padding: const EdgeInsets.symmetric(vertical: 12),
       child: Row(
         children: [
@@ -489,14 +490,35 @@ class _CategoryRow extends StatelessWidget {
               ],
             ),
           ),
-          if (showArchiveAction && !category.isDefault)
-            IconButton(
-              tooltip: 'Archive ${category.name}',
-              onPressed: () => onArchive(category),
-              icon: Icon(Icons.archive_outlined, color: colors.deepNavy),
-            ),
         ],
       ),
+    );
+
+    if (!showArchiveAction || category.isDefault) return row;
+
+    return Dismissible(
+      key: ValueKey('category-row-${category.id}'),
+      direction: DismissDirection.endToStart,
+      confirmDismiss: (_) async {
+        onArchive(category);
+        return false;
+      },
+      background: const SizedBox.shrink(),
+      secondaryBackground: SwipeActionBackground(
+        alignment: Alignment.centerRight,
+        padding: const EdgeInsets.only(right: 0),
+        children: [
+          SwipeActionTile(
+            key: const ValueKey('category-swipe-action-archive'),
+            icon: Icons.archive_outlined,
+            label: 'Archive',
+            foregroundColor: colors.deepNavy,
+            backgroundColor: colors.navySoft,
+            onTap: () => onArchive(category),
+          ),
+        ],
+      ),
+      child: ColoredBox(color: colors.paper, child: row),
     );
   }
 }

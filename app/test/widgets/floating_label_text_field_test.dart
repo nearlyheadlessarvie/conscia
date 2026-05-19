@@ -44,4 +44,40 @@ void main() {
 
     expect(labelLeft, greaterThan(iconRight));
   });
+
+  testWidgets('FloatingLabelTextField focuses from label and icon chrome',
+      (tester) async {
+    final controller = TextEditingController();
+    final focusNode = FocusNode();
+    addTearDown(focusNode.dispose);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Padding(
+            padding: const EdgeInsets.all(24),
+            child: FloatingLabelTextField(
+              controller: controller,
+              focusNode: focusNode,
+              label: 'Email',
+              prefix: const Icon(Icons.email_outlined),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.byIcon(Icons.email_outlined));
+    await tester.pump();
+
+    expect(focusNode.hasFocus, isTrue);
+
+    focusNode.unfocus();
+    await tester.pump();
+
+    await tester.tap(find.text('Email'), warnIfMissed: false);
+    await tester.pump();
+
+    expect(focusNode.hasFocus, isTrue);
+  });
 }

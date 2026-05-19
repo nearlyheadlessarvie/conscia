@@ -136,7 +136,7 @@ class _BudgetFormSheetState extends ConsumerState<BudgetFormSheet> {
   Future<void> _confirmDelete() async {
     final confirmed = await ConsciaConfirmSheet.show(
       context,
-      title: 'Delete this budget?',
+      title: 'Delete ${widget.existing!.category} budget?',
       message: "This can't be undone.",
       confirmLabel: 'Delete budget',
     );
@@ -242,18 +242,18 @@ class _BudgetFormSheetState extends ConsumerState<BudgetFormSheet> {
                           }),
                         ),
                       ),
-                    if (_errorText != null) ...[
-                      const SizedBox(height: 12),
-                      InlineNotice(
-                        message: _errorText!,
-                        tone: InlineNoticeTone.error,
-                        icon: const Icon(Icons.error_outline_rounded),
-                      ),
-                    ],
                   ],
                 ),
               ),
               const SizedBox(height: 16),
+              if (_errorText != null) ...[
+                InlineNotice(
+                  message: _errorText!,
+                  tone: InlineNoticeTone.error,
+                  icon: const Icon(Icons.error_outline_rounded),
+                ),
+                const SizedBox(height: 12),
+              ],
               FilledButton(
                 onPressed: _isValid && !_submitting ? _submit : null,
                 child: _submitting

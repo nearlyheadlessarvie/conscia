@@ -49,18 +49,47 @@ class RegretPromptCard extends StatelessWidget {
 
     return Dismissible(
       key: ValueKey('regret_${counterparty}_${date.millisecondsSinceEpoch}'),
-      direction: DismissDirection.startToEnd,
-      onDismissed: (_) => onDismiss?.call(),
+      direction: DismissDirection.horizontal,
+      dismissThresholds: const {
+        DismissDirection.startToEnd: 0.18,
+        DismissDirection.endToStart: 0.18,
+      },
+      confirmDismiss: (direction) async {
+        if (direction == DismissDirection.startToEnd) {
+          if (onWorthIt != null) {
+            onWorthIt!();
+          } else {
+            onDismiss?.call();
+          }
+        } else if (direction == DismissDirection.endToStart) {
+          onRegret?.call();
+        }
+
+        return false;
+      },
       background: SwipeActionBackground(
         alignment: Alignment.centerLeft,
         padding: const EdgeInsets.only(left: 12),
         children: [
           SwipeActionTile(
-            icon: Icons.check_rounded,
-            label: 'Dismiss',
+            icon: Icons.thumb_up_alt_outlined,
+            label: 'Worth It',
             foregroundColor: appColors.income,
             backgroundColor: appColors.incomeSoft,
-            onTap: () {},
+            onTap: onWorthIt ?? onDismiss ?? () {},
+          ),
+        ],
+      ),
+      secondaryBackground: SwipeActionBackground(
+        alignment: Alignment.centerRight,
+        padding: const EdgeInsets.only(right: 12),
+        children: [
+          SwipeActionTile(
+            icon: Icons.thumb_down_alt_outlined,
+            label: 'Regret',
+            foregroundColor: appColors.expense,
+            backgroundColor: appColors.expenseSoft,
+            onTap: onRegret ?? () {},
           ),
         ],
       ),

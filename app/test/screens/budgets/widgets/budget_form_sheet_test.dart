@@ -202,9 +202,17 @@ void main() {
     await tester.tap(find.widgetWithText(FilledButton, 'Create Budget'));
     await tester.pumpAndSettle();
 
+    final errorTop = tester
+        .getTopLeft(find.text('A budget for that category already exists.'))
+        .dy;
+    final buttonTop = tester
+        .getTopLeft(find.widgetWithText(FilledButton, 'Create Budget'))
+        .dy;
+
     expect(
       find.text('A budget for that category already exists.'),
       findsOneWidget,
     );
+    expect(errorTop, lessThan(buttonTop));
   });
 }

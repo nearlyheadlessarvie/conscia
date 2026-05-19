@@ -1,6 +1,10 @@
 using System.Security.Claims;
 using Conscia.Api.Middleware;
+using Conscia.Application.Interfaces;
+using Conscia.Domain.Entities;
+using Conscia.Domain.Enums;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Conscia.Tests.Unit.Infrastructure;
 
@@ -42,7 +46,11 @@ public class SubscriptionTierMiddlewareTests
     [Fact]
     public async Task PremiumEndpoint_PremiumUser_Passes()
     {
-        var context = CreateContext(authenticated: true, tier: "Premium", hasPremiumMetadata: true);
+        var context = CreateContext(
+            authenticated: true,
+            tier: "Premium",
+            hasPremiumMetadata: true,
+            currentSubscriptionIsPremium: true);
         var middleware = new SubscriptionTierMiddleware(_ => Task.CompletedTask);
 
         await middleware.InvokeAsync(context);
@@ -51,9 +59,13 @@ public class SubscriptionTierMiddlewareTests
     }
 
     [Fact]
-    public async Task PremiumEndpoint_TierCaseInsensitive_Passes()
+    public async Task PremiumEndpoint_UsesCurrentSubscriptionInsteadOfClaimCasing()
     {
-        var context = CreateContext(authenticated: true, tier: "premium", hasPremiumMetadata: true);
+        var context = CreateContext(
+            authenticated: true,
+            tier: "premium",
+            hasPremiumMetadata: true,
+            currentSubscriptionIsPremium: true);
         var middleware = new SubscriptionTierMiddleware(_ => Task.CompletedTask);
 
         await middleware.InvokeAsync(context);
@@ -61,10 +73,33 @@ public class SubscriptionTierMiddlewareTests
         Assert.Equal(200, context.Response.StatusCode);
     }
 
-    private static HttpContext CreateContext(bool authenticated, string? tier, bool hasPremiumMetadata)
+    [Fact]
+    public async Task PremiumEndpoint_CurrentPremiumSubscription_PassesEvenWhenTokenTierIsStale()
+    {
+        var context = CreateContext(
+            authenticated: true,
+            tier: "Free",
+            hasPremiumMetadata: true,
+            currentSubscriptionIsPremium: true);
+        var middleware = new SubscriptionTierMiddleware(_ => Task.CompletedTask);
+
+        await middleware.InvokeAsync(context);
+
+        Assert.Equal(200, context.Response.StatusCode);
+    }
+
+    private static HttpContext CreateContext(
+        bool authenticated,
+        string? tier,
+        bool hasPremiumMetadata,
+        bool currentSubscriptionIsPremium = false)
     {
         var context = new DefaultHttpContext();
         context.Response.Body = new MemoryStream();
+        context.RequestServices = new ServiceCollection()
+            .AddSingleton<ISubscriptionService>(
+                new FakeSubscriptionService(currentSubscriptionIsPremium))
+            .BuildServiceProvider();
 
         if (authenticated)
         {
@@ -87,5 +122,28 @@ public class SubscriptionTierMiddlewareTests
         context.SetEndpoint(new Endpoint(_ => Task.CompletedTask, new EndpointMetadataCollection(endpointMetadata), "test"));
 
         return context;
+    }
+
+    private sealed class FakeSubscriptionService(bool isPremium) : ISubscriptionService
+    {
+        public Task<UserSubscription> VerifyiOSReceiptAsync(
+            Guid userId,
+            string receiptData,
+            CancellationToken ct = default) =>
+            throw new NotSupportedException();
+
+        public Task<UserSubscription> VerifyAndroidTokenAsync(
+            Guid userId,
+            string purchaseToken,
+            CancellationToken ct = default) =>
+            throw new NotSupportedException();
+
+        public Task<UserSubscription?> GetStatusAsync(
+            Guid userId,
+            CancellationToken ct = default) =>
+            Task.FromResult<UserSubscription?>(null);
+
+        public Task<bool> IsPremiumAsync(Guid userId, CancellationToken ct = default) =>
+            Task.FromResult(isPremium);
     }
 }

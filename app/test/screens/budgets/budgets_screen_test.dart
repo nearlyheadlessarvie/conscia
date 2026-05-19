@@ -352,7 +352,7 @@ void main() {
     await tester.drag(find.text('Coffee').first, const Offset(-500, 0));
     await tester.pumpAndSettle();
 
-    expect(find.text('Delete this budget?'), findsOneWidget);
+    expect(find.text('Delete Coffee budget?'), findsOneWidget);
     expect(find.text("This can't be undone."), findsOneWidget);
 
     await tester.tap(find.widgetWithText(FilledButton, 'Delete budget'));

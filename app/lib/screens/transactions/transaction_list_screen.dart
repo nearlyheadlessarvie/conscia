@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -21,7 +22,6 @@ import '../../widgets/empty_state.dart';
 import '../../widgets/feed_card.dart';
 import '../../widgets/selection_chip_group.dart';
 import '../../widgets/skeleton_loader.dart';
-import '../../widgets/swipe_action_tile.dart';
 import '../../../widgets/form_label.dart';
 import '../budgets/widgets/budget_form_sheet.dart';
 import 'transaction_form_screen.dart';
@@ -87,11 +87,20 @@ class _TransactionListScreenState extends ConsumerState<TransactionListScreen> {
   }
 
   Future<void> _confirmDeleteTransaction(Transaction transaction) async {
+    final userPrefs = ref.read(userPreferencesProvider);
     final confirmed = await ConsciaConfirmSheet.show(
       context,
       title: 'Delete this transaction?',
-      message: "This can't be undone.",
+      message: 'This can\'t be undone.',
       confirmLabel: 'Delete transaction',
+      preview: EditorialTransactionRow(
+        data: EditorialTransactionRowData.fromTransaction(
+          transaction,
+          displayCategory: _displayCategory(transaction),
+        ),
+        locale: userPrefs.locale,
+        onTap: () {},
+      ),
     );
     if (!confirmed || !mounted) return;
 
@@ -489,52 +498,57 @@ class _SwipeableTransactionActionRow extends StatefulWidget {
 }
 
 class _SwipeableTransactionActionRowState
-    extends State<_SwipeableTransactionActionRow> {
-  static const _actionWidth = 82.0;
-  static const _deleteRevealWidth = 88.0;
+    extends State<_SwipeableTransactionActionRow>
+    with SingleTickerProviderStateMixin {
+  static const _actionExtent = 0.22;
+  static const _deleteExtent = 0.24;
+  static const _commitThreshold = 0.58;
 
-  double _dragExtent = 0;
+  late final SlidableController _controller;
+  bool _handlingCommittedSwipe = false;
 
   int get _actionCount =>
       1 + (widget.canReflect ? 1 : 0) + (widget.canAddBudget ? 1 : 0);
 
-  double get _rightRevealWidth => (_actionCount * _actionWidth)
-      .clamp(
-        _actionWidth,
-        _actionWidth * 3,
-      )
-      .toDouble();
-
-  void _close() {
-    if (_dragExtent == 0) return;
-    setState(() => _dragExtent = 0);
+  @override
+  void initState() {
+    super.initState();
+    _controller = SlidableController(this)
+      ..endGesture.addListener(_handleCommittedSwipe);
   }
 
-  void _handleDragUpdate(DragUpdateDetails details) {
-    final delta = details.primaryDelta ?? 0;
-    setState(() {
-      _dragExtent = (_dragExtent + delta).clamp(
-        -_deleteRevealWidth,
-        _rightRevealWidth,
-      );
-    });
+  @override
+  void dispose() {
+    _controller.endGesture.removeListener(_handleCommittedSwipe);
+    _controller.dispose();
+    super.dispose();
   }
 
-  void _handleDragEnd(DragEndDetails details) {
-    if (_dragExtent <= -44) {
-      _close();
-      widget.onDelete();
+  double get _startExtent =>
+      (_actionCount * _actionExtent).clamp(_actionExtent, 0.72).toDouble();
+
+  void _handleCommittedSwipe() {
+    if (_handlingCommittedSwipe) return;
+
+    final ratio = _controller.ratio;
+    if (ratio <= -_commitThreshold) {
+      _runCommittedAction(widget.onDelete);
       return;
     }
 
-    setState(() {
-      _dragExtent = _dragExtent >= 44 ? _rightRevealWidth : 0;
-    });
+    if (_actionCount == 1 && ratio >= _commitThreshold) {
+      _runCommittedAction(widget.onEdit);
+    }
   }
 
-  void _runAction(VoidCallback action) {
-    _close();
-    action();
+  void _runCommittedAction(VoidCallback action) {
+    _handlingCommittedSwipe = true;
+    _controller.close(duration: Duration.zero);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _handlingCommittedSwipe = false;
+      action();
+    });
   }
 
   String get _rowId {
@@ -548,87 +562,183 @@ class _SwipeableTransactionActionRowState
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).appColors;
-    final actionBg = colors.navySoft.withValues(alpha: 0.72);
 
-    return ClipRect(
-      child: Stack(
+    return Slidable(
+      key: widget.key,
+      controller: _controller,
+      groupTag: 'transactions',
+      closeOnScroll: true,
+      startActionPane: ActionPane(
+        motion: const BehindMotion(),
+        extentRatio: _startExtent,
+        dismissible: _actionCount == 1
+            ? _TransactionSlidablePreview(
+                label: 'Edit',
+                icon: Icons.edit_rounded,
+                foregroundColor: colors.deepNavy,
+                backgroundColor: colors.navySoft.withValues(alpha: 0.72),
+                alignment: Alignment.centerLeft,
+              )
+            : null,
         children: [
-          AnimatedContainer(
-            duration: const Duration(milliseconds: 120),
-            curve: Curves.easeOutCubic,
-            transform: Matrix4.translationValues(_dragExtent, 0, 0),
-            child: GestureDetector(
-              behavior: HitTestBehavior.translucent,
-              onTap: _dragExtent > 0 ? _close : null,
-              onHorizontalDragUpdate: _handleDragUpdate,
-              onHorizontalDragEnd: _handleDragEnd,
-              child: ColoredBox(
-                key: ValueKey('transaction-swipe-foreground-$_rowId'),
-                color: colors.paper,
-                child: widget.child,
+          _TransactionSlidableAction(
+            label: 'Edit',
+            icon: Icons.edit_rounded,
+            foregroundColor: colors.deepNavy,
+            backgroundColor: colors.navySoft.withValues(alpha: 0.72),
+            onPressed: widget.onEdit,
+          ),
+          if (widget.canReflect)
+            _TransactionSlidableAction(
+              label: 'Reflect',
+              icon: Icons.auto_awesome_rounded,
+              foregroundColor: colors.deepNavy,
+              backgroundColor: colors.navySoft.withValues(alpha: 0.72),
+              onPressed: widget.onReflect,
+            ),
+          if (widget.canAddBudget)
+            _TransactionSlidableAction(
+              label: 'Add budget',
+              icon: Icons.flag_rounded,
+              foregroundColor: colors.deepNavy,
+              backgroundColor: colors.amberSoft,
+              onPressed: widget.onAddBudget,
+            ),
+        ],
+      ),
+      endActionPane: ActionPane(
+        motion: const BehindMotion(),
+        extentRatio: _deleteExtent,
+        dismissible: _TransactionSlidablePreview(
+          label: 'Delete',
+          icon: Icons.delete_outline_rounded,
+          foregroundColor: colors.expense,
+          backgroundColor: colors.expenseSoft,
+          alignment: Alignment.centerRight,
+        ),
+        children: [
+          _TransactionSlidableAction(
+            label: 'Delete',
+            icon: Icons.delete_outline_rounded,
+            foregroundColor: colors.expense,
+            backgroundColor: colors.expenseSoft,
+            onPressed: widget.onDelete,
+          ),
+        ],
+      ),
+      child: ColoredBox(
+        key: ValueKey('transaction-swipe-foreground-$_rowId'),
+        color: colors.paper,
+        child: widget.child,
+      ),
+    );
+  }
+}
+
+class _TransactionSlidablePreview extends StatelessWidget {
+  const _TransactionSlidablePreview({
+    required this.label,
+    required this.icon,
+    required this.foregroundColor,
+    required this.backgroundColor,
+    required this.alignment,
+  });
+
+  final String label;
+  final IconData icon;
+  final Color foregroundColor;
+  final Color backgroundColor;
+  final Alignment alignment;
+
+  @override
+  Widget build(BuildContext context) {
+    return ColoredBox(
+      color: Theme.of(context).appColors.paper,
+      child: Align(
+        alignment: alignment,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: backgroundColor,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: SizedBox(
+              width: 84,
+              height: double.infinity,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(icon, color: foregroundColor, size: 19),
+                  const SizedBox(height: 3),
+                  Text(
+                    label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                          color: foregroundColor,
+                          fontWeight: FontWeight.w800,
+                        ),
+                  ),
+                ],
               ),
             ),
           ),
-          if (_dragExtent > 0)
-            Positioned.fill(
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: SizedBox(
-                  width: _rightRevealWidth,
-                  child: Row(
-                    children: [
-                      SwipeActionTile(
-                        icon: Icons.edit_rounded,
-                        label: 'Edit',
-                        foregroundColor: colors.deepNavy,
-                        backgroundColor: actionBg,
-                        width: _actionWidth,
-                        onTap: () => _runAction(widget.onEdit),
+        ),
+      ),
+    );
+  }
+}
+
+class _TransactionSlidableAction extends StatelessWidget {
+  const _TransactionSlidableAction({
+    required this.label,
+    required this.icon,
+    required this.foregroundColor,
+    required this.backgroundColor,
+    required this.onPressed,
+  });
+
+  final String label;
+  final IconData icon;
+  final Color foregroundColor;
+  final Color backgroundColor;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return CustomSlidableAction(
+      key: ValueKey('swipe-action-tile-$label'),
+      backgroundColor: Theme.of(context).appColors.paper,
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 7),
+      onPressed: (_) => onPressed(),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: backgroundColor,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: SizedBox.expand(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(icon, color: foregroundColor, size: 19),
+                const SizedBox(height: 3),
+                Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: foregroundColor,
+                        fontWeight: FontWeight.w800,
                       ),
-                      if (widget.canReflect)
-                        SwipeActionTile(
-                          icon: Icons.auto_awesome_rounded,
-                          label: 'Reflect',
-                          foregroundColor: colors.deepNavy,
-                          backgroundColor: actionBg,
-                          width: _actionWidth,
-                          onTap: () => _runAction(widget.onReflect),
-                        ),
-                      if (widget.canAddBudget)
-                        SwipeActionTile(
-                          icon: Icons.flag_rounded,
-                          label: 'Add budget',
-                          foregroundColor: colors.deepNavy,
-                          backgroundColor: colors.amberSoft,
-                          width: _actionWidth,
-                          onTap: () => _runAction(widget.onAddBudget),
-                        ),
-                    ],
-                  ),
                 ),
-              ),
+              ],
             ),
-          if (_dragExtent < 0)
-            Positioned.fill(
-              child: Align(
-                alignment: Alignment.centerRight,
-                child: SwipeActionBackground(
-                  alignment: Alignment.centerRight,
-                  padding: const EdgeInsets.only(right: 6),
-                  children: [
-                    SwipeActionTile(
-                      icon: Icons.delete_outline_rounded,
-                      label: 'Delete',
-                      foregroundColor: colors.expense,
-                      backgroundColor: colors.expenseSoft,
-                      width: _deleteRevealWidth,
-                      onTap: () => _runAction(widget.onDelete),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-        ],
+          ),
+        ),
       ),
     );
   }

@@ -29,6 +29,7 @@ import '../../widgets/form_label.dart';
 import '../../widgets/premium_upgrade_dialog.dart';
 import '../../widgets/skeleton_loader.dart';
 import 'transaction_form_screen.dart';
+import 'widgets/editorial_transaction_row.dart';
 
 class TransactionDetailScreen extends ConsumerStatefulWidget {
   final String transactionId;
@@ -103,11 +104,22 @@ class _TransactionDetailScreenState
   }
 
   Future<void> _confirmDelete(Transaction? transaction) async {
+    final userPrefs = ref.read(userPreferencesProvider);
+    final transactionForContext = transaction ?? _editedTransactionOverride;
     final confirmed = await ConsciaConfirmSheet.show(
       context,
       title: 'Delete this transaction?',
       message: "This can't be undone.",
       confirmLabel: 'Delete transaction',
+      preview: transactionForContext == null
+          ? null
+          : EditorialTransactionRow(
+              data: EditorialTransactionRowData.fromTransaction(
+                transactionForContext,
+              ),
+              locale: userPrefs.locale,
+              onTap: () {},
+            ),
     );
 
     if (!confirmed || !mounted) return;
