@@ -1048,7 +1048,7 @@ void main() {
     expect(momentumValue.data, '18 day streak');
     expect(momentumDetail.data, '2 more days to strengthen your stride.');
     expect(find.text('0/5 quests'), findsNothing);
-    expect(title.style?.fontFamily, contains('Lora'));
+    expect(title.style?.fontFamily, contains('CormorantGaramond'));
     expect(subtitle.style?.fontFamily, contains('Nunito'));
     expect(momentumValue.style?.fontFamily, contains('Nunito'));
   });

@@ -91,7 +91,7 @@ class _JourneyHomeSection extends StatelessWidget {
                 child: Text(
                   title,
                   key: ValueKey('journey-home-section-title-$title'),
-                  style: GoogleFonts.lora(
+                  style: GoogleFonts.cormorantGaramond(
                     textStyle: textTheme.titleLarge,
                     color: colors.deepNavy,
                     fontWeight: FontWeight.w700,
@@ -213,7 +213,7 @@ class _QuestTile extends StatelessWidget {
             textAlign: TextAlign.center,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
-            style: GoogleFonts.lora(
+            style: GoogleFonts.cormorantGaramond(
               textStyle: textTheme.labelLarge,
               color: colors.deepNavy,
               fontWeight: FontWeight.w700,
@@ -349,7 +349,7 @@ class _PatternSignalCard extends StatelessWidget {
             key: const ValueKey('journey-home-pattern-title'),
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
-            style: GoogleFonts.lora(
+            style: GoogleFonts.cormorantGaramond(
               textStyle: textTheme.labelLarge,
               color: colors.ink,
               fontWeight: FontWeight.w700,
@@ -463,7 +463,7 @@ class _MilestoneStrip extends StatelessWidget {
                 badge.title,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style: GoogleFonts.lora(
+                style: GoogleFonts.cormorantGaramond(
                   textStyle: Theme.of(context).textTheme.labelMedium,
                   color: colors.deepNavy,
                   fontWeight: FontWeight.w700,

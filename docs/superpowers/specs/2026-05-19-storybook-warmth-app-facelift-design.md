@@ -35,16 +35,16 @@ The font direction is locked.
 
 Conscia should use a two-family type system:
 
-- **Lora** for expressive headings and editorial moments
+- **Cormorant Garamond** for expressive headings and editorial moments
 - **Nunito Sans** for body text, labels, controls, navigation, amounts, and dense UI
 
-Lora gives the app the Storybook Warmth signal: reflective, human, slightly literary, and emotionally distinct from a generic finance dashboard. It should be used selectively so it feels special rather than noisy.
+Cormorant Garamond gives the app the Storybook Warmth signal: reflective, human, literary, and emotionally distinct from a generic finance dashboard. It should be used selectively so it feels special rather than noisy.
 
-Nunito Sans should replace the current Poppins/Inter mix as the core product font. It keeps the interface friendly and readable while pairing better with Lora than the current sharper body stack.
+Nunito Sans should replace the current Poppins/Inter mix as the core product font. It keeps the interface friendly and readable while pairing better with Cormorant Garamond than the current sharper body stack.
 
 Recommended type roles:
 
-- `displayLarge`, `displayMedium`, `headlineLarge`, `headlineMedium`, and `titleLarge`: Lora
+- `displayLarge`, `displayMedium`, `headlineLarge`, `headlineMedium`, and `titleLarge`: Cormorant Garamond
 - `titleMedium`, `titleSmall`, `bodyLarge`, `bodyMedium`, `bodySmall`, `labelLarge`, `labelMedium`, `labelSmall`, and button text: Nunito Sans
 - transaction amounts and numeric UI: Nunito Sans with strong weights and tabular figures where available
 
@@ -110,7 +110,7 @@ This means:
 - update `AppTheme` light and dark typography
 - update `AppColors` light and dark tokens
 - align Material theme defaults for cards, buttons, chips, inputs, app bars, bottom sheets, dividers, and navigation bars
-- replace inline `GoogleFonts.poppins` and `GoogleFonts.inter` calls with theme-driven typography or the approved Lora/Nunito Sans stack
+- replace inline `GoogleFonts.poppins` and `GoogleFonts.inter` calls with theme-driven typography or the approved Cormorant Garamond/Nunito Sans stack
 - tune the Journey-led Home implementation so it uses shared tokens rather than becoming a special-case island
 - apply light-touch fixes to obvious screens where old font/color assumptions clash with the new system
 
@@ -178,9 +178,8 @@ The facelift is successful when:
 
 - the app visibly shares the Journey mockup's Storybook Warmth identity
 - light and dark mode feel like two versions of the same brand
-- Lora and Nunito Sans are the dominant app-wide font system
+- Cormorant Garamond and Nunito Sans are the dominant app-wide font system
 - old Poppins/Inter one-offs are removed or intentionally justified
 - financial utility screens remain clear and trustworthy
 - Journey feels like the natural center of the app rather than a visually isolated experiment
 - the existing navigation and feature flows continue to work unchanged
-

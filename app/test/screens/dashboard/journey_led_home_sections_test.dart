@@ -176,11 +176,11 @@ void main() {
       find.byKey(const ValueKey('journey-home-pattern-description')),
     );
 
-    expect(sectionTitle.style?.fontFamily, contains('Lora'));
+    expect(sectionTitle.style?.fontFamily, contains('CormorantGaramond'));
     expect(sectionSubtitle.style?.fontFamily, contains('Nunito'));
-    expect(questTitle.style?.fontFamily, contains('Lora'));
+    expect(questTitle.style?.fontFamily, contains('CormorantGaramond'));
     expect(questDescription.style?.fontFamily, contains('Nunito'));
-    expect(patternTitle.style?.fontFamily, contains('Lora'));
+    expect(patternTitle.style?.fontFamily, contains('CormorantGaramond'));
     expect(patternDescription.style?.fontFamily, contains('Nunito'));
   });
 
