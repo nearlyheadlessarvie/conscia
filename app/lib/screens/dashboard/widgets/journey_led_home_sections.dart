@@ -199,108 +199,67 @@ class _QuestTile extends StatelessWidget {
           borderRadius: BorderRadius.circular(16),
           border: Border.all(color: colors.border),
         ),
-        child: Stack(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            Positioned(
-              right: 0,
-              top: 0,
-              child: _ActionHint(
-                key: const ValueKey('journey-home-quest-open-hint'),
-                icon: Icons.arrow_outward_rounded,
+            _SoftIcon(icon: _questIcon(quest.key), color: accent),
+            const SizedBox(height: 10),
+            Text(
+              _compactQuestTitle(quest.title),
+              key: const ValueKey('journey-home-quest-title'),
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: GoogleFonts.nunitoSans(
+                textStyle: textTheme.labelLarge,
                 color: colors.deepNavy,
+                fontWeight: FontWeight.w800,
+                height: 1.06,
               ),
             ),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.center,
+            const SizedBox(height: 7),
+            Expanded(
+              child: Text(
+                quest.description,
+                key: const ValueKey('journey-home-quest-description'),
+                textAlign: TextAlign.center,
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+                style: GoogleFonts.nunitoSans(
+                  textStyle: textTheme.labelSmall,
+                  color: colors.mutedInk,
+                  fontWeight: FontWeight.w600,
+                  height: 1.2,
+                ),
+              ),
+            ),
+            const SizedBox(height: 10),
+            Row(
               children: [
-                _SoftIcon(icon: _questIcon(quest.key), color: accent),
-                const SizedBox(height: 10),
-                Text(
-                  _compactQuestTitle(quest.title),
-                  key: const ValueKey('journey-home-quest-title'),
-                  textAlign: TextAlign.center,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.nunitoSans(
-                    textStyle: textTheme.labelLarge,
-                    color: colors.deepNavy,
-                    fontWeight: FontWeight.w800,
-                    height: 1.06,
-                  ),
+                Icon(
+                  quest.isCompleted
+                      ? Icons.check_circle_rounded
+                      : Icons.arrow_forward_rounded,
+                  color: quest.isCompleted ? colors.income : colors.deepNavy,
+                  size: 18,
                 ),
-                const SizedBox(height: 7),
+                const SizedBox(width: 6),
                 Expanded(
-                  child: Text(
-                    quest.description,
-                    key: const ValueKey('journey-home-quest-description'),
-                    textAlign: TextAlign.center,
-                    maxLines: 3,
-                    overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.nunitoSans(
-                      textStyle: textTheme.labelSmall,
-                      color: colors.mutedInk,
-                      fontWeight: FontWeight.w600,
-                      height: 1.2,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(999),
+                    child: LinearProgressIndicator(
+                      minHeight: 3,
+                      value: progress,
+                      backgroundColor: colors.border,
+                      valueColor: AlwaysStoppedAnimation<Color>(accent),
                     ),
                   ),
-                ),
-                const SizedBox(height: 10),
-                Row(
-                  children: [
-                    Icon(
-                      quest.isCompleted
-                          ? Icons.check_circle_rounded
-                          : Icons.arrow_forward_rounded,
-                      color:
-                          quest.isCompleted ? colors.income : colors.deepNavy,
-                      size: 18,
-                    ),
-                    const SizedBox(width: 6),
-                    Expanded(
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(999),
-                        child: LinearProgressIndicator(
-                          minHeight: 3,
-                          value: progress,
-                          backgroundColor: colors.border,
-                          valueColor: AlwaysStoppedAnimation<Color>(accent),
-                        ),
-                      ),
-                    ),
-                  ],
                 ),
               ],
             ),
           ],
         ),
       ),
-    );
-  }
-}
-
-class _ActionHint extends StatelessWidget {
-  const _ActionHint({
-    super.key,
-    required this.icon,
-    required this.color,
-  });
-
-  final IconData icon;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).appColors;
-
-    return Container(
-      width: 28,
-      height: 28,
-      decoration: BoxDecoration(
-        color: colors.paper.withValues(alpha: 0.72),
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: colors.border.withValues(alpha: 0.8)),
-      ),
-      child: Icon(icon, color: color, size: 15),
     );
   }
 }
@@ -340,40 +299,63 @@ class _InsightSummaryCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(_insightToneIcon(tone), color: color, size: 16),
-                const SizedBox(width: 6),
+                Container(
+                  key: const ValueKey('journey-home-insight-body-icon'),
+                  width: 46,
+                  height: 46,
+                  decoration: BoxDecoration(
+                    color: color.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(15),
+                  ),
+                  child: Icon(_insightToneIcon(tone), color: color, size: 24),
+                ),
+                const SizedBox(width: 12),
                 Expanded(
-                  child: Text(
-                    _insightEyebrow(tone),
-                    style: GoogleFonts.nunitoSans(
-                      textStyle: textTheme.labelSmall,
-                      color: color,
-                      fontWeight: FontWeight.w800,
-                    ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        trend?.category ?? _insightTitle(tone),
+                        key: const ValueKey('journey-home-insight-title'),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.libreBaskerville(
+                          textStyle: textTheme.titleSmall,
+                          color: colors.ink,
+                          fontWeight: FontWeight.w700,
+                          height: 1.12,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        summary?.text ??
+                            'Insights are still taking shape as Conscia learns your weekly rhythm.',
+                        key: const ValueKey('journey-home-insight-description'),
+                        maxLines: 3,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.nunitoSans(
+                          textStyle: textTheme.labelSmall,
+                          color: colors.mutedInk,
+                          fontWeight: FontWeight.w600,
+                          height: 1.28,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                _ActionHint(
-                  key: const ValueKey('journey-home-insight-action-icon'),
-                  icon: Icons.query_stats_rounded,
-                  color: color,
+                const SizedBox(width: 8),
+                Icon(
+                  key: const ValueKey('journey-home-insight-chevron'),
+                  Icons.chevron_right_rounded,
+                  color: colors.mutedInk,
+                  size: 22,
                 ),
               ],
             ),
-            const SizedBox(height: 8),
-            Text(
-              trend?.category ?? _insightTitle(tone),
-              key: const ValueKey('journey-home-insight-title'),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: GoogleFonts.nunitoSans(
-                textStyle: textTheme.labelLarge,
-                color: colors.ink,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
             if (hasGraph) ...[
-              const SizedBox(height: 10),
+              const SizedBox(height: 12),
               SizedBox(
                 key: const ValueKey('journey-home-insight-graph'),
                 height: 42,
@@ -386,20 +368,6 @@ class _InsightSummaryCard extends StatelessWidget {
                 ),
               ),
             ],
-            const SizedBox(height: 8),
-            Text(
-              summary?.text ??
-                  'Insights are still taking shape as Conscia learns your weekly rhythm.',
-              key: const ValueKey('journey-home-insight-description'),
-              maxLines: 3,
-              overflow: TextOverflow.ellipsis,
-              style: GoogleFonts.nunitoSans(
-                textStyle: textTheme.labelSmall,
-                color: colors.mutedInk,
-                fontWeight: FontWeight.w600,
-                height: 1.2,
-              ),
-            ),
           ],
         ),
       ),
@@ -563,15 +531,6 @@ IconData _insightToneIcon(InsightFeedTone tone) {
     InsightFeedTone.caution => Icons.flag_rounded,
     InsightFeedTone.urgent => Icons.priority_high_rounded,
     InsightFeedTone.neutral => Icons.auto_graph_rounded,
-  };
-}
-
-String _insightEyebrow(InsightFeedTone tone) {
-  return switch (tone) {
-    InsightFeedTone.positive => 'Improving',
-    InsightFeedTone.caution => 'Watch this',
-    InsightFeedTone.urgent => 'Needs care',
-    InsightFeedTone.neutral => 'Weekly signal',
   };
 }
 

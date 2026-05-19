@@ -167,7 +167,7 @@ void main() {
     expect(find.byKey(const ValueKey('journey-home-quest-card')),
         findsNWidgets(5));
     expect(find.byKey(const ValueKey('journey-home-quest-open-hint')),
-        findsNWidgets(5));
+        findsNothing);
 
     final firstCard = tester.getSize(
       find.byKey(const ValueKey('journey-home-quest-card')).first,
@@ -265,7 +265,7 @@ void main() {
     expect(sectionSubtitle.style?.fontFamily, contains('Nunito'));
     expect(questTitle.style?.fontFamily, contains('Nunito'));
     expect(questDescription.style?.fontFamily, contains('Nunito'));
-    expect(patternTitle.style?.fontFamily, contains('Nunito'));
+    expect(patternTitle.style?.fontFamily, contains('LibreBaskerville'));
     expect(patternDescription.style?.fontFamily, contains('Nunito'));
   });
 
@@ -292,7 +292,10 @@ void main() {
         find.text('Dining is above your recent 3-month pace.'), findsOneWidget);
     expect(find.byKey(const ValueKey('journey-home-insight-graph')),
         findsOneWidget);
-    expect(find.byKey(const ValueKey('journey-home-insight-action-icon')),
+    expect(find.text('Needs care'), findsNothing);
+    expect(find.byKey(const ValueKey('journey-home-insight-body-icon')),
+        findsOneWidget);
+    expect(find.byKey(const ValueKey('journey-home-insight-chevron')),
         findsOneWidget);
 
     await tester.tap(find.byKey(const ValueKey('journey-home-insight-card')));
