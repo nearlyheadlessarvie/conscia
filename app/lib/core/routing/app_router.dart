@@ -278,6 +278,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             initialCurrencyCode: extra?['currencyCode'],
             initialCategory: extra?['category'],
             initialCounterparty: extra?['counterparty'],
+            initialScope: extra?['scope'],
           );
         },
       ),

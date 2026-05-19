@@ -173,6 +173,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   }
 
   void _openJourneyQuest(ConscienceQuest quest) {
+    if (quest.key == 'add_family_expense') {
+      context.push(AppRoutes.addTransaction, extra: {'scope': 'family'});
+      return;
+    }
     context.push(_journeyQuestRoute(quest));
   }
 
@@ -186,7 +190,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       'check_before_purchase' => AppRoutes.assistant,
       'review_regret_pattern' => AppRoutes.insights,
       'send_family_invite' => AppRoutes.familyInvites,
-      'add_family_expense' => AppRoutes.addTransaction,
       _ => AppRoutes.journey,
     };
   }

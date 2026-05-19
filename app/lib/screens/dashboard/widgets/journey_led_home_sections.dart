@@ -199,67 +199,108 @@ class _QuestTile extends StatelessWidget {
           borderRadius: BorderRadius.circular(16),
           border: Border.all(color: colors.border),
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.center,
+        child: Stack(
           children: [
-            _SoftIcon(icon: _questIcon(quest.key), color: accent),
-            const SizedBox(height: 10),
-            Text(
-              _compactQuestTitle(quest.title),
-              key: const ValueKey('journey-home-quest-title'),
-              textAlign: TextAlign.center,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: GoogleFonts.nunitoSans(
-                textStyle: textTheme.labelLarge,
+            Positioned(
+              right: 0,
+              top: 0,
+              child: _ActionHint(
+                key: const ValueKey('journey-home-quest-open-hint'),
+                icon: Icons.arrow_outward_rounded,
                 color: colors.deepNavy,
-                fontWeight: FontWeight.w800,
-                height: 1.06,
               ),
             ),
-            const SizedBox(height: 7),
-            Expanded(
-              child: Text(
-                quest.description,
-                key: const ValueKey('journey-home-quest-description'),
-                textAlign: TextAlign.center,
-                maxLines: 3,
-                overflow: TextOverflow.ellipsis,
-                style: GoogleFonts.nunitoSans(
-                  textStyle: textTheme.labelSmall,
-                  color: colors.mutedInk,
-                  fontWeight: FontWeight.w600,
-                  height: 1.2,
-                ),
-              ),
-            ),
-            const SizedBox(height: 10),
-            Row(
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                Icon(
-                  quest.isCompleted
-                      ? Icons.check_circle_rounded
-                      : Icons.arrow_forward_rounded,
-                  color: quest.isCompleted ? colors.income : colors.deepNavy,
-                  size: 18,
+                _SoftIcon(icon: _questIcon(quest.key), color: accent),
+                const SizedBox(height: 10),
+                Text(
+                  _compactQuestTitle(quest.title),
+                  key: const ValueKey('journey-home-quest-title'),
+                  textAlign: TextAlign.center,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.nunitoSans(
+                    textStyle: textTheme.labelLarge,
+                    color: colors.deepNavy,
+                    fontWeight: FontWeight.w800,
+                    height: 1.06,
+                  ),
                 ),
-                const SizedBox(width: 6),
+                const SizedBox(height: 7),
                 Expanded(
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(999),
-                    child: LinearProgressIndicator(
-                      minHeight: 3,
-                      value: progress,
-                      backgroundColor: colors.border,
-                      valueColor: AlwaysStoppedAnimation<Color>(accent),
+                  child: Text(
+                    quest.description,
+                    key: const ValueKey('journey-home-quest-description'),
+                    textAlign: TextAlign.center,
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.nunitoSans(
+                      textStyle: textTheme.labelSmall,
+                      color: colors.mutedInk,
+                      fontWeight: FontWeight.w600,
+                      height: 1.2,
                     ),
                   ),
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Icon(
+                      quest.isCompleted
+                          ? Icons.check_circle_rounded
+                          : Icons.arrow_forward_rounded,
+                      color:
+                          quest.isCompleted ? colors.income : colors.deepNavy,
+                      size: 18,
+                    ),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(999),
+                        child: LinearProgressIndicator(
+                          minHeight: 3,
+                          value: progress,
+                          backgroundColor: colors.border,
+                          valueColor: AlwaysStoppedAnimation<Color>(accent),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
           ],
         ),
       ),
+    );
+  }
+}
+
+class _ActionHint extends StatelessWidget {
+  const _ActionHint({
+    super.key,
+    required this.icon,
+    required this.color,
+  });
+
+  final IconData icon;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).appColors;
+
+    return Container(
+      width: 28,
+      height: 28,
+      decoration: BoxDecoration(
+        color: colors.paper.withValues(alpha: 0.72),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: colors.border.withValues(alpha: 0.8)),
+      ),
+      child: Icon(icon, color: color, size: 15),
     );
   }
 }
@@ -311,6 +352,11 @@ class _InsightSummaryCard extends StatelessWidget {
                       fontWeight: FontWeight.w800,
                     ),
                   ),
+                ),
+                _ActionHint(
+                  key: const ValueKey('journey-home-insight-action-icon'),
+                  icon: Icons.query_stats_rounded,
+                  color: color,
                 ),
               ],
             ),

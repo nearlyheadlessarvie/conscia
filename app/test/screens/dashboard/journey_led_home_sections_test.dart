@@ -166,6 +166,8 @@ void main() {
     expect(find.text('0/5 commitments complete'), findsNothing);
     expect(find.byKey(const ValueKey('journey-home-quest-card')),
         findsNWidgets(5));
+    expect(find.byKey(const ValueKey('journey-home-quest-open-hint')),
+        findsNWidgets(5));
 
     final firstCard = tester.getSize(
       find.byKey(const ValueKey('journey-home-quest-card')).first,
@@ -289,6 +291,8 @@ void main() {
     expect(
         find.text('Dining is above your recent 3-month pace.'), findsOneWidget);
     expect(find.byKey(const ValueKey('journey-home-insight-graph')),
+        findsOneWidget);
+    expect(find.byKey(const ValueKey('journey-home-insight-action-icon')),
         findsOneWidget);
 
     await tester.tap(find.byKey(const ValueKey('journey-home-insight-card')));

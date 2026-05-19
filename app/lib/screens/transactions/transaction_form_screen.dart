@@ -35,6 +35,7 @@ class TransactionFormScreen extends StatefulWidget {
   final String? initialCurrencyCode;
   final String? initialCategory;
   final String? initialCounterparty;
+  final String? initialScope;
 
   const TransactionFormScreen({
     super.key,
@@ -43,11 +44,11 @@ class TransactionFormScreen extends StatefulWidget {
     this.initialCurrencyCode,
     this.initialCategory,
     this.initialCounterparty,
+    this.initialScope,
   });
 
   @override
-  State<TransactionFormScreen> createState() =>
-      _TransactionFormScreenState();
+  State<TransactionFormScreen> createState() => _TransactionFormScreenState();
 }
 
 class _TransactionFormScreenState extends State<TransactionFormScreen> {
@@ -70,6 +71,7 @@ class _TransactionFormScreenState extends State<TransactionFormScreen> {
       initialCurrencyCode: widget.initialCurrencyCode,
       initialCategory: widget.initialCategory,
       initialCounterparty: widget.initialCounterparty,
+      initialScope: widget.initialScope,
     );
     if (!mounted) return;
 
@@ -94,6 +96,7 @@ class TransactionFormSheet extends ConsumerStatefulWidget {
   final String? initialCurrencyCode;
   final String? initialCategory;
   final String? initialCounterparty;
+  final String? initialScope;
   final ScrollController? scrollController;
 
   const TransactionFormSheet({
@@ -103,6 +106,7 @@ class TransactionFormSheet extends ConsumerStatefulWidget {
     this.initialCurrencyCode,
     this.initialCategory,
     this.initialCounterparty,
+    this.initialScope,
     this.scrollController,
   });
 
@@ -113,6 +117,7 @@ class TransactionFormSheet extends ConsumerStatefulWidget {
     String? initialCurrencyCode,
     String? initialCategory,
     String? initialCounterparty,
+    String? initialScope,
   }) {
     return showModalBottomSheet<Transaction>(
       context: context,
@@ -130,6 +135,7 @@ class TransactionFormSheet extends ConsumerStatefulWidget {
           initialCurrencyCode: initialCurrencyCode,
           initialCategory: initialCategory,
           initialCounterparty: initialCounterparty,
+          initialScope: initialScope,
           scrollController: controller,
         ),
       ),
@@ -197,6 +203,10 @@ class _TransactionFormSheetState extends ConsumerState<TransactionFormSheet> {
     if (widget.initialCounterparty case final counterparty?
         when counterparty.trim().isNotEmpty) {
       _counterpartyController.text = counterparty;
+    }
+    if (widget.initialScope case final scope?
+        when scope == 'personal' || scope == 'family') {
+      _scope = scope;
     }
   }
 

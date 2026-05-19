@@ -201,6 +201,17 @@ Widget _buildApp(
         ),
       ),
       GoRoute(
+        path: '/transactions/add',
+        builder: (context, state) {
+          final extra = state.extra as Map<String, String?>?;
+          return Scaffold(
+            body: Center(
+              child: Text('add:${state.uri.path}:${extra?['scope']}'),
+            ),
+          );
+        },
+      ),
+      GoRoute(
         path: '/transactions/:id',
         builder: (context, state) => Scaffold(
           body: Center(
@@ -1321,6 +1332,75 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Insights placeholder'), findsOneWidget);
+  });
+
+  testWidgets('dashboard add family expense quest opens add form directly',
+      (tester) async {
+    _useTallDashboardViewport(tester);
+
+    const journey = ConscienceJourneySummary(
+      xpTotal: 0,
+      currentLevel: ConscienceLevel(
+        key: 'awakening',
+        title: 'Awakening',
+        requiredXp: 0,
+      ),
+      nextLevel: ConscienceLevel(
+        key: 'impulse_spotter',
+        title: 'Impulse Spotter',
+        requiredXp: 120,
+      ),
+      xpIntoLevel: 0,
+      xpToNextLevel: 120,
+      momentumDays: 0,
+      bestMomentumDays: 0,
+      weeklyQuests: [
+        ConscienceQuest(
+          key: 'add_family_expense',
+          title: 'Add a family expense',
+          description: 'Track one shared purchase.',
+          progress: 0,
+          target: 1,
+          xpReward: 20,
+          isCompleted: false,
+        ),
+      ],
+      badges: [],
+    );
+    final container = ProviderContainer(
+      overrides: [
+        sharedPreferencesProvider.overrideWithValue(prefs),
+        budgetServiceProvider.overrideWithValue(_StaticBudgetService(const [])),
+        transactionServiceProvider
+            .overrideWithValue(_StaticTransactionService()),
+        behavioralInsightsProvider.overrideWith((ref) async => null),
+        insightsSummaryProvider.overrideWith((ref) async => null),
+        insightsCategoriesProvider.overrideWith((ref) async => const []),
+        insightsMerchantsProvider.overrideWith((ref) async => const []),
+        conscienceJourneyProvider.overrideWith(
+          () => _StaticConscienceJourneyNotifier(journey),
+        ),
+        localAlertsProvider.overrideWith(
+          (ref) => _LocalAlertsTestNotifier(const []),
+        ),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    await tester.pumpWidget(_buildApp(container));
+    await tester.pumpAndSettle();
+
+    await tester.drag(
+      find.byKey(const PageStorageKey('dashboard-shell-scroll')),
+      const Offset(0, -360),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('journey-home-quest-card')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('add:/transactions/add:family'), findsOneWidget);
+    expect(find.text('detail:/transactions/add'), findsNothing);
   });
 
   testWidgets('dashboard insights section renders real summary and graph',
