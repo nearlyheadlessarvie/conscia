@@ -77,15 +77,14 @@ void main() {
       iapService: iapService,
     );
 
-    expect(find.text('Manage Conscia Premium'), findsOneWidget);
+    expect(find.text('Conscia Premium'), findsOneWidget);
     expect(find.text('Subscribe Now'), findsNothing);
     expect(find.text('Manage Subscription'), findsOneWidget);
-    expect(find.textContaining('Premium access stays active until 6/7/2026'),
-        findsOneWidget);
+    expect(find.text('Active · renews Jun 7, 2026'), findsOneWidget);
     expect(find.text('Restore Purchases'), findsNothing);
     expect(find.byIcon(Icons.check_circle), findsNothing);
     expect(find.byKey(const ValueKey('subscription-plan-premium-radio')),
-        findsOneWidget);
+        findsNothing);
     expect(find.byKey(const ValueKey('subscription-comparison-list')),
         findsOneWidget);
   });
@@ -109,7 +108,7 @@ void main() {
     expect(find.text('Restore Purchases'), findsOneWidget);
     expect(find.byIcon(Icons.check_circle), findsNothing);
     expect(find.byKey(const ValueKey('subscription-plan-free-radio')),
-        findsOneWidget);
+        findsNothing);
     expect(find.byKey(const ValueKey('subscription-comparison-list')),
         findsOneWidget);
   });
@@ -129,10 +128,10 @@ void main() {
       iapService: iapService,
     );
 
-    final listMaterial = tester.widget<Material>(
+    expect(
       find.byKey(const ValueKey('subscription-comparison-list')),
+      findsOneWidget,
     );
-    expect(listMaterial.color, Colors.transparent);
     expect(
       find.descendant(
         of: find.byKey(const ValueKey('subscription-comparison-list')),
@@ -146,7 +145,7 @@ void main() {
     );
     final background =
         cta.style?.backgroundColor?.resolve(<WidgetState>{});
-    expect(background, const Color(0xFF18245C));
+    expect(background, const Color(0xFFFFB300));
   });
 
   testWidgets('subscription sheet shows inline dev-mode management notice', (

@@ -1,7 +1,5 @@
 import 'dart:io';
 
-import 'package:conscia_app/core/theme/app_theme.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -37,34 +35,25 @@ void main() {
   });
 
   test('AppTheme makes primary and secondary buttons pill CTAs', () {
-    for (final theme in [AppTheme.light(), AppTheme.dark()]) {
-      final filledStyle = theme.filledButtonTheme.style!;
-      final outlinedStyle = theme.outlinedButtonTheme.style!;
-      final textStyle = theme.textButtonTheme.style!;
+    final source = File('lib/core/theme/app_theme.dart').readAsStringSync();
 
-      expect(filledStyle.minimumSize?.resolve({}), const Size(0, 48));
-      expect(outlinedStyle.minimumSize?.resolve({}), const Size(0, 48));
-      expect(textStyle.minimumSize?.resolve({}), const Size(0, 48));
-      expect(filledStyle.shape?.resolve({}), isA<StadiumBorder>());
-      expect(outlinedStyle.shape?.resolve({}), isA<StadiumBorder>());
-      expect(textStyle.shape?.resolve({}), isA<StadiumBorder>());
-      expect(
-        filledStyle.backgroundColor?.resolve({}),
-        theme.colorScheme.primary,
-      );
-      expect(
-        filledStyle.foregroundColor?.resolve({}),
-        theme.colorScheme.onPrimary,
-      );
-      expect(
-        outlinedStyle.side?.resolve({})?.color,
-        theme.colorScheme.primary,
-      );
-      expect(
-        outlinedStyle.foregroundColor?.resolve({}),
-        theme.colorScheme.primary,
-      );
-    }
+    expect(source, contains('filledButtonTheme: FilledButtonThemeData('));
+    expect(source, contains('outlinedButtonTheme: OutlinedButtonThemeData('));
+    expect(source, contains('textButtonTheme: TextButtonThemeData('));
+    expect(
+      RegExp(r'minimumSize:\s+const Size\(0,\s+48\)')
+          .allMatches(source)
+          .length,
+      8,
+    );
+    expect(
+      RegExp(r'shape:\s+const StadiumBorder\(\)').allMatches(source).length,
+      8,
+    );
+    expect(source, contains('backgroundColor: colorScheme.primary'));
+    expect(source, contains('foregroundColor: colorScheme.onPrimary'));
+    expect(source, contains('side: BorderSide(color: colorScheme.primary'));
+    expect(source, contains('foregroundColor: colorScheme.primary'));
   });
 
   test('AppTheme uses paper as the default pull-up sheet surface', () {

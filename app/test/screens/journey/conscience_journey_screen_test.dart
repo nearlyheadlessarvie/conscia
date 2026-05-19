@@ -1,10 +1,13 @@
 import 'package:conscia_app/models/conscience_journey.dart';
+import 'package:conscia_app/providers/auth_provider.dart';
 import 'package:conscia_app/providers/conscience_journey_provider.dart';
 import 'package:conscia_app/screens/journey/conscience_journey_screen.dart';
+import 'package:conscia_app/services/auth_service.dart';
 import 'package:conscia_app/services/conscience_journey_service.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -22,19 +25,34 @@ void main() {
     expect(find.text('Budget Guardian'), findsOneWidget);
     expect(find.text('85 / 600 XP to Conscience Captain'), findsOneWidget);
     expect(find.text("THIS WEEK'S QUESTS"), findsOneWidget);
+    expect(
+      find.text('Habits to focus on this week. They reset every Sunday.'),
+      findsOneWidget,
+    );
     expect(find.text('Reflect on 3 purchases'), findsOneWidget);
     expect(find.text('ACHIEVEMENTS'), findsOneWidget);
+    expect(
+      find.text('Badges earned by sticking to better money habits.'),
+      findsOneWidget,
+    );
     expect(find.text('First Reflection'), findsOneWidget);
     expect(find.text('???'), findsOneWidget);
-    expect(find.text('MASCOT MOMENT'), findsOneWidget);
-    expect(find.text('You paused before buying.'), findsOneWidget);
+    expect(find.text('6-day streak'), findsOneWidget);
+    expect(find.text('MASCOT MOMENT'), findsNothing);
   });
 
-  testWidgets('opens the journey guide from the header help icon',
-      (tester) async {
+  testWidgets('renders the iOS-forward sticky journey header', (tester) async {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          authProvider.overrideWith(
+            (ref) => _TestAuthNotifier(
+              const AuthState(
+                status: AuthStatus.authenticated,
+                userId: 'user-1',
+              ),
+            ),
+          ),
           conscienceJourneyServiceProvider
               .overrideWithValue(_StaticConscienceJourneyService()),
         ],
@@ -43,22 +61,10 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byTooltip('Journey guide'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('How Journey works'), findsOneWidget);
-    expect(find.text('Only 3 quests show up each week.'), findsOneWidget);
-    expect(find.text('400 XP'), findsOneWidget);
-    expect(
-        find.text('More levels can arrive in future updates.'), findsOneWidget);
-    expect(find.text('Possible weekly quest'), findsNothing);
-    expect(find.text('Counts reflections that turn spending into signal.'),
-        findsOneWidget);
-    expect(find.text('Invited someone into a family space.'), findsOneWidget);
-    expect(find.text('Invite a family member.'), findsOneWidget);
-    expect(find.text('Add a household contribution.'), findsNothing);
-    expect(find.text('Mystery achievements'), findsOneWidget);
-    expect(find.text('Mascot moments'), findsOneWidget);
+    expect(find.byKey(const ValueKey('journey-sticky-header')), findsOneWidget);
+    expect(find.text('Journey'), findsOneWidget);
+    expect(find.byTooltip('Journey guide'), findsNothing);
+    expect(find.text('Budget Guardian'), findsOneWidget);
   });
 }
 
@@ -67,6 +73,31 @@ class _StaticConscienceJourneyService extends ConscienceJourneyService {
 
   @override
   Future<ConscienceJourneySummary> fetchJourney() async => _summary();
+}
+
+class _FakeAuthService extends AuthService {
+  _FakeAuthService() : super(Dio());
+}
+
+class _FakeSecureStorage extends FlutterSecureStorage {
+  @override
+  Future<String?> read({
+    required String key,
+    AppleOptions? iOptions,
+    AndroidOptions? aOptions,
+    LinuxOptions? lOptions,
+    WebOptions? webOptions,
+    WindowsOptions? wOptions,
+    AppleOptions? mOptions,
+  }) async =>
+      null;
+}
+
+class _TestAuthNotifier extends AuthNotifier {
+  _TestAuthNotifier(AuthState initialState)
+      : super(_FakeAuthService(), _FakeSecureStorage()) {
+    state = initialState;
+  }
 }
 
 ConscienceJourneySummary _summary() => ConscienceJourneySummary(
