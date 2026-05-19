@@ -91,7 +91,7 @@ class _JourneyHomeSection extends StatelessWidget {
                 child: Text(
                   title,
                   key: ValueKey('journey-home-section-title-$title'),
-                  style: GoogleFonts.cormorantGaramond(
+                  style: GoogleFonts.libreBaskerville(
                     textStyle: textTheme.titleLarge,
                     color: colors.deepNavy,
                     fontWeight: FontWeight.w700,
@@ -463,7 +463,7 @@ class _MilestoneStrip extends StatelessWidget {
                 badge.title,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style: GoogleFonts.cormorantGaramond(
+                style: GoogleFonts.libreBaskerville(
                   textStyle: Theme.of(context).textTheme.labelMedium,
                   color: colors.deepNavy,
                   fontWeight: FontWeight.w700,

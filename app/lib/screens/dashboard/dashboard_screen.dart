@@ -703,7 +703,7 @@ class _DashboardEditorialHeroCard extends StatelessWidget {
                 Text(
                   'Journey',
                   key: const ValueKey('dashboard-journey-hero-title'),
-                  style: GoogleFonts.cormorantGaramond(
+                  style: GoogleFonts.libreBaskerville(
                     textStyle: textTheme.displayMedium,
                     color: colors.deepNavy,
                     fontWeight: FontWeight.w700,
@@ -866,7 +866,7 @@ class _JourneyHeroNextStepCard extends StatelessWidget {
                 const SizedBox(height: 6),
                 Text(
                   action.title,
-                  style: GoogleFonts.cormorantGaramond(
+                  style: GoogleFonts.libreBaskerville(
                     textStyle: textTheme.titleLarge,
                     color: foreground,
                     fontWeight: FontWeight.w800,
