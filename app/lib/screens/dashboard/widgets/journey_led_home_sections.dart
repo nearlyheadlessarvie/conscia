@@ -213,11 +213,11 @@ class _QuestTile extends StatelessWidget {
             textAlign: TextAlign.center,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
-            style: GoogleFonts.cormorantGaramond(
+            style: GoogleFonts.nunitoSans(
               textStyle: textTheme.labelLarge,
               color: colors.deepNavy,
-              fontWeight: FontWeight.w700,
-              height: 1.04,
+              fontWeight: FontWeight.w800,
+              height: 1.06,
             ),
           ),
           const SizedBox(height: 7),
@@ -349,10 +349,10 @@ class _PatternSignalCard extends StatelessWidget {
             key: const ValueKey('journey-home-pattern-title'),
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
-            style: GoogleFonts.cormorantGaramond(
+            style: GoogleFonts.nunitoSans(
               textStyle: textTheme.labelLarge,
               color: colors.ink,
-              fontWeight: FontWeight.w700,
+              fontWeight: FontWeight.w800,
             ),
           ),
           const SizedBox(height: 8),

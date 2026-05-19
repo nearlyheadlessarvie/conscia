@@ -46,6 +46,7 @@ Recommended type roles:
 
 - `displayLarge`, `displayMedium`, `headlineLarge`, `headlineMedium`, and `titleLarge`: Cormorant Garamond
 - `titleMedium`, `titleSmall`, `bodyLarge`, `bodyMedium`, `bodySmall`, `labelLarge`, `labelMedium`, `labelSmall`, and button text: Nunito Sans
+- small cards, quest tiles, compact pattern titles, and other dense UI labels: Nunito Sans even when they are visually prominent
 - transaction amounts and numeric UI: Nunito Sans with strong weights and tabular figures where available
 
 Screen-level exceptions should be rare. If a screen needs custom type, it should pull from named app typography helpers rather than directly calling `GoogleFonts` inline.

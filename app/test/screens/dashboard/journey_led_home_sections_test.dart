@@ -178,9 +178,9 @@ void main() {
 
     expect(sectionTitle.style?.fontFamily, contains('CormorantGaramond'));
     expect(sectionSubtitle.style?.fontFamily, contains('Nunito'));
-    expect(questTitle.style?.fontFamily, contains('CormorantGaramond'));
+    expect(questTitle.style?.fontFamily, contains('Nunito'));
     expect(questDescription.style?.fontFamily, contains('Nunito'));
-    expect(patternTitle.style?.fontFamily, contains('CormorantGaramond'));
+    expect(patternTitle.style?.fontFamily, contains('Nunito'));
     expect(patternDescription.style?.fontFamily, contains('Nunito'));
   });
 
