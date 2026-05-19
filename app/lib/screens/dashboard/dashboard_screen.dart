@@ -397,6 +397,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     final recentTransactions = transactions.take(5).toList();
     final insightSummary = insightSummaryState.valueOrNull;
     final journey = journeyState.valueOrNull;
+    final journeyLoadingWithoutData = journeyState.isLoading && journey == null;
     final journeyHome = buildJourneyHomePresentation(journey);
     final regretPrompts = transactions
         .where((t) =>
@@ -428,20 +429,21 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   locale: userPreferences.locale,
                   journey: journey,
                   summary: insightSummary,
-                  loading: (journeyState.isLoading && journey == null) ||
+                  loading: journeyLoadingWithoutData ||
                       (insightSummaryState.isLoading && insightSummary == null),
                 ),
               ),
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.only(top: 18),
-                  child: JourneyLedHomeSections(
-                    summary: journey,
-                    presentation: journeyHome,
-                    onContinueJourney: _continueJourney,
+              if (!journeyLoadingWithoutData)
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.only(top: 18),
+                    child: JourneyLedHomeSections(
+                      summary: journey,
+                      presentation: journeyHome,
+                      onContinueJourney: _continueJourney,
+                    ),
                   ),
                 ),
-              ),
               SliverToBoxAdapter(
                 child: _buildSectionHeader(context, 'BUDGETS'),
               ),

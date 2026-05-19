@@ -177,6 +177,12 @@ Widget _buildApp(
         ),
       ),
       GoRoute(
+        path: '/assistant',
+        builder: (context, state) => const Scaffold(
+          body: Center(child: Text('Assistant placeholder')),
+        ),
+      ),
+      GoRoute(
         path: '/transactions/:id',
         builder: (context, state) => Scaffold(
           body: Center(
@@ -309,7 +315,12 @@ void main() {
     );
     addTearDown(container.dispose);
 
-    await tester.pumpWidget(_buildApp(container));
+    await tester.pumpWidget(
+      _buildApp(
+        container,
+        journeyService: _PendingConscienceJourneyService(),
+      ),
+    );
     await tester.pumpAndSettle();
 
     for (var i = 0; i < 8 && find.text('Starbucks').evaluate().isEmpty; i++) {
@@ -420,7 +431,12 @@ void main() {
     );
     addTearDown(container.dispose);
 
-    await tester.pumpWidget(_buildApp(container));
+    await tester.pumpWidget(
+      _buildApp(
+        container,
+        journeyService: _PendingConscienceJourneyService(),
+      ),
+    );
     await tester.pumpAndSettle();
 
     final headerFinder =
@@ -687,6 +703,7 @@ void main() {
 
     final container = ProviderContainer(
       overrides: [
+        _authenticatedOverride,
         sharedPreferencesProvider.overrideWithValue(prefs),
         budgetServiceProvider.overrideWithValue(_StaticBudgetService(const [])),
         transactionServiceProvider
@@ -1054,10 +1071,13 @@ void main() {
     final pendingSummary = Completer<DashboardInsightSummary?>();
     final container = ProviderContainer(
       overrides: [
+        _authenticatedOverride,
         sharedPreferencesProvider.overrideWithValue(prefs),
         budgetServiceProvider.overrideWithValue(_StaticBudgetService(const [])),
         transactionServiceProvider
             .overrideWithValue(_StaticTransactionService()),
+        currentUserProvider.overrideWith((ref) async => _testUser),
+        subscriptionProvider.overrideWith((ref) async => _testSubscription),
         dashboardInsightSummaryProvider.overrideWith(
           (ref) => pendingSummary.future,
         ),
@@ -1079,7 +1099,39 @@ void main() {
 
     expect(
         find.byKey(const ValueKey('dashboard-hero-skeleton')), findsOneWidget);
+    expect(find.text('Today with Conscia'), findsNothing);
+    expect(find.text('This Week'), findsNothing);
+    expect(find.text('Patterns'), findsNothing);
     expect(find.byType(InsightSkeletonCard), findsNothing);
+  });
+
+  testWidgets('dashboard continue journey CTA opens assistant', (tester) async {
+    _useTallDashboardViewport(tester);
+
+    final container = ProviderContainer(
+      overrides: [
+        sharedPreferencesProvider.overrideWithValue(prefs),
+        budgetServiceProvider.overrideWithValue(_StaticBudgetService(const [])),
+        transactionServiceProvider
+            .overrideWithValue(_StaticTransactionService()),
+        behavioralInsightsProvider.overrideWith((ref) async => null),
+        insightsSummaryProvider.overrideWith((ref) async => null),
+        insightsCategoriesProvider.overrideWith((ref) async => const []),
+        insightsMerchantsProvider.overrideWith((ref) async => const []),
+        localAlertsProvider.overrideWith(
+          (ref) => _LocalAlertsTestNotifier(const []),
+        ),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    await tester.pumpWidget(_buildApp(container));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Continue journey'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Assistant placeholder'), findsOneWidget);
   });
 
   testWidgets(
