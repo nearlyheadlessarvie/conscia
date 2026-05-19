@@ -1,11 +1,12 @@
 import 'package:conscia_app/models/family_space.dart';
-import 'package:conscia_app/providers/health_provider.dart';
+import 'package:conscia_app/providers/app_availability_provider.dart';
 import 'package:conscia_app/providers/family_space_provider.dart';
 import 'package:conscia_app/screens/family/family_space_settings_screen.dart';
-import 'package:conscia_app/services/health_service.dart';
+import 'package:conscia_app/services/api_availability_service.dart';
+import 'package:conscia_app/services/app_update_service.dart';
+import 'package:conscia_app/services/connectivity_service.dart';
 import 'package:conscia_app/widgets/feed_card.dart';
 import 'package:conscia_app/widgets/floating_label_text_field.dart';
-import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -168,8 +169,8 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          healthStatusProvider.overrideWith(
-            (ref) => _OfflineHealthStatusNotifier(),
+          appAvailabilityProvider.overrideWith(
+            (ref) => _BlockedAppAvailabilityNotifier(),
           ),
           familySpaceProvider.overrideWith((ref) async {
             throw Exception('offline');
@@ -186,14 +187,34 @@ void main() {
   });
 }
 
-class _OfflineHealthStatusNotifier extends HealthStatusNotifier {
-  _OfflineHealthStatusNotifier() : super(HealthService(Dio()));
-
-  @override
-  Future<void> refresh() async {
-    state = HealthState(
-      isOffline: true,
+class _BlockedAppAvailabilityNotifier extends AppAvailabilityNotifier {
+  _BlockedAppAvailabilityNotifier()
+      : super(
+          connectivityService: _AlwaysConnectedService(),
+          apiAvailabilityService: _HealthyApiService(),
+          appUpdateService: _NoUpdateService(),
+          autoRefresh: false,
+          refreshOnInit: false,
+        ) {
+    state = AppAvailabilityState(
+      issue: AvailabilityIssue.deviceOffline,
       lastChecked: DateTime(2026, 5, 19),
     );
   }
+}
+
+class _AlwaysConnectedService implements ConnectivityService {
+  @override
+  Future<bool> hasNetworkConnection() async => true;
+}
+
+class _HealthyApiService implements ApiAvailabilityService {
+  @override
+  Future<void> checkLiveness() async {}
+}
+
+class _NoUpdateService implements AppUpdateService {
+  @override
+  Future<AppUpdateCheckResult> checkForUpdate() async =>
+      const AppUpdateCheckResult();
 }
