@@ -97,10 +97,13 @@ class _StaticTransactionService extends TransactionService {
 }
 
 class _StaticConscienceJourneyService extends ConscienceJourneyService {
-  _StaticConscienceJourneyService() : super(Dio());
+  _StaticConscienceJourneyService([this.summary = _testJourneySummary])
+      : super(Dio());
+
+  final ConscienceJourneySummary summary;
 
   @override
-  Future<ConscienceJourneySummary> fetchJourney() async => _testJourneySummary;
+  Future<ConscienceJourneySummary> fetchJourney() async => summary;
 }
 
 class _PendingConscienceJourneyService extends ConscienceJourneyService {
@@ -109,6 +112,15 @@ class _PendingConscienceJourneyService extends ConscienceJourneyService {
   @override
   Future<ConscienceJourneySummary> fetchJourney() =>
       Completer<ConscienceJourneySummary>().future;
+}
+
+class _StaticConscienceJourneyNotifier extends ConscienceJourneyNotifier {
+  _StaticConscienceJourneyNotifier(this.summary);
+
+  final ConscienceJourneySummary summary;
+
+  @override
+  Future<ConscienceJourneySummary> build() async => summary;
 }
 
 class _LocalAlertsTestNotifier extends LocalAlertsNotifier {
@@ -926,7 +938,7 @@ void main() {
     expect(find.text('of ₱6,500.00 monthly cap'), findsOneWidget);
   });
 
-  testWidgets('dashboard hero aggregates monthly spend in user currency',
+  testWidgets('dashboard hero uses storybook typography and clean momentum',
       (tester) async {
     final user = UserProfile(
       id: _testUser.id,
@@ -949,6 +961,36 @@ void main() {
         exchangeRateToBase: 56,
       ),
     ];
+    final journey = ConscienceJourneySummary(
+      xpTotal: 500,
+      currentLevel: const ConscienceLevel(
+        key: 'budget_guardian',
+        title: 'Budget Guardian',
+        requiredXp: 400,
+      ),
+      nextLevel: const ConscienceLevel(
+        key: 'pattern_keeper',
+        title: 'Pattern Keeper',
+        requiredXp: 700,
+      ),
+      xpIntoLevel: 100,
+      xpToNextLevel: 200,
+      momentumDays: 18,
+      bestMomentumDays: 20,
+      weeklyQuests: List.generate(
+        5,
+        (index) => ConscienceQuest(
+          key: 'quest-$index',
+          title: 'Quest $index',
+          description: 'Quest description $index.',
+          progress: 0,
+          target: 1,
+          xpReward: 10,
+          isCompleted: false,
+        ),
+      ),
+      badges: const [],
+    );
     final container = ProviderContainer(
       overrides: [
         sharedPreferencesProvider.overrideWithValue(prefs),
@@ -964,6 +1006,16 @@ void main() {
         insightsSummaryProvider.overrideWith((ref) async => null),
         insightsCategoriesProvider.overrideWith((ref) async => const []),
         insightsMerchantsProvider.overrideWith((ref) async => const []),
+        dashboardInsightSummaryProvider.overrideWith(
+          (ref) async => const DashboardInsightSummary(
+            text:
+                'Shopping is carrying your strongest regret signal right now.',
+            tone: InsightFeedTone.caution,
+          ),
+        ),
+        conscienceJourneyProvider.overrideWith(
+          () => _StaticConscienceJourneyNotifier(journey),
+        ),
         localAlertsProvider.overrideWith(
           (ref) => _LocalAlertsTestNotifier(const []),
         ),
@@ -974,7 +1026,31 @@ void main() {
     await tester.pumpWidget(_buildApp(container));
     await tester.pumpAndSettle();
 
-    expect(find.text('₱5.600,00'), findsOneWidget);
+    expect(find.text('SPENT THIS MONTH'), findsNothing);
+    expect(find.text('₱5.600,00'), findsNothing);
+    expect(
+      find.text('Shopping is carrying your strongest regret signal right now.'),
+      findsNothing,
+    );
+    final title = tester.widget<Text>(
+      find.byKey(const ValueKey('dashboard-journey-hero-title')),
+    );
+    final subtitle = tester.widget<Text>(
+      find.byKey(const ValueKey('dashboard-journey-hero-subtitle')),
+    );
+    final momentumValue = tester.widget<Text>(
+      find.byKey(const ValueKey('dashboard-journey-momentum-value')),
+    );
+    final momentumDetail = tester.widget<Text>(
+      find.byKey(const ValueKey('dashboard-journey-momentum-detail')),
+    );
+
+    expect(momentumValue.data, '18 day streak');
+    expect(momentumDetail.data, '2 more days to strengthen your stride.');
+    expect(find.text('0/5 quests'), findsOneWidget);
+    expect(title.style?.fontFamily, contains('Lora'));
+    expect(subtitle.style?.fontFamily, contains('Nunito'));
+    expect(momentumValue.style?.fontFamily, contains('Nunito'));
   });
 
   testWidgets('dashboard uses a personal welcome header', (tester) async {
@@ -1205,7 +1281,7 @@ void main() {
   });
 
   testWidgets(
-      'dashboard summarizes budget trends when behavioral insights include trends',
+      'dashboard keeps budget trend summaries out of the Journey hero',
       (tester) async {
     final container = ProviderContainer(
       overrides: [
@@ -1258,14 +1334,14 @@ void main() {
         find.byKey(const ValueKey('dashboard-editorial-hero')), findsOneWidget);
     expect(
       find.text('Dining is above your recent 3-month pace.'),
-      findsOneWidget,
+      findsNothing,
     );
     expect(find.text('Subscriptions has enough activity for a budget'),
         findsNothing);
     expect(find.text('Budget trends'), findsNothing);
   });
 
-  testWidgets('dashboard shows an inferred insight summary in the hero card',
+  testWidgets('dashboard keeps inferred insight summaries out of the hero card',
       (tester) async {
     final container = ProviderContainer(
       overrides: [
@@ -1306,11 +1382,11 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(
-      find.text('Dining is above your recent 3-month pace.'),
-      findsOneWidget,
-    );
-    expect(
         find.byKey(const ValueKey('dashboard-editorial-hero')), findsOneWidget);
+    expect(
+      find.text('Dining is above your recent 3-month pace.'),
+      findsNothing,
+    );
     expect(find.text('Your financial mood is confident'), findsNothing);
     expect(find.text('More insights inside'), findsNothing);
     expect(find.byTooltip('Dismiss insight'), findsNothing);

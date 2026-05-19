@@ -381,7 +381,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   Widget build(BuildContext context) {
     final budgetState = ref.watch(budgetListProvider);
     final txState = ref.watch(transactionListProvider);
-    final insightSummaryState = ref.watch(dashboardInsightSummaryProvider);
     final journeyState = ref.watch(conscienceJourneyProvider);
     final profile = ref.watch(currentUserProvider).valueOrNull;
     final userPreferences = ref.watch(userPreferencesProvider);
@@ -403,7 +402,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         : budgets;
     final transactions = txState.transactions;
     final recentTransactions = transactions.take(5).toList();
-    final insightSummary = insightSummaryState.valueOrNull;
     final journey = journeyState.valueOrNull;
     final journeyLoadingWithoutData = journeyState.isLoading && journey == null;
     final journeyHome = buildJourneyHomePresentation(journey);
@@ -415,10 +413,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         .take(3)
         .toList();
     final greetingName = _greetingName(profile);
-    final monthExpenseTotal = _currentMonthExpenseTotal(
-      transactions,
-      userPreferences.currency,
-    );
     final stickyProgress = ((_scrollOffset - 5) / 10).clamp(0.0, 1.0);
 
     return Stack(
@@ -432,14 +426,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             slivers: [
               SliverToBoxAdapter(
                 child: _DashboardEditorialHeroCard(
-                  monthExpenseTotal: monthExpenseTotal,
-                  currencyCode: userPreferences.currency,
-                  locale: userPreferences.locale,
                   journey: journey,
                   presentation: journeyHome,
-                  summary: insightSummary,
-                  loading: journeyLoadingWithoutData ||
-                      (insightSummaryState.isLoading && insightSummary == null),
+                  loading: journeyLoadingWithoutData,
                   onContinueJourney: _continueJourney,
                 ),
               ),
@@ -626,25 +615,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     return 'there';
   }
 
-  double _currentMonthExpenseTotal(
-    List<Transaction> transactions,
-    String currencyCode,
-  ) {
-    final now = DateTime.now();
-    return transactions
-        .where((t) => t.type != 'income')
-        .where((t) => t.date.year == now.year && t.date.month == now.month)
-        .fold(0.0, (sum, t) => sum + _amountInUserCurrency(t, currencyCode));
-  }
-
-  double _amountInUserCurrency(Transaction tx, String currencyCode) {
-    final amount = tx.amount.abs();
-    if (tx.currencyCode == currencyCode) return amount;
-    final rate = tx.exchangeRateToBase;
-    if (rate == null || rate <= 0) return amount;
-    return amount * rate;
-  }
-
   List<AppAlert> _visibleAlerts(List<AppAlert> alerts, List<Budget> budgets) {
     final budgetCategories =
         budgets.map((budget) => budget.category.toLowerCase()).toSet();
@@ -675,22 +645,14 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
 class _DashboardEditorialHeroCard extends StatelessWidget {
   const _DashboardEditorialHeroCard({
-    required this.monthExpenseTotal,
-    required this.currencyCode,
-    required this.locale,
     required this.journey,
     required this.presentation,
-    required this.summary,
     required this.loading,
     required this.onContinueJourney,
   });
 
-  final double monthExpenseTotal;
-  final String currencyCode;
-  final String? locale;
   final ConscienceJourneySummary? journey;
   final JourneyHomePresentation presentation;
-  final DashboardInsightSummary? summary;
   final bool loading;
   final VoidCallback onContinueJourney;
 
@@ -704,9 +666,6 @@ class _DashboardEditorialHeroCard extends StatelessWidget {
     }
 
     final heroTopPadding = AppLayout.dashboardHeroTop(context);
-    final completed = presentation.completedQuestCount;
-    final total = presentation.totalQuestCount;
-
     return Container(
       key: const ValueKey('dashboard-editorial-hero'),
       width: double.infinity,
@@ -745,97 +704,136 @@ class _DashboardEditorialHeroCard extends StatelessWidget {
                   'Journey',
                   key: const ValueKey('dashboard-journey-hero-title'),
                   style: GoogleFonts.lora(
-                    textStyle: textTheme.displaySmall,
+                    textStyle: textTheme.displayMedium,
                     color: colors.deepNavy,
-                    fontWeight: FontWeight.w800,
+                    fontWeight: FontWeight.w700,
                     height: 0.96,
                   ),
                 ),
                 const SizedBox(height: 6),
                 Text(
                   'Small choices, big freedom.',
-                  style: textTheme.bodyMedium?.copyWith(
+                  key: const ValueKey('dashboard-journey-hero-subtitle'),
+                  style: GoogleFonts.nunitoSans(
+                    textStyle: textTheme.bodyMedium,
                     color: colors.ink.withValues(alpha: 0.78),
+                    fontWeight: FontWeight.w500,
                     height: 1.3,
                   ),
                 ),
                 const SizedBox(height: 20),
-                Text(
-                  'MOMENTUM',
-                  style: textTheme.labelSmall?.copyWith(
-                    color: colors.deepNavy.withValues(alpha: 0.72),
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 0.9,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 10,
-                  runSpacing: 10,
-                  children: [
-                    _HeroMetricPill(
-                      icon: Icons.local_fire_department_rounded,
-                      label: journey == null
-                          ? '0-day streak'
-                          : '${journey!.momentumDays}-day streak',
-                      backgroundColor:
-                          colors.surfaceRaised.withValues(alpha: 0.78),
-                      foregroundColor: colors.deepNavy,
-                    ),
-                    _HeroMetricPill(
-                      icon: Icons.flag_rounded,
-                      label: journey == null
-                          ? '0/0 quests'
-                          : '$completed/$total quests',
-                      backgroundColor:
-                          colors.surfaceRaised.withValues(alpha: 0.78),
-                      foregroundColor: colors.deepNavy,
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 10),
-                Text(
-                  summary?.text ??
-                      (journey == null
-                          ? 'Conscia will turn your next few transactions into a clearer monthly story.'
-                          : '${journey!.currentLevel.title} · ${journey!.xpTotal} XP earned'),
-                  style: textTheme.bodySmall?.copyWith(
-                    color: colors.ink.withValues(alpha: 0.72),
-                    height: 1.35,
-                  ),
+                _JourneyHeroMomentum(
+                  journey: journey,
+                  completedQuestCount: presentation.completedQuestCount,
+                  totalQuestCount: presentation.totalQuestCount,
                 ),
                 const SizedBox(height: 20),
                 _JourneyHeroNextStepCard(
                   action: presentation.todayAction,
                   onPressed: onContinueJourney,
                 ),
-                const SizedBox(height: 18),
-                Text(
-                  'SPENT THIS MONTH',
-                  style: textTheme.labelSmall?.copyWith(
-                    color: colors.deepNavy,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 0.8,
-                  ),
-                ),
-                const SizedBox(height: 5),
-                Text(
-                  CurrencyFormatter.format(
-                    monthExpenseTotal,
-                    currencyCode: currencyCode,
-                    locale: locale,
-                  ),
-                  style: GoogleFonts.inter(
-                    textStyle: textTheme.headlineMedium,
-                    color: colors.deepNavy,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
               ],
             ),
           ),
         ],
       ),
+    );
+  }
+}
+
+class _JourneyHeroMomentum extends StatelessWidget {
+  const _JourneyHeroMomentum({
+    required this.journey,
+    required this.completedQuestCount,
+    required this.totalQuestCount,
+  });
+
+  final ConscienceJourneySummary? journey;
+  final int completedQuestCount;
+  final int totalQuestCount;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).appColors;
+    final textTheme = Theme.of(context).textTheme;
+    final momentumDays = journey?.momentumDays ?? 0;
+    final bestMomentumDays = journey?.bestMomentumDays ?? 0;
+    final remainingDays =
+        bestMomentumDays > momentumDays ? bestMomentumDays - momentumDays : 0;
+    final detail = momentumDays <= 0
+        ? 'Start with one check-in to begin your stride.'
+        : remainingDays > 0
+            ? '$remainingDays more days to strengthen your stride.'
+            : 'Your stride is getting stronger.';
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'MOMENTUM',
+          style: GoogleFonts.nunitoSans(
+            textStyle: textTheme.labelSmall,
+            color: colors.deepNavy.withValues(alpha: 0.72),
+            fontWeight: FontWeight.w900,
+            letterSpacing: 0.9,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 12,
+          runSpacing: 8,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 21,
+                  height: 21,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFE97552),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: const Icon(
+                    Icons.local_fire_department_rounded,
+                    color: Colors.white,
+                    size: 14,
+                  ),
+                ),
+                const SizedBox(width: 7),
+                Text(
+                  '$momentumDays day streak',
+                  key: const ValueKey('dashboard-journey-momentum-value'),
+                  style: GoogleFonts.nunitoSans(
+                    textStyle: textTheme.titleMedium,
+                    color: colors.deepNavy,
+                    fontWeight: FontWeight.w800,
+                    height: 1.0,
+                  ),
+                ),
+              ],
+            ),
+            Text(
+              '$completedQuestCount/$totalQuestCount quests',
+              style: GoogleFonts.nunitoSans(
+                textStyle: textTheme.labelLarge,
+                color: colors.deepNavy.withValues(alpha: 0.86),
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 5),
+        Text(
+          detail,
+          key: const ValueKey('dashboard-journey-momentum-detail'),
+          style: GoogleFonts.nunitoSans(
+            textStyle: textTheme.bodySmall,
+            color: colors.ink.withValues(alpha: 0.72),
+            height: 1.25,
+          ),
+        ),
+      ],
     );
   }
 }
@@ -881,7 +879,8 @@ class _JourneyHeroNextStepCard extends StatelessWidget {
               children: [
                 Text(
                   'NEXT STEP',
-                  style: textTheme.labelSmall?.copyWith(
+                  style: GoogleFonts.nunitoSans(
+                    textStyle: textTheme.labelSmall,
                     color: foreground.withValues(alpha: 0.76),
                     fontWeight: FontWeight.w800,
                     letterSpacing: 0.8,
@@ -902,7 +901,8 @@ class _JourneyHeroNextStepCard extends StatelessWidget {
                   '2 min  •  ${action.description}',
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: textTheme.bodySmall?.copyWith(
+                  style: GoogleFonts.nunitoSans(
+                    textStyle: textTheme.bodySmall,
                     color: foreground.withValues(alpha: 0.76),
                     height: 1.25,
                   ),
@@ -1056,48 +1056,6 @@ class _JourneyHeroAtmospherePainter extends CustomPainter {
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
-class _HeroMetricPill extends StatelessWidget {
-  const _HeroMetricPill({
-    required this.icon,
-    required this.label,
-    required this.backgroundColor,
-    required this.foregroundColor,
-  });
-
-  final IconData icon;
-  final String label;
-  final Color backgroundColor;
-  final Color foregroundColor;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        color: backgroundColor,
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 15, color: foregroundColor),
-          const SizedBox(width: 6),
-          Flexible(
-            child: Text(
-              label,
-              overflow: TextOverflow.ellipsis,
-              style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                    color: foregroundColor,
-                    fontWeight: FontWeight.w700,
-                  ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class _DashboardStickyOverlayHeader extends StatelessWidget {
   const _DashboardStickyOverlayHeader({
     required this.progress,
@@ -1238,10 +1196,10 @@ class _DashboardIdentityRow extends StatelessWidget {
           Expanded(
             child: Text(
               greetingName,
-              style: GoogleFonts.poppins(
+              style: GoogleFonts.nunitoSans(
                 textStyle: textTheme.titleSmall,
                 color: colors.ink,
-                fontWeight: FontWeight.w700,
+                fontWeight: FontWeight.w800,
               ),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
@@ -1272,18 +1230,19 @@ class _DashboardIdentityRow extends StatelessWidget {
             children: [
               Text(
                 'Welcome back',
-                style: textTheme.bodySmall?.copyWith(
+                style: GoogleFonts.nunitoSans(
+                  textStyle: textTheme.bodySmall,
                   color: colors.mutedInk,
-                  fontWeight: FontWeight.w600,
+                  fontWeight: FontWeight.w700,
                 ),
               ),
               const SizedBox(height: 2),
               Text(
                 greetingName,
-                style: GoogleFonts.poppins(
+                style: GoogleFonts.nunitoSans(
                   textStyle: textTheme.titleLarge,
                   color: colors.ink,
-                  fontWeight: FontWeight.w600,
+                  fontWeight: FontWeight.w800,
                 ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
