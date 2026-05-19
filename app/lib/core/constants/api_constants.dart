@@ -6,6 +6,26 @@ class ApiConstants {
     defaultValue: true,
   );
 
+  static const bool mockLocationSuggestions = bool.fromEnvironment(
+    'MOCK_LOCATION_SUGGESTIONS',
+    defaultValue: useMockAuth,
+  );
+
+  static final double mockLocationLatitude = double.tryParse(
+        const String.fromEnvironment('MOCK_LOCATION_LAT'),
+      ) ??
+      14.5539;
+
+  static final double mockLocationLongitude = double.tryParse(
+        const String.fromEnvironment('MOCK_LOCATION_LNG'),
+      ) ??
+      121.0192;
+
+  static final double mockLocationRadiusMeters = double.tryParse(
+        const String.fromEnvironment('MOCK_LOCATION_RADIUS_METERS'),
+      ) ??
+      1200;
+
   static const bool pushNotificationsEnabled = bool.fromEnvironment(
     'PUSH_NOTIFICATIONS_ENABLED',
     defaultValue: false,
@@ -33,6 +53,8 @@ class ApiConstants {
 
   // User
   static const String profile = 'users/me';
+  static const String profilePictureUpload =
+      'users/me/profile-picture-upload-url';
   static const String preferences = 'users/me/preferences';
   static const String profileExport = 'users/me/export';
 
@@ -80,6 +102,8 @@ class ApiConstants {
   static const String familyMembers = 'family-space/members';
   static String familyMember(String id) => 'family-space/members/$id';
   static String familyMemberRole(String id) => 'family-space/members/$id/role';
+  static String familyTransferOwnership(String id) =>
+      'family-space/members/$id/transfer-ownership';
   static const String familyLeave = 'family-space/leave';
   static const String familyInvites = 'family-space/invites';
   static const String familyOutgoingInvites = 'family-space/invites/outgoing';

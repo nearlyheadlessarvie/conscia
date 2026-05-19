@@ -3,12 +3,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import 'package:conscia_app/core/theme/app_colors.dart';
 import 'package:conscia_app/providers/user_provider.dart';
 import 'package:conscia_app/widgets/currency_picker_sheet.dart';
-import 'package:conscia_app/widgets/feed_card.dart';
-import 'package:conscia_app/widgets/hero_screen_scaffold.dart';
+import 'package:conscia_app/widgets/inline_notice.dart';
 import 'package:conscia_app/widgets/locale_picker_sheet.dart';
 import 'package:conscia_app/widgets/screen_section.dart';
+
+import 'widgets/onboarding_step_scaffold.dart';
 
 class SetupScreen extends ConsumerStatefulWidget {
   const SetupScreen({super.key});
@@ -21,6 +23,13 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
   late String _currencyCode;
   late String _locale;
   late String _deviceCurrencyCode;
+
+  static const _regionLabels = {
+    'en_US': 'Default',
+    'de_DE': 'European',
+    'fr_FR': 'French / Swiss',
+    'en_IN': 'Indian',
+  };
 
   @override
   void initState() {
@@ -41,19 +50,7 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
   }
 
   String _localeName() {
-    final display = {
-      'en_US': 'English (US)',
-      'en_GB': 'English (UK)',
-      'es_MX': 'Español (México)',
-      'es_ES': 'Español (España)',
-      'fr_FR': 'Français',
-      'de_DE': 'Deutsch',
-      'pt_BR': 'Português (Brasil)',
-      'ja_JP': '日本語',
-      'zh_CN': '中文 (简体)',
-      'ko_KR': '한국어',
-    };
-    return display[_locale] ?? _locale;
+    return _regionLabels[_locale] ?? 'Default';
   }
 
   void _openCurrencyPicker() {
@@ -62,7 +59,9 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
       selectedCode: _currencyCode,
       priorityCode: _deviceCurrencyCode,
       isPremium: true,
-      onSelected: (code) => setState(() => _currencyCode = code),
+      onSelected: (code) => setState(() {
+        _currencyCode = code;
+      }),
     );
   }
 
@@ -70,102 +69,166 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
     LocalePickerSheet.show(
       context,
       selectedLocale: _locale,
-      onSelected: (locale) => setState(() => _locale = locale),
+      onSelected: (locale) => setState(() {
+        _locale = locale;
+      }),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
 
-    return HeroScreenScaffold(
-      appBar: AppBar(
-        title: const Text('Set Up Your Profile'),
-        automaticallyImplyLeading: false,
-      ),
-      bottom: SizedBox(
-        height: 48,
-        child: FilledButton(
-          style: FilledButton.styleFrom(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(24),
-            ),
-          ),
-          onPressed: () async {
-            try {
-              final userService = ref.read(userServiceProvider);
-              await userService.updateProfile(
-                preferredCurrency: _currencyCode,
-                locale: _locale,
-              );
-              ref.invalidate(currentUserProvider);
-            } catch (_) {
-              // Best-effort save; user can update later in Settings
-            }
-            if (!mounted) return;
-            GoRouter.of(this.context).go(
-              '/onboarding/profile',
-              extra: {
-                'currencyCode': _currencyCode,
-                'locale': _locale,
-              },
+    return OnboardingStepScaffold(
+      appBarTitle: 'Set Up Your Profile',
+      stepLabel: 'Before we start',
+      heroTitle: 'Make money feel native',
+      heroSubtitle:
+          'Choose the currency and number format Conscia should use from the first screen onward.',
+      heroChips: [
+        OnboardingHeroChip(label: '$_currencyCode currency'),
+        OnboardingHeroChip(label: '${_localeName()} numbers'),
+      ],
+      bottom: FilledButton(
+        onPressed: () async {
+          try {
+            final userService = ref.read(userServiceProvider);
+            await userService.updateProfile(
+              preferredCurrency: _currencyCode,
+              locale: _locale,
             );
-          },
-          child: const Text("Let's Go!"),
+            ref.invalidate(currentUserProvider);
+          } catch (_) {
+            // Best-effort save; user can update later in Settings
+          }
+          if (!mounted) return;
+          GoRouter.of(this.context).go(
+            '/onboarding/profile',
+            extra: {
+              'currencyCode': _currencyCode,
+              'locale': _locale,
+            },
+          );
+        },
+        style: FilledButton.styleFrom(
+          minimumSize: const Size.fromHeight(48),
         ),
+        child: const Text("Let's Go!"),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const SizedBox(height: 10),
-          ScreenSection(
-            title: 'Your defaults',
-            subtitle:
-                'Pick the currency and number format that should feel native from the very first screen.',
-            child: Column(
-              children: [
-                ListTile(
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    side: BorderSide(color: colors.outlineVariant),
-                  ),
-                  leading: const Icon(Icons.monetization_on_outlined),
-                  title: const Text('Currency'),
-                  subtitle: Text(_currencyCode),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: _openCurrencyPicker,
-                ),
-                const SizedBox(height: 16),
-                ListTile(
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    side: BorderSide(color: colors.outlineVariant),
-                  ),
-                  leading: const Icon(Icons.language),
-                  title: const Text('Region'),
-                  subtitle: Text(_localeName()),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: _openLocalePicker,
-                ),
-              ],
+      children: [
+        ScreenSection(
+          title: 'Your defaults',
+          subtitle:
+              'These only affect currency, numbers, and dates. App language stays English.',
+          child: OnboardingActionList(
+            children: [
+              _SetupActionRow(
+                icon: Icons.monetization_on_outlined,
+                label: 'Currency',
+                value: _currencyCode,
+                onTap: _openCurrencyPicker,
+              ),
+              _SetupActionRow(
+                icon: Icons.language,
+                label: 'Region Format',
+                value: _localeName(),
+                onTap: _openLocalePicker,
+              ),
+            ],
+          ),
+        ),
+        const InlineNotice(
+          message:
+              'Changes how numbers and dates are shown. App language stays in English.',
+          tone: InlineNoticeTone.info,
+          icon: Icon(Icons.info_outline_rounded),
+        ),
+        const SizedBox(height: 22),
+        ScreenSection(
+          title: 'Preview',
+          compact: true,
+          child: Center(
+            child: Text(
+              _formattedSample(),
+              style: textTheme.headlineLarge?.copyWith(
+                color: Theme.of(context).appColors.deepNavy,
+                fontWeight: FontWeight.w800,
+                fontFeatures: const [FontFeature.tabularFigures()],
+              ),
             ),
           ),
-          FeedCard(
-            child: Column(
-              children: [
-                Text('Preview', style: textTheme.labelMedium),
-                const SizedBox(height: 8),
-                Text(
-                  _formattedSample(),
-                  style: textTheme.headlineLarge?.copyWith(
-                    color: colors.primary,
-                  ),
-                ),
-              ],
+        ),
+      ],
+    );
+  }
+}
+
+class _SetupActionRow extends StatelessWidget {
+  const _SetupActionRow({
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final String value;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).appColors;
+    final textTheme = Theme.of(context).textTheme;
+
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(14),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 12),
+        child: Row(
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: colors.navySoft.withValues(alpha: 0.68),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Icon(icon, size: 20, color: colors.deepNavy),
             ),
-          ),
-        ],
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    style: textTheme.labelSmall?.copyWith(
+                      color: colors.mutedInk,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 0.7,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    value,
+                    style: textTheme.bodyLarge?.copyWith(
+                      color: colors.ink,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 12),
+            Icon(
+              Icons.chevron_right_rounded,
+              size: 20,
+              color: colors.deepNavy.withValues(alpha: 0.5),
+            ),
+          ],
+        ),
       ),
     );
   }

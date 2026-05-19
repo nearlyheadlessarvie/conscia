@@ -10,9 +10,23 @@ namespace Conscia.Tests.Unit.Application;
 public class UserServiceTests
 {
     private readonly Mock<IUserRepository> _repoMock = new();
+    private readonly Mock<ITransactionRepository> _transactionRepoMock = new();
     private readonly UserService _svc;
 
-    public UserServiceTests() => _svc = new UserService(_repoMock.Object);
+    public UserServiceTests()
+    {
+        _transactionRepoMock
+            .Setup(r => r.QueryByUserAsync(
+                It.IsAny<Guid>(),
+                It.IsAny<DateTime?>(),
+                It.IsAny<DateTime?>(),
+                It.IsAny<string?>(),
+                It.IsAny<int>(),
+                It.IsAny<string?>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Array.Empty<Transaction>(), null));
+        _svc = new UserService(_repoMock.Object, _transactionRepoMock.Object);
+    }
 
     [Fact]
     public async Task GetByIdAsync_ReturnsUser()
@@ -67,6 +81,46 @@ public class UserServiceTests
     }
 
     [Fact]
+    public async Task UpdateProfileAsync_RejectsCurrencyChange_WhenTransactionsExist()
+    {
+        var id = Guid.NewGuid();
+        var user = new User { Id = id, PreferredCurrency = "USD", Locale = "en-US" };
+        _repoMock.Setup(r => r.GetByIdAsync(id, It.IsAny<CancellationToken>())).ReturnsAsync(user);
+        _transactionRepoMock
+            .Setup(r => r.QueryByUserAsync(
+                id,
+                null,
+                null,
+                null,
+                1,
+                null,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync((
+                new[]
+                {
+                    new Transaction
+                    {
+                        Id = Guid.NewGuid(),
+                        UserId = id,
+                        Type = TransactionType.Expense,
+                        Amount = new(10m, "USD"),
+                        Category = "Dining",
+                        Date = DateTime.UtcNow,
+                    },
+                },
+                null));
+
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => _svc.UpdateProfileAsync(
+                id,
+                new UserProfileUpdateDto { PreferredCurrency = "EUR" }));
+
+        Assert.Equal(
+            "Default currency is locked after your first transaction.",
+            ex.Message);
+    }
+
+    [Fact]
     public async Task UpdateProfileAsync_UpdatesLocale()
     {
         var id = Guid.NewGuid();
@@ -79,6 +133,27 @@ public class UserServiceTests
 
         Assert.Equal("USD", result.PreferredCurrency);
         Assert.Equal("es-MX", result.Locale);
+    }
+
+    [Fact]
+    public async Task UpdateProfileAsync_UpdatesDisplayNameAndProfilePictureKey()
+    {
+        var id = Guid.NewGuid();
+        var user = new User { Id = id, Email = "story@example.com" };
+        _repoMock.Setup(r => r.GetByIdAsync(id, It.IsAny<CancellationToken>())).ReturnsAsync(user);
+        _repoMock.Setup(r => r.UpdateAsync(It.IsAny<User>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((User u, CancellationToken _) => u);
+
+        var result = await _svc.UpdateProfileAsync(
+            id,
+            new UserProfileUpdateDto
+            {
+                DisplayName = "Story Demo",
+                ProfilePictureKey = $"profile-pictures/{id}/avatar.jpg"
+            });
+
+        Assert.Equal("Story Demo", result.DisplayName);
+        Assert.Equal($"profile-pictures/{id}/avatar.jpg", result.ProfilePictureKey);
     }
 
     [Fact]

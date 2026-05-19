@@ -21,7 +21,9 @@ class SubscriptionCard extends StatelessWidget {
     final textTheme = theme.textTheme;
 
     return FeedCard(
-      child: status.isPremium ? _buildPremium(textTheme, theme) : _buildFree(textTheme, theme),
+      child: status.isPremium
+          ? _buildPremium(textTheme, theme)
+          : _buildFree(textTheme, theme),
     );
   }
 

@@ -28,8 +28,10 @@ class _FakeLocationAssistanceService extends LocationAssistanceService {
   Future<bool> requestPermission() async => false;
 
   @override
-  ({List<String> nearbyMerchants, List<String> likelyCategories})
-  getTransactionSuggestions() =>
+  ({
+    List<String> nearbyMerchants,
+    List<String> likelyCategories
+  }) getTransactionSuggestions() =>
       const (nearbyMerchants: <String>[], likelyCategories: <String>[]);
 }
 
@@ -202,10 +204,16 @@ void main() {
 
     await tester.pumpAndSettle();
 
-    expect(find.text('Scan the receipt, then sanity-check the details'),
-        findsOneWidget);
+    expect(find.byKey(const ValueKey('receipt-scan-hero')), findsOneWidget);
+    expect(find.text('SCAN RECEIPT'), findsOneWidget);
+    expect(find.text('Snap it. Review it. Done.'), findsOneWidget);
+    expect(find.text('CHOOSE A SOURCE'), findsOneWidget);
     expect(find.text('Take photo'), findsOneWidget);
     expect(find.text('Choose from gallery'), findsOneWidget);
+    expect(find.byKey(const ValueKey('receipt-scan-camera-action')),
+        findsOneWidget);
+    expect(find.byKey(const ValueKey('receipt-scan-gallery-action')),
+        findsOneWidget);
   });
 
   testWidgets('receipt maybe later opens add expense form for free users',
@@ -219,11 +227,12 @@ void main() {
     await tester.tap(find.text('Maybe Later'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Add Transaction'), findsOneWidget);
+    expect(find.text('Add transaction'), findsOneWidget);
     expect(find.text('Expense'), findsOneWidget);
   });
 
-  testWidgets('receipt maybe later add expense form can close back to previous screen',
+  testWidgets(
+      'receipt maybe later add expense form can close back to previous screen',
       (tester) async {
     await _pumpReceiptRouterAppWithPreviousRoute(tester);
     await tester.pumpAndSettle();
@@ -236,12 +245,12 @@ void main() {
     await tester.tap(find.text('Maybe Later'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Add Transaction'), findsOneWidget);
+    expect(find.text('Add transaction'), findsOneWidget);
 
-    await tester.tap(find.byIcon(Icons.close));
+    Navigator.of(tester.element(find.text('Add transaction'))).pop();
     await tester.pumpAndSettle();
 
     expect(find.text('Open Scan'), findsOneWidget);
-    expect(find.text('Add Transaction'), findsNothing);
+    expect(find.text('Add transaction'), findsNothing);
   });
 }

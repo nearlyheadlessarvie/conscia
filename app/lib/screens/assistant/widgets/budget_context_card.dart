@@ -53,6 +53,7 @@ class BudgetContextCard extends StatelessWidget {
                   category,
                   size: 16,
                   filled: false,
+                  type: 'Expense',
                 ),
                 const SizedBox(width: 8),
                 Text(

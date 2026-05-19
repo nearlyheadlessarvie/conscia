@@ -236,6 +236,46 @@ public class ValidatorTests
     }
 
     [Fact]
+    public async Task UserProfileUpdate_DisplayNameOnly_Passes()
+    {
+        var validator = new UserProfileUpdateValidator();
+        var dto = new UserProfileUpdateDto { DisplayName = "Story Demo" };
+
+        var result = await validator.ValidateAsync(dto);
+
+        Assert.True(result.IsValid);
+    }
+
+    [Fact]
+    public async Task UserProfileUpdate_ProfilePictureKeyOnly_Passes()
+    {
+        var validator = new UserProfileUpdateValidator();
+        var dto = new UserProfileUpdateDto
+        {
+            ProfilePictureKey = "profile-pictures/user-id/avatar.jpg"
+        };
+
+        var result = await validator.ValidateAsync(dto);
+
+        Assert.True(result.IsValid);
+    }
+
+    [Fact]
+    public async Task UserProfileUpdate_ExternalProfilePictureKey_Fails()
+    {
+        var validator = new UserProfileUpdateValidator();
+        var dto = new UserProfileUpdateDto
+        {
+            ProfilePictureKey = "https://example.com/avatar.jpg"
+        };
+
+        var result = await validator.ValidateAsync(dto);
+
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, e => e.PropertyName == "ProfilePictureKey");
+    }
+
+    [Fact]
     public async Task UserProfileUpdate_AiPersonalityIntensityOnly_Passes()
     {
         var validator = new UserProfileUpdateValidator();

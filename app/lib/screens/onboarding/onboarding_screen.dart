@@ -79,11 +79,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     width: double.infinity,
                     height: 48,
                     child: FilledButton(
-                      style: FilledButton.styleFrom(
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(24),
-                        ),
-                      ),
                       onPressed: () => context.go('/onboarding/sign-up'),
                       child: const Text('Create Account'),
                     ),
@@ -104,11 +99,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     width: double.infinity,
                     height: 48,
                     child: FilledButton.tonal(
-                      style: FilledButton.styleFrom(
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(24),
-                        ),
-                      ),
                       onPressed: () {
                         _controller.nextPage(
                           duration: const Duration(milliseconds: 300),

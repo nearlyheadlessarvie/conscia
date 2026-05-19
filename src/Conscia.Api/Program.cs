@@ -16,6 +16,7 @@ using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.RateLimiting;
 using Conscia.Api.Middleware;
 using Conscia.Application.Configuration;
+using Conscia.Application.Constants;
 using Conscia.Application.Interfaces;
 using Conscia.Application.Services;
 using Conscia.Application.Triggers;
@@ -89,12 +90,16 @@ if (builder.Environment.IsDevelopment())
     };
     builder.Services.AddSingleton<IAmazonDynamoDB>(new AmazonDynamoDBClient(credentials, dynamoConfig));
 
+    var s3AccessKey = builder.Configuration["AWS:S3:AccessKey"] ?? "minioadmin";
+    var s3SecretKey = builder.Configuration["AWS:S3:SecretKey"] ?? "minioadmin";
     var s3Config = new AmazonS3Config
     {
         ServiceURL = builder.Configuration["AWS:S3:ServiceURL"],
         ForcePathStyle = builder.Configuration.GetValue<bool>("AWS:S3:ForcePathStyle")
     };
-    builder.Services.AddSingleton<IAmazonS3>(new AmazonS3Client(credentials, s3Config));
+    builder.Services.AddSingleton<IAmazonS3>(new AmazonS3Client(
+        new BasicAWSCredentials(s3AccessKey, s3SecretKey),
+        s3Config));
 
     var sqsConfig = new AmazonSQSConfig
     {
@@ -151,6 +156,7 @@ builder.Services.AddScoped<IBehavioralInsightsService, BehavioralInsightsService
 builder.Services.AddScoped<IPurchaseSuggestionService, PurchaseSuggestionService>();
 builder.Services.AddScoped<IPurchasePatternService, PurchasePatternService>();
 builder.Services.AddScoped<IAlertService, AlertService>();
+builder.Services.AddSingleton<IConscienceJourneyRulesProvider, HardcodedJourneyRulesProvider>();
 builder.Services.AddScoped<IConscienceJourneyService, ConscienceJourneyService>();
 builder.Services.AddSingleton<IRecurringScheduleGenerator, RecurringScheduleGenerator>();
 builder.Services.AddScoped<ITriggerEvaluator, BudgetWarningEvaluator>();

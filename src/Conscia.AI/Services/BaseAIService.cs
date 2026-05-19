@@ -23,7 +23,8 @@ public abstract class BaseAIService : IAIService
         var userPrompt = PromptTemplates.BuildPrePurchaseUserPrompt(
             context.Amount, context.CurrencyCode, context.Category,
             context.BudgetPercentUsed, context.RecentRegrets, context.SpendingFrequencyThisWeek,
-            context.ContextScope, context.FamilyContextSummary, context.InsightContext);
+            context.ContextScope, context.FamilyContextSummary, context.InsightContext,
+            context.UserDisplayName);
 
         return await OrchestrateAsync(userPrompt, context, isReflectionFlow: false, ct);
     }
@@ -35,7 +36,8 @@ public abstract class BaseAIService : IAIService
 
         var userPrompt = PromptTemplates.BuildReflectionUserPrompt(
             context.Amount, context.CurrencyCode, context.Category,
-            context.BudgetPercentUsed, context.RecentRegrets);
+            context.BudgetPercentUsed, context.RecentRegrets,
+            context.UserDisplayName);
 
         return await OrchestrateAsync(userPrompt, context, isReflectionFlow: true, ct);
     }

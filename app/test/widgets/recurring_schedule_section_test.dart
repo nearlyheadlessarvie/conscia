@@ -26,6 +26,7 @@ void main() {
     expect(find.text('Weekly'), findsOneWidget);
     expect(find.text('Monthly'), findsOneWidget);
     expect(find.text('Yearly'), findsOneWidget);
-    expect(find.text('End date (optional)'), findsOneWidget);
+    expect(find.text('END DATE'), findsOneWidget);
+    expect(find.text('Never ends'), findsWidgets);
   });
 }

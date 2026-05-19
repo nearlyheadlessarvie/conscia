@@ -19,6 +19,7 @@ class Transaction {
   final String? sharedByUserId;
   final String? sharedByInitials;
   final String? sharedByDisplayName;
+  final double? exchangeRateToBase;
 
   const Transaction({
     required this.id,
@@ -36,6 +37,7 @@ class Transaction {
     this.sharedByUserId,
     this.sharedByInitials,
     this.sharedByDisplayName,
+    this.exchangeRateToBase,
   });
 
   bool get isRecurring => recurringScheduleId != null;
@@ -63,6 +65,7 @@ class Transaction {
       sharedByUserId: json['sharedByUserId'] as String?,
       sharedByInitials: json['sharedByInitials'] as String?,
       sharedByDisplayName: json['sharedByDisplayName'] as String?,
+      exchangeRateToBase: (json['exchangeRateToBase'] as num?)?.toDouble(),
     );
   }
 

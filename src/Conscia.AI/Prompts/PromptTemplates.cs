@@ -70,14 +70,18 @@ public static class PromptTemplates
     public static string BuildPrePurchaseUserPrompt(
         decimal? amount, string? currency, string? category,
         decimal? budgetPercent, int recentRegrets, int spendingFreq,
-        string? contextScope = null, string? familyContextSummary = null, string? insightContext = null)
+        string? contextScope = null, string? familyContextSummary = null, string? insightContext = null,
+        string? userDisplayName = null)
     {
         currency = PromptSanitizer.Sanitize(currency, 10);
         category = PromptSanitizer.Sanitize(category, 100);
         contextScope = PromptSanitizer.Sanitize(contextScope, 20);
+        userDisplayName = PromptSanitizer.Sanitize(userDisplayName, 80);
 
         var parts = new List<string> { "The user is considering a purchase:" };
 
+        if (userDisplayName.Length > 0)
+            parts.Add($"- User name: {userDisplayName}");
         if (amount.HasValue && currency.Length > 0)
         {
             parts.Add($"- Amount: {FormatPromptMoney(amount.Value, currency)}");
@@ -104,13 +108,17 @@ public static class PromptTemplates
 
     public static string BuildReflectionUserPrompt(
         decimal? amount, string? currency, string? category,
-        decimal? budgetPercent, int recentRegrets)
+        decimal? budgetPercent, int recentRegrets,
+        string? userDisplayName = null)
     {
         currency = PromptSanitizer.Sanitize(currency, 10);
         category = PromptSanitizer.Sanitize(category, 100);
+        userDisplayName = PromptSanitizer.Sanitize(userDisplayName, 80);
 
         var parts = new List<string> { "The user wants to reflect on their recent spending:" };
 
+        if (userDisplayName.Length > 0)
+            parts.Add($"- User name: {userDisplayName}");
         if (amount.HasValue && currency.Length > 0)
         {
             parts.Add($"- Recent spend: {FormatPromptMoney(amount.Value, currency)}");

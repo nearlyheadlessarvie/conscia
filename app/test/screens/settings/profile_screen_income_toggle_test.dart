@@ -15,6 +15,9 @@ class _RecordingUserService extends UserService {
   Future<UserProfile> updateProfile({
     String? preferredCurrency,
     String? locale,
+    String? displayName,
+    String? profilePictureKey,
+    String? photoUrl,
     String? spendingPersonality,
     String? incomeRange,
     String? occupationType,
@@ -26,6 +29,9 @@ class _RecordingUserService extends UserService {
     lastUpdate = {
       'preferredCurrency': preferredCurrency,
       'locale': locale,
+      'displayName': displayName,
+      'profilePictureKey': profilePictureKey,
+      'photoUrl': photoUrl,
       'spendingPersonality': spendingPersonality,
       'incomeRange': incomeRange,
       'occupationType': occupationType,
@@ -40,6 +46,9 @@ class _RecordingUserService extends UserService {
       email: 'profile@example.com',
       currencyCode: 'USD',
       locale: 'en_US',
+      displayName: displayName,
+      profilePictureKey: profilePictureKey,
+      photoUrl: photoUrl,
       createdAt: DateTime(2026),
       hasCompletedOnboarding: true,
       locationSuggestionsEnabled: locationSuggestionsEnabled ?? false,
@@ -53,7 +62,7 @@ class _RecordingUserService extends UserService {
 }
 
 void main() {
-  testWidgets('selected income range can be cleared before saving', (
+  testWidgets('profile can save editable monthly income range', (
     tester,
   ) async {
     final userService = _RecordingUserService();
@@ -67,6 +76,7 @@ void main() {
               email: 'profile@example.com',
               currencyCode: 'USD',
               locale: 'en_US',
+              displayName: 'Arvie Aguirre',
               createdAt: DateTime(2026),
               hasCompletedOnboarding: true,
               spendingPersonality: null,
@@ -84,12 +94,23 @@ void main() {
     );
 
     await tester.pumpAndSettle();
-    await tester.tap(find.text('USD 20,000 - USD 50,000'));
+    await tester.drag(
+      find.byKey(const PageStorageKey('profile-shell-scroll')),
+      const Offset(0, -420),
+    );
     await tester.pumpAndSettle();
-    await tester.ensureVisible(find.text('Save Changes'));
-    await tester.tap(find.text('Save Changes'));
+    await tester.tap(find.text('Monthly income'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Prefer not to say'));
+    await tester.pumpAndSettle();
+    await tester.drag(
+      find.byKey(const PageStorageKey('profile-shell-scroll')),
+      const Offset(0, -520),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Save'));
     await tester.pumpAndSettle();
 
-    expect(userService.lastUpdate?['incomeRange'], isNull);
+    expect(userService.lastUpdate?['incomeRange'], 'prefer_not_to_say');
   });
 }

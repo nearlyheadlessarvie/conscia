@@ -23,7 +23,7 @@ public class CategoryRepository : DynamoRepository, ICategoryRepository
             Key = Key(CategoryPk(id), "PROFILE")
         }, ct);
 
-        return response.Item.Count == 0 ? null : FromItem(response.Item);
+        return IsMissingItem(response.Item) ? null : FromItem(response.Item);
     }
 
     public async Task<ManagedCategory?> GetByNormalizedNameAsync(
@@ -40,7 +40,7 @@ public class CategoryRepository : DynamoRepository, ICategoryRepository
             Key = Key(UniquePk(userId, familySpaceId, scope, type, normalizedName), "CATEGORY")
         }, ct);
 
-        if (response.Item.Count == 0 || !response.Item.TryGetValue("CategoryId", out var categoryId))
+        if (IsMissingItem(response.Item) || !response.Item.TryGetValue("CategoryId", out var categoryId))
             return null;
 
         return Guid.TryParse(categoryId.S, out var parsed)
@@ -61,7 +61,7 @@ public class CategoryRepository : DynamoRepository, ICategoryRepository
             }
         }, ct);
 
-        return response.Items
+        return Items(response)
             .Where(item => item.TryGetValue("EntityType", out var type) && type.S == "ManagedCategory")
             .Select(FromItem)
             .ToList();
@@ -80,7 +80,7 @@ public class CategoryRepository : DynamoRepository, ICategoryRepository
             }
         }, ct);
 
-        return response.Items
+        return Items(response)
             .Where(item => item.TryGetValue("EntityType", out var type) && type.S == "ManagedCategory")
             .Select(FromItem)
             .ToList();

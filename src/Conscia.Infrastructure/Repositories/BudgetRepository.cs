@@ -22,7 +22,7 @@ public class BudgetRepository : DynamoRepository, IBudgetRepository
             Key = Key(BudgetPk(id), "PROFILE")
         }, ct);
 
-        return response.Item.Count == 0 ? null : FromItem(response.Item);
+        return IsMissingItem(response.Item) ? null : FromItem(response.Item);
     }
 
     public async Task<IReadOnlyList<Budget>> ListByUserAsync(Guid userId, CancellationToken ct = default)
@@ -38,7 +38,7 @@ public class BudgetRepository : DynamoRepository, IBudgetRepository
             }
         }, ct);
 
-        return response.Items
+        return Items(response)
             .Where(item => item.TryGetValue("EntityType", out var type) && type.S == "Budget")
             .Select(FromItem)
             .ToList();
@@ -57,7 +57,7 @@ public class BudgetRepository : DynamoRepository, IBudgetRepository
             }
         }, ct);
 
-        return response.Items
+        return Items(response)
             .Where(item => item.TryGetValue("EntityType", out var type) && type.S == "Budget")
             .Select(FromItem)
             .ToList();
@@ -65,30 +65,37 @@ public class BudgetRepository : DynamoRepository, IBudgetRepository
 
     public async Task<Budget> AddAsync(Budget budget, CancellationToken ct = default)
     {
-        await Dynamo.TransactWriteItemsAsync(new TransactWriteItemsRequest
+        try
         {
-            TransactItems =
-            [
-                new()
-                {
-                    Put = new Put
+            await Dynamo.TransactWriteItemsAsync(new TransactWriteItemsRequest
+            {
+                TransactItems =
+                [
+                    new()
                     {
-                        TableName = TableName,
-                        Item = ToItem(budget),
-                        ConditionExpression = "attribute_not_exists(PK)"
-                    }
-                },
-                new()
-                {
-                    Put = new Put
+                        Put = new Put
+                        {
+                            TableName = TableName,
+                            Item = ToItem(budget),
+                            ConditionExpression = "attribute_not_exists(PK)"
+                        }
+                    },
+                    new()
                     {
-                        TableName = TableName,
-                        Item = UniqueSentinel(budget),
-                        ConditionExpression = "attribute_not_exists(PK)"
+                        Put = new Put
+                        {
+                            TableName = TableName,
+                            Item = UniqueSentinel(budget),
+                            ConditionExpression = "attribute_not_exists(PK)"
+                        }
                     }
-                }
-            ]
-        }, ct);
+                ]
+            }, ct);
+        }
+        catch (TransactionCanceledException ex)
+        {
+            throw DuplicateBudgetException(ex);
+        }
 
         return budget;
     }
@@ -128,10 +135,17 @@ public class BudgetRepository : DynamoRepository, IBudgetRepository
             }
         });
 
-        await Dynamo.TransactWriteItemsAsync(new TransactWriteItemsRequest
+        try
         {
-            TransactItems = writes
-        }, ct);
+            await Dynamo.TransactWriteItemsAsync(new TransactWriteItemsRequest
+            {
+                TransactItems = writes
+            }, ct);
+        }
+        catch (TransactionCanceledException ex)
+        {
+            throw DuplicateBudgetException(ex);
+        }
 
         return budget;
     }
@@ -228,4 +242,7 @@ public class BudgetRepository : DynamoRepository, IBudgetRepository
             : budget.UserId.ToString();
         return $"BUDGET_UNIQUE#{budget.Scope}#{owner}#{NormalizeKeyPart(budget.Category)}";
     }
+
+    private static InvalidOperationException DuplicateBudgetException(Exception inner) =>
+        new("A budget for that category already exists.", inner);
 }

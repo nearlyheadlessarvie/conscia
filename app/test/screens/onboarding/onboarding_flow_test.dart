@@ -4,7 +4,7 @@ import 'package:conscia_app/screens/onboarding/onboarding_screen.dart';
 import 'package:conscia_app/screens/onboarding/setup_screen.dart';
 import 'package:conscia_app/screens/onboarding/spending_profile_screen.dart';
 import 'package:conscia_app/services/user_service.dart';
-import 'package:conscia_app/widgets/selection_chip_group.dart';
+import 'package:conscia_app/widgets/single_select_list.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -21,6 +21,9 @@ class _RecordingUserService extends UserService {
   Future<UserProfile> updateProfile({
     String? preferredCurrency,
     String? locale,
+    String? displayName,
+    String? profilePictureKey,
+    String? photoUrl,
     String? spendingPersonality,
     String? incomeRange,
     String? occupationType,
@@ -32,6 +35,7 @@ class _RecordingUserService extends UserService {
     updates.add({
       'preferredCurrency': preferredCurrency,
       'locale': locale,
+      'displayName': displayName,
       'spendingPersonality': spendingPersonality,
       'incomeRange': incomeRange,
       'occupationType': occupationType,
@@ -121,6 +125,29 @@ void main() {
     expect(find.textContaining('Free tier:'), findsNothing);
   });
 
+  testWidgets('setup screen describes locale as region format', (tester) async {
+    final userService = _RecordingUserService();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          userServiceProvider.overrideWithValue(userService),
+        ],
+        child: const MaterialApp(
+          home: SetupScreen(),
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    expect(find.text('Region Format'), findsOneWidget);
+    expect(
+      find.textContaining('App language stays in English'),
+      findsOneWidget,
+    );
+  });
+
   testWidgets(
     'setup screen defaults to the device currency and shows it first in the picker',
     (tester) async {
@@ -149,12 +176,7 @@ void main() {
 
       await tester.pumpAndSettle();
 
-      final currencyTile = tester.widget<ListTile>(
-        find.widgetWithText(ListTile, 'Currency'),
-      );
-      final currencySubtitle = currencyTile.subtitle! as Text;
-
-      expect(currencySubtitle.data, 'PHP');
+      expect(find.text('PHP'), findsWidgets);
 
       await tester.tap(find.text('Currency'));
       await tester.pumpAndSettle();
@@ -370,7 +392,7 @@ void main() {
   });
 
   testWidgets(
-    'spending profile next persists prefer-not-to-say and routes to budgets',
+    'spending profile requires income selection before routing to budgets',
     (tester) async {
       final userService = _RecordingUserService();
       final router = GoRouter(
@@ -413,6 +435,24 @@ void main() {
         ),
       );
 
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.text('Next'));
+      await tester.tap(find.text('Next'));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text(
+            'Choose a monthly income range, or select Prefer not to say.'),
+        findsOneWidget,
+      );
+      expect(userService.updates, isEmpty);
+
+      await tester.drag(
+        find.byType(CustomScrollView),
+        const Offset(0, -520),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Prefer not to say'));
       await tester.pumpAndSettle();
       await tester.ensureVisible(find.text('Next'));
       await tester.tap(find.text('Next'));
@@ -480,7 +520,7 @@ void main() {
     },
   );
 
-  testWidgets('about you skip marks onboarding complete and returns home', (
+  testWidgets('about you requires display name before completing onboarding', (
     tester,
   ) async {
     final userService = _RecordingUserService();
@@ -518,14 +558,37 @@ void main() {
     );
 
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Skip'));
+
+    expect(find.text('Skip'), findsNothing);
+    expect(find.text('PERSONAL DETAILS'), findsOneWidget);
+    expect(
+      find.text('This is the name Conscia will use around the app.'),
+      findsOneWidget,
+    );
+    expect(find.text('Go to dashboard'), findsOneWidget);
+
+    var button = tester.widget<FilledButton>(
+      find.widgetWithText(FilledButton, 'Go to dashboard'),
+    );
+    expect(button.onPressed, isNull);
+
+    await tester.enterText(find.byType(TextField).first, 'Story Demo');
+    await tester.pumpAndSettle();
+
+    button = tester.widget<FilledButton>(
+      find.widgetWithText(FilledButton, 'Go to dashboard'),
+    );
+    expect(button.onPressed, isNotNull);
+
+    await tester.tap(find.text('Go to dashboard'));
     await tester.pumpAndSettle();
 
     expect(find.text('home-screen'), findsOneWidget);
     expect(userService.updates.single['hasCompletedOnboarding'], true);
+    expect(userService.updates.single['displayName'], 'Story Demo');
   });
 
-  testWidgets('about you uses branded chip avatars instead of raw icons', (
+  testWidgets('about you uses flat check lists for single-select facts', (
     tester,
   ) async {
     await tester.pumpWidget(
@@ -551,12 +614,18 @@ void main() {
 
     await tester.pumpAndSettle();
 
-    final chips = tester
-        .widgetList<SelectionChipButton>(find.byType(SelectionChipButton))
+    final lists = tester
+        .widgetList<SingleSelectList<String>>(
+            find.byType(SingleSelectList<String>))
         .toList();
 
-    expect(chips, isNotEmpty);
-    expect(chips.first.avatar, isNotNull);
-    expect(chips.first.avatar, isNot(isA<Icon>()));
+    expect(lists.length, 2);
+    expect(find.byType(Radio<String>), findsNothing);
+    expect(find.byType(Divider), findsWidgets);
+
+    await tester.tap(find.text('Employed'));
+    await tester.pumpAndSettle();
+
+    expect(find.byIcon(Icons.check_rounded), findsOneWidget);
   });
 }

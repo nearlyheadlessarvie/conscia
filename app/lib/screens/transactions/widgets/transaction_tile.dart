@@ -48,11 +48,13 @@ class TransactionTile extends StatelessWidget {
     String category, {
     double size = 20,
     bool filled = true,
+    String? type,
   }) {
     return CategoryIcons.badge(
       category,
       size: size,
       filled: filled,
+      type: type,
     );
   }
 
@@ -125,7 +127,12 @@ class TransactionTile extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         child: Row(
           children: [
-            badgeFor(_displayCategory, size: 22, filled: false),
+            badgeFor(
+              _displayCategory,
+              size: 22,
+              filled: false,
+              type: isIncome ? 'Income' : 'Expense',
+            ),
             const SizedBox(width: 12),
             Expanded(
               child: Column(

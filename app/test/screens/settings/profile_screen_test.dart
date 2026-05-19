@@ -1,7 +1,7 @@
 import 'package:conscia_app/providers/user_provider.dart';
 import 'package:conscia_app/screens/settings/profile_screen.dart';
 import 'package:conscia_app/services/user_service.dart';
-import 'package:conscia_app/widgets/selection_chip_group.dart';
+import 'package:conscia_app/widgets/hero_shortcut_card.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -16,6 +16,9 @@ class _RecordingUserService extends UserService {
   Future<UserProfile> updateProfile({
     String? preferredCurrency,
     String? locale,
+    String? displayName,
+    String? profilePictureKey,
+    String? photoUrl,
     String? spendingPersonality,
     String? incomeRange,
     String? occupationType,
@@ -27,6 +30,9 @@ class _RecordingUserService extends UserService {
     lastUpdate = {
       'preferredCurrency': preferredCurrency,
       'locale': locale,
+      'displayName': displayName,
+      'profilePictureKey': profilePictureKey,
+      'photoUrl': photoUrl,
       'spendingPersonality': spendingPersonality,
       'incomeRange': incomeRange,
       'occupationType': occupationType,
@@ -41,6 +47,9 @@ class _RecordingUserService extends UserService {
       email: 'profile@example.com',
       currencyCode: 'USD',
       locale: 'en_US',
+      displayName: displayName,
+      profilePictureKey: profilePictureKey,
+      photoUrl: photoUrl,
       createdAt: DateTime(2026),
       hasCompletedOnboarding: true,
       locationSuggestionsEnabled: locationSuggestionsEnabled ?? false,
@@ -54,7 +63,7 @@ class _RecordingUserService extends UserService {
 }
 
 void main() {
-  testWidgets('untouched optional spending style stays unset when saving', (
+  testWidgets('profile saves display name and editable onboarding facts', (
     tester,
   ) async {
     final userService = _RecordingUserService();
@@ -68,6 +77,7 @@ void main() {
               email: 'profile@example.com',
               currencyCode: 'USD',
               locale: 'en_US',
+              displayName: 'Arvie Aguirre',
               createdAt: DateTime(2026),
               hasCompletedOnboarding: true,
               spendingPersonality: null,
@@ -85,14 +95,48 @@ void main() {
     );
 
     await tester.pumpAndSettle();
-    await tester.ensureVisible(find.text('Save Changes'));
-    await tester.tap(find.text('Save Changes'));
+    await tester.enterText(
+      find.byType(TextField).first,
+      'Arvie Updated',
+    );
+    await tester.drag(
+      find.byKey(const PageStorageKey('profile-shell-scroll')),
+      const Offset(0, -420),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Spending style'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Saver'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Monthly income'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Prefer not to say'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Occupation'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Student'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Household'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Shared'));
+    await tester.pumpAndSettle();
+    await tester.drag(
+      find.byKey(const PageStorageKey('profile-shell-scroll')),
+      const Offset(0, -520),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Save'));
     await tester.pumpAndSettle();
 
-    expect(userService.lastUpdate?['spendingPersonality'], isNull);
+    expect(userService.lastUpdate?['displayName'], 'Arvie Updated');
+    expect(userService.lastUpdate?['spendingPersonality'], 'saver');
+    expect(userService.lastUpdate?['incomeRange'], 'prefer_not_to_say');
+    expect(userService.lastUpdate?['occupationType'], 'student');
+    expect(userService.lastUpdate?['householdSize'], 'shared');
   });
 
-  testWidgets('profile uses branded avatars for profile choice chips', (
+  testWidgets('profile uses bleeding hero and removes preferences-only fields',
+      (
     tester,
   ) async {
     final userService = _RecordingUserService();
@@ -106,6 +150,7 @@ void main() {
               email: 'profile@example.com',
               currencyCode: 'USD',
               locale: 'en_US',
+              displayName: 'Arvie Aguirre',
               createdAt: DateTime(2026),
               hasCompletedOnboarding: true,
               spendingPersonality: 'balanced',
@@ -124,16 +169,37 @@ void main() {
 
     await tester.pumpAndSettle();
 
-    final chips = tester
-        .widgetList<SelectionChipButton>(find.byType(SelectionChipButton))
-        .toList();
-
-    expect(chips, isNotEmpty);
-    expect(chips.first.avatar, isNotNull);
-    expect(chips.first.avatar, isNot(isA<Icon>()));
+    expect(
+      find.byKey(const ValueKey('profile-editorial-hero')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('conscia-app-bar-capsule')),
+      findsOneWidget,
+    );
+    expect(find.text('PROFILE HUB'), findsOneWidget);
+    expect(find.text('Keep your money profile personal'), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('profile-hero-display-name-pill')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('profile-hero-email-pill')),
+      findsOneWidget,
+    );
+    expect(find.text('PERSONAL DETAILS'), findsOneWidget);
+    expect(find.text('MONEY PROFILE'), findsOneWidget);
+    expect(find.byKey(const ValueKey('profile-photo-action')), findsOneWidget);
+    expect(find.text('profile@example.com'), findsOneWidget);
+    expect(find.text('Display name'), findsOneWidget);
+    expect(find.byType(HeroShortcutCard), findsNothing);
+    expect(find.text('Currency'), findsNothing);
+    expect(find.text('AI Personality Intensity'), findsNothing);
   });
 
-  testWidgets('profile shows explicit monthly income ranges', (tester) async {
+  testWidgets('profile photo affordance is available in personal details', (
+    tester,
+  ) async {
     final userService = _RecordingUserService();
 
     await tester.pumpWidget(
@@ -145,6 +211,7 @@ void main() {
               email: 'profile@example.com',
               currencyCode: 'PHP',
               locale: 'en_US',
+              displayName: 'Arvie Aguirre',
               createdAt: DateTime(2026),
               hasCompletedOnboarding: true,
               spendingPersonality: 'balanced',
@@ -163,10 +230,50 @@ void main() {
 
     await tester.pumpAndSettle();
 
-    expect(find.text('Under PHP 20,000'), findsOneWidget);
-    expect(find.text('PHP 20,000 - PHP 50,000'), findsOneWidget);
-    expect(find.text('PHP 50,000 - PHP 100,000'), findsOneWidget);
-    expect(find.text('Over PHP 100,000'), findsOneWidget);
-    expect(find.text('Prefer not to say'), findsOneWidget);
+    expect(find.byKey(const ValueKey('profile-photo-action')), findsOneWidget);
+    expect(userService.lastUpdate, isNull);
+  });
+
+  testWidgets('profile save action is a keyboard-safe bottom CTA', (
+    tester,
+  ) async {
+    final userService = _RecordingUserService();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          currentUserProvider.overrideWith(
+            (ref) async => UserProfile(
+              id: 'user-1',
+              email: 'profile@example.com',
+              currencyCode: 'PHP',
+              locale: 'en_US',
+              displayName: 'Arvie Aguirre',
+              createdAt: DateTime(2026),
+              hasCompletedOnboarding: true,
+              spendingPersonality: 'balanced',
+              incomeRange: 'high',
+              occupationType: 'employed',
+              householdSize: 'family',
+            ),
+          ),
+          userServiceProvider.overrideWithValue(userService),
+        ],
+        child: const MaterialApp(
+          home: ProfileScreen(),
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    final ctaFinder = find.byKey(const ValueKey('profile-save-cta'));
+
+    expect(ctaFinder, findsOneWidget);
+    expect(tester.widget<FilledButton>(find.byType(FilledButton)).onPressed,
+        isNotNull);
+
+    final ctaBottom = tester.getBottomLeft(ctaFinder).dy;
+    expect(ctaBottom, lessThanOrEqualTo(580));
   });
 }

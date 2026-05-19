@@ -93,6 +93,7 @@ public static class AIEndpoints
             var context = new AIContext
             {
                 UserId = userId,
+                UserDisplayName = user?.DisplayName,
                 Amount = dto.Amount,
                 CurrencyCode = dto.CurrencyCode,
                 Category = dto.Category,
@@ -182,6 +183,7 @@ public static class AIEndpoints
             var context = new AIContext
             {
                 UserId = userId,
+                UserDisplayName = user?.DisplayName,
                 Amount = transaction.Amount.Amount,
                 CurrencyCode = transaction.Amount.CurrencyCode,
                 Category = transaction.Category,

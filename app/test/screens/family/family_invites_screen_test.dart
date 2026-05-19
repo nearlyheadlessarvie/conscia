@@ -36,8 +36,8 @@ void main() {
 
     await tester.pumpAndSettle();
 
-    expect(find.text('Family invites'), findsWidgets);
-    expect(find.text('Invites you received'), findsOneWidget);
+    expect(find.text('Invites'), findsWidgets);
+    expect(find.text('INVITES YOU RECEIVED'), findsOneWidget);
     expect(find.text('Santos Household'), findsOneWidget);
     expect(find.text('Contributor'), findsOneWidget);
     expect(find.widgetWithText(FilledButton, 'Accept'), findsOneWidget);
@@ -68,8 +68,10 @@ void main() {
 
     await tester.pumpAndSettle();
 
-    expect(find.text('Invite someone'), findsOneWidget);
-    expect(find.widgetWithText(TextField, 'Email'), findsOneWidget);
+    expect(find.text('INVITE A FAMILY MEMBER'), findsOneWidget);
+    expect(find.text('Email address'), findsOneWidget);
+    expect(find.text('Contributor'), findsOneWidget);
+    expect(find.text('Viewer'), findsOneWidget);
     expect(find.widgetWithText(FilledButton, 'Send invite'), findsOneWidget);
   });
 
@@ -142,12 +144,17 @@ void main() {
 
     await tester.pumpAndSettle();
 
-    expect(find.text('Invites you sent'), findsOneWidget);
+    expect(find.text('SENT'), findsOneWidget);
     expect(find.text('wife@example.com'), findsOneWidget);
-    expect(
-        find.widgetWithText(OutlinedButton, 'Cancel invite'), findsOneWidget);
+    expect(find.text('Contributor · Expires May 15'), findsOneWidget);
+    expect(find.widgetWithText(TextButton, 'Cancel'), findsNothing);
+    expect(find.byType(Dismissible), findsAtLeastNWidgets(1));
 
-    await tester.tap(find.widgetWithText(OutlinedButton, 'Cancel invite'));
+    final outgoingInvite =
+        find.byKey(const ValueKey('outgoing-invite-invite-outgoing'));
+    await tester.ensureVisible(outgoingInvite);
+    await tester.pumpAndSettle();
+    await tester.drag(outgoingInvite, const Offset(-500, 0));
     await tester.pumpAndSettle();
 
     expect(actions.cancelledInviteIds, ['invite-outgoing']);
@@ -202,6 +209,11 @@ class _RecordingFamilySpaceActions implements FamilySpaceActions {
     required String memberId,
     required String role,
   }) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<FamilyMember> transferOwnership(String memberId) {
     throw UnimplementedError();
   }
 }

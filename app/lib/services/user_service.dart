@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:dio/dio.dart';
 
 import '../core/constants/api_constants.dart';
@@ -5,6 +7,9 @@ import '../core/constants/api_constants.dart';
 class UserProfile {
   final String id;
   final String email;
+  final String? displayName;
+  final String? profilePictureKey;
+  final String? photoUrl;
   final String currencyCode;
   final String locale;
   final DateTime createdAt;
@@ -25,6 +30,9 @@ class UserProfile {
     required this.hasCompletedOnboarding,
     this.locationSuggestionsEnabled = false,
     this.aiPersonalityIntensity = 'balanced',
+    this.displayName,
+    this.profilePictureKey,
+    this.photoUrl,
     this.spendingPersonality,
     this.incomeRange,
     this.occupationType,
@@ -35,6 +43,9 @@ class UserProfile {
     return UserProfile(
       id: json['id'] as String,
       email: json['email'] as String,
+      displayName: json['displayName'] as String? ?? json['name'] as String?,
+      profilePictureKey: json['profilePictureKey'] as String?,
+      photoUrl: json['photoUrl'] as String? ?? json['avatarUrl'] as String?,
       currencyCode:
           (json['currencyCode'] ?? json['preferredCurrency']) as String? ??
               'USD',
@@ -42,8 +53,7 @@ class UserProfile {
       createdAt: json['createdAt'] != null
           ? DateTime.parse(json['createdAt'] as String)
           : DateTime.now(),
-      hasCompletedOnboarding:
-          json['hasCompletedOnboarding'] as bool? ?? false,
+      hasCompletedOnboarding: json['hasCompletedOnboarding'] as bool? ?? false,
       locationSuggestionsEnabled:
           json['locationSuggestionsEnabled'] as bool? ?? false,
       aiPersonalityIntensity:
@@ -56,10 +66,31 @@ class UserProfile {
   }
 }
 
+class ProfilePictureUpload {
+  const ProfilePictureUpload({
+    required this.uploadUrl,
+    required this.profilePictureKey,
+    this.proxyUploadUrl,
+  });
+
+  final String uploadUrl;
+  final String? proxyUploadUrl;
+  final String profilePictureKey;
+
+  factory ProfilePictureUpload.fromJson(Map<String, dynamic> json) {
+    return ProfilePictureUpload(
+      uploadUrl: json['uploadUrl'] as String,
+      proxyUploadUrl: json['proxyUploadUrl'] as String?,
+      profilePictureKey: json['profilePictureKey'] as String,
+    );
+  }
+}
+
 class UserService {
   final Dio _dio;
+  final Dio _uploadDio;
 
-  UserService(this._dio);
+  UserService(this._dio, {Dio? uploadDio}) : _uploadDio = uploadDio ?? Dio();
 
   Future<UserProfile> getProfile() async {
     try {
@@ -73,6 +104,9 @@ class UserService {
   Future<UserProfile> updateProfile({
     String? preferredCurrency,
     String? locale,
+    String? displayName,
+    String? profilePictureKey,
+    String? photoUrl,
     String? spendingPersonality,
     String? incomeRange,
     String? occupationType,
@@ -87,6 +121,9 @@ class UserService {
         data: {
           if (preferredCurrency != null) 'preferredCurrency': preferredCurrency,
           if (locale != null) 'locale': locale,
+          if (displayName != null) 'displayName': displayName,
+          if (profilePictureKey != null)
+            'profilePictureKey': profilePictureKey,
           if (spendingPersonality != null)
             'spendingPersonality': spendingPersonality,
           if (incomeRange != null) 'incomeRange': incomeRange,
@@ -101,6 +138,45 @@ class UserService {
         },
       );
       return UserProfile.fromJson(response.data as Map<String, dynamic>);
+    } on DioException {
+      rethrow;
+    }
+  }
+
+  Future<ProfilePictureUpload> createProfilePictureUpload({
+    required String contentType,
+  }) async {
+    try {
+      final response = await _dio.post(
+        ApiConstants.profilePictureUpload,
+        data: {'contentType': contentType},
+      );
+      return ProfilePictureUpload.fromJson(
+        response.data as Map<String, dynamic>,
+      );
+    } on DioException {
+      rethrow;
+    }
+  }
+
+  Future<void> uploadProfilePicture({
+    required String uploadUrl,
+    String? proxyUploadUrl,
+    required List<int> bytes,
+    required String contentType,
+  }) async {
+    try {
+      final useProxy = proxyUploadUrl != null && proxyUploadUrl.isNotEmpty;
+      await (useProxy ? _dio : _uploadDio).put(
+        useProxy ? proxyUploadUrl : uploadUrl,
+        data: Uint8List.fromList(bytes),
+        options: Options(
+          contentType: contentType,
+          headers: {
+            Headers.contentTypeHeader: contentType,
+          },
+        ),
+      );
     } on DioException {
       rethrow;
     }

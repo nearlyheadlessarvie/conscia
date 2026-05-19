@@ -294,6 +294,28 @@ public class FamilySpaceService : IFamilySpaceService
         return await ToMemberDtoAsync(target, userId, ct);
     }
 
+    public async Task<FamilyMemberDto> TransferOwnershipAsync(
+        Guid userId,
+        Guid memberId,
+        CancellationToken ct = default)
+    {
+        var owner = await RequireOwnerAsync(userId, ct);
+        var members = await _repository.ListMembersAsync(owner.FamilySpaceId, ct);
+        var target = FindMember(members, memberId);
+
+        if (target.Id == owner.Id)
+            throw new InvalidOperationException("Choose another family member to become owner.");
+
+        if (target.Role == FamilyMemberRole.Owner)
+            throw new InvalidOperationException("This member is already the Family Space owner.");
+
+        owner.Role = FamilyMemberRole.Contributor;
+        target.Role = FamilyMemberRole.Owner;
+
+        await _repository.TransferOwnershipAsync(owner, target, ct);
+        return await ToMemberDtoAsync(target, userId, ct);
+    }
+
     public async Task RemoveMemberAsync(
         Guid userId,
         Guid memberId,

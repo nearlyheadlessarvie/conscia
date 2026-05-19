@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -58,6 +60,46 @@ GoRouter _router({String initialLocation = '/'}) => GoRouter(
             ),
           ),
         ),
+        GoRoute(
+          path: '/scroll-demo',
+          builder: (_, __) => MainShell(
+            child: Scaffold(
+              body: ListView.builder(
+                key: const ValueKey('shell-scroll-demo-list'),
+                itemCount: 40,
+                itemBuilder: (_, index) => SizedBox(
+                  height: 64,
+                  child: Text('Row $index'),
+                ),
+              ),
+            ),
+          ),
+        ),
+        GoRoute(
+          path: '/short-scroll-demo',
+          builder: (_, __) => const MainShell(
+            child: Scaffold(
+              body: SingleChildScrollView(
+                key: ValueKey('shell-short-scroll-demo-list'),
+                child: SizedBox(
+                  height: 620,
+                  child: Text('Short scroll range'),
+                ),
+              ),
+            ),
+          ),
+        ),
+        GoRoute(
+          path: '/keyboard-demo',
+          builder: (context, __) => MediaQuery(
+            data: MediaQuery.of(context).copyWith(
+              viewInsets: const EdgeInsets.only(bottom: 260),
+            ),
+            child: const MainShell(
+              child: Scaffold(body: Text('keyboard')),
+            ),
+          ),
+        ),
       ],
     );
 
@@ -84,47 +126,158 @@ Future<void> _pumpShell(
 }
 
 void main() {
-  testWidgets('MainShell shows five navigation destinations and add FAB',
+  testWidgets('MainShell renders floating dock without text labels',
       (tester) async {
     await _pumpShell(tester);
 
-    expect(find.text('Home'), findsOneWidget);
-    expect(find.text('Transactions'), findsOneWidget);
-    expect(find.text('Scan'), findsOneWidget);
-    expect(find.text('Assistant'), findsOneWidget);
-    expect(find.text('Settings'), findsOneWidget);
-    expect(find.byType(FloatingActionButton), findsOneWidget);
+    expect(find.text('Home'), findsNothing);
+    expect(find.text('Transactions'), findsNothing);
+    expect(find.text('Scan'), findsNothing);
+    expect(find.text('Assistant'), findsNothing);
+    expect(find.text('Settings'), findsNothing);
+    expect(find.byKey(const ValueKey('floating-dock-nav')), findsOneWidget);
   });
 
-  testWidgets('MainShell renders an emphasized raised scan action on mobile',
+  testWidgets('MainShell keeps the scan action centered and emphasized',
       (tester) async {
     await _pumpShell(tester);
 
-    final raisedScanButton =
-        find.byKey(const ValueKey('main-shell-scan-button'));
-    expect(raisedScanButton, findsOneWidget);
+    final scanAction = find.byKey(const ValueKey('floating-dock-scan-action'));
+    expect(scanAction, findsOneWidget);
 
-    final scanPosition = tester.getTopLeft(raisedScanButton);
-    final navigationBarPosition = tester.getTopLeft(find.byType(NavigationBar));
-    final scanBottom = tester.getBottomLeft(raisedScanButton);
+    final dockRect =
+        tester.getRect(find.byKey(const ValueKey('floating-dock-nav')));
+    final scanRect = tester.getRect(scanAction);
 
-    expect(scanPosition.dy, lessThan(navigationBarPosition.dy));
-    expect(scanBottom.dy, greaterThan(navigationBarPosition.dy));
+    expect(scanRect.center.dx, closeTo(dockRect.center.dx, 1));
+    expect(scanRect.height, greaterThan(48));
   });
 
-  testWidgets('MainShell hides the shared add FAB on transactions, assistant, and settings on mobile',
+  testWidgets('MainShell uses a circular active highlight for side tabs',
       (tester) async {
-    await _pumpShell(tester, initialLocation: '/transactions');
-    expect(find.byType(FloatingActionButton), findsNothing);
+    await _pumpShell(tester);
 
+    final activeHomeItem = find.byKey(const ValueKey('floating-dock-item-0'));
+    expect(activeHomeItem, findsOneWidget);
+
+    final activeDecoration = tester
+        .widgetList<AnimatedContainer>(
+          find.descendant(
+            of: activeHomeItem,
+            matching: find.byType(AnimatedContainer),
+          ),
+        )
+        .single
+        .decoration as BoxDecoration;
+
+    expect(activeDecoration.shape, BoxShape.circle);
+  });
+
+  testWidgets('MainShell exposes a dock overlay layer for transparent underlay',
+      (tester) async {
+    await _pumpShell(tester);
+
+    expect(
+        find.byKey(const ValueKey('main-shell-dock-overlay')), findsOneWidget);
+  });
+
+  testWidgets('MainShell slides dock away when scrolling down and restores up',
+      (tester) async {
+    await _pumpShell(tester, initialLocation: '/scroll-demo');
+
+    AnimatedSlide dockSlide() => tester.widget<AnimatedSlide>(
+          find.byKey(const ValueKey('main-shell-dock-motion')),
+        );
+
+    expect(dockSlide().offset, Offset.zero);
+
+    await tester.drag(
+      find.byKey(const ValueKey('shell-scroll-demo-list')),
+      const Offset(0, -180),
+    );
+    await tester.pump();
+
+    expect(dockSlide().offset.dy, greaterThan(0));
+
+    await tester.drag(
+      find.byKey(const ValueKey('shell-scroll-demo-list')),
+      const Offset(0, 80),
+    );
+    await tester.pump();
+
+    expect(dockSlide().offset, Offset.zero);
+  });
+
+  testWidgets('MainShell hides dock even when little scroll range remains',
+      (tester) async {
+    await _pumpShell(
+      tester,
+      initialLocation: '/short-scroll-demo',
+      windowSize: const Size(375, 600),
+    );
+
+    AnimatedSlide dockSlide() => tester.widget<AnimatedSlide>(
+          find.byKey(const ValueKey('main-shell-dock-motion')),
+        );
+
+    expect(dockSlide().offset, Offset.zero);
+
+    await tester.drag(
+      find.byKey(const ValueKey('shell-short-scroll-demo-list')),
+      const Offset(0, -120),
+    );
+    await tester.pump();
+
+    expect(dockSlide().offset.dy, greaterThan(0));
+  });
+
+  testWidgets('MainShell keeps dock hidden while keyboard is open',
+      (tester) async {
+    await _pumpShell(tester, initialLocation: '/keyboard-demo');
+
+    final dockSlide = tester.widget<AnimatedSlide>(
+      find.byKey(const ValueKey('main-shell-dock-motion')),
+    );
+
+    expect(dockSlide.offset.dy, greaterThan(0));
+  });
+
+  testWidgets('MainShell keeps dock available on assistant for navigation',
+      (tester) async {
     await _pumpShell(tester, initialLocation: '/assistant');
-    expect(find.byType(FloatingActionButton), findsNothing);
 
-    await _pumpShell(tester, initialLocation: '/settings');
+    final dockSlide = tester.widget<AnimatedSlide>(
+      find.byKey(const ValueKey('main-shell-dock-motion')),
+    );
+    final dockOpacity = tester.widget<AnimatedOpacity>(
+      find.byType(AnimatedOpacity),
+    );
+
+    expect(dockSlide.offset, Offset.zero);
+    expect(dockOpacity.opacity, 1);
+  });
+
+  testWidgets('MainShell does not show a shared add FAB on mobile',
+      (tester) async {
+    await _pumpShell(tester);
     expect(find.byType(FloatingActionButton), findsNothing);
   });
 
-  testWidgets('MainShell hides the navigation rail add FAB on transactions, assistant, and settings',
+  testWidgets('MainShell does not show a navigation rail add FAB on wide home',
+      (tester) async {
+    await _pumpShell(
+      tester,
+      initialLocation: '/',
+      windowSize: const Size(1200, 800),
+    );
+
+    expect(find.byType(NavigationRail), findsNothing);
+    expect(find.byKey(const ValueKey('floating-dock-nav')), findsOneWidget);
+    expect(find.byType(FloatingActionButton), findsNothing);
+  });
+
+  testWidgets(
+      'MainShell hides the navigation rail add FAB on transactions, assistant, and settings',
       (tester) async {
     const wideSize = Size(1200, 800);
 
@@ -133,7 +286,8 @@ void main() {
       initialLocation: '/transactions',
       windowSize: wideSize,
     );
-    expect(find.byType(NavigationRail), findsOneWidget);
+    expect(find.byType(NavigationRail), findsNothing);
+    expect(find.byKey(const ValueKey('floating-dock-nav')), findsOneWidget);
     expect(find.byType(FloatingActionButton), findsNothing);
 
     await _pumpShell(
@@ -141,7 +295,8 @@ void main() {
       initialLocation: '/assistant',
       windowSize: wideSize,
     );
-    expect(find.byType(NavigationRail), findsOneWidget);
+    expect(find.byType(NavigationRail), findsNothing);
+    expect(find.byKey(const ValueKey('floating-dock-nav')), findsOneWidget);
     expect(find.byType(FloatingActionButton), findsNothing);
 
     await _pumpShell(
@@ -149,7 +304,8 @@ void main() {
       initialLocation: '/settings',
       windowSize: wideSize,
     );
-    expect(find.byType(NavigationRail), findsOneWidget);
+    expect(find.byType(NavigationRail), findsNothing);
+    expect(find.byKey(const ValueKey('floating-dock-nav')), findsOneWidget);
     expect(find.byType(FloatingActionButton), findsNothing);
   });
 
@@ -166,7 +322,16 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Open sheet'));
+    final context = tester.element(find.byType(MainShell));
+    unawaited(
+      showModalBottomSheet<void>(
+        context: context,
+        builder: (_) => const SizedBox(
+          height: 120,
+          child: Center(child: Text('Sheet content')),
+        ),
+      ),
+    );
     await tester.pumpAndSettle();
 
     expect(find.text('Sheet content'), findsOneWidget);

@@ -4,7 +4,7 @@ public sealed record ReceiptScanResult(
     Guid Id,
     string? Merchant,
     decimal Total,
-    string CurrencyCode,
+    string? CurrencyCode,
     DateTime? Date,
     double Confidence,
     List<ReceiptLineItem> LineItems);

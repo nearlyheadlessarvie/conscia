@@ -77,13 +77,16 @@ void main() {
       iapService: iapService,
     );
 
-    expect(find.text('Manage Conscia Premium'), findsOneWidget);
+    expect(find.text('Conscia Premium'), findsOneWidget);
     expect(find.text('Subscribe Now'), findsNothing);
     expect(find.text('Manage Subscription'), findsOneWidget);
-    expect(find.textContaining('Premium access stays active until 6/7/2026'),
-        findsOneWidget);
+    expect(find.text('Active · renews Jun 7, 2026'), findsOneWidget);
     expect(find.text('Restore Purchases'), findsNothing);
-    expect(find.byIcon(Icons.check_circle), findsOneWidget);
+    expect(find.byIcon(Icons.check_circle), findsNothing);
+    expect(find.byKey(const ValueKey('subscription-plan-premium-radio')),
+        findsNothing);
+    expect(find.byKey(const ValueKey('subscription-comparison-list')),
+        findsOneWidget);
   });
 
   testWidgets('subscription sheet highlights free plan for free users', (
@@ -103,7 +106,46 @@ void main() {
     expect(find.text('Unlock Conscia Premium'), findsOneWidget);
     expect(find.text('Subscribe Now'), findsOneWidget);
     expect(find.text('Restore Purchases'), findsOneWidget);
-    expect(find.byIcon(Icons.check_circle), findsOneWidget);
+    expect(find.byIcon(Icons.check_circle), findsNothing);
+    expect(find.byKey(const ValueKey('subscription-plan-free-radio')),
+        findsNothing);
+    expect(find.byKey(const ValueKey('subscription-comparison-list')),
+        findsOneWidget);
+  });
+
+  testWidgets('subscription comparison uses flat separators instead of table card',
+      (
+    tester,
+  ) async {
+    final iapService = _FakeIAPService();
+
+    await _pumpSheetHost(
+      tester,
+      status: const SubscriptionStatus(
+        tier: 'free',
+        isPremium: false,
+      ),
+      iapService: iapService,
+    );
+
+    expect(
+      find.byKey(const ValueKey('subscription-comparison-list')),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('subscription-comparison-list')),
+        matching: find.byType(Divider),
+      ),
+      findsWidgets,
+    );
+
+    final cta = tester.widget<FilledButton>(
+      find.widgetWithText(FilledButton, 'Subscribe Now'),
+    );
+    final background =
+        cta.style?.backgroundColor?.resolve(<WidgetState>{});
+    expect(background, const Color(0xFFFFB300));
   });
 
   testWidgets('subscription sheet shows inline dev-mode management notice', (

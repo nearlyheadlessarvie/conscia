@@ -7,6 +7,7 @@ import '../../../core/constants/generated/app_constants.g.dart';
 import '../../../models/managed_category.dart';
 import '../../../providers/category_provider.dart';
 import '../../../providers/category_recents_provider.dart';
+import 'category_picker.dart';
 
 class QuickPresetChips extends ConsumerWidget {
   final String? selectedCategory;
@@ -27,20 +28,29 @@ class QuickPresetChips extends ConsumerWidget {
     final recentCategories = ref.watch(recentCategoryProvider);
     final managedCategories =
         ref.watch(managedCategoriesProvider(const CategoryQuery())).maybeWhen(
-              data: _managedCategoryNames,
-              orElse: () => const <String>[],
+              data: _managedCategoryData,
+              orElse: () => const <CategoryData>[],
             );
     final categories = managedCategories.isNotEmpty
-        ? orderCategoriesByRecency(
-            categories: managedCategories,
-            recents: recentCategories,
-          ).take(5).toList()
+        ? [
+            for (final name in orderCategoriesByRecency(
+              categories:
+                  managedCategories.map((category) => category.name).toList(),
+              recents: recentCategories,
+            ).take(5))
+              managedCategories.firstWhere((category) => category.name == name),
+          ]
         : isExpense
             ? _expenseQuickCategories(recentCategories)
+                .map((name) => CategoryData(name, type: 'Expense'))
+                .toList()
             : orderCategoriesByRecency(
                 categories: incomeCategories,
                 recents: recentCategories,
-              ).take(5).toList();
+              )
+                .take(5)
+                .map((name) => CategoryData(name, type: 'Income'))
+                .toList();
 
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
@@ -50,13 +60,16 @@ class QuickPresetChips extends ConsumerWidget {
             padding: const EdgeInsets.only(right: 8),
             child: FilterChip(
               avatar: CategoryIcons.badge(
-                cat,
+                cat.name,
                 size: 14,
-                selected: selectedCategory == cat,
+                type: cat.type,
+                iconKey: cat.iconKey,
+                colorKey: cat.colorKey,
+                selected: selectedCategory == cat.name,
               ),
-              label: Text(cat),
-              selected: selectedCategory == cat,
-              onSelected: (_) => onCategorySelected(cat),
+              label: Text(cat.name),
+              selected: selectedCategory == cat.name,
+              onSelected: (_) => onCategorySelected(cat.name),
             ),
           );
         }).toList(),
@@ -75,11 +88,11 @@ class QuickPresetChips extends ConsumerWidget {
     ).take(5).toList();
   }
 
-  List<String> _managedCategoryNames(List<ManagedCategory> categories) {
+  List<CategoryData> _managedCategoryData(List<ManagedCategory> categories) {
     return categories
         .where((category) => !category.isArchived)
         .where((category) => isExpense ? category.isExpense : category.isIncome)
-        .map((category) => category.name)
+        .map(CategoryData.fromManaged)
         .toList(growable: false);
   }
 }

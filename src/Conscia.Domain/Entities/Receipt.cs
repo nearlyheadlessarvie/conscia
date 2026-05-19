@@ -5,6 +5,7 @@ namespace Conscia.Domain.Entities;
 public class Receipt
 {
     public Guid Id { get; set; }
+    public Guid UserId { get; set; }
     public Guid TransactionId { get; set; }
     public string S3Key { get; set; } = string.Empty;
     public string? ExtractedData { get; set; }

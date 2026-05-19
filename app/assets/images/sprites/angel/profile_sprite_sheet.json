@@ -1,0 +1,79 @@
+{
+  "sprites": [
+    {
+      "fileName": "1_neutral.png",
+      "width": 1254,
+      "height": 1254,
+      "x": 0,
+      "y": 0
+    },
+    {
+      "fileName": "2_fiece.png",
+      "width": 1254,
+      "height": 1254,
+      "x": 1254,
+      "y": 0
+    },
+    {
+      "fileName": "3_joy.png",
+      "width": 1254,
+      "height": 1254,
+      "x": 2508,
+      "y": 0
+    },
+    {
+      "fileName": "4_sad.png",
+      "width": 1254,
+      "height": 1254,
+      "x": 3762,
+      "y": 0
+    },
+    {
+      "fileName": "5_wink.png",
+      "width": 1254,
+      "height": 1254,
+      "x": 5016,
+      "y": 0
+    },
+    {
+      "fileName": "6_surprised.png",
+      "width": 1254,
+      "height": 1254,
+      "x": 0,
+      "y": 1254
+    },
+    {
+      "fileName": "7_shy.png",
+      "width": 1254,
+      "height": 1254,
+      "x": 1254,
+      "y": 1254
+    },
+    {
+      "fileName": "8_sleepy.png",
+      "width": 1254,
+      "height": 1254,
+      "x": 2508,
+      "y": 1254
+    },
+    {
+      "fileName": "9_confused.png",
+      "width": 1254,
+      "height": 1254,
+      "x": 3762,
+      "y": 1254
+    },
+    {
+      "fileName": "10_love.png",
+      "width": 1254,
+      "height": 1254,
+      "x": 5016,
+      "y": 1254
+    }
+  ],
+  "packMode": "grid",
+  "padding": 0,
+  "backgroundColor": "rgba(0, 0, 0, 0)",
+  "spriteSheetWidth": 6270,
+  "spriteSheetHeight": 2508
+}

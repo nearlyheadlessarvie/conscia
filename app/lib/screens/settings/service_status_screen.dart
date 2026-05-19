@@ -8,6 +8,7 @@ import '../../models/health_status.dart';
 import '../../providers/health_provider.dart';
 import '../../widgets/feed_card.dart';
 import '../../widgets/hero_screen_scaffold.dart';
+import '../../widgets/conscia_app_bar.dart';
 import '../../widgets/screen_section.dart';
 
 const _serviceMetadata = <String, _ServiceMeta>{
@@ -92,8 +93,8 @@ class _ServiceStatusScreenState extends ConsumerState<ServiceStatusScreen> {
     return RefreshIndicator(
       onRefresh: () => ref.read(healthStatusProvider.notifier).refresh(),
       child: HeroScreenScaffold(
-        appBar: AppBar(
-          title: const Text('Service Status'),
+        appBar: const ConsciaAppBar(
+          title: Text('Service Status'),
         ),
         child: Column(
           children: [
@@ -162,7 +163,7 @@ class _ServiceStatusScreenState extends ConsumerState<ServiceStatusScreen> {
     String error,
   ) {
     return HeroScreenScaffold(
-      appBar: AppBar(title: const Text('Service Status')),
+      appBar: const ConsciaAppBar(title: Text('Service Status')),
       child: Center(
         child: Padding(
           padding: const EdgeInsets.all(32),

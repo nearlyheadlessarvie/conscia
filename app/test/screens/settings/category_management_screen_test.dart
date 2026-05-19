@@ -1,6 +1,9 @@
 import 'package:conscia_app/models/managed_category.dart';
 import 'package:conscia_app/providers/category_provider.dart';
 import 'package:conscia_app/screens/settings/category_management_screen.dart';
+import 'package:conscia_app/widgets/feed_card.dart';
+import 'package:conscia_app/widgets/floating_label_text_field.dart';
+import 'package:conscia_app/core/network/api_exception.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -8,7 +11,10 @@ import 'package:flutter_test/flutter_test.dart';
 class _RecordingCategoryActions extends CategoryActions {
   String? createdName;
   String? createdType;
+  String? createdIconKey;
+  String? createdColorKey;
   String? archivedId;
+  Object? createError;
 
   @override
   Future<ManagedCategory> create({
@@ -19,8 +25,13 @@ class _RecordingCategoryActions extends CategoryActions {
     String? iconKey,
     String? colorKey,
   }) async {
+    final error = createError;
+    if (error != null) throw error;
+
     createdName = name;
     createdType = type;
+    createdIconKey = iconKey;
+    createdColorKey = colorKey;
     return _category(id: 'created', name: name, type: type);
   }
 
@@ -35,6 +46,9 @@ ManagedCategory _category({
   required String name,
   required String type,
   bool isArchived = false,
+  bool isDefault = false,
+  String? iconKey,
+  String? colorKey,
 }) {
   return ManagedCategory(
     id: id,
@@ -42,10 +56,10 @@ ManagedCategory _category({
     normalizedName: name.toLowerCase(),
     type: type,
     scope: 'Personal',
-    iconKey: null,
-    colorKey: null,
+    iconKey: iconKey,
+    colorKey: colorKey,
     isArchived: isArchived,
-    isDefault: false,
+    isDefault: isDefault,
     createdAt: DateTime(2026),
     updatedAt: DateTime(2026),
   );
@@ -88,12 +102,15 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Categories'), findsOneWidget);
-    expect(find.text('Expense'), findsWidgets);
-    expect(find.text('Income'), findsWidgets);
+    expect(find.text('EXPENSE'), findsOneWidget);
+    expect(find.text('INCOME'), findsOneWidget);
+    expect(find.text('Expense'), findsNothing);
+    expect(find.text('Income'), findsNothing);
     expect(find.text('Dining'), findsOneWidget);
     expect(find.text('Salary'), findsOneWidget);
-    expect(find.text('Archived'), findsOneWidget);
+    expect(find.text('ARCHIVED'), findsOneWidget);
     expect(find.text('Old Hobby'), findsOneWidget);
+    expect(find.byType(FeedCard), findsNothing);
   });
 
   testWidgets('creates a custom category from settings', (tester) async {
@@ -104,14 +121,104 @@ void main() {
     await tester.tap(find.text('Add category'));
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField), 'Pet care');
+    await tester.ensureVisible(find.text('Save category'));
     await tester.tap(find.text('Save category'));
     await tester.pumpAndSettle();
 
     expect(actions.createdName, 'Pet care');
     expect(actions.createdType, 'Expense');
+    expect(actions.createdIconKey, 'other');
+    expect(actions.createdColorKey, isNot(isEmpty));
   });
 
-  testWidgets('archives a custom category after confirmation', (tester) async {
+  testWidgets('category sheet uses Conscia v2 floating input', (tester) async {
+    final actions = _RecordingCategoryActions();
+    await _pumpScreen(tester, actions: actions);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Add category'));
+    await tester.pumpAndSettle();
+
+    final floatingFields = tester.widgetList<FloatingLabelTextField>(
+      find.byType(FloatingLabelTextField),
+    );
+
+    expect(
+      floatingFields.any((field) => field.label == 'Category name'),
+      isTrue,
+    );
+    expect(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is TextField &&
+            widget.decoration?.labelText == 'Category name',
+      ),
+      findsNothing,
+    );
+  });
+
+  testWidgets('category sheet uses Conscia controls for type and visuals',
+      (tester) async {
+    final actions = _RecordingCategoryActions();
+    await _pumpScreen(tester, actions: actions);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Add category'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(SegmentedButton<String>), findsNothing);
+    expect(find.byTooltip('Icon: More'), findsOneWidget);
+    expect(find.text('More'), findsOneWidget);
+    expect(find.byTooltip('Color: Red'), findsOneWidget);
+    expect(find.byTooltip('Color: Indigo'), findsOneWidget);
+    expect(find.byTooltip('Color: Lime'), findsOneWidget);
+  });
+
+  testWidgets('more icon choice opens the full icon picker sheet',
+      (tester) async {
+    final actions = _RecordingCategoryActions();
+    await _pumpScreen(tester, actions: actions);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Add category'));
+    await tester.pumpAndSettle();
+
+    expect(find.byTooltip('Icon: Rental'), findsNothing);
+
+    await tester.tap(find.byTooltip('Icon: More'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Choose icon'), findsOneWidget);
+    expect(find.byTooltip('Icon: Rental'), findsOneWidget);
+  });
+
+  testWidgets('shows create errors inline inside the category sheet',
+      (tester) async {
+    final actions = _RecordingCategoryActions()
+      ..createError = const ApiException(
+        message: 'A category with that name already exists.',
+        statusCode: 409,
+      );
+    await _pumpScreen(tester, actions: actions);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Add category'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), 'Dining');
+    await tester.ensureVisible(find.text('Save category'));
+    await tester.tap(find.text('Save category'));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('A category with that name already exists.'),
+      findsOneWidget,
+    );
+    expect(find.byType(SnackBar), findsNothing);
+    expect(find.text('New category'), findsOneWidget);
+  });
+
+  testWidgets('archives a custom category with a left swipe confirmation',
+      (tester) async {
     final actions = _RecordingCategoryActions();
     await _pumpScreen(
       tester,
@@ -120,11 +227,39 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byTooltip('Archive Coffee'));
+    expect(find.byTooltip('Archive Coffee'), findsNothing);
+
+    await tester.drag(find.text('Coffee').first, const Offset(-500, 0));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Archive'));
+
+    expect(find.text('Archive'), findsOneWidget);
+    await tester.tap(find.widgetWithText(FilledButton, 'Archive category'));
     await tester.pumpAndSettle();
 
     expect(actions.archivedId, 'coffee');
+    expect(find.text('Category archived.'), findsOneWidget);
+  });
+
+  testWidgets('default category rows use centralized colors over stale blue',
+      (tester) async {
+    await _pumpScreen(
+      tester,
+      actions: _RecordingCategoryActions(),
+      categories: [
+        _category(
+          id: 'dining',
+          name: 'Dining',
+          type: 'Expense',
+          isDefault: true,
+          iconKey: 'dining',
+          colorKey: 'blue',
+        ),
+      ],
+    );
+    await tester.pumpAndSettle();
+
+    final icon = tester.widget<Icon>(find.byIcon(Icons.restaurant_rounded));
+
+    expect(icon.color, const Color(0xFF43A047));
   });
 }

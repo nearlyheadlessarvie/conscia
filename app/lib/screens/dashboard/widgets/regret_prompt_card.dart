@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../../../core/theme/app_colors.dart';
+import '../../../widgets/feeling_choice_button.dart';
+import '../../../widgets/swipe_action_tile.dart';
+
 class RegretPromptCard extends StatelessWidget {
   final Widget categoryBadge;
   final String counterparty;
@@ -35,6 +39,7 @@ class RegretPromptCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
+    final appColors = Theme.of(context).appColors;
     final textTheme = Theme.of(context).textTheme;
 
     final formatter = NumberFormat.currency(
@@ -44,16 +49,49 @@ class RegretPromptCard extends StatelessWidget {
 
     return Dismissible(
       key: ValueKey('regret_${counterparty}_${date.millisecondsSinceEpoch}'),
-      direction: DismissDirection.startToEnd,
-      onDismissed: (_) => onDismiss?.call(),
-      background: Container(
+      direction: DismissDirection.horizontal,
+      dismissThresholds: const {
+        DismissDirection.startToEnd: 0.18,
+        DismissDirection.endToStart: 0.18,
+      },
+      confirmDismiss: (direction) async {
+        if (direction == DismissDirection.startToEnd) {
+          if (onWorthIt != null) {
+            onWorthIt!();
+          } else {
+            onDismiss?.call();
+          }
+        } else if (direction == DismissDirection.endToStart) {
+          onRegret?.call();
+        }
+
+        return false;
+      },
+      background: SwipeActionBackground(
         alignment: Alignment.centerLeft,
-        padding: const EdgeInsets.only(left: 24),
-        decoration: BoxDecoration(
-          color: const Color(0xFF4CAF50).withValues(alpha: 0.15),
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: const Icon(Icons.check, color: Color(0xFF4CAF50)),
+        padding: const EdgeInsets.only(left: 12),
+        children: [
+          SwipeActionTile(
+            icon: Icons.thumb_up_alt_outlined,
+            label: 'Worth It',
+            foregroundColor: appColors.income,
+            backgroundColor: appColors.incomeSoft,
+            onTap: onWorthIt ?? onDismiss ?? () {},
+          ),
+        ],
+      ),
+      secondaryBackground: SwipeActionBackground(
+        alignment: Alignment.centerRight,
+        padding: const EdgeInsets.only(right: 12),
+        children: [
+          SwipeActionTile(
+            icon: Icons.thumb_down_alt_outlined,
+            label: 'Regret',
+            foregroundColor: appColors.expense,
+            backgroundColor: appColors.expenseSoft,
+            onTap: onRegret ?? () {},
+          ),
+        ],
       ),
       child: Card(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -99,76 +137,23 @@ class RegretPromptCard extends StatelessWidget {
               Row(
                 children: [
                   Expanded(
-                    child: _ActionButton(
-                      label: 'Worth It',
-                      color: const Color(0xFF4CAF50),
-                      icon: Icons.thumb_up_outlined,
-                      onTap: onWorthIt,
+                    child: FeelingChoiceButton.worthIt(
+                      onPressed: onWorthIt,
                     ),
                   ),
                   const SizedBox(width: 8),
                   Expanded(
-                    child: _ActionButton(
-                      label: 'Not Sure',
-                      color: const Color(0xFFFFC107),
-                      icon: Icons.help_outline,
-                      onTap: onNotSure,
+                    child: FeelingChoiceButton.notSure(
+                      onPressed: onNotSure,
                     ),
                   ),
                   const SizedBox(width: 8),
                   Expanded(
-                    child: _ActionButton(
-                      label: 'Regret',
-                      color: const Color(0xFFE53935),
-                      icon: Icons.thumb_down_outlined,
-                      onTap: onRegret,
+                    child: FeelingChoiceButton.regret(
+                      onPressed: onRegret,
                     ),
                   ),
                 ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _ActionButton extends StatelessWidget {
-  final String label;
-  final Color color;
-  final IconData icon;
-  final VoidCallback? onTap;
-
-  const _ActionButton({
-    required this.label,
-    required this.color,
-    required this.icon,
-    this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: color.withValues(alpha: 0.12),
-      borderRadius: BorderRadius.circular(12),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(icon, color: color, size: 20),
-              const SizedBox(height: 4),
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  color: color,
-                ),
               ),
             ],
           ),

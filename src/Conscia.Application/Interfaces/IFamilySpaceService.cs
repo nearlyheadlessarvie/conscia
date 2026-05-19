@@ -18,6 +18,7 @@ public interface IFamilySpaceService
     Task DeclineInviteAsync(Guid userId, string email, Guid inviteId, CancellationToken ct = default);
     Task CancelInviteAsync(Guid userId, Guid inviteId, CancellationToken ct = default);
     Task<FamilyMemberDto> UpdateMemberRoleAsync(Guid userId, Guid memberId, FamilyMemberRole role, CancellationToken ct = default);
+    Task<FamilyMemberDto> TransferOwnershipAsync(Guid userId, Guid memberId, CancellationToken ct = default);
     Task RemoveMemberAsync(Guid userId, Guid memberId, CancellationToken ct = default);
     Task LeaveAsync(Guid userId, CancellationToken ct = default);
 }

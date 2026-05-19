@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../models/insight_feed_item.dart';
 import '../../models/insights_models.dart';
@@ -7,95 +8,235 @@ import '../../providers/budget_providers.dart';
 import '../../providers/insight_feed_provider.dart';
 import '../../providers/insights_provider.dart';
 import '../../providers/user_provider.dart';
+import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_layout.dart';
 import '../budgets/widgets/budget_form_sheet.dart';
 import '../dashboard/widgets/insight_feed_card.dart';
+import '../../widgets/empty_state.dart';
+import '../../widgets/editorial_sticky_header.dart';
 import '../../widgets/feed_card.dart';
-import '../../widgets/hero_screen_scaffold.dart';
+import '../../widgets/hero_shortcut_card.dart';
 import '../../widgets/screen_section.dart';
 import 'widgets/category_trend_card.dart';
 import 'widgets/insights_formatting.dart';
 import 'widgets/merchant_spotlight_card.dart';
 
-class InsightsScreen extends ConsumerWidget {
+class InsightsScreen extends ConsumerStatefulWidget {
   const InsightsScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<InsightsScreen> createState() => _InsightsScreenState();
+}
+
+class _InsightsScreenState extends ConsumerState<InsightsScreen> {
+  final ScrollController _scrollController = ScrollController();
+  double _scrollOffset = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(_handleScroll);
+  }
+
+  @override
+  void dispose() {
+    _scrollController
+      ..removeListener(_handleScroll)
+      ..dispose();
+    super.dispose();
+  }
+
+  void _handleScroll() {
+    final nextOffset =
+        _scrollController.hasClients ? _scrollController.offset : 0.0;
+    if ((nextOffset - _scrollOffset).abs() < 1) return;
+    setState(() => _scrollOffset = nextOffset);
+  }
+
+  Future<void> _onRefresh() async {
+    ref.invalidate(insightFeedBySectionProvider);
+    ref.invalidate(insightsSummaryProvider);
+    ref.invalidate(insightsMerchantsProvider);
+    ref.invalidate(insightsCategoriesProvider);
+
+    await Future.wait([
+      ref.read(insightFeedBySectionProvider.future),
+      ref.read(insightsSummaryProvider.future),
+      ref.read(insightsMerchantsProvider.future),
+      ref.read(insightsCategoriesProvider.future),
+    ]);
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final summaryAsync = ref.watch(insightsSummaryProvider);
     final merchantsAsync = ref.watch(insightsMerchantsProvider);
     final categoriesAsync = ref.watch(insightsCategoriesProvider);
     final feedSectionsAsync = ref.watch(insightFeedBySectionProvider);
     final prefs = ref.watch(userPreferencesProvider);
+    final colors = Theme.of(context).appColors;
+    final stickyProgress = ((_scrollOffset - 5) / 10).clamp(0.0, 1.0);
 
-    return HeroScreenScaffold(
-      appBar: AppBar(title: const Text('Insights')),
-      child: feedSectionsAsync.when(
-        loading: () => const _CenteredState(
-          child: CircularProgressIndicator(),
+    return Scaffold(
+      body: DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [colors.pageTop, colors.pageBottom],
+          ),
         ),
-        error: (_, __) => const _InsightMessageCard(
-          icon: Icons.auto_graph_rounded,
-          title: 'Insights are taking a minute',
-          body: 'We could not load your patterns just now.',
-        ),
-        data: (sections) {
-          final summary = summaryAsync.valueOrNull;
-          final hasAnyInsight =
-              sections.values.any((items) => items.isNotEmpty) ||
-                  summary != null;
-
-          if (!hasAnyInsight) {
-            return const _InsightMessageCard(
-              icon: Icons.timeline_rounded,
-              title: 'Patterns show up after a little history',
-              body:
-                  'Check back after your first week of tracking and Conscia will start surfacing your spending patterns.',
-            );
-          }
-
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _InsightFeedSection(
-                title: 'This week',
-                subtitle: 'The freshest read on how your money decisions feel.',
-                items: sections[InsightFeedSection.thisWeek] ?? const [],
-              ),
-              _InsightFeedSection(
-                title: 'Budget trends',
-                subtitle:
-                    'Where spending is pacing high or ready for a budget.',
-                items: sections[InsightFeedSection.budgetTrends] ?? const [],
-              ),
-              if (summary != null) ...[
-                _SummaryCard(
-                  summary: summary,
+        child: Stack(
+          children: [
+            RefreshIndicator(
+              onRefresh: _onRefresh,
+              child: feedSectionsAsync.when(
+                loading: () => CustomScrollView(
+                  controller: _scrollController,
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  slivers: const [
+                    SliverFillRemaining(
+                      hasScrollBody: false,
+                      child: _CenteredState(child: CircularProgressIndicator()),
+                    ),
+                  ],
+                ),
+                error: (_, __) => CustomScrollView(
+                  controller: _scrollController,
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  slivers: const [
+                    SliverPadding(
+                      padding: EdgeInsets.fromLTRB(20, 96, 20, 28),
+                      sliver: SliverToBoxAdapter(
+                        child: _InsightMessageCard(
+                          icon: Icons.auto_graph_rounded,
+                          title: 'Insights are taking a minute',
+                          body: 'We could not load your patterns just now.',
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                data: (sections) => _buildInsightScroll(
+                  sections: sections,
+                  summary: summaryAsync.valueOrNull,
+                  merchantsAsync: merchantsAsync,
+                  categoriesAsync: categoriesAsync,
                   currencyCode: prefs.currency,
                   locale: prefs.locale,
                 ),
-                const SizedBox(height: 26),
-              ],
-              _InsightFeedSection(
-                title: 'Regret patterns',
-                subtitle:
-                    'The repeat signals worth noticing before the next purchase.',
-                items: sections[InsightFeedSection.regretPatterns] ?? const [],
               ),
-              _MerchantSpotlightSection(merchantsAsync: merchantsAsync),
-              _CategoryTrendSection(
-                categoriesAsync: categoriesAsync,
-                currencyCode: prefs.currency,
-                locale: prefs.locale,
+            ),
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              child: EditorialStickyHeader(
+                key: const ValueKey('insights-sticky-header'),
+                title: 'Insights',
+                progress: stickyProgress,
+                topPadding: MediaQuery.paddingOf(context).top,
               ),
-              _InsightFeedSection(
-                title: 'Recent signals',
-                subtitle: 'Small changes that may deserve a pause.',
-                items: sections[InsightFeedSection.recentSignals] ?? const [],
-              ),
-            ],
-          );
-        },
+            ),
+          ],
+        ),
       ),
+    );
+  }
+
+  Widget _buildInsightScroll({
+    required Map<InsightFeedSection, List<InsightFeedItem>> sections,
+    required InsightsSummary? summary,
+    required AsyncValue<List<MerchantStat>> merchantsAsync,
+    required AsyncValue<List<CategoryStat>> categoriesAsync,
+    required String currencyCode,
+    required String? locale,
+  }) {
+    final hasAnyInsight =
+        sections.values.any((items) => items.isNotEmpty) || summary != null;
+
+    if (!hasAnyInsight) {
+      return CustomScrollView(
+        controller: _scrollController,
+        physics: const AlwaysScrollableScrollPhysics(),
+        slivers: const [
+          SliverPadding(
+            padding: EdgeInsets.fromLTRB(20, 96, 20, 28),
+            sliver: SliverToBoxAdapter(
+              child: EmptyState(
+                icon: Icons.auto_graph_rounded,
+                title: 'No insights yet',
+                subtitle:
+                    'Keep tracking for a week and Conscia will surface your spending patterns.',
+              ),
+            ),
+          ),
+        ],
+      );
+    }
+
+    return CustomScrollView(
+      controller: _scrollController,
+      physics: const AlwaysScrollableScrollPhysics(),
+      slivers: [
+        if (summary != null)
+          SliverToBoxAdapter(
+            child: _InsightEditorialHighlight(
+              summary: summary,
+              currencyCode: currencyCode,
+              locale: locale,
+            ),
+          ),
+        SliverPadding(
+          padding: EdgeInsets.fromLTRB(20, summary == null ? 96 : 22, 20, 0),
+          sliver: SliverToBoxAdapter(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (summary != null) ...[
+                  _SummaryCard(
+                    summary: summary,
+                    currencyCode: currencyCode,
+                    locale: locale,
+                  ),
+                  const SizedBox(height: 26),
+                ],
+                _InsightFeedSection(
+                  title: 'Regret patterns',
+                  subtitle:
+                      'The repeat signals worth noticing before the next purchase.',
+                  items:
+                      sections[InsightFeedSection.regretPatterns] ?? const [],
+                ),
+                _MerchantSpotlightSection(merchantsAsync: merchantsAsync),
+                _CategoryTrendSection(
+                  categoriesAsync: categoriesAsync,
+                  currencyCode: currencyCode,
+                  locale: locale,
+                ),
+                _InsightFeedSection(
+                  title: 'This week',
+                  subtitle:
+                      'The freshest read on how your money decisions feel.',
+                  items: sections[InsightFeedSection.thisWeek] ?? const [],
+                ),
+                _InsightFeedSection(
+                  title: 'Budget trends',
+                  subtitle:
+                      'Where spending is pacing high or ready for a budget.',
+                  items: sections[InsightFeedSection.budgetTrends] ?? const [],
+                ),
+                _InsightFeedSection(
+                  title: 'Recent signals',
+                  subtitle: 'Small changes that may deserve a pause.',
+                  items: sections[InsightFeedSection.recentSignals] ?? const [],
+                ),
+                const SizedBox(height: 32),
+              ],
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
@@ -134,22 +275,31 @@ class _InsightFeedSection extends StatelessWidget {
         return ScreenSection(
           title: title,
           subtitle: subtitle,
-          child: Column(
-            children: [
-              for (final item in currentItems) ...[
-                InsightFeedCard(
-                  item: item,
-                  enableNavigation: item.route != '/insights',
-                  onTap: item.budgetCategory == null
-                      ? null
-                      : () => BudgetFormSheet.show(
-                            context,
-                            initialCategory: item.budgetCategory,
-                          ),
-                ),
-                if (item != currentItems.last) const SizedBox(height: 12),
+          child: FeedCard(
+            padding: const EdgeInsets.fromLTRB(14, 2, 14, 2),
+            child: Column(
+              children: [
+                for (var index = 0; index < currentItems.length; index++) ...[
+                  InsightFeedCard(
+                    item: currentItems[index],
+                    groupedRow: true,
+                    enableNavigation: currentItems[index].route != '/insights',
+                    onTap: currentItems[index].budgetCategory == null
+                        ? null
+                        : () => BudgetFormSheet.show(
+                              context,
+                              initialCategory:
+                                  currentItems[index].budgetCategory,
+                            ),
+                  ),
+                  if (index < currentItems.length - 1)
+                    Divider(
+                      height: 1,
+                      color: Theme.of(context).appColors.border,
+                    ),
+                ],
               ],
-            ],
+            ),
           ),
         );
       },
@@ -204,6 +354,181 @@ class _MerchantSpotlightSection extends StatelessWidget {
           child: MerchantSpotlightCard(merchant: merchants.first),
         );
       },
+    );
+  }
+}
+
+class _InsightEditorialHighlight extends StatelessWidget {
+  const _InsightEditorialHighlight({
+    required this.summary,
+    required this.currencyCode,
+    required this.locale,
+  });
+
+  final InsightsSummary summary;
+  final String currencyCode;
+  final String? locale;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).appColors;
+    final textTheme = Theme.of(context).textTheme;
+    final regretText = formatInsightCurrency(
+      summary.regrettedAmount,
+      currencyCode: currencyCode,
+      locale: locale,
+    );
+
+    return Container(
+      key: const ValueKey('insights-editorial-hero'),
+      width: double.infinity,
+      padding: EdgeInsets.fromLTRB(
+        AppLayout.screenPadding,
+        AppLayout.insightsHeroTop(context),
+        AppLayout.screenPadding,
+        AppLayout.heroBottomPadding,
+      ),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            colors.navySoft,
+            colors.amberSoft,
+          ],
+        ),
+        borderRadius: const BorderRadius.vertical(bottom: Radius.circular(32)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(children: [
+            Text(
+              'REGRET SIGNAL',
+              style: textTheme.labelSmall?.copyWith(
+                color: colors.deepNavy,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 0.9,
+              ),
+            ),
+            const Spacer(),
+            DecoratedBox(
+              decoration: BoxDecoration(
+                color: colors.surfaceRaised.withValues(alpha: 0.76),
+                borderRadius: BorderRadius.circular(999),
+              ),
+              child: Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                child: Text(
+                  '${(summary.avgRegretRate * 100).toStringAsFixed(0)}% regret rate',
+                  style: textTheme.labelSmall?.copyWith(
+                    color: colors.deepNavy,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+            ),
+          ]),
+          const SizedBox(height: 6),
+          Text(
+            regretText,
+            style: textTheme.displaySmall?.copyWith(
+              color: colors.deepNavy,
+              fontWeight: FontWeight.w800,
+              height: 1.05,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            '${summary.regrettedCategory} is carrying your strongest regret signal right now.',
+            style: textTheme.bodyMedium?.copyWith(
+              color: colors.ink,
+              height: 1.35,
+            ),
+          ),
+          const SizedBox(height: 18),
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: [
+              _InsightHeroMetricPill(
+                icon: Icons.category_rounded,
+                label: summary.regrettedCategory,
+              ),
+              _InsightHeroMetricPill(
+                icon: Icons.auto_graph_rounded,
+                label: '${summary.patternCount} patterns',
+              ),
+            ],
+          ),
+          const SizedBox(height: 18),
+          Row(
+            children: [
+              Expanded(
+                child: HeroShortcutCard(
+                  key: const ValueKey('insights-categories-link'),
+                  icon: Icons.category_rounded,
+                  label: 'Categories',
+                  subtitle: 'Regret by category',
+                  minHeight: 54,
+                  onPressed: () => context.push('/insights/categories'),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: HeroShortcutCard(
+                  key: const ValueKey('insights-merchants-link'),
+                  icon: Icons.storefront_rounded,
+                  label: 'Merchants',
+                  subtitle: 'Places to watch',
+                  minHeight: 54,
+                  onPressed: () => context.push('/insights/merchants'),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _InsightHeroMetricPill extends StatelessWidget {
+  const _InsightHeroMetricPill({
+    required this.icon,
+    required this.label,
+  });
+
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).appColors;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: colors.surfaceRaised.withValues(alpha: 0.76),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 15, color: colors.deepNavy),
+          const SizedBox(width: 6),
+          Flexible(
+            child: Text(
+              label,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                    color: colors.deepNavy,
+                    fontWeight: FontWeight.w700,
+                  ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -277,10 +602,12 @@ class _SummaryCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Your regret pulse',
-            style: textTheme.labelLarge?.copyWith(
-              color: colors.onSurfaceVariant,
-              fontWeight: FontWeight.w700,
+            'YOUR REGRET PULSE',
+            style: textTheme.labelSmall?.copyWith(
+              color: Theme.of(context).appColors.mutedInk,
+              fontSize: 12,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 0.9,
             ),
           ),
           const SizedBox(height: 10),

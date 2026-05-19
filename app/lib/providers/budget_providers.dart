@@ -40,19 +40,27 @@ class BudgetListState {
 }
 
 class BudgetListNotifier extends StateNotifier<BudgetListState> {
-  final BudgetService _service;
+  final BudgetService? _service;
   Timer? _pendingRefresh;
 
   BudgetListNotifier(this._service) : super(const BudgetListState()) {
     load();
   }
 
+  BudgetListNotifier.empty()
+      : _service = null,
+        super(const BudgetListState());
+
   Future<void> load() async {
+    final service = _service;
+    if (service == null || !mounted) return;
     state = state.copyWith(isLoading: true, error: null);
     try {
-      final budgets = await _service.list();
+      final budgets = await service.list();
+      if (!mounted) return;
       state = state.copyWith(budgets: budgets, isLoading: false);
     } catch (e, s) {
+      if (!mounted) return;
       state = state.copyWith(
         isLoading: false,
         error: AppError.from(e, stackTrace: s).userMessage,
@@ -61,36 +69,51 @@ class BudgetListNotifier extends StateNotifier<BudgetListState> {
   }
 
   Future<void> create(CreateBudgetDto dto) async {
+    final service = _service;
+    if (service == null || !mounted) return;
     try {
-      final budget = await _service.create(dto);
+      final budget = await service.create(dto);
+      if (!mounted) return;
       state = state.copyWith(budgets: [...state.budgets, budget]);
     } catch (e, s) {
-      state =
-          state.copyWith(error: AppError.from(e, stackTrace: s).userMessage);
+      if (!mounted) return;
+      final error = AppError.from(e, stackTrace: s, log: false);
+      state = state.copyWith(error: error.userMessage);
+      throw error;
     }
   }
 
   Future<void> update(String id, CreateBudgetDto dto) async {
+    final service = _service;
+    if (service == null || !mounted) return;
     try {
-      final updated = await _service.update(id, dto);
+      final updated = await service.update(id, dto);
+      if (!mounted) return;
       state = state.copyWith(
         budgets: state.budgets.map((b) => b.id == id ? updated : b).toList(),
       );
     } catch (e, s) {
-      state =
-          state.copyWith(error: AppError.from(e, stackTrace: s).userMessage);
+      if (!mounted) return;
+      final error = AppError.from(e, stackTrace: s, log: false);
+      state = state.copyWith(error: error.userMessage);
+      throw error;
     }
   }
 
   Future<void> delete(String id) async {
+    final service = _service;
+    if (service == null || !mounted) return;
     try {
-      await _service.delete(id);
+      await service.delete(id);
+      if (!mounted) return;
       state = state.copyWith(
         budgets: state.budgets.where((b) => b.id != id).toList(),
       );
     } catch (e, s) {
-      state =
-          state.copyWith(error: AppError.from(e, stackTrace: s).userMessage);
+      if (!mounted) return;
+      final error = AppError.from(e, stackTrace: s, log: false);
+      state = state.copyWith(error: error.userMessage);
+      throw error;
     }
   }
 
@@ -165,10 +188,14 @@ class BudgetListNotifier extends StateNotifier<BudgetListState> {
   }
 
   Future<void> refreshInBackground() async {
+    final service = _service;
+    if (service == null || !mounted) return;
     try {
-      final budgets = await _service.list();
+      final budgets = await service.list();
+      if (!mounted) return;
       state = state.copyWith(budgets: budgets, error: null);
     } catch (e, s) {
+      if (!mounted) return;
       state =
           state.copyWith(error: AppError.from(e, stackTrace: s).userMessage);
     }
@@ -192,6 +219,8 @@ class BudgetListNotifier extends StateNotifier<BudgetListState> {
 
 final budgetListProvider =
     StateNotifierProvider<BudgetListNotifier, BudgetListState>((ref) {
+  final authState = ref.watch(authProvider);
+  if (!authState.isAuthenticated) return BudgetListNotifier.empty();
   final service = ref.watch(budgetServiceProvider);
   return BudgetListNotifier(service);
 });

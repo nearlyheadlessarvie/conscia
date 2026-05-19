@@ -28,7 +28,7 @@ public class UserSubscriptionRepository : DynamoRepository, IUserSubscriptionRep
             }
         }, ct);
 
-        return response.Items
+        return Items(response)
             .Select(FromItem)
             .OrderByDescending(subscription => subscription.ExpiresAt ?? DateTime.MaxValue)
             .FirstOrDefault();
@@ -42,7 +42,7 @@ public class UserSubscriptionRepository : DynamoRepository, IUserSubscriptionRep
             Key = Key(UserRepository.SubscriptionOriginalPk(originalTransactionId), "SUBSCRIPTION")
         }, ct);
 
-        if (response.Item.Count == 0 ||
+        if (IsMissingItem(response.Item) ||
             !response.Item.TryGetValue("UserId", out var userId) ||
             !response.Item.TryGetValue("SubscriptionId", out var subscriptionId))
         {
@@ -105,7 +105,7 @@ public class UserSubscriptionRepository : DynamoRepository, IUserSubscriptionRep
             Key = Key(UserRepository.UserPk(userId), SubscriptionSk(subscriptionId))
         }, ct);
 
-        return response.Item.Count == 0 ? null : FromItem(response.Item);
+        return IsMissingItem(response.Item) ? null : FromItem(response.Item);
     }
 
     private static string SubscriptionSk(Guid id) => $"SUBSCRIPTION#{id}";

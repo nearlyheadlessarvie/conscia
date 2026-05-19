@@ -21,7 +21,7 @@ public class ConscienceJourneyRepository : DynamoRepository, IConscienceJourneyR
             Key = Key(DynamoKeys.User(userId), DynamoKeys.ConscienceProgress())
         }, ct);
 
-        return response.Item is null || response.Item.Count == 0
+        return IsMissingItem(response.Item)
             ? null
             : ProgressFromItem(response.Item);
     }
@@ -60,13 +60,13 @@ public class ConscienceJourneyRepository : DynamoRepository, IConscienceJourneyR
         CancellationToken ct = default)
     {
         var response = await QueryByPrefixAsync(userId, "EVENT#", ct, limit);
-        return response.Items.Select(EventFromItem).ToList();
+        return Items(response).Select(EventFromItem).ToList();
     }
 
     public async Task<IReadOnlyList<ConscienceBadgeProgress>> GetBadgeProgressAsync(Guid userId, CancellationToken ct = default)
     {
         var response = await QueryByPrefixAsync(userId, "BADGE#", ct);
-        return response.Items.Select(BadgeFromItem).ToList();
+        return Items(response).Select(BadgeFromItem).ToList();
     }
 
     public async Task UpsertBadgeProgressAsync(ConscienceBadgeProgress progress, CancellationToken ct = default)
@@ -84,7 +84,7 @@ public class ConscienceJourneyRepository : DynamoRepository, IConscienceJourneyR
         CancellationToken ct = default)
     {
         var response = await QueryByPrefixAsync(userId, DynamoKeys.ConscienceQuestPrefix(weekStart), ct);
-        return response.Items.Select(QuestFromItem).ToList();
+        return Items(response).Select(QuestFromItem).ToList();
     }
 
     public async Task<IReadOnlyList<ConscienceQuestProgress>> ListQuestProgressAsync(
@@ -93,7 +93,7 @@ public class ConscienceJourneyRepository : DynamoRepository, IConscienceJourneyR
         CancellationToken ct = default)
     {
         var response = await QueryByPrefixAsync(userId, "QUEST#", ct, limit);
-        return response.Items.Select(QuestFromItem).ToList();
+        return Items(response).Select(QuestFromItem).ToList();
     }
 
     public async Task UpsertQuestProgressAsync(ConscienceQuestProgress progress, CancellationToken ct = default)
@@ -120,7 +120,7 @@ public class ConscienceJourneyRepository : DynamoRepository, IConscienceJourneyR
             Limit = 1
         }, ct);
 
-        return response.Items.Count == 0 ? null : MascotMomentFromItem(response.Items[0]);
+        return FirstItem(response) is { } item ? MascotMomentFromItem(item) : null;
     }
 
     public async Task<IReadOnlyList<ConscienceMascotMoment>> ListMascotMomentsAsync(
@@ -129,7 +129,7 @@ public class ConscienceJourneyRepository : DynamoRepository, IConscienceJourneyR
         CancellationToken ct = default)
     {
         var response = await QueryByPrefixAsync(userId, "MOMENT#", ct, limit, scanIndexForward: false);
-        return response.Items.Select(MascotMomentFromItem).ToList();
+        return Items(response).Select(MascotMomentFromItem).ToList();
     }
 
     public async Task AddMascotMomentAsync(ConscienceMascotMoment moment, CancellationToken ct = default)

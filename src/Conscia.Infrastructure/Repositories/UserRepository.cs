@@ -23,7 +23,9 @@ public class UserRepository : DynamoRepository, IUserRepository
             Key = Key(UserPk(id), "PROFILE")
         }, ct);
 
-        return response.Item.Count == 0 ? null : FromUserItem(response.Item);
+        return IsMissingItem(response.Item)
+            ? null
+            : FromUserItem(response.Item);
     }
 
     public async Task<User?> GetByProviderAsync(AuthProvider provider, string providerSub, CancellationToken ct = default)
@@ -34,7 +36,8 @@ public class UserRepository : DynamoRepository, IUserRepository
             Key = Key(IdentityPk(provider, providerSub), "USER")
         }, ct);
 
-        if (response.Item.Count == 0 || !response.Item.TryGetValue("UserId", out var userId))
+        if (IsMissingItem(response.Item) ||
+            !response.Item.TryGetValue("UserId", out var userId))
             return null;
 
         return Guid.TryParse(userId.S, out var parsed)
@@ -50,7 +53,8 @@ public class UserRepository : DynamoRepository, IUserRepository
             Key = Key(EmailPk(email), "USER")
         }, ct);
 
-        if (response.Item.Count == 0 || !response.Item.TryGetValue("UserId", out var userId))
+        if (IsMissingItem(response.Item) ||
+            !response.Item.TryGetValue("UserId", out var userId))
             return null;
 
         return Guid.TryParse(userId.S, out var parsed)
@@ -154,11 +158,11 @@ public class UserRepository : DynamoRepository, IUserRepository
             }
         }, ct);
 
-        if (response.Items.Count == 0)
+        if (Items(response).Count == 0)
             return;
 
         var deletes = new List<WriteRequest>();
-        foreach (var item in response.Items)
+        foreach (var item in Items(response))
         {
             deletes.Add(DeleteRequest(item["PK"].S, item["SK"].S));
 

@@ -12,6 +12,9 @@ import '../../core/network/api_exception.dart';
 import '../../core/routing/app_router.dart';
 import '../../core/utils/email_validator.dart';
 import '../../providers/auth_provider.dart';
+import '../../widgets/floating_label_text_field.dart';
+import '../../widgets/conscia_app_bar.dart';
+import '../../widgets/inline_notice.dart';
 
 String friendlySignInErrorMessage(
   Object error, {
@@ -51,6 +54,8 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
   bool _obscurePassword = true;
   bool _isLoading = false;
   String? _errorMessage;
+  String? _emailFieldError;
+  String? _passwordFieldError;
   bool _biometricsAvailable = false;
   String? _lastEmail;
 
@@ -135,12 +140,35 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
     return null;
   }
 
+  void _clearInlineErrors() {
+    if (_errorMessage != null ||
+        _emailFieldError != null ||
+        _passwordFieldError != null) {
+      setState(() {
+        _errorMessage = null;
+        _emailFieldError = null;
+        _passwordFieldError = null;
+      });
+    }
+  }
+
   Future<void> _submit() async {
-    if (!_formKey.currentState!.validate()) return;
+    final emailError = _validateEmail(_emailController.text.trim());
+    final passwordError = _validatePassword(_passwordController.text);
+    if (emailError != null || passwordError != null) {
+      setState(() {
+        _emailFieldError = emailError;
+        _passwordFieldError = passwordError;
+        _errorMessage = null;
+      });
+      return;
+    }
 
     setState(() {
       _isLoading = true;
       _errorMessage = null;
+      _emailFieldError = null;
+      _passwordFieldError = null;
     });
 
     try {
@@ -169,8 +197,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
     final colors = Theme.of(context).colorScheme;
 
     return Scaffold(
-      appBar: AppBar(
-        leading: const BackButton(),
+      appBar: const ConsciaAppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
       ),
@@ -194,16 +221,10 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
               ),
               const SizedBox(height: 32),
               if (_errorMessage != null) ...[
-                MaterialBanner(
-                  content: Text(_errorMessage!),
-                  backgroundColor: colors.errorContainer,
-                  leading: Icon(Icons.error, color: colors.error),
-                  actions: [
-                    TextButton(
-                      onPressed: () => setState(() => _errorMessage = null),
-                      child: const Text('Dismiss'),
-                    ),
-                  ],
+                InlineNotice(
+                  message: _errorMessage!,
+                  tone: InlineNoticeTone.error,
+                  icon: const Icon(Icons.lock_outline_rounded),
                 ),
                 const SizedBox(height: 16),
               ],
@@ -211,34 +232,44 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                 key: _formKey,
                 child: Column(
                   children: [
-                    TextFormField(
+                    FloatingLabelTextField(
                       controller: _emailController,
+                      label: 'Email',
+                      prefix: const Icon(Icons.email_outlined),
                       keyboardType: TextInputType.emailAddress,
                       textInputAction: TextInputAction.next,
-                      validator: _validateEmail,
-                      decoration: const InputDecoration(
-                        labelText: 'Email',
-                        prefixIcon: Icon(Icons.email_outlined),
-                        border: OutlineInputBorder(),
-                      ),
+                      onChanged: (_) => _clearInlineErrors(),
+                      errorText: _emailFieldError,
+                      autofillHints: const [AutofillHints.email],
                     ),
                     const SizedBox(height: 16),
-                    TextFormField(
+                    FloatingLabelTextField(
                       controller: _passwordController,
+                      label: 'Password',
+                      prefix: const Icon(Icons.lock_outline),
                       obscureText: _obscurePassword,
                       textInputAction: TextInputAction.done,
-                      validator: _validatePassword,
-                      onFieldSubmitted: (_) => _submit(),
-                      decoration: InputDecoration(
-                        labelText: 'Password',
-                        prefixIcon: const Icon(Icons.lock_outlined),
-                        border: const OutlineInputBorder(),
-                        suffixIcon: IconButton(
-                          icon: Icon(_obscurePassword
+                      onChanged: (_) => _clearInlineErrors(),
+                      onSubmitted: (_) {
+                        if (!_isLoading) {
+                          _submit();
+                        }
+                      },
+                      errorText: _passwordFieldError,
+                      enableSuggestions: false,
+                      autocorrect: false,
+                      autofillHints: const [AutofillHints.password],
+                      trailing: IconButton(
+                        icon: Icon(
+                          _obscurePassword
                               ? Icons.visibility_outlined
-                              : Icons.visibility_off_outlined),
-                          onPressed: () => setState(
-                              () => _obscurePassword = !_obscurePassword),
+                              : Icons.visibility_off_outlined,
+                          color: _obscurePassword
+                              ? Theme.of(context).colorScheme.onSurfaceVariant
+                              : Theme.of(context).colorScheme.primary,
+                        ),
+                        onPressed: () => setState(
+                          () => _obscurePassword = !_obscurePassword,
                         ),
                       ),
                     ),
@@ -249,11 +280,6 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
               SizedBox(
                 height: 48,
                 child: FilledButton(
-                  style: FilledButton.styleFrom(
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(24),
-                    ),
-                  ),
                   onPressed: _isLoading ? null : _submit,
                   child: _isLoading
                       ? const SizedBox(
@@ -269,11 +295,6 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                 SizedBox(
                   height: 48,
                   child: OutlinedButton.icon(
-                    style: OutlinedButton.styleFrom(
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(24),
-                      ),
-                    ),
                     icon: const Icon(Icons.fingerprint, size: 24),
                     label: const Text('Sign in with Biometrics'),
                     onPressed: _isLoading ? null : _authenticateWithBiometrics,

@@ -3,6 +3,7 @@ namespace Conscia.Application.Models;
 public class AIContext
 {
     public Guid UserId { get; set; }
+    public string? UserDisplayName { get; set; }
     public decimal? BudgetPercentUsed { get; set; }
     public string? Category { get; set; }
     public decimal? Amount { get; set; }

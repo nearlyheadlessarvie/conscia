@@ -60,12 +60,25 @@ class BudgetCard extends StatelessWidget {
                   CategoryIcons.badge(
                     budget.category,
                     size: 18,
+                    type: 'Expense',
                   ),
                   const SizedBox(width: 10),
                   Expanded(
-                    child: Text(
-                      budget.category,
-                      style: textTheme.titleMedium,
+                    child: Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            budget.category,
+                            style: textTheme.titleMedium,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        if (budget.isFamily) ...[
+                          const SizedBox(width: 8),
+                          const _FamilyBudgetPill(),
+                        ],
+                      ],
                     ),
                   ),
                   PopupMenuButton<String>(
@@ -176,6 +189,39 @@ class BudgetCard extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _FamilyBudgetPill extends StatelessWidget {
+  const _FamilyBudgetPill();
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).appColors;
+    final textTheme = Theme.of(context).textTheme;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+      decoration: BoxDecoration(
+        color: colors.familySoft,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.groups_rounded, size: 13, color: colors.family),
+          const SizedBox(width: 4),
+          Text(
+            'Family budget',
+            style: textTheme.labelSmall?.copyWith(
+              color: colors.family,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 0.2,
+            ),
+          ),
+        ],
       ),
     );
   }

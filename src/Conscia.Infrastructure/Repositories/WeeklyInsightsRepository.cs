@@ -6,16 +6,17 @@ using Conscia.Domain.Enums;
 
 namespace Conscia.Infrastructure.Repositories;
 
-public class WeeklyInsightsRepository : IWeeklyInsightsRepository
+public class WeeklyInsightsRepository : DynamoRepository, IWeeklyInsightsRepository
 {
     private const string TableName = "WeeklyInsights";
-    private readonly IAmazonDynamoDB _dynamo;
 
-    public WeeklyInsightsRepository(IAmazonDynamoDB dynamo) => _dynamo = dynamo;
+    public WeeklyInsightsRepository(IAmazonDynamoDB dynamo) : base(dynamo)
+    {
+    }
 
     public async Task<WeeklyInsights?> GetLatestByUserIdAsync(Guid userId, CancellationToken ct = default)
     {
-        var response = await _dynamo.QueryAsync(new QueryRequest
+        var response = await Dynamo.QueryAsync(new QueryRequest
         {
             TableName = TableName,
             KeyConditionExpression = "PK = :pk",
@@ -27,12 +28,12 @@ public class WeeklyInsightsRepository : IWeeklyInsightsRepository
             Limit = 1
         }, ct);
 
-        return response.Items?.FirstOrDefault() is { } item ? FromItem(item) : null;
+        return FirstItem(response) is { } item ? FromItem(item) : null;
     }
 
     public async Task<WeeklyInsights?> GetByUserIdAndWeekAsync(Guid userId, DateTime weekStartDate, CancellationToken ct = default)
     {
-        var response = await _dynamo.GetItemAsync(new GetItemRequest
+        var response = await Dynamo.GetItemAsync(new GetItemRequest
         {
             TableName = TableName,
             Key = new Dictionary<string, AttributeValue>
@@ -42,12 +43,12 @@ public class WeeklyInsightsRepository : IWeeklyInsightsRepository
             }
         }, ct);
 
-        return response.Item?.Count > 0 ? FromItem(response.Item) : null;
+        return IsMissingItem(response.Item) ? null : FromItem(response.Item);
     }
 
     public async Task UpsertAsync(WeeklyInsights insights, CancellationToken ct = default)
     {
-        await _dynamo.PutItemAsync(new PutItemRequest
+        await Dynamo.PutItemAsync(new PutItemRequest
         {
             TableName = TableName,
             Item = ToItem(insights)
@@ -56,7 +57,7 @@ public class WeeklyInsightsRepository : IWeeklyInsightsRepository
 
     public async Task<List<WeeklyInsights>> GetByUserIdAsync(Guid userId, int limit = 10, CancellationToken ct = default)
     {
-        var response = await _dynamo.QueryAsync(new QueryRequest
+        var response = await Dynamo.QueryAsync(new QueryRequest
         {
             TableName = TableName,
             KeyConditionExpression = "PK = :pk",
@@ -68,7 +69,7 @@ public class WeeklyInsightsRepository : IWeeklyInsightsRepository
             Limit = limit
         }, ct);
 
-        return response.Items?.Select(FromItem).ToList() ?? new List<WeeklyInsights>();
+        return Items(response).Select(FromItem).ToList();
     }
 
     private static Dictionary<string, AttributeValue> ToItem(WeeklyInsights insights) => new()

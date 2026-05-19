@@ -5,13 +5,20 @@ import 'package:intl/intl.dart';
 
 import '../../core/constants/app_icons.dart';
 import '../../core/constants/category_icons.dart';
+import '../../core/constants/category_visibility.dart';
+import '../../core/constants/generated/app_constants.g.dart';
+import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_layout.dart';
 import '../../core/errors/app_error.dart';
 import '../../core/routing/app_router.dart';
+import '../../core/utils/localized_number_input.dart';
 import '../../providers/budget_providers.dart';
 import '../../providers/exchange_rate_provider.dart';
 import '../../providers/user_provider.dart';
 import '../../services/budget_service.dart';
-import '../transactions/widgets/category_picker.dart';
+import '../../widgets/conscia_bottom_sheet.dart';
+import '../../widgets/screen_section.dart';
+import 'widgets/onboarding_step_scaffold.dart';
 
 class SuggestedBudgetsScreen extends ConsumerStatefulWidget {
   final String spendingPersonality;
@@ -33,6 +40,7 @@ class _SuggestedBudgetsScreenState
   final List<_BudgetDraft> _drafts = [];
   bool _budgetsInitialised = false;
   bool _saving = false;
+  String? _errorMessage;
 
   static const _midpoints = {
     'low': 300.0,
@@ -78,8 +86,15 @@ class _SuggestedBudgetsScreenState
 
   Future<void> _editAmount(int index) async {
     final draft = _drafts[index];
+    final locale = ref.read(userPreferencesProvider).locale;
     final controller = TextEditingController(
-      text: draft.amount > 0 ? draft.amount.toStringAsFixed(0) : '',
+      text: draft.amount > 0
+          ? LocalizedNumberInput.formatForInput(
+              draft.amount,
+              locale: locale,
+              decimalDigits: 0,
+            )
+          : '',
     );
 
     await showModalBottomSheet<void>(
@@ -88,28 +103,38 @@ class _SuggestedBudgetsScreenState
       isScrollControlled: true,
       builder: (context) => Padding(
         padding: EdgeInsets.only(
-          left: 16,
-          right: 16,
-          top: 16,
-          bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+          left: 20,
+          right: 20,
+          top: 8,
+          bottom: MediaQuery.of(context).viewInsets.bottom + 20,
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text('Edit ${draft.categoryName}'),
-            const SizedBox(height: 12),
+            const ConsciaSheetHandle(),
+            const SizedBox(height: 18),
+            ConsciaSheetHeader(
+              title: 'Edit ${draft.categoryName}',
+              subtitle:
+                  'Set the monthly limit for this suggested budget category.',
+            ),
+            const SizedBox(height: 16),
             TextField(
               controller: controller,
               autofocus: true,
               keyboardType:
                   const TextInputType.numberWithOptions(decimal: true),
+              inputFormatters: [LocalizedNumberInput.formatter(locale)],
               decoration: const InputDecoration(labelText: 'Monthly limit'),
             ),
             const SizedBox(height: 12),
             FilledButton(
               onPressed: () {
-                final value = double.tryParse(controller.text.trim());
+                final value = LocalizedNumberInput.parseAmount(
+                  controller.text,
+                  locale: locale,
+                );
                 if (value != null) {
                   setState(
                       () => _drafts[index] = draft.copyWith(amount: value));
@@ -129,33 +154,25 @@ class _SuggestedBudgetsScreenState
       context: context,
       useRootNavigator: true,
       isScrollControlled: true,
-      builder: (context) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-          child: SingleChildScrollView(
-            child: CategoryPicker(
-              selected: null,
-              maxVisible: 100,
-              onSelected: (category) {
-                if (_drafts.any((draft) => draft.categoryName == category)) {
-                  Navigator.of(context).pop();
-                  return;
-                }
-                setState(() {
-                  _drafts.add(_BudgetDraft(categoryName: category, amount: 0));
-                });
-                Navigator.of(context).pop();
-              },
-            ),
-          ),
-        ),
+      builder: (context) => _BudgetCategorySheet(
+        selectedCategories: _drafts.map((draft) => draft.categoryName).toSet(),
+        onSelected: (category) {
+          setState(() {
+            _drafts.add(_BudgetDraft(categoryName: category, amount: 0));
+            _errorMessage = null;
+          });
+          Navigator.of(context).pop();
+        },
       ),
     );
   }
 
   Future<void> _createBudgets() async {
     if (_saving) return;
-    setState(() => _saving = true);
+    setState(() {
+      _saving = true;
+      _errorMessage = null;
+    });
     final currencyCode = ref.read(userPreferencesProvider).currency;
     final notifier = ref.read(budgetListProvider.notifier);
 
@@ -175,9 +192,7 @@ class _SuggestedBudgetsScreenState
       if (!mounted) return;
       setState(() => _saving = false);
       final error = AppError.from(e, stackTrace: s);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error.userMessage)),
-      );
+      setState(() => _errorMessage = error.userMessage);
     }
   }
 
@@ -269,95 +284,93 @@ class _SuggestedBudgetsScreenState
     required bool ratesAvailable,
     String? helperText,
   }) {
-    return Scaffold(
-      appBar: AppBar(
-        automaticallyImplyLeading: false,
-        title: const Text('Suggested Budgets'),
-        actions: [
-          TextButton(
-            onPressed: _saving ? null : _skip,
-            child: const Text('Skip'),
+    final total = _drafts.fold<double>(
+      0,
+      (sum, draft) => sum + (ratesAvailable ? draft.amount : 0),
+    );
+
+    return OnboardingStepScaffold(
+      appBarTitle: 'Suggested Budgets',
+      stepLabel: 'Step 2 of 3',
+      heroTitle: 'Your first budget map',
+      heroSubtitle:
+          'Based on ${_personalityLabel(widget.spendingPersonality)} · ${_incomeLabel(widget.incomeRange)}. Tune anything before Conscia creates the set.',
+      heroChips: [
+        OnboardingHeroChip(
+          label: ratesAvailable ? formatter.format(total) : 'Preparing totals',
+          icon: Icons.account_balance_wallet_outlined,
+        ),
+        OnboardingHeroChip(
+          label: '${_drafts.length} categories',
+          icon: Icons.category_outlined,
+        ),
+        const OnboardingHeroChip(
+          label: 'Editable',
+          icon: Icons.tune_rounded,
+        ),
+      ],
+      actions: [
+        IconButton(
+          tooltip: 'Skip',
+          onPressed: _saving ? null : _skip,
+          icon: Icon(
+            AppIcons.chevronRight,
+            color: Theme.of(context).appColors.deepNavy,
           ),
-        ],
+        ),
+      ],
+      bottom: FilledButton(
+        onPressed: ratesAvailable && !_saving ? _createBudgets : null,
+        style: FilledButton.styleFrom(
+          minimumSize: const Size.fromHeight(48),
+        ),
+        child: _saving
+            ? const SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: Colors.white,
+                ),
+              )
+            : const Text('Create budgets'),
       ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (helperText != null) ...[
+          Text(
+            helperText,
+            style: textTheme.bodySmall?.copyWith(
+              color: colors.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: 16),
+        ],
+        ScreenSection(
+          title: 'Budget set',
+          subtitle:
+              'Tap a row to adjust the monthly cap before creating budgets.',
+          child: OnboardingActionList(
             children: [
-              Text(
-                'Step 2 of 3',
-                style: textTheme.labelSmall?.copyWith(
-                  color: colors.onSurfaceVariant,
-                ),
-              ),
-              const SizedBox(height: 16),
-              Text('Your suggested budgets', style: textTheme.headlineSmall),
-              const SizedBox(height: 4),
-              Text(
-                'Based on ${_personalityLabel(widget.spendingPersonality)} · ${_incomeLabel(widget.incomeRange)}.',
-                style: textTheme.bodyMedium?.copyWith(
-                  color: colors.onSurfaceVariant,
-                ),
-              ),
-              if (helperText != null) ...[
-                const SizedBox(height: 8),
-                Text(
-                  helperText,
-                  style: textTheme.bodySmall?.copyWith(
-                    color: colors.onSurfaceVariant,
-                  ),
-                ),
-              ],
-              const SizedBox(height: 24),
               ..._drafts.asMap().entries.map((entry) {
                 final index = entry.key;
                 final draft = entry.value;
-                return Card(
-                  margin: const EdgeInsets.only(bottom: 10),
-                  child: ListTile(
-                    leading: CategoryIcons.badge(
-                      draft.categoryName,
-                      size: 18,
-                    ),
-                    title: Text(draft.categoryName),
-                    trailing: TextButton(
-                      onPressed:
-                          ratesAvailable ? () => _editAmount(index) : null,
-                      child: Text(
-                        ratesAvailable ? formatter.format(draft.amount) : '—',
-                      ),
-                    ),
-                  ),
+                return _SuggestedBudgetRow(
+                  categoryName: draft.categoryName,
+                  amountLabel:
+                      ratesAvailable ? formatter.format(draft.amount) : '—',
+                  enabled: ratesAvailable,
+                  onTap: () => _editAmount(index),
                 );
               }),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: TextButton.icon(
-                  onPressed: _addCategory,
-                  icon: Icon(AppIcons.add, size: 16),
-                  label: const Text('Add category'),
-                ),
-              ),
-              const SizedBox(height: 24),
-              FilledButton(
-                onPressed: ratesAvailable && !_saving ? _createBudgets : null,
-                child: _saving
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white,
-                        ),
-                      )
-                    : const Text('Create budgets'),
-              ),
+              _AddBudgetCategoryRow(onTap: _addCategory),
             ],
           ),
         ),
-      ),
+        if (_errorMessage != null) ...[
+          OnboardingInlineNote(message: _errorMessage!),
+          const SizedBox(height: 16),
+        ],
+      ],
     );
   }
 
@@ -377,6 +390,268 @@ class _SuggestedBudgetsScreenState
       'prefer_not_to_say' => 'Prefer not to say',
       _ => 'Mid income',
     };
+  }
+}
+
+class _BudgetCategorySheet extends StatefulWidget {
+  const _BudgetCategorySheet({
+    required this.selectedCategories,
+    required this.onSelected,
+  });
+
+  final Set<String> selectedCategories;
+  final ValueChanged<String> onSelected;
+
+  @override
+  State<_BudgetCategorySheet> createState() => _BudgetCategorySheetState();
+}
+
+class _BudgetCategorySheetState extends State<_BudgetCategorySheet> {
+  String? _notice;
+
+  @override
+  Widget build(BuildContext context) {
+    final categories = visibleBudgetCategories(
+      isPremium: true,
+      categories: expenseCategories,
+    );
+
+    return SafeArea(
+      child: Padding(
+        padding: EdgeInsets.only(
+          left: 20,
+          right: 20,
+          top: 12,
+          bottom: MediaQuery.viewInsetsOf(context).bottom + 24,
+        ),
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Center(
+                child: ConsciaSheetHandle(),
+              ),
+              const SizedBox(height: 20),
+              const ConsciaSheetHeader(
+                title: 'Add budget category',
+                subtitle:
+                    'Pick another category to include in your first budget set.',
+              ),
+              if (_notice != null) ...[
+                const SizedBox(height: 14),
+                OnboardingInlineNote(message: _notice!),
+              ],
+              const SizedBox(height: 18),
+              OnboardingActionList(
+                children: [
+                  for (final category in categories)
+                    _BudgetCategoryOptionRow(
+                      categoryName: category,
+                      alreadyAdded:
+                          widget.selectedCategories.contains(category),
+                      onTap: () {
+                        if (widget.selectedCategories.contains(category)) {
+                          setState(
+                            () => _notice =
+                                '$category is already in your budget set.',
+                          );
+                          return;
+                        }
+                        widget.onSelected(category);
+                      },
+                    ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _BudgetCategoryOptionRow extends StatelessWidget {
+  const _BudgetCategoryOptionRow({
+    required this.categoryName,
+    required this.alreadyAdded,
+    required this.onTap,
+  });
+
+  final String categoryName;
+  final bool alreadyAdded;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).appColors;
+    final textTheme = Theme.of(context).textTheme;
+
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 13),
+        child: Row(
+          children: [
+            Opacity(
+              opacity: alreadyAdded ? 0.48 : 1,
+              child: CategoryIcons.badge(
+                categoryName,
+                size: AppLayout.listIconSize,
+                type: 'Expense',
+              ),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Text(
+                categoryName,
+                style: textTheme.bodyLarge?.copyWith(
+                  color: alreadyAdded ? colors.mutedInk : colors.ink,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            if (alreadyAdded)
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: colors.navySoft.withValues(alpha: 0.72),
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Text(
+                  'Added',
+                  style: textTheme.labelSmall?.copyWith(
+                    color: colors.deepNavy,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              )
+            else
+              Icon(
+                AppIcons.add,
+                size: 20,
+                color: colors.deepNavy,
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SuggestedBudgetRow extends StatelessWidget {
+  const _SuggestedBudgetRow({
+    required this.categoryName,
+    required this.amountLabel,
+    required this.enabled,
+    required this.onTap,
+  });
+
+  final String categoryName;
+  final String amountLabel;
+  final bool enabled;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).appColors;
+    final textTheme = Theme.of(context).textTheme;
+
+    return InkWell(
+      onTap: enabled ? onTap : null,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 14),
+        child: Row(
+          children: [
+            CategoryIcons.badge(
+              categoryName,
+              size: AppLayout.listIconSize,
+              type: 'Expense',
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Text(
+                categoryName,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: textTheme.bodyLarge?.copyWith(
+                  color: colors.ink,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Text(
+              amountLabel,
+              style: textTheme.bodyMedium?.copyWith(
+                color: colors.deepNavy,
+                fontWeight: FontWeight.w800,
+                fontFeatures: const [FontFeature.tabularFigures()],
+              ),
+            ),
+            const SizedBox(width: 8),
+            Icon(
+              AppIcons.chevronRight,
+              size: 18,
+              color: enabled
+                  ? colors.deepNavy.withValues(alpha: 0.54)
+                  : colors.softInk.withValues(alpha: 0.48),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _AddBudgetCategoryRow extends StatelessWidget {
+  const _AddBudgetCategoryRow({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).appColors;
+    final textTheme = Theme.of(context).textTheme;
+
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 14),
+        child: Row(
+          children: [
+            Container(
+              width: AppLayout.listIconSize + 12,
+              height: AppLayout.listIconSize + 12,
+              decoration: BoxDecoration(
+                color: colors.navySoft.withValues(alpha: 0.58),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Icon(AppIcons.add, size: 19, color: colors.deepNavy),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Text(
+                'Add category',
+                style: textTheme.bodyMedium?.copyWith(
+                  color: colors.deepNavy,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+            Icon(
+              AppIcons.chevronRight,
+              size: 18,
+              color: colors.deepNavy.withValues(alpha: 0.54),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 

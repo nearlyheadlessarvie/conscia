@@ -3,15 +3,21 @@ import 'package:conscia_app/providers/usage_provider.dart';
 import 'package:conscia_app/providers/subscription_provider.dart';
 import 'package:conscia_app/providers/user_provider.dart';
 import 'package:conscia_app/screens/receipts/receipt_review_screen.dart';
+import 'package:conscia_app/screens/transactions/widgets/transaction_style_category_selector.dart';
 import 'package:conscia_app/services/subscription_service.dart';
 import 'package:conscia_app/services/user_service.dart';
+import 'package:conscia_app/widgets/amount_hero_field.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-Future<void> _pumpReceiptReviewScreen(WidgetTester tester) async {
+Future<void> _pumpReceiptReviewScreen(
+  WidgetTester tester, {
+  Map<String, dynamic>? extractedData,
+  String userCurrencyCode = 'USD',
+}) async {
   SharedPreferences.setMockInitialValues(const {
     'location_suggestions_enabled': false,
     'location_suggestions_prompted': true,
@@ -29,17 +35,18 @@ Future<void> _pumpReceiptReviewScreen(WidgetTester tester) async {
                 data: {
                   'ocrConfidence': 0.82,
                   'needsReview': true,
-                  'extractedData': {
-                    'merchant': 'Corner Cafe',
-                    'total': 18.50,
-                    'currencyCode': 'USD',
-                    'category': 'Dining',
-                    'date': '2026-05-01T00:00:00.000Z',
-                    'items': [
-                      {'name': 'Latte', 'amount': 6.5},
-                      {'name': 'Sandwich', 'amount': 12.0},
-                    ],
-                  },
+                  'extractedData': extractedData ??
+                      {
+                        'merchant': 'Corner Cafe',
+                        'total': 18.50,
+                        'currencyCode': 'USD',
+                        'category': 'Dining',
+                        'date': '2026-05-01T00:00:00.000Z',
+                        'items': [
+                          {'name': 'Latte', 'amount': 6.5},
+                          {'name': 'Sandwich', 'amount': 12.0},
+                        ],
+                      },
                 },
               ),
             );
@@ -56,6 +63,9 @@ Future<void> _pumpReceiptReviewScreen(WidgetTester tester) async {
       overrides: [
         dioProvider.overrideWithValue(dio),
         sharedPreferencesProvider.overrideWithValue(prefs),
+        userPreferencesProvider.overrideWithValue(
+          (currency: userCurrencyCode, locale: 'en_US'),
+        ),
         subscriptionProvider.overrideWith(
           (ref) async => const SubscriptionStatus(
             tier: 'premium',
@@ -66,7 +76,7 @@ Future<void> _pumpReceiptReviewScreen(WidgetTester tester) async {
           (ref) async => UserProfile(
             id: 'user-1',
             email: 'review@example.com',
-            currencyCode: 'USD',
+            currencyCode: userCurrencyCode,
             locale: 'en_US',
             createdAt: DateTime(2026),
             hasCompletedOnboarding: true,
@@ -88,9 +98,30 @@ void main() {
       (tester) async {
     await _pumpReceiptReviewScreen(tester);
 
-    expect(find.text('AI read quality'), findsOneWidget);
-    expect(find.text('Transaction details'), findsOneWidget);
+    expect(find.text('AI READ QUALITY'), findsOneWidget);
+    expect(find.text('TRANSACTION DETAILS'), findsOneWidget);
+    expect(find.byType(AmountHeroField), findsOneWidget);
+    expect(find.byType(TransactionStyleCategorySelector), findsOneWidget);
     expect(find.text('Confirm and save'), findsOneWidget);
     expect(find.text('Latte'), findsOneWidget);
+  });
+
+  testWidgets('receipt review falls back to user currency when scan has none',
+      (tester) async {
+    await _pumpReceiptReviewScreen(
+      tester,
+      userCurrencyCode: 'PHP',
+      extractedData: {
+        'merchant': 'Unknown Merchant',
+        'total': 0,
+        'currencyCode': null,
+        'category': null,
+        'date': '2026-05-01T00:00:00.000Z',
+        'items': <Map<String, Object?>>[],
+      },
+    );
+
+    expect(find.text('PHP'), findsOneWidget);
+    expect(find.text('USD'), findsNothing);
   });
 }

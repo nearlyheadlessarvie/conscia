@@ -87,18 +87,10 @@ void main() {
       ),
     );
 
-    await tester.enterText(
-      find.widgetWithText(TextFormField, 'Email'),
-      'nearlyheadlessarvie@live.com.ph',
-    );
-    await tester.enterText(
-      find.widgetWithText(TextFormField, 'Password'),
-      'Secure123',
-    );
-    await tester.enterText(
-      find.widgetWithText(TextFormField, 'Confirm Password'),
-      'Secure123',
-    );
+    final fields = find.byType(TextField);
+    await tester.enterText(fields.at(0), 'nearlyheadlessarvie@live.com.ph');
+    await tester.enterText(fields.at(1), 'Secure123');
+    await tester.enterText(fields.at(2), 'Secure123');
 
     await tester.tap(find.widgetWithText(FilledButton, 'Create Account'));
     await tester.pump();
@@ -110,5 +102,6 @@ void main() {
     );
     expect(find.textContaining('Reference: SIGNUP01'), findsNothing);
     expect(find.textContaining('DioException'), findsNothing);
+    expect(find.text('Dismiss'), findsNothing);
   });
 }

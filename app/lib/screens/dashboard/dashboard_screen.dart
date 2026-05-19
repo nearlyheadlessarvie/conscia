@@ -1,13 +1,18 @@
+import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import 'package:conscia_app/core/constants/generated/app_constants.g.dart';
+import 'package:conscia_app/core/constants/category_icons.dart';
 import 'package:conscia_app/core/assets/mascot_sprite_sheet.dart';
 import 'package:conscia_app/core/routing/app_router.dart';
+import 'package:conscia_app/core/theme/app_colors.dart';
+import 'package:conscia_app/core/theme/app_layout.dart';
+import 'package:conscia_app/core/utils/currency_formatter.dart';
 import 'package:conscia_app/models/conscience_journey.dart';
-import 'package:conscia_app/models/insight_feed_item.dart';
 import 'package:conscia_app/providers/alert_provider.dart';
 import 'package:conscia_app/providers/behavioral_insights_provider.dart';
 import 'package:conscia_app/providers/budget_providers.dart';
@@ -15,19 +20,24 @@ import 'package:conscia_app/providers/conscience_journey_provider.dart';
 import 'package:conscia_app/providers/insight_feed_provider.dart';
 import 'package:conscia_app/providers/subscription_provider.dart';
 import 'package:conscia_app/providers/transaction_providers.dart';
+import 'package:conscia_app/providers/user_provider.dart';
 import 'package:conscia_app/providers/usage_provider.dart';
-import 'package:conscia_app/screens/dashboard/widgets/budget_summary_card.dart';
-import 'package:conscia_app/screens/dashboard/widgets/in_app_alert_banner.dart';
-import 'package:conscia_app/screens/dashboard/widgets/budget_warning_banner.dart';
 import 'package:conscia_app/screens/dashboard/widgets/recent_transaction_tile.dart';
 import 'package:conscia_app/screens/dashboard/widgets/regret_prompt_card.dart';
 import 'package:conscia_app/screens/budgets/widgets/budget_form_sheet.dart';
+import 'package:conscia_app/screens/transactions/widgets/editorial_transaction_row.dart';
 import 'package:conscia_app/screens/transactions/widgets/transaction_tile.dart';
+import 'package:conscia_app/services/budget_service.dart';
 import 'package:conscia_app/services/transaction_service.dart';
+import 'package:conscia_app/services/user_service.dart';
 import 'package:conscia_app/widgets/empty_state.dart';
+import 'package:conscia_app/widgets/budget_mix_visuals.dart';
+import 'package:conscia_app/widgets/conscia_bottom_sheet.dart';
+import 'package:conscia_app/widgets/hero_shortcut_card.dart';
 import 'package:conscia_app/widgets/premium_upgrade_dialog.dart';
+import 'package:conscia_app/widgets/scope_pill_switch.dart';
 import 'package:conscia_app/widgets/skeleton_loader.dart';
-import 'dart:async';
+import 'package:conscia_app/widgets/swipe_action_tile.dart';
 
 class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
@@ -37,8 +47,70 @@ class DashboardScreen extends ConsumerStatefulWidget {
 }
 
 class _DashboardScreenState extends ConsumerState<DashboardScreen> {
-  bool _bannerDismissed = false;
   final Set<String> _dismissedPrompts = {};
+  final ScrollController _scrollController = ScrollController();
+  double _scrollOffset = 0;
+  bool _hasRestoredScrollOffset = false;
+  String _budgetScope = 'personal';
+
+  static const _scrollOffsetStorageIdentifier =
+      'dashboard-header-scroll-offset';
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(_handleScroll);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_hasRestoredScrollOffset) {
+      final restoredOffset = PageStorage.maybeOf(context)?.readState(
+        context,
+        identifier: _scrollOffsetStorageIdentifier,
+      );
+      if (restoredOffset is num) {
+        _scrollOffset = restoredOffset.toDouble();
+      }
+      _hasRestoredScrollOffset = true;
+    }
+    _syncScrollOffsetAfterLayout();
+  }
+
+  @override
+  void dispose() {
+    _scrollController
+      ..removeListener(_handleScroll)
+      ..dispose();
+    super.dispose();
+  }
+
+  void _handleScroll() {
+    final nextOffset =
+        _scrollController.hasClients ? _scrollController.offset : 0.0;
+    PageStorage.maybeOf(context)?.writeState(
+      context,
+      nextOffset,
+      identifier: _scrollOffsetStorageIdentifier,
+    );
+    if ((nextOffset - _scrollOffset).abs() < 1) return;
+    setState(() => _scrollOffset = nextOffset);
+  }
+
+  void _syncScrollOffsetAfterLayout() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_scrollController.hasClients) return;
+      final nextOffset = _scrollController.offset;
+      PageStorage.maybeOf(context)?.writeState(
+        context,
+        nextOffset,
+        identifier: _scrollOffsetStorageIdentifier,
+      );
+      if ((nextOffset - _scrollOffset).abs() < 1) return;
+      setState(() => _scrollOffset = nextOffset);
+    });
+  }
 
   Future<void> _onRefresh() async {
     await Future.wait([
@@ -115,79 +187,142 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     context.push(alert.actionRoute ?? AppRoutes.budgets);
   }
 
-  void _showNotificationsSheet() {
+  void _showNotificationsSheet(List<AppAlert> initialAlerts) {
     showModalBottomSheet(
       context: context,
       useRootNavigator: true,
       useSafeArea: true,
       isScrollControlled: true,
       builder: (sheetContext) {
+        var sheetAlerts = initialAlerts;
         return DraggableScrollableSheet(
           expand: false,
           initialChildSize: 0.62,
           minChildSize: 0.32,
           maxChildSize: 0.9,
           builder: (context, scrollController) {
-            return Consumer(
-              builder: (context, ref, _) {
-                final alerts = ref.watch(activeAlertsProvider);
+            return StatefulBuilder(
+              builder: (context, setSheetState) {
                 final colors = Theme.of(context).colorScheme;
                 final textTheme = Theme.of(context).textTheme;
+                final grouped = _groupAlerts(sheetAlerts);
 
-                return ListView(
+                return CustomScrollView(
                   controller: scrollController,
-                  padding: const EdgeInsets.fromLTRB(20, 12, 20, 28),
-                  children: [
-                    Center(
-                      child: Container(
-                        width: 36,
-                        height: 4,
-                        decoration: BoxDecoration(
-                          color: colors.outlineVariant,
-                          borderRadius: BorderRadius.circular(99),
+                  slivers: [
+                    SliverPadding(
+                      padding: const EdgeInsets.fromLTRB(20, 8, 20, 4),
+                      sliver: SliverToBoxAdapter(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const ConsciaSheetHandle(),
+                            const SizedBox(height: 18),
+                            ConsciaSheetHeader(
+                              title: 'Notifications',
+                              subtitle: sheetAlerts.isEmpty
+                                  ? 'Nothing needs your attention right now.'
+                                  : 'The latest nudges and reminders from Conscia.',
+                            ),
+                            const SizedBox(height: 16),
+                          ],
                         ),
                       ),
                     ),
-                    const SizedBox(height: 18),
-                    Text(
-                      'Notifications',
-                      style: textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      alerts.isEmpty
-                          ? 'Nothing needs your attention right now.'
-                          : 'The latest nudges and reminders from Conscia.',
-                      style: textTheme.bodySmall?.copyWith(
-                        color: colors.onSurfaceVariant,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    if (alerts.isEmpty)
-                      const EmptyState(
-                        icon: Icons.notifications_none_rounded,
-                        title: 'All clear',
-                        subtitle: 'New reminders will show up here.',
+                    if (sheetAlerts.isEmpty)
+                      const SliverPadding(
+                        padding: EdgeInsets.symmetric(horizontal: 20),
+                        sliver: SliverToBoxAdapter(
+                          child: EmptyState(
+                            icon: Icons.notifications_none_rounded,
+                            title: 'All clear',
+                            subtitle: 'New reminders will show up here.',
+                          ),
+                        ),
                       )
                     else
-                      for (final alert in alerts) ...[
-                        _NotificationListTile(
-                          alert: alert,
-                          onAction: alert.actionLabel == null &&
-                                  alert.type != 'budget_nudge'
-                              ? null
-                              : () {
-                                  Navigator.of(sheetContext).pop();
-                                  _handleAlertAction(alert);
-                                },
-                          onDismiss: () => ref
-                              .read(dismissedAlertIdsProvider.notifier)
-                              .dismiss(alert.id),
+                      for (final entry in grouped.entries) ...[
+                        SliverPadding(
+                          padding: const EdgeInsets.fromLTRB(20, 4, 20, 6),
+                          sliver: SliverToBoxAdapter(
+                            child: Text(
+                              entry.key,
+                              style: textTheme.labelSmall?.copyWith(
+                                color: colors.onSurfaceVariant,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 0.6,
+                              ),
+                            ),
+                          ),
                         ),
-                        const SizedBox(height: 10),
+                        SliverToBoxAdapter(
+                          child: Divider(
+                            height: 1,
+                            indent: 20,
+                            endIndent: 20,
+                            color: colors.outlineVariant,
+                          ),
+                        ),
+                        SliverList.separated(
+                          itemCount: entry.value.length,
+                          separatorBuilder: (_, __) => Divider(
+                            height: 1,
+                            indent: 76,
+                            endIndent: 20,
+                            color: colors.outlineVariant.withValues(alpha: 0.6),
+                          ),
+                          itemBuilder: (context, i) {
+                            final alert = entry.value[i];
+                            void dismiss() {
+                              ref
+                                  .read(dismissedAlertIdsProvider.notifier)
+                                  .dismiss(alert.id);
+                              setSheetState(() {
+                                sheetAlerts = sheetAlerts
+                                    .where((item) => item.id != alert.id)
+                                    .toList(growable: false);
+                              });
+                            }
+
+                            return Dismissible(
+                              key: ValueKey(alert.id),
+                              direction: DismissDirection.endToStart,
+                              onDismissed: (_) => dismiss(),
+                              secondaryBackground: SwipeActionBackground(
+                                alignment: Alignment.centerRight,
+                                padding: const EdgeInsets.only(right: 12),
+                                children: [
+                                  SwipeActionTile(
+                                    icon: Icons.delete_sweep_rounded,
+                                    label: 'Dismiss',
+                                    foregroundColor:
+                                        Theme.of(context).appColors.expense,
+                                    backgroundColor:
+                                        Theme.of(context).appColors.expenseSoft,
+                                    onTap: () {},
+                                  ),
+                                ],
+                              ),
+                              background: const SizedBox.shrink(),
+                              child: ColoredBox(
+                                color: Theme.of(context).appColors.paper,
+                                child: _NotificationListTile(
+                                  alert: alert,
+                                  onAction: alert.actionLabel == null &&
+                                          alert.type != 'budget_nudge'
+                                      ? null
+                                      : () {
+                                          Navigator.of(sheetContext).pop();
+                                          _handleAlertAction(alert);
+                                        },
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                        const SliverToBoxAdapter(child: SizedBox(height: 12)),
                       ],
+                    const SliverToBoxAdapter(child: SizedBox(height: 16)),
                   ],
                 );
               },
@@ -198,20 +333,64 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     );
   }
 
+  static Map<String, List<AppAlert>> _groupAlerts(List<AppAlert> alerts) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final yesterday = today.subtract(const Duration(days: 1));
+    final weekAgo = today.subtract(const Duration(days: 7));
+
+    final groups = <String, List<AppAlert>>{
+      'Today': [],
+      'Yesterday': [],
+      'A week ago': [],
+      'Older': [],
+    };
+
+    for (final alert in alerts) {
+      final d = DateTime(
+          alert.createdAt.year, alert.createdAt.month, alert.createdAt.day);
+      if (!d.isBefore(today)) {
+        groups['Today']!.add(alert);
+      } else if (!d.isBefore(yesterday)) {
+        groups['Yesterday']!.add(alert);
+      } else if (d.isAfter(weekAgo)) {
+        groups['A week ago']!.add(alert);
+      } else {
+        groups['Older']!.add(alert);
+      }
+    }
+
+    return Map.fromEntries(groups.entries.where((e) => e.value.isNotEmpty));
+  }
+
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
     final budgetState = ref.watch(budgetListProvider);
     final txState = ref.watch(transactionListProvider);
     final insightSummaryState = ref.watch(dashboardInsightSummaryProvider);
     final journeyState = ref.watch(conscienceJourneyProvider);
-    final alerts = ref.watch(activeAlertsProvider);
+    final profile = ref.watch(currentUserProvider).valueOrNull;
+    final userPreferences = ref.watch(userPreferencesProvider);
+    final alerts =
+        _visibleAlerts(ref.watch(activeAlertsProvider), budgetState.budgets);
 
     final budgets = budgetState.budgets;
+    final hasPersonalBudgets = budgets.any((budget) => !budget.isFamily);
+    final hasFamilyBudgets = budgets.any((budget) => budget.isFamily);
+    final effectiveBudgetScope = hasPersonalBudgets ? _budgetScope : 'family';
+    final visibleBudgets = hasFamilyBudgets
+        ? budgets
+            .where(
+              (budget) => effectiveBudgetScope == 'family'
+                  ? budget.isFamily
+                  : !budget.isFamily,
+            )
+            .toList(growable: false)
+        : budgets;
     final transactions = txState.transactions;
     final recentTransactions = transactions.take(5).toList();
-    final highlightedAlert = alerts.isNotEmpty ? alerts.first : null;
+    final insightSummary = insightSummaryState.valueOrNull;
+    final journey = journeyState.valueOrNull;
     final regretPrompts = transactions
         .where((t) =>
             t.regretLevel == null &&
@@ -219,260 +398,957 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             !_dismissedPrompts.contains(t.id))
         .take(3)
         .toList();
+    final greetingName = _greetingName(profile);
+    final monthExpenseTotal = _currentMonthExpenseTotal(
+      transactions,
+      userPreferences.currency,
+    );
+    final stickyProgress = ((_scrollOffset - 5) / 10).clamp(0.0, 1.0);
 
-    final overBudgetCount = budgets.where((b) => b.percentage >= 0.8).length;
-
-    return RefreshIndicator(
-      onRefresh: _onRefresh,
-      child: CustomScrollView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        slivers: [
-          SliverAppBar(
-            floating: true,
-            pinned: true,
-            title: Text(
-              'Conscia',
-              style: GoogleFonts.poppins(
-                textStyle: textTheme.titleLarge,
-                color: colors.primary,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            actions: [
-              IconButton(
-                tooltip: 'Notifications',
-                icon: _NotificationBell(count: alerts.length),
-                onPressed: _showNotificationsSheet,
-              ),
-            ],
-          ),
-          if (overBudgetCount > 0 && !_bannerDismissed)
-            SliverToBoxAdapter(
-              child: BudgetWarningBanner(
-                overBudgetCount: overBudgetCount,
-                onDismiss: () => setState(() => _bannerDismissed = true),
-              ),
-            ),
-          if (highlightedAlert != null)
-            SliverToBoxAdapter(
-              child: InAppAlertBanner(
-                title: highlightedAlert.title,
-                message: highlightedAlert.message,
-                actionLabel: highlightedAlert.actionLabel ??
-                    (highlightedAlert.type == 'budget_nudge'
-                        ? 'Add budget'
-                        : null),
-                onAction: (highlightedAlert.actionRoute == null &&
-                        highlightedAlert.type != 'budget_nudge')
-                    ? null
-                    : () => _handleAlertAction(highlightedAlert),
-                onDismiss: () => ref
-                    .read(dismissedAlertIdsProvider.notifier)
-                    .dismiss(highlightedAlert.id),
-              ),
-            ),
-          ...insightSummaryState.when<List<Widget>>(
-            loading: () => [
+    return Stack(
+      children: [
+        RefreshIndicator(
+          onRefresh: _onRefresh,
+          child: CustomScrollView(
+            controller: _scrollController,
+            key: const PageStorageKey('dashboard-shell-scroll'),
+            physics: const AlwaysScrollableScrollPhysics(),
+            slivers: [
               SliverToBoxAdapter(
-                child: _buildSectionHeader(context, 'Your Insights'),
-              ),
-              const SliverPadding(
-                padding: EdgeInsets.symmetric(horizontal: 16),
-                sliver: SliverToBoxAdapter(
-                  child: DashboardInsightSummarySkeletonCard(),
+                child: _DashboardEditorialHeroCard(
+                  monthExpenseTotal: monthExpenseTotal,
+                  currencyCode: userPreferences.currency,
+                  locale: userPreferences.locale,
+                  journey: journey,
+                  summary: insightSummary,
+                  loading: (journeyState.isLoading && journey == null) ||
+                      (insightSummaryState.isLoading && insightSummary == null),
+                  onJourneyTap: () => context.push(AppRoutes.journey),
+                  onInsightsTap: () => context.push(AppRoutes.insights),
                 ),
               ),
-            ],
-            data: (summary) {
-              if (summary == null) return <Widget>[];
-              return [
+              SliverToBoxAdapter(
+                child: _buildSectionHeader(context, 'BUDGETS'),
+              ),
+              if (budgetState.isLoading && budgets.isEmpty)
+                const SliverPadding(
+                  padding: EdgeInsets.symmetric(horizontal: 20),
+                  sliver: SliverList(
+                    delegate: SliverChildListDelegate.fixed(
+                      [
+                        _FlatBudgetRowSkeleton(),
+                        Divider(height: 1),
+                        _FlatBudgetRowSkeleton(),
+                        Divider(height: 1),
+                        _FlatBudgetRowSkeleton(),
+                      ],
+                    ),
+                  ),
+                )
+              else if (budgets.isEmpty)
                 SliverToBoxAdapter(
-                  child: _buildSectionHeader(context, 'Your Insights'),
+                  child: EmptyState(
+                    icon: Icons.account_balance_wallet_outlined,
+                    title: 'No budgets yet',
+                    subtitle: 'Set up budgets to track your spending limits.',
+                    actionLabel: 'Add Budget',
+                    onAction: () => context.push(AppRoutes.budgets),
+                  ),
+                )
+              else
+                SliverPadding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  sliver: SliverToBoxAdapter(
+                    child: _DashboardBudgetSummary(
+                      budgets: visibleBudgets,
+                      selectedScope: effectiveBudgetScope,
+                      showScopeSwitch: hasPersonalBudgets && hasFamilyBudgets,
+                      locale: userPreferences.locale,
+                      onScopeChanged: (value) =>
+                          setState(() => _budgetScope = value.toLowerCase()),
+                      onManageTap: () => context.push(AppRoutes.budgets),
+                    ),
+                  ),
+                ),
+              if (regretPrompts.isNotEmpty) ...[
+                SliverToBoxAdapter(
+                  child: _buildSectionHeader(context, 'REFLECT'),
                 ),
                 SliverPadding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  sliver: SliverToBoxAdapter(
-                    child: _DashboardInsightSummaryCard(
-                      summary: summary,
-                      onTap: () => context.push(AppRoutes.insights),
-                    ),
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  sliver: SliverList.builder(
+                    itemCount: regretPrompts.length,
+                    itemBuilder: (context, index) {
+                      final tx = regretPrompts[index];
+                      final displayCounterparty = tx.description.isNotEmpty
+                          ? tx.description
+                          : 'Unknown';
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: RegretPromptCard(
+                          categoryBadge: TransactionTile.badgeFor(
+                            tx.category,
+                            size: 30,
+                            filled: false,
+                          ),
+                          counterparty: displayCounterparty,
+                          amount: tx.amount,
+                          currencyCode: tx.currencyCode,
+                          date: tx.date,
+                          onWorthIt: () => _recordReflection(tx, 'worth_it'),
+                          onNotSure: () => _recordReflection(tx, 'not_sure'),
+                          onRegret: () => _recordReflection(tx, 'regret'),
+                          onDismiss: () =>
+                              setState(() => _dismissedPrompts.add(tx.id)),
+                        ),
+                      );
+                    },
                   ),
                 ),
-              ];
-            },
-            error: (_, __) => <Widget>[],
-          ),
-          ...journeyState.when<List<Widget>>(
-            loading: () => [
+              ],
               SliverToBoxAdapter(
-                child: _buildSectionHeader(context, 'Journey'),
+                child: _buildSectionHeader(context, 'RECENT TRANSACTIONS'),
               ),
-              const SliverPadding(
-                padding: EdgeInsets.symmetric(horizontal: 16),
-                sliver: SliverToBoxAdapter(
-                  child: DashboardJourneySkeletonCard(),
-                ),
-              ),
-            ],
-            error: (_, __) => <Widget>[],
-            data: (journey) => [
-              SliverToBoxAdapter(
-                child: _buildSectionHeader(context, 'Journey'),
-              ),
-              SliverPadding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                sliver: SliverToBoxAdapter(
-                  child: _DashboardJourneyCard(
-                    journey: journey,
-                    onTap: () => context.push(AppRoutes.journey),
+              if (txState.isLoading && transactions.isEmpty)
+                const SliverPadding(
+                  padding: EdgeInsets.symmetric(horizontal: 20),
+                  sliver: SliverList(
+                    delegate: SliverChildListDelegate.fixed(
+                      [
+                        _FlatTransactionRowSkeleton(),
+                        Divider(height: 1),
+                        _FlatTransactionRowSkeleton(),
+                        Divider(height: 1),
+                        _FlatTransactionRowSkeleton(),
+                      ],
+                    ),
+                  ),
+                )
+              else if (transactions.isEmpty)
+                SliverToBoxAdapter(
+                  child: EmptyState(
+                    icon: Icons.receipt_long_outlined,
+                    title: 'No transactions yet',
+                    subtitle: 'Add your first transaction to get started.',
+                    actionLabel: 'Add Transaction',
+                    onAction: () => context.push(AppRoutes.addTransaction),
+                  ),
+                )
+              else
+                SliverToBoxAdapter(
+                  child: EditorialTransactionRowsGroup(
+                    horizontalPadding: 20,
+                    children: [
+                      for (final transaction in recentTransactions)
+                        RecentTransactionTile(
+                          id: transaction.id,
+                          categoryBadge: CategoryIcons.badge(
+                            displayCategoryForTransaction(transaction),
+                            size: 30,
+                            type: transaction.type == 'income'
+                                ? 'Income'
+                                : 'Expense',
+                          ),
+                          counterparty: transaction.description.trim().isEmpty
+                              ? 'Unknown'
+                              : transaction.description.trim(),
+                          category: displayCategoryForTransaction(transaction),
+                          date: transaction.date,
+                          amount: transaction.amount,
+                          isIncome: transaction.type == 'income',
+                          currencyCode: transaction.currencyCode,
+                          regretLevel: transaction.regretLevel,
+                          isRecurring: transaction.isRecurring,
+                          isFamily: transaction.isFamily,
+                          locale: userPreferences.locale,
+                        ),
+                    ],
                   ),
                 ),
-              ),
+              const SliverPadding(padding: EdgeInsets.only(bottom: 32)),
             ],
           ),
-          SliverToBoxAdapter(
-            child: _buildSectionHeader(context, 'Budgets'),
+        ),
+        Positioned(
+          top: 0,
+          left: 0,
+          right: 0,
+          child: _DashboardStickyOverlayHeader(
+            progress: stickyProgress,
+            topPadding: MediaQuery.paddingOf(context).top,
+            profile: profile,
+            greetingName: greetingName,
+            alertsCount: alerts.length,
+            onNotificationsTap: () => _showNotificationsSheet(alerts),
           ),
-          if (budgetState.isLoading && budgets.isEmpty)
-            SliverToBoxAdapter(
-              child: SizedBox(
-                height: 160,
-                child: ListView.separated(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  itemCount: 3,
-                  separatorBuilder: (_, __) => const SizedBox(width: 12),
-                  itemBuilder: (_, __) => const BudgetSummarySkeletonCard(),
-                ),
-              ),
-            )
-          else if (budgets.isEmpty)
-            SliverToBoxAdapter(
-              child: EmptyState(
-                icon: Icons.account_balance_wallet_outlined,
-                title: 'No budgets yet',
-                subtitle: 'Set up budgets to track your spending limits.',
-                actionLabel: 'Add Budget',
-                onAction: () => context.push(AppRoutes.budgets),
-              ),
-            )
-          else
-            SliverToBoxAdapter(
-              child: SizedBox(
-                height: 160,
-                child: ListView.separated(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  itemCount: budgets.length,
-                  separatorBuilder: (_, __) => const SizedBox(width: 12),
-                  itemBuilder: (context, index) {
-                    final b = budgets[index];
-                    return BudgetSummaryCard(
-                      categoryBadge: TransactionTile.badgeFor(
-                        b.category,
-                        size: 16,
-                        filled: false,
-                      ),
-                      categoryName: b.category,
-                      spent: b.spent,
-                      limit: b.monthlyLimit,
-                      currencyCode: b.currencyCode,
-                    );
-                  },
-                ),
-              ),
+        ),
+      ],
+    );
+  }
+
+  String _greetingName(UserProfile? profile) {
+    final displayName = profile?.displayName?.trim();
+    if (displayName != null && displayName.isNotEmpty) {
+      return displayName;
+    }
+    final email = profile?.email.trim();
+    if (email != null && email.isNotEmpty) {
+      return email.split('@').first;
+    }
+    return 'there';
+  }
+
+  double _currentMonthExpenseTotal(
+    List<Transaction> transactions,
+    String currencyCode,
+  ) {
+    final now = DateTime.now();
+    return transactions
+        .where((t) => t.type != 'income')
+        .where((t) => t.date.year == now.year && t.date.month == now.month)
+        .fold(0.0, (sum, t) => sum + _amountInUserCurrency(t, currencyCode));
+  }
+
+  double _amountInUserCurrency(Transaction tx, String currencyCode) {
+    final amount = tx.amount.abs();
+    if (tx.currencyCode == currencyCode) return amount;
+    final rate = tx.exchangeRateToBase;
+    if (rate == null || rate <= 0) return amount;
+    return amount * rate;
+  }
+
+  List<AppAlert> _visibleAlerts(List<AppAlert> alerts, List<Budget> budgets) {
+    final budgetCategories =
+        budgets.map((budget) => budget.category.toLowerCase()).toSet();
+    return alerts.where((alert) {
+      if (alert.type != 'budget_nudge') {
+        return true;
+      }
+      final category = alert.category?.toLowerCase();
+      return category == null || !budgetCategories.contains(category);
+    }).toList(growable: false);
+  }
+
+  Widget _buildSectionHeader(BuildContext context, String title) {
+    final colors = Theme.of(context).appColors;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 24, 20, 12),
+      child: Text(
+        title,
+        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              color: colors.mutedInk,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 1.0,
             ),
-          if (regretPrompts.isNotEmpty) ...[
-            SliverToBoxAdapter(
-              child: _buildSectionHeader(context, 'Reflect'),
-            ),
-            SliverPadding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              sliver: SliverList.builder(
-                itemCount: regretPrompts.length,
-                itemBuilder: (context, index) {
-                  final tx = regretPrompts[index];
-                  final displayCounterparty =
-                      tx.description.isNotEmpty ? tx.description : 'Unknown';
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
-                    child: RegretPromptCard(
-                      categoryBadge: TransactionTile.badgeFor(
-                        tx.category,
-                        size: 16,
-                        filled: false,
-                      ),
-                      counterparty: displayCounterparty,
-                      amount: tx.amount,
-                      currencyCode: tx.currencyCode,
-                      date: tx.date,
-                      onWorthIt: () => _recordReflection(tx, 'worth_it'),
-                      onNotSure: () => _recordReflection(tx, 'not_sure'),
-                      onRegret: () => _recordReflection(tx, 'regret'),
-                      onDismiss: () =>
-                          setState(() => _dismissedPrompts.add(tx.id)),
-                    ),
-                  );
-                },
-              ),
-            ),
+      ),
+    );
+  }
+}
+
+class _DashboardEditorialHeroCard extends StatelessWidget {
+  const _DashboardEditorialHeroCard({
+    required this.monthExpenseTotal,
+    required this.currencyCode,
+    required this.locale,
+    required this.journey,
+    required this.summary,
+    required this.loading,
+    required this.onJourneyTap,
+    required this.onInsightsTap,
+  });
+
+  final double monthExpenseTotal;
+  final String currencyCode;
+  final String? locale;
+  final ConscienceJourneySummary? journey;
+  final DashboardInsightSummary? summary;
+  final bool loading;
+  final VoidCallback onJourneyTap;
+  final VoidCallback onInsightsTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).appColors;
+    final textTheme = Theme.of(context).textTheme;
+
+    if (loading) {
+      return const _DashboardHeroSkeleton();
+    }
+
+    final heroTopPadding = AppLayout.dashboardHeroTop(context);
+
+    return Container(
+      key: const ValueKey('dashboard-editorial-hero'),
+      width: double.infinity,
+      padding: EdgeInsets.fromLTRB(20, heroTopPadding, 20, 28),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            colors.navySoft,
+            colors.amberSoft,
           ],
-          SliverToBoxAdapter(
-            child: _buildSectionHeader(context, 'Recent Transactions'),
-          ),
-          if (txState.isLoading && transactions.isEmpty)
-            SliverList.builder(
-              itemCount: 5,
-              itemBuilder: (_, __) => const SkeletonListTile(),
-            )
-          else if (transactions.isEmpty)
-            SliverToBoxAdapter(
-              child: EmptyState(
-                icon: Icons.receipt_long_outlined,
-                title: 'No transactions yet',
-                subtitle: 'Add your first transaction to get started.',
-                actionLabel: 'Add Transaction',
-                onAction: () => context.push(AppRoutes.addTransaction),
-              ),
-            )
-          else
-            SliverList.builder(
-              itemCount: recentTransactions.length,
-              itemBuilder: (context, index) {
-                final t = recentTransactions[index];
-                final displayCounterparty =
-                    t.description.isNotEmpty ? t.description : 'Unknown';
-                return RecentTransactionTile(
-                  id: t.id,
-                  categoryBadge: TransactionTile.badgeFor(
-                    t.category,
-                    size: 16,
-                    filled: false,
-                  ),
-                  counterparty: displayCounterparty,
-                  category: t.category,
-                  date: t.date,
-                  amount: t.amount,
-                  isIncome: t.type == 'income',
-                  currencyCode: t.currencyCode,
-                  regretLevel: t.regretLevel,
-                );
-              },
+        ),
+        borderRadius: const BorderRadius.vertical(
+          bottom: Radius.circular(32),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'SPENT THIS MONTH',
+            style: textTheme.labelSmall?.copyWith(
+              color: colors.deepNavy,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.8,
             ),
-          const SliverPadding(padding: EdgeInsets.only(bottom: 80)),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            CurrencyFormatter.format(
+              monthExpenseTotal,
+              currencyCode: currencyCode,
+              locale: locale,
+            ),
+            style: GoogleFonts.inter(
+              textStyle: textTheme.displaySmall,
+              color: colors.deepNavy,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            summary?.text ??
+                (journey == null
+                    ? 'Conscia will turn your next few transactions into a clearer monthly story.'
+                    : '${journey!.momentumDays}-day mindful streak · ${_DashboardJourneyCard._completedQuestCount(journey!.weeklyQuests)}/${journey!.weeklyQuests.length} quests this week'),
+            style: textTheme.bodyMedium?.copyWith(
+              color: colors.ink,
+              height: 1.35,
+            ),
+          ),
+          const SizedBox(height: 18),
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: [
+              _HeroMetricPill(
+                icon: Icons.local_fire_department_rounded,
+                label: journey == null
+                    ? '0-day streak'
+                    : '${journey!.momentumDays}-day streak',
+                backgroundColor: colors.surfaceRaised.withValues(alpha: 0.75),
+                foregroundColor: colors.deepNavy,
+              ),
+              _HeroMetricPill(
+                icon: Icons.flag_rounded,
+                label: journey == null
+                    ? '0/0 quests'
+                    : '${_DashboardJourneyCard._completedQuestCount(journey!.weeklyQuests)}/${journey!.weeklyQuests.length} quests',
+                backgroundColor: colors.surfaceRaised.withValues(alpha: 0.75),
+                foregroundColor: colors.deepNavy,
+              ),
+            ],
+          ),
+          const SizedBox(height: 18),
+          Row(
+            children: [
+              Expanded(
+                child: HeroShortcutCard(
+                  key: const ValueKey('dashboard-journey-link'),
+                  icon: Icons.flag_rounded,
+                  label: 'Journey',
+                  subtitle: 'Momentum and quests',
+                  minHeight: 54,
+                  onPressed: onJourneyTap,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: HeroShortcutCard(
+                  key: const ValueKey('dashboard-insights-link'),
+                  icon: Icons.auto_graph_rounded,
+                  label: 'Insights',
+                  subtitle: 'Patterns and signals',
+                  minHeight: 54,
+                  onPressed: onInsightsTap,
+                ),
+              ),
+            ],
+          ),
         ],
       ),
     );
   }
+}
 
-  Widget _buildSectionHeader(BuildContext context, String title) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 24, 16, 12),
-      child: Text(
-        title,
-        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.w600,
+class _HeroMetricPill extends StatelessWidget {
+  const _HeroMetricPill({
+    required this.icon,
+    required this.label,
+    required this.backgroundColor,
+    required this.foregroundColor,
+  });
+
+  final IconData icon;
+  final String label;
+  final Color backgroundColor;
+  final Color foregroundColor;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 15, color: foregroundColor),
+          const SizedBox(width: 6),
+          Flexible(
+            child: Text(
+              label,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                    color: foregroundColor,
+                    fontWeight: FontWeight.w700,
+                  ),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DashboardStickyOverlayHeader extends StatelessWidget {
+  const _DashboardStickyOverlayHeader({
+    required this.progress,
+    required this.topPadding,
+    required this.profile,
+    required this.greetingName,
+    required this.alertsCount,
+    required this.onNotificationsTap,
+  });
+
+  final double progress;
+  final double topPadding;
+  final UserProfile? profile;
+  final String greetingName;
+  final int alertsCount;
+  final VoidCallback onNotificationsTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).appColors;
+    final opacity = progress >= 1.0 ? 1.0 : 0.0;
+    final horizontalInset = 8.0 * opacity;
+    final radius = BorderRadius.circular(999);
+    final headerBackground = Color.lerp(
+      Colors.transparent,
+      colors.paper.withValues(alpha: 0.64),
+      opacity,
+    )!;
+    final borderColor = Color.lerp(
+      Colors.transparent,
+      colors.border.withValues(alpha: 0.84),
+      opacity,
+    )!;
+
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
+        horizontalInset,
+        topPadding + AppLayout.stickyHeaderTopGap,
+        horizontalInset,
+        0,
+      ),
+      child: ClipRRect(
+        borderRadius: radius,
+        child: BackdropFilter(
+          filter: ui.ImageFilter.blur(
+            sigmaX: 18 * opacity,
+            sigmaY: 18 * opacity,
+          ),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 180),
+            curve: Curves.easeOutCubic,
+            key: const ValueKey('dashboard-sticky-identity-header'),
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(
+              horizontal: 14,
+              vertical: 10,
+            ),
+            decoration: BoxDecoration(
+              color: headerBackground,
+              borderRadius: radius,
+              border: Border.all(color: borderColor),
+              boxShadow: opacity > 0.02
+                  ? [
+                      BoxShadow(
+                        color: colors.ink.withValues(alpha: 0.05 * opacity),
+                        blurRadius: 18,
+                        offset: const Offset(0, 8),
+                      ),
+                    ]
+                  : null,
+            ),
+            child: _DashboardStickyIdentityHeader(
+              profile: profile,
+              greetingName: greetingName,
+              alertsCount: alertsCount,
+              onNotificationsTap: onNotificationsTap,
+              collapsed: false,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _DashboardStickyIdentityHeader extends StatelessWidget {
+  const _DashboardStickyIdentityHeader({
+    required this.profile,
+    required this.greetingName,
+    required this.alertsCount,
+    required this.onNotificationsTap,
+    required this.collapsed,
+  });
+
+  final UserProfile? profile;
+  final String greetingName;
+  final int alertsCount;
+  final VoidCallback onNotificationsTap;
+  final bool collapsed;
+
+  @override
+  Widget build(BuildContext context) {
+    return _DashboardIdentityRow(
+      profile: profile,
+      greetingName: greetingName,
+      alertsCount: alertsCount,
+      onNotificationsTap: onNotificationsTap,
+      compact: collapsed,
+    );
+  }
+}
+
+class _DashboardIdentityRow extends StatelessWidget {
+  const _DashboardIdentityRow({
+    required this.profile,
+    required this.greetingName,
+    required this.alertsCount,
+    required this.onNotificationsTap,
+    this.compact = false,
+  });
+
+  final UserProfile? profile;
+  final String greetingName;
+  final int alertsCount;
+  final VoidCallback onNotificationsTap;
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).appColors;
+    final textTheme = Theme.of(context).textTheme;
+
+    if (compact) {
+      return Row(
+        children: [
+          _ProfileAvatar(photoUrl: profile?.photoUrl, compact: true),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              greetingName,
+              style: GoogleFonts.poppins(
+                textStyle: textTheme.titleSmall,
+                color: colors.ink,
+                fontWeight: FontWeight.w700,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          const SizedBox(width: 10),
+          Material(
+            color: Colors.transparent,
+            shape: const CircleBorder(),
+            child: IconButton(
+              tooltip: 'Notifications',
+              visualDensity: VisualDensity.compact,
+              onPressed: onNotificationsTap,
+              icon: _NotificationBell(count: alertsCount),
+            ),
+          ),
+        ],
+      );
+    }
+
+    return Row(
+      children: [
+        _ProfileAvatar(photoUrl: profile?.photoUrl, compact: false),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Welcome back',
+                style: textTheme.bodySmall?.copyWith(
+                  color: colors.mutedInk,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                greetingName,
+                style: GoogleFonts.poppins(
+                  textStyle: textTheme.titleLarge,
+                  color: colors.ink,
+                  fontWeight: FontWeight.w600,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(width: 12),
+        Material(
+          color: colors.surfaceRaised.withValues(alpha: 0.92),
+          shape: const CircleBorder(),
+          child: IconButton(
+            tooltip: 'Notifications',
+            onPressed: onNotificationsTap,
+            icon: _NotificationBell(count: alertsCount),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ProfileAvatar extends StatelessWidget {
+  const _ProfileAvatar({
+    required this.photoUrl,
+    required this.compact,
+  });
+
+  final String? photoUrl;
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).appColors;
+    final radius = compact ? 20.0 : 24.0;
+
+    return CircleAvatar(
+      radius: radius,
+      backgroundColor: colors.surfaceRaised,
+      foregroundImage: photoUrl != null && photoUrl!.isNotEmpty
+          ? NetworkImage(photoUrl!)
+          : null,
+      child: Icon(
+        Icons.person_rounded,
+        size: compact ? 20 : 24,
+        color: colors.deepNavy,
+      ),
+    );
+  }
+}
+
+class _DashboardBudgetSummary extends StatelessWidget {
+  const _DashboardBudgetSummary({
+    required this.budgets,
+    required this.selectedScope,
+    required this.showScopeSwitch,
+    required this.locale,
+    required this.onScopeChanged,
+    required this.onManageTap,
+  });
+
+  final List<Budget> budgets;
+  final String selectedScope;
+  final bool showScopeSwitch;
+  final String? locale;
+  final ValueChanged<String> onScopeChanged;
+  final VoidCallback onManageTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).appColors;
+    final textTheme = Theme.of(context).textTheme;
+    final mix = _budgetMix(budgets);
+    final totalSpent = budgets.fold<double>(0, (sum, b) => sum + b.spent);
+    final totalLimit =
+        budgets.fold<double>(0, (sum, b) => sum + b.monthlyLimit);
+    final currencyCode = budgets.isEmpty ? 'PHP' : budgets.first.currencyCode;
+    final usedPercent =
+        totalLimit <= 0 ? 0 : ((totalSpent / totalLimit) * 100).round();
+
+    return Column(
+      key: const ValueKey('dashboard-budget-summary'),
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        LayoutBuilder(
+          key: const ValueKey('dashboard-budget-top-row'),
+          builder: (context, constraints) {
+            final columnWidth = constraints.maxWidth / 2;
+            final donutSize = columnWidth.clamp(96.0, 120.0);
+
+            return Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                SizedBox(
+                  width: columnWidth,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '${CurrencyFormatter.format(
+                          totalSpent,
+                          currencyCode: currencyCode,
+                          locale: locale,
+                        )} used',
+                        style: textTheme.headlineSmall?.copyWith(
+                          color: colors.deepNavy,
+                          fontWeight: FontWeight.w800,
+                          height: 1.0,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'of ${CurrencyFormatter.format(
+                          totalLimit,
+                          currencyCode: currencyCode,
+                          locale: locale,
+                        )} monthly cap',
+                        style: textTheme.bodySmall?.copyWith(
+                          color: colors.mutedInk,
+                        ),
+                      ),
+                      if (showScopeSwitch) ...[
+                        const SizedBox(height: 12),
+                        ScopePillSwitch(
+                          value: selectedScope,
+                          familyEnabled: true,
+                          onChanged: onScopeChanged,
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                SizedBox(
+                  key: const ValueKey('dashboard-budget-donut-lane'),
+                  width: columnWidth,
+                  child: Center(
+                    child: BudgetMixDonut(
+                      key: const ValueKey('dashboard-budget-donut'),
+                      size: donutSize,
+                      trackStrokeWidth: donutSize * 0.17,
+                      segmentStrokeWidth: donutSize * 0.125,
+                      segments: _budgetSegments(mix, totalSpent),
+                      center: Text(
+                        '$usedPercent%',
+                        style: textTheme.labelSmall?.copyWith(
+                          color: colors.deepNavy,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            );
+          },
+        ),
+        if (mix.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          SingleChildScrollView(
+            key: const ValueKey('dashboard-budget-mix-pill-rail'),
+            scrollDirection: Axis.horizontal,
+            clipBehavior: Clip.none,
+            child: Row(
+              children: [
+                for (final entry in mix.indexed)
+                  Padding(
+                    padding: EdgeInsets.only(
+                      right: entry.$1 == mix.length - 1 ? 0 : 8,
+                    ),
+                    child: BudgetMixPill(
+                      index: entry.$1,
+                      category: entry.$2.category,
+                      type: 'Expense',
+                      share: totalSpent <= 0 ? 0 : entry.$2.spent / totalSpent,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ],
+        const SizedBox(height: 12),
+        HeroShortcutCard(
+          key: const ValueKey('dashboard-manage-budgets'),
+          icon: Icons.pie_chart_rounded,
+          label: 'Manage budgets',
+          subtitle: 'Tune caps and scope',
+          onPressed: onManageTap,
+        ),
+      ],
+    );
+  }
+
+  List<Budget> _budgetMix(List<Budget> budgets) {
+    final copy = [...budgets]..sort((a, b) => b.spent.compareTo(a.spent));
+    return copy.toList(growable: false);
+  }
+
+  List<BudgetMixDonutSegment> _budgetSegments(
+    List<Budget> budgets,
+    double totalSpent,
+  ) {
+    if (totalSpent <= 0) return const [];
+    return budgets
+        .where((budget) => budget.spent > 0)
+        .indexed
+        .map(
+          (entry) => BudgetMixDonutSegment(
+            share: entry.$2.spent / totalSpent,
+            color: BudgetMixPalette.staticColorForCategory(
+              entry.$2.category,
+              type: 'Expense',
+            ),
+          ),
+        )
+        .toList(growable: false);
+  }
+}
+
+class _FlatBudgetRowSkeleton extends StatelessWidget {
+  const _FlatBudgetRowSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Padding(
+      padding: EdgeInsets.symmetric(vertical: 14),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SkeletonLoader(width: 30, height: 30, borderRadius: 15),
+          SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(child: SkeletonLoader(height: 14, width: 90)),
+                    SizedBox(width: 12),
+                    SkeletonLoader(height: 14, width: 34),
+                  ],
+                ),
+                SizedBox(height: 6),
+                SkeletonLoader(height: 12, width: 130),
+                SizedBox(height: 10),
+                SkeletonLoader(height: 6, borderRadius: 999),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _FlatTransactionRowSkeleton extends StatelessWidget {
+  const _FlatTransactionRowSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Padding(
+      padding: EdgeInsets.symmetric(vertical: 14),
+      child: Row(
+        children: [
+          SkeletonLoader(width: 30, height: 30, borderRadius: 15),
+          SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SkeletonLoader(height: 14, width: 120),
+                SizedBox(height: 6),
+                SkeletonLoader(height: 12, width: 72),
+              ],
+            ),
+          ),
+          SizedBox(width: 12),
+          SkeletonLoader(height: 14, width: 84),
+        ],
+      ),
+    );
+  }
+}
+
+class _DashboardHeroSkeleton extends StatelessWidget {
+  const _DashboardHeroSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).appColors;
+
+    final heroTopPadding = AppLayout.dashboardHeroTop(context);
+
+    return Container(
+      key: const ValueKey('dashboard-hero-skeleton'),
+      width: double.infinity,
+      padding: EdgeInsets.fromLTRB(20, heroTopPadding, 20, 28),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            colors.amberSoft,
+            colors.paper,
+            colors.navySoft,
+          ],
+        ),
+        borderRadius: const BorderRadius.vertical(bottom: Radius.circular(32)),
+      ),
+      child: const Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SkeletonLoader(height: 12, width: 100),
+          SizedBox(height: 10),
+          SkeletonLoader(height: 38, width: 210),
+          SizedBox(height: 10),
+          SkeletonLoader(height: 14),
+          SizedBox(height: 6),
+          SkeletonLoader(height: 14, width: 220),
+          SizedBox(height: 18),
+          Row(
+            children: [
+              Expanded(child: SkeletonLoader(height: 38, borderRadius: 999)),
+              SizedBox(width: 10),
+              Expanded(child: SkeletonLoader(height: 38, borderRadius: 999)),
+            ],
+          ),
+          SizedBox(height: 18),
+          Row(
+            children: [
+              Expanded(child: SkeletonLoader(height: 64, borderRadius: 18)),
+              SizedBox(width: 10),
+              Expanded(child: SkeletonLoader(height: 64, borderRadius: 18)),
+              SizedBox(width: 10),
+              Expanded(child: SkeletonLoader(height: 64, borderRadius: 18)),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -689,195 +1565,129 @@ class _NotificationBell extends StatelessWidget {
   }
 }
 
-class _DashboardInsightSummaryCard extends StatelessWidget {
-  const _DashboardInsightSummaryCard({
-    required this.summary,
-    required this.onTap,
-  });
-
-  final DashboardInsightSummary summary;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
-    final toneColor = _toneColor(colors, summary.tone);
-
-    return Card(
-      child: InkWell(
-        borderRadius: BorderRadius.circular(12),
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Icon(
-                    Icons.auto_graph_rounded,
-                    color: toneColor,
-                    size: 18,
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'Summary',
-                      style: textTheme.labelMedium?.copyWith(
-                        color: colors.onSurfaceVariant,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
-                  Icon(
-                    Icons.chevron_right_rounded,
-                    color: colors.onSurfaceVariant,
-                    size: 20,
-                  ),
-                ],
-              ),
-              const SizedBox(height: 10),
-              Row(
-                children: [
-                  _SummaryMascot(tone: summary.tone),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      summary.text,
-                      style: textTheme.bodyMedium?.copyWith(
-                        color: colors.onSurface,
-                        height: 1.28,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Color _toneColor(ColorScheme colors, InsightFeedTone tone) {
-    switch (tone) {
-      case InsightFeedTone.positive:
-        return colors.primary;
-      case InsightFeedTone.caution:
-        return colors.tertiary;
-      case InsightFeedTone.urgent:
-        return colors.error;
-      case InsightFeedTone.neutral:
-        return colors.secondary;
-    }
-  }
-}
-
-class _SummaryMascot extends StatelessWidget {
-  const _SummaryMascot({
-    required this.tone,
-  });
-
-  final InsightFeedTone tone;
-
-  @override
-  Widget build(BuildContext context) {
-    final (atlas, frameName) = switch (tone) {
-      InsightFeedTone.positive => (angelMascotAtlas, '4_win.png'),
-      InsightFeedTone.caution => (devilMascotAtlas, '9_coin.png'),
-      InsightFeedTone.urgent => (devilMascotAtlas, '14_frustrated.png'),
-      InsightFeedTone.neutral => (angelMascotAtlas, '1_neutral.png'),
-    };
-
-    return MascotSpriteFrame(
-      atlas: atlas,
-      frameName: frameName,
-      width: 64,
-    );
-  }
-}
-
 class _NotificationListTile extends StatelessWidget {
   const _NotificationListTile({
     required this.alert,
-    required this.onDismiss,
     this.onAction,
   });
 
   final AppAlert alert;
   final VoidCallback? onAction;
-  final VoidCallback onDismiss;
 
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
+    final appColors = Theme.of(context).appColors;
     final textTheme = Theme.of(context).textTheme;
     final actionLabel = alert.actionLabel ??
         (alert.type == 'budget_nudge' ? 'Add budget' : null);
+    final (iconBg, iconFg) = _iconColors(alert.type, appColors, colors);
 
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(color: iconBg, shape: BoxShape.circle),
+            child: Icon(_iconFor(alert.type), color: iconFg, size: 20),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Container(
-                  width: 36,
-                  height: 36,
-                  decoration: BoxDecoration(
-                    color: colors.primaryContainer.withValues(alpha: 0.6),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Icon(
-                    _iconFor(alert.type),
-                    color: colors.primary,
-                    size: 20,
+                Text(
+                  alert.title,
+                  style: textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w800,
                   ),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        alert.title,
-                        style: textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        alert.message,
-                        style: textTheme.bodySmall?.copyWith(
-                          color: colors.onSurfaceVariant,
-                        ),
-                      ),
-                    ],
+                const SizedBox(height: 3),
+                Text(
+                  alert.message,
+                  style: textTheme.bodySmall?.copyWith(
+                    color: colors.onSurfaceVariant,
+                    height: 1.4,
                   ),
                 ),
-                IconButton(
-                  tooltip: 'Dismiss notification',
-                  visualDensity: VisualDensity.compact,
-                  icon: const Icon(Icons.close_rounded),
-                  onPressed: onDismiss,
+                const SizedBox(height: 8),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          if (actionLabel != null && onAction != null) ...[
+                            GestureDetector(
+                              onTap: onAction,
+                              child: Text(
+                                actionLabel,
+                                style: textTheme.labelSmall?.copyWith(
+                                  color: colors.primary,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                          ],
+                          Text(
+                            _relativeTime(alert.createdAt),
+                            style: textTheme.labelSmall?.copyWith(
+                              color: colors.onSurfaceVariant,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
-            if (actionLabel != null && onAction != null) ...[
-              const SizedBox(height: 10),
-              TextButton(
-                onPressed: onAction,
-                child: Text(actionLabel),
-              ),
-            ],
-          ],
-        ),
+          ),
+        ],
       ),
     );
+  }
+
+  String _relativeTime(DateTime dt) {
+    final diff = DateTime.now().difference(dt);
+    if (diff.inMinutes < 1) return 'just now';
+    if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
+    if (diff.inHours < 24) return '${diff.inHours}h ago';
+    if (diff.inDays == 1) return 'Yesterday';
+    if (diff.inDays < 7) return '${diff.inDays}d ago';
+    final months = [
+      '',
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
+    return '${months[dt.month]} ${dt.day}';
+  }
+
+  (Color, Color) _iconColors(String type, AppColors a, ColorScheme c) {
+    return switch (type) {
+      'budget_nudge' => (a.amberSoft, a.amber),
+      'journey_level_up' => (a.navySoft, a.deepNavy),
+      'journey_badge' => (a.familySoft, a.family),
+      'journey_quest' => (a.amberSoft, a.amber),
+      'ReflectionFollowUp' => (a.angelSoft, a.angelAccent),
+      'recurring_transaction_created' => (a.incomeSoft, a.income),
+      _ => (c.primaryContainer.withValues(alpha: 0.7), c.primary),
+    };
   }
 
   IconData _iconFor(String type) {

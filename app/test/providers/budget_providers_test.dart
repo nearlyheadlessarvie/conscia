@@ -1,9 +1,56 @@
+import 'dart:async';
+
+import 'package:conscia_app/providers/auth_provider.dart';
 import 'package:conscia_app/providers/budget_providers.dart';
+import 'package:conscia_app/services/auth_service.dart';
 import 'package:conscia_app/services/budget_service.dart';
 import 'package:conscia_app/services/transaction_service.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+class _FakeAuthService extends AuthService {
+  _FakeAuthService() : super(Dio());
+}
+
+class _FakeSecureStorage extends FlutterSecureStorage {
+  @override
+  Future<String?> read({
+    required String key,
+    AppleOptions? iOptions,
+    AndroidOptions? aOptions,
+    LinuxOptions? lOptions,
+    WebOptions? webOptions,
+    WindowsOptions? wOptions,
+    AppleOptions? mOptions,
+  }) async =>
+      null;
+}
+
+class _TestAuthNotifier extends AuthNotifier {
+  _TestAuthNotifier(AuthState initialState)
+      : super(_FakeAuthService(), _FakeSecureStorage()) {
+    state = initialState;
+  }
+}
+
+final _authenticatedOverride = authProvider.overrideWith(
+  (ref) => _TestAuthNotifier(
+    const AuthState(status: AuthStatus.authenticated, userId: 'user-1'),
+  ),
+);
+
+class _DeferredBudgetService extends BudgetService {
+  _DeferredBudgetService() : super(Dio());
+
+  final completer = Completer<List<Budget>>();
+
+  @override
+  Future<List<Budget>> list() {
+    return completer.future;
+  }
+}
 
 class _StaticBudgetService extends BudgetService {
   _StaticBudgetService(this.budgets) : super(Dio());
@@ -19,6 +66,23 @@ class _StaticBudgetService extends BudgetService {
 }
 
 void main() {
+  test('ignores an in-flight budget load after provider disposal', () async {
+    final service = _DeferredBudgetService();
+    final container = ProviderContainer(
+      overrides: [
+        _authenticatedOverride,
+        budgetServiceProvider.overrideWithValue(service),
+      ],
+    );
+
+    container.read(budgetListProvider);
+    container.dispose();
+
+    service.completer.complete(const []);
+    await service.completer.future;
+    await Future<void>.delayed(Duration.zero);
+  });
+
   test('budget json percentUsed is normalized from percent to ratio', () {
     final budget = Budget.fromJson({
       'id': 'budget-1',
@@ -34,9 +98,28 @@ void main() {
     expect(budget.isOverBudget, isFalse);
   });
 
+  test('budget json preserves family scope metadata', () {
+    final budget = Budget.fromJson({
+      'id': 'budget-family-1',
+      'category': 'Dining',
+      'monthlyLimit': 6500,
+      'currentSpend': 3720,
+      'currencyCode': 'PHP',
+      'percentUsed': 57.23,
+      'isOverBudget': false,
+      'scope': 'Family',
+      'familySpaceId': 'family-1',
+    });
+
+    expect(budget.scope, 'family');
+    expect(budget.isFamily, isTrue);
+    expect(budget.familySpaceId, 'family-1');
+  });
+
   ProviderContainer buildContainer(_StaticBudgetService service) {
     return ProviderContainer(
       overrides: [
+        _authenticatedOverride,
         budgetServiceProvider.overrideWithValue(service),
       ],
     );

@@ -216,6 +216,30 @@ public static class FamilySpaceEndpoints
             }
         }).WithName("UpdateFamilyMemberRole");
 
+        group.MapPost("/members/{memberId:guid}/transfer-ownership", async (
+            HttpContext ctx,
+            Guid memberId,
+            IFamilySpaceService svc) =>
+        {
+            try
+            {
+                var member = await svc.TransferOwnershipAsync(
+                    ctx.User.GetUserId(),
+                    memberId,
+                    ctx.RequestAborted);
+
+                return Results.Ok(member);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Results.Json(new { error = ex.Message }, statusCode: StatusCodes.Status403Forbidden);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return Results.BadRequest(new { error = ex.Message });
+            }
+        }).WithName("TransferFamilyOwnership");
+
         group.MapDelete("/members/{memberId:guid}", async (HttpContext ctx, Guid memberId, IFamilySpaceService svc) =>
         {
             try

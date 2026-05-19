@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../core/constants/app_icons.dart';
+import 'floating_dock_nav.dart';
 
 class MainShell extends ConsumerStatefulWidget {
   final Widget child;
@@ -15,6 +16,13 @@ class MainShell extends ConsumerStatefulWidget {
 
 class _MainShellState extends ConsumerState<MainShell> {
   String? _lastLocation;
+  bool _dockVisible = true;
+  double _downwardScrollAccumulation = 0;
+  double _upwardScrollAccumulation = 0;
+
+  static const _hideDockThreshold = 32.0;
+  static const _showDockThreshold = 12.0;
+  static const _edgeHideThreshold = 8.0;
 
   static final _tabs = [
     (
@@ -59,12 +67,6 @@ class _MainShellState extends ConsumerState<MainShell> {
     return 0;
   }
 
-  bool _showSharedAddFab(String location) {
-    return !location.startsWith('/transactions') &&
-        !location.startsWith('/assistant') &&
-        !location.startsWith('/settings');
-  }
-
   @override
   Widget build(BuildContext context) {
     final location = GoRouterState.of(context).uri.toString();
@@ -77,95 +79,99 @@ class _MainShellState extends ConsumerState<MainShell> {
     }
     _lastLocation = location;
     final currentIndex = _selectedIndex(location);
-    final isWide = MediaQuery.sizeOf(context).width > 840;
-    final showSharedAddFab = _showSharedAddFab(location);
-
-    if (isWide) {
-      return Scaffold(
-        body: Row(
-          children: [
-            NavigationRail(
-              selectedIndex: currentIndex,
-              onDestinationSelected: (i) => _onDestinationSelected(context, i),
-              labelType: NavigationRailLabelType.all,
-              leading: showSharedAddFab
-                  ? Padding(
-                      padding: const EdgeInsets.only(top: 8),
-                      child: FloatingActionButton(
-                        onPressed: () => context.push('/transactions/add'),
-                        child: Icon(AppIcons.add),
-                      ),
-                    )
-                  : null,
-              destinations: _tabs
-                  .map(
-                    (t) => NavigationRailDestination(
-                      icon: Icon(t.icon),
-                      selectedIcon: Icon(t.activeIcon),
-                      label: Text(t.label),
-                    ),
-                  )
-                  .toList(),
-            ),
-            const VerticalDivider(width: 1, thickness: 1),
-            Expanded(child: widget.child),
-          ],
-        ),
-      );
-    }
+    final keyboardOpen = MediaQuery.viewInsetsOf(context).bottom > 0;
+    final dockShown = _dockVisible && !keyboardOpen;
 
     return Scaffold(
-      body: widget.child,
-      floatingActionButton: showSharedAddFab
-          ? FloatingActionButton(
-              onPressed: () => context.push('/transactions/add'),
-              child: Icon(AppIcons.add),
-            )
-          : null,
-      bottomNavigationBar: SizedBox(
-        height: 96,
-        child: Stack(
-          clipBehavior: Clip.none,
-          alignment: Alignment.topCenter,
-          children: [
-            Positioned.fill(
-              top: 10,
-              child: NavigationBar(
-                height: 80,
-                selectedIndex: currentIndex,
-                onDestinationSelected: (i) {
-                  if (i == _mobileScanIndex) return;
-                  _onDestinationSelected(context, i);
-                },
-                destinations: _tabs
-                    .map(
-                      (t) => t.label == 'Scan'
-                          ? const NavigationDestination(
-                              icon: SizedBox.shrink(),
-                              selectedIcon: SizedBox.shrink(),
-                              label: '',
-                            )
-                          : NavigationDestination(
-                              icon: Icon(t.icon),
-                              selectedIcon: Icon(t.activeIcon),
-                              label: t.label,
-                            ),
-                    )
-                    .toList(),
+      body: Stack(
+        children: [
+          Positioned.fill(
+            child: NotificationListener<ScrollNotification>(
+              onNotification: _handleScrollNotification,
+              child: widget.child,
+            ),
+          ),
+          Positioned.fill(
+            child: IgnorePointer(
+              ignoring: true,
+              child: Align(
+                alignment: Alignment.bottomCenter,
+                child: Container(
+                  key: const ValueKey('main-shell-dock-overlay'),
+                ),
               ),
             ),
-            Positioned(
-              top: -8,
-              child: _RaisedScanButton(
-                key: const ValueKey('main-shell-scan-button'),
-                isSelected: currentIndex == _mobileScanIndex,
-                onTap: () => _onDestinationSelected(context, _mobileScanIndex),
+          ),
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            child: IgnorePointer(
+              ignoring: !dockShown,
+              child: AnimatedSlide(
+                key: const ValueKey('main-shell-dock-motion'),
+                duration: const Duration(milliseconds: 220),
+                curve: Curves.easeOutCubic,
+                offset: dockShown ? Offset.zero : const Offset(0, 1.35),
+                child: AnimatedOpacity(
+                  duration: const Duration(milliseconds: 160),
+                  curve: Curves.easeOut,
+                  opacity: dockShown ? 1 : 0,
+                  child: FloatingDockNav(
+                    currentIndex: currentIndex,
+                    onDestinationSelected: (index) =>
+                        _onDestinationSelected(context, index),
+                  ),
+                ),
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
+  }
+
+  bool _handleScrollNotification(ScrollNotification notification) {
+    if (notification.metrics.axis != Axis.vertical) return false;
+    if (notification.metrics.pixels <= 0) {
+      _setDockVisible(true);
+      _resetScrollAccumulation();
+      return false;
+    }
+
+    final delta = notification is ScrollUpdateNotification
+        ? notification.scrollDelta ?? 0
+        : 0.0;
+    if (delta > 0) {
+      _downwardScrollAccumulation += delta;
+      _upwardScrollAccumulation = 0;
+      final reachedLowerEdge =
+          notification.metrics.extentAfter <= _edgeHideThreshold;
+      if (_downwardScrollAccumulation >= _hideDockThreshold ||
+          reachedLowerEdge) {
+        _setDockVisible(false);
+        _downwardScrollAccumulation = 0;
+      }
+    } else if (delta < 0) {
+      _upwardScrollAccumulation += -delta;
+      _downwardScrollAccumulation = 0;
+      if (_upwardScrollAccumulation >= _showDockThreshold) {
+        _setDockVisible(true);
+        _upwardScrollAccumulation = 0;
+      }
+    }
+
+    return false;
+  }
+
+  void _setDockVisible(bool visible) {
+    if (_dockVisible == visible) return;
+    setState(() => _dockVisible = visible);
+  }
+
+  void _resetScrollAccumulation() {
+    _downwardScrollAccumulation = 0;
+    _upwardScrollAccumulation = 0;
   }
 
   void _onDestinationSelected(BuildContext context, int index) {
@@ -174,73 +180,5 @@ class _MainShellState extends ConsumerState<MainShell> {
       return;
     }
     context.go(_tabs[index].path);
-  }
-}
-
-class _RaisedScanButton extends StatelessWidget {
-  final bool isSelected;
-  final VoidCallback onTap;
-
-  const _RaisedScanButton({
-    super.key,
-    required this.isSelected,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(36),
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.only(top: 4),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              AnimatedContainer(
-                duration: const Duration(milliseconds: 180),
-                width: 64,
-                height: 64,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: isSelected
-                      ? colorScheme.primary
-                      : colorScheme.primaryContainer,
-                  boxShadow: [
-                    BoxShadow(
-                      color: colorScheme.shadow.withValues(alpha: 0.18),
-                      blurRadius: 18,
-                      offset: const Offset(0, 6),
-                    ),
-                  ],
-                  border: Border.all(
-                    color: colorScheme.surface,
-                    width: 4,
-                  ),
-                ),
-                child: Icon(
-                  AppIcons.scan,
-                  size: 28,
-                  color: isSelected
-                      ? colorScheme.onPrimary
-                      : colorScheme.onPrimaryContainer,
-                ),
-              ),
-              const SizedBox(height: 1),
-              Text(
-                'Scan',
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
   }
 }

@@ -19,7 +19,7 @@ class SelectionChipGroup extends StatelessWidget {
   final String? value;
   final ValueChanged<String> onSelected;
   final String Function(String option)? labelBuilder;
-  final Widget Function(String option, bool selected)? avatarBuilder;
+  final Widget? Function(String option, bool selected)? avatarBuilder;
   final bool scrollable;
   final bool showTrailingCheck;
 
@@ -52,7 +52,8 @@ class SelectionChipGroup extends StatelessWidget {
     if (scrollable) {
       return SingleChildScrollView(
         scrollDirection: Axis.horizontal,
-        child: Row(children: chips),
+        child:
+            Row(crossAxisAlignment: CrossAxisAlignment.start, children: chips),
       );
     }
 
@@ -83,8 +84,9 @@ class SelectionChipButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).appColors;
-    final textStyle = Theme.of(context).textTheme.labelLarge?.copyWith(
+    final textStyle = Theme.of(context).textTheme.labelSmall?.copyWith(
           fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+          fontSize: 12,
         );
 
     return Material(
@@ -95,7 +97,7 @@ class SelectionChipButton extends StatelessWidget {
         onTap: onTap,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 160),
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
           decoration: BoxDecoration(
             color: selected ? colors.heroTint : colors.surfaceMuted,
             borderRadius: BorderRadius.circular(18),

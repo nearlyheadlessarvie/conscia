@@ -14,8 +14,22 @@ public static class ReceiptEndpoints
 
         group.MapPost("/scan", async (HttpContext ctx, IReceiptService receiptService) =>
         {
+            if (!ctx.Request.HasFormContentType)
+                return Results.BadRequest(new { error = "Receipt image is required" });
+
+            var form = await ctx.Request.ReadFormAsync(ctx.RequestAborted);
+            var image = form.Files["image"] ?? form.Files.FirstOrDefault();
+            if (image is null || image.Length == 0)
+                return Results.BadRequest(new { error = "Receipt image is required" });
+
             var userId = ctx.User.GetUserId();
-            var result = await receiptService.ScanAsync(userId, ctx.Request.Body, ctx.RequestAborted);
+            await using var stream = image.OpenReadStream();
+            var result = await receiptService.ScanAsync(
+                userId,
+                stream,
+                string.IsNullOrWhiteSpace(image.ContentType) ? "image/jpeg" : image.ContentType,
+                ctx.RequestAborted);
+
             return Results.Ok(result);
         })
         .WithName("ScanReceipt")

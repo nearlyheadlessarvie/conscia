@@ -1,6 +1,9 @@
-import 'package:conscia_app/providers/category_frequency_provider.dart';
 import 'package:conscia_app/providers/alert_provider.dart';
+import 'package:conscia_app/providers/auth_provider.dart';
 import 'package:conscia_app/providers/budget_providers.dart';
+import 'package:conscia_app/providers/category_frequency_provider.dart';
+import 'package:conscia_app/providers/category_provider.dart';
+import 'package:conscia_app/providers/exchange_rate_provider.dart';
 import 'package:conscia_app/models/family_space.dart';
 import 'package:conscia_app/models/recurring_schedule.dart';
 import 'package:conscia_app/providers/family_space_provider.dart';
@@ -9,17 +12,22 @@ import 'package:conscia_app/providers/transaction_providers.dart';
 import 'package:conscia_app/providers/usage_provider.dart';
 import 'package:conscia_app/providers/user_provider.dart';
 import 'package:conscia_app/screens/transactions/transaction_form_screen.dart';
-import 'package:conscia_app/screens/transactions/widgets/quick_preset_chips.dart';
+import 'package:conscia_app/screens/transactions/widgets/category_picker.dart';
 import 'package:conscia_app/screens/transactions/widgets/voice_input_button.dart';
+import 'package:conscia_app/services/auth_service.dart';
 import 'package:conscia_app/services/budget_service.dart';
 import 'package:conscia_app/services/location_assistance_service.dart';
 import 'package:conscia_app/services/recurring_service.dart';
 import 'package:conscia_app/services/subscription_service.dart';
 import 'package:conscia_app/services/transaction_service.dart';
 import 'package:conscia_app/services/user_service.dart';
+import 'package:conscia_app/widgets/amount_hero_field.dart';
+import 'package:conscia_app/widgets/conscia_bottom_sheet.dart';
+import 'package:conscia_app/widgets/floating_label_text_field.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -30,6 +38,7 @@ class _FakeLocationAssistanceService extends LocationAssistanceService {
       nearbyMerchants: ['Blue Bottle Coffee'],
       likelyCategories: ['Coffee'],
     ),
+    this.merchantCategories = const {},
   });
 
   final bool permissionGranted;
@@ -37,6 +46,7 @@ class _FakeLocationAssistanceService extends LocationAssistanceService {
     List<String> nearbyMerchants,
     List<String> likelyCategories
   }) suggestions;
+  final Map<String, String> merchantCategories;
 
   @override
   Future<bool> requestPermission() async => permissionGranted;
@@ -44,7 +54,41 @@ class _FakeLocationAssistanceService extends LocationAssistanceService {
   @override
   ({List<String> nearbyMerchants, List<String> likelyCategories})
       getTransactionSuggestions() => suggestions;
+
+  @override
+  String? categoryForMerchant(String merchant) => merchantCategories[merchant];
 }
+
+class _FakeAuthService extends AuthService {
+  _FakeAuthService() : super(Dio());
+}
+
+class _FakeSecureStorage extends FlutterSecureStorage {
+  @override
+  Future<String?> read({
+    required String key,
+    AppleOptions? iOptions,
+    AndroidOptions? aOptions,
+    LinuxOptions? lOptions,
+    WebOptions? webOptions,
+    WindowsOptions? wOptions,
+    AppleOptions? mOptions,
+  }) async =>
+      null;
+}
+
+class _TestAuthNotifier extends AuthNotifier {
+  _TestAuthNotifier(AuthState initialState)
+      : super(_FakeAuthService(), _FakeSecureStorage()) {
+    state = initialState;
+  }
+}
+
+final _authenticatedOverride = authProvider.overrideWith(
+  (ref) => _TestAuthNotifier(
+    const AuthState(status: AuthStatus.authenticated, userId: 'user-1'),
+  ),
+);
 
 class _RecordingTransactionService extends TransactionService {
   _RecordingTransactionService({this.editTransaction}) : super(Dio());
@@ -126,6 +170,9 @@ class _FakeUserService extends UserService {
   Future<UserProfile> updateProfile({
     String? preferredCurrency,
     String? locale,
+    String? displayName,
+    String? profilePictureKey,
+    String? photoUrl,
     String? spendingPersonality,
     String? incomeRange,
     String? occupationType,
@@ -159,6 +206,7 @@ Future<ProviderContainer> _pumpTransactionForm(
   String? transactionId,
   List<Budget> budgets = const [],
   FamilySpace? familySpace,
+  String locale = 'en_US',
   bool locationSuggestionsEnabled = false,
 }) async {
   final resolvedPrefs = prefs ??
@@ -172,6 +220,7 @@ Future<ProviderContainer> _pumpTransactionForm(
 
   final container = ProviderContainer(
     overrides: [
+      _authenticatedOverride,
       categoryFrequencyProvider.overrideWithValue(
         ['Coffee', 'Dining', 'Shopping', 'Gaming', 'Travel'],
       ),
@@ -186,7 +235,7 @@ Future<ProviderContainer> _pumpTransactionForm(
           id: 'user-1',
           email: 'tx@example.com',
           currencyCode: 'USD',
-          locale: 'en_US',
+          locale: locale,
           createdAt: DateTime(2026),
           hasCompletedOnboarding: true,
           locationSuggestionsEnabled: locationSuggestionsEnabled,
@@ -204,6 +253,8 @@ Future<ProviderContainer> _pumpTransactionForm(
       recurringServiceProvider.overrideWithValue(_FakeRecurringService()),
       budgetServiceProvider.overrideWithValue(_StaticBudgetService(budgets)),
       budgetReconciliationEnabledProvider.overrideWithValue(false),
+      exchangeRateProvider.overrideWith((ref, pair) async => null),
+      managedCategoriesProvider.overrideWith((ref, query) async => const []),
       familySpaceProvider.overrideWith((ref) async => familySpace),
     ],
   );
@@ -228,18 +279,36 @@ Widget _buildTransactionFormApp(
   );
 }
 
+Finder _floatingLabelInput(String label) {
+  return find.descendant(
+    of: find.byWidgetPredicate(
+      (widget) => widget is FloatingLabelTextField && widget.label == label,
+    ),
+    matching: find.byType(TextField),
+  );
+}
+
+Finder _amountInput() {
+  return find.descendant(
+    of: find.byType(AmountHeroField),
+    matching: find.byType(EditableText),
+  );
+}
+
 Future<Widget> buildTransactionFormApp(
   WidgetTester tester, {
   Map<String, Object> initialPrefs = const {
     'location_suggestions_enabled': false,
     'location_suggestions_prompted': true,
   },
+  String locale = 'en_US',
 }) async {
   SharedPreferences.setMockInitialValues(initialPrefs);
   final resolvedPrefs = await SharedPreferences.getInstance();
 
   final container = ProviderContainer(
     overrides: [
+      _authenticatedOverride,
       categoryFrequencyProvider.overrideWithValue(
         ['Coffee', 'Dining', 'Shopping', 'Gaming', 'Travel'],
       ),
@@ -254,7 +323,7 @@ Future<Widget> buildTransactionFormApp(
           id: 'user-1',
           email: 'tx@example.com',
           currencyCode: 'USD',
-          locale: 'en_US',
+          locale: locale,
           createdAt: DateTime(2026),
           hasCompletedOnboarding: true,
         ),
@@ -269,6 +338,8 @@ Future<Widget> buildTransactionFormApp(
       recurringServiceProvider.overrideWithValue(_FakeRecurringService()),
       budgetServiceProvider.overrideWithValue(_StaticBudgetService(const [])),
       budgetReconciliationEnabledProvider.overrideWithValue(false),
+      exchangeRateProvider.overrideWith((ref, pair) async => null),
+      managedCategoriesProvider.overrideWith((ref, query) async => const []),
       familySpaceProvider.overrideWith((ref) async => null),
     ],
   );
@@ -342,6 +413,19 @@ void main() {
   });
 
   testWidgets(
+      'transaction form route presents as a Conscia pull-up sheet', (
+    tester,
+  ) async {
+    await _pumpTransactionForm(tester);
+
+    await tester.pumpAndSettle();
+
+    expect(find.byType(BottomSheet), findsAtLeastNWidgets(1));
+    expect(find.byType(ConsciaSheetHandle), findsOneWidget);
+    expect(find.text('Add transaction'), findsOneWidget);
+  });
+
+  testWidgets(
       'transaction form shows a single quick preset row when unselected', (
     tester,
   ) async {
@@ -349,7 +433,7 @@ void main() {
 
     await tester.pumpAndSettle();
 
-    expect(find.byType(QuickPresetChips), findsOneWidget);
+    expect(find.text('More'), findsOneWidget);
     expect(find.text('Quick add'), findsNothing);
   });
 
@@ -374,12 +458,103 @@ void main() {
     tester,
   ) async {
     await tester.pumpWidget(await buildTransactionFormApp(tester));
+    await tester.pumpAndSettle();
 
     await tester.tap(find.text('Income'));
     await tester.pumpAndSettle();
 
     expect(find.text('Source (optional)'), findsOneWidget);
     expect(find.text('Merchant (optional)'), findsNothing);
+  });
+
+  testWidgets('transaction form asks details before amount and category', (
+    tester,
+  ) async {
+    await _pumpTransactionForm(tester);
+    await tester.pumpAndSettle();
+
+    expect(find.text('AMOUNT'), findsNothing);
+    expect(find.text('TRANSACTION DETAILS'), findsOneWidget);
+
+    final detailsTop = tester.getTopLeft(find.text('TRANSACTION DETAILS')).dy;
+    final merchantTop =
+        tester.getTopLeft(_floatingLabelInput('Merchant (optional)')).dy;
+    final amountTop = tester.getTopLeft(find.byType(AmountHeroField)).dy;
+    final categoryTop = tester.getTopLeft(find.text('CATEGORY')).dy;
+
+    expect(detailsTop, lessThan(merchantTop));
+    expect(merchantTop, lessThan(amountTop));
+    expect(amountTop, lessThan(categoryTop));
+  });
+
+  testWidgets('transaction form advances from merchant to amount', (
+    tester,
+  ) async {
+    await _pumpTransactionForm(tester);
+    await tester.pumpAndSettle();
+
+    final merchantField = tester.widget<TextField>(
+      _floatingLabelInput('Merchant (optional)'),
+    );
+    expect(merchantField.focusNode?.hasFocus, isTrue);
+
+    merchantField.onSubmitted?.call('Corner Bakery');
+    await tester.pumpAndSettle();
+
+    final amountField = tester.widget<EditableText>(_amountInput());
+    expect(amountField.focusNode.hasFocus, isTrue);
+  });
+
+  testWidgets('transaction amount submit brings category into view', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(390, 420));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await _pumpTransactionForm(tester);
+    await tester.pumpAndSettle();
+
+    final categoryTitle = find.text('CATEGORY', skipOffstage: false);
+    final before = tester.getTopLeft(categoryTitle).dy;
+
+    tester.widget<EditableText>(_amountInput()).onSubmitted?.call('12.50');
+    await tester.pumpAndSettle();
+
+    final after = tester.getTopLeft(categoryTitle).dy;
+    expect(after, lessThan(before));
+  });
+
+  testWidgets('income transactions do not show merchant autosuggestions', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({
+      'location_suggestions_enabled': true,
+      'location_suggestions_prompted': true,
+    });
+    final prefs = await SharedPreferences.getInstance();
+
+    await _pumpTransactionForm(
+      tester,
+      prefs: prefs,
+      locationSuggestionsEnabled: true,
+      locationService: _FakeLocationAssistanceService(
+        permissionGranted: true,
+        suggestions: const (
+          nearbyMerchants: ['Corner Bakery', 'Local Grocer'],
+          likelyCategories: ['Groceries', 'Dining'],
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Income'));
+    await tester.pumpAndSettle();
+    await tester.tap(_floatingLabelInput('Source (optional)'));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey('smart-merchant-suggestion-strip')),
+        findsNothing);
+    expect(find.text('Corner Bakery'), findsNothing);
   });
 
   testWidgets('transaction form does not show a voice mic button', (
@@ -398,10 +573,11 @@ void main() {
     await tester.pumpWidget(await buildTransactionFormApp(tester));
     await tester.pumpAndSettle();
 
-    final chipsTopLeft = tester.getTopLeft(find.text('Dining').first);
-    final actionTopLeft = tester.getTopLeft(find.text('All categories'));
+    // 'Dining' chip and 'More' button are in the same horizontal chip rail row
+    final chipsY = tester.getCenter(find.text('Dining').first).dy;
+    final actionY = tester.getCenter(find.text('More')).dy;
 
-    expect(chipsTopLeft.dy, lessThan(actionTopLeft.dy));
+    expect((chipsY - actionY).abs(), lessThan(8));
   });
 
   testWidgets(
@@ -418,111 +594,166 @@ void main() {
 
     await tester.pumpAndSettle();
 
-    expect(find.text('More categories'), findsNothing);
-    expect(find.text('All categories'), findsOneWidget);
+    expect(find.text('More'), findsOneWidget);
 
-    await tester.tap(find.text('All categories'));
+    await tester.tap(find.text('More'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(BottomSheet), findsAtLeastNWidgets(1));
+
+    final sheetPicker = find.byType(CategoryPicker).last;
+    final transport = find.descendant(
+      of: sheetPicker,
+      matching: find.text('Transport'),
+    );
+    final dining = find.descendant(
+      of: sheetPicker,
+      matching: find.text('Dining'),
+    );
+
+    expect(transport, findsOneWidget);
+    expect(dining, findsOneWidget);
+    expect(
+      tester.getTopLeft(transport).dx,
+      lessThan(tester.getTopLeft(dining).dx),
+    );
+
+    await tester.tap(
+      find.descendant(of: sheetPicker, matching: find.text('Groceries')),
+    );
     await tester.pumpAndSettle();
 
     expect(find.byType(BottomSheet), findsOneWidget);
-
-    final choiceChips = tester.widgetList<ChoiceChip>(find.byType(ChoiceChip));
-    final labels = choiceChips
-        .map((chip) => (chip.label as Text).data)
-        .whereType<String>()
-        .toList();
-
-    expect(labels.take(2).toList(), ['Transport', 'Dining']);
-
-    await tester.tap(find.widgetWithText(ChoiceChip, 'Groceries').last);
-    await tester.pumpAndSettle();
-
-    expect(find.byType(BottomSheet), findsNothing);
-    expect(
-      find.descendant(
-        of: find.byType(InputChip),
-        matching: find.text('Groceries'),
-      ),
-      findsOneWidget,
-    );
+    expect(find.text('Groceries'), findsWidgets);
   });
 
-  testWidgets('transaction form shows only one category heading',
+  testWidgets('transaction form keeps category separate from scope',
       (tester) async {
     await tester.pumpWidget(await buildTransactionFormApp(tester));
 
     await tester.pumpAndSettle();
 
-    expect(find.text('Category'), findsOneWidget);
+    expect(find.text('TRANSACTION'), findsOneWidget);
+    expect(find.text('Was this money in or out?'), findsOneWidget);
+    expect(find.text('CLASSIFY'), findsNothing);
+    expect(find.text('CATEGORY'), findsOneWidget);
+    expect(
+      find.text(
+        'Choose where this transaction belongs so budgets and insights stay accurate.',
+      ),
+      findsOneWidget,
+    );
   });
 
-  testWidgets('category and details accordions start expanded', (tester) async {
+  testWidgets('income category copy explains income rhythm tracking',
+      (tester) async {
     await tester.pumpWidget(await buildTransactionFormApp(tester));
     await tester.pumpAndSettle();
 
-    expect(find.text('All categories'), findsOneWidget);
-    expect(find.text('Merchant (optional)'), findsOneWidget);
+    await tester.tap(find.text('Income'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('CATEGORY'), findsOneWidget);
+    expect(
+      find.text(
+        'Choose where this money came from so Conscia can understand your income rhythm separately from spending.',
+      ),
+      findsOneWidget,
+    );
   });
 
-  testWidgets('category accordion can collapse and expand', (tester) async {
+  testWidgets('family scope uses its own classify section', (tester) async {
+    await _pumpTransactionForm(
+      tester,
+      familySpace: const FamilySpace(
+        id: 'family-1',
+        name: 'Santos Household',
+        currencyCode: 'USD',
+        isReadOnly: false,
+        role: 'Contributor',
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('CLASSIFY'), findsOneWidget);
+    expect(
+      find.text('Where should this live in your money story?'),
+      findsOneWidget,
+    );
+    expect(find.text('CATEGORY'), findsOneWidget);
+    expect(find.text('SCOPE'), findsNothing);
+  });
+
+  testWidgets('category selector and merchant field are always visible',
+      (tester) async {
     await tester.pumpWidget(await buildTransactionFormApp(tester));
     await tester.pumpAndSettle();
 
-    expect(find.text('All categories'), findsOneWidget);
-
-    await tester.tap(find.text('Category'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('All categories'), findsNothing);
-
-    await tester.tap(find.text('Category'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('All categories'), findsOneWidget);
+    expect(find.text('More'), findsOneWidget);
+    expect(find.text('Merchant (optional)'), findsOneWidget);
   });
 
-  testWidgets('details accordion can collapse and expand', (tester) async {
+  testWidgets('category label and chip rail are always visible',
+      (tester) async {
+    await tester.pumpWidget(await buildTransactionFormApp(tester));
+    await tester.pumpAndSettle();
+
+    expect(find.text('CATEGORY'), findsOneWidget);
+    expect(find.text('More'), findsOneWidget);
+  });
+
+  testWidgets('merchant field and date are always visible', (tester) async {
     await tester.pumpWidget(await buildTransactionFormApp(tester));
     await tester.pumpAndSettle();
 
     expect(find.text('Merchant (optional)'), findsOneWidget);
-
-    await tester.tap(find.text('Details'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Merchant (optional)'), findsNothing);
-    expect(find.text('Notes (optional)'), findsNothing);
-    expect(find.text('Today'), findsNothing);
-
-    await tester.tap(find.text('Details'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Merchant (optional)'), findsOneWidget);
+    expect(find.byIcon(Icons.calendar_today_outlined), findsOneWidget);
   });
 
-  testWidgets('recurring accordion starts collapsed and can expand', (
+  testWidgets('merchant field uses Conscia v2 floating label treatment',
+      (tester) async {
+    await tester.pumpWidget(await buildTransactionFormApp(tester));
+    await tester.pumpAndSettle();
+
+    final floatingFields = tester.widgetList<FloatingLabelTextField>(
+      find.byType(FloatingLabelTextField),
+    );
+
+    expect(
+      floatingFields.any((field) => field.label == 'Merchant (optional)'),
+      isTrue,
+    );
+    expect(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is TextField &&
+            widget.decoration?.labelText == 'Merchant (optional)',
+      ),
+      findsNothing,
+    );
+  });
+
+  testWidgets(
+      'recurring section is always visible and cadence options are hidden by default',
+      (tester) async {
+    await tester.pumpWidget(await buildTransactionFormApp(tester));
+    await tester.pumpAndSettle();
+
+    expect(find.text('RECURRING'), findsOneWidget);
+    expect(find.text('Repeat on a schedule.'), findsOneWidget);
+    expect(find.byType(SwitchListTile), findsNothing);
+
+    final title = tester.widget<Text>(find.text('RECURRING'));
+    expect(title.style?.fontSize, 12);
+    expect(title.style?.fontWeight, FontWeight.w800);
+    expect(title.style?.letterSpacing, 0.9);
+    expect(find.text('Weekly'), findsNothing);
+  });
+
+  testWidgets('shows recurring controls when recurring switch is enabled', (
     tester,
   ) async {
     await tester.pumpWidget(await buildTransactionFormApp(tester));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Make this recurring'), findsNothing);
-
-    await tester.ensureVisible(find.text('Recurring'));
-    await tester.tap(find.text('Recurring'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Make this recurring'), findsOneWidget);
-  });
-
-  testWidgets('shows recurring controls when make this recurring is enabled', (
-    tester,
-  ) async {
-    await tester.pumpWidget(await buildTransactionFormApp(tester));
-    await tester.pumpAndSettle();
-
-    await tester.ensureVisible(find.text('Recurring'));
-    await tester.tap(find.text('Recurring'));
     await tester.pumpAndSettle();
 
     await tester.ensureVisible(find.byType(Switch));
@@ -532,7 +763,8 @@ void main() {
     expect(find.text('Weekly'), findsOneWidget);
     expect(find.text('Monthly'), findsOneWidget);
     expect(find.text('Yearly'), findsOneWidget);
-    expect(find.text('End date (optional)'), findsOneWidget);
+    expect(find.text('END DATE'), findsOneWidget);
+    expect(find.byIcon(Icons.calendar_today_outlined), findsWidgets);
   });
 
   testWidgets('create transaction dto serializes recurring payload', (
@@ -613,7 +845,8 @@ void main() {
     expect(find.text('Turn on smart location help?'), findsNothing);
   });
 
-  testWidgets('transaction form shows merchant suggestion UI when enabled', (
+  testWidgets('transaction form shows quiet merchant suggestions when enabled',
+      (
     tester,
   ) async {
     SharedPreferences.setMockInitialValues({
@@ -637,16 +870,18 @@ void main() {
 
     await tester.pumpAndSettle();
 
-    expect(find.text('Smart suggestions nearby'), findsOneWidget);
-    expect(find.text('Nearby merchants'), findsOneWidget);
-    expect(find.text('Likely categories'), findsOneWidget);
+    expect(find.text('Smart suggestions nearby'), findsNothing);
+    expect(find.byKey(const ValueKey('smart-merchant-suggestion-strip')),
+        findsOneWidget);
+    expect(find.text('Likely categories'), findsNothing);
     expect(find.text('Corner Bakery'), findsOneWidget);
     expect(find.text('Local Grocer'), findsOneWidget);
-    expect(find.text('Groceries'), findsWidgets);
     expect(find.text('Blue Bottle Coffee'), findsNothing);
   });
 
-  testWidgets('tapping suggestion chips fills the form fields', (tester) async {
+  testWidgets('merchant suggestions stay open while horizontally scrolling', (
+    tester,
+  ) async {
     SharedPreferences.setMockInitialValues({
       'location_suggestions_enabled': true,
       'location_suggestions_prompted': true,
@@ -660,9 +895,53 @@ void main() {
       locationService: _FakeLocationAssistanceService(
         permissionGranted: true,
         suggestions: const (
+          nearbyMerchants: [
+            'Corner Bakery',
+            'Local Grocer',
+            'Starbucks',
+            'Manam',
+            'Grab',
+          ],
+          likelyCategories: ['Groceries', 'Dining'],
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    final strip = find.byKey(
+      const ValueKey('smart-merchant-suggestion-strip'),
+    );
+    expect(strip, findsOneWidget);
+
+    await tester.drag(strip, const Offset(-120, 0));
+    await tester.pumpAndSettle();
+
+    expect(strip, findsOneWidget);
+    expect(find.text('Grab'), findsOneWidget);
+  });
+
+  testWidgets('tapping a merchant suggestion fills merchant and category',
+      (tester) async {
+    SharedPreferences.setMockInitialValues({
+      'location_suggestions_enabled': true,
+      'location_suggestions_prompted': true,
+    });
+    final prefs = await SharedPreferences.getInstance();
+    final transactionService = _RecordingTransactionService();
+
+    await _pumpTransactionForm(
+      tester,
+      prefs: prefs,
+      transactionService: transactionService,
+      locationSuggestionsEnabled: true,
+      locationService: _FakeLocationAssistanceService(
+        permissionGranted: true,
+        suggestions: const (
           nearbyMerchants: ['Corner Bakery'],
           likelyCategories: ['Groceries'],
         ),
+        merchantCategories: const {'Corner Bakery': 'Groceries'},
       ),
     );
 
@@ -672,26 +951,26 @@ void main() {
     await tester.tap(find.text('Corner Bakery'));
     await tester.pumpAndSettle();
 
-    final merchantField = tester.widget<TextField>(
+    final merchantField = tester.widget<FloatingLabelTextField>(
       find.byWidgetPredicate(
         (widget) =>
-            widget is TextField &&
-            widget.decoration?.labelText == 'Merchant (optional)',
+            widget is FloatingLabelTextField &&
+            widget.label == 'Merchant (optional)',
       ),
     );
-    expect(merchantField.controller?.text, 'Corner Bakery');
+    expect(merchantField.controller.text, 'Corner Bakery');
+    expect(find.text('Groceries'), findsWidgets);
+    expect(
+        tester.widget<EditableText>(_amountInput()).focusNode.hasFocus, isTrue);
 
-    await tester.ensureVisible(find.widgetWithText(ActionChip, 'Groceries'));
-    await tester.tap(find.widgetWithText(ActionChip, 'Groceries'));
+    await tester.enterText(_amountInput(), '12.50');
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Save Transaction'));
+    await tester.tap(find.text('Save Transaction'));
     await tester.pumpAndSettle();
 
-    expect(
-      find.descendant(
-        of: find.byType(InputChip),
-        matching: find.text('Groceries'),
-      ),
-      findsOneWidget,
-    );
+    expect(transactionService.lastCreated?.counterparty, 'Corner Bakery');
+    expect(transactionService.lastCreated?.category, 'Groceries');
   });
 
   testWidgets(
@@ -719,7 +998,8 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Smart suggestions nearby'), findsNothing);
-    expect(find.text('Nearby merchants'), findsNothing);
+    expect(find.byKey(const ValueKey('smart-merchant-suggestion-strip')),
+        findsNothing);
     expect(find.text('Likely categories'), findsNothing);
   });
 
@@ -747,8 +1027,9 @@ void main() {
 
     await tester.pumpAndSettle();
 
-    expect(find.text('Smart suggestions nearby'), findsOneWidget);
-    expect(find.text('Nearby merchants'), findsOneWidget);
+    expect(find.text('Smart suggestions nearby'), findsNothing);
+    expect(find.byKey(const ValueKey('smart-merchant-suggestion-strip')),
+        findsOneWidget);
     expect(find.text('Corner Bakery'), findsOneWidget);
     expect(find.text('Likely categories'), findsNothing);
   });
@@ -776,7 +1057,7 @@ void main() {
 
     await tester.pumpAndSettle();
 
-    await tester.enterText(find.byType(TextField).first, '12.50');
+    await tester.enterText(_amountInput(), '12.50');
     await tester.tap(find.text('Dining'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Save Transaction'));
@@ -787,6 +1068,65 @@ void main() {
     expect(alerts, hasLength(1));
     expect(alerts.first.type, 'budget_nudge');
     expect(alerts.first.title, 'No budget for Dining yet');
+  });
+
+  testWidgets('transaction form parses localized amount input on save', (
+    tester,
+  ) async {
+    final transactionService = _RecordingTransactionService();
+
+    await _pumpTransactionForm(
+      tester,
+      transactionService: transactionService,
+      locale: 'de_DE',
+      budgets: const [
+        Budget(
+          id: 'budget-1',
+          category: 'Dining',
+          monthlyLimit: 3000,
+          spent: 25,
+          currencyCode: 'USD',
+          percentage: 0.01,
+          isOverBudget: false,
+        ),
+      ],
+    );
+
+    await tester.pumpAndSettle();
+
+    await tester.enterText(_amountInput(), '1.234,56');
+    await tester.tap(find.text('Dining'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Save Transaction'));
+    await tester.pumpAndSettle();
+
+    expect(transactionService.lastCreated?.amount, 1234.56);
+  });
+
+  testWidgets('transaction form uses locale when showing explicit dates', (
+    tester,
+  ) async {
+    await _pumpTransactionForm(
+      tester,
+      transactionService: _RecordingTransactionService(
+        editTransaction: Transaction(
+          id: 'tx-locale-date',
+          amount: 14.75,
+          currencyCode: 'EUR',
+          category: 'Coffee',
+          description: 'Cafe',
+          type: 'expense',
+          date: DateTime(2026, 5, 3, 12, 30),
+        ),
+      ),
+      transactionId: 'tx-locale-date',
+      locale: 'de_DE',
+    );
+
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 250));
+
+    expect(find.text('3.5.2026'), findsOneWidget);
   });
 
   testWidgets('transaction form can save a family-scoped transaction', (
@@ -808,9 +1148,10 @@ void main() {
 
     await tester.pumpAndSettle();
 
+    await tester.ensureVisible(find.text('Family'));
     await tester.tap(find.text('Family'));
     await tester.pumpAndSettle();
-    await tester.enterText(find.byType(TextField).first, '1500');
+    await tester.enterText(_amountInput(), '1500');
     await tester.tap(find.text('Groceries'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Save Transaction'));
@@ -850,11 +1191,10 @@ void main() {
       ),
     );
 
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 250));
+    await tester.pumpAndSettle();
 
-    expect(find.text('Scope'), findsOneWidget);
-    expect(find.textContaining('Santos Household'), findsOneWidget);
+    expect(find.text('CLASSIFY'), findsOneWidget);
+    expect(find.text('Family'), findsOneWidget);
 
     await tester.tap(find.text('Update Transaction'));
     await tester.pump();
@@ -886,7 +1226,7 @@ void main() {
 
     await tester.pumpAndSettle();
 
-    await tester.enterText(find.byType(TextField).first, '12.50');
+    await tester.enterText(_amountInput(), '12.50');
     await tester.tap(find.text('Groceries'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Save Transaction'));
@@ -924,6 +1264,7 @@ void main() {
 
     final container = ProviderContainer(
       overrides: [
+        _authenticatedOverride,
         categoryFrequencyProvider.overrideWithValue(
           ['Coffee', 'Dining', 'Shopping', 'Gaming', 'Travel'],
         ),
@@ -951,6 +1292,8 @@ void main() {
         transactionServiceProvider.overrideWithValue(transactionService),
         budgetServiceProvider.overrideWithValue(_StaticBudgetService(const [])),
         budgetReconciliationEnabledProvider.overrideWithValue(false),
+        exchangeRateProvider.overrideWith((ref, pair) async => null),
+        managedCategoriesProvider.overrideWith((ref, query) async => const []),
       ],
     );
     addTearDown(container.dispose);
@@ -981,15 +1324,9 @@ void main() {
     await tester.tap(find.text('Open edit'));
     await tester.pumpAndSettle();
 
-    await tester.enterText(find.byType(TextField).first, '18.25');
+    await tester.enterText(_amountInput(), '18.25');
     await tester.enterText(
-      find.byWidgetPredicate(
-        (widget) =>
-            widget is TextField &&
-            widget.decoration?.labelText == 'Merchant (optional)',
-      ),
-      'Morning Brew',
-    );
+        _floatingLabelInput('Merchant (optional)'), 'Morning Brew');
     await tester.tap(find.text('Update Transaction'));
     await tester.pumpAndSettle();
 
@@ -1010,6 +1347,7 @@ void main() {
 
     final container = ProviderContainer(
       overrides: [
+        _authenticatedOverride,
         categoryFrequencyProvider.overrideWithValue(
           ['Coffee', 'Dining', 'Shopping', 'Gaming', 'Travel'],
         ),
@@ -1049,6 +1387,8 @@ void main() {
           ]),
         ),
         budgetReconciliationEnabledProvider.overrideWithValue(false),
+        exchangeRateProvider.overrideWith((ref, pair) async => null),
+        managedCategoriesProvider.overrideWith((ref, query) async => const []),
       ],
     );
     addTearDown(container.dispose);
@@ -1064,7 +1404,7 @@ void main() {
 
     await tester.pumpAndSettle();
 
-    await tester.enterText(find.byType(TextField).first, '18.25');
+    await tester.enterText(_amountInput(), '18.25');
     await tester.tap(find.text('Update Transaction'));
     await tester.pumpAndSettle();
 

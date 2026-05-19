@@ -133,7 +133,49 @@ public static class ConscienceJourneyRules
             Title: "Family Planner",
             Description: "Recorded your first shared family expense.",
             EventType: ConscienceEventTypes.FamilyExpenseAdded,
-            Target: 1)
+            Target: 1),
+        new(
+            Key: "insight_reader",
+            Title: "Insight Reader",
+            Description: "Explored 5 insights to understand your patterns.",
+            EventType: ConscienceEventTypes.InsightReviewed,
+            Target: 5),
+        new(
+            Key: "deep_thinker",
+            Title: "Deep Thinker",
+            Description: "Reviewed 3 regret patterns before they repeated.",
+            EventType: ConscienceEventTypes.RegretPatternReviewed,
+            Target: 3),
+        new(
+            Key: "pre_purchase_habit",
+            Title: "Pre-Purchase Habit",
+            Description: "Checked with Conscia before 5 purchases.",
+            EventType: ConscienceEventTypes.PrePurchaseChecked,
+            Target: 5),
+        new(
+            Key: "reflection_habit",
+            Title: "Reflection Habit",
+            Description: "Logged 10 reflections to build lasting awareness.",
+            EventType: ConscienceEventTypes.ReflectionCompleted,
+            Target: 10),
+        new(
+            Key: "family_connector",
+            Title: "Family Connector",
+            Description: "Had a family member accept your invite.",
+            EventType: ConscienceEventTypes.FamilyInviteAccepted,
+            Target: 1),
+        new(
+            Key: "family_budget_tracker",
+            Title: "Family Budget Tracker",
+            Description: "Tracked 5 shared family expenses.",
+            EventType: ConscienceEventTypes.FamilyExpenseAdded,
+            Target: 5),
+        new(
+            Key: "budget_builder",
+            Title: "Budget Builder",
+            Description: "Created 2 budgets from spending nudges.",
+            EventType: ConscienceEventTypes.BudgetCreatedFromNudge,
+            Target: 2)
     ];
 
     public static readonly IReadOnlyList<ConscienceMascotMomentRule> MascotMoments =

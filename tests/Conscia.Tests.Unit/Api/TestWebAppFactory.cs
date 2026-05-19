@@ -75,6 +75,7 @@ public class TestWebAppFactory : WebApplicationFactory<Program>
             ReplaceService<IWeeklyInsightsRepository>(services, WeeklyInsightsRepoMock.Object);
             ReplaceService<IPurchasePatternRepository>(services, PurchasePatternRepoMock.Object);
             ReplaceService<IMonthlyCategorySpendRepository>(services, MonthlyCategorySpendRepoMock.Object);
+            ReplaceService<IS3StorageService>(services, S3StorageServiceMock.Object);
         });
 
         builder.UseSetting("Auth:UseMock", "true");

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:conscia_app/core/network/dio_client.dart';
@@ -62,9 +63,43 @@ class _FakeSecureStorage extends FlutterSecureStorage {
   }
 }
 
+class _BlockingDeleteSecureStorage extends _FakeSecureStorage {
+  _BlockingDeleteSecureStorage(super.initial);
+
+  final firstDeleteStarted = Completer<void>();
+  final allowDeletes = Completer<void>();
+
+  @override
+  Future<void> delete({
+    required String key,
+    AppleOptions? iOptions,
+    AndroidOptions? aOptions,
+    LinuxOptions? lOptions,
+    WebOptions? webOptions,
+    WindowsOptions? wOptions,
+    AppleOptions? mOptions,
+  }) async {
+    if (!firstDeleteStarted.isCompleted) {
+      firstDeleteStarted.complete();
+    }
+    await allowDeletes.future;
+    await super.delete(
+      key: key,
+      iOptions: iOptions,
+      aOptions: aOptions,
+      lOptions: lOptions,
+      webOptions: webOptions,
+      wOptions: wOptions,
+      mOptions: mOptions,
+    );
+  }
+}
+
 class _TestAuthNotifier extends AuthNotifier {
-  _TestAuthNotifier(AuthState initialState)
-      : super(_FakeAuthService(), _FakeSecureStorage()) {
+  _TestAuthNotifier(
+    AuthState initialState, {
+    FlutterSecureStorage? storage,
+  }) : super(_FakeAuthService(), storage ?? _FakeSecureStorage()) {
     state = initialState;
   }
 
@@ -89,12 +124,15 @@ class _TestAuthNotifier extends AuthNotifier {
 }
 
 class _UnauthorizedAdapter implements HttpClientAdapter {
+  int fetchCount = 0;
+
   @override
   Future<ResponseBody> fetch(
     RequestOptions options,
     Stream<Uint8List>? requestStream,
     Future<void>? cancelFuture,
   ) async {
+    fetchCount += 1;
     return ResponseBody.fromString(
       '{"message":"Unauthorized"}',
       401,
@@ -108,8 +146,31 @@ class _UnauthorizedAdapter implements HttpClientAdapter {
   void close({bool force = false}) {}
 }
 
+class _OkAdapter implements HttpClientAdapter {
+  int fetchCount = 0;
+
+  @override
+  Future<ResponseBody> fetch(
+    RequestOptions options,
+    Stream<Uint8List>? requestStream,
+    Future<void>? cancelFuture,
+  ) async {
+    fetchCount += 1;
+    return ResponseBody.fromString(
+      '{"status":"Healthy","checks":[]}',
+      200,
+      headers: {
+        Headers.contentTypeHeader: [Headers.jsonContentType],
+      },
+    );
+  }
+
+  @override
+  void close({bool force = false}) {}
+}
+
 void main() {
-  test('dioProvider rebuilds when the authenticated user changes', () {
+  test('dioProvider stays stable when auth state changes', () {
     final authNotifier = _TestAuthNotifier(
       const AuthState(
         status: AuthStatus.authenticated,
@@ -134,7 +195,7 @@ void main() {
 
     final secondClient = container.read(dioProvider);
 
-    expect(secondClient, isNot(same(firstClient)));
+    expect(secondClient, same(firstClient));
   });
 
   test('does not mark session expired when a stale request fails after logout',
@@ -156,8 +217,8 @@ void main() {
     addTearDown(container.dispose);
 
     await authNotifier.logout();
-    final dio = container.read(dioProvider)
-      ..httpClientAdapter = _UnauthorizedAdapter();
+    final adapter = _UnauthorizedAdapter();
+    final dio = container.read(dioProvider)..httpClientAdapter = adapter;
 
     await expectLater(
       dio.get<dynamic>('/transactions'),
@@ -167,5 +228,117 @@ void main() {
     expect(authNotifier.state.status, AuthStatus.unauthenticated);
     expect(authNotifier.refreshSessionCount, 0);
     expect(authNotifier.markSessionExpiredCount, 0);
+    expect(adapter.fetchCount, 0);
+  });
+
+  test('blocks protected requests while logout is clearing stored tokens',
+      () async {
+    final storage = _BlockingDeleteSecureStorage({
+      'access_token': 'old-token',
+      'refresh_token': 'old-refresh-token',
+      'user_id': 'user-1',
+    });
+    final authNotifier = _TestAuthNotifier(
+      const AuthState(
+        status: AuthStatus.authenticated,
+        accessToken: 'old-token',
+        refreshToken: 'old-refresh-token',
+        userId: 'user-1',
+      ),
+      storage: storage,
+    );
+    final container = ProviderContainer(
+      overrides: [
+        authProvider.overrideWith((ref) => authNotifier),
+        secureStorageProvider.overrideWithValue(storage),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    final adapter = _OkAdapter();
+    final dio = container.read(dioProvider)..httpClientAdapter = adapter;
+    final logoutFuture = authNotifier.logout();
+
+    await storage.firstDeleteStarted.future;
+
+    try {
+      await expectLater(
+        dio.get<dynamic>('/transactions'),
+        throwsA(isA<DioException>()),
+      );
+
+      expect(authNotifier.state.status, AuthStatus.unauthenticated);
+      expect(authNotifier.refreshSessionCount, 0);
+      expect(authNotifier.markSessionExpiredCount, 0);
+      expect(adapter.fetchCount, 0);
+    } finally {
+      storage.allowDeletes.complete();
+      await logoutFuture;
+    }
+  });
+
+  test('allows health requests to reach the network adapter after logout',
+      () async {
+    final authNotifier = _TestAuthNotifier(
+      const AuthState(
+        status: AuthStatus.authenticated,
+        accessToken: 'old-token',
+        refreshToken: 'old-refresh-token',
+        userId: 'user-1',
+      ),
+    );
+    final container = ProviderContainer(
+      overrides: [
+        authProvider.overrideWith((ref) => authNotifier),
+        secureStorageProvider.overrideWithValue(_FakeSecureStorage()),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    await authNotifier.logout();
+    final adapter = _OkAdapter();
+    final dio = container.read(dioProvider)..httpClientAdapter = adapter;
+
+    final response = await dio.get<dynamic>('http://localhost:5248/health');
+
+    expect(response.statusCode, 200);
+    expect(adapter.fetchCount, 1);
+  });
+
+  test('marks session expired when a retried protected request is still 401',
+      () async {
+    final authNotifier = _TestAuthNotifier(
+      const AuthState(
+        status: AuthStatus.authenticated,
+        accessToken: 'fresh-token',
+        refreshToken: 'fresh-refresh-token',
+        userId: 'user-1',
+      ),
+    );
+    final container = ProviderContainer(
+      overrides: [
+        authProvider.overrideWith((ref) => authNotifier),
+        secureStorageProvider.overrideWithValue(
+          _FakeSecureStorage({'access_token': 'fresh-token'}),
+        ),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    final adapter = _UnauthorizedAdapter();
+    final dio = container.read(dioProvider)..httpClientAdapter = adapter;
+
+    await expectLater(
+      dio.get<dynamic>(
+        '/transactions',
+        options: Options(extra: const {'authRetried': true}),
+      ),
+      throwsA(isA<DioException>()),
+    );
+
+    expect(authNotifier.state.status, AuthStatus.sessionExpired);
+    expect(authNotifier.refreshSessionCount, 0);
+    expect(authNotifier.markSessionExpiredCount, 1);
+    expect(adapter.fetchCount, 1);
   });
 }

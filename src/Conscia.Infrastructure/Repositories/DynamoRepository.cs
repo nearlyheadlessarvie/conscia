@@ -26,6 +26,21 @@ public abstract class DynamoRepository
         return key;
     }
 
+    protected static bool IsMissingItem(Dictionary<string, AttributeValue>? item) =>
+        item is null || item.Count == 0;
+
+    protected static IReadOnlyList<Dictionary<string, AttributeValue>> Items(QueryResponse? response) =>
+        response?.Items ?? [];
+
+    protected static IReadOnlyList<Dictionary<string, AttributeValue>> Items(ScanResponse? response) =>
+        response?.Items ?? [];
+
+    protected static Dictionary<string, AttributeValue>? FirstItem(QueryResponse? response) =>
+        Items(response).FirstOrDefault();
+
+    protected static Dictionary<string, AttributeValue>? FirstItem(ScanResponse? response) =>
+        Items(response).FirstOrDefault();
+
     protected static AttributeValue StringValue(string value) => new(value);
 
     protected static AttributeValue NumberValue(decimal value) =>

@@ -1,9 +1,53 @@
 import 'package:conscia_app/core/errors/app_error.dart';
+import 'package:conscia_app/providers/auth_provider.dart';
 import 'package:conscia_app/screens/onboarding/sign_in_screen.dart';
+import 'package:conscia_app/services/auth_service.dart';
 import 'package:dio/dio.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+class _FailingAuthService extends AuthService {
+  _FailingAuthService() : super(Dio());
+
+  @override
+  Future<AuthTokens> login(String email, String password) {
+    throw DioException(
+      requestOptions: RequestOptions(path: '/api/v1/auth/login'),
+      response: Response(
+        requestOptions: RequestOptions(path: '/api/v1/auth/login'),
+        statusCode: 401,
+        data: {'error': 'Invalid email or password'},
+      ),
+      type: DioExceptionType.badResponse,
+    );
+  }
+}
+
+class _FakeSecureStorage extends FlutterSecureStorage {
+  const _FakeSecureStorage();
+
+  @override
+  Future<String?> read({
+    required String key,
+    AppleOptions? iOptions,
+    AndroidOptions? aOptions,
+    LinuxOptions? lOptions,
+    WebOptions? webOptions,
+    WindowsOptions? wOptions,
+    AppleOptions? mOptions,
+  }) async {
+    return null;
+  }
+}
 
 void main() {
+  setUp(() {
+    SharedPreferences.setMockInitialValues({});
+  });
+
   tearDown(AppError.resetForTests);
 
   test('password sign-in maps 401 to invalid username or password', () {
@@ -73,4 +117,83 @@ void main() {
       'Invalid username or password.',
     );
   });
+
+  testWidgets(
+    'sign in screen shows inline auth error note instead of dismissible banner',
+    (tester) async {
+      final authNotifier = AuthNotifier(
+        _FailingAuthService(),
+        const _FakeSecureStorage(),
+      );
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            authProvider.overrideWith((ref) => authNotifier),
+          ],
+          child: const MaterialApp(
+            home: SignInScreen(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final fields = find.byType(TextField);
+      await tester.enterText(fields.at(0), 'nearlyheadlessarvie@live.com.ph');
+      await tester.enterText(fields.at(1), 'Secure123');
+      await tester.tap(find.widgetWithText(FilledButton, 'Sign In'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(find.text('Dismiss'), findsNothing);
+      expect(find.text('Invalid username or password.'), findsOneWidget);
+    },
+  );
+
+  testWidgets('pressing enter in password field submits sign in',
+      (tester) async {
+    var loginCallCount = 0;
+    final authService = _RecordingAuthService(
+      onLogin: (email, password) {
+        loginCallCount += 1;
+        return const AuthTokens(
+          accessToken: 'header.payload.signature',
+          refreshToken: 'refresh-token',
+          userId: 'user-1',
+        );
+      },
+    );
+    final authNotifier = AuthNotifier(authService, const _FakeSecureStorage());
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          authProvider.overrideWith((ref) => authNotifier),
+        ],
+        child: const MaterialApp(
+          home: SignInScreen(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final fields = find.byType(TextField);
+    await tester.enterText(fields.at(0), 'nearlyheadlessarvie@live.com.ph');
+    await tester.enterText(fields.at(1), 'Secure123');
+    await tester.testTextInput.receiveAction(TextInputAction.done);
+    await tester.pump();
+
+    expect(loginCallCount, 1);
+  });
+}
+
+class _RecordingAuthService extends AuthService {
+  _RecordingAuthService({required this.onLogin}) : super(Dio());
+
+  final AuthTokens Function(String email, String password) onLogin;
+
+  @override
+  Future<AuthTokens> login(String email, String password) async {
+    return onLogin(email, password);
+  }
 }

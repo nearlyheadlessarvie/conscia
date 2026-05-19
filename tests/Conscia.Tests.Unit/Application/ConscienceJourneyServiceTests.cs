@@ -11,7 +11,7 @@ public class ConscienceJourneyServiceTests
     public async Task RecordEventAsync_AwardsEventXpAndBuildsSummary()
     {
         var repository = new InMemoryConscienceJourneyRepository();
-        var service = new ConscienceJourneyService(repository);
+        var service = new ConscienceJourneyService(repository, new HardcodedJourneyRulesProvider());
         var userId = Guid.NewGuid();
 
         var result = await service.RecordEventAsync(userId, ConscienceEventTypes.ReflectionCompleted, "tx-1");
@@ -29,7 +29,7 @@ public class ConscienceJourneyServiceTests
     public async Task RecordEventAsync_DuplicateEventDoesNotAwardXpAgain()
     {
         var repository = new InMemoryConscienceJourneyRepository();
-        var service = new ConscienceJourneyService(repository);
+        var service = new ConscienceJourneyService(repository, new HardcodedJourneyRulesProvider());
         var userId = Guid.NewGuid();
 
         await service.RecordEventAsync(userId, ConscienceEventTypes.ReflectionCompleted, "tx-1");
@@ -45,7 +45,7 @@ public class ConscienceJourneyServiceTests
     public async Task RecordEventAsync_CalculatesLevelThresholds()
     {
         var repository = new InMemoryConscienceJourneyRepository();
-        var service = new ConscienceJourneyService(repository);
+        var service = new ConscienceJourneyService(repository, new HardcodedJourneyRulesProvider());
         var userId = Guid.NewGuid();
 
         await repository.UpsertProgressAsync(new ConscienceJourneyProgress
@@ -69,7 +69,7 @@ public class ConscienceJourneyServiceTests
     public async Task RecordEventAsync_CompletesWeeklyQuestOnceAndAwardsQuestXp()
     {
         var repository = new InMemoryConscienceJourneyRepository();
-        var service = new ConscienceJourneyService(repository);
+        var service = new ConscienceJourneyService(repository, new HardcodedJourneyRulesProvider());
         var userId = Guid.NewGuid();
 
         var first = await service.RecordEventAsync(userId, ConscienceEventTypes.PrePurchaseChecked, "check-1");
@@ -86,7 +86,7 @@ public class ConscienceJourneyServiceTests
     public async Task RecordEventAsync_UnlocksBadgeAndMascotMoment()
     {
         var repository = new InMemoryConscienceJourneyRepository();
-        var service = new ConscienceJourneyService(repository);
+        var service = new ConscienceJourneyService(repository, new HardcodedJourneyRulesProvider());
         var userId = Guid.NewGuid();
 
         var result = await service.RecordEventAsync(userId, ConscienceEventTypes.RegretPatternReviewed, "pattern-1");
@@ -102,7 +102,7 @@ public class ConscienceJourneyServiceTests
     public async Task RecordEventAsync_MomentumDoesNotResetAfterMissedDays()
     {
         var repository = new InMemoryConscienceJourneyRepository();
-        var service = new ConscienceJourneyService(repository);
+        var service = new ConscienceJourneyService(repository, new HardcodedJourneyRulesProvider());
         var userId = Guid.NewGuid();
 
         await repository.UpsertProgressAsync(new ConscienceJourneyProgress

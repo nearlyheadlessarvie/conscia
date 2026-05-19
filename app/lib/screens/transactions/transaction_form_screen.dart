@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
 import '../../core/constants/app_icons.dart';
-import '../../core/constants/category_icons.dart';
 import '../../core/errors/app_error.dart';
+import '../../core/theme/app_colors.dart';
+import '../../core/utils/localized_date_format.dart';
+import '../../core/utils/localized_number_input.dart';
 import '../../providers/alert_provider.dart';
 import '../../providers/budget_providers.dart';
 import '../../providers/category_recents_provider.dart';
@@ -16,16 +17,19 @@ import '../../providers/transaction_providers.dart';
 import '../../providers/user_provider.dart';
 import '../../models/recurring_schedule.dart';
 import '../../services/transaction_service.dart';
-import '../../widgets/amount_input_field.dart';
-import '../../widgets/hero_screen_scaffold.dart';
+import '../../widgets/conscia_bottom_sheet.dart';
 import '../../widgets/location_assistance_prompt_sheet.dart';
 import '../../widgets/recurring_schedule_section.dart';
-import '../../widgets/scope_selector.dart';
+import '../../widgets/scope_pill_switch.dart';
 import '../../widgets/skeleton_loader.dart';
-import '../../widgets/smart_suggestions_card.dart';
+import '../../widgets/smart_merchant_suggestion_strip.dart';
+import '../../widgets/amount_hero_field.dart';
+import '../../widgets/floating_label_text_field.dart';
+import '../../widgets/screen_section.dart';
 import 'widgets/transaction_style_category_selector.dart';
+import '../../widgets/segmented_switch.dart';
 
-class TransactionFormScreen extends ConsumerStatefulWidget {
+class TransactionFormScreen extends StatefulWidget {
   final String? transactionId;
   final String? initialAmount;
   final String? initialCurrencyCode;
@@ -42,16 +46,104 @@ class TransactionFormScreen extends ConsumerStatefulWidget {
   });
 
   @override
-  ConsumerState<TransactionFormScreen> createState() =>
+  State<TransactionFormScreen> createState() =>
       _TransactionFormScreenState();
 }
 
-class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
+class _TransactionFormScreenState extends State<TransactionFormScreen> {
+  bool _opened = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_opened) return;
+    _opened = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) => _openSheet());
+  }
+
+  Future<void> _openSheet() async {
+    if (!mounted) return;
+    final result = await TransactionFormSheet.show(
+      context,
+      transactionId: widget.transactionId,
+      initialAmount: widget.initialAmount,
+      initialCurrencyCode: widget.initialCurrencyCode,
+      initialCategory: widget.initialCategory,
+      initialCounterparty: widget.initialCounterparty,
+    );
+    if (!mounted) return;
+
+    final navigator = Navigator.of(context);
+    if (navigator.canPop()) {
+      navigator.pop(result);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Theme.of(context).appColors.paper,
+      body: const SizedBox.expand(),
+    );
+  }
+}
+
+class TransactionFormSheet extends ConsumerStatefulWidget {
+  final String? transactionId;
+  final String? initialAmount;
+  final String? initialCurrencyCode;
+  final String? initialCategory;
+  final String? initialCounterparty;
+  final ScrollController? scrollController;
+
+  const TransactionFormSheet({
+    super.key,
+    this.transactionId,
+    this.initialAmount,
+    this.initialCurrencyCode,
+    this.initialCategory,
+    this.initialCounterparty,
+    this.scrollController,
+  });
+
+  static Future<Transaction?> show(
+    BuildContext context, {
+    String? transactionId,
+    String? initialAmount,
+    String? initialCurrencyCode,
+    String? initialCategory,
+    String? initialCounterparty,
+  }) {
+    return showModalBottomSheet<Transaction>(
+      context: context,
+      useRootNavigator: true,
+      isScrollControlled: true,
+      useSafeArea: true,
+      builder: (_) => DraggableScrollableSheet(
+        initialChildSize: 0.98,
+        minChildSize: 0.56,
+        maxChildSize: 1,
+        expand: false,
+        builder: (_, controller) => TransactionFormSheet(
+          transactionId: transactionId,
+          initialAmount: initialAmount,
+          initialCurrencyCode: initialCurrencyCode,
+          initialCategory: initialCategory,
+          initialCounterparty: initialCounterparty,
+          scrollController: controller,
+        ),
+      ),
+    );
+  }
+
+  @override
+  ConsumerState<TransactionFormSheet> createState() =>
+      _TransactionFormSheetState();
+}
+
+class _TransactionFormSheetState extends ConsumerState<TransactionFormSheet> {
   bool get _isEditing => widget.transactionId != null;
 
-  bool _categoryExpanded = true;
-  bool _detailsExpanded = true;
-  bool _recurringExpanded = false;
   bool _isExpense = true;
   final _amountController = TextEditingController();
   final _exchangeRateController = TextEditingController();
@@ -59,8 +151,10 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
   bool _currencyManuallyChanged = false;
   String? _selectedCategory;
   final _counterpartyController = TextEditingController();
+  final _counterpartyFocusNode = FocusNode();
+  final _amountFocusNode = FocusNode();
+  final _categorySectionKey = GlobalKey();
   DateTime _selectedDate = DateTime.now();
-  final _notesController = TextEditingController();
   bool _submitting = false;
   bool _prefilled = false;
   bool _hasCheckedLocationPrompt = false;
@@ -136,7 +230,10 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
         _originalTransaction = tx;
         _prefilled = true;
         _isExpense = tx.type != 'income';
-        _amountController.text = tx.amount.toStringAsFixed(2);
+        _amountController.text = LocalizedNumberInput.formatForInput(
+          tx.amount,
+          locale: ref.read(userPreferencesProvider).locale,
+        );
         _currencyCode = tx.currencyCode;
         _currencyManuallyChanged = true;
         _selectedCategory = tx.category;
@@ -149,15 +246,37 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
 
   @override
   void dispose() {
+    _counterpartyFocusNode.dispose();
+    _amountFocusNode.dispose();
     _amountController.dispose();
     _exchangeRateController.dispose();
     _counterpartyController.dispose();
-    _notesController.dispose();
     super.dispose();
   }
 
+  void _focusAmount() {
+    _amountFocusNode.requestFocus();
+  }
+
+  void _scrollCategoryIntoView() {
+    _amountFocusNode.unfocus();
+    final categoryContext = _categorySectionKey.currentContext;
+    if (categoryContext == null) return;
+
+    Scrollable.ensureVisible(
+      categoryContext,
+      duration: const Duration(milliseconds: 240),
+      curve: Curves.easeOutCubic,
+      alignment: 0.08,
+    );
+  }
+
   bool get _isValid {
-    final amount = double.tryParse(_amountController.text);
+    final prefs = ref.read(userPreferencesProvider);
+    final amount = LocalizedNumberInput.parseAmount(
+      _amountController.text,
+      locale: prefs.locale,
+    );
     return amount != null && amount > 0 && _selectedCategory != null;
   }
 
@@ -165,15 +284,23 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
     if (!_isValid || _submitting) return;
     setState(() => _submitting = true);
 
-    final userCurrency = ref.read(userPreferencesProvider).currency;
-    final rateOverride = double.tryParse(_exchangeRateController.text);
+    final prefs = ref.read(userPreferencesProvider);
+    final userCurrency = prefs.currency;
+    final amount = LocalizedNumberInput.parseAmount(
+      _amountController.text,
+      locale: prefs.locale,
+    )!;
+    final rateOverride = LocalizedNumberInput.parseAmount(
+      _exchangeRateController.text,
+      locale: prefs.locale,
+    );
     final familySpace = ref.read(familySpaceProvider).valueOrNull;
     final familySpaceId =
         familySpace?.id ?? _originalTransaction?.familySpaceId;
     final isFamilyScope = _scope == 'family' && familySpaceId != null;
 
     final dto = CreateTransactionDto(
-      amount: double.parse(_amountController.text),
+      amount: amount,
       currencyCode: _currencyCode,
       category: _selectedCategory!,
       counterparty: _counterpartyController.text,
@@ -286,9 +413,10 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
     }
 
     if (_isEditing && !_prefilled) {
-      return HeroScreenScaffold(
-        appBar: AppBar(title: const Text('Edit Transaction')),
-        child: const Column(
+      return const ConsciaBottomSheetScaffold(
+        title: 'Edit transaction',
+        subtitle: 'Loading the record so you can update it safely.',
+        child: Column(
           children: [
             SkeletonLoader(height: 48),
             SizedBox(height: 16),
@@ -313,155 +441,196 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
     final familySpace = ref.watch(familySpaceProvider).valueOrNull;
     final locationAssistance = ref.watch(locationAssistanceProvider);
     final suggestions = ref.watch(locationAssistanceSuggestionsProvider);
-    final hasSuggestions = suggestions.nearbyMerchants.isNotEmpty ||
-        suggestions.likelyCategories.isNotEmpty;
+    final hasSuggestions = suggestions.nearbyMerchants.isNotEmpty;
+    final categorySubtitle = _isExpense
+        ? 'Choose where this transaction belongs so budgets and insights stay accurate.'
+        : 'Choose where this money came from so Conscia can understand your income rhythm separately from spending.';
+    final userPrefs = ref.watch(userPreferencesProvider);
+    final dateLabel = _relativeDateLabel(
+      _selectedDate,
+      locale: userPrefs.locale,
+    );
 
-    return HeroScreenScaffold(
-      appBar: AppBar(
-        title: Text(_isEditing ? 'Edit Transaction' : 'Add Transaction'),
-        leading: IconButton(
-          icon: Icon(AppIcons.close),
-          onPressed: () => context.pop(),
-        ),
-      ),
-      bottom: FilledButton(
-        onPressed: _isValid && !_submitting ? _submit : null,
-        child: _submitting
-            ? const SizedBox(
-                width: 24,
-                height: 24,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: Colors.white,
+    return ConsciaBottomSheetScaffold(
+      title: _isEditing ? 'Edit transaction' : 'Add transaction',
+      subtitle: _isEditing
+          ? 'Update the money story without losing the original context.'
+          : 'Capture who, how much, and where this belongs.',
+      expand: true,
+      scrollController: widget.scrollController,
+      footer: SizedBox(
+        width: double.infinity,
+        child: FilledButton(
+          onPressed: _isValid && !_submitting ? _submit : null,
+          child: _submitting
+              ? const SizedBox(
+                  width: 24,
+                  height: 24,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.white,
+                  ),
+                )
+              : Text(
+                  _isEditing ? 'Update Transaction' : 'Save Transaction',
                 ),
-              )
-            : Text(
-                _isEditing ? 'Update Transaction' : 'Save Transaction',
-              ),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          SegmentedButton<bool>(
-            segments: [
-              ButtonSegment(
-                value: true,
-                label: const Text('Expense'),
-                icon: Icon(
-                  Icons.arrow_downward,
-                  color: _isExpense
-                      ? (colors.brightness == Brightness.light
-                          ? const Color(0xFFE53935)
-                          : const Color(0xFFEF9A9A))
-                      : null,
+          ScreenSection(
+            title: 'Transaction',
+            subtitle: 'Was this money in or out?',
+            compact: true,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                SegmentedSwitch(
+                  items: const ['Expense', 'Income'],
+                  selectedItem: _isExpense ? 'expense' : 'income',
+                  selectedColor: _isExpense
+                      ? Theme.of(context).appColors.expense
+                      : Theme.of(context).appColors.income,
+                  onChanged: (label) => setState(() {
+                    final v = {label};
+                    _isExpense = v.first == 'expense';
+                    _selectedCategory = null;
+                  }),
                 ),
-              ),
-              ButtonSegment(
-                value: false,
-                label: const Text('Income'),
-                icon: Icon(
-                  Icons.arrow_upward,
-                  color: !_isExpense
-                      ? (colors.brightness == Brightness.light
-                          ? const Color(0xFF4CAF50)
-                          : const Color(0xFF81C784))
-                      : null,
-                ),
-              ),
-            ],
-            selected: {_isExpense},
-            onSelectionChanged: (v) => setState(() {
-              _isExpense = v.first;
-              _selectedCategory = null;
-            }),
-          ),
-          const SizedBox(height: 18),
-          AmountInputField(
-            controller: _amountController,
-            isExpense: _isExpense,
-            currencyCode: _currencyCode,
-            isPremium: isPremium,
-            onChanged: (_) => setState(() {}),
-            onCurrencyChanged: (code) => setState(() {
-              _currencyManuallyChanged = true;
-              _currencyCode = code;
-            }),
-          ),
-          const SizedBox(height: 18),
-          if (familySpace != null) ...[
-            Padding(
-              padding: const EdgeInsets.only(bottom: 18),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Text(
-                    'Scope',
-                    style: textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Choose whether this record stays personal or appears in ${familySpace.name}.',
-                    style: textTheme.bodySmall?.copyWith(
-                      color: colors.onSurfaceVariant,
-                      height: 1.35,
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  ScopeSelector(
-                    value: _scope,
-                    familyEnabled: true,
-                    onChanged: (value) => setState(() => _scope = value),
-                  ),
-                ],
-              ),
+              ],
             ),
-          ],
-          Consumer(
-            builder: (context, ref, _) {
-              final userCurrency = ref.watch(userPreferencesProvider).currency;
-              if (_currencyCode == userCurrency) {
-                return const SizedBox.shrink();
-              }
-
-              final rateAsync = ref.watch(
-                exchangeRateProvider((_currencyCode, userCurrency)),
-              );
-
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 18),
-                child: rateAsync.when(
-                  loading: () => const LinearProgressIndicator(),
-                  error: (_, __) => const SizedBox.shrink(),
-                  data: (liveRate) => TextField(
-                    controller: _exchangeRateController,
-                    keyboardType: const TextInputType.numberWithOptions(
-                      decimal: true,
-                    ),
-                    decoration: InputDecoration(
-                      labelText: 'Exchange rate (optional)',
-                      hintText: liveRate != null
-                          ? liveRate.toStringAsFixed(4)
-                          : 'Enter rate manually',
-                      helperText: liveRate != null
-                          ? 'Leave blank to use live rate (1 $_currencyCode = ${liveRate.toStringAsFixed(4)} $userCurrency)'
-                          : 'Live rate unavailable — enter manually or leave blank',
-                    ),
+          ),
+          ScreenSection(
+            title: 'Transaction Details',
+            subtitle:
+                'Add who this involves first, then the amount that changed.',
+            compact: true,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                SmartMerchantSuggestionStrip(
+                  focusNode: _counterpartyFocusNode,
+                  suggestions: suggestions,
+                  enabled: _isExpense &&
+                      !_isEditing &&
+                      locationAssistance.isEnabled &&
+                      hasSuggestions,
+                  onMerchantSelected: (counterpartySuggestion) {
+                    setState(() {
+                      _counterpartyController.text = counterpartySuggestion;
+                      final category = suggestions.categoryForMerchant(
+                        counterpartySuggestion,
+                      );
+                      if (category != null) {
+                        _selectedCategory = category;
+                      }
+                    });
+                    _focusAmount();
+                    final category = suggestions.categoryForMerchant(
+                      counterpartySuggestion,
+                    );
+                    if (category != null) {
+                      ref
+                          .read(recentCategoryProvider.notifier)
+                          .record(category);
+                    }
+                  },
+                  child: FloatingLabelTextField(
+                    controller: _counterpartyController,
+                    focusNode: _counterpartyFocusNode,
+                    onChanged: (_) => setState(() {}),
+                    onSubmitted: (_) => _focusAmount(),
+                    textInputAction: TextInputAction.next,
+                    autofocus: !_isEditing,
+                    label: _isExpense
+                        ? 'Merchant (optional)'
+                        : 'Source (optional)',
                   ),
                 ),
-              );
-            },
+                const SizedBox(height: 12),
+                AmountHeroField(
+                  controller: _amountController,
+                  focusNode: _amountFocusNode,
+                  currencyCode: _currencyCode,
+                  locale: userPrefs.locale,
+                  isExpense: _isExpense,
+                  isPremium: isPremium,
+                  textInputAction: TextInputAction.next,
+                  onSubmitted: (_) => _scrollCategoryIntoView(),
+                  onChanged: (_) => setState(() {}),
+                  onCurrencyChanged: (code) => setState(() {
+                    _currencyManuallyChanged = true;
+                    _currencyCode = code;
+                  }),
+                ),
+                Consumer(
+                  builder: (context, ref, _) {
+                    final userCurrency =
+                        ref.watch(userPreferencesProvider).currency;
+                    if (_currencyCode == userCurrency) {
+                      return const SizedBox.shrink();
+                    }
+
+                    final rateAsync = ref.watch(
+                      exchangeRateProvider((_currencyCode, userCurrency)),
+                    );
+
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 18),
+                      child: rateAsync.when(
+                        loading: () => const LinearProgressIndicator(),
+                        error: (_, __) => const SizedBox.shrink(),
+                        data: (liveRate) => Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const SizedBox(height: 18),
+                            FloatingLabelTextField(
+                              controller: _exchangeRateController,
+                              label: 'Exchange rate (optional)',
+                              keyboardType:
+                                  const TextInputType.numberWithOptions(
+                                decimal: true,
+                              ),
+                              inputFormatters: [
+                                LocalizedNumberInput.formatter(
+                                  userPrefs.locale,
+                                  decimalDigits: 4,
+                                  useGrouping: false,
+                                ),
+                              ],
+                              onChanged: (_) => setState(() {}),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              liveRate != null
+                                  ? 'Leave blank to use live rate (1 $_currencyCode = ${LocalizedNumberInput.formatForInput(
+                                      liveRate,
+                                      locale: userPrefs.locale,
+                                      decimalDigits: 4,
+                                    )} $userCurrency)'
+                                  : 'Live rate unavailable - enter manually or leave blank',
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodySmall
+                                  ?.copyWith(
+                                    color: Theme.of(context).appColors.mutedInk,
+                                  ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ],
+            ),
           ),
-          _AccordionSection(
+          ScreenSection(
+            key: _categorySectionKey,
             title: 'Category',
-            subtitle: _isExpense
-                ? 'Choose a category first, then refine the rest.'
-                : 'Pick the income source type you want to track.',
-            expanded: _categoryExpanded,
-            onToggle: () => setState(() {
-              _categoryExpanded = !_categoryExpanded;
-            }),
+            subtitle: categorySubtitle,
+            compact: true,
             child: TransactionStyleCategorySelector(
               selectedCategory: _selectedCategory,
               isExpense: _isExpense,
@@ -479,116 +648,52 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
               },
             ),
           ),
-          if (!_isEditing &&
-              locationAssistance.isEnabled &&
-              hasSuggestions) ...[
-            SmartSuggestionsCard(
-              suggestions: suggestions,
-              subtitle:
-                  'Suggestions only help you fill things faster. You can still edit everything manually.',
-              onMerchantSelected: (counterpartySuggestion) {
-                setState(() {
-                  _counterpartyController.text = counterpartySuggestion;
-                });
-              },
-              onCategorySelected: (category) {
-                setState(() {
-                  _selectedCategory = category;
-                });
-                ref.read(recentCategoryProvider.notifier).record(category);
-              },
-              categoryAvatarBuilder: (category) => CategoryIcons.badge(
-                category,
-                size: 14,
+          if (familySpace != null)
+            ScreenSection(
+              title: 'Classify',
+              subtitle: 'Where should this live in your money story?',
+              compact: true,
+              child: ScopePillSwitch(
+                value: _scope,
+                familyEnabled: true,
+                onChanged: (value) =>
+                    setState(() => _scope = value.toLowerCase()),
               ),
             ),
-            const SizedBox(height: 18),
-          ],
-          _AccordionSection(
-            title: 'Details',
-            subtitle:
-                'Add the who, when, and any context you want to remember later.',
-            expanded: _detailsExpanded,
-            onToggle: () => setState(() {
-              _detailsExpanded = !_detailsExpanded;
-            }),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                TextField(
-                  controller: _counterpartyController,
-                  textCapitalization: TextCapitalization.words,
-                  onChanged: (_) => setState(() {}),
-                  decoration: InputDecoration(
-                    labelText: _isExpense
-                        ? 'Merchant (optional)'
-                        : 'Source (optional)',
-                  ),
+          ScreenSection(
+            title: 'Timing',
+            subtitle: 'Choose the date for your money history.',
+            compact: true,
+            child: InkWell(
+              onTap: _pickDate,
+              borderRadius: BorderRadius.circular(12),
+              child: InputDecorator(
+                decoration: const InputDecoration(),
+                child: Row(
+                  children: [
+                    Expanded(
+                        child: Text(
+                      dateLabel,
+                      style: textTheme.bodyMedium,
+                    )),
+                    const Icon(Icons.calendar_today_outlined, size: 18),
+                  ],
                 ),
-                const SizedBox(height: 14),
-                TextField(
-                  controller: _notesController,
-                  maxLines: 3,
-                  minLines: 1,
-                  decoration: const InputDecoration(
-                    labelText: 'Notes (optional)',
-                  ),
-                ),
-                const SizedBox(height: 14),
-                InkWell(
-                  onTap: _pickDate,
-                  borderRadius: BorderRadius.circular(12),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 10,
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(
-                          AppIcons.calendar,
-                          size: 18,
-                          color: colors.onSurfaceVariant,
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          _relativeDateLabel(_selectedDate),
-                          style: textTheme.bodyMedium,
-                        ),
-                        const Spacer(),
-                        Icon(
-                          AppIcons.chevronRight,
-                          size: 16,
-                          color: colors.outline,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
+              ),
             ),
           ),
           if (!_isEditing) ...[
-            const SizedBox(height: 18),
-            _AccordionSection(
-              title: 'Recurring',
-              subtitle:
-                  'Create future transactions automatically on a schedule.',
-              expanded: _recurringExpanded,
-              onToggle: () => setState(() {
-                _recurringExpanded = !_recurringExpanded;
-              }),
-              child: RecurringScheduleSection(
-                enabled: _recurringEnabled,
-                cadence: _recurringCadence,
-                endDate: _recurringEndDate,
-                onEnabledChanged: (value) =>
-                    setState(() => _recurringEnabled = value),
-                onCadenceChanged: (value) =>
-                    setState(() => _recurringCadence = value),
-                onEndDateChanged: (value) =>
-                    setState(() => _recurringEndDate = value),
-              ),
+            const Divider(height: 24),
+            RecurringScheduleSection(
+              enabled: _recurringEnabled,
+              cadence: _recurringCadence,
+              endDate: _recurringEndDate,
+              onEnabledChanged: (value) =>
+                  setState(() => _recurringEnabled = value),
+              onCadenceChanged: (value) =>
+                  setState(() => _recurringCadence = value),
+              onEndDateChanged: (value) =>
+                  setState(() => _recurringEndDate = value),
             ),
           ],
         ],
@@ -596,25 +701,11 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
     );
   }
 
-  String _formatDate(DateTime d) {
-    const months = [
-      'January',
-      'February',
-      'March',
-      'April',
-      'May',
-      'June',
-      'July',
-      'August',
-      'September',
-      'October',
-      'November',
-      'December',
-    ];
-    return '${months[d.month - 1]} ${d.day}, ${d.year}';
+  String _formatDate(DateTime date, {required String locale}) {
+    return LocalizedDateFormat.numeric(date, locale: locale);
   }
 
-  String _relativeDateLabel(DateTime date) {
+  String _relativeDateLabel(DateTime date, {required String locale}) {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     final selected = DateTime(date.year, date.month, date.day);
@@ -622,97 +713,6 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
     if (selected == today.subtract(const Duration(days: 1))) {
       return 'Yesterday';
     }
-    return _formatDate(date);
-  }
-}
-
-class _AccordionSection extends StatelessWidget {
-  const _AccordionSection({
-    required this.title,
-    this.subtitle,
-    required this.expanded,
-    required this.onToggle,
-    required this.child,
-  });
-
-  final String title;
-  final String? subtitle;
-  final bool expanded;
-  final VoidCallback onToggle;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-    final colors = Theme.of(context).colorScheme;
-
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 18),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          InkWell(
-            onTap: onToggle,
-            borderRadius: BorderRadius.circular(16),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 2),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          title,
-                          style: textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                        if (subtitle != null) ...[
-                          const SizedBox(height: 4),
-                          Text(
-                            subtitle!,
-                            style: textTheme.bodySmall?.copyWith(
-                              color: colors.onSurfaceVariant,
-                              height: 1.35,
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Padding(
-                    padding: const EdgeInsets.only(top: 2),
-                    child: AnimatedRotation(
-                      turns: expanded ? 0.5 : 0,
-                      duration: const Duration(milliseconds: 180),
-                      curve: Curves.easeOutCubic,
-                      child: Icon(
-                        Icons.keyboard_arrow_down_rounded,
-                        color: colors.onSurfaceVariant,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          ClipRect(
-            child: AnimatedSize(
-              duration: const Duration(milliseconds: 180),
-              curve: Curves.easeOutCubic,
-              child: expanded
-                  ? Padding(
-                      padding: const EdgeInsets.only(top: 10),
-                      child: child,
-                    )
-                  : const SizedBox.shrink(),
-            ),
-          ),
-        ],
-      ),
-    );
+    return _formatDate(date, locale: locale);
   }
 }

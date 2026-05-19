@@ -42,9 +42,7 @@ public class AIInteractionRepository : DynamoRepository, IAIInteractionRepositor
             ConsistentRead = false // explicit: GSI is eventual
         }, ct);
 
-        return response.Items.Count > 0
-            ? FromItem(response.Items[0])
-            : null;
+        return FirstItem(response) is { } item ? FromItem(item) : null;
     }
 
     // Primary access pattern: USER timeline
@@ -78,7 +76,7 @@ public class AIInteractionRepository : DynamoRepository, IAIInteractionRepositor
             Limit = limit
         }, ct);
 
-        return response.Items.Select(FromItem).ToList();
+        return Items(response).Select(FromItem).ToList();
     }
 
     // Efficient count using PK

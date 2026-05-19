@@ -23,7 +23,7 @@ public class ReceiptRepository : DynamoRepository, IReceiptRepository
             Key = Key(ReceiptPk(id), "PROFILE")
         }, ct);
 
-        return response.Item.Count == 0 ? null : FromItem(response.Item);
+        return IsMissingItem(response.Item) ? null : FromItem(response.Item);
     }
 
     public async Task<Receipt?> GetByTransactionIdAsync(Guid transactionId, CancellationToken ct = default)
@@ -40,7 +40,7 @@ public class ReceiptRepository : DynamoRepository, IReceiptRepository
             Limit = 1
         }, ct);
 
-        return response.Items.Count == 0 ? null : FromItem(response.Items[0]);
+        return FirstItem(response) is { } item ? FromItem(item) : null;
     }
 
     public async Task<Receipt> AddAsync(Receipt receipt, CancellationToken ct = default)
@@ -94,15 +94,20 @@ public class ReceiptRepository : DynamoRepository, IReceiptRepository
             ["SK"] = new("PROFILE"),
             ["EntityType"] = new("Receipt"),
             ["Id"] = new(receipt.Id.ToString()),
-            ["TransactionId"] = new(receipt.TransactionId.ToString()),
+            ["UserId"] = new(receipt.UserId.ToString()),
             ["S3Key"] = new(receipt.S3Key),
             ["OcrConfidence"] = NumberValue(receipt.OcrConfidence),
             ["NeedsReview"] = BoolValue(receipt.NeedsReview),
             ["Status"] = new(receipt.Status.ToString()),
             ["CreatedAt"] = new(receipt.CreatedAt.ToString("O", CultureInfo.InvariantCulture)),
-            ["GSI1PK"] = new($"TRANSACTION#{receipt.TransactionId}"),
-            ["GSI1SK"] = new($"RECEIPT#{receipt.CreatedAt:O}#{receipt.Id}")
         };
+
+        if (receipt.TransactionId != Guid.Empty)
+        {
+            item["TransactionId"] = new(receipt.TransactionId.ToString());
+            item["GSI1PK"] = new($"TRANSACTION#{receipt.TransactionId}");
+            item["GSI1SK"] = new($"RECEIPT#{receipt.CreatedAt:O}#{receipt.Id}");
+        }
 
         AddIfNotNull(item, "ExtractedData", receipt.ExtractedData);
         return item;
@@ -111,7 +116,10 @@ public class ReceiptRepository : DynamoRepository, IReceiptRepository
     internal static Receipt FromItem(Dictionary<string, AttributeValue> item) => new()
     {
         Id = Guid.Parse(item["Id"].S),
-        TransactionId = Guid.Parse(item["TransactionId"].S),
+        UserId = item.TryGetValue("UserId", out var userId) ? Guid.Parse(userId.S) : Guid.Empty,
+        TransactionId = item.TryGetValue("TransactionId", out var transactionId)
+            ? Guid.Parse(transactionId.S)
+            : Guid.Empty,
         S3Key = item["S3Key"].S,
         ExtractedData = GetOptionalString(item, "ExtractedData"),
         OcrConfidence = item.TryGetValue("OcrConfidence", out var confidence) ? GetDouble(item, "OcrConfidence") : 0,

@@ -22,6 +22,8 @@ public class StoryDemoScenarioTests
     {
         var scenario = StoryDemoScenario.Build(DateTime.Parse("2026-05-11T00:00:00Z"));
 
+        Assert.Equal("PHP", scenario.User.PreferredCurrency);
+        Assert.Equal("en_US", scenario.User.Locale);
         Assert.Contains(scenario.Transactions, tx => tx.Category == "Subscriptions");
         Assert.DoesNotContain(scenario.Budgets, budget => budget.Category == "Subscriptions");
         Assert.Equal("story-demo-premium", scenario.Subscription.OriginalTransactionId);

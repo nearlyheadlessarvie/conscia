@@ -14,6 +14,11 @@ final categoryFilterProvider = StateProvider<String?>((ref) {
   return null;
 });
 
+final transactionScopeFilterProvider = StateProvider<String>((ref) {
+  ref.watch(authCacheScopeProvider);
+  return 'personal';
+});
+
 class TransactionListState {
   final List<Transaction> transactions;
   final bool isLoading;
@@ -70,9 +75,22 @@ class TransactionListNotifier extends StateNotifier<TransactionListState> {
           currentPage: 1,
         ));
 
+  TransactionListNotifier.empty()
+      : _service = null,
+        _categoryFilter = null,
+        _scopeFilter = null,
+        super(const TransactionListState(
+          transactions: [],
+          isLoading: false,
+          hasMore: false,
+          currentPage: 0,
+        ));
+
   Future<void> loadMore() async {
     final service = _service;
-    if (service == null || state.isLoading || !state.hasMore) return;
+    if (service == null || !mounted || state.isLoading || !state.hasMore) {
+      return;
+    }
     state = state.copyWith(isLoading: true, error: null);
 
     try {
@@ -82,13 +100,16 @@ class TransactionListNotifier extends StateNotifier<TransactionListState> {
         category: _categoryFilter,
         scope: _scopeFilter,
       );
-      state = state.copyWith(
-        transactions: [...state.transactions, ...result.items],
+      if (!mounted) return;
+      final current = state;
+      state = current.copyWith(
+        transactions: [...current.transactions, ...result.items],
         isLoading: false,
         hasMore: result.hasMore,
         currentPage: nextPage,
       );
     } catch (e, s) {
+      if (!mounted) return;
       state = state.copyWith(
         isLoading: false,
         error: AppError.from(e, stackTrace: s).userMessage,
@@ -97,6 +118,7 @@ class TransactionListNotifier extends StateNotifier<TransactionListState> {
   }
 
   Future<void> refresh() async {
+    if (!mounted) return;
     state = const TransactionListState();
     await loadMore();
   }
@@ -104,19 +126,29 @@ class TransactionListNotifier extends StateNotifier<TransactionListState> {
 
 final transactionListProvider =
     StateNotifierProvider<TransactionListNotifier, TransactionListState>((ref) {
+  final authState = ref.watch(authProvider);
+  if (!authState.isAuthenticated) return TransactionListNotifier.empty();
   final service = ref.watch(transactionServiceProvider);
   return TransactionListNotifier(service, null);
 });
 
 final filteredTransactionListProvider =
     StateNotifierProvider<TransactionListNotifier, TransactionListState>((ref) {
+  final authState = ref.watch(authProvider);
+  if (!authState.isAuthenticated) return TransactionListNotifier.empty();
   final service = ref.watch(transactionServiceProvider);
   final category = ref.watch(categoryFilterProvider);
-  return TransactionListNotifier(service, category);
+  final scope = ref.watch(transactionScopeFilterProvider);
+  return TransactionListNotifier(service, category, scope);
 });
 
 final transactionDetailProvider =
     FutureProvider.family<Transaction, String>((ref, id) async {
+  final authState = ref.watch(authProvider);
+  if (!authState.isAuthenticated) {
+    throw StateError(
+        'Cannot load transaction without an authenticated session.');
+  }
   final service = ref.watch(transactionServiceProvider);
   try {
     return await service.getById(id);

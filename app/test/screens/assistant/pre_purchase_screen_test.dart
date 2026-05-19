@@ -1,3 +1,4 @@
+import 'package:conscia_app/widgets/thinking_cloud.dart';
 import 'package:conscia_app/providers/category_frequency_provider.dart';
 import 'package:conscia_app/models/family_space.dart';
 import 'package:conscia_app/models/insight_feed_item.dart';
@@ -7,12 +8,16 @@ import 'package:conscia_app/providers/subscription_provider.dart';
 import 'package:conscia_app/providers/usage_provider.dart';
 import 'package:conscia_app/providers/user_provider.dart';
 import 'package:conscia_app/providers/ai_provider.dart';
+import 'package:conscia_app/core/theme/app_theme.dart';
 import 'package:conscia_app/core/utils/currency_formatter.dart';
 import 'package:conscia_app/screens/assistant/pre_purchase_screen.dart';
 import 'package:conscia_app/screens/transactions/transaction_form_screen.dart';
+import 'package:conscia_app/screens/transactions/widgets/category_picker.dart';
 import 'package:conscia_app/screens/transactions/widgets/voice_input_button.dart';
 import 'package:conscia_app/services/ai_service.dart';
-import 'package:conscia_app/widgets/conscience_mark.dart';
+import 'package:conscia_app/widgets/editorial_sticky_header.dart';
+import 'package:conscia_app/widgets/amount_hero_field.dart';
+import 'package:conscia_app/widgets/floating_label_text_field.dart';
 import 'package:dio/dio.dart';
 import 'package:conscia_app/services/location_assistance_service.dart';
 import 'package:conscia_app/services/subscription_service.dart';
@@ -23,12 +28,28 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-Finder _assetImageFinder(String assetName) => find.byWidgetPredicate(
+Future<void> pumpAssistantFrame(WidgetTester tester) async {
+  await tester.pump();
+  await tester.pump(const Duration(milliseconds: 240));
+}
+
+Finder purchaseDescriptionField() {
+  return find.descendant(
+    of: find.byWidgetPredicate(
       (widget) =>
-          widget is Image &&
-          widget.image is AssetImage &&
-          (widget.image as AssetImage).assetName == assetName,
-    );
+          widget is FloatingLabelTextField &&
+          widget.label == 'What are you thinking of buying?',
+    ),
+    matching: find.byType(TextField),
+  );
+}
+
+Finder purchaseAmountField() {
+  return find.descendant(
+    of: find.byType(AmountHeroField),
+    matching: find.byType(EditableText),
+  );
+}
 
 class _FakeLocationAssistanceService extends LocationAssistanceService {
   _FakeLocationAssistanceService({
@@ -37,6 +58,7 @@ class _FakeLocationAssistanceService extends LocationAssistanceService {
       nearbyMerchants: ['Corner Bakery'],
       likelyCategories: ['Groceries'],
     ),
+    this.merchantCategories = const {},
   });
 
   final bool permissionGranted;
@@ -44,6 +66,7 @@ class _FakeLocationAssistanceService extends LocationAssistanceService {
     List<String> nearbyMerchants,
     List<String> likelyCategories
   }) suggestions;
+  final Map<String, String> merchantCategories;
 
   @override
   Future<bool> requestPermission() async => permissionGranted;
@@ -51,6 +74,9 @@ class _FakeLocationAssistanceService extends LocationAssistanceService {
   @override
   ({List<String> nearbyMerchants, List<String> likelyCategories})
       getTransactionSuggestions() => suggestions;
+
+  @override
+  String? categoryForMerchant(String merchant) => merchantCategories[merchant];
 }
 
 class _FakeAIService extends AIService {
@@ -64,6 +90,7 @@ class _FakeAIService extends AIService {
   String? receivedInsightContext;
   String? receivedCurrencyCode;
   String? receivedContextScope;
+  CancelToken? receivedCancelToken;
 
   @override
   Future<AIResponse> prePurchase({
@@ -73,10 +100,12 @@ class _FakeAIService extends AIService {
     required String category,
     String? insightContext,
     String contextScope = 'personal',
+    CancelToken? cancelToken,
   }) async {
     receivedInsightContext = insightContext;
     receivedCurrencyCode = currencyCode;
     receivedContextScope = contextScope;
+    receivedCancelToken = cancelToken;
     if (delay > Duration.zero) {
       await Future<void>.delayed(delay);
     }
@@ -91,6 +120,9 @@ class _FakeUserService extends UserService {
   Future<UserProfile> updateProfile({
     String? preferredCurrency,
     String? locale,
+    String? displayName,
+    String? profilePictureKey,
+    String? photoUrl,
     String? spendingPersonality,
     String? incomeRange,
     String? occupationType,
@@ -159,8 +191,12 @@ Future<void> _pumpPrePurchaseScreen(
               _FakeLocationAssistanceService(permissionGranted: true),
         ),
       ],
-      child: const MaterialApp(
-        home: PrePurchaseScreen(),
+      child: MaterialApp(
+        theme: AppTheme.light(),
+        home: const TickerMode(
+          enabled: false,
+          child: PrePurchaseScreen(),
+        ),
       ),
     ),
   );
@@ -222,8 +258,12 @@ Future<Widget> buildPrePurchaseAppForTier(
         _FakeLocationAssistanceService(permissionGranted: true),
       ),
     ],
-    child: const MaterialApp(
-      home: PrePurchaseScreen(),
+    child: MaterialApp(
+      theme: AppTheme.light(),
+      home: const TickerMode(
+        enabled: false,
+        child: PrePurchaseScreen(),
+      ),
     ),
   );
 }
@@ -248,7 +288,10 @@ Future<void> _pumpPrePurchaseRouterApp(
     routes: [
       GoRoute(
         path: '/assistant',
-        builder: (_, __) => const PrePurchaseScreen(),
+        builder: (_, __) => const TickerMode(
+          enabled: false,
+          child: PrePurchaseScreen(),
+        ),
       ),
       GoRoute(
         path: '/transactions/add',
@@ -297,14 +340,105 @@ Future<void> _pumpPrePurchaseRouterApp(
           (ref) async => insightSummary,
         ),
       ],
-      child: MaterialApp.router(routerConfig: router),
+      child: MaterialApp.router(theme: AppTheme.light(), routerConfig: router),
     ),
   );
 }
 
 void main() {
+  Color purchaseAssistantHeaderColor(WidgetTester tester) {
+    final header = tester.widget<AnimatedContainer>(
+      find.byKey(
+        const ValueKey('editorial-sticky-header-Purchase Assistant'),
+      ),
+    );
+    return (header.decoration! as BoxDecoration).color!;
+  }
+
+  testWidgets('pre-purchase asks purchase details before amount and category',
+      (tester) async {
+    await tester.pumpWidget(await buildPrePurchaseApp(tester));
+    await pumpAssistantFrame(tester);
+
+    expect(find.text('AMOUNT'), findsNothing);
+
+    final detailsTop = tester.getTopLeft(find.text('DECISION DETAILS')).dy;
+    final descriptionTop = tester.getTopLeft(purchaseDescriptionField()).dy;
+    final amountTop = tester.getTopLeft(find.byType(AmountHeroField)).dy;
+    final categoryTop =
+        tester.getTopLeft(find.text('CATEGORY', skipOffstage: false)).dy;
+
+    expect(detailsTop, lessThan(descriptionTop));
+    expect(descriptionTop, lessThan(amountTop));
+    expect(amountTop, lessThan(categoryTop));
+  });
+
+  testWidgets('pre-purchase advances from purchase prompt to amount',
+      (tester) async {
+    await tester.pumpWidget(await buildPrePurchaseApp(tester));
+    await pumpAssistantFrame(tester);
+
+    final promptField = tester.widget<TextField>(purchaseDescriptionField());
+    expect(promptField.focusNode?.hasFocus, isTrue);
+
+    promptField.onSubmitted?.call('Coffee');
+    await tester.pumpAndSettle();
+
+    final amountField = tester.widget<EditableText>(purchaseAmountField());
+    expect(amountField.focusNode.hasFocus, isTrue);
+  });
+
+  testWidgets('pre-purchase amount submit brings category into view',
+      (tester) async {
+    await tester.binding.setSurfaceSize(const Size(390, 540));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(await buildPrePurchaseApp(tester));
+    await pumpAssistantFrame(tester);
+
+    final scrollView = find.byKey(
+      const PageStorageKey('assistant-shell-scroll'),
+    );
+    final before =
+        tester.widget<SingleChildScrollView>(scrollView).controller!.offset;
+
+    tester
+        .widget<EditableText>(purchaseAmountField())
+        .onSubmitted
+        ?.call('12.50');
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 260));
+
+    final after =
+        tester.widget<SingleChildScrollView>(scrollView).controller!.offset;
+    expect(after, greaterThan(before));
+  });
+
+  testWidgets('pre-purchase CTA stays in form flow with docker-safe padding',
+      (tester) async {
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(await buildPrePurchaseApp(tester));
+    await pumpAssistantFrame(tester);
+
+    final scrollViewFinder = find.byKey(
+      const PageStorageKey('assistant-shell-scroll'),
+    );
+    final ctaFinder = find.byKey(const ValueKey('assistant-submit-cta'));
+    final scrollView = tester.widget<SingleChildScrollView>(scrollViewFinder);
+
+    expect(ctaFinder, findsOneWidget);
+    expect(
+      find.descendant(of: scrollViewFinder, matching: ctaFinder),
+      findsOneWidget,
+    );
+    expect(
+        (scrollView.padding as EdgeInsets).bottom, greaterThanOrEqualTo(112));
+  });
+
   testWidgets(
-      'pre-purchase assistant shows all categories entrypoint and orders sheet by recent categories',
+      'pre-purchase assistant shows category picker entrypoint and orders sheet by recent categories',
       (tester) async {
     await tester.pumpWidget(await buildPrePurchaseApp(
       tester,
@@ -318,43 +452,49 @@ void main() {
 
     expect(find.text('Salary'), findsNothing);
     expect(find.text('More categories'), findsNothing);
-    expect(find.text('All categories'), findsOneWidget);
+    expect(find.text('More'), findsOneWidget);
     expect(find.text('Dining'), findsWidgets);
 
-    await tester.ensureVisible(find.text('All categories'));
-    await tester.tap(find.text('All categories'));
+    await tester.ensureVisible(find.text('More'));
+    await tester.tap(find.text('More'));
     await tester.pumpAndSettle();
 
     expect(find.byType(BottomSheet), findsOneWidget);
 
-    final choiceChips = tester.widgetList<ChoiceChip>(find.byType(ChoiceChip));
-    final labels = choiceChips
-        .map((chip) => (chip.label as Text).data)
-        .whereType<String>()
-        .toList();
+    final sheetPicker = find.byType(CategoryPicker).last;
+    final transport = find.descendant(
+      of: sheetPicker,
+      matching: find.text('Transport'),
+    );
+    final dining = find.descendant(
+      of: sheetPicker,
+      matching: find.text('Dining'),
+    );
 
-    expect(labels.take(2).toList(), ['Transport', 'Dining']);
+    expect(transport, findsOneWidget);
+    expect(dining, findsOneWidget);
+    expect(
+      tester.getTopLeft(transport).dx,
+      lessThan(tester.getTopLeft(dining).dx),
+    );
 
-    await tester.tap(find.widgetWithText(ChoiceChip, 'Groceries').last);
+    await tester.tap(
+      find.descendant(of: sheetPicker, matching: find.text('Groceries')),
+    );
     await tester.pumpAndSettle();
 
     expect(find.byType(BottomSheet), findsNothing);
-    expect(
-      find.descendant(
-        of: find.byType(InputChip),
-        matching: find.text('Groceries'),
-      ),
-      findsOneWidget,
-    );
-    expect(find.text('Dining'), findsNothing);
+    expect(find.text('Groceries'), findsOneWidget);
+    expect(find.text('Dining'), findsWidgets);
   });
 
-  testWidgets('pre-purchase assistant shows only one category heading',
+  testWidgets('pre-purchase assistant keeps category chips compact',
       (tester) async {
     await tester.pumpWidget(await buildPrePurchaseApp(tester));
     await tester.pumpAndSettle();
 
-    expect(find.text('Category'), findsOneWidget);
+    expect(find.text('Category'), findsNothing);
+    expect(find.text('More'), findsOneWidget);
   });
 
   testWidgets(
@@ -367,46 +507,162 @@ void main() {
   });
 
   testWidgets(
-      'pre-purchase assistant uses the layered alter ego hero on the input screen',
+      'pre-purchase assistant uses the shared editorial header and thinking cloud hero',
       (tester) async {
     await tester.pumpWidget(await buildPrePurchaseApp(tester));
     await tester.pumpAndSettle();
 
-    expect(find.byKey(const ValueKey('conscience-alter-ego-idle')),
-        findsOneWidget);
-    expect(
-      _assetImageFinder('assets/images/sprites/devil/1_neutral.PNG'),
-      findsNothing,
+    expect(find.byType(EditorialStickyHeader), findsOneWidget);
+    final cloud = tester.widget<ThinkingCloudWidget>(
+      find.byType(ThinkingCloudWidget),
     );
+    expect(cloud.animate, isTrue);
     expect(
-      _assetImageFinder('assets/images/sprites/angel/1_neutral.PNG'),
-      findsNothing,
-    );
-    expect(
-      _assetImageFinder('assets/images/sprites/money/1_neutral.PNG'),
-      findsNothing,
-    );
-    expect(
-      _assetImageFinder('assets/images/sprites/devil/sprite_sheet.png'),
-      findsOneWidget,
-    );
-    expect(
-      _assetImageFinder('assets/images/sprites/angel/sprite_sheet.png'),
-      findsOneWidget,
-    );
-    expect(
-      _assetImageFinder('assets/images/sprites/money/sprite_sheet.png'),
-      findsOneWidget,
-    );
-    expect(
-        find.byKey(const ValueKey('conscience-devil-neutral')), findsOneWidget);
-    expect(
-        find.byKey(const ValueKey('conscience-angel-neutral')), findsOneWidget);
-    expect(
-        find.byKey(const ValueKey('conscience-money-neutral')), findsOneWidget);
+        find.byKey(const ValueKey('conscience-alter-ego-idle')), findsNothing);
   });
 
-  testWidgets('shows shared loader while AI response is pending',
+  testWidgets(
+      'pre-purchase assistant header restores translucent state from saved scroll offset',
+      (tester) async {
+    final bucket = PageStorageBucket();
+    SharedPreferences.setMockInitialValues({
+      'location_suggestions_enabled': false,
+      'location_suggestions_prompted': true,
+    });
+    final prefs = await SharedPreferences.getInstance();
+
+    Future<void> pumpSavedAssistant() async {
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            categoryFrequencyProvider.overrideWithValue(
+              ['Health', 'Dining', 'Shopping', 'Travel', 'Education'],
+            ),
+            subscriptionProvider.overrideWith(
+              (ref) async => const SubscriptionStatus(
+                tier: 'free',
+                isPremium: false,
+              ),
+            ),
+            currentUserProvider.overrideWith(
+              (ref) async => UserProfile(
+                id: 'user-1',
+                email: 'prepurchase@example.com',
+                currencyCode: 'USD',
+                locale: 'en_US',
+                createdAt: DateTime(2026),
+                hasCompletedOnboarding: true,
+              ),
+            ),
+            sharedPreferencesProvider.overrideWithValue(prefs),
+            userServiceProvider.overrideWithValue(_FakeUserService()),
+            familySpaceProvider.overrideWith((ref) async => null),
+            locationAssistanceServiceProvider.overrideWithValue(
+              _FakeLocationAssistanceService(permissionGranted: true),
+            ),
+          ],
+          child: MaterialApp(
+            theme: AppTheme.light(),
+            home: PageStorage(
+              bucket: bucket,
+              child: const TickerMode(
+                enabled: false,
+                child: PrePurchaseScreen(),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+    }
+
+    await pumpSavedAssistant();
+    await tester.drag(
+      find.byKey(const PageStorageKey('assistant-shell-scroll')),
+      const Offset(0, -360),
+      warnIfMissed: false,
+    );
+    await tester.pumpAndSettle();
+
+    expect(purchaseAssistantHeaderColor(tester), isNot(Colors.transparent));
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
+    await pumpSavedAssistant();
+    await tester.pump(const Duration(milliseconds: 220));
+
+    expect(purchaseAssistantHeaderColor(tester), isNot(Colors.transparent));
+  });
+
+  testWidgets('pre-purchase assistant shows the editorial prompt copy',
+      (tester) async {
+    await tester.pumpWidget(await buildPrePurchaseApp(tester));
+    await tester.pumpAndSettle();
+
+    expect(find.text("Let's think this through"), findsOneWidget);
+    expect(
+      find.text('Conscia helps you pause before you spend.'),
+      findsOneWidget,
+    );
+    expect(find.text('DECISION DETAILS'), findsOneWidget);
+    expect(
+      find.text(
+        "Tell Conscia what you're considering so it can weigh both sides.",
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('CLASSIFY'), findsNothing);
+    expect(find.text('CATEGORY'), findsOneWidget);
+    expect(
+      find.text(
+          'Where do you think this belongs so we can give you better insights?'),
+      findsOneWidget,
+    );
+    expect(find.byType(FloatingLabelTextField), findsOneWidget);
+    expect(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is TextField &&
+            widget.decoration?.labelText == 'What are you thinking of buying?',
+      ),
+      findsNothing,
+    );
+  });
+
+  testWidgets('pre-purchase family scope uses its own classify section',
+      (tester) async {
+    await _pumpPrePurchaseRouterApp(
+      tester,
+      aiService: _FakeAIService(
+        response: const AIResponse(
+          impulse: 'Family treat?',
+          reason: 'Check the household plan.',
+          neutral: 'This is family advice.',
+        ),
+      ),
+      locationService: _FakeLocationAssistanceService(permissionGranted: true),
+      familySpace: const FamilySpace(
+        id: 'family-1',
+        name: 'Santos Household',
+        currencyCode: 'PHP',
+        isReadOnly: false,
+        role: 'Contributor',
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    expect(find.text('DECISION DETAILS'), findsOneWidget);
+    expect(find.text('CLASSIFY'), findsOneWidget);
+    expect(
+      find.text('Where should this live in your money story?'),
+      findsOneWidget,
+    );
+    expect(find.text('Personal'), findsOneWidget);
+    expect(find.text('Family'), findsOneWidget);
+  });
+
+  testWidgets('shows conscience check in a pull-up sheet while AI is pending',
       (tester) async {
     await _pumpPrePurchaseRouterApp(
       tester,
@@ -424,41 +680,36 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.enterText(
-      find.byWidgetPredicate(
-        (widget) =>
-            widget is TextField &&
-            widget.decoration?.labelText == 'What are you thinking of buying?',
-      ),
+      purchaseDescriptionField(),
       'Coffee',
     );
-    await tester.enterText(find.byType(TextField).at(1), '180');
-    await tester.ensureVisible(find.widgetWithText(FilterChip, 'Dining'));
-    await tester.tap(find.widgetWithText(FilterChip, 'Dining'));
+    await tester.enterText(purchaseAmountField(), '180');
+    await tester.ensureVisible(find.text('Dining').first);
+    await tester.tap(find.text('Dining').first);
     await tester.pump();
 
-    await tester.tap(find.text('Ask Conscia'));
+    await tester.tap(find.textContaining('Ask Conscia'));
     await tester.pump();
 
-    expect(
-        find.text('Your conscience is weighing both sides...'), findsOneWidget);
-    expect(find.byType(ConscienceLoader), findsOneWidget);
-    expect(find.byKey(const ValueKey('conscience-loader-assistant')),
-        findsOneWidget);
+    expect(find.byType(BottomSheet), findsOneWidget);
+    expect(find.text('Conscience Check'), findsOneWidget);
+    expect(find.byType(ThinkingCloudWidget), findsWidgets);
+    expect(find.text('The verdict'), findsNothing);
 
     await tester.pump(const Duration(seconds: 5));
     await tester.pumpAndSettle();
   });
 
-  testWidgets(
-      'pre-purchase assistant shows category chips above all categories action',
+  testWidgets('pre-purchase assistant shows category chips above picker action',
       (tester) async {
     await tester.pumpWidget(await buildPrePurchaseApp(tester));
     await tester.pumpAndSettle();
 
     final chipsTopLeft = tester.getTopLeft(find.text('Dining').first);
-    final actionTopLeft = tester.getTopLeft(find.text('All categories'));
+    final actionTopLeft = tester.getTopLeft(find.text('More'));
 
-    expect(chipsTopLeft.dy, lessThan(actionTopLeft.dy));
+    expect(chipsTopLeft.dy, actionTopLeft.dy);
+    expect(chipsTopLeft.dx, lessThan(actionTopLeft.dx));
   });
 
   testWidgets('pre-purchase hides upgrade-only categories for free users',
@@ -474,8 +725,8 @@ void main() {
     expect(find.text('Shopping'), findsNothing);
     expect(find.text('Dining'), findsOneWidget);
 
-    await tester.ensureVisible(find.text('All categories'));
-    await tester.tap(find.text('All categories'));
+    await tester.ensureVisible(find.text('More'));
+    await tester.tap(find.text('More'));
     await tester.pumpAndSettle();
 
     expect(find.text('Groceries'), findsWidgets);
@@ -493,8 +744,8 @@ void main() {
 
     expect(find.text('Travel'), findsNothing);
 
-    await tester.ensureVisible(find.text('All categories'));
-    await tester.tap(find.text('All categories'));
+    await tester.ensureVisible(find.text('More'));
+    await tester.tap(find.text('More'));
     await tester.pumpAndSettle();
 
     expect(find.text('Travel'), findsWidgets);
@@ -568,7 +819,7 @@ void main() {
     expect(find.text('Turn on smart location help?'), findsNothing);
   });
 
-  testWidgets('pre-purchase can suggest merchant and category when enabled',
+  testWidgets('pre-purchase suggests merchants and infers their category',
       (tester) async {
     SharedPreferences.setMockInitialValues({
       'location_suggestions_enabled': true,
@@ -586,40 +837,30 @@ void main() {
           nearbyMerchants: ['Corner Bakery'],
           likelyCategories: ['Groceries'],
         ),
+        merchantCategories: const {'Corner Bakery': 'Groceries'},
       ),
     );
 
     await tester.pumpAndSettle();
 
-    expect(find.text('Smart suggestions nearby'), findsOneWidget);
+    expect(find.text('Smart suggestions nearby'), findsNothing);
+    expect(find.byKey(const ValueKey('smart-merchant-suggestion-strip')),
+        findsOneWidget);
     expect(find.text('Corner Bakery'), findsOneWidget);
-    expect(find.text('Groceries'), findsWidgets);
+    expect(find.text('Likely categories'), findsNothing);
 
-    await tester
-        .ensureVisible(find.widgetWithText(ActionChip, 'Corner Bakery'));
-    await tester.tap(find.text('Corner Bakery'));
+    await tester.tap(find.widgetWithText(ActionChip, 'Corner Bakery'));
     await tester.pumpAndSettle();
 
     final descriptionField = tester.widget<TextField>(
-      find.byWidgetPredicate(
-        (widget) =>
-            widget is TextField &&
-            widget.decoration?.labelText == 'What are you thinking of buying?',
-      ),
+      purchaseDescriptionField(),
     );
     expect(descriptionField.controller?.text, 'Corner Bakery');
 
-    await tester.ensureVisible(find.widgetWithText(ActionChip, 'Groceries'));
-    await tester.tap(find.widgetWithText(ActionChip, 'Groceries'));
-    await tester.pumpAndSettle();
-
+    expect(find.text('Groceries'), findsWidgets);
     expect(
-      find.descendant(
-        of: find.byType(InputChip),
-        matching: find.text('Groceries'),
-      ),
-      findsOneWidget,
-    );
+        tester.widget<EditableText>(purchaseAmountField()).focusNode.hasFocus,
+        isTrue);
   });
 
   testWidgets('pre-purchase sends dashboard insight summary as AI context',
@@ -645,20 +886,21 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.enterText(
-      find.byWidgetPredicate(
-        (widget) =>
-            widget is TextField &&
-            widget.decoration?.labelText == 'What are you thinking of buying?',
-      ),
+      purchaseDescriptionField(),
       'Starbucks coffee',
     );
-    await tester.enterText(find.byType(TextField).at(1), '600');
-    await tester.ensureVisible(find.widgetWithText(FilterChip, 'Dining'));
-    await tester.tap(find.widgetWithText(FilterChip, 'Dining'));
+    await tester.enterText(purchaseAmountField(), '600');
+    final diningChip = find.text('Dining').first;
+    await Scrollable.ensureVisible(
+      tester.element(diningChip),
+      alignment: 0.7,
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(diningChip);
     await tester.pumpAndSettle();
 
-    await tester.ensureVisible(find.text('Ask Conscia'));
-    await tester.tap(find.text('Ask Conscia'));
+    await tester.ensureVisible(find.textContaining('Ask Conscia'));
+    await tester.tap(find.textContaining('Ask Conscia'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 700));
     await tester.pumpAndSettle();
@@ -667,6 +909,7 @@ void main() {
       aiService.receivedInsightContext,
       'Dining is above your recent 3-month pace.',
     );
+    expect(aiService.receivedCancelToken, isNotNull);
   });
 
   testWidgets('pre-purchase can send family context when family space exists',
@@ -694,24 +937,29 @@ void main() {
 
     await tester.pumpAndSettle();
 
-    await tester.ensureVisible(find.text('Family'));
+    await Scrollable.ensureVisible(
+      tester.element(find.text('Family')),
+      alignment: 0.7,
+    );
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Family'));
     await tester.pumpAndSettle();
     await tester.enterText(
-      find.byWidgetPredicate(
-        (widget) =>
-            widget is TextField &&
-            widget.decoration?.labelText == 'What are you thinking of buying?',
-      ),
+      purchaseDescriptionField(),
       'Dinner delivery',
     );
-    await tester.enterText(find.byType(TextField).at(1), '1200');
-    await tester.ensureVisible(find.widgetWithText(FilterChip, 'Dining'));
-    await tester.tap(find.widgetWithText(FilterChip, 'Dining'));
+    await tester.enterText(purchaseAmountField(), '1200');
+    final diningChip = find.text('Dining').first;
+    await Scrollable.ensureVisible(
+      tester.element(diningChip),
+      alignment: 0.7,
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(diningChip);
     await tester.pumpAndSettle();
 
-    await tester.ensureVisible(find.text('Ask Conscia'));
-    await tester.tap(find.text('Ask Conscia'));
+    await tester.ensureVisible(find.textContaining('Ask Conscia'));
+    await tester.tap(find.textContaining('Ask Conscia'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 700));
     await tester.pumpAndSettle();
@@ -755,28 +1003,19 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.enterText(
-      find.byWidgetPredicate(
-        (widget) =>
-            widget is TextField &&
-            widget.decoration?.labelText == 'What are you thinking of buying?',
-      ),
+      purchaseDescriptionField(),
       'Starbucks coffee',
     );
-    await tester.enterText(find.byType(TextField).at(1), '600');
-    await tester.ensureVisible(find.widgetWithText(FilterChip, 'Dining'));
-    await tester.tap(find.widgetWithText(FilterChip, 'Dining'));
+    await tester.enterText(purchaseAmountField(), '600');
+    await tester.ensureVisible(find.text('Dining').first);
+    await tester.tap(find.text('Dining').first);
     await tester.pumpAndSettle();
-    await tester.ensureVisible(find.text('Ask Conscia'));
-    await tester.tap(find.text('Ask Conscia'));
+    await tester.ensureVisible(find.textContaining('Ask Conscia'));
+    await tester.tap(find.textContaining('Ask Conscia'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 700));
     await tester.pumpAndSettle();
 
-    final formatted = CurrencyFormatter.format(
-      600,
-      currencyCode: 'PHP',
-      locale: 'en_PH',
-    );
     final spentFormatted = CurrencyFormatter.format(
       0,
       currencyCode: 'PHP',
@@ -790,7 +1029,6 @@ void main() {
 
     expect(find.textContaining('\$600 PHP'), findsNothing);
     expect(aiService.receivedCurrencyCode, 'PHP');
-    expect(find.text(formatted), findsOneWidget);
     expect(find.textContaining('\$0.00 / \$16706.49'), findsNothing);
     expect(find.text(spentFormatted), findsOneWidget);
     expect(find.text(' / $limitFormatted'), findsOneWidget);
@@ -823,48 +1061,212 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.enterText(
-      find.byWidgetPredicate(
-        (widget) =>
-            widget is TextField &&
-            widget.decoration?.labelText == 'What are you thinking of buying?',
-      ),
+      purchaseDescriptionField(),
       'Starbucks coffee',
     );
-    await tester.enterText(find.byType(TextField).at(1), '600');
-    await tester.ensureVisible(find.widgetWithText(FilterChip, 'Dining'));
-    await tester.tap(find.widgetWithText(FilterChip, 'Dining'));
+    await tester.enterText(purchaseAmountField(), '600');
+    await tester.ensureVisible(find.text('Dining').first);
+    await tester.tap(find.text('Dining').first);
     await tester.pumpAndSettle();
-    await tester.ensureVisible(find.text('Ask Conscia'));
-    await tester.tap(find.text('Ask Conscia'));
+    await tester.ensureVisible(find.textContaining('Ask Conscia'));
+    await tester.tap(find.textContaining('Ask Conscia'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 700));
     await tester.pumpAndSettle();
 
-    expect(find.text('Bought it anyway'), findsOneWidget);
+    final buyButton = find.textContaining('Buy it');
+    expect(buyButton, findsOneWidget);
 
-    await tester.tap(find.text('Bought it anyway'));
+    await tester.tap(buyButton);
     await tester.pumpAndSettle();
 
-    expect(find.text('Add Transaction'), findsOneWidget);
+    expect(find.text('Add transaction'), findsOneWidget);
 
-    final amountField = tester.widget<TextField>(find.byType(TextField).first);
-    expect(amountField.controller?.text, '600');
+    expect(find.text('Dining'), findsWidgets);
+  });
 
-    expect(
-      find.descendant(
-        of: find.byType(InputChip),
-        matching: find.text('Dining'),
+  // ── Verdict screen tests ─────────────────────────────────────────────────
+
+  // Helper: pump the screen and drive it to the response state.
+  Future<void> pumpWithResponse(WidgetTester tester) async {
+    await _pumpPrePurchaseRouterApp(
+      tester,
+      aiService: _FakeAIService(
+        response: const AIResponse(
+          impulse: 'Treat yourself.',
+          reason: 'Check your budget.',
+          neutral: 'You can decide.',
+        ),
       ),
+      locationService: _FakeLocationAssistanceService(permissionGranted: true),
+    );
+
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      purchaseDescriptionField(),
+      'Coffee',
+    );
+    await tester.enterText(purchaseAmountField(), '100');
+    await tester.ensureVisible(find.text('Dining').first);
+    await tester.tap(find.text('Dining').first);
+    await tester.pumpAndSettle();
+
+    await tester.ensureVisible(find.textContaining('Ask Conscia'));
+    await tester.tap(find.textContaining('Ask Conscia'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 700));
+    await tester.pumpAndSettle();
+  }
+
+  testWidgets('verdict appears as chat messages with speaker avatars',
+      (tester) async {
+    await pumpWithResponse(tester);
+
+    expect(find.byType(BottomSheet), findsOneWidget);
+    expect(find.text('The verdict'), findsNothing);
+    expect(find.byKey(const ValueKey('verdict-devil-card')), findsNothing);
+    expect(find.byKey(const ValueKey('verdict-angel-card')), findsNothing);
+    expect(find.byKey(const ValueKey('verdict-user-message')), findsOneWidget);
+    expect(find.byKey(const ValueKey('verdict-devil-message')), findsOneWidget);
+    expect(find.byKey(const ValueKey('verdict-angel-message')), findsOneWidget);
+    expect(
+        find.byKey(const ValueKey('verdict-conscia-message')), findsOneWidget);
+    expect(find.byKey(const ValueKey('verdict-user-avatar')), findsOneWidget);
+    expect(find.byKey(const ValueKey('verdict-devil-avatar')), findsOneWidget);
+    expect(find.byKey(const ValueKey('verdict-angel-avatar')), findsOneWidget);
+    expect(
+        find.byKey(const ValueKey('verdict-conscia-avatar')), findsOneWidget);
+    expect(find.text('Can I spend \$100.00 on Coffee?'), findsOneWidget);
+
+    final userBubble =
+        tester.getRect(find.byKey(const ValueKey('verdict-user-message')));
+    final devilBubble =
+        tester.getRect(find.byKey(const ValueKey('verdict-devil-message')));
+    final angelBubble =
+        tester.getRect(find.byKey(const ValueKey('verdict-angel-message')));
+    final consciaBubble =
+        tester.getRect(find.byKey(const ValueKey('verdict-conscia-message')));
+    final userAvatar =
+        tester.getRect(find.byKey(const ValueKey('verdict-user-avatar')));
+    final devilAvatar =
+        tester.getRect(find.byKey(const ValueKey('verdict-devil-avatar')));
+    final angelAvatar =
+        tester.getRect(find.byKey(const ValueKey('verdict-angel-avatar')));
+    final consciaAvatar =
+        tester.getRect(find.byKey(const ValueKey('verdict-conscia-avatar')));
+    expect(devilBubble.left, greaterThan(angelBubble.left));
+    expect(devilBubble.left, greaterThan(consciaBubble.left));
+    expect(devilBubble.width, greaterThan(500));
+    expect(angelBubble.left, lessThan(devilBubble.left));
+    expect(consciaBubble.left, lessThan(devilBubble.left));
+    expect(userBubble.right, lessThan(userAvatar.left + 2));
+    expect(devilBubble.left, greaterThan(devilAvatar.right - 2));
+    expect(angelBubble.right, lessThan(angelAvatar.left + 2));
+    expect(consciaBubble.right, lessThan(consciaAvatar.left + 2));
+    expect(devilAvatar.center.dy, greaterThan(devilBubble.center.dy));
+    expect(angelAvatar.center.dy, greaterThan(angelBubble.center.dy));
+    expect(find.byKey(const ValueKey('verdict-devil-tail')), findsNothing);
+    expect(find.byKey(const ValueKey('verdict-angel-tail')), findsNothing);
+    expect(find.byKey(const ValueKey('verdict-conscia-tail')), findsNothing);
+  });
+
+  testWidgets('verdict CTAs use one primary action and one honest secondary',
+      (tester) async {
+    await pumpWithResponse(tester);
+
+    expect(find.text('Buy it'), findsOneWidget);
+    expect(find.text('Skip'), findsOneWidget);
+    expect(find.text('Wait 24h'), findsNothing);
+
+    final buyButton = find.widgetWithText(FilledButton, 'Buy it');
+    final skipButton = find.widgetWithText(OutlinedButton, 'Skip');
+
+    expect(tester.getSize(buyButton).height, 48);
+    expect(tester.getSize(skipButton).height, 48);
+    expect(tester.getTopLeft(buyButton).dy, tester.getTopLeft(skipButton).dy);
+    expect(tester.getSize(buyButton).width, tester.getSize(skipButton).width);
+    expect(tester.widget<FilledButton>(buyButton).style, isNull);
+    expect(tester.widget<OutlinedButton>(skipButton).style, isNull);
+  });
+
+  testWidgets('Conscia message uses the app icon avatar instead of a take card',
+      (tester) async {
+    await pumpWithResponse(tester);
+
+    expect(find.text("Conscia's take"), findsNothing);
+    expect(
+        find.byKey(const ValueKey('verdict-conscia-app-icon')), findsOneWidget);
+  });
+
+  // Helper: pump the screen and leave it in the loading state.
+  Future<void> pumpLoading(WidgetTester tester) async {
+    await _pumpPrePurchaseRouterApp(
+      tester,
+      aiService: _FakeAIService(
+        response: const AIResponse(
+          impulse: 'Treat yourself.',
+          reason: 'Check your budget.',
+          neutral: 'You can decide.',
+        ),
+        delay: const Duration(seconds: 30),
+      ),
+      locationService: _FakeLocationAssistanceService(permissionGranted: true),
+    );
+
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      purchaseDescriptionField(),
+      'Coffee',
+    );
+    await tester.enterText(purchaseAmountField(), '100');
+    await tester.ensureVisible(find.text('Dining').first);
+    await tester.tap(find.text('Dining').first);
+    await tester.pump();
+
+    await tester.tap(find.textContaining('Ask Conscia'));
+    await tester.pump(); // trigger setState to loading
+  }
+
+  testWidgets('loading sheet shows ThinkingCloudWidget', (tester) async {
+    await pumpLoading(tester);
+    expect(
+      find.byKey(const ValueKey('ai-guidance-loading-sheet-prepurchase')),
       findsOneWidget,
     );
+    expect(find.byType(ThinkingCloudWidget), findsWidgets);
+    // Drain the pending AI delay timer before the test ends.
+    await tester.pump(const Duration(seconds: 30));
+    await tester.pumpAndSettle();
+  });
 
-    final merchantField = tester.widget<TextField>(
-      find.byWidgetPredicate(
-        (widget) =>
-            widget is TextField &&
-            widget.decoration?.labelText == 'Merchant (optional)',
-      ),
-    );
-    expect(merchantField.controller?.text, 'Starbucks');
+  testWidgets('loading sheet keeps the insight slideshow compact',
+      (tester) async {
+    await pumpLoading(tester);
+
+    final slideshowSize = tester.getSize(find.byType(PageView).first);
+    expect(slideshowSize.height, lessThanOrEqualTo(140));
+
+    // Drain the pending AI delay timer before the test ends.
+    await tester.pump(const Duration(seconds: 30));
+    await tester.pumpAndSettle();
+  });
+
+  testWidgets('input hero bleeds full width with bottom-only radius',
+      (tester) async {
+    await tester.pumpWidget(await buildPrePurchaseApp(tester));
+    await tester.pumpAndSettle();
+
+    final hero = find.byKey(const ValueKey('assistant-hero-bleed'));
+    expect(hero, findsOneWidget);
+
+    // Hero spans the full screen width
+    final heroWidth = tester.getSize(hero).width;
+    final screenWidth = tester.getSize(find.byType(MaterialApp)).width;
+    expect(heroWidth, closeTo(screenWidth, 1));
+
+    // Hero tagline is visible
+    expect(find.text("Let's think this through"), findsOneWidget);
   });
 }

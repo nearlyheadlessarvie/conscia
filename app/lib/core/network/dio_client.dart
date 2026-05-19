@@ -7,8 +7,6 @@ import '../constants/api_constants.dart';
 const _tokenKey = 'access_token';
 
 final dioProvider = Provider<Dio>((ref) {
-  ref.watch(authCacheScopeProvider);
-
   final dio = Dio(
     BaseOptions(
       baseUrl: ApiConstants.baseUrl,
@@ -27,11 +25,33 @@ final dioProvider = Provider<Dio>((ref) {
   dio.interceptors.add(
     InterceptorsWrapper(
       onRequest: (options, handler) async {
-        final token = await storage.read(key: _tokenKey);
-        if (token != null) {
-          options.headers['Authorization'] = 'Bearer $token';
+        if (_isPublicRequest(options)) {
+          return handler.next(options);
         }
-        return handler.next(options);
+
+        final authState = ref.read(authProvider);
+        if (authState.isAuthenticated) {
+          final token =
+              authState.accessToken ?? await storage.read(key: _tokenKey);
+          if (token != null && token.isNotEmpty) {
+            options.headers['Authorization'] = 'Bearer $token';
+            return handler.next(options);
+          }
+        }
+
+        return handler.reject(
+          DioException(
+            requestOptions: options,
+            response: Response(
+              requestOptions: options,
+              statusCode: 401,
+              data: const {'message': 'Session ended'},
+            ),
+            type: DioExceptionType.badResponse,
+            error:
+                'Cannot send authenticated request without an active session.',
+          ),
+        );
       },
       onError: (error, handler) async {
         final request = error.requestOptions;
@@ -41,6 +61,11 @@ final dioProvider = Provider<Dio>((ref) {
             request.path.endsWith(ApiConstants.refreshToken);
 
         if (isUnauthorized && !ref.read(authProvider).isAuthenticated) {
+          return handler.next(error);
+        }
+
+        if (isUnauthorized && alreadyRetried && !isRefreshRequest) {
+          await ref.read(authProvider.notifier).markSessionExpired();
           return handler.next(error);
         }
 
@@ -82,3 +107,8 @@ final dioProvider = Provider<Dio>((ref) {
 
   return dio;
 });
+
+bool _isPublicRequest(RequestOptions options) {
+  final path = options.uri.path;
+  return path == '/health' || path.startsWith('/health/');
+}

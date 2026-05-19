@@ -32,4 +32,43 @@ void main() {
     expect(find.byType(CircleAvatar), findsNothing);
     expect(find.text('Starbucks'), findsOneWidget);
   });
+
+  testWidgets('regret tag uses the shared soft badge icon language', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: RecentTransactionTile(
+            id: 'tx-2',
+            categoryBadge: const Icon(Icons.restaurant),
+            counterparty: 'Starbucks',
+            category: 'Dining',
+            date: DateTime(2026, 5, 9),
+            amount: 280,
+            isIncome: false,
+            currencyCode: 'PHP',
+            regretLevel: 0,
+          ),
+        ),
+      ),
+    );
+
+    final regretTag = tester.widget<Icon>(
+      find.descendant(
+        of: find.byKey(const ValueKey('regret-transaction-badge')),
+        matching: find.byType(Icon),
+      ),
+    );
+
+    expect(regretTag.icon, Icons.thumb_up_alt_outlined);
+    expect(regretTag.size, 12);
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('regret-transaction-badge')),
+        matching: find.byType(Container),
+      ),
+      findsOneWidget,
+    );
+  });
 }

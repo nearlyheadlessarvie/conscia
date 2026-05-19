@@ -3,13 +3,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/constants/category_icons.dart';
+import '../../core/theme/app_layout.dart';
 import '../../models/insights_models.dart';
 import '../../providers/insights_provider.dart';
 import '../../providers/user_provider.dart';
 import '../../widgets/feed_card.dart';
-import '../../widgets/hero_screen_scaffold.dart';
 import '../../widgets/screen_section.dart';
+import 'widgets/insight_drilldown_scaffold.dart';
 import 'widgets/insights_formatting.dart';
+import 'widgets/insight_list_editorial_hero.dart';
 
 class CategoryListScreen extends ConsumerWidget {
   const CategoryListScreen({super.key});
@@ -19,10 +21,12 @@ class CategoryListScreen extends ConsumerWidget {
     final categoriesAsync = ref.watch(insightsCategoriesProvider);
     final prefs = ref.watch(userPreferencesProvider);
 
-    return HeroScreenScaffold(
-      appBar: AppBar(title: const Text('Categories')),
+    return InsightDrilldownScaffold(
+      title: 'Categories',
       child: categoriesAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => const _StatePadding(
+          child: Center(child: CircularProgressIndicator()),
+        ),
         error: (_, __) => const _MessageCard(
           title: 'Categories are unavailable',
           body: 'We could not load category insights right now.',
@@ -39,36 +43,78 @@ class CategoryListScreen extends ConsumerWidget {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              FeedCard(
-                child: Text(
-                  'See which categories are quietly turning into repeat regret. Tap a category for the recent transactions behind the pattern.',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                      ),
-                ),
+              _CategoryEditorialHero(
+                category: categories.first,
+                currencyCode: prefs.currency,
+                locale: prefs.locale,
               ),
               const SizedBox(height: 26),
-              ScreenSection(
-                title: 'Top regret categories',
-                subtitle:
-                    'Ordered by how much spend you ended up second-guessing.',
-                child: Column(
-                  children: [
-                    for (final category in categories) ...[
-                      _CategoryCard(
-                        category: category,
-                        currencyCode: prefs.currency,
-                        locale: prefs.locale,
-                      ),
-                      const SizedBox(height: 12),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: ScreenSection(
+                  title: 'Top regret categories',
+                  subtitle:
+                      'Ordered by how much spend you ended up second-guessing.',
+                  child: Column(
+                    children: [
+                      for (final category in categories) ...[
+                        _CategoryCard(
+                          category: category,
+                          currencyCode: prefs.currency,
+                          locale: prefs.locale,
+                        ),
+                        const SizedBox(height: 12),
+                      ],
                     ],
-                  ],
+                  ),
                 ),
               ),
             ],
           );
         },
       ),
+    );
+  }
+}
+
+class _CategoryEditorialHero extends StatelessWidget {
+  const _CategoryEditorialHero({
+    required this.category,
+    required this.currencyCode,
+    required this.locale,
+  });
+
+  final CategoryStat category;
+  final String currencyCode;
+  final String? locale;
+
+  @override
+  Widget build(BuildContext context) {
+    final regrettedText = formatInsightCurrency(
+      category.regrettedSpend,
+      currencyCode: currencyCode,
+      locale: locale,
+    );
+    final rateText =
+        '${(category.regretRate * 100).toStringAsFixed(0)}% regret';
+
+    return InsightListEditorialHero(
+      bleed: true,
+      topPadding: AppLayout.drilldownHeroTop(context),
+      leading: CategoryIcons.badge(
+        category.category,
+        size: 30,
+        type: 'Expense',
+      ),
+      label: 'TOP REGRET CATEGORY',
+      primary: regrettedText,
+      body:
+          '${category.category} is your strongest repeat regret signal right now.',
+      chips: [
+        'Top: ${category.category}',
+        '${category.transactionCount} purchases',
+        rateText,
+      ],
     );
   }
 }
@@ -88,7 +134,8 @@ class _CategoryCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
-    final rateText = '${(category.regretRate * 100).toStringAsFixed(0)}% regret';
+    final rateText =
+        '${(category.regretRate * 100).toStringAsFixed(0)}% regret';
     final regretText = formatInsightCurrency(
       category.regrettedSpend,
       currencyCode: currencyCode,
@@ -108,7 +155,11 @@ class _CategoryCard extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          CategoryIcons.badge(category.category, size: 20),
+          CategoryIcons.badge(
+            category.category,
+            size: 20,
+            type: 'Expense',
+          ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -183,6 +234,25 @@ class _Pill extends StatelessWidget {
   }
 }
 
+class _StatePadding extends StatelessWidget {
+  const _StatePadding({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
+        16,
+        AppLayout.drilldownHeroTop(context),
+        16,
+        28,
+      ),
+      child: child,
+    );
+  }
+}
+
 class _MessageCard extends StatelessWidget {
   const _MessageCard({
     required this.title,
@@ -197,22 +267,25 @@ class _MessageCard extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
     final colors = Theme.of(context).colorScheme;
 
-    return FeedCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            body,
-            style: textTheme.bodyMedium?.copyWith(
-              color: colors.onSurfaceVariant,
+    return _StatePadding(
+      child: FeedCard(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              title,
+              style:
+                  textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
             ),
-          ),
-        ],
+            const SizedBox(height: 8),
+            Text(
+              body,
+              style: textTheme.bodyMedium?.copyWith(
+                color: colors.onSurfaceVariant,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

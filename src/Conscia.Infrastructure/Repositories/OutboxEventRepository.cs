@@ -39,7 +39,7 @@ public class OutboxEventRepository : DynamoRepository, IOutboxEventRepository
             Limit = limit
         }, ct);
 
-        return response.Items.Select(FromItem).ToList();
+        return Items(response).Select(FromItem).ToList();
     }
 
     public Task MarkProcessedAsync(OutboxEvent outboxEvent, CancellationToken ct = default) =>

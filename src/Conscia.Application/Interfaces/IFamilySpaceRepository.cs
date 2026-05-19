@@ -18,5 +18,6 @@ public interface IFamilySpaceRepository
     Task UpdateInviteAsync(FamilyInvite invite, CancellationToken ct = default);
     Task DeleteInviteAsync(Guid inviteId, CancellationToken ct = default);
     Task UpdateMemberAsync(FamilyMember member, CancellationToken ct = default);
+    Task TransferOwnershipAsync(FamilyMember previousOwner, FamilyMember newOwner, CancellationToken ct = default);
     Task DeleteMemberAsync(Guid memberId, CancellationToken ct = default);
 }

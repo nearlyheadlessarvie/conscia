@@ -15,10 +15,12 @@ public static class UtteranceEndpoints
         group.MapPost("/parse-utterance", async (
             HttpContext ctx,
             ParseUtteranceRequest req,
+            ISubscriptionService subscriptionService,
             IAIService aiService,
             CancellationToken ct) =>
         {
-            if (!ctx.User.IsPremium())
+            var userId = ctx.User.GetUserId();
+            if (!await subscriptionService.IsPremiumAsync(userId, ct))
                 return Results.Forbid();
 
             if (string.IsNullOrWhiteSpace(req.Transcript))

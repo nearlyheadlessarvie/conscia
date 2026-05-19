@@ -13,6 +13,9 @@ ManagedCategory _category({
   required String name,
   required String type,
   bool isArchived = false,
+  bool isDefault = false,
+  String? iconKey,
+  String? colorKey,
 }) {
   return ManagedCategory(
     id: id,
@@ -20,10 +23,10 @@ ManagedCategory _category({
     normalizedName: name.toLowerCase(),
     type: type,
     scope: 'Personal',
-    iconKey: null,
-    colorKey: null,
+    iconKey: iconKey,
+    colorKey: colorKey,
     isArchived: isArchived,
-    isDefault: false,
+    isDefault: isDefault,
     createdAt: DateTime(2026),
     updatedAt: DateTime(2026),
   );
@@ -33,6 +36,8 @@ Future<void> _pumpPicker(
   WidgetTester tester, {
   required bool isExpense,
   required List<ManagedCategory> categories,
+  String? selected,
+  ValueChanged<String?>? onSelected,
 }) async {
   SharedPreferences.setMockInitialValues({
     'location_suggestions_enabled': false,
@@ -50,9 +55,10 @@ Future<void> _pumpPicker(
       child: MaterialApp(
         home: Scaffold(
           body: CategoryPicker(
+            selected: selected,
             isExpense: isExpense,
             maxVisible: 20,
-            onSelected: (_) {},
+            onSelected: onSelected ?? (_) {},
           ),
         ),
       ),
@@ -96,5 +102,82 @@ void main() {
 
     expect(find.text('Salary'), findsOneWidget);
     expect(find.text('Pet care'), findsNothing);
+  });
+
+  testWidgets('selected category is first and tapping again unselects',
+      (tester) async {
+    String? selected = 'Gift';
+    await _pumpPicker(
+      tester,
+      selected: selected,
+      isExpense: true,
+      categories: [
+        _category(id: 'dining', name: 'Dining', type: 'Expense'),
+        _category(id: 'gift', name: 'Gift', type: 'Expense'),
+        _category(id: 'bills', name: 'Bills', type: 'Expense'),
+      ],
+      onSelected: (value) => selected = value,
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byIcon(Icons.close_rounded), findsOneWidget);
+    expect(
+      tester.getTopLeft(find.text('Gift')).dy,
+      lessThanOrEqualTo(tester.getTopLeft(find.text('Dining')).dy),
+    );
+    expect(
+      tester.getTopLeft(find.text('Gift')).dx,
+      lessThan(tester.getTopLeft(find.text('Dining')).dx),
+    );
+
+    await tester.tap(find.text('Gift'));
+    await tester.pumpAndSettle();
+
+    expect(selected, isNull);
+  });
+
+  testWidgets('uses stored category color metadata for managed chips',
+      (tester) async {
+    await _pumpPicker(
+      tester,
+      isExpense: true,
+      categories: [
+        _category(
+          id: 'pet',
+          name: 'Pet care',
+          type: 'Expense',
+          iconKey: 'other',
+          colorKey: 'pink',
+        ),
+      ],
+    );
+    await tester.pumpAndSettle();
+
+    final icon = tester.widget<Icon>(find.byIcon(Icons.more_horiz_rounded));
+
+    expect(icon.color, const Color(0xFFEC407A));
+  });
+
+  testWidgets('default managed categories ignore stale stored blue metadata',
+      (tester) async {
+    await _pumpPicker(
+      tester,
+      isExpense: true,
+      categories: [
+        _category(
+          id: 'dining',
+          name: 'Dining',
+          type: 'Expense',
+          isDefault: true,
+          iconKey: 'dining',
+          colorKey: 'blue',
+        ),
+      ],
+    );
+    await tester.pumpAndSettle();
+
+    final icon = tester.widget<Icon>(find.byIcon(Icons.restaurant_rounded));
+
+    expect(icon.color, const Color(0xFF43A047));
   });
 }

@@ -1,4 +1,6 @@
-using System.Security.Claims;
+using Conscia.Api.Extensions;
+using Conscia.Application.Interfaces;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Conscia.Api.Middleware;
 
@@ -22,8 +24,14 @@ public class SubscriptionTierMiddleware
                 return;
             }
 
-            var tier = context.User.FindFirstValue("tier");
-            if (!string.Equals(tier, "Premium", StringComparison.OrdinalIgnoreCase))
+            var userId = context.User.GetUserId();
+            var subscriptionService =
+                context.RequestServices.GetRequiredService<ISubscriptionService>();
+            var isPremium = await subscriptionService.IsPremiumAsync(
+                userId,
+                context.RequestAborted);
+
+            if (!isPremium)
             {
                 context.Response.StatusCode = 403;
                 await context.Response.WriteAsJsonAsync(new { error = "Premium subscription required" });

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/utils/currency_formatter.dart';
 import '../../../providers/purchase_suggestions_provider.dart';
+import '../../../providers/user_provider.dart';
 
 typedef SuggestionCallback = void Function(
     String description, double amount, String category);
@@ -16,6 +18,7 @@ class PurchaseSuggestionChips extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final suggestionsAsync = ref.watch(purchaseSuggestionsProvider);
+    final prefs = ref.watch(userPreferencesProvider);
 
     return suggestionsAsync.when(
       loading: () => const SizedBox.shrink(),
@@ -26,15 +29,14 @@ class PurchaseSuggestionChips extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text('Your usual',
-                style: Theme.of(context)
-                    .textTheme
-                    .labelSmall
-                    ?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant)),
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant)),
             const SizedBox(height: 8),
             ...suggestions.map((s) => _SuggestionRow(
                   suggestion: s,
-                  onTap: () => onSuggestionSelected(
-                      s.description, s.amount, s.category),
+                  locale: prefs.locale,
+                  onTap: () =>
+                      onSuggestionSelected(s.description, s.amount, s.category),
                 )),
             const SizedBox(height: 8),
           ],
@@ -46,9 +48,14 @@ class PurchaseSuggestionChips extends ConsumerWidget {
 
 class _SuggestionRow extends StatelessWidget {
   final PurchaseSuggestion suggestion;
+  final String? locale;
   final VoidCallback onTap;
 
-  const _SuggestionRow({required this.suggestion, required this.onTap});
+  const _SuggestionRow({
+    required this.suggestion,
+    required this.locale,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -70,7 +77,11 @@ class _SuggestionRow extends StatelessWidget {
                   style: Theme.of(context).textTheme.bodyMedium),
             ),
             Text(
-              '${suggestion.currencyCode} ${suggestion.amount.toStringAsFixed(2)}',
+              CurrencyFormatter.format(
+                suggestion.amount,
+                currencyCode: suggestion.currencyCode,
+                locale: locale,
+              ),
               style: Theme.of(context).textTheme.bodySmall,
             ),
             const SizedBox(width: 8),
