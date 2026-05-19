@@ -223,6 +223,13 @@ Widget _buildNestedShellApp(ProviderContainer container) {
   );
 }
 
+void _useTallDashboardViewport(WidgetTester tester) {
+  tester.view.devicePixelRatio = 1;
+  tester.view.physicalSize = const Size(900, 2600);
+  addTearDown(tester.view.resetPhysicalSize);
+  addTearDown(tester.view.resetDevicePixelRatio);
+}
+
 void main() {
   late SharedPreferences prefs;
 
@@ -255,6 +262,8 @@ void main() {
 
   testWidgets('dashboard recent transactions use shared icon-only status tags',
       (tester) async {
+    _useTallDashboardViewport(tester);
+
     final container = ProviderContainer(
       overrides: [
         sharedPreferencesProvider.overrideWithValue(prefs),
@@ -661,6 +670,8 @@ void main() {
 
   testWidgets('dashboard uses editorial hero and grouped recent activity',
       (tester) async {
+    _useTallDashboardViewport(tester);
+
     final transactions = List.generate(
       3,
       (index) => Transaction(
@@ -699,10 +710,19 @@ void main() {
       find.byKey(const ValueKey('dashboard-editorial-hero')),
       findsOneWidget,
     );
+    expect(find.text('Today with Conscia'), findsOneWidget);
+    expect(find.text('This Week'), findsOneWidget);
+    expect(find.text('Patterns'), findsOneWidget);
+    expect(find.text('BUDGETS'), findsOneWidget);
+    expect(find.text('RECENT TRANSACTIONS'), findsOneWidget);
+    expect(find.byKey(const ValueKey('dashboard-journey-link')), findsNothing);
   });
 
-  testWidgets('dashboard hero distinguishes shortcut cards from static pills',
+  testWidgets(
+      'dashboard renders journey-led home sections instead of shortcuts',
       (tester) async {
+    _useTallDashboardViewport(tester);
+
     final container = ProviderContainer(
       overrides: [
         sharedPreferencesProvider.overrideWithValue(prefs),
@@ -724,24 +744,18 @@ void main() {
     await tester.pumpWidget(_buildApp(container));
     await tester.pumpAndSettle();
 
-    for (final id in [
-      'dashboard-journey-link',
-      'dashboard-insights-link',
-    ]) {
-      final material = tester.widget<Material>(
-        find.descendant(
-          of: find.byKey(ValueKey(id)),
-          matching: find.byType(Material),
-        ),
-      );
-      expect(material.color, isNot(Colors.transparent));
-      expect(material.shape, isA<RoundedRectangleBorder>());
-    }
-
+    expect(
+      find.byKey(const ValueKey('dashboard-editorial-hero')),
+      findsOneWidget,
+    );
+    expect(find.text('Today with Conscia'), findsOneWidget);
+    expect(find.text('This Week'), findsOneWidget);
+    expect(find.text('Patterns'), findsOneWidget);
+    expect(find.text('BUDGETS'), findsOneWidget);
+    expect(find.text('RECENT TRANSACTIONS'), findsOneWidget);
+    expect(find.byKey(const ValueKey('dashboard-journey-link')), findsNothing);
+    expect(find.byKey(const ValueKey('dashboard-insights-link')), findsNothing);
     expect(find.byKey(const ValueKey('dashboard-add-link')), findsNothing);
-    expect(find.text('Add'), findsNothing);
-    expect(find.text('Momentum and quests'), findsOneWidget);
-    expect(find.text('Patterns and signals'), findsOneWidget);
     expect(find.byKey(const ValueKey('hero-shortcut-card-6-day streak')),
         findsNothing);
     expect(find.byKey(const ValueKey('hero-shortcut-card-0/0 quests')),
@@ -750,6 +764,8 @@ void main() {
 
   testWidgets('dashboard shows editorial hero before utility sections',
       (tester) async {
+    _useTallDashboardViewport(tester);
+
     final container = ProviderContainer(
       overrides: [
         sharedPreferencesProvider.overrideWithValue(prefs),
@@ -794,16 +810,19 @@ void main() {
     await tester.pumpWidget(_buildApp(container));
     await tester.pumpAndSettle();
 
-    final hero = find.byKey(const ValueKey('dashboard-editorial-hero'));
+    final today = find.text('Today with Conscia');
     final budgets = find.text('BUDGETS');
 
-    expect(hero, findsOneWidget);
+    expect(today, findsOneWidget);
     expect(budgets, findsOneWidget);
-    expect(tester.getTopLeft(hero).dy, lessThan(tester.getTopLeft(budgets).dy));
+    expect(
+        tester.getTopLeft(today).dy, lessThan(tester.getTopLeft(budgets).dy));
   });
 
   testWidgets('dashboard summarizes budgets by scope without detailed rows',
       (tester) async {
+    _useTallDashboardViewport(tester);
+
     final container = ProviderContainer(
       overrides: [
         _authenticatedOverride,

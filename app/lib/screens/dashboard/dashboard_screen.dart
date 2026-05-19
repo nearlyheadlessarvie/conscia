@@ -22,6 +22,8 @@ import 'package:conscia_app/providers/subscription_provider.dart';
 import 'package:conscia_app/providers/transaction_providers.dart';
 import 'package:conscia_app/providers/user_provider.dart';
 import 'package:conscia_app/providers/usage_provider.dart';
+import 'package:conscia_app/screens/dashboard/journey_home_presenter.dart';
+import 'package:conscia_app/screens/dashboard/widgets/journey_led_home_sections.dart';
 import 'package:conscia_app/screens/dashboard/widgets/recent_transaction_tile.dart';
 import 'package:conscia_app/screens/dashboard/widgets/regret_prompt_card.dart';
 import 'package:conscia_app/screens/budgets/widgets/budget_form_sheet.dart';
@@ -163,6 +165,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text('$displayCounterparty: $label')),
     );
+  }
+
+  void _continueJourney() {
+    context.push(AppRoutes.assistant);
   }
 
   void _handleAlertAction(AppAlert alert) {
@@ -391,6 +397,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     final recentTransactions = transactions.take(5).toList();
     final insightSummary = insightSummaryState.valueOrNull;
     final journey = journeyState.valueOrNull;
+    final journeyHome = buildJourneyHomePresentation(journey);
     final regretPrompts = transactions
         .where((t) =>
             t.regretLevel == null &&
@@ -423,8 +430,16 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   summary: insightSummary,
                   loading: (journeyState.isLoading && journey == null) ||
                       (insightSummaryState.isLoading && insightSummary == null),
-                  onJourneyTap: () => context.push(AppRoutes.journey),
-                  onInsightsTap: () => context.push(AppRoutes.insights),
+                ),
+              ),
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.only(top: 18),
+                  child: JourneyLedHomeSections(
+                    summary: journey,
+                    presentation: journeyHome,
+                    onContinueJourney: _continueJourney,
+                  ),
                 ),
               ),
               SliverToBoxAdapter(
@@ -653,8 +668,6 @@ class _DashboardEditorialHeroCard extends StatelessWidget {
     required this.journey,
     required this.summary,
     required this.loading,
-    required this.onJourneyTap,
-    required this.onInsightsTap,
   });
 
   final double monthExpenseTotal;
@@ -663,8 +676,6 @@ class _DashboardEditorialHeroCard extends StatelessWidget {
   final ConscienceJourneySummary? journey;
   final DashboardInsightSummary? summary;
   final bool loading;
-  final VoidCallback onJourneyTap;
-  final VoidCallback onInsightsTap;
 
   @override
   Widget build(BuildContext context) {
@@ -753,30 +764,22 @@ class _DashboardEditorialHeroCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 18),
-          Row(
-            children: [
-              Expanded(
-                child: HeroShortcutCard(
-                  key: const ValueKey('dashboard-journey-link'),
-                  icon: Icons.flag_rounded,
-                  label: 'Journey',
-                  subtitle: 'Momentum and quests',
-                  minHeight: 54,
-                  onPressed: onJourneyTap,
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: HeroShortcutCard(
-                  key: const ValueKey('dashboard-insights-link'),
-                  icon: Icons.auto_graph_rounded,
-                  label: 'Insights',
-                  subtitle: 'Patterns and signals',
-                  minHeight: 54,
-                  onPressed: onInsightsTap,
-                ),
-              ),
-            ],
+          Text(
+            'Journey',
+            style: textTheme.titleLarge?.copyWith(
+              color: colors.deepNavy,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            journey == null
+                ? 'Conscia is ready to shape your next few choices into a clearer pattern.'
+                : '${journey!.currentLevel.title} · ${journey!.xpTotal} XP earned',
+            style: textTheme.bodyMedium?.copyWith(
+              color: colors.ink,
+              height: 1.35,
+            ),
           ),
         ],
       ),
