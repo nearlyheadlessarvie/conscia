@@ -2,10 +2,11 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import 'core/routing/app_router.dart';
 import 'core/theme/app_theme.dart';
-import 'providers/health_provider.dart';
+import 'providers/app_availability_provider.dart';
 import 'providers/iap_provider.dart';
 import 'services/push_notification_service.dart';
 
@@ -50,7 +51,7 @@ class _OfflineBlocker extends ConsumerStatefulWidget {
 
 class _OfflineBlockerState extends ConsumerState<_OfflineBlocker> {
   Timer? _countdownTimer;
-  int _secondsUntilRetry = HealthStatusNotifier.autoRetryInterval.inSeconds;
+  int _secondsUntilRetry = AppAvailabilityNotifier.autoRetryInterval.inSeconds;
 
   @override
   void initState() {
@@ -58,7 +59,7 @@ class _OfflineBlockerState extends ConsumerState<_OfflineBlocker> {
     _countdownTimer = Timer.periodic(const Duration(seconds: 1), (_) {
       if (!mounted) return;
       final next = _secondsUntilRetry <= 1
-          ? HealthStatusNotifier.autoRetryInterval.inSeconds
+          ? AppAvailabilityNotifier.autoRetryInterval.inSeconds
           : _secondsUntilRetry - 1;
       setState(() => _secondsUntilRetry = next);
     });
@@ -72,22 +73,23 @@ class _OfflineBlockerState extends ConsumerState<_OfflineBlocker> {
 
   @override
   Widget build(BuildContext context) {
-    final state = ref.watch(healthStatusProvider);
+    final state = ref.watch(appAvailabilityProvider);
 
-    ref.listen(healthStatusProvider, (previous, next) {
+    ref.listen(appAvailabilityProvider, (previous, next) {
       if (previous?.lastChecked != next.lastChecked) {
         setState(
           () => _secondsUntilRetry =
-              HealthStatusNotifier.autoRetryInterval.inSeconds,
+              AppAvailabilityNotifier.autoRetryInterval.inSeconds,
         );
       }
     });
 
-    if (!state.isOffline) {
+    if (!state.isBlocked) {
       return const SizedBox.shrink();
     }
 
     final theme = Theme.of(context);
+    final blocker = _BlockerContent.fromState(state);
 
     return Positioned.fill(
       child: ColoredBox(
@@ -102,38 +104,63 @@ class _OfflineBlockerState extends ConsumerState<_OfflineBlocker> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Icon(
-                      Icons.cloud_off,
+                      blocker.icon,
                       size: 64,
                       color: theme.colorScheme.onSurfaceVariant,
                     ),
                     const SizedBox(height: 16),
                     Text(
-                      'Device Offline',
+                      blocker.title,
                       style: theme.textTheme.headlineMedium,
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Conscia cannot reach the internet right now. We will retry automatically.',
+                      blocker.message,
                       style: theme.textTheme.bodyMedium?.copyWith(
                         color: theme.colorScheme.onSurfaceVariant,
                       ),
                       textAlign: TextAlign.center,
                     ),
+                    if (state.isUpdateRequired &&
+                        state.availableVersion != null) ...[
+                      const SizedBox(height: 12),
+                      Text(
+                        'Store version ${state.availableVersion} is required to continue.',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
                     const SizedBox(height: 20),
                     FilledButton.icon(
-                      onPressed: () =>
-                          ref.read(healthStatusProvider.notifier).refresh(),
-                      icon: const Icon(Icons.refresh),
-                      label: const Text('Retry Now'),
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      'Retrying in ${_secondsUntilRetry}s',
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
+                      onPressed: () async {
+                        if (state.isUpdateRequired && state.updateUrl != null) {
+                          await launchUrl(
+                            Uri.parse(state.updateUrl!),
+                            mode: LaunchMode.externalApplication,
+                          );
+                          return;
+                        }
+                        await ref.read(appAvailabilityProvider.notifier).refresh();
+                      },
+                      icon: Icon(
+                        state.isUpdateRequired ? Icons.system_update : Icons.refresh,
+                      ),
+                      label: Text(
+                        state.isUpdateRequired ? 'Update Now' : 'Retry Now',
                       ),
                     ),
+                    if (!state.isUpdateRequired) ...[
+                      const SizedBox(height: 12),
+                      Text(
+                        'Retrying in ${_secondsUntilRetry}s',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -142,5 +169,49 @@ class _OfflineBlockerState extends ConsumerState<_OfflineBlocker> {
         ),
       ),
     );
+  }
+}
+
+class _BlockerContent {
+  const _BlockerContent({
+    required this.icon,
+    required this.title,
+    required this.message,
+  });
+
+  final IconData icon;
+  final String title;
+  final String message;
+
+  factory _BlockerContent.fromState(AppAvailabilityState state) {
+    switch (state.issue) {
+      case AvailabilityIssue.deviceOffline:
+        return const _BlockerContent(
+          icon: Icons.cloud_off,
+          title: 'Device Offline',
+          message:
+              'Conscia cannot reach the internet right now. We will retry automatically.',
+        );
+      case AvailabilityIssue.apiUnavailable:
+        return const _BlockerContent(
+          icon: Icons.cloud_off_outlined,
+          title: 'Conscia Unavailable',
+          message:
+              'Your device is online, but the Conscia API is temporarily unavailable.',
+        );
+      case AvailabilityIssue.updateRequired:
+        return const _BlockerContent(
+          icon: Icons.system_update,
+          title: 'Update Required',
+          message:
+              'A newer version of Conscia is available in the store and is required before you can continue.',
+        );
+      case AvailabilityIssue.none:
+        return const _BlockerContent(
+          icon: Icons.check_circle,
+          title: '',
+          message: '',
+        );
+    }
   }
 }

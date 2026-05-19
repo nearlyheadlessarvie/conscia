@@ -7,8 +7,8 @@ import '../../core/routing/app_router.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_layout.dart';
 import '../../models/family_space.dart';
+import '../../providers/app_availability_provider.dart';
 import '../../providers/family_space_provider.dart';
-import '../../providers/health_provider.dart';
 import '../../widgets/conscia_bottom_sheet.dart';
 import '../../widgets/floating_label_text_field.dart';
 import '../../widgets/conscia_app_bar.dart';
@@ -92,11 +92,11 @@ class _FamilySpaceSettingsScreenState
                 ),
               ),
               error: (_, __) {
-                final isOffline = ref.watch(
-                  healthStatusProvider.select((state) => state.isOffline),
+                final isBlocked = ref.watch(
+                  appAvailabilityProvider.select((state) => state.isBlocked),
                 );
 
-                if (isOffline) {
+                if (isBlocked) {
                   return const _SharedConsciaScrollView(
                     child: SizedBox.shrink(),
                   );
