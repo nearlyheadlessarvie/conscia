@@ -6,11 +6,11 @@
 
 ## Goal
 
-Redesign the Journey feature so it no longer feels like a secondary gamification screen and instead becomes a first-class behavioral hub inside the Conscia app.
+Redesign Home around Journey so it no longer feels like a secondary gamification feature and instead becomes the first-class behavioral center of the Conscia app.
 
 The new Journey should:
 
-- feel like a dedicated companion-led destination
+- become the emotional and behavioral center of the Home tab
 - interpret user behavior across the app rather than only displaying rewards
 - guide the user toward the next best mindful action
 - stay faithful to the existing Conscia iOS-forward v2 design language
@@ -19,13 +19,13 @@ The new Journey should:
 The redesign should not:
 
 - add Journey as a sixth dock destination
-- replace Home as the app's primary landing screen
+- create a new navigation shell
 - introduce fictional backend capabilities that do not exist yet
 - turn Journey into an arcade-style XP dashboard
 
 ## Product Role
 
-Journey should become the app's behavioral operating system.
+Journey should become the app's behavioral operating system by taking over Home's primary content experience.
 
 The app's tool destinations remain what they are today:
 
@@ -35,7 +35,7 @@ The app's tool destinations remain what they are today:
 - Purchase Assistant
 - Settings
 
-Journey serves a different purpose. It is the place where Conscia interprets what the user's actions mean.
+Home remains the selected dock destination and the user's starting point, but its content becomes Journey-led. It is the place where Conscia interprets what the user's actions mean.
 
 Budgets, reflections, regret tracking, insights review, and purchase pauses may happen in other parts of the app, but Journey is where those actions are translated into:
 
@@ -53,7 +53,7 @@ Journey should answer four questions each time the user opens it:
 - What patterns are improving or slipping?
 - What did Conscia notice about me lately?
 
-This shifts Journey from a trophy case into an active behavior center.
+This shifts Home from a broad dashboard into an active behavior center. Budgets, transactions, and other summaries still appear, but they support the Journey story rather than defining the page.
 
 ## Product Direction
 
@@ -62,44 +62,57 @@ The approved direction is:
 - behavior-first, not navigation-first
 - balanced habit-building, not only reflection or only discipline
 - companion-led, not hyper-gamified
-- dedicated hub, not a home-screen replacement
+- Home becomes Journey-led
 
-That means Journey should feel alive and important, but its importance comes from interpretation and guidance rather than raw nav prominence.
+That means Journey becomes important through the app's primary landing experience, not through a new tab or altered dock.
 
 ## Navigation And Discovery
 
-Journey remains a full-screen destination at the existing `/journey` route.
+Journey's primary surface becomes the existing Home route at `/`.
 
-It should not be promoted into the floating dock. The current 5-destination dock remains unchanged.
+The current 5-destination dock remains unchanged:
 
-Instead, Journey becomes class-1 through stronger discovery and stronger return value:
+- Home
+- Transactions
+- Scan
+- Assistant
+- Settings
 
-- Home keeps a prominent Journey entry point in the editorial hero
-- alerts and important Journey moments can deep-link into the Journey hub
-- other behavioral surfaces such as Insights, Purchase Assistant, and transaction reflection flows can open Journey when the user wants the broader personal meaning
-- the Journey hub itself must feel rich enough that users intentionally return to it
+Home stays selected when the user is in the Journey-led experience.
+
+The existing `/journey` route can remain available as a deeper detail route, transition route, or compatibility route, but it is no longer the main first-class surface. If retained, it should mirror or deepen the Journey-led Home experience rather than competing with it.
+
+Journey becomes class-1 through:
+
+- replacing the current Home content hierarchy
+- becoming the first thing users see after opening the app
+- letting alerts and important Journey moments route back to Home or a deeper Journey detail view
+- letting behavioral surfaces such as Insights, Purchase Assistant, and transaction reflection flows point users back to the Journey-led Home when they want the broader personal meaning
 
 Working model:
 
-- the dock gets users to tools
-- Journey interprets behavior across those tools
+- the dock still gets users to tools
+- Home is where Journey interprets behavior across those tools
 
 ## Home Relationship
 
-Home should stop presenting Journey as a small stat card or sidecar surface.
+Home becomes Journey-led.
 
-Home's Journey preview should instead communicate:
+The previous Home dashboard structure should be reshaped so Journey is the main experience, with financial summaries and activity feeds becoming supporting context.
+
+The Home experience should communicate:
 
 - the user's current Journey state
 - one recommended next step
 - one signal of improvement or drift
-- one strong entry into the full Journey hub
+- current weekly commitments
+- supporting financial context such as budgets and recent transactions
 
-This keeps Journey prominent without collapsing Home into Journey.
+This makes Journey class-1 without changing the bottom navigation.
 
 ## Screen Structure
 
-The Journey screen should be reorganized into five major modules in this order.
+The Home screen should be reorganized into six major modules in this order.
 
 ### 1. Hero Summary
 
@@ -107,10 +120,12 @@ The screen starts with a full-bleed editorial hero using the existing gradient-h
 
 The hero should include:
 
+- personal greeting
 - Journey title
 - current level, chapter, or equivalent progress identity
 - a short companion-led guidance message
 - momentum or streak signal
+- a concise financial context line when useful
 - one calm progress indicator
 
 The hero should feel emotionally rewarding, but not like a game lobby.
@@ -162,7 +177,20 @@ This module should reuse current insights and regret-related data where possible
 
 The tone must stay supportive and non-punitive.
 
-### 5. Milestones
+### 5. Supporting Financial Context
+
+Budgets and recent transactions remain available on Home, but lower in the hierarchy.
+
+This section should preserve Home's usefulness as the user's starting point without letting the page collapse back into a generic financial dashboard.
+
+Representative supporting modules:
+
+- budget summary
+- recent transactions
+- compact insight entry
+- transaction or reflection prompt when relevant
+
+### 6. Milestones
 
 Badges, unlocks, streaks, and mascot moments still matter, but they move below the behavioral modules.
 
@@ -189,6 +217,7 @@ The redesign should avoid:
 
 - generic fintech dashboard aesthetics
 - a sixth navigation item
+- a new bottom navigation shell
 - oversized decorative mascot overload
 - overly playful arcade gamification
 - cluttered micro-card stacking
@@ -241,12 +270,13 @@ The first version of the redesign should primarily reframe and reprioritize this
 
 ### Phase 1: Screen Restructure
 
-Use the existing Journey route and current summary data to redesign the screen around:
+Use the existing Home route and current summary data to redesign Home around:
 
 - hero summary
 - Today with Conscia
 - weekly arc
 - patterns
+- supporting financial context
 - milestones
 
 This phase is primarily UI, hierarchy, and presentation logic.
@@ -267,18 +297,20 @@ This phase strengthens the quality of Journey recommendations and makes the hub 
 
 The Journey redesign is successful when:
 
-- Journey feels like a first-class destination without becoming a dock tab
+- Home feels Journey-led while remaining the Home dock destination
 - the screen leads with guidance and behavioral meaning rather than only XP and badges
 - one clear next action is visible near the top of the screen
 - weekly commitments feel human and supportive rather than gamey
 - patterns and behavioral signals are presented in a non-judgmental way
+- budgets and recent transactions still exist as supporting Home context
 - milestones still exist but no longer dominate the whole screen
 - the design clearly follows the established Conscia visual system
 - the redesign works within the current 5-destination navigation structure
 
 ## Implementation Notes
 
-- Keep the existing `/journey` route.
-- Keep Home as the main landing screen.
-- Strengthen Journey through hierarchy, discovery, and behavioral usefulness rather than shell-level navigation changes.
+- Keep Home as the main landing screen and make its content Journey-led.
+- Do not add a sixth dock destination.
+- Keep or redirect the existing `/journey` route based on implementation fit; it should not be the primary first-class Journey experience after this redesign.
+- Strengthen Journey through Home hierarchy, behavioral guidance, and supporting context rather than shell-level navigation changes.
 - Preserve the current floating integrated dock pattern exactly as established in the broader app redesign work.
