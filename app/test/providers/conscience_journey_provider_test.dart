@@ -56,7 +56,7 @@ void main() {
     expect(alerts.map((alert) => alert.type), contains('journey_level_up'));
     expect(alerts.map((alert) => alert.type), contains('journey_badge'));
     expect(alerts.map((alert) => alert.type), contains('journey_quest'));
-    expect(alerts.first.actionRoute, '/journey');
+    expect(alerts.first.actionRoute, '/');
   });
 
   test('conscienceJourneyProvider refreshes when authenticated user changes',
