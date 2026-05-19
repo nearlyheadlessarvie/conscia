@@ -12,6 +12,7 @@ import 'package:conscia_app/core/routing/app_router.dart';
 import 'package:conscia_app/core/theme/app_colors.dart';
 import 'package:conscia_app/core/theme/app_layout.dart';
 import 'package:conscia_app/core/utils/currency_formatter.dart';
+import 'package:conscia_app/models/behavioral_insights.dart';
 import 'package:conscia_app/models/conscience_journey.dart';
 import 'package:conscia_app/providers/alert_provider.dart';
 import 'package:conscia_app/providers/behavioral_insights_provider.dart';
@@ -171,12 +172,14 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     context.push(AppRoutes.assistant);
   }
 
-  void _openJourneyQuests() {
-    context.push(AppRoutes.journey);
-  }
-
-  void _openWeeklyInsights() {
-    context.push(AppRoutes.insights);
+  BudgetTrendInsight? _graphableBudgetTrend(
+    List<BudgetTrendInsight>? trends,
+  ) {
+    if (trends == null) return null;
+    for (final trend in trends) {
+      if (trend.months.length >= 2) return trend;
+    }
+    return null;
   }
 
   void _handleAlertAction(AppAlert alert) {
@@ -405,6 +408,12 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     final journey = journeyState.valueOrNull;
     final journeyLoadingWithoutData = journeyState.isLoading && journey == null;
     final journeyHome = buildJourneyHomePresentation(journey);
+    final dashboardInsightSummary =
+        ref.watch(dashboardInsightSummaryProvider).valueOrNull;
+    final behavioralInsights =
+        ref.watch(behavioralInsightsProvider).valueOrNull;
+    final dashboardInsightTrend =
+        _graphableBudgetTrend(behavioralInsights?.budgetTrends);
     final regretPrompts = transactions
         .where((t) =>
             t.regretLevel == null &&
@@ -439,8 +448,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     child: JourneyLedHomeSections(
                       summary: journey,
                       presentation: journeyHome,
-                      onOpenWeeklyArc: _openJourneyQuests,
-                      onOpenWeeklyInsights: _openWeeklyInsights,
+                      insightSummary: dashboardInsightSummary,
+                      insightTrend: dashboardInsightTrend,
                     ),
                   ),
                 ),

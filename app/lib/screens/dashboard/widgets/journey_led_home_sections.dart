@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../../core/theme/app_colors.dart';
+import '../../../models/behavioral_insights.dart';
 import '../../../models/conscience_journey.dart';
+import '../../../models/insight_feed_item.dart';
+import '../../../providers/insight_feed_provider.dart';
 import '../../../widgets/feed_card.dart';
 import '../journey_home_presenter.dart';
 
@@ -11,14 +14,14 @@ class JourneyLedHomeSections extends StatelessWidget {
     super.key,
     required this.summary,
     required this.presentation,
-    required this.onOpenWeeklyArc,
-    required this.onOpenWeeklyInsights,
+    required this.insightSummary,
+    required this.insightTrend,
   });
 
   final ConscienceJourneySummary? summary;
   final JourneyHomePresentation presentation;
-  final VoidCallback onOpenWeeklyArc;
-  final VoidCallback onOpenWeeklyInsights;
+  final DashboardInsightSummary? insightSummary;
+  final BudgetTrendInsight? insightTrend;
 
   @override
   Widget build(BuildContext context) {
@@ -30,20 +33,17 @@ class JourneyLedHomeSections extends StatelessWidget {
           _JourneyHomeSection(
             title: 'This Week',
             subtitle: 'A gentle arc for building consistency.',
-            linkKey: const ValueKey('journey-home-weekly-link'),
-            onTap: onOpenWeeklyArc,
-            trailing: const _SectionHint(label: 'Your weekly arc'),
             child: _WeeklyArc(
               quests: summary?.weeklyQuests ?? const [],
             ),
           ),
           _JourneyHomeSection(
-            title: 'Patterns',
+            title: 'Insights',
             subtitle: 'What Conscia is noticing without judging.',
-            linkKey: const ValueKey('journey-home-patterns-link'),
-            onTap: onOpenWeeklyInsights,
-            trailing: const _SectionHint(label: 'Signals from your week'),
-            child: _PatternPreview(patterns: presentation.patterns),
+            child: _InsightSummaryCard(
+              summary: insightSummary,
+              trend: insightTrend,
+            ),
           ),
           if (presentation.milestones.isNotEmpty)
             _JourneyHomeSection(
@@ -62,24 +62,18 @@ class _JourneyHomeSection extends StatelessWidget {
     required this.title,
     required this.subtitle,
     required this.child,
-    this.trailing,
-    this.linkKey,
-    this.onTap,
   });
 
   final String title;
   final String subtitle;
   final Widget child;
-  final Widget? trailing;
-  final Key? linkKey;
-  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
     final colors = Theme.of(context).appColors;
 
-    final content = Padding(
+    return Padding(
       padding: const EdgeInsets.only(bottom: 18),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -99,10 +93,6 @@ class _JourneyHomeSection extends StatelessWidget {
                   ),
                 ),
               ),
-              if (trailing != null) ...[
-                const SizedBox(width: 12),
-                trailing!,
-              ],
             ],
           ),
           const SizedBox(height: 4),
@@ -121,15 +111,6 @@ class _JourneyHomeSection extends StatelessWidget {
         ],
       ),
     );
-
-    if (onTap == null) return content;
-
-    return GestureDetector(
-      key: linkKey,
-      behavior: HitTestBehavior.opaque,
-      onTap: onTap,
-      child: content,
-    );
   }
 }
 
@@ -142,9 +123,8 @@ class _WeeklyArc extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).appColors;
     final textTheme = Theme.of(context).textTheme;
-    final visibleQuests = quests.take(3).toList(growable: false);
 
-    if (visibleQuests.isEmpty) {
+    if (quests.isEmpty) {
       return FeedCard(
         child: Text(
           'Conscia will shape weekly commitments as your activity builds.',
@@ -153,24 +133,18 @@ class _WeeklyArc extends StatelessWidget {
       );
     }
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            for (final entry in visibleQuests.indexed)
-              Expanded(
-                child: Padding(
-                  padding: EdgeInsets.only(
-                    right: entry.$1 == visibleQuests.length - 1 ? 0 : 8,
-                  ),
-                  child: _QuestTile(quest: entry.$2, index: entry.$1),
-                ),
-              ),
-          ],
+    return SizedBox(
+      height: 174,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        clipBehavior: Clip.none,
+        itemCount: quests.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 10),
+        itemBuilder: (context, index) => SizedBox(
+          width: 128,
+          child: _QuestTile(quest: quests[index], index: index),
         ),
-      ],
+      ),
     );
   }
 }
@@ -195,6 +169,7 @@ class _QuestTile extends StatelessWidget {
         : (quest.progress / quest.target).clamp(0.0, 1.0).toDouble();
 
     return Container(
+      key: const ValueKey('journey-home-quest-card'),
       height: 174,
       padding: const EdgeInsets.fromLTRB(10, 12, 10, 10),
       decoration: BoxDecoration(
@@ -266,59 +241,28 @@ class _QuestTile extends StatelessWidget {
   }
 }
 
-class _PatternPreview extends StatelessWidget {
-  const _PatternPreview({required this.patterns});
-
-  final List<JourneyHomePatternSignal> patterns;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        for (final entry in patterns.take(2).indexed)
-          Expanded(
-            child: Padding(
-              padding: EdgeInsets.only(right: entry.$1 == 1 ? 0 : 8),
-              child: _PatternSignalCard(
-                pattern: entry.$2,
-                color: _toneColor(context, entry.$2),
-              ),
-            ),
-          ),
-      ],
-    );
-  }
-
-  Color _toneColor(BuildContext context, JourneyHomePatternSignal pattern) {
-    final colors = Theme.of(context).appColors;
-    return pattern.tone == JourneyHomePatternTone.positive
-        ? colors.income
-        : colors.deepNavy;
-  }
-}
-
-class _PatternSignalCard extends StatelessWidget {
-  const _PatternSignalCard({
-    required this.pattern,
-    required this.color,
+class _InsightSummaryCard extends StatelessWidget {
+  const _InsightSummaryCard({
+    required this.summary,
+    required this.trend,
   });
 
-  final JourneyHomePatternSignal pattern;
-  final Color color;
+  final DashboardInsightSummary? summary;
+  final BudgetTrendInsight? trend;
 
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).appColors;
     final textTheme = Theme.of(context).textTheme;
+    final tone = summary?.tone ?? InsightFeedTone.neutral;
+    final color = _insightToneColor(colors, tone);
+    final hasGraph = (trend?.months.length ?? 0) >= 2;
 
     return Container(
-      constraints: const BoxConstraints(minHeight: 156),
-      padding: const EdgeInsets.all(12),
+      constraints: const BoxConstraints(minHeight: 136),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: pattern.tone == JourneyHomePatternTone.positive
-            ? colors.incomeSoft.withValues(alpha: 0.54)
-            : colors.devilSoft.withValues(alpha: 0.5),
+        color: _insightToneBackground(colors, tone),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: colors.border),
       ),
@@ -327,13 +271,11 @@ class _PatternSignalCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(pattern.icon, color: color, size: 16),
-              const SizedBox(width: 5),
+              Icon(_insightToneIcon(tone), color: color, size: 16),
+              const SizedBox(width: 6),
               Expanded(
                 child: Text(
-                  pattern.tone == JourneyHomePatternTone.positive
-                      ? 'Improving'
-                      : 'Watch this',
+                  _insightEyebrow(tone),
                   style: GoogleFonts.nunitoSans(
                     textStyle: textTheme.labelSmall,
                     color: color,
@@ -345,8 +287,8 @@ class _PatternSignalCard extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            pattern.title,
-            key: const ValueKey('journey-home-pattern-title'),
+            trend?.category ?? _insightTitle(tone),
+            key: const ValueKey('journey-home-insight-title'),
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
             style: GoogleFonts.nunitoSans(
@@ -355,21 +297,25 @@ class _PatternSignalCard extends StatelessWidget {
               fontWeight: FontWeight.w800,
             ),
           ),
-          const SizedBox(height: 8),
-          SizedBox(
-            height: 36,
-            child: CustomPaint(
-              painter: _SignalLinePainter(
-                color: color,
-                positive: pattern.tone == JourneyHomePatternTone.positive,
+          if (hasGraph) ...[
+            const SizedBox(height: 10),
+            SizedBox(
+              key: const ValueKey('journey-home-insight-graph'),
+              height: 42,
+              child: CustomPaint(
+                painter: _InsightTrendPainter(
+                  color: color,
+                  values: trend!.months,
+                ),
+                child: const SizedBox.expand(),
               ),
-              child: const SizedBox.expand(),
             ),
-          ),
+          ],
           const SizedBox(height: 8),
           Text(
-            pattern.description,
-            key: const ValueKey('journey-home-pattern-description'),
+            summary?.text ??
+                'Insights are still taking shape as Conscia learns your weekly rhythm.',
+            key: const ValueKey('journey-home-insight-description'),
             maxLines: 3,
             overflow: TextOverflow.ellipsis,
             style: GoogleFonts.nunitoSans(
@@ -385,17 +331,19 @@ class _PatternSignalCard extends StatelessWidget {
   }
 }
 
-class _SignalLinePainter extends CustomPainter {
-  const _SignalLinePainter({
+class _InsightTrendPainter extends CustomPainter {
+  const _InsightTrendPainter({
     required this.color,
-    required this.positive,
+    required this.values,
   });
 
   final Color color;
-  final bool positive;
+  final List<double> values;
 
   @override
   void paint(Canvas canvas, Size size) {
+    if (values.length < 2) return;
+
     final fillPaint = Paint()
       ..color = color.withValues(alpha: 0.08)
       ..style = PaintingStyle.fill;
@@ -405,13 +353,16 @@ class _SignalLinePainter extends CustomPainter {
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round;
 
+    final minValue = values.reduce((a, b) => a < b ? a : b);
+    final maxValue = values.reduce((a, b) => a > b ? a : b);
+    final range = maxValue - minValue;
     final path = Path();
-    for (var i = 0; i < 6; i++) {
-      final x = size.width * i / 5;
-      final base = positive
-          ? size.height * (0.82 - i * 0.09)
-          : size.height * (0.56 + (i == 4 ? 0.18 : 0.02 * i));
-      final y = base + (i.isEven ? 4 : -3);
+    for (final entry in values.indexed) {
+      final i = entry.$1;
+      final value = entry.$2;
+      final x = values.length == 1 ? 0.0 : size.width * i / (values.length - 1);
+      final normalized = range == 0 ? 0.5 : (value - minValue) / range;
+      final y = size.height - (normalized * size.height * 0.72) - 5;
       if (i == 0) {
         path.moveTo(x, y);
       } else {
@@ -424,16 +375,21 @@ class _SignalLinePainter extends CustomPainter {
       ..close();
     canvas.drawPath(fillPath, fillPaint);
     canvas.drawPath(path, linePaint);
+    final lastValue = values.last;
+    final normalizedLast = range == 0 ? 0.5 : (lastValue - minValue) / range;
     canvas.drawCircle(
-      Offset(size.width, positive ? size.height * 0.33 : size.height * 0.68),
+      Offset(
+        size.width,
+        size.height - (normalizedLast * size.height * 0.72) - 5,
+      ),
       3.2,
       Paint()..color = color,
     );
   }
 
   @override
-  bool shouldRepaint(covariant _SignalLinePainter oldDelegate) =>
-      oldDelegate.color != color || oldDelegate.positive != positive;
+  bool shouldRepaint(covariant _InsightTrendPainter oldDelegate) =>
+      oldDelegate.color != color || oldDelegate.values != values;
 }
 
 class _MilestoneStrip extends StatelessWidget {
@@ -496,32 +452,6 @@ class _SoftIcon extends StatelessWidget {
   }
 }
 
-class _SectionHint extends StatelessWidget {
-  const _SectionHint({required this.label});
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).appColors;
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(
-          label,
-          style: GoogleFonts.nunitoSans(
-            textStyle: Theme.of(context).textTheme.labelSmall,
-            color: colors.mutedInk,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-        const SizedBox(width: 4),
-        Icon(Icons.chevron_right_rounded, size: 15, color: colors.mutedInk),
-      ],
-    );
-  }
-}
-
 IconData _questIcon(String key) {
   return switch (key) {
     'reflect_three_purchases' => Icons.auto_stories_rounded,
@@ -530,6 +460,51 @@ IconData _questIcon(String key) {
     'send_family_invite' => Icons.group_add_rounded,
     'add_family_expense' => Icons.receipt_long_rounded,
     _ => Icons.flag_rounded,
+  };
+}
+
+Color _insightToneColor(AppColors colors, InsightFeedTone tone) {
+  return switch (tone) {
+    InsightFeedTone.positive => colors.income,
+    InsightFeedTone.caution => colors.amber,
+    InsightFeedTone.urgent => colors.devilAccent,
+    InsightFeedTone.neutral => colors.deepNavy,
+  };
+}
+
+Color _insightToneBackground(AppColors colors, InsightFeedTone tone) {
+  return switch (tone) {
+    InsightFeedTone.positive => colors.incomeSoft.withValues(alpha: 0.54),
+    InsightFeedTone.caution => colors.amberSoft.withValues(alpha: 0.52),
+    InsightFeedTone.urgent => colors.devilSoft.withValues(alpha: 0.5),
+    InsightFeedTone.neutral => colors.navySoft.withValues(alpha: 0.44),
+  };
+}
+
+IconData _insightToneIcon(InsightFeedTone tone) {
+  return switch (tone) {
+    InsightFeedTone.positive => Icons.arrow_upward_rounded,
+    InsightFeedTone.caution => Icons.flag_rounded,
+    InsightFeedTone.urgent => Icons.priority_high_rounded,
+    InsightFeedTone.neutral => Icons.auto_graph_rounded,
+  };
+}
+
+String _insightEyebrow(InsightFeedTone tone) {
+  return switch (tone) {
+    InsightFeedTone.positive => 'Improving',
+    InsightFeedTone.caution => 'Watch this',
+    InsightFeedTone.urgent => 'Needs care',
+    InsightFeedTone.neutral => 'Weekly signal',
+  };
+}
+
+String _insightTitle(InsightFeedTone tone) {
+  return switch (tone) {
+    InsightFeedTone.positive => 'Momentum is forming',
+    InsightFeedTone.caution => 'Weekly rhythm',
+    InsightFeedTone.urgent => 'A signal to slow down',
+    InsightFeedTone.neutral => 'Your week in view',
   };
 }
 

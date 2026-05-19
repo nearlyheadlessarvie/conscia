@@ -1,5 +1,8 @@
 import 'package:conscia_app/core/theme/app_theme.dart';
+import 'package:conscia_app/models/behavioral_insights.dart';
 import 'package:conscia_app/models/conscience_journey.dart';
+import 'package:conscia_app/models/insight_feed_item.dart';
+import 'package:conscia_app/providers/insight_feed_provider.dart';
 import 'package:conscia_app/screens/dashboard/journey_home_presenter.dart';
 import 'package:conscia_app/screens/dashboard/widgets/journey_led_home_sections.dart';
 import 'package:flutter/material.dart';
@@ -10,14 +13,18 @@ void main() {
       (tester) async {
     await tester.pumpWidget(_buildSubject(
       summary: _summary(),
-      onOpenWeeklyArc: () {},
-      onOpenWeeklyInsights: () {},
+      insightSummary: const DashboardInsightSummary(
+        text: 'Dining is above your recent 3-month pace.',
+        tone: InsightFeedTone.caution,
+      ),
+      insightTrend: _budgetTrend(),
     ));
 
     expect(find.text('Today with Conscia'), findsNothing);
     expect(find.byKey(const ValueKey('journey-home-today-card')), findsNothing);
     expect(find.text('This Week'), findsOneWidget);
-    expect(find.text('Patterns'), findsOneWidget);
+    expect(find.text('Insights'), findsOneWidget);
+    expect(find.text('Patterns'), findsNothing);
     expect(find.text('Milestones'), findsOneWidget);
   });
 
@@ -47,18 +54,21 @@ void main() {
     await tester.pumpWidget(_buildSubject(
       summary: _summary(weeklyQuests: const [], badges: const []),
       presentation: presentation,
-      onOpenWeeklyArc: () {},
-      onOpenWeeklyInsights: () {},
+      insightSummary: const DashboardInsightSummary(
+        text: 'More of your decisions are feeling worth it than last month.',
+        tone: InsightFeedTone.positive,
+      ),
+      insightTrend: null,
     ));
 
-    expect(find.text('Momentum is forming'), findsOneWidget);
+    expect(find.text('Insights'), findsOneWidget);
     expect(
-      find.text('Three mindful days are starting to look like a rhythm.'),
+      find.text('More of your decisions are feeling worth it than last month.'),
       findsOneWidget,
     );
   });
 
-  testWidgets('Weekly arc renders progress and only first three quests',
+  testWidgets('Weekly arc renders progress for every current quest',
       (tester) async {
     final summary = _summary(
       weeklyQuests: const [
@@ -116,15 +126,56 @@ void main() {
         totalQuestCount: 4,
         levelProgress: 0.5,
       ),
-      onOpenWeeklyArc: () {},
-      onOpenWeeklyInsights: () {},
+      insightSummary: null,
+      insightTrend: null,
     ));
 
     expect(find.text('1/4 commitments complete'), findsNothing);
     expect(find.text('First quest'), findsOneWidget);
     expect(find.text('Second quest'), findsOneWidget);
     expect(find.text('Third quest'), findsOneWidget);
-    expect(find.text('Fourth quest'), findsNothing);
+    expect(find.text('Fourth quest'), findsOneWidget);
+  });
+
+  testWidgets('Weekly arc shows all quests in fixed-width horizontal cards',
+      (tester) async {
+    final summary = _summary(
+      weeklyQuests: List.generate(
+        5,
+        (index) => ConscienceQuest(
+          key: 'quest_$index',
+          title: 'Quest ${index + 1}',
+          description: 'Quest ${index + 1} description.',
+          progress: 0,
+          target: 1,
+          xpReward: 10,
+          isCompleted: false,
+        ),
+      ),
+    );
+
+    await tester.pumpWidget(_buildSubject(
+      summary: summary,
+      insightSummary: null,
+      insightTrend: null,
+    ));
+
+    expect(find.text('Your weekly arc'), findsNothing);
+    expect(
+        find.byKey(const ValueKey('journey-home-weekly-link')), findsNothing);
+    expect(find.text('0/5 commitments complete'), findsNothing);
+    expect(find.byKey(const ValueKey('journey-home-quest-card')),
+        findsNWidgets(5));
+
+    final firstCard = tester.getSize(
+      find.byKey(const ValueKey('journey-home-quest-card')).first,
+    );
+    final secondCard = tester.getSize(
+      find.byKey(const ValueKey('journey-home-quest-card')).at(1),
+    );
+
+    expect(firstCard.width, closeTo(128, 0.1));
+    expect(secondCard.width, firstCard.width);
   });
 
   testWidgets('Journey sections use locked storybook typography',
@@ -153,8 +204,11 @@ void main() {
     await tester.pumpWidget(_buildSubject(
       summary: _summary(),
       presentation: presentation,
-      onOpenWeeklyArc: () {},
-      onOpenWeeklyInsights: () {},
+      insightSummary: const DashboardInsightSummary(
+        text: 'Recent reflections point to a calmer week.',
+        tone: InsightFeedTone.positive,
+      ),
+      insightTrend: _budgetTrend(),
     ));
 
     final sectionTitle = tester.widget<Text>(
@@ -170,10 +224,10 @@ void main() {
       find.byKey(const ValueKey('journey-home-quest-description')),
     );
     final patternTitle = tester.widget<Text>(
-      find.byKey(const ValueKey('journey-home-pattern-title')),
+      find.byKey(const ValueKey('journey-home-insight-title')),
     );
     final patternDescription = tester.widget<Text>(
-      find.byKey(const ValueKey('journey-home-pattern-description')),
+      find.byKey(const ValueKey('journey-home-insight-description')),
     );
 
     expect(sectionTitle.style?.fontFamily, contains('LibreBaskerville'));
@@ -184,34 +238,26 @@ void main() {
     expect(patternDescription.style?.fontFamily, contains('Nunito'));
   });
 
-  testWidgets('Weekly arc opens the Journey quests board', (tester) async {
-    var openCount = 0;
-
+  testWidgets('Insights section renders real summary and optional graph',
+      (tester) async {
     await tester.pumpWidget(_buildSubject(
       summary: _summary(),
-      onOpenWeeklyArc: () => openCount++,
-      onOpenWeeklyInsights: () {},
+      insightSummary: const DashboardInsightSummary(
+        text: 'Dining is above your recent 3-month pace.',
+        tone: InsightFeedTone.caution,
+      ),
+      insightTrend: _budgetTrend(),
     ));
 
-    await tester.tap(find.byKey(const ValueKey('journey-home-weekly-link')));
-    await tester.pump();
-
-    expect(openCount, 1);
-  });
-
-  testWidgets('Pattern signals open weekly insights', (tester) async {
-    var openCount = 0;
-
-    await tester.pumpWidget(_buildSubject(
-      summary: _summary(),
-      onOpenWeeklyArc: () {},
-      onOpenWeeklyInsights: () => openCount++,
-    ));
-
-    await tester.tap(find.byKey(const ValueKey('journey-home-patterns-link')));
-    await tester.pump();
-
-    expect(openCount, 1);
+    expect(find.text('Insights'), findsOneWidget);
+    expect(find.text('Patterns'), findsNothing);
+    expect(find.text('Signals from your week'), findsNothing);
+    expect(
+        find.byKey(const ValueKey('journey-home-patterns-link')), findsNothing);
+    expect(
+        find.text('Dining is above your recent 3-month pace.'), findsOneWidget);
+    expect(find.byKey(const ValueKey('journey-home-insight-graph')),
+        findsOneWidget);
   });
 
   testWidgets('Empty weekly state renders and milestones hide without badges',
@@ -223,8 +269,8 @@ void main() {
 
     await tester.pumpWidget(_buildSubject(
       summary: summary,
-      onOpenWeeklyArc: () {},
-      onOpenWeeklyInsights: () {},
+      insightSummary: null,
+      insightTrend: null,
     ));
 
     expect(
@@ -240,8 +286,8 @@ void main() {
 Widget _buildSubject({
   required ConscienceJourneySummary summary,
   JourneyHomePresentation? presentation,
-  required VoidCallback onOpenWeeklyArc,
-  required VoidCallback onOpenWeeklyInsights,
+  required DashboardInsightSummary? insightSummary,
+  required BudgetTrendInsight? insightTrend,
 }) {
   return MaterialApp(
     theme: AppTheme.light(),
@@ -250,8 +296,8 @@ Widget _buildSubject({
         child: JourneyLedHomeSections(
           summary: summary,
           presentation: presentation ?? buildJourneyHomePresentation(summary),
-          onOpenWeeklyArc: onOpenWeeklyArc,
-          onOpenWeeklyInsights: onOpenWeeklyInsights,
+          insightSummary: insightSummary,
+          insightTrend: insightTrend,
         ),
       ),
     ),
@@ -299,4 +345,14 @@ ConscienceJourneySummary _summary({
       bestMomentumDays: 8,
       weeklyQuests: weeklyQuests,
       badges: badges,
+    );
+
+BudgetTrendInsight _budgetTrend() => const BudgetTrendInsight(
+      category: 'Dining',
+      hasBudget: true,
+      currencyCode: 'PHP',
+      months: [42, 54, 68, 82],
+      currentMonthSpend: 8200,
+      currentMonthPercentUsed: 82,
+      insightLabel: 'Dining is trending higher.',
     );

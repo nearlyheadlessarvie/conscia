@@ -747,7 +747,7 @@ void main() {
     );
     expect(find.text('Today with Conscia'), findsNothing);
     expect(find.text('This Week'), findsOneWidget);
-    expect(find.text('Patterns'), findsOneWidget);
+    expect(find.text('Insights'), findsOneWidget);
     expect(find.text('BUDGETS'), findsOneWidget);
     expect(find.text('RECENT TRANSACTIONS'), findsOneWidget);
     expect(find.byKey(const ValueKey('dashboard-journey-link')), findsNothing);
@@ -785,7 +785,7 @@ void main() {
     );
     expect(find.text('Today with Conscia'), findsNothing);
     expect(find.text('This Week'), findsOneWidget);
-    expect(find.text('Patterns'), findsOneWidget);
+    expect(find.text('Insights'), findsOneWidget);
     expect(find.text('BUDGETS'), findsOneWidget);
     expect(find.text('RECENT TRANSACTIONS'), findsOneWidget);
     expect(find.byKey(const ValueKey('dashboard-journey-link')), findsNothing);
@@ -1029,7 +1029,12 @@ void main() {
     expect(find.text('SPENT THIS MONTH'), findsNothing);
     expect(find.text('₱5.600,00'), findsNothing);
     expect(
-      find.text('Shopping is carrying your strongest regret signal right now.'),
+      find.descendant(
+        of: find.byKey(const ValueKey('dashboard-editorial-hero')),
+        matching: find.text(
+          'Shopping is carrying your strongest regret signal right now.',
+        ),
+      ),
       findsNothing,
     );
     final title = tester.widget<Text>(
@@ -1160,6 +1165,7 @@ void main() {
             .overrideWithValue(_StaticTransactionService()),
         currentUserProvider.overrideWith((ref) async => _testUser),
         subscriptionProvider.overrideWith((ref) async => _testSubscription),
+        behavioralInsightsProvider.overrideWith((ref) async => null),
         dashboardInsightSummaryProvider.overrideWith(
           (ref) => pendingSummary.future,
         ),
@@ -1183,7 +1189,7 @@ void main() {
         find.byKey(const ValueKey('dashboard-hero-skeleton')), findsOneWidget);
     expect(find.text('Today with Conscia'), findsNothing);
     expect(find.text('This Week'), findsNothing);
-    expect(find.text('Patterns'), findsNothing);
+    expect(find.text('Insights'), findsNothing);
     expect(find.byType(InsightSkeletonCard), findsNothing);
   });
 
@@ -1218,7 +1224,8 @@ void main() {
     expect(find.text('Assistant placeholder'), findsOneWidget);
   });
 
-  testWidgets('dashboard weekly arc opens journey board', (tester) async {
+  testWidgets('dashboard weekly quest rail is not a section link',
+      (tester) async {
     _useTallDashboardViewport(tester);
 
     final container = ProviderContainer(
@@ -1242,13 +1249,14 @@ void main() {
     await tester.pumpWidget(_buildApp(container));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byKey(const ValueKey('journey-home-weekly-link')));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Journey placeholder'), findsOneWidget);
+    expect(
+        find.byKey(const ValueKey('journey-home-weekly-link')), findsNothing);
+    expect(find.text('Your weekly arc'), findsNothing);
+    expect(find.text('This Week'), findsOneWidget);
   });
 
-  testWidgets('dashboard pattern signals open insights', (tester) async {
+  testWidgets('dashboard insights section renders real summary and graph',
+      (tester) async {
     _useTallDashboardViewport(tester);
 
     final container = ProviderContainer(
@@ -1257,10 +1265,34 @@ void main() {
         budgetServiceProvider.overrideWithValue(_StaticBudgetService(const [])),
         transactionServiceProvider
             .overrideWithValue(_StaticTransactionService()),
-        behavioralInsightsProvider.overrideWith((ref) async => null),
+        behavioralInsightsProvider
+            .overrideWith((ref) async => const BehavioralInsights(
+                  mood: FinancialMood.balanced,
+                  worthItPercentage: 72,
+                  worthItCount: 9,
+                  previousMonthWorthItCount: 7,
+                  impulseeTrends: [],
+                  budgetTrends: [
+                    BudgetTrendInsight(
+                      category: 'Dining',
+                      hasBudget: true,
+                      currencyCode: 'PHP',
+                      months: [42, 54, 68, 82],
+                      currentMonthSpend: 8200,
+                      currentMonthPercentUsed: 82,
+                      insightLabel: 'Dining is trending higher.',
+                    ),
+                  ],
+                )),
         insightsSummaryProvider.overrideWith((ref) async => null),
         insightsCategoriesProvider.overrideWith((ref) async => const []),
         insightsMerchantsProvider.overrideWith((ref) async => const []),
+        dashboardInsightSummaryProvider.overrideWith(
+          (ref) async => const DashboardInsightSummary(
+            text: 'Dining is above your recent 3-month pace.',
+            tone: InsightFeedTone.caution,
+          ),
+        ),
         conscienceJourneyServiceProvider.overrideWithValue(_testJourneyService),
         localAlertsProvider.overrideWith(
           (ref) => _LocalAlertsTestNotifier(const []),
@@ -1272,12 +1304,16 @@ void main() {
     await tester.pumpWidget(_buildApp(container));
     await tester.pumpAndSettle();
 
-    await tester.ensureVisible(
-        find.byKey(const ValueKey('journey-home-patterns-link')));
-    await tester.tap(find.byKey(const ValueKey('journey-home-patterns-link')));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Insights placeholder'), findsOneWidget);
+    expect(find.text('Insights'), findsOneWidget);
+    expect(
+        find.byKey(const ValueKey('journey-home-patterns-link')), findsNothing);
+    expect(find.text('Signals from your week'), findsNothing);
+    expect(
+      find.text('Dining is above your recent 3-month pace.'),
+      findsOneWidget,
+    );
+    expect(find.byKey(const ValueKey('journey-home-insight-graph')),
+        findsOneWidget);
   });
 
   testWidgets('dashboard keeps budget trend summaries out of the Journey hero',
@@ -1332,7 +1368,10 @@ void main() {
     expect(
         find.byKey(const ValueKey('dashboard-editorial-hero')), findsOneWidget);
     expect(
-      find.text('Dining is above your recent 3-month pace.'),
+      find.descendant(
+        of: find.byKey(const ValueKey('dashboard-editorial-hero')),
+        matching: find.text('Dining is above your recent 3-month pace.'),
+      ),
       findsNothing,
     );
     expect(find.text('Subscriptions has enough activity for a budget'),
@@ -1383,7 +1422,10 @@ void main() {
     expect(
         find.byKey(const ValueKey('dashboard-editorial-hero')), findsOneWidget);
     expect(
-      find.text('Dining is above your recent 3-month pace.'),
+      find.descendant(
+        of: find.byKey(const ValueKey('dashboard-editorial-hero')),
+        matching: find.text('Dining is above your recent 3-month pace.'),
+      ),
       findsNothing,
     );
     expect(find.text('Your financial mood is confident'), findsNothing);
