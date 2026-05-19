@@ -35,6 +35,7 @@ class JourneyLedHomeSections extends StatelessWidget {
           _JourneyHomeSection(
             title: 'This Week',
             subtitle: 'A gentle arc for building consistency.',
+            trailing: const _SectionHint(label: 'Your weekly arc'),
             child: _WeeklyArc(
               quests: summary?.weeklyQuests ?? const [],
               completed: presentation.completedQuestCount,
@@ -44,6 +45,7 @@ class JourneyLedHomeSections extends StatelessWidget {
           _JourneyHomeSection(
             title: 'Patterns',
             subtitle: 'What Conscia is noticing without judging.',
+            trailing: const _SectionHint(label: 'Signals from your week'),
             child: _PatternPreview(patterns: presentation.patterns),
           ),
           if (presentation.milestones.isNotEmpty)
@@ -63,11 +65,13 @@ class _JourneyHomeSection extends StatelessWidget {
     required this.title,
     required this.subtitle,
     required this.child,
+    this.trailing,
   });
 
   final String title;
   final String subtitle;
   final Widget child;
+  final Widget? trailing;
 
   @override
   Widget build(BuildContext context) {
@@ -80,12 +84,23 @@ class _JourneyHomeSection extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            title,
-            style: textTheme.titleMedium?.copyWith(
-              color: colors.ink,
-              fontWeight: FontWeight.w800,
-            ),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Expanded(
+                child: Text(
+                  title,
+                  style: textTheme.titleLarge?.copyWith(
+                    color: colors.deepNavy,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+              if (trailing != null) ...[
+                const SizedBox(width: 12),
+                trailing!,
+              ],
+            ],
           ),
           const SizedBox(height: 4),
           Text(
@@ -117,21 +132,42 @@ class _TodayWithConsciaCard extends StatelessWidget {
     final colors = Theme.of(context).appColors;
     final textTheme = Theme.of(context).textTheme;
 
-    return FeedCard(
+    return Container(
       key: const ValueKey('journey-home-today-card'),
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
+      padding: const EdgeInsets.fromLTRB(16, 14, 14, 14),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.centerLeft,
+          end: Alignment.centerRight,
+          colors: [
+            colors.devilSoft.withValues(alpha: 0.56),
+            colors.surfaceRaised,
+          ],
+        ),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: colors.border),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              _SoftIcon(icon: action.icon, color: colors.deepNavy),
+              _WarmIcon(icon: action.icon),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    Text(
+                      'RECOMMENDED',
+                      style: textTheme.labelSmall?.copyWith(
+                        color: colors.devilAccent,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 0.8,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
                     Text(
                       action.title,
                       style: textTheme.titleMedium?.copyWith(
@@ -150,13 +186,9 @@ class _TodayWithConsciaCard extends StatelessWidget {
                   ],
                 ),
               ),
+              const SizedBox(width: 12),
+              _CoralArrowButton(onPressed: onPressed),
             ],
-          ),
-          const SizedBox(height: 14),
-          FilledButton.icon(
-            onPressed: onPressed,
-            icon: const Icon(Icons.arrow_forward_rounded, size: 18),
-            label: Text(action.ctaLabel),
           ),
         ],
       ),
@@ -190,61 +222,115 @@ class _WeeklyArc extends StatelessWidget {
       );
     }
 
-    return FeedCard(
-      padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
-      child: Column(
-        children: [
-          Row(
-            children: [
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          '$completed/$total commitments complete',
+          style: textTheme.labelMedium?.copyWith(
+            color: colors.deepNavy,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+        const SizedBox(height: 10),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            for (final entry in visibleQuests.indexed)
               Expanded(
-                child: Text(
-                  '$completed/$total commitments complete',
-                  style: textTheme.labelMedium?.copyWith(
-                    color: colors.deepNavy,
-                    fontWeight: FontWeight.w800,
+                child: Padding(
+                  padding: EdgeInsets.only(
+                    right: entry.$1 == visibleQuests.length - 1 ? 0 : 8,
                   ),
+                  child: _QuestTile(quest: entry.$2, index: entry.$1),
                 ),
               ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          for (final quest in visibleQuests) _QuestRow(quest: quest),
-        ],
-      ),
+          ],
+        ),
+      ],
     );
   }
 }
 
-class _QuestRow extends StatelessWidget {
-  const _QuestRow({required this.quest});
+class _QuestTile extends StatelessWidget {
+  const _QuestTile({required this.quest, required this.index});
 
   final ConscienceQuest quest;
+  final int index;
 
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).appColors;
     final textTheme = Theme.of(context).textTheme;
+    final accent = [
+      colors.income,
+      colors.amber,
+      colors.devilAccent,
+    ][index % 3];
+    final progress = quest.target <= 0
+        ? 0.0
+        : (quest.progress / quest.target).clamp(0.0, 1.0).toDouble();
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 7),
-      child: Row(
+    return Container(
+      height: 174,
+      padding: const EdgeInsets.fromLTRB(10, 12, 10, 10),
+      decoration: BoxDecoration(
+        color: colors.surfaceRaised,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: colors.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Icon(
-            quest.isCompleted
-                ? Icons.check_circle_rounded
-                : Icons.radio_button_unchecked_rounded,
-            color: quest.isCompleted ? colors.income : colors.mutedInk,
-            size: 20,
+          _SoftIcon(icon: _questIcon(quest.key), color: accent),
+          const SizedBox(height: 10),
+          Text(
+            _compactQuestTitle(quest.title),
+            textAlign: TextAlign.center,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: textTheme.labelLarge?.copyWith(
+              color: colors.deepNavy,
+              fontWeight: FontWeight.w900,
+              height: 1.05,
+            ),
           ),
-          const SizedBox(width: 10),
+          const SizedBox(height: 7),
           Expanded(
             child: Text(
-              quest.title,
-              style: textTheme.bodyMedium?.copyWith(
-                color: colors.ink,
-                fontWeight: FontWeight.w600,
+              quest.description,
+              textAlign: TextAlign.center,
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+              style: textTheme.labelSmall?.copyWith(
+                color: colors.mutedInk,
+                height: 1.2,
               ),
             ),
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Icon(
+                quest.isCompleted
+                    ? Icons.check_circle_rounded
+                    : Icons.arrow_forward_rounded,
+                color: quest.isCompleted ? colors.income : colors.deepNavy,
+                size: 18,
+              ),
+              const SizedBox(width: 6),
+              Expanded(
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(999),
+                  child: LinearProgressIndicator(
+                    minHeight: 3,
+                    value: progress,
+                    backgroundColor: colors.border,
+                    valueColor: AlwaysStoppedAnimation<Color>(accent),
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -259,43 +345,16 @@ class _PatternPreview extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        for (final pattern in patterns)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 10),
-            child: FeedCard(
-              padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
-              child: Row(
-                children: [
-                  _SoftIcon(
-                    icon: pattern.icon,
-                    color: _toneColor(context, pattern),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          pattern.title,
-                          style:
-                              Theme.of(context).textTheme.titleSmall?.copyWith(
-                                    fontWeight: FontWeight.w800,
-                                  ),
-                        ),
-                        const SizedBox(height: 3),
-                        Text(
-                          pattern.description,
-                          style:
-                              Theme.of(context).textTheme.bodySmall?.copyWith(
-                                    color: Theme.of(context).appColors.mutedInk,
-                                  ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
+        for (final entry in patterns.take(2).indexed)
+          Expanded(
+            child: Padding(
+              padding: EdgeInsets.only(right: entry.$1 == 1 ? 0 : 8),
+              child: _PatternSignalCard(
+                pattern: entry.$2,
+                color: _toneColor(context, entry.$2),
               ),
             ),
           ),
@@ -309,6 +368,138 @@ class _PatternPreview extends StatelessWidget {
         ? colors.income
         : colors.deepNavy;
   }
+}
+
+class _PatternSignalCard extends StatelessWidget {
+  const _PatternSignalCard({
+    required this.pattern,
+    required this.color,
+  });
+
+  final JourneyHomePatternSignal pattern;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).appColors;
+    final textTheme = Theme.of(context).textTheme;
+
+    return Container(
+      constraints: const BoxConstraints(minHeight: 156),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: pattern.tone == JourneyHomePatternTone.positive
+            ? colors.incomeSoft.withValues(alpha: 0.54)
+            : colors.devilSoft.withValues(alpha: 0.5),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: colors.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(pattern.icon, color: color, size: 16),
+              const SizedBox(width: 5),
+              Expanded(
+                child: Text(
+                  pattern.tone == JourneyHomePatternTone.positive
+                      ? 'Improving'
+                      : 'Watch this',
+                  style: textTheme.labelSmall?.copyWith(
+                    color: color,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            pattern.title,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: textTheme.labelLarge?.copyWith(
+              color: colors.ink,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          const SizedBox(height: 8),
+          SizedBox(
+            height: 36,
+            child: CustomPaint(
+              painter: _SignalLinePainter(
+                color: color,
+                positive: pattern.tone == JourneyHomePatternTone.positive,
+              ),
+              child: const SizedBox.expand(),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            pattern.description,
+            maxLines: 3,
+            overflow: TextOverflow.ellipsis,
+            style: textTheme.labelSmall?.copyWith(
+              color: colors.mutedInk,
+              height: 1.2,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SignalLinePainter extends CustomPainter {
+  const _SignalLinePainter({
+    required this.color,
+    required this.positive,
+  });
+
+  final Color color;
+  final bool positive;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final fillPaint = Paint()
+      ..color = color.withValues(alpha: 0.08)
+      ..style = PaintingStyle.fill;
+    final linePaint = Paint()
+      ..color = color.withValues(alpha: 0.88)
+      ..strokeWidth = 1.4
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round;
+
+    final path = Path();
+    for (var i = 0; i < 6; i++) {
+      final x = size.width * i / 5;
+      final base = positive
+          ? size.height * (0.82 - i * 0.09)
+          : size.height * (0.56 + (i == 4 ? 0.18 : 0.02 * i));
+      final y = base + (i.isEven ? 4 : -3);
+      if (i == 0) {
+        path.moveTo(x, y);
+      } else {
+        path.lineTo(x, y);
+      }
+    }
+    final fillPath = Path.from(path)
+      ..lineTo(size.width, size.height)
+      ..lineTo(0, size.height)
+      ..close();
+    canvas.drawPath(fillPath, fillPaint);
+    canvas.drawPath(path, linePaint);
+    canvas.drawCircle(
+      Offset(size.width, positive ? size.height * 0.33 : size.height * 0.68),
+      3.2,
+      Paint()..color = color,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _SignalLinePainter oldDelegate) =>
+      oldDelegate.color != color || oldDelegate.positive != positive;
 }
 
 class _MilestoneStrip extends StatelessWidget {
@@ -368,4 +559,98 @@ class _SoftIcon extends StatelessWidget {
       child: Icon(icon, color: color, size: 21),
     );
   }
+}
+
+class _SectionHint extends StatelessWidget {
+  const _SectionHint({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).appColors;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          label,
+          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                color: colors.mutedInk,
+                fontWeight: FontWeight.w600,
+              ),
+        ),
+        const SizedBox(width: 4),
+        Icon(Icons.info_outline_rounded, size: 13, color: colors.mutedInk),
+      ],
+    );
+  }
+}
+
+class _WarmIcon extends StatelessWidget {
+  const _WarmIcon({required this.icon});
+
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).appColors;
+    return Container(
+      width: 52,
+      height: 52,
+      decoration: BoxDecoration(
+        color: colors.devilSoft,
+        shape: BoxShape.circle,
+      ),
+      child: Icon(icon, color: colors.devilAccent, size: 24),
+    );
+  }
+}
+
+class _CoralArrowButton extends StatelessWidget {
+  const _CoralArrowButton({required this.onPressed});
+
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 44,
+      height: 44,
+      child: FilledButton(
+        key: const ValueKey('journey-home-today-action-button'),
+        style: FilledButton.styleFrom(
+          padding: EdgeInsets.zero,
+          backgroundColor: const Color(0xFFE97552),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+          ),
+        ),
+        onPressed: onPressed,
+        child: const Icon(Icons.arrow_forward_rounded, size: 22),
+      ),
+    );
+  }
+}
+
+IconData _questIcon(String key) {
+  return switch (key) {
+    'reflect_three_purchases' => Icons.auto_stories_rounded,
+    'check_before_purchase' => Icons.psychology_rounded,
+    'review_regret_pattern' => Icons.loop_rounded,
+    'send_family_invite' => Icons.group_add_rounded,
+    'add_family_expense' => Icons.receipt_long_rounded,
+    _ => Icons.flag_rounded,
+  };
+}
+
+String _compactQuestTitle(String title) {
+  final lower = title.toLowerCase();
+  if (lower.contains('reflect')) return 'Reflect';
+  if (lower.contains('insight') || lower.contains('regret')) {
+    return 'Review insights';
+  }
+  if (lower.contains('purchase') || lower.contains('pause')) {
+    return 'Hold a spending pause';
+  }
+  return title;
 }

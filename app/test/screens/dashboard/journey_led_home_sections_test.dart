@@ -49,9 +49,10 @@ void main() {
       find.text('Take one breath and name what this purchase is solving.'),
       findsOneWidget,
     );
-    expect(find.text('Start the pause'), findsOneWidget);
+    expect(find.text('RECOMMENDED'), findsOneWidget);
 
-    await tester.tap(find.text('Start the pause'));
+    await tester
+        .tap(find.byKey(const ValueKey('journey-home-today-action-button')));
     await tester.pump();
 
     expect(continueCount, 1);

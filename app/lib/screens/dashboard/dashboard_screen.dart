@@ -428,9 +428,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   currencyCode: userPreferences.currency,
                   locale: userPreferences.locale,
                   journey: journey,
+                  presentation: journeyHome,
                   summary: insightSummary,
                   loading: journeyLoadingWithoutData ||
                       (insightSummaryState.isLoading && insightSummary == null),
+                  onContinueJourney: _continueJourney,
                 ),
               ),
               if (!journeyLoadingWithoutData)
@@ -668,16 +670,20 @@ class _DashboardEditorialHeroCard extends StatelessWidget {
     required this.currencyCode,
     required this.locale,
     required this.journey,
+    required this.presentation,
     required this.summary,
     required this.loading,
+    required this.onContinueJourney,
   });
 
   final double monthExpenseTotal;
   final String currencyCode;
   final String? locale;
   final ConscienceJourneySummary? journey;
+  final JourneyHomePresentation presentation;
   final DashboardInsightSummary? summary;
   final bool loading;
+  final VoidCallback onContinueJourney;
 
   @override
   Widget build(BuildContext context) {
@@ -689,104 +695,356 @@ class _DashboardEditorialHeroCard extends StatelessWidget {
     }
 
     final heroTopPadding = AppLayout.dashboardHeroTop(context);
+    final completed = presentation.completedQuestCount;
+    final total = presentation.totalQuestCount;
 
     return Container(
       key: const ValueKey('dashboard-editorial-hero'),
       width: double.infinity,
-      padding: EdgeInsets.fromLTRB(20, heroTopPadding, 20, 28),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            colors.navySoft,
+            colors.paper,
             colors.amberSoft,
+            colors.navySoft.withValues(alpha: 0.72),
           ],
         ),
         borderRadius: const BorderRadius.vertical(
           bottom: Radius.circular(32),
         ),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Stack(
         children: [
-          Text(
-            'SPENT THIS MONTH',
-            style: textTheme.labelSmall?.copyWith(
-              color: colors.deepNavy,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 0.8,
+          const Positioned.fill(
+            child: CustomPaint(
+              painter: _JourneyHeroAtmospherePainter(),
             ),
           ),
-          const SizedBox(height: 6),
-          Text(
-            CurrencyFormatter.format(
-              monthExpenseTotal,
-              currencyCode: currencyCode,
-              locale: locale,
-            ),
-            style: GoogleFonts.inter(
-              textStyle: textTheme.displaySmall,
-              color: colors.deepNavy,
-              fontWeight: FontWeight.w600,
-            ),
+          Positioned(
+            right: 14,
+            top: heroTopPadding + 28,
+            child: const _JourneyHeroMascots(),
           ),
-          const SizedBox(height: 8),
-          Text(
-            summary?.text ??
-                (journey == null
-                    ? 'Conscia will turn your next few transactions into a clearer monthly story.'
-                    : '${journey!.momentumDays}-day mindful streak · ${_DashboardJourneyCard._completedQuestCount(journey!.weeklyQuests)}/${journey!.weeklyQuests.length} quests this week'),
-            style: textTheme.bodyMedium?.copyWith(
-              color: colors.ink,
-              height: 1.35,
-            ),
-          ),
-          const SizedBox(height: 18),
-          Wrap(
-            spacing: 10,
-            runSpacing: 10,
-            children: [
-              _HeroMetricPill(
-                icon: Icons.local_fire_department_rounded,
-                label: journey == null
-                    ? '0-day streak'
-                    : '${journey!.momentumDays}-day streak',
-                backgroundColor: colors.surfaceRaised.withValues(alpha: 0.75),
-                foregroundColor: colors.deepNavy,
-              ),
-              _HeroMetricPill(
-                icon: Icons.flag_rounded,
-                label: journey == null
-                    ? '0/0 quests'
-                    : '${_DashboardJourneyCard._completedQuestCount(journey!.weeklyQuests)}/${journey!.weeklyQuests.length} quests',
-                backgroundColor: colors.surfaceRaised.withValues(alpha: 0.75),
-                foregroundColor: colors.deepNavy,
-              ),
-            ],
-          ),
-          const SizedBox(height: 18),
-          Text(
-            'Journey',
-            style: textTheme.titleLarge?.copyWith(
-              color: colors.deepNavy,
-              fontWeight: FontWeight.w900,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            journey == null
-                ? 'Conscia is ready to shape your next few choices into a clearer pattern.'
-                : '${journey!.currentLevel.title} · ${journey!.xpTotal} XP earned',
-            style: textTheme.bodyMedium?.copyWith(
-              color: colors.ink,
-              height: 1.35,
+          Padding(
+            padding: EdgeInsets.fromLTRB(20, heroTopPadding, 20, 22),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Journey',
+                  key: const ValueKey('dashboard-journey-hero-title'),
+                  style: GoogleFonts.lora(
+                    textStyle: textTheme.displaySmall,
+                    color: colors.deepNavy,
+                    fontWeight: FontWeight.w800,
+                    height: 0.96,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'Small choices, big freedom.',
+                  style: textTheme.bodyMedium?.copyWith(
+                    color: colors.ink.withValues(alpha: 0.78),
+                    height: 1.3,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Text(
+                  'MOMENTUM',
+                  style: textTheme.labelSmall?.copyWith(
+                    color: colors.deepNavy.withValues(alpha: 0.72),
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0.9,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 10,
+                  runSpacing: 10,
+                  children: [
+                    _HeroMetricPill(
+                      icon: Icons.local_fire_department_rounded,
+                      label: journey == null
+                          ? '0-day streak'
+                          : '${journey!.momentumDays}-day streak',
+                      backgroundColor:
+                          colors.surfaceRaised.withValues(alpha: 0.78),
+                      foregroundColor: colors.deepNavy,
+                    ),
+                    _HeroMetricPill(
+                      icon: Icons.flag_rounded,
+                      label: journey == null
+                          ? '0/0 quests'
+                          : '$completed/$total quests',
+                      backgroundColor:
+                          colors.surfaceRaised.withValues(alpha: 0.78),
+                      foregroundColor: colors.deepNavy,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  summary?.text ??
+                      (journey == null
+                          ? 'Conscia will turn your next few transactions into a clearer monthly story.'
+                          : '${journey!.currentLevel.title} · ${journey!.xpTotal} XP earned'),
+                  style: textTheme.bodySmall?.copyWith(
+                    color: colors.ink.withValues(alpha: 0.72),
+                    height: 1.35,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                _JourneyHeroNextStepCard(
+                  action: presentation.todayAction,
+                  onPressed: onContinueJourney,
+                ),
+                const SizedBox(height: 18),
+                Text(
+                  'SPENT THIS MONTH',
+                  style: textTheme.labelSmall?.copyWith(
+                    color: colors.deepNavy,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0.8,
+                  ),
+                ),
+                const SizedBox(height: 5),
+                Text(
+                  CurrencyFormatter.format(
+                    monthExpenseTotal,
+                    currencyCode: currencyCode,
+                    locale: locale,
+                  ),
+                  style: GoogleFonts.inter(
+                    textStyle: textTheme.headlineMedium,
+                    color: colors.deepNavy,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ],
             ),
           ),
         ],
       ),
     );
   }
+}
+
+class _JourneyHeroNextStepCard extends StatelessWidget {
+  const _JourneyHeroNextStepCard({
+    required this.action,
+    required this.onPressed,
+  });
+
+  final JourneyHomeAction action;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    const foreground = Colors.white;
+
+    return Container(
+      key: const ValueKey('dashboard-journey-next-step-card'),
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(18, 16, 14, 16),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFF071A34), Color(0xFF132D55)],
+        ),
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.16),
+            blurRadius: 24,
+            offset: const Offset(0, 12),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'NEXT STEP',
+                  style: textTheme.labelSmall?.copyWith(
+                    color: foreground.withValues(alpha: 0.76),
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0.8,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  action.title,
+                  style: GoogleFonts.lora(
+                    textStyle: textTheme.titleLarge,
+                    color: foreground,
+                    fontWeight: FontWeight.w800,
+                    height: 1.05,
+                  ),
+                ),
+                const SizedBox(height: 5),
+                Text(
+                  '2 min  •  ${action.description}',
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: textTheme.bodySmall?.copyWith(
+                    color: foreground.withValues(alpha: 0.76),
+                    height: 1.25,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 14),
+          SizedBox(
+            width: 54,
+            height: 54,
+            child: FilledButton(
+              key: const ValueKey('dashboard-journey-next-step-button'),
+              style: FilledButton.styleFrom(
+                padding: EdgeInsets.zero,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                backgroundColor: const Color(0xFFE97552),
+                foregroundColor: foreground,
+              ),
+              onPressed: onPressed,
+              child: const Icon(Icons.arrow_forward_rounded, size: 25),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _JourneyHeroMascots extends StatelessWidget {
+  const _JourneyHeroMascots();
+
+  @override
+  Widget build(BuildContext context) {
+    return IgnorePointer(
+      child: Opacity(
+        opacity: 0.88,
+        child: SizedBox(
+          width: 156,
+          height: 132,
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              Positioned(
+                right: 4,
+                top: 28,
+                child: Container(
+                  width: 96,
+                  height: 96,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.44),
+                    shape: BoxShape.circle,
+                  ),
+                ),
+              ),
+              const Positioned(
+                right: 2,
+                top: 10,
+                child: MascotSpriteFrame(
+                  atlas: angelMascotAtlas,
+                  frameName: '4_win.png',
+                  width: 92,
+                ),
+              ),
+              const Positioned(
+                right: 66,
+                top: 50,
+                child: MascotSpriteFrame(
+                  atlas: devilMascotAtlas,
+                  frameName: '9_coin.png',
+                  width: 68,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _JourneyHeroAtmospherePainter extends CustomPainter {
+  const _JourneyHeroAtmospherePainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final sunPaint = Paint()
+      ..shader = RadialGradient(
+        colors: [
+          const Color(0xFFFFD98A).withValues(alpha: 0.42),
+          const Color(0x00FFD98A),
+        ],
+      ).createShader(Rect.fromCircle(
+        center: Offset(size.width * 0.72, size.height * 0.26),
+        radius: size.width * 0.38,
+      ));
+
+    canvas.drawCircle(
+      Offset(size.width * 0.72, size.height * 0.26),
+      size.width * 0.38,
+      sunPaint,
+    );
+
+    final hillPaint = Paint()
+      ..color = const Color(0xFF8CA889).withValues(alpha: 0.16)
+      ..style = PaintingStyle.fill;
+
+    final backHill = Path()
+      ..moveTo(0, size.height * 0.58)
+      ..cubicTo(
+        size.width * 0.24,
+        size.height * 0.46,
+        size.width * 0.48,
+        size.height * 0.66,
+        size.width,
+        size.height * 0.52,
+      )
+      ..lineTo(size.width, size.height)
+      ..lineTo(0, size.height)
+      ..close();
+    canvas.drawPath(backHill, hillPaint);
+
+    final pathPaint = Paint()
+      ..color = const Color(0xFFD9B778).withValues(alpha: 0.18)
+      ..style = PaintingStyle.fill;
+    final path = Path()
+      ..moveTo(size.width * 0.48, size.height)
+      ..cubicTo(
+        size.width * 0.54,
+        size.height * 0.74,
+        size.width * 0.64,
+        size.height * 0.65,
+        size.width * 0.78,
+        size.height * 0.52,
+      )
+      ..cubicTo(
+        size.width * 0.68,
+        size.height * 0.66,
+        size.width * 0.68,
+        size.height * 0.82,
+        size.width * 0.64,
+        size.height,
+      )
+      ..close();
+    canvas.drawPath(path, pathPaint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
 class _HeroMetricPill extends StatelessWidget {
@@ -1352,176 +1610,6 @@ class _DashboardHeroSkeleton extends StatelessWidget {
               SizedBox(width: 10),
               Expanded(child: SkeletonLoader(height: 64, borderRadius: 18)),
             ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _DashboardJourneyCard extends StatelessWidget {
-  const _DashboardJourneyCard({
-    required this.journey,
-    required this.onTap,
-  });
-
-  final ConscienceJourneySummary journey;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
-    final nextLevel = journey.nextLevel;
-
-    return Card(
-      child: InkWell(
-        borderRadius: BorderRadius.circular(12),
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Icon(
-                    Icons.workspace_premium_rounded,
-                    color: colors.primary,
-                    size: 18,
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'Conscience Journey',
-                      style: textTheme.labelMedium?.copyWith(
-                        color: colors.onSurfaceVariant,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
-                  Icon(
-                    Icons.chevron_right_rounded,
-                    color: colors.onSurfaceVariant,
-                    size: 20,
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  const _JourneyCardMascots(),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          journey.currentLevel.title,
-                          style: textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          nextLevel == null
-                              ? '${journey.xpTotal} XP earned'
-                              : '${journey.xpTotal} XP · ${journey.xpToNextLevel} to ${nextLevel.title}',
-                          style: textTheme.bodySmall?.copyWith(
-                            color: colors.onSurfaceVariant,
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: [
-                            _JourneyMiniPill(
-                              label: '${journey.momentumDays}-day streak',
-                              icon: Icons.local_fire_department_rounded,
-                            ),
-                            _JourneyMiniPill(
-                              label:
-                                  '${_completedQuestCount(journey.weeklyQuests)}/${journey.weeklyQuests.length} quests',
-                              icon: Icons.flag_rounded,
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  static int _completedQuestCount(List<ConscienceQuest> quests) =>
-      quests.where((quest) => quest.isCompleted == true).length;
-}
-
-class _JourneyCardMascots extends StatelessWidget {
-  const _JourneyCardMascots();
-
-  @override
-  Widget build(BuildContext context) {
-    return const SizedBox(
-      width: 74,
-      height: 58,
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          Positioned(
-            left: 24,
-            child: MascotSpriteFrame(
-              atlas: angelMascotAtlas,
-              frameName: '4_win.png',
-              width: 54,
-            ),
-          ),
-          MascotSpriteFrame(
-            atlas: devilMascotAtlas,
-            frameName: '9_coin.png',
-            width: 54,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _JourneyMiniPill extends StatelessWidget {
-  const _JourneyMiniPill({
-    required this.label,
-    required this.icon,
-  });
-
-  final String label;
-  final IconData icon;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
-      decoration: BoxDecoration(
-        color: colors.primaryContainer.withValues(alpha: 0.55),
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 14, color: colors.primary),
-          const SizedBox(width: 5),
-          Text(
-            label,
-            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: colors.primary,
-                  fontWeight: FontWeight.w800,
-                ),
           ),
         ],
       ),

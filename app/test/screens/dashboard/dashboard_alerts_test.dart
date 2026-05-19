@@ -1128,7 +1128,9 @@ void main() {
     await tester.pumpWidget(_buildApp(container));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Continue journey'));
+    await tester.tap(
+      find.byKey(const ValueKey('dashboard-journey-next-step-button')),
+    );
     await tester.pumpAndSettle();
 
     expect(find.text('Assistant placeholder'), findsOneWidget);
