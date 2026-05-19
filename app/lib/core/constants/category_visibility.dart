@@ -1,5 +1,3 @@
-import 'generated/app_constants.g.dart';
-
 const Set<String> freeTransactionCategories = {
   'Dining',
   'Groceries',
