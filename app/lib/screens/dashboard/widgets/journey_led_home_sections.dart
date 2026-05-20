@@ -455,7 +455,8 @@ class _MilestoneStrip extends StatelessWidget {
         children: [
           for (final badge in badges)
             Container(
-              width: 112,
+              key: const ValueKey('journey-home-milestone-card'),
+              width: 176,
               margin: const EdgeInsets.only(right: 10),
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
@@ -463,15 +464,56 @@ class _MilestoneStrip extends StatelessWidget {
                 borderRadius: BorderRadius.circular(18),
                 border: Border.all(color: colors.border),
               ),
-              child: Text(
-                badge.title,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: GoogleFonts.libreBaskerville(
-                  textStyle: Theme.of(context).textTheme.labelMedium,
-                  color: colors.deepNavy,
-                  fontWeight: FontWeight.w700,
-                ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: 34,
+                    height: 34,
+                    decoration: BoxDecoration(
+                      color: colors.incomeSoft.withValues(alpha: 0.7),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(
+                      Icons.emoji_events_rounded,
+                      color: colors.income,
+                      size: 18,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    badge.title,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.libreBaskerville(
+                      textStyle: Theme.of(context).textTheme.labelMedium,
+                      color: colors.deepNavy,
+                      fontWeight: FontWeight.w700,
+                      height: 1.1,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    badge.description,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.nunitoSans(
+                      textStyle: Theme.of(context).textTheme.labelSmall,
+                      color: colors.mutedInk,
+                      fontWeight: FontWeight.w600,
+                      height: 1.2,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    '${badge.progress}/${badge.target}',
+                    style: GoogleFonts.nunitoSans(
+                      textStyle: Theme.of(context).textTheme.labelSmall,
+                      color: colors.deepNavy,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ],
               ),
             ),
         ],
@@ -505,6 +547,8 @@ IconData _questIcon(String key) {
     'reflect_three_purchases' => Icons.auto_stories_rounded,
     'check_before_purchase' => Icons.psychology_rounded,
     'review_regret_pattern' => Icons.loop_rounded,
+    'read_two_insights' => Icons.query_stats_rounded,
+    'create_budget_guardrail' => Icons.account_balance_wallet_rounded,
     'send_family_invite' => Icons.group_add_rounded,
     'add_family_expense' => Icons.receipt_long_rounded,
     _ => Icons.flag_rounded,

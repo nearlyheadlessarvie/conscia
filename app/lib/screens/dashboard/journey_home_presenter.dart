@@ -61,14 +61,22 @@ JourneyHomePresentation buildJourneyHomePresentation(
   return JourneyHomePresentation(
     todayAction: _todayAction(summary),
     patterns: _patterns(summary),
-    milestones: (summary?.badges ?? const [])
-        .where((badge) => badge.isUnlocked)
-        .take(4)
-        .toList(growable: false),
+    milestones: _milestones(summary),
     completedQuestCount: completedQuestCount,
     totalQuestCount: totalQuestCount,
     levelProgress: _levelProgress(summary),
   );
+}
+
+List<ConscienceBadge> _milestones(ConscienceJourneySummary? summary) {
+  final badges = [...summary?.badges ?? const <ConscienceBadge>[]]
+    ..sort((a, b) {
+      if (a.isUnlocked != b.isUnlocked) return a.isUnlocked ? -1 : 1;
+      final aProgress = a.target <= 0 ? 0 : a.progress / a.target;
+      final bProgress = b.target <= 0 ? 0 : b.progress / b.target;
+      return bProgress.compareTo(aProgress);
+    });
+  return badges.take(4).toList(growable: false);
 }
 
 JourneyHomeAction _todayAction(ConscienceJourneySummary? summary) {
@@ -91,7 +99,8 @@ JourneyHomeAction _todayAction(ConscienceJourneySummary? summary) {
   return const JourneyHomeAction(
     icon: Icons.auto_stories_rounded,
     title: 'Check in with a recent purchase',
-    description: 'Pick one transaction and mark whether it still feels worth it.',
+    description:
+        'Pick one transaction and mark whether it still feels worth it.',
     ctaLabel: 'Continue journey',
   );
 }
@@ -137,6 +146,8 @@ IconData _questIcon(String key) {
     'reflect_three_purchases' => Icons.auto_stories_rounded,
     'check_before_purchase' => Icons.psychology_rounded,
     'review_regret_pattern' => Icons.loop_rounded,
+    'read_two_insights' => Icons.query_stats_rounded,
+    'create_budget_guardrail' => Icons.account_balance_wallet_rounded,
     'send_family_invite' => Icons.group_add_rounded,
     'add_family_expense' => Icons.receipt_long_rounded,
     _ => Icons.flag_rounded,

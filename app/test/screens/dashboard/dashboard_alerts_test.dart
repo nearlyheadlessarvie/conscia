@@ -897,7 +897,11 @@ void main() {
     expect(find.text('This Week'), findsOneWidget);
     expect(find.text('Insights'), findsOneWidget);
     expect(find.text('Budgets'), findsOneWidget);
+    expect(find.text('A quick pulse check on your monthly guardrails.'),
+        findsOneWidget);
     expect(find.text('Recent transactions'), findsOneWidget);
+    expect(find.text('The latest money moments feeding your Journey.'),
+        findsOneWidget);
     expect(find.byKey(const ValueKey('dashboard-journey-link')), findsNothing);
   });
 
@@ -935,7 +939,11 @@ void main() {
     expect(find.text('This Week'), findsOneWidget);
     expect(find.text('Insights'), findsOneWidget);
     expect(find.text('Budgets'), findsOneWidget);
+    expect(find.text('A quick pulse check on your monthly guardrails.'),
+        findsOneWidget);
     expect(find.text('Recent transactions'), findsOneWidget);
+    expect(find.text('The latest money moments feeding your Journey.'),
+        findsOneWidget);
     expect(find.byKey(const ValueKey('dashboard-journey-link')), findsNothing);
     expect(find.byKey(const ValueKey('dashboard-insights-link')), findsNothing);
     expect(find.byKey(const ValueKey('dashboard-add-link')), findsNothing);
@@ -1022,6 +1030,15 @@ void main() {
               isOverBudget: false,
             ),
             Budget(
+              id: 'budget-personal-bills',
+              category: 'Bills',
+              monthlyLimit: 8000,
+              spent: 0,
+              currencyCode: 'PHP',
+              percentage: 0,
+              isOverBudget: false,
+            ),
+            Budget(
               id: 'budget-family-dining',
               category: 'Dining',
               monthlyLimit: 6500,
@@ -1060,10 +1077,11 @@ void main() {
     expect(find.text('PERSONAL BUDGET MIX'), findsNothing);
     expect(find.text('FAMILY BUDGET MIX'), findsNothing);
     expect(find.text('₱3,720.00 used'), findsOneWidget);
-    expect(find.text('of ₱4,000.00 monthly cap'), findsOneWidget);
+    expect(find.text('of ₱12,000.00 monthly cap'), findsOneWidget);
     expect(find.text('A calmer view of what your money is doing.'),
         findsOneWidget);
     expect(find.text('Dining 100%'), findsOneWidget);
+    expect(find.text('Bills 0%'), findsNothing);
     expect(find.byKey(const ValueKey('dashboard-budget-manage-row')),
         findsOneWidget);
     expect(find.text('₱3,720.00 / ₱4,000.00'), findsNothing);

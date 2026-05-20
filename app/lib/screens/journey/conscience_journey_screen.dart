@@ -375,6 +375,8 @@ class _QuestCard extends StatelessWidget {
       'reflect_three_purchases' => Icons.auto_stories_rounded,
       'check_before_purchase' => Icons.psychology_rounded,
       'review_regret_pattern' => Icons.loop_rounded,
+      'read_two_insights' => Icons.query_stats_rounded,
+      'create_budget_guardrail' => Icons.account_balance_wallet_rounded,
       'send_family_invite' => Icons.group_add_rounded,
       'add_family_expense' => Icons.receipt_long_rounded,
       _ => Icons.flag_rounded,

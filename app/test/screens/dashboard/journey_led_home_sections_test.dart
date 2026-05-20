@@ -362,6 +362,36 @@ void main() {
     expect(cardSize.height, lessThan(120));
   });
 
+  testWidgets('Milestones render as progress cards with description',
+      (tester) async {
+    final summary = _summary(
+      weeklyQuests: const [],
+      badges: const [
+        ConscienceBadge(
+          key: 'first_reflection',
+          title: 'First Reflection',
+          description: 'Reflected on your first purchase.',
+          progress: 1,
+          target: 1,
+          isUnlocked: true,
+        ),
+      ],
+    );
+
+    await tester.pumpWidget(_buildSubject(
+      summary: summary,
+      insightSummary: null,
+      insightTrend: null,
+    ));
+
+    expect(find.text('Milestones'), findsOneWidget);
+    expect(find.byKey(const ValueKey('journey-home-milestone-card')),
+        findsOneWidget);
+    expect(find.text('First Reflection'), findsOneWidget);
+    expect(find.text('Reflected on your first purchase.'), findsOneWidget);
+    expect(find.text('1/1'), findsOneWidget);
+  });
+
   testWidgets('Empty weekly state renders and milestones hide without badges',
       (tester) async {
     final summary = _summary(

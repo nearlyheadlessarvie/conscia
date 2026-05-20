@@ -75,6 +75,20 @@ public static class ConscienceJourneyRules
             Target: 1,
             XpReward: 15),
         new(
+            Key: "read_two_insights",
+            Title: "Read 2 insights",
+            Description: "Open signals that explain your recent patterns.",
+            EventType: ConscienceEventTypes.InsightReviewed,
+            Target: 2,
+            XpReward: 10),
+        new(
+            Key: "create_budget_guardrail",
+            Title: "Create 1 budget guardrail",
+            Description: "Turn one nudge into a monthly cap.",
+            EventType: ConscienceEventTypes.BudgetCreatedFromNudge,
+            Target: 1,
+            XpReward: 15),
+        new(
             Key: "send_family_invite",
             Title: "Invite 1 family member",
             Description: "Start planning with someone in your household.",

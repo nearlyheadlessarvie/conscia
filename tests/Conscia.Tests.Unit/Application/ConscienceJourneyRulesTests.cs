@@ -52,6 +52,29 @@ public class ConscienceJourneyRulesTests
         Assert.Equal(15, rewards["reflect_three_purchases"]);
         Assert.Equal(10, rewards["check_before_purchase"]);
         Assert.Equal(15, rewards["review_regret_pattern"]);
+        Assert.Equal(10, rewards["read_two_insights"]);
+        Assert.Equal(15, rewards["create_budget_guardrail"]);
+    }
+
+    [Fact]
+    public void WeeklyQuests_IncludeFiveSoloSafeQuests()
+    {
+        var familyEventTypes = new[]
+        {
+            ConscienceEventTypes.FamilyInviteSent,
+            ConscienceEventTypes.FamilyInviteAccepted,
+            ConscienceEventTypes.FamilyExpenseAdded,
+            ConscienceEventTypes.FamilyPurchaseChecked
+        }.ToHashSet(StringComparer.Ordinal);
+
+        var soloQuests = ConscienceJourneyRules.WeeklyQuests
+            .Where(quest => !familyEventTypes.Contains(quest.EventType))
+            .Select(quest => quest.Key)
+            .ToList();
+
+        Assert.Equal(5, soloQuests.Count);
+        Assert.Contains("read_two_insights", soloQuests);
+        Assert.Contains("create_budget_guardrail", soloQuests);
     }
 
     [Fact]

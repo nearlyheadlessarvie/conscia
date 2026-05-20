@@ -3,14 +3,16 @@ import 'package:conscia_app/screens/dashboard/journey_home_presenter.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  test('buildJourneyHomePresentation chooses an incomplete quest as today action',
+  test(
+      'buildJourneyHomePresentation chooses an incomplete quest as today action',
       () {
     final presentation = buildJourneyHomePresentation(_summary(
       quests: const [
         ConscienceQuest(
           key: 'reflect_three_purchases',
           title: 'Reflect on three purchases',
-          description: 'Check how recent spending felt after the moment passed.',
+          description:
+              'Check how recent spending felt after the moment passed.',
           progress: 1,
           target: 3,
           xpReward: 40,
@@ -59,7 +61,10 @@ void main() {
       ],
     ));
 
-    expect(presentation.milestones.single.title, 'First Reflection');
+    expect(presentation.milestones.map((badge) => badge.title), [
+      'First Reflection',
+      'Locked',
+    ]);
   });
 }
 

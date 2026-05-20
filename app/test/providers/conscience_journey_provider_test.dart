@@ -149,6 +149,10 @@ void main() {
 
     expect(summary.weeklyQuests.map((quest) => quest.key), [
       'reflect_three_purchases',
+      'check_before_purchase',
+      'review_regret_pattern',
+      'read_two_insights',
+      'create_budget_guardrail',
     ]);
   });
 
@@ -176,6 +180,10 @@ void main() {
 
     expect(summary.weeklyQuests.map((quest) => quest.key), [
       'reflect_three_purchases',
+      'check_before_purchase',
+      'review_regret_pattern',
+      'read_two_insights',
+      'create_budget_guardrail',
       'send_family_invite',
       'add_family_expense',
     ]);
@@ -271,6 +279,42 @@ class _FamilyQuestConscienceJourneyService extends ConscienceJourneyService {
             description: 'Turn recent decisions into useful signal.',
             progress: 0,
             target: 3,
+            xpReward: 15,
+            isCompleted: false,
+          ),
+          ConscienceQuest(
+            key: 'check_before_purchase',
+            title: 'Check before 1 purchase',
+            description: 'Pause with Conscia before spending.',
+            progress: 0,
+            target: 1,
+            xpReward: 10,
+            isCompleted: false,
+          ),
+          ConscienceQuest(
+            key: 'review_regret_pattern',
+            title: 'Review 1 regret pattern',
+            description: 'Spot one repeat spending signal.',
+            progress: 0,
+            target: 1,
+            xpReward: 15,
+            isCompleted: false,
+          ),
+          ConscienceQuest(
+            key: 'read_two_insights',
+            title: 'Read 2 insights',
+            description: 'Open signals that explain your recent patterns.',
+            progress: 0,
+            target: 2,
+            xpReward: 10,
+            isCompleted: false,
+          ),
+          ConscienceQuest(
+            key: 'create_budget_guardrail',
+            title: 'Create 1 budget guardrail',
+            description: 'Turn one nudge into a monthly cap.',
+            progress: 0,
+            target: 1,
             xpReward: 15,
             isCompleted: false,
           ),

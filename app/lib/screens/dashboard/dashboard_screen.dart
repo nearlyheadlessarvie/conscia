@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
@@ -15,6 +16,7 @@ import 'package:conscia_app/core/utils/currency_formatter.dart';
 import 'package:conscia_app/models/behavioral_insights.dart';
 import 'package:conscia_app/models/conscience_journey.dart';
 import 'package:conscia_app/providers/alert_provider.dart';
+import 'package:conscia_app/providers/auth_provider.dart';
 import 'package:conscia_app/providers/behavioral_insights_provider.dart';
 import 'package:conscia_app/providers/budget_providers.dart';
 import 'package:conscia_app/providers/conscience_journey_provider.dart';
@@ -176,11 +178,45 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       context.push(AppRoutes.addTransaction, extra: {'scope': 'family'});
       return;
     }
+    if (quest.key == 'review_regret_pattern') {
+      _recordJourneyEvent(
+        eventType: ConscienceJourneyEvents.regretPatternReviewed,
+        sourceId: 'quest:${quest.key}:${DateTime.now().millisecondsSinceEpoch}',
+      );
+    } else if (quest.key == 'read_two_insights') {
+      _recordJourneyEvent(
+        eventType: ConscienceJourneyEvents.insightReviewed,
+        sourceId: 'quest:${quest.key}:${DateTime.now().millisecondsSinceEpoch}',
+      );
+    }
     context.push(_journeyQuestRoute(quest));
   }
 
   void _openWeeklyInsights() {
+    _recordJourneyEvent(
+      eventType: ConscienceJourneyEvents.insightReviewed,
+      sourceId: 'dashboard-insights:${DateTime.now().millisecondsSinceEpoch}',
+    );
     context.push(AppRoutes.insights);
+  }
+
+  void _recordJourneyEvent({
+    required String eventType,
+    required String sourceId,
+  }) {
+    if (!ref.read(authProvider).isAuthenticated) return;
+    unawaited(
+      () async {
+        try {
+          await ref.read(conscienceJourneyProvider.notifier).recordEvent(
+                eventType: eventType,
+                sourceId: sourceId,
+              );
+        } catch (_) {
+          // Journey progress is supportive context; never block navigation on it.
+        }
+      }(),
+    );
   }
 
   String _journeyQuestRoute(ConscienceQuest quest) {
@@ -188,6 +224,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       'reflect_three_purchases' => AppRoutes.transactions,
       'check_before_purchase' => AppRoutes.assistant,
       'review_regret_pattern' => AppRoutes.insights,
+      'read_two_insights' => AppRoutes.insights,
+      'create_budget_guardrail' => AppRoutes.budgets,
       'send_family_invite' => AppRoutes.familyInvites,
       _ => AppRoutes.journey,
     };
@@ -487,7 +525,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   ),
                 ),
               SliverToBoxAdapter(
-                child: _buildSectionHeader(context, 'Budgets'),
+                child: _buildSectionHeader(
+                  context,
+                  'Budgets',
+                  subtitle: 'A quick pulse check on your monthly guardrails.',
+                ),
               ),
               if (budgetState.isLoading && budgets.isEmpty)
                 const SliverPadding(
@@ -566,7 +608,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 ),
               ],
               SliverToBoxAdapter(
-                child: _buildSectionHeader(context, 'Recent transactions'),
+                child: _buildSectionHeader(
+                  context,
+                  'Recent transactions',
+                  subtitle: 'The latest money moments feeding your Journey.',
+                ),
               ),
               if (txState.isLoading && transactions.isEmpty)
                 const SliverPadding(
@@ -668,25 +714,46 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     }).toList(growable: false);
   }
 
-  Widget _buildSectionHeader(BuildContext context, String title) {
+  Widget _buildSectionHeader(
+    BuildContext context,
+    String title, {
+    String? subtitle,
+  }) {
     final colors = Theme.of(context).appColors;
     final isEditorial = title != title.toUpperCase();
     return Padding(
       padding: EdgeInsets.fromLTRB(20, isEditorial ? 24 : 24, 20, 12),
-      child: Text(
-        title,
-        style: isEditorial
-            ? GoogleFonts.libreBaskerville(
-                textStyle: Theme.of(context).textTheme.titleLarge,
-                color: colors.deepNavy,
-                fontWeight: FontWeight.w700,
-                height: 1.05,
-              )
-            : Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: colors.mutedInk,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 1.0,
-                ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: isEditorial
+                ? GoogleFonts.libreBaskerville(
+                    textStyle: Theme.of(context).textTheme.titleLarge,
+                    color: colors.deepNavy,
+                    fontWeight: FontWeight.w700,
+                    height: 1.05,
+                  )
+                : Theme.of(context).textTheme.labelSmall?.copyWith(
+                      color: colors.mutedInk,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 1.0,
+                    ),
+          ),
+          if (subtitle != null) ...[
+            const SizedBox(height: 4),
+            Text(
+              subtitle,
+              style: GoogleFonts.nunitoSans(
+                textStyle: Theme.of(context).textTheme.bodySmall,
+                color: colors.mutedInk,
+                fontWeight: FontWeight.w500,
+                height: 1.35,
+              ),
+            ),
+          ],
+        ],
       ),
     );
   }
@@ -1406,6 +1473,7 @@ class _DashboardBudgetSummary extends StatelessWidget {
     final colors = Theme.of(context).appColors;
     final textTheme = Theme.of(context).textTheme;
     final mix = _budgetMix(budgets);
+    final activeMix = mix.where((budget) => budget.spent > 0).toList();
     final totalSpent = budgets.fold<double>(0, (sum, b) => sum + b.spent);
     final totalLimit =
         budgets.fold<double>(0, (sum, b) => sum + b.monthlyLimit);
@@ -1531,29 +1599,40 @@ class _DashboardBudgetSummary extends StatelessWidget {
                   );
                 },
               ),
-              if (mix.isNotEmpty) ...[
+              if (activeMix.isNotEmpty) ...[
                 const SizedBox(height: 14),
-                SingleChildScrollView(
-                  key: const ValueKey('dashboard-budget-mix-pill-rail'),
-                  scrollDirection: Axis.horizontal,
-                  clipBehavior: Clip.none,
-                  child: Row(
-                    children: [
-                      for (final entry in mix.indexed)
-                        Padding(
-                          padding: EdgeInsets.only(
-                            right: entry.$1 == mix.length - 1 ? 0 : 8,
-                          ),
-                          child: BudgetMixPill(
-                            index: entry.$1,
-                            category: entry.$2.category,
-                            type: 'Expense',
-                            share: totalSpent <= 0
-                                ? 0
-                                : entry.$2.spent / totalSpent,
-                          ),
-                        ),
+                ShaderMask(
+                  shaderCallback: (bounds) => LinearGradient(
+                    colors: [
+                      Colors.white,
+                      Colors.white,
+                      Colors.white.withValues(alpha: 0),
                     ],
+                    stops: const [0, 0.9, 1],
+                  ).createShader(bounds),
+                  blendMode: BlendMode.dstIn,
+                  child: SingleChildScrollView(
+                    key: const ValueKey('dashboard-budget-mix-pill-rail'),
+                    scrollDirection: Axis.horizontal,
+                    clipBehavior: Clip.hardEdge,
+                    child: Row(
+                      children: [
+                        for (final entry in activeMix.indexed)
+                          Padding(
+                            padding: EdgeInsets.only(
+                              right: entry.$1 == activeMix.length - 1 ? 20 : 8,
+                            ),
+                            child: BudgetMixPill(
+                              index: entry.$1,
+                              category: entry.$2.category,
+                              type: 'Expense',
+                              share: totalSpent <= 0
+                                  ? 0
+                                  : entry.$2.spent / totalSpent,
+                            ),
+                          ),
+                      ],
+                    ),
                   ),
                 ),
               ],

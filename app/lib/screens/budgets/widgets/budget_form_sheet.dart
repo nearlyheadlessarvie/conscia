@@ -1,9 +1,14 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/constants/conscience_journey.dart';
 import '../../../core/errors/app_error.dart';
 import '../../../core/utils/localized_number_input.dart';
+import '../../../providers/auth_provider.dart';
 import '../../../providers/budget_providers.dart';
+import '../../../providers/conscience_journey_provider.dart';
 import '../../../providers/family_space_provider.dart';
 import '../../../providers/subscription_provider.dart';
 import '../../../services/budget_service.dart';
@@ -119,6 +124,13 @@ class _BudgetFormSheetState extends ConsumerState<BudgetFormSheet> {
         );
       } else {
         await notifier.create(dto);
+        if (widget.initialCategory != null) {
+          _recordJourneyEvent(
+            eventType: ConscienceJourneyEvents.budgetCreatedFromNudge,
+            sourceId:
+                'budget-nudge:${widget.initialCategory}:${DateTime.now().millisecondsSinceEpoch}',
+          );
+        }
         messenger.showSnackBar(
           const SnackBar(content: Text('Budget created.')),
         );
@@ -131,6 +143,24 @@ class _BudgetFormSheetState extends ConsumerState<BudgetFormSheet> {
     } finally {
       if (mounted) setState(() => _submitting = false);
     }
+  }
+
+  void _recordJourneyEvent({
+    required String eventType,
+    required String sourceId,
+  }) {
+    if (!ref.read(authProvider).isAuthenticated) return;
+    unawaited(
+      () async {
+        try {
+          await ref
+              .read(conscienceJourneyProvider.notifier)
+              .recordEvent(eventType: eventType, sourceId: sourceId);
+        } catch (_) {
+          // Budget creation should remain usable even if Journey sync is offline.
+        }
+      }(),
+    );
   }
 
   Future<void> _confirmDelete() async {
