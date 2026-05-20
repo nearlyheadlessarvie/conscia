@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../core/theme/app_colors.dart';
+import 'editorial_section_header.dart';
 
 class ScreenSection extends StatelessWidget {
   const ScreenSection({
@@ -20,49 +20,17 @@ class ScreenSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-    final appColors = Theme.of(context).appColors;
-    final colors = Theme.of(context).colorScheme;
-
     return Padding(
       padding: EdgeInsets.only(bottom: compact ? 18 : 26),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title.toUpperCase(),
-                      style: textTheme.labelSmall?.copyWith(
-                        color: appColors.mutedInk,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: 0.9,
-                      ),
-                    ),
-                    if (subtitle != null) ...[
-                      const SizedBox(height: 4),
-                      Text(
-                        subtitle!,
-                        style: textTheme.bodySmall?.copyWith(
-                          color: colors.onSurfaceVariant,
-                          height: 1.35,
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-              if (trailing != null) ...[
-                const SizedBox(width: 12),
-                trailing!,
-              ],
-            ],
+          EditorialSectionHeader(
+            title: title,
+            subtitle: subtitle,
+            trailing: trailing,
+            compact: compact,
+            uppercase: true,
           ),
           SizedBox(height: compact ? 10 : 14),
           child,

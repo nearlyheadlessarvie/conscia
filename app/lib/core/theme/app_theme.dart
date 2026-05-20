@@ -308,77 +308,85 @@ class AppTheme {
         : const Color(0xFFE6E1E5);
 
     return TextTheme(
-      displayLarge: GoogleFonts.poppins(
+      displayLarge: GoogleFonts.libreBaskerville(
         fontSize: 32,
         fontWeight: FontWeight.w700,
         letterSpacing: 0,
+        height: 1.02,
         color: color,
       ),
-      displayMedium: GoogleFonts.poppins(
+      displayMedium: GoogleFonts.libreBaskerville(
         fontSize: 28,
-        fontWeight: FontWeight.w600,
+        fontWeight: FontWeight.w700,
+        height: 1.04,
         color: color,
       ),
-      headlineLarge: GoogleFonts.poppins(
+      headlineLarge: GoogleFonts.libreBaskerville(
         fontSize: 24,
         fontWeight: FontWeight.w700,
+        height: 1.08,
         color: color,
       ),
-      headlineMedium: GoogleFonts.poppins(
+      headlineMedium: GoogleFonts.libreBaskerville(
         fontSize: 20,
         fontWeight: FontWeight.w700,
+        height: 1.1,
         color: color,
       ),
-      titleLarge: GoogleFonts.poppins(
+      titleLarge: GoogleFonts.libreBaskerville(
         fontSize: 18,
         fontWeight: FontWeight.w700,
+        height: 1.12,
         color: color,
       ),
-      titleMedium: GoogleFonts.poppins(
+      titleMedium: GoogleFonts.nunitoSans(
         fontSize: 16,
-        fontWeight: FontWeight.w700,
+        fontWeight: FontWeight.w800,
         letterSpacing: 0,
         color: color,
       ),
-      titleSmall: GoogleFonts.inter(
+      titleSmall: GoogleFonts.nunitoSans(
         fontSize: 14,
-        fontWeight: FontWeight.w600,
+        fontWeight: FontWeight.w800,
         letterSpacing: 0.1,
         color: color,
       ),
-      bodyLarge: GoogleFonts.inter(
+      bodyLarge: GoogleFonts.nunitoSans(
         fontSize: 14,
-        fontWeight: FontWeight.w400,
-        letterSpacing: 0.5,
+        fontWeight: FontWeight.w500,
+        letterSpacing: 0.1,
+        height: 1.38,
         color: color,
       ),
-      bodyMedium: GoogleFonts.inter(
+      bodyMedium: GoogleFonts.nunitoSans(
         fontSize: 14,
-        fontWeight: FontWeight.w400,
-        letterSpacing: 0.25,
+        fontWeight: FontWeight.w500,
+        letterSpacing: 0.1,
+        height: 1.36,
         color: color,
       ),
-      bodySmall: GoogleFonts.inter(
+      bodySmall: GoogleFonts.nunitoSans(
         fontSize: 12,
-        fontWeight: FontWeight.w400,
-        letterSpacing: 0.4,
+        fontWeight: FontWeight.w500,
+        letterSpacing: 0.1,
+        height: 1.34,
         color: color,
       ),
-      labelLarge: GoogleFonts.inter(
+      labelLarge: GoogleFonts.nunitoSans(
         fontSize: 14,
-        fontWeight: FontWeight.w600,
+        fontWeight: FontWeight.w800,
         letterSpacing: 0.1,
         color: color,
       ),
-      labelMedium: GoogleFonts.inter(
+      labelMedium: GoogleFonts.nunitoSans(
         fontSize: 12,
-        fontWeight: FontWeight.w400,
-        letterSpacing: 0.5,
-        color: color,
-      ),
-      labelSmall: GoogleFonts.inter(
-        fontSize: 11,
         fontWeight: FontWeight.w700,
+        letterSpacing: 0.2,
+        color: color,
+      ),
+      labelSmall: GoogleFonts.nunitoSans(
+        fontSize: 11,
+        fontWeight: FontWeight.w800,
         letterSpacing: 0.5,
         color: color,
       ),
@@ -390,9 +398,9 @@ class AppTheme {
         ? const Color(0xFFE6E1E5)
         : const Color(0xFF171421);
 
-    return GoogleFonts.inter(
+    return GoogleFonts.nunitoSans(
       fontSize: 14,
-      fontWeight: FontWeight.w700,
+      fontWeight: FontWeight.w800,
       letterSpacing: 0,
       color: color,
     );
