@@ -187,6 +187,8 @@ class _ReceiptReviewScreenState extends ConsumerState<ReceiptReviewScreen> {
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
+    final hasFatalLoadError =
+        _error != null && _merchantController.text.isEmpty;
 
     return HeroScreenScaffold(
       bleedBehindAppBar: true,
@@ -198,11 +200,24 @@ class _ReceiptReviewScreenState extends ConsumerState<ReceiptReviewScreen> {
           onPressed: () => Navigator.of(context).maybePop(),
         ),
       ),
+      bottom: !_loading && !hasFatalLoadError ? _buildConfirmDock() : null,
       child: _loading
           ? _buildLoading()
-          : _error != null && _merchantController.text.isEmpty
+          : hasFatalLoadError
               ? _buildError(textTheme)
               : _buildContent(textTheme),
+    );
+  }
+
+  Widget _buildConfirmDock() {
+    return SizedBox(
+      key: const ValueKey('receipt-review-confirm-dock'),
+      width: double.infinity,
+      child: FilledButton.icon(
+        onPressed: _isValid && !_submitting ? _confirm : null,
+        icon: const Icon(Icons.check_rounded),
+        label: Text(_submitting ? 'Saving...' : 'Confirm and save'),
+      ),
     );
   }
 
@@ -361,24 +376,6 @@ class _ReceiptReviewScreenState extends ConsumerState<ReceiptReviewScreen> {
                   ),
                   child: _buildLineItems(textTheme),
                 ),
-              const SizedBox(height: 4),
-              FilledButton.icon(
-                onPressed: _isValid && !_submitting ? _confirm : null,
-                icon: const Icon(Icons.check_rounded),
-                label: Text(_submitting ? 'Saving...' : 'Confirm and save'),
-              ),
-              const SizedBox(height: 10),
-              OutlinedButton(
-                onPressed: _submitting
-                    ? null
-                    : () {
-                        Navigator.of(context).maybePop();
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Receipt discarded')),
-                        );
-                      },
-                child: const Text('Discard'),
-              ),
             ],
           ),
         ),

@@ -431,7 +431,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Skip'), findsNothing);
-    expect(find.text('PERSONAL DETAILS'), findsOneWidget);
+    expect(find.text('Personal details'), findsOneWidget);
     expect(
       find.text('This is the name Conscia will use around the app.'),
       findsOneWidget,

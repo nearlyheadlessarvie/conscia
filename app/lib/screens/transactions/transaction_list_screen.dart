@@ -380,6 +380,8 @@ class _TransactionListScreenState extends ConsumerState<TransactionListScreen> {
                 FormLabel(label: _formatDateLabel(groups[key]!.first.date)),
                 const SizedBox(height: 10),
                 EditorialTransactionRowsGroup(
+                  surface: false,
+                  horizontalPadding: 0,
                   children: [
                     for (var index = 0; index < groups[key]!.length; index++)
                       _SwipeableTransactionActionRow(
@@ -560,74 +562,97 @@ class _SwipeableTransactionActionRowState
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).appColors;
+    final radius = BorderRadius.circular(18);
 
-    return Slidable(
-      key: widget.key,
-      controller: _controller,
-      groupTag: 'transactions',
-      closeOnScroll: true,
-      startActionPane: ActionPane(
-        motion: const BehindMotion(),
-        extentRatio: _startExtent,
-        dismissible: _actionCount == 1
-            ? _TransactionSlidablePreview(
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        borderRadius: radius,
+        boxShadow: [
+          BoxShadow(
+            color: colors.ink.withValues(alpha: 0.035),
+            blurRadius: 18,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: radius,
+        child: Slidable(
+          key: widget.key,
+          controller: _controller,
+          groupTag: 'transactions',
+          closeOnScroll: true,
+          startActionPane: ActionPane(
+            motion: const BehindMotion(),
+            extentRatio: _startExtent,
+            dismissible: _actionCount == 1
+                ? _TransactionSlidablePreview(
+                    label: 'Edit',
+                    icon: Icons.edit_rounded,
+                    foregroundColor: colors.deepNavy,
+                    backgroundColor: colors.navySoft.withValues(alpha: 0.72),
+                    alignment: Alignment.centerLeft,
+                  )
+                : null,
+            children: [
+              _TransactionSlidableAction(
                 label: 'Edit',
                 icon: Icons.edit_rounded,
                 foregroundColor: colors.deepNavy,
                 backgroundColor: colors.navySoft.withValues(alpha: 0.72),
-                alignment: Alignment.centerLeft,
-              )
-            : null,
-        children: [
-          _TransactionSlidableAction(
-            label: 'Edit',
-            icon: Icons.edit_rounded,
-            foregroundColor: colors.deepNavy,
-            backgroundColor: colors.navySoft.withValues(alpha: 0.72),
-            onPressed: widget.onEdit,
+                onPressed: widget.onEdit,
+              ),
+              if (widget.canReflect)
+                _TransactionSlidableAction(
+                  label: 'Reflect',
+                  icon: Icons.auto_awesome_rounded,
+                  foregroundColor: colors.deepNavy,
+                  backgroundColor: colors.navySoft.withValues(alpha: 0.72),
+                  onPressed: widget.onReflect,
+                ),
+              if (widget.canAddBudget)
+                _TransactionSlidableAction(
+                  label: 'Add budget',
+                  icon: Icons.flag_rounded,
+                  foregroundColor: colors.deepNavy,
+                  backgroundColor: colors.amberSoft,
+                  onPressed: widget.onAddBudget,
+                ),
+            ],
           ),
-          if (widget.canReflect)
-            _TransactionSlidableAction(
-              label: 'Reflect',
-              icon: Icons.auto_awesome_rounded,
-              foregroundColor: colors.deepNavy,
-              backgroundColor: colors.navySoft.withValues(alpha: 0.72),
-              onPressed: widget.onReflect,
+          endActionPane: ActionPane(
+            motion: const BehindMotion(),
+            extentRatio: _deleteExtent,
+            dismissible: _TransactionSlidablePreview(
+              label: 'Delete',
+              icon: Icons.delete_outline_rounded,
+              foregroundColor: colors.expense,
+              backgroundColor: colors.expenseSoft,
+              alignment: Alignment.centerRight,
             ),
-          if (widget.canAddBudget)
-            _TransactionSlidableAction(
-              label: 'Add budget',
-              icon: Icons.flag_rounded,
-              foregroundColor: colors.deepNavy,
-              backgroundColor: colors.amberSoft,
-              onPressed: widget.onAddBudget,
+            children: [
+              _TransactionSlidableAction(
+                label: 'Delete',
+                icon: Icons.delete_outline_rounded,
+                foregroundColor: colors.expense,
+                backgroundColor: colors.expenseSoft,
+                onPressed: widget.onDelete,
+              ),
+            ],
+          ),
+          child: DecoratedBox(
+            key: ValueKey('transaction-swipe-foreground-$_rowId'),
+            decoration: BoxDecoration(
+              color: colors.surfaceRaised,
+              borderRadius: radius,
+              border: Border.all(color: colors.border),
             ),
-        ],
-      ),
-      endActionPane: ActionPane(
-        motion: const BehindMotion(),
-        extentRatio: _deleteExtent,
-        dismissible: _TransactionSlidablePreview(
-          label: 'Delete',
-          icon: Icons.delete_outline_rounded,
-          foregroundColor: colors.expense,
-          backgroundColor: colors.expenseSoft,
-          alignment: Alignment.centerRight,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: widget.child,
+            ),
+          ),
         ),
-        children: [
-          _TransactionSlidableAction(
-            label: 'Delete',
-            icon: Icons.delete_outline_rounded,
-            foregroundColor: colors.expense,
-            backgroundColor: colors.expenseSoft,
-            onPressed: widget.onDelete,
-          ),
-        ],
-      ),
-      child: ColoredBox(
-        key: ValueKey('transaction-swipe-foreground-$_rowId'),
-        color: colors.paper,
-        child: widget.child,
       ),
     );
   }
@@ -650,37 +675,30 @@ class _TransactionSlidablePreview extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).appColors;
+
     return ColoredBox(
-      color: Theme.of(context).appColors.paper,
+      color: backgroundColor.withValues(alpha: 0.38),
       child: Align(
         alignment: alignment,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              color: backgroundColor,
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: SizedBox(
-              width: 84,
-              height: double.infinity,
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(icon, color: foregroundColor, size: 19),
-                  const SizedBox(height: 3),
-                  Text(
-                    label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                          color: foregroundColor,
-                          fontWeight: FontWeight.w800,
-                        ),
-                  ),
-                ],
+        child: SizedBox(
+          width: 92,
+          height: double.infinity,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, color: foregroundColor, size: 20),
+              const SizedBox(height: 4),
+              Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      color: colors.ink,
+                      fontWeight: FontWeight.w800,
+                    ),
               ),
-            ),
+            ],
           ),
         ),
       ),
@@ -705,38 +723,32 @@ class _TransactionSlidableAction extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).appColors;
+
     return CustomSlidableAction(
       key: ValueKey('swipe-action-tile-$label'),
-      backgroundColor: Theme.of(context).appColors.paper,
-      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 7),
+      backgroundColor: backgroundColor.withValues(alpha: 0.38),
+      padding: EdgeInsets.zero,
       onPressed: (_) => onPressed(),
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: backgroundColor,
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: SizedBox.expand(
-          child: Padding(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, color: foregroundColor, size: 20),
+          const SizedBox(height: 4),
+          Padding(
             padding: const EdgeInsets.symmetric(horizontal: 4),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(icon, color: foregroundColor, size: 19),
-                const SizedBox(height: 3),
-                Text(
-                  label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: foregroundColor,
-                        fontWeight: FontWeight.w800,
-                      ),
-                ),
-              ],
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: colors.ink,
+                    fontWeight: FontWeight.w800,
+                  ),
             ),
           ),
-        ),
+        ],
       ),
     );
   }

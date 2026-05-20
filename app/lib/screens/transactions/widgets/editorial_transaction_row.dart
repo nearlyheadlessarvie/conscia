@@ -65,11 +65,13 @@ class EditorialTransactionRowsGroup extends StatelessWidget {
     required this.children,
     this.horizontalPadding = 16,
     this.verticalPadding = 4,
+    this.surface = true,
   });
 
   final List<Widget> children;
   final double horizontalPadding;
   final double verticalPadding;
+  final bool surface;
 
   @override
   Widget build(BuildContext context) {
@@ -79,14 +81,27 @@ class EditorialTransactionRowsGroup extends StatelessWidget {
     for (var index = 0; index < children.length; index++) {
       separatedChildren.add(children[index]);
       if (index < children.length - 1) {
-        separatedChildren.add(
-          Divider(
-            height: 10,
-            thickness: 1,
-            color: colors.border,
-          ),
-        );
+        separatedChildren.add(surface
+            ? Divider(
+                height: 10,
+                thickness: 1,
+                color: colors.border,
+              )
+            : const SizedBox(height: 10));
       }
+    }
+
+    if (!surface) {
+      return Padding(
+        padding: EdgeInsets.symmetric(
+          horizontal: horizontalPadding,
+          vertical: verticalPadding,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: separatedChildren,
+        ),
+      );
     }
 
     return Padding(

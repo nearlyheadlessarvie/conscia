@@ -10,6 +10,7 @@ class ScreenSection extends StatelessWidget {
     required this.child,
     this.trailing,
     this.compact = false,
+    this.uppercase = false,
   });
 
   final String title;
@@ -17,6 +18,7 @@ class ScreenSection extends StatelessWidget {
   final Widget child;
   final Widget? trailing;
   final bool compact;
+  final bool uppercase;
 
   @override
   Widget build(BuildContext context) {
@@ -30,7 +32,7 @@ class ScreenSection extends StatelessWidget {
             subtitle: subtitle,
             trailing: trailing,
             compact: compact,
-            uppercase: true,
+            uppercase: uppercase,
           ),
           SizedBox(height: compact ? 10 : 14),
           child,

@@ -25,13 +25,13 @@ void main() {
 
     expect(find.text('Budget Guardian'), findsOneWidget);
     expect(find.text('85 / 600 XP to Conscience Captain'), findsOneWidget);
-    expect(find.text("THIS WEEK'S QUESTS"), findsOneWidget);
+    expect(find.text("This week's quests"), findsOneWidget);
     expect(
       find.text('Habits to focus on this week. They reset every Sunday.'),
       findsOneWidget,
     );
     expect(find.text('Reflect on 3 purchases'), findsOneWidget);
-    expect(find.text('ACHIEVEMENTS'), findsOneWidget);
+    expect(find.text('Achievements'), findsOneWidget);
     expect(
       find.text('Badges earned by sticking to better money habits.'),
       findsOneWidget,

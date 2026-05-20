@@ -13,10 +13,17 @@ enum ConsciaGlyphKind {
   family,
   recurring,
   income,
+  salary,
+  freelance,
+  business,
+  investment,
+  rentalIncome,
+  bonus,
   dining,
   groceries,
   transport,
   entertainment,
+  gaming,
   shopping,
   health,
   bills,
@@ -103,7 +110,8 @@ class ConsciaGlyph extends StatelessWidget {
       'dining' => ConsciaGlyphKind.dining,
       'groceries' => ConsciaGlyphKind.groceries,
       'transport' || 'fuel' || 'parking' => ConsciaGlyphKind.transport,
-      'entertainment' || 'gaming' || 'events' => ConsciaGlyphKind.entertainment,
+      'entertainment' || 'events' => ConsciaGlyphKind.entertainment,
+      'gaming' => ConsciaGlyphKind.gaming,
       'shopping' || 'clothing' || 'beauty' => ConsciaGlyphKind.shopping,
       'health' || 'pharmacy' || 'fitness' => ConsciaGlyphKind.health,
       'bills' ||
@@ -116,13 +124,12 @@ class ConsciaGlyph extends StatelessWidget {
       'travel' => ConsciaGlyphKind.travel,
       'coffee' => ConsciaGlyphKind.coffee,
       'subscriptions' => ConsciaGlyphKind.subscription,
-      'salary' ||
-      'freelance' ||
-      'business' ||
-      'investment' ||
-      'rental-income' ||
-      'bonus' =>
-        ConsciaGlyphKind.income,
+      'salary' => ConsciaGlyphKind.salary,
+      'freelance' => ConsciaGlyphKind.freelance,
+      'business' => ConsciaGlyphKind.business,
+      'investment' => ConsciaGlyphKind.investment,
+      'rental-income' => ConsciaGlyphKind.rentalIncome,
+      'bonus' => ConsciaGlyphKind.bonus,
       'home' || 'repairs' => ConsciaGlyphKind.home,
       'gift' || 'charity' || 'pets' || 'childcare' => ConsciaGlyphKind.gift,
       'insurance' => ConsciaGlyphKind.shield,
@@ -208,6 +215,8 @@ class _ConsciaGlyphPainter extends CustomPainter {
         _car(canvas, size, stroke);
       case ConsciaGlyphKind.entertainment:
         _ticket(canvas, size, stroke);
+      case ConsciaGlyphKind.gaming:
+        _gameController(canvas, size, stroke, fill);
       case ConsciaGlyphKind.shopping:
         _shopping(canvas, size, stroke);
       case ConsciaGlyphKind.health:
@@ -224,8 +233,20 @@ class _ConsciaGlyphPainter extends CustomPainter {
       case ConsciaGlyphKind.recurring:
         _loop(canvas, size, stroke);
       case ConsciaGlyphKind.income:
-      case ConsciaGlyphKind.work:
         _income(canvas, size, stroke);
+      case ConsciaGlyphKind.salary:
+        _salary(canvas, size, stroke);
+      case ConsciaGlyphKind.freelance:
+      case ConsciaGlyphKind.work:
+        _briefcase(canvas, size, stroke);
+      case ConsciaGlyphKind.business:
+        _storefront(canvas, size, stroke);
+      case ConsciaGlyphKind.investment:
+        _investment(canvas, size, stroke, fill);
+      case ConsciaGlyphKind.rentalIncome:
+        _rentalIncome(canvas, size, stroke);
+      case ConsciaGlyphKind.bonus:
+        _bonus(canvas, size, stroke);
       case ConsciaGlyphKind.home:
         _home(canvas, size, stroke);
       case ConsciaGlyphKind.gift:
@@ -297,6 +318,32 @@ class _ConsciaGlyphPainter extends CustomPainter {
     canvas.drawRRect(_rr(s, .18, .3, .64, .4, .08), p);
     canvas.drawLine(_o(s, .48, .34), _o(s, .48, .66), p);
     canvas.restore();
+  }
+
+  void _gameController(Canvas canvas, Size s, Paint p, Paint f) {
+    final body = Path()
+      ..moveTo(s.width * .26, s.height * .42)
+      ..quadraticBezierTo(
+          s.width * .3, s.height * .28, s.width * .44, s.height * .34)
+      ..lineTo(s.width * .56, s.height * .34)
+      ..quadraticBezierTo(
+          s.width * .7, s.height * .28, s.width * .74, s.height * .42)
+      ..lineTo(s.width * .82, s.height * .64)
+      ..quadraticBezierTo(
+          s.width * .86, s.height * .78, s.width * .72, s.height * .76)
+      ..quadraticBezierTo(
+          s.width * .62, s.height * .74, s.width * .58, s.height * .64)
+      ..lineTo(s.width * .42, s.height * .64)
+      ..quadraticBezierTo(
+          s.width * .38, s.height * .74, s.width * .28, s.height * .76)
+      ..quadraticBezierTo(
+          s.width * .14, s.height * .78, s.width * .18, s.height * .64)
+      ..close();
+    canvas.drawPath(body, p);
+    canvas.drawLine(_o(s, .3, .52), _o(s, .44, .52), p);
+    canvas.drawLine(_o(s, .37, .45), _o(s, .37, .59), p);
+    canvas.drawCircle(_o(s, .62, .5), s.width * .035, f);
+    canvas.drawCircle(_o(s, .72, .56), s.width * .035, f);
   }
 
   void _shopping(Canvas canvas, Size s, Paint p) {
@@ -377,6 +424,79 @@ class _ConsciaGlyphPainter extends CustomPainter {
         _r(s, .34, .2, .28, .24), -math.pi / 2, math.pi * 1.5, false, p);
     canvas.drawArc(
         _r(s, .38, .54, .28, .24), math.pi / 2, math.pi * 1.5, false, p);
+  }
+
+  void _salary(Canvas canvas, Size s, Paint p) {
+    canvas.drawRRect(_rr(s, .2, .34, .6, .42, .07), p);
+    canvas.drawCircle(_o(s, .5, .55), s.width * .11, p);
+    canvas.drawLine(_o(s, .3, .22), _o(s, .7, .22), p);
+    canvas.drawLine(_o(s, .36, .22), _o(s, .36, .34), p);
+    canvas.drawLine(_o(s, .64, .22), _o(s, .64, .34), p);
+  }
+
+  void _briefcase(Canvas canvas, Size s, Paint p) {
+    canvas.drawRRect(_rr(s, .18, .34, .64, .42, .08), p);
+    canvas.drawPath(
+        Path()
+          ..moveTo(s.width * .38, s.height * .34)
+          ..lineTo(s.width * .38, s.height * .24)
+          ..lineTo(s.width * .62, s.height * .24)
+          ..lineTo(s.width * .62, s.height * .34),
+        p);
+    canvas.drawLine(_o(s, .2, .5), _o(s, .8, .5), p);
+  }
+
+  void _storefront(Canvas canvas, Size s, Paint p) {
+    canvas.drawRRect(_rr(s, .22, .42, .56, .34, .06), p);
+    canvas.drawPath(
+        Path()
+          ..moveTo(s.width * .22, s.height * .42)
+          ..lineTo(s.width * .3, s.height * .24)
+          ..lineTo(s.width * .7, s.height * .24)
+          ..lineTo(s.width * .78, s.height * .42),
+        p);
+    for (final x in const [.36, .5, .64]) {
+      canvas.drawLine(_o(s, x, .26), _o(s, x, .42), p);
+    }
+    canvas.drawLine(_o(s, .34, .76), _o(s, .34, .58), p);
+  }
+
+  void _investment(Canvas canvas, Size s, Paint p, Paint f) {
+    canvas.drawLine(_o(s, .22, .76), _o(s, .22, .6), p);
+    canvas.drawLine(_o(s, .4, .76), _o(s, .4, .52), p);
+    canvas.drawLine(_o(s, .58, .76), _o(s, .58, .42), p);
+    canvas.drawPath(
+        Path()
+          ..moveTo(s.width * .2, s.height * .5)
+          ..lineTo(s.width * .4, s.height * .42)
+          ..lineTo(s.width * .56, s.height * .48)
+          ..lineTo(s.width * .78, s.height * .24),
+        p);
+    canvas.drawCircle(_o(s, .78, .24), s.width * .04, f);
+  }
+
+  void _rentalIncome(Canvas canvas, Size s, Paint p) {
+    _home(canvas, s, p);
+    canvas.drawCircle(_o(s, .66, .56), s.width * .055, p);
+    canvas.drawLine(_o(s, .7, .6), _o(s, .82, .72), p);
+    canvas.drawLine(_o(s, .77, .67), _o(s, .72, .72), p);
+  }
+
+  void _bonus(Canvas canvas, Size s, Paint p) {
+    canvas.drawPath(
+        Path()
+          ..moveTo(s.width * .5, s.height * .18)
+          ..lineTo(s.width * .58, s.height * .4)
+          ..lineTo(s.width * .8, s.height * .42)
+          ..lineTo(s.width * .62, s.height * .56)
+          ..lineTo(s.width * .68, s.height * .78)
+          ..lineTo(s.width * .5, s.height * .66)
+          ..lineTo(s.width * .32, s.height * .78)
+          ..lineTo(s.width * .38, s.height * .56)
+          ..lineTo(s.width * .2, s.height * .42)
+          ..lineTo(s.width * .42, s.height * .4)
+          ..close(),
+        p);
   }
 
   void _home(Canvas canvas, Size s, Paint p) {
@@ -552,7 +672,7 @@ class _ConsciaGlyphPainter extends CustomPainter {
 
   void _more(Canvas canvas, Size s, Paint f) {
     for (final x in const [.32, .5, .68]) {
-      canvas.drawCircle(_o(s, x, .5), s.width * .045, f);
+      canvas.drawCircle(_o(s, x, .5), s.width * .07, f);
     }
   }
 

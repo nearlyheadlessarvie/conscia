@@ -207,7 +207,7 @@ void main() {
     expect(find.byKey(const ValueKey('receipt-scan-hero')), findsOneWidget);
     expect(find.text('SCAN RECEIPT'), findsOneWidget);
     expect(find.text('Snap it. Review it. Done.'), findsOneWidget);
-    expect(find.text('CHOOSE A SOURCE'), findsOneWidget);
+    expect(find.text('Choose a source'), findsOneWidget);
     expect(find.text('Take photo'), findsOneWidget);
     expect(find.text('Choose from gallery'), findsOneWidget);
     expect(find.byKey(const ValueKey('receipt-scan-camera-action')),

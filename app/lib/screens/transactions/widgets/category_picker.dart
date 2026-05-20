@@ -236,10 +236,12 @@ class CategoryChoicePill extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              CategoryIcons.forCategory(category, iconKey: iconKey),
+            CategoryIcons.rawIcon(
+              category,
               size: 13,
-              color: accent,
+              type: type,
+              iconKey: iconKey,
+              colorKey: colorKey,
             ),
             const SizedBox(width: 6),
             Text(

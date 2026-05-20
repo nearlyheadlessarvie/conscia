@@ -438,11 +438,14 @@ class _PrePurchaseScreenState extends ConsumerState<PrePurchaseScreen> {
     final colors = Theme.of(context).appColors;
     final stickyProgress = ((_inputScrollOffset - 5) / 10).clamp(0.0, 1.0);
     final keyboardInset = MediaQuery.viewInsetsOf(context).bottom;
-    final ctaBottomSpacer = keyboardInset > 0 ? keyboardInset + 28 : 112.0;
+    final safeBottom = MediaQuery.paddingOf(context).bottom;
+    final ctaLift = keyboardInset > 0 ? keyboardInset + 12 : safeBottom + 16;
+    final ctaBottomSpacer = keyboardInset > 0 ? keyboardInset + 112 : 128.0;
 
     _scheduleInputScrollSync();
 
     return Scaffold(
+      resizeToAvoidBottomInset: false,
       body: DecoratedBox(
         decoration: BoxDecoration(
           gradient: LinearGradient(
@@ -571,15 +574,6 @@ class _PrePurchaseScreenState extends ConsumerState<PrePurchaseScreen> {
                               ),
                             ),
                           ),
-                        const SizedBox(height: 18),
-                        SizedBox(
-                          key: const ValueKey('assistant-submit-cta'),
-                          width: double.infinity,
-                          child: FilledButton(
-                            onPressed: _formValid ? _submit : null,
-                            child: const Text('Ask Conscia ✦'),
-                          ),
-                        ),
                       ],
                     ),
                   ),
@@ -594,6 +588,24 @@ class _PrePurchaseScreenState extends ConsumerState<PrePurchaseScreen> {
                 title: 'Purchase Assistant',
                 progress: stickyProgress,
                 topPadding: MediaQuery.paddingOf(context).top,
+              ),
+            ),
+            Positioned(
+              left: 16,
+              right: 16,
+              bottom: 0,
+              child: AnimatedPadding(
+                duration: const Duration(milliseconds: 180),
+                curve: Curves.easeOutCubic,
+                padding: EdgeInsets.only(bottom: ctaLift),
+                child: SizedBox(
+                  key: const ValueKey('assistant-submit-cta'),
+                  width: double.infinity,
+                  child: FilledButton(
+                    onPressed: _formValid ? _submit : null,
+                    child: const Text('Ask Conscia ✦'),
+                  ),
+                ),
               ),
             ),
           ],

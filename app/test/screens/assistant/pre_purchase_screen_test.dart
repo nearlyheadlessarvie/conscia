@@ -361,11 +361,11 @@ void main() {
 
     expect(find.text('AMOUNT'), findsNothing);
 
-    final detailsTop = tester.getTopLeft(find.text('DECISION DETAILS')).dy;
+    final detailsTop = tester.getTopLeft(find.text('Decision details')).dy;
     final descriptionTop = tester.getTopLeft(purchaseDescriptionField()).dy;
     final amountTop = tester.getTopLeft(find.byType(AmountHeroField)).dy;
     final categoryTop =
-        tester.getTopLeft(find.text('CATEGORY', skipOffstage: false)).dy;
+        tester.getTopLeft(find.text('Category', skipOffstage: false)).dy;
 
     expect(detailsTop, lessThan(descriptionTop));
     expect(descriptionTop, lessThan(amountTop));
@@ -413,7 +413,7 @@ void main() {
     expect(after, greaterThan(before));
   });
 
-  testWidgets('pre-purchase CTA stays in form flow with docker-safe padding',
+  testWidgets('pre-purchase CTA docks above the form with safe scroll padding',
       (tester) async {
     await tester.binding.setSurfaceSize(const Size(390, 844));
     addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -430,10 +430,10 @@ void main() {
     expect(ctaFinder, findsOneWidget);
     expect(
       find.descendant(of: scrollViewFinder, matching: ctaFinder),
-      findsOneWidget,
+      findsNothing,
     );
     expect(
-        (scrollView.padding as EdgeInsets).bottom, greaterThanOrEqualTo(112));
+        (scrollView.padding as EdgeInsets).bottom, greaterThanOrEqualTo(128));
   });
 
   testWidgets(
@@ -474,7 +474,7 @@ void main() {
     await tester.pumpWidget(await buildPrePurchaseApp(tester));
     await tester.pumpAndSettle();
 
-    expect(find.text('Category'), findsNothing);
+    expect(find.text('Category'), findsOneWidget);
     expect(find.text('More'), findsNothing);
     expect(find.text('Premium categories'), findsOneWidget);
   });
@@ -586,15 +586,15 @@ void main() {
       find.text('Conscia helps you pause before you spend.'),
       findsOneWidget,
     );
-    expect(find.text('DECISION DETAILS'), findsOneWidget);
+    expect(find.text('Decision details'), findsOneWidget);
     expect(
       find.text(
         "Tell Conscia what you're considering so it can weigh both sides.",
       ),
       findsOneWidget,
     );
-    expect(find.text('CLASSIFY'), findsNothing);
-    expect(find.text('CATEGORY'), findsOneWidget);
+    expect(find.text('Classify'), findsNothing);
+    expect(find.text('Category'), findsOneWidget);
     expect(
       find.text(
           'Where do you think this belongs so we can give you better insights?'),
@@ -634,8 +634,8 @@ void main() {
 
     await tester.pumpAndSettle();
 
-    expect(find.text('DECISION DETAILS'), findsOneWidget);
-    expect(find.text('CLASSIFY'), findsOneWidget);
+    expect(find.text('Decision details'), findsOneWidget);
+    expect(find.text('Classify'), findsOneWidget);
     expect(
       find.text('Where should this live in your money story?'),
       findsOneWidget,
@@ -883,7 +883,6 @@ void main() {
     await tester.tap(diningChip);
     await tester.pumpAndSettle();
 
-    await tester.ensureVisible(find.textContaining('Ask Conscia'));
     await tester.tap(find.textContaining('Ask Conscia'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 700));
@@ -942,7 +941,6 @@ void main() {
     await tester.tap(diningChip);
     await tester.pumpAndSettle();
 
-    await tester.ensureVisible(find.textContaining('Ask Conscia'));
     await tester.tap(find.textContaining('Ask Conscia'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 700));
@@ -994,7 +992,6 @@ void main() {
     await tester.ensureVisible(find.text('Dining').first);
     await tester.tap(find.text('Dining').first);
     await tester.pumpAndSettle();
-    await tester.ensureVisible(find.textContaining('Ask Conscia'));
     await tester.tap(find.textContaining('Ask Conscia'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 700));
@@ -1052,7 +1049,6 @@ void main() {
     await tester.ensureVisible(find.text('Dining').first);
     await tester.tap(find.text('Dining').first);
     await tester.pumpAndSettle();
-    await tester.ensureVisible(find.textContaining('Ask Conscia'));
     await tester.tap(find.textContaining('Ask Conscia'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 700));
@@ -1096,7 +1092,6 @@ void main() {
     await tester.tap(find.text('Dining').first);
     await tester.pumpAndSettle();
 
-    await tester.ensureVisible(find.textContaining('Ask Conscia'));
     await tester.tap(find.textContaining('Ask Conscia'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 700));
