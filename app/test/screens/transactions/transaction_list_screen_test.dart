@@ -259,7 +259,7 @@ void main() {
     expect(find.byType(BottomSheet), findsWidgets);
   });
 
-  testWidgets('transaction list leads with editorial hero and open date groups',
+  testWidgets('transaction list leads with softer spending trail sections',
       (
     tester,
   ) async {
@@ -298,15 +298,15 @@ void main() {
       ],
     );
 
-    expect(find.text('MONEY TRAIL'), findsOneWidget);
-    expect(find.textContaining('Shopping is carrying'), findsOneWidget);
-    expect(find.text('FRI, MAY 8'), findsOneWidget);
+    expect(find.text('SPENDING TRAIL'), findsOneWidget);
+    expect(find.textContaining('Shopping is showing up'), findsOneWidget);
+    expect(find.text('Fri · May 8'), findsOneWidget);
     expect(find.byKey(const ValueKey('selection-chip-button-All')),
         findsOneWidget);
     expect(find.byType(GroupedListCard), findsNothing);
   });
 
-  testWidgets('money trail aggregates transactions in the user currency', (
+  testWidgets('spending trail aggregates transactions in the user currency', (
     tester,
   ) async {
     await _pumpTransactionList(

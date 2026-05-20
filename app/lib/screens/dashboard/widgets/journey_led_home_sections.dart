@@ -6,6 +6,7 @@ import '../../../models/behavioral_insights.dart';
 import '../../../models/conscience_journey.dart';
 import '../../../models/insight_feed_item.dart';
 import '../../../providers/insight_feed_provider.dart';
+import '../../../widgets/conscia_glyph.dart';
 import '../../../widgets/feed_card.dart';
 import '../../../widgets/horizontal_edge_fade.dart';
 import '../journey_home_presenter.dart';
@@ -205,7 +206,14 @@ class _QuestTile extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            _SoftIcon(icon: _questIcon(quest.key), color: accent),
+            _SoftIcon(
+              glyph: ConsciaGlyph.quest(
+                quest.key,
+                color: accent,
+                size: 21,
+              ),
+              color: accent,
+            ),
             const SizedBox(height: 10),
             Text(
               _compactQuestTitle(quest.title),
@@ -487,14 +495,15 @@ class _MilestoneStrip extends StatelessWidget {
                                 : colors.surfaceRaised.withValues(alpha: 0.82),
                             borderRadius: BorderRadius.circular(12),
                           ),
-                          child: Icon(
-                            badge.isUnlocked
-                                ? Icons.emoji_events_rounded
-                                : Icons.lock_outline_rounded,
-                            color: badge.isUnlocked
-                                ? colors.income
-                                : colors.mutedInk,
-                            size: 18,
+                          child: Center(
+                            child: ConsciaGlyph.milestone(
+                              badge.key,
+                              unlocked: badge.isUnlocked,
+                              color: badge.isUnlocked
+                                  ? colors.income
+                                  : colors.mutedInk,
+                              size: 18,
+                            ),
                           ),
                         ),
                         const SizedBox(height: 10),
@@ -536,9 +545,9 @@ class _MilestoneStrip extends StatelessWidget {
 }
 
 class _SoftIcon extends StatelessWidget {
-  const _SoftIcon({required this.icon, required this.color});
+  const _SoftIcon({required this.glyph, required this.color});
 
-  final IconData icon;
+  final Widget glyph;
   final Color color;
 
   @override
@@ -550,22 +559,9 @@ class _SoftIcon extends StatelessWidget {
         color: color.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(14),
       ),
-      child: Icon(icon, color: color, size: 21),
+      child: Center(child: glyph),
     );
   }
-}
-
-IconData _questIcon(String key) {
-  return switch (key) {
-    'reflect_three_purchases' => Icons.auto_stories_rounded,
-    'check_before_purchase' => Icons.psychology_rounded,
-    'review_regret_pattern' => Icons.loop_rounded,
-    'read_two_insights' => Icons.query_stats_rounded,
-    'create_budget_guardrail' => Icons.account_balance_wallet_rounded,
-    'send_family_invite' => Icons.group_add_rounded,
-    'add_family_expense' => Icons.receipt_long_rounded,
-    _ => Icons.flag_rounded,
-  };
 }
 
 Color _insightToneColor(AppColors colors, InsightFeedTone tone) {

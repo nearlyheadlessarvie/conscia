@@ -2,6 +2,8 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
+import '../../widgets/conscia_glyph.dart';
+
 class CategoryIcons {
   CategoryIcons._();
 
@@ -412,10 +414,11 @@ class CategoryIcons {
       iconKey: iconKey,
       colorKey: colorKey,
     );
-    return Icon(
-      visual.icon,
+    return ConsciaGlyph.category(
+      visual.iconKey,
       size: size,
       color: visual.accent,
+      strokeWidth: size * 0.11,
     );
   }
 
@@ -559,10 +562,13 @@ class _CategoryBadge extends StatelessWidget {
               : Colors.transparent,
         ),
       ),
-      child: Icon(
-        visual.icon,
-        size: size,
-        color: fg,
+      child: Center(
+        child: ConsciaGlyph.category(
+          visual.iconKey,
+          color: fg,
+          size: size,
+          strokeWidth: size * 0.11,
+        ),
       ),
     );
   }

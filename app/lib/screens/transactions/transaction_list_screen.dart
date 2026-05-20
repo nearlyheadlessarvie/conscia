@@ -16,6 +16,7 @@ import '../../services/budget_service.dart';
 import '../../services/transaction_service.dart';
 import '../../core/utils/currency_formatter.dart';
 import '../../widgets/conscia_confirm_sheet.dart';
+import '../../widgets/conscia_glyph.dart';
 import '../../widgets/editorial_sticky_header.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/feed_card.dart';
@@ -376,9 +377,7 @@ class _TransactionListScreenState extends ConsumerState<TransactionListScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                FormLabel(
-                    label: _formatDateLabel(groups[key]!.first.date)
-                        .toUpperCase()),
+                FormLabel(label: _formatDateLabel(groups[key]!.first.date)),
                 const SizedBox(height: 10),
                 EditorialTransactionRowsGroup(
                   children: [
@@ -447,10 +446,10 @@ class _TransactionListScreenState extends ConsumerState<TransactionListScreen> {
     final diff = today.difference(dateOnly).inDays;
 
     if (diff == 0) {
-      return 'Today, ${DateFormat.MMMd().format(date)}';
+      return 'Today · ${DateFormat.MMMd().format(date)}';
     }
     if (diff == 1) {
-      return 'Yesterday, ${DateFormat.MMMd().format(date)}';
+      return 'Yesterday · ${DateFormat.MMMd().format(date)}';
     }
     const weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
     const months = [
@@ -467,7 +466,7 @@ class _TransactionListScreenState extends ConsumerState<TransactionListScreen> {
       'Nov',
       'Dec',
     ];
-    return '${weekdays[date.weekday - 1]}, ${months[date.month - 1]} ${date.day}';
+    return '${weekdays[date.weekday - 1]} · ${months[date.month - 1]} ${date.day}';
   }
 }
 
@@ -931,7 +930,7 @@ class _TransactionsEditorialHero extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'MONEY TRAIL',
+            'SPENDING TRAIL',
             style: textTheme.labelSmall?.copyWith(
               color: colors.deepNavy,
               fontWeight: FontWeight.w800,
@@ -963,21 +962,33 @@ class _TransactionsEditorialHero extends StatelessWidget {
             children: [
               Expanded(
                 child: _HeroPill(
-                  icon: Icons.receipt_long_rounded,
-                  label: '${basis.length} entries',
+                  glyph: ConsciaGlyph(
+                    kind: ConsciaGlyphKind.trail,
+                    size: 14,
+                    color: colors.deepNavy,
+                  ),
+                  label: '${basis.length} moments',
                 ),
               ),
               const SizedBox(width: 10),
               Expanded(
                 child: _HeroPill(
-                  icon: Icons.category_rounded,
-                  label: '$repeatCount categories',
+                  glyph: ConsciaGlyph(
+                    kind: ConsciaGlyphKind.signal,
+                    size: 14,
+                    color: colors.deepNavy,
+                  ),
+                  label: '$repeatCount patterns',
                 ),
               ),
               const SizedBox(width: 10),
               Expanded(
                 child: _HeroPill(
-                  icon: Icons.psychology_rounded,
+                  glyph: ConsciaGlyph(
+                    kind: ConsciaGlyphKind.reflect,
+                    size: 14,
+                    color: colors.deepNavy,
+                  ),
                   label: '$regretCount reflected',
                 ),
               ),
@@ -1009,15 +1020,15 @@ class _TransactionsEditorialHero extends StatelessWidget {
 
   String _summaryCopy(String? topCategory, int count) {
     if (count == 0) {
-      return 'Your transactions will turn into a clearer money story once history appears here.';
+      return 'Your spending moments will collect here, ready for patterns and reflection.';
     }
     if (selectedCategory != null) {
-      return '$selectedCategory is in focus. Use this trail to spot timing, repeats, and reflection cues.';
+      return '$selectedCategory is in focus. Notice the timing, repeats, and small cues below.';
     }
     if (topCategory == null) {
-      return 'Income is landing here. Expense patterns will appear as your spending history grows.';
+      return 'Income is landing here. Spending patterns will appear as your history grows.';
     }
-    return '$topCategory is carrying the strongest activity lately. Scan the trail below for repeats and reflection cues.';
+    return '$topCategory is showing up most lately. Follow the trail below for repeat moments and reflection cues.';
   }
 
   double _amountInUserCurrency(Transaction tx) {
@@ -1037,9 +1048,9 @@ class _TransactionsEditorialHero extends StatelessWidget {
 }
 
 class _HeroPill extends StatelessWidget {
-  const _HeroPill({required this.icon, required this.label});
+  const _HeroPill({required this.glyph, required this.label});
 
-  final IconData icon;
+  final Widget glyph;
   final String label;
 
   @override
@@ -1055,7 +1066,7 @@ class _HeroPill extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(icon, size: 14, color: colors.deepNavy),
+          glyph,
           const SizedBox(width: 6),
           Flexible(
             child: Text(
