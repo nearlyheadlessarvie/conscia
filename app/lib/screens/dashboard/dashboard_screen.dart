@@ -289,126 +289,137 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             return StatefulBuilder(
               builder: (context, setSheetState) {
                 final colors = Theme.of(context).colorScheme;
+                final appColors = Theme.of(context).appColors;
                 final textTheme = Theme.of(context).textTheme;
                 final grouped = _groupAlerts(sheetAlerts);
 
-                return CustomScrollView(
-                  controller: scrollController,
-                  slivers: [
-                    SliverPadding(
-                      padding: const EdgeInsets.fromLTRB(20, 8, 20, 4),
-                      sliver: SliverToBoxAdapter(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const ConsciaSheetHandle(),
-                            const SizedBox(height: 18),
-                            ConsciaSheetHeader(
-                              title: 'Notifications',
-                              subtitle: sheetAlerts.isEmpty
-                                  ? 'Nothing needs your attention right now.'
-                                  : 'The latest nudges and reminders from Conscia.',
-                            ),
-                            const SizedBox(height: 16),
-                          ],
+                return Material(
+                  color: appColors.paper,
+                  clipBehavior: Clip.antiAlias,
+                  shape: const RoundedRectangleBorder(
+                    borderRadius:
+                        BorderRadius.vertical(top: Radius.circular(28)),
+                  ),
+                  child: CustomScrollView(
+                    controller: scrollController,
+                    slivers: [
+                      SliverPadding(
+                        padding: const EdgeInsets.fromLTRB(20, 8, 20, 4),
+                        sliver: SliverToBoxAdapter(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const ConsciaSheetHandle(),
+                              const SizedBox(height: 18),
+                              ConsciaSheetHeader(
+                                title: 'Notifications',
+                                subtitle: sheetAlerts.isEmpty
+                                    ? 'Nothing needs your attention right now.'
+                                    : 'The latest nudges and reminders from Conscia.',
+                              ),
+                              const SizedBox(height: 16),
+                            ],
+                          ),
                         ),
                       ),
-                    ),
-                    if (sheetAlerts.isEmpty)
-                      const SliverPadding(
-                        padding: EdgeInsets.symmetric(horizontal: 20),
-                        sliver: SliverToBoxAdapter(
-                          child: EmptyState(
-                            icon: Icons.notifications_none_rounded,
-                            title: 'All clear',
-                            subtitle: 'New reminders will show up here.',
-                          ),
-                        ),
-                      )
-                    else
-                      for (final entry in grouped.entries) ...[
-                        SliverPadding(
-                          padding: const EdgeInsets.fromLTRB(20, 4, 20, 6),
+                      if (sheetAlerts.isEmpty)
+                        const SliverPadding(
+                          padding: EdgeInsets.symmetric(horizontal: 20),
                           sliver: SliverToBoxAdapter(
-                            child: Text(
-                              entry.key,
-                              style: textTheme.labelSmall?.copyWith(
-                                color: colors.onSurfaceVariant,
-                                fontWeight: FontWeight.w700,
-                                letterSpacing: 0.6,
+                            child: EmptyState(
+                              icon: Icons.notifications_none_rounded,
+                              title: 'All clear',
+                              subtitle: 'New reminders will show up here.',
+                            ),
+                          ),
+                        )
+                      else
+                        for (final entry in grouped.entries) ...[
+                          SliverPadding(
+                            padding: const EdgeInsets.fromLTRB(20, 4, 20, 6),
+                            sliver: SliverToBoxAdapter(
+                              child: Text(
+                                entry.key,
+                                style: textTheme.labelSmall?.copyWith(
+                                  color: colors.onSurfaceVariant,
+                                  fontWeight: FontWeight.w700,
+                                  letterSpacing: 0.6,
+                                ),
                               ),
                             ),
                           ),
-                        ),
-                        SliverToBoxAdapter(
-                          child: Divider(
-                            height: 1,
-                            indent: 20,
-                            endIndent: 20,
-                            color: colors.outlineVariant,
+                          SliverToBoxAdapter(
+                            child: Divider(
+                              height: 1,
+                              indent: 20,
+                              endIndent: 20,
+                              color: colors.outlineVariant,
+                            ),
                           ),
-                        ),
-                        SliverList.separated(
-                          itemCount: entry.value.length,
-                          separatorBuilder: (_, __) => Divider(
-                            height: 1,
-                            indent: 76,
-                            endIndent: 20,
-                            color: colors.outlineVariant.withValues(alpha: 0.6),
-                          ),
-                          itemBuilder: (context, i) {
-                            final alert = entry.value[i];
-                            void dismiss() {
-                              ref
-                                  .read(dismissedAlertIdsProvider.notifier)
-                                  .dismiss(alert.id);
-                              setSheetState(() {
-                                sheetAlerts = sheetAlerts
-                                    .where((item) => item.id != alert.id)
-                                    .toList(growable: false);
-                              });
-                            }
+                          SliverList.separated(
+                            itemCount: entry.value.length,
+                            separatorBuilder: (_, __) => Divider(
+                              height: 1,
+                              indent: 76,
+                              endIndent: 20,
+                              color:
+                                  colors.outlineVariant.withValues(alpha: 0.6),
+                            ),
+                            itemBuilder: (context, i) {
+                              final alert = entry.value[i];
+                              void dismiss() {
+                                ref
+                                    .read(dismissedAlertIdsProvider.notifier)
+                                    .dismiss(alert.id);
+                                setSheetState(() {
+                                  sheetAlerts = sheetAlerts
+                                      .where((item) => item.id != alert.id)
+                                      .toList(growable: false);
+                                });
+                              }
 
-                            return Dismissible(
-                              key: ValueKey(alert.id),
-                              direction: DismissDirection.endToStart,
-                              onDismissed: (_) => dismiss(),
-                              secondaryBackground: SwipeActionBackground(
-                                alignment: Alignment.centerRight,
-                                padding: const EdgeInsets.only(right: 12),
-                                children: [
-                                  SwipeActionTile(
-                                    icon: Icons.delete_sweep_rounded,
-                                    label: 'Dismiss',
-                                    foregroundColor:
-                                        Theme.of(context).appColors.expense,
-                                    backgroundColor:
-                                        Theme.of(context).appColors.expenseSoft,
-                                    onTap: () {},
-                                  ),
-                                ],
-                              ),
-                              background: const SizedBox.shrink(),
-                              child: ColoredBox(
-                                color: Theme.of(context).appColors.paper,
-                                child: _NotificationListTile(
-                                  alert: alert,
-                                  onAction: alert.actionLabel == null &&
-                                          alert.type != 'budget_nudge'
-                                      ? null
-                                      : () {
-                                          Navigator.of(sheetContext).pop();
-                                          _handleAlertAction(alert);
-                                        },
+                              return Dismissible(
+                                key: ValueKey(alert.id),
+                                direction: DismissDirection.endToStart,
+                                onDismissed: (_) => dismiss(),
+                                secondaryBackground: SwipeActionBackground(
+                                  alignment: Alignment.centerRight,
+                                  padding: const EdgeInsets.only(right: 12),
+                                  children: [
+                                    SwipeActionTile(
+                                      icon: Icons.delete_sweep_rounded,
+                                      label: 'Dismiss',
+                                      foregroundColor:
+                                          Theme.of(context).appColors.expense,
+                                      backgroundColor: Theme.of(context)
+                                          .appColors
+                                          .expenseSoft,
+                                      onTap: () {},
+                                    ),
+                                  ],
                                 ),
-                              ),
-                            );
-                          },
-                        ),
-                        const SliverToBoxAdapter(child: SizedBox(height: 12)),
-                      ],
-                    const SliverToBoxAdapter(child: SizedBox(height: 16)),
-                  ],
+                                background: const SizedBox.shrink(),
+                                child: ColoredBox(
+                                  color: Theme.of(context).appColors.paper,
+                                  child: _NotificationListTile(
+                                    alert: alert,
+                                    onAction: alert.actionLabel == null &&
+                                            alert.type != 'budget_nudge'
+                                        ? null
+                                        : () {
+                                            Navigator.of(sheetContext).pop();
+                                            _handleAlertAction(alert);
+                                          },
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                          const SliverToBoxAdapter(child: SizedBox(height: 12)),
+                        ],
+                      const SliverToBoxAdapter(child: SizedBox(height: 16)),
+                    ],
+                  ),
                 );
               },
             );
@@ -2264,6 +2275,8 @@ class _NotificationListTile extends StatelessWidget {
                   style: textTheme.titleSmall?.copyWith(
                     fontWeight: FontWeight.w800,
                   ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 3),
                 Text(
@@ -2272,6 +2285,8 @@ class _NotificationListTile extends StatelessWidget {
                     color: colors.onSurfaceVariant,
                     height: 1.4,
                   ),
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 8),
                 Row(
