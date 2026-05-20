@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_colors.dart';
+import '../../../widgets/editorial_hero_chip.dart';
 
 class InsightListEditorialHero extends StatelessWidget {
   const InsightListEditorialHero({
@@ -91,38 +92,16 @@ class InsightListEditorialHero extends StatelessWidget {
               spacing: 8,
               runSpacing: 8,
               children: [
-                for (final chip in chips) _HeroChip(label: chip),
+                for (final chip in chips)
+                  EditorialHeroChip(
+                    label: chip,
+                    horizontalPadding: 10,
+                    verticalPadding: 7,
+                    letterSpacing: 0,
+                  ),
               ],
             ),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-class _HeroChip extends StatelessWidget {
-  const _HeroChip({required this.label});
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).appColors;
-
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: colors.surfaceRaised.withValues(alpha: 0.76),
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-        child: Text(
-          label,
-          style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                color: colors.deepNavy,
-                fontWeight: FontWeight.w800,
-              ),
         ),
       ),
     );

@@ -15,6 +15,7 @@ import '../../providers/transaction_providers.dart';
 import '../../providers/user_provider.dart';
 import '../../widgets/amount_hero_field.dart';
 import '../../widgets/conscia_app_bar.dart';
+import '../../widgets/editorial_hero_chip.dart';
 import '../../widgets/floating_label_text_field.dart';
 import '../../widgets/hero_screen_scaffold.dart';
 import '../../widgets/screen_section.dart';
@@ -621,37 +622,14 @@ class _ReceiptReviewHero extends StatelessWidget {
             spacing: 8,
             runSpacing: 8,
             children: [
-              _HeroChip(label: '$percentage% confidence'),
-              _HeroChip(label: needsReview ? 'Needs review' : 'Looks ready'),
-              const _HeroChip(label: 'Editable'),
+              EditorialHeroChip(label: '$percentage% confidence'),
+              EditorialHeroChip(
+                label: needsReview ? 'Needs review' : 'Looks ready',
+              ),
+              const EditorialHeroChip(label: 'Editable'),
             ],
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _HeroChip extends StatelessWidget {
-  const _HeroChip({required this.label});
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).appColors;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
-      decoration: BoxDecoration(
-        color: colors.paper.withAlpha(235),
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Text(
-        label,
-        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: colors.deepNavy,
-              fontWeight: FontWeight.w800,
-            ),
       ),
     );
   }

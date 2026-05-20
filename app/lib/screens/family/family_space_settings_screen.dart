@@ -10,6 +10,7 @@ import '../../models/family_space.dart';
 import '../../providers/app_availability_provider.dart';
 import '../../providers/family_space_provider.dart';
 import '../../widgets/conscia_bottom_sheet.dart';
+import '../../widgets/editorial_hero_chip.dart';
 import '../../widgets/floating_label_text_field.dart';
 import '../../widgets/conscia_app_bar.dart';
 import '../../widgets/screen_section.dart';
@@ -523,7 +524,7 @@ class _SharedConsciaHero extends StatelessWidget {
             spacing: 10,
             runSpacing: 10,
             children: [
-              for (final pill in pills) _HeroPill(label: pill),
+              for (final pill in pills) EditorialHeroChip(label: pill),
             ],
           ),
           if (shortcuts.isNotEmpty) ...[
@@ -531,35 +532,6 @@ class _SharedConsciaHero extends StatelessWidget {
             _HeroShortcutGrid(shortcuts: shortcuts),
           ],
         ],
-      ),
-    );
-  }
-}
-
-class _HeroPill extends StatelessWidget {
-  const _HeroPill({required this.label});
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).appColors;
-
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: colors.surfaceRaised.withValues(alpha: 0.88),
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        child: Text(
-          label,
-          style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                color: colors.deepNavy,
-                fontWeight: FontWeight.w800,
-                letterSpacing: 0.2,
-              ),
-        ),
       ),
     );
   }
