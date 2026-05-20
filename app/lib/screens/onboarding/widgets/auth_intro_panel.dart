@@ -22,6 +22,7 @@ class AuthIntroPanel extends StatelessWidget {
 
     return Container(
       width: double.infinity,
+      clipBehavior: Clip.antiAlias,
       padding: EdgeInsets.fromLTRB(
         AppLayout.screenPadding,
         AppLayout.appBarClearHeroTop(context),
@@ -48,20 +49,12 @@ class AuthIntroPanel extends StatelessWidget {
       ),
       child: Stack(
         children: [
-          Positioned(
-            right: -16,
-            top: 2,
-            child: _HeroOrb(
-              size: 108,
-              color: colors.amberSoft.withValues(alpha: 0.72),
-            ),
-          ),
-          Positioned(
-            right: 52,
-            bottom: -32,
-            child: _HeroOrb(
-              size: 122,
-              color: colors.navySoft.withValues(alpha: 0.8),
+          Positioned.fill(
+            child: CustomPaint(
+              painter: _AuthHeroAtmospherePainter(
+                warm: colors.amberSoft,
+                cool: colors.navySoft,
+              ),
             ),
           ),
           Row(
@@ -110,29 +103,58 @@ class AuthIntroPanel extends StatelessWidget {
   }
 }
 
-class _HeroOrb extends StatelessWidget {
-  const _HeroOrb({required this.size, required this.color});
+class _AuthHeroAtmospherePainter extends CustomPainter {
+  const _AuthHeroAtmospherePainter({
+    required this.warm,
+    required this.cool,
+  });
 
-  final double size;
-  final Color color;
+  final Color warm;
+  final Color cool;
 
   @override
-  Widget build(BuildContext context) {
-    return IgnorePointer(
-      child: Container(
-        width: size,
-        height: size,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          gradient: RadialGradient(
-            colors: [
-              color,
-              color.withValues(alpha: color.a * 0.34),
-              Colors.transparent,
-            ],
-          ),
+  void paint(Canvas canvas, Size size) {
+    final warmPaint = Paint()
+      ..shader = RadialGradient(
+        colors: [
+          warm.withValues(alpha: 0.48),
+          warm.withValues(alpha: 0.16),
+          Colors.transparent,
+        ],
+      ).createShader(
+        Rect.fromCircle(
+          center: Offset(size.width * 0.86, size.height * 0.18),
+          radius: size.width * 0.42,
         ),
-      ),
+      );
+    canvas.drawCircle(
+      Offset(size.width * 0.86, size.height * 0.18),
+      size.width * 0.42,
+      warmPaint,
     );
+
+    final coolPaint = Paint()
+      ..shader = RadialGradient(
+        colors: [
+          cool.withValues(alpha: 0.28),
+          cool.withValues(alpha: 0.1),
+          Colors.transparent,
+        ],
+      ).createShader(
+        Rect.fromCircle(
+          center: Offset(size.width * 0.78, size.height * 0.68),
+          radius: size.width * 0.32,
+        ),
+      );
+    canvas.drawCircle(
+      Offset(size.width * 0.78, size.height * 0.68),
+      size.width * 0.32,
+      coolPaint,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _AuthHeroAtmospherePainter oldDelegate) {
+    return oldDelegate.warm != warm || oldDelegate.cool != cool;
   }
 }
