@@ -141,6 +141,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       final hasOnboarded =
           userProfile?.hasCompletedOnboarding ?? localHasOnboarded;
       final isOnboarding = state.uri.path.startsWith('/onboarding');
+      final isOnboardingLanding = state.uri.path == AppRoutes.onboarding;
       final isVerifyEmailRoute = state.uri.path == AppRoutes.verifyEmail;
       final isSessionExpiredRoute = state.uri.path == AppRoutes.sessionExpired;
       final isHealthCheck = state.uri.path.startsWith('/health');
@@ -155,8 +156,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         return isVerifyEmailRoute ? null : AppRoutes.verifyEmail;
       }
 
-      if (!isAuthenticated && !isOnboarding) {
-        return hasOnboarded ? AppRoutes.signIn : AppRoutes.onboarding;
+      if (!isAuthenticated && (!isOnboarding || isOnboardingLanding)) {
+        return AppRoutes.signIn;
       }
 
       if (isAuthenticated && (currentUserAsync?.isLoading ?? false)) {

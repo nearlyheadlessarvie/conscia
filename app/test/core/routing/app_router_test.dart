@@ -154,6 +154,36 @@ void main() {
     expect(identical(routerBefore, routerAfter), isTrue);
   });
 
+  testWidgets('first-time unauthenticated users land on sign in', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({
+      'has_completed_onboarding': false,
+    });
+    final fakeAuthNotifier = _TestAuthNotifier(const AuthState());
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          authProvider.overrideWith((ref) => fakeAuthNotifier),
+        ],
+        child: Consumer(
+          builder: (context, ref, _) {
+            final router = ref.watch(appRouterProvider);
+            return MaterialApp.router(routerConfig: router);
+          },
+        ),
+      ),
+    );
+
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+
+    expect(find.text('Welcome back'), findsOneWidget);
+    expect(find.text('Sign In'), findsOneWidget);
+    expect(find.text('Build a calmer money rhythm'), findsNothing);
+  });
+
   testWidgets(
     'onboarding profile route accepts generic map extras',
     (tester) async {
