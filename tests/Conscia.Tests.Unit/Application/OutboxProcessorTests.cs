@@ -1,4 +1,5 @@
 using Conscia.Application.Interfaces;
+using Conscia.Application.Configuration;
 using Conscia.Domain.Entities;
 using Conscia.Domain.Enums;
 using Conscia.Domain.ValueObjects;
@@ -17,6 +18,7 @@ public class OutboxProcessorTests
     private readonly Mock<IUserRepository> _userRepoMock = new();
     private readonly Mock<IInAppAlertRepository> _alertRepoMock = new();
     private readonly Mock<IPushNotificationSender> _pushSenderMock = new();
+    private readonly Mock<IInviteEmailSender> _inviteEmailSenderMock = new();
     private readonly Mock<ILogger<OutboxProcessor>> _loggerMock = new();
 
     private OutboxProcessor CreateProcessor()
@@ -28,6 +30,12 @@ public class OutboxProcessorTests
         services.AddScoped(_ => _userRepoMock.Object);
         services.AddScoped(_ => _alertRepoMock.Object);
         services.AddScoped(_ => _pushSenderMock.Object);
+        services.AddScoped(_ => _inviteEmailSenderMock.Object);
+        services.Configure<InviteEmailOptions>(options =>
+        {
+            options.FromEmail = "invites@getconscia.com";
+            options.DeepLinkBaseUri = "https://getconscia.com/open/family-invite";
+        });
         var sp = services.BuildServiceProvider();
         var scopeFactory = sp.GetRequiredService<IServiceScopeFactory>();
         return new OutboxProcessor(scopeFactory, _loggerMock.Object);
@@ -282,19 +290,74 @@ public class OutboxProcessorTests
 
         await CreateProcessor().ProcessBatchAsync(CancellationToken.None);
 
+        _inviteEmailSenderMock.Verify(sender => sender.SendFamilyInviteAsync(
+            It.Is<FamilyInviteEmailMessage>(message =>
+                message.InviteId == inviteId &&
+                message.RecipientEmail == "wife@example.com" &&
+                message.FamilySpaceName == "Santos Household" &&
+                message.InviteLink == $"https://getconscia.com/open/family-invite?inviteId={inviteId}"),
+            It.IsAny<CancellationToken>()), Times.Once);
         _alertRepoMock.Verify(r => r.AddAsync(
             It.Is<Conscia.Application.Models.InAppAlert>(alert =>
                 alert.UserId == invitedUserId &&
                 alert.AlertKey == $"family-invite:{inviteId}" &&
                 alert.Title == "Family invite" &&
-                alert.ActionRoute == "/settings/family-space/invites"),
+                alert.ActionRoute == $"/settings/family-space/invites?inviteId={inviteId}"),
             It.IsAny<CancellationToken>()), Times.Once);
         _pushSenderMock.Verify(s => s.SendToUserAsync(
             invitedUserId,
             "Family invite",
             "You were invited to Santos Household.",
-            "/settings/family-space/invites",
+            $"/settings/family-space/invites?inviteId={inviteId}",
             It.IsAny<CancellationToken>()), Times.Once);
+        _outboxRepoMock.Verify(r => r.MarkProcessedAsync(evt, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task ProcessBatchAsync_FamilyInviteCreated_UnregisteredInviteeStillGetsEmail()
+    {
+        var inviteId = Guid.NewGuid();
+        var evt = new OutboxEvent
+        {
+            Id = Guid.NewGuid(),
+            AggregateId = inviteId,
+            EventType = OutboxEventType.FamilyInviteCreated,
+            Payload = System.Text.Json.JsonSerializer.Serialize(new
+            {
+                InviteId = inviteId,
+                Email = "newperson@example.com",
+                FamilySpaceName = "Santos Household",
+                ExpiresAt = DateTime.Parse("2026-06-01T00:00:00Z")
+            }),
+            CreatedAt = DateTime.UtcNow
+        };
+
+        _outboxRepoMock.Setup(r => r.GetPendingAsync(50, It.IsAny<CancellationToken>()))
+            .ReturnsAsync([evt]);
+        _outboxRepoMock.Setup(r => r.TryStartProcessingAsync(evt, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+        _userRepoMock.Setup(r => r.GetByEmailAsync("newperson@example.com", It.IsAny<CancellationToken>()))
+            .ReturnsAsync((User?)null);
+
+        await CreateProcessor().ProcessBatchAsync(CancellationToken.None);
+
+        _inviteEmailSenderMock.Verify(sender => sender.SendFamilyInviteAsync(
+            It.Is<FamilyInviteEmailMessage>(message =>
+                message.InviteId == inviteId &&
+                message.RecipientEmail == "newperson@example.com" &&
+                message.InviteLink == $"https://getconscia.com/open/family-invite?inviteId={inviteId}"),
+            It.IsAny<CancellationToken>()), Times.Once);
+        _alertRepoMock.Verify(
+            r => r.AddAsync(It.IsAny<Conscia.Application.Models.InAppAlert>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        _pushSenderMock.Verify(
+            s => s.SendToUserAsync(
+                It.IsAny<Guid>(),
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<string?>(),
+                It.IsAny<CancellationToken>()),
+            Times.Never);
         _outboxRepoMock.Verify(r => r.MarkProcessedAsync(evt, It.IsAny<CancellationToken>()), Times.Once);
     }
 }

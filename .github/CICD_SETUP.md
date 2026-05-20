@@ -154,7 +154,9 @@ At this point you should be able to deploy:
 
 ## Phase 2: Production API Runtime Wiring
 
-This phase is for production auth, app compatibility policy, push delivery, and store-validation credentials. These values should ultimately live in AWS Secrets Manager or SSM Parameter Store and be injected by CDK, not permanently sourced from GitHub Actions secrets.
+This phase is for production auth, app compatibility policy, push delivery, family invite delivery, and store-validation credentials. These values should ultimately live in AWS Secrets Manager or SSM Parameter Store and be injected by CDK, not permanently sourced from GitHub Actions secrets.
+
+The production API now validates these settings at startup. In `Production`, the app will refuse to boot if required auth, subscription, push, invite-email, or app-compatibility settings are missing.
 
 ### Auth And App Compatibility
 
@@ -198,11 +200,29 @@ Service account JSON for Play purchase validation.
 
 #### `FIREBASE_ADMIN_SERVICE_ACCOUNT_JSON`
 
-Firebase Admin SDK JSON, only needed once server-side push delivery is implemented.
+Firebase Admin SDK JSON used by the real server-side FCM sender.
+
+#### `FIREBASE_PROJECT_ID`
+
+Firebase project id used when the push sender calls FCM. This should usually match the project used by the mobile Firebase config.
+
+### Family Invite Email
+
+#### `INVITE_EMAIL_DEEP_LINK_BASE_URI`
+
+Default:
+
+```bash
+gh variable set INVITE_EMAIL_DEEP_LINK_BASE_URI \
+  --body "https://getconscia.com/open/family-invite" \
+  --repo nearlyheadlessarvie/conscia
+```
+
+The outbox processor appends `?inviteId=<guid>` automatically. The app resolves this universal/app link to `/settings/family-space/invites`.
 
 ### SES Email
 
-These are needed once the email stack is live:
+These are required now for family invite email delivery:
 
 #### `SES_FROM_EMAIL`
 
@@ -225,6 +245,8 @@ aws cloudformation describe-stacks \
 - The app sends `X-Conscia-App-Version`, and the API can return `426 Upgrade Required` when the app falls behind the supported window.
 - Keep normal backend changes additive within `v=1`.
 - Introduce `v=2` only for real contract breaks.
+- Subscription verification now fails closed. If Apple/Google validation is not configured, purchase verification requests will be rejected instead of granting fallback premium.
+- Receipt OCR now fails closed. If no real OCR provider is configured, receipt scanning returns `503` instead of fake extracted data.
 
 ---
 
@@ -305,6 +327,36 @@ Usually `com.conscia.app`.
 
 The app workflow uses these iOS secrets to sign the archive on a macOS runner and upload the resulting IPA to TestFlight.
 
+### Passkey Association Files
+
+Passkeys now replace the old faux biometric toggle for Cognito-native Conscia accounts. Real devices need associated-domain metadata generated during the web release.
+
+#### `APPLE_TEAM_ID`
+
+Your Apple Developer Team ID. This is used to generate the `apple-app-site-association` file for iOS passkeys and universal links.
+
+```bash
+gh variable set APPLE_TEAM_ID --body "YOURTEAMID" --repo nearlyheadlessarvie/conscia
+```
+
+#### `ANDROID_PASSKEY_SHA256_CERT_FINGERPRINTS`
+
+Comma-separated SHA-256 signing certificate fingerprints for the Android app. Include every fingerprint that should be trusted for passkeys and app links, for example release and Play App Signing fingerprints.
+
+```bash
+gh variable set ANDROID_PASSKEY_SHA256_CERT_FINGERPRINTS \
+  --body "AA:BB:CC:...,11:22:33:..." \
+  --repo nearlyheadlessarvie/conscia
+```
+
+You can get fingerprints with:
+
+```bash
+keytool -list -v -keystore conscia-release.jks -alias conscia
+```
+
+If you use Play App Signing, also copy the App Signing SHA-256 fingerprint from Play Console and include it in the comma-separated list.
+
 ---
 
 ## Bulk Push Helper
@@ -331,6 +383,10 @@ GOOGLE_PLAY_PACKAGE_NAME=com.getconscia.app
 IOS_BUNDLE_ID=com.getconscia.app
 SES_FROM_EMAIL=invites@getconscia.com
 SES_CONFIGURATION_SET=conscia-production
+FIREBASE_PROJECT_ID=conscia-production
+INVITE_EMAIL_DEEP_LINK_BASE_URI=https://getconscia.com/open/family-invite
+APPLE_TEAM_ID=YOURTEAMID
+ANDROID_PASSKEY_SHA256_CERT_FINGERPRINTS=AA:BB:CC:...
 ```
 
 ### Push Script

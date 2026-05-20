@@ -38,7 +38,7 @@ CDK now creates and validates certificates when `CONSCIA_DOMAIN_NAME` and `ROUTE
 
 ## API Runtime Secrets
 
-These should ultimately live in AWS Secrets Manager or SSM Parameter Store and be injected into Lambda by CDK, not passed directly from GitHub into deployed code.
+These should ultimately live in AWS Secrets Manager or SSM Parameter Store and be injected into Lambda by CDK, not passed directly from GitHub into deployed code. The current release workflows pass them through so production startup validation can fail fast if they are missing.
 
 The runtime API contract is now:
 
@@ -48,15 +48,17 @@ The runtime API contract is now:
 
 | Name | Type | Used By | Notes |
 |---|---|---|---|
-| `AUTH_APP_JWT_SIGNING_KEY` | Secret | Future infra/API deploy | 32+ character signing key for app-issued JWTs used by social auth. Maps to `Auth__AppJwtSigningKey`. |
-| `AUTH_GOOGLE_CLIENT_ID` | Secret | Future infra/API deploy | Google token audience. Maps to `Auth__Google__ClientId` or `Auth__Google__ClientIds__0`. |
-| `AUTH_APPLE_CLIENT_ID` | Secret | Future infra/API deploy | Usually the iOS bundle ID. Maps to `Auth__Apple__ClientId`. |
-| `APPLE_KEY_ID` | Secret | Future store/subscription validation | Maps to `Apple__KeyId` if Apple server API validation is enabled. |
-| `APPLE_ISSUER_ID` | Secret | Future store/subscription validation | Maps to `Apple__IssuerId`. |
-| `APPLE_PRIVATE_KEY` | Secret | Future store/subscription validation | Maps to `Apple__PrivateKey`. Preserve line breaks or store as base64. |
-| `GOOGLE_PLAY_PACKAGE_NAME` | Variable | Future store/subscription validation | Maps to `GooglePlay__PackageName`. |
-| `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON` | Secret | Future store/subscription validation | Maps to `GooglePlay__ServiceAccountJson`. |
-| `FIREBASE_ADMIN_SERVICE_ACCOUNT_JSON` | Secret | Future push delivery | Server-side FCM sender credential. Not needed while push delivery is no-op. |
+| `AUTH_APP_JWT_SIGNING_KEY` | Secret | `release-infra.yml`, `release-api.yml` | 32+ character signing key for app-issued JWTs used by social auth. Maps to `Auth__AppJwtSigningKey`. |
+| `AUTH_GOOGLE_CLIENT_ID` | Secret | `release-infra.yml`, `release-api.yml` | Google token audience. Use the same web/server client ID as `GOOGLE_SERVER_CLIENT_ID`. Maps to `Auth__Google__ClientId` or `Auth__Google__ClientIds__0`. |
+| `AUTH_APPLE_CLIENT_ID` | Secret | `release-infra.yml`, `release-api.yml` | Usually the iOS bundle ID. Maps to `Auth__Apple__ClientId` and `Apple__BundleId`. |
+| `APPLE_KEY_ID` | Secret | `release-infra.yml`, `release-api.yml` | Maps to `Apple__KeyId`. |
+| `APPLE_ISSUER_ID` | Secret | `release-infra.yml`, `release-api.yml` | Maps to `Apple__IssuerId`. |
+| `APPLE_PRIVATE_KEY` | Secret | `release-infra.yml`, `release-api.yml` | Maps to `Apple__PrivateKey`. Preserve line breaks or store as base64. |
+| `GOOGLE_PLAY_PACKAGE_NAME` | Variable | `release-infra.yml`, `release-api.yml`, `release-app.yml`, `release-web.yml` | Maps to `GooglePlay__PackageName`. Also used for Android passkey/app-link association files. |
+| `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON` | Secret | `release-infra.yml`, `release-api.yml` | Maps to `GooglePlay__ServiceAccountJson`. |
+| `FIREBASE_ADMIN_SERVICE_ACCOUNT_JSON` | Secret | `release-infra.yml`, `release-api.yml` | Server-side FCM sender credential. |
+| `FIREBASE_PROJECT_ID` | Variable | `release-infra.yml`, `release-api.yml` | Maps to `Firebase__ProjectId` for the real FCM sender. |
+| `INVITE_EMAIL_DEEP_LINK_BASE_URI` | Variable | `release-infra.yml`, `release-api.yml` | Defaults to `https://getconscia.com/open/family-invite`. The processor appends `?inviteId=<guid>`. |
 
 ## Firebase Client Config
 
@@ -80,6 +82,15 @@ Only needed when CI starts producing store-ready Android releases.
 | `ANDROID_KEY_PASSWORD` | Secret | `release-app.yml` | Release key password. |
 | `GOOGLE_PLAY_DEPLOY_SERVICE_ACCOUNT_JSON` | Secret | `release-app.yml` Play internal upload | Service account with Play Console release permissions. Can be same project as subscription validation, but keep permissions scoped. |
 
+## Passkey Association Metadata
+
+The app now supports Cognito-native passkeys for Conscia accounts. The web release generates the associated-domain files consumed by iOS/Android.
+
+| Name | Type | Used By | Notes |
+|---|---|---|---|
+| `APPLE_TEAM_ID` | Variable | `release-web.yml` | Apple Developer Team ID used in `apple-app-site-association`. |
+| `ANDROID_PASSKEY_SHA256_CERT_FINGERPRINTS` | Variable | `release-web.yml` | Comma-separated Android SHA-256 certificate fingerprints for `assetlinks.json`. Include release and Play App Signing fingerprints when applicable. |
+
 ## iOS Signing And Distribution
 
 Only needed when CI starts producing signed iOS releases.
@@ -100,5 +111,5 @@ CDK creates an SES domain identity and configuration set when production domain 
 
 | Name | Type | Used By | Notes |
 |---|---|---|---|
-| `SES_FROM_EMAIL` | Variable | Future API/outbox email sender | CDK currently outputs `invites@getconscia.com`. |
-| `SES_CONFIGURATION_SET` | Variable | Future API/outbox email sender | CDK currently creates `conscia-production`. |
+| `SES_FROM_EMAIL` | Variable | `release-infra.yml`, `release-api.yml` | Used by the real family invite email sender. CDK currently outputs `invites@getconscia.com`. |
+| `SES_CONFIGURATION_SET` | Variable | `release-infra.yml`, `release-api.yml` | Used by the real family invite email sender. CDK currently creates `conscia-production`. |

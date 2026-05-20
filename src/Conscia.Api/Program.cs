@@ -8,9 +8,11 @@ using Amazon.CognitoIdentityProvider;
 using Amazon.DynamoDBv2;
 using Amazon.Runtime;
 using Amazon.S3;
+using Amazon.SimpleEmailV2;
 using Amazon.SQS;
 using Asp.Versioning;
 using Conscia.AI.Services;
+using Conscia.Api.Configuration;
 using Conscia.Api.Endpoints;
 using Conscia.Api.Health;
 using System.Threading.RateLimiting;
@@ -29,6 +31,7 @@ using FluentValidation;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Trace;
@@ -138,6 +141,8 @@ builder.Services.AddScoped<IConscienceJourneyRepository, ConscienceJourneyReposi
 // --- Store Validation ---
 builder.Services.Configure<AppleStoreOptions>(builder.Configuration.GetSection(AppleStoreOptions.SectionName));
 builder.Services.Configure<GooglePlayOptions>(builder.Configuration.GetSection(GooglePlayOptions.SectionName));
+builder.Services.Configure<FirebaseAdminOptions>(builder.Configuration.GetSection(FirebaseAdminOptions.SectionName));
+builder.Services.Configure<InviteEmailOptions>(builder.Configuration.GetSection(InviteEmailOptions.SectionName));
 builder.Services.AddHttpClient<IAppleReceiptValidator, AppleReceiptValidator>();
 builder.Services.AddHttpClient<IGooglePlayValidator, GooglePlayValidator>();
 builder.Services.AddHttpClient<IExternalSocialTokenVerifier, ExternalSocialTokenVerifier>();
@@ -153,7 +158,6 @@ builder.Services.AddScoped<ISubscriptionService, SubscriptionService>();
 builder.Services.AddScoped<IReceiptService, ReceiptService>();
 builder.Services.AddScoped<IFamilySpaceService, FamilySpaceService>();
 builder.Services.AddScoped<ICategoryService, CategoryService>();
-builder.Services.AddScoped<IPushNotificationSender, NoopPushNotificationSender>();
 builder.Services.AddScoped<IBehavioralInsightsService, BehavioralInsightsService>();
 builder.Services.AddScoped<IPurchaseSuggestionService, PurchaseSuggestionService>();
 builder.Services.AddScoped<IPurchasePatternService, PurchasePatternService>();
@@ -161,6 +165,7 @@ builder.Services.AddScoped<IAlertService, AlertService>();
 builder.Services.AddSingleton<IConscienceJourneyRulesProvider, HardcodedJourneyRulesProvider>();
 builder.Services.AddScoped<IConscienceJourneyService, ConscienceJourneyService>();
 builder.Services.AddSingleton<IRecurringScheduleGenerator, RecurringScheduleGenerator>();
+builder.Services.AddScoped<IInviteEmailSender, NoopInviteEmailSender>();
 builder.Services.AddScoped<ITriggerEvaluator, BudgetWarningEvaluator>();
 builder.Services.AddScoped<ITriggerEvaluator, CoolingOffSuggestionEvaluator>();
 builder.Services.AddScoped<ITriggerEvaluator, RepeatedRegretCounterpartyEvaluator>();
@@ -176,6 +181,17 @@ builder.Services.AddHttpClient<IExchangeRateService, ExchangeRateService>(client
     client.Timeout = TimeSpan.FromSeconds(10);
 });
 builder.Services.AddScoped<IOcrService, StubOcrService>();
+
+if (builder.Environment.IsDevelopment())
+{
+    builder.Services.AddScoped<IPushNotificationSender, NoopPushNotificationSender>();
+}
+else
+{
+    builder.Services.AddAWSService<IAmazonSimpleEmailServiceV2>();
+    builder.Services.AddHttpClient<IPushNotificationSender, FirebasePushNotificationSender>();
+    builder.Services.AddScoped<IInviteEmailSender, SesInviteEmailSender>();
+}
 
 // --- AI Service ---
 if (builder.Environment.IsDevelopment())
@@ -218,6 +234,7 @@ var useMockAuth = builder.Configuration.GetValue<bool>("Auth:UseMock");
 if (useMockAuth)
 {
     builder.Services.AddScoped<IAuthService, MockAuthService>();
+    builder.Services.AddScoped<IPasskeyAuthService, UnavailablePasskeyAuthService>();
 
     var signingKey = builder.Configuration["Auth:MockSigningKey"]!;
     builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -238,6 +255,7 @@ if (useMockAuth)
 else
 {
     builder.Services.AddScoped<IAuthService, CognitoAuthService>();
+    builder.Services.AddScoped<IPasskeyAuthService, CognitoPasskeyAuthService>();
 
     var appJwtSigningKey = builder.Configuration["Auth:AppJwtSigningKey"];
     var appJwtIssuer = builder.Configuration["Auth:AppJwtIssuer"] ?? "conscia-app";
@@ -308,6 +326,10 @@ else
 
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddProblemDetails();
+builder.Services.AddOptions<ProductionRuntimeOptions>()
+    .Bind(builder.Configuration.GetSection(ProductionRuntimeOptions.SectionName))
+    .ValidateOnStart();
+builder.Services.AddSingleton<IValidateOptions<ProductionRuntimeOptions>, ProductionRuntimeOptionsValidator>();
 builder.Services.Configure<AppCompatibilityOptions>(
     builder.Configuration.GetSection(AppCompatibilityOptions.SectionName));
 

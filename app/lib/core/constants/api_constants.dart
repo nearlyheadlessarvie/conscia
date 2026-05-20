@@ -50,6 +50,10 @@ class ApiConstants {
   static const String logout = 'auth/logout';
   static const String appleSignIn = 'auth/apple';
   static const String googleSignIn = 'auth/google';
+  static const String passkeyRegisterStart = 'auth/passkeys/register/start';
+  static const String passkeyRegisterComplete = 'auth/passkeys/register/complete';
+  static const String passkeyLoginStart = 'auth/passkeys/login/start';
+  static const String passkeyLoginComplete = 'auth/passkeys/login/complete';
 
   // User
   static const String profile = 'users/me';

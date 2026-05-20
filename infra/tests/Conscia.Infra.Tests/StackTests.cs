@@ -101,14 +101,37 @@ public class StackTests
     public void AuthStack_CreatesUserPoolAndClient()
     {
         var app = new App();
-        var stack = new AuthStack(app, "TestAuth", new StackProps { Env = TestEnv });
+        var stack = new AuthStack(app, "TestAuth", new AuthStackProps
+        {
+            Env = TestEnv,
+            DomainSettings = TestDomainSettings
+        });
         var template = Template.FromStack(stack);
 
         template.ResourceCountIs("AWS::Cognito::UserPool", 1);
         template.ResourceCountIs("AWS::Cognito::UserPoolClient", 1);
         template.HasResourceProperties("AWS::Cognito::UserPool", new Dictionary<string, object>
         {
-            ["UserPoolName"] = "conscia-users"
+            ["UserPoolName"] = "conscia-users",
+            ["UserPoolTier"] = "ESSENTIALS",
+            ["WebAuthnRelyingPartyID"] = "getconscia.com",
+            ["WebAuthnUserVerification"] = "preferred",
+            ["Policies"] = Match.ObjectLike(new Dictionary<string, object>
+            {
+                ["SignInPolicy"] = Match.ObjectLike(new Dictionary<string, object>
+                {
+                    ["AllowedFirstAuthFactors"] = Match.ArrayWith(["PASSWORD", "WEB_AUTHN"])
+                })
+            })
+        });
+        template.HasResourceProperties("AWS::Cognito::UserPoolClient", new Dictionary<string, object>
+        {
+            ["ExplicitAuthFlows"] = Match.ArrayWith([
+                "ALLOW_USER_PASSWORD_AUTH",
+                "ALLOW_USER_SRP_AUTH",
+                "ALLOW_REFRESH_TOKEN_AUTH",
+                "ALLOW_USER_AUTH"
+            ])
         });
     }
 
@@ -152,6 +175,21 @@ public class StackTests
             PushDeviceTokensTable = database.PushDeviceTokensTable,
             ConscienceJourneyTable = database.ConscienceJourneyTable,
             AiQueue = ai.AiQueue,
+            RuntimeSettings = new ProductionRuntimeSettings(
+                "jwt-signing-key",
+                "google-client-id",
+                "com.conscia.app",
+                "APPLEKEYID",
+                "00000000-0000-0000-0000-000000000000",
+                "com.conscia.app",
+                "private-key",
+                "com.conscia.app",
+                "service-account-json",
+                "firebase-service-account",
+                "conscia-prod",
+                "invites@getconscia.com",
+                "conscia-production",
+                "conscia://invite"),
             ApiAssetPath = CreateAssetStub("api")
         });
 
@@ -167,7 +205,9 @@ public class StackTests
                 ["Variables"] = Match.ObjectLike(new Dictionary<string, object>
                 {
                     ["AWS__DynamoDB__ControlPlaneTable"] = Match.AnyValue(),
-                    ["AWS__DynamoDB__TransactionsTable"] = Match.AnyValue()
+                    ["AWS__DynamoDB__TransactionsTable"] = Match.AnyValue(),
+                    ["Firebase__AdminServiceAccountJson"] = "firebase-service-account",
+                    ["InviteEmail__FromEmail"] = "invites@getconscia.com"
                 })
             }
         });
@@ -186,6 +226,22 @@ public class StackTests
             OutboxEventsTable = database.OutboxEventsTable,
             InAppAlertsTable = database.InAppAlertsTable,
             MonthlyCategorySpendsTable = database.MonthlyCategorySpendsTable,
+            PushDeviceTokensTable = database.PushDeviceTokensTable,
+            RuntimeSettings = new ProductionRuntimeSettings(
+                "jwt-signing-key",
+                "google-client-id",
+                "com.conscia.app",
+                "APPLEKEYID",
+                "00000000-0000-0000-0000-000000000000",
+                "com.conscia.app",
+                "private-key",
+                "com.conscia.app",
+                "service-account-json",
+                "firebase-service-account",
+                "conscia-prod",
+                "invites@getconscia.com",
+                "conscia-production",
+                "conscia://invite"),
             AssetPath = CreateAssetStub("outbox"),
             DomainSettings = TestDomainSettings
         });
@@ -198,6 +254,18 @@ public class StackTests
         template.HasResourceProperties("AWS::Lambda::EventSourceMapping", new Dictionary<string, object>
         {
             ["StartingPosition"] = "TRIM_HORIZON"
+        });
+        template.HasResourceProperties("AWS::Lambda::Function", new Dictionary<string, object>
+        {
+            ["Environment"] = new Dictionary<string, object>
+            {
+                ["Variables"] = Match.ObjectLike(new Dictionary<string, object>
+                {
+                    ["AWS__DynamoDB__PushDeviceTokensTable"] = Match.AnyValue(),
+                    ["Firebase__AdminServiceAccountJson"] = "firebase-service-account",
+                    ["InviteEmail__FromEmail"] = "invites@getconscia.com"
+                })
+            }
         });
     }
 
@@ -304,7 +372,11 @@ public class StackTests
         var app = new App();
         var database = new DatabaseStack(app, "D", new StackProps { Env = TestEnv });
         var storage = new StorageStack(app, "S", new StorageStackProps { Env = TestEnv });
-        var auth = new AuthStack(app, "A", new StackProps { Env = TestEnv });
+        var auth = new AuthStack(app, "A", new AuthStackProps
+        {
+            Env = TestEnv,
+            DomainSettings = TestDomainSettings
+        });
         var ai = new AIStack(app, "AI", new StackProps { Env = TestEnv });
         return (app, database, storage, auth, ai);
     }

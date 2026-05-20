@@ -1,12 +1,14 @@
 import 'package:conscia_app/models/family_space.dart';
 import 'package:conscia_app/providers/family_space_provider.dart';
 import 'package:conscia_app/providers/location_assistance_provider.dart';
+import 'package:conscia_app/providers/passkey_provider.dart';
 import 'package:conscia_app/providers/subscription_provider.dart';
 import 'package:conscia_app/providers/transaction_providers.dart';
 import 'package:conscia_app/providers/usage_provider.dart';
 import 'package:conscia_app/providers/user_provider.dart';
 import 'package:conscia_app/screens/settings/settings_screen.dart';
 import 'package:conscia_app/services/location_assistance_service.dart';
+import 'package:conscia_app/services/passkey_service.dart';
 import 'package:conscia_app/services/subscription_service.dart';
 import 'package:conscia_app/services/transaction_service.dart';
 import 'package:conscia_app/services/user_service.dart';
@@ -123,6 +125,20 @@ class _FailingCurrencyUserService extends _RecordingUserService {
   }
 }
 
+class _RecordingPasskeyService extends PasskeyService {
+  _RecordingPasskeyService()
+      : super(
+          publicDio: Dio(),
+          authenticatedDio: Dio(),
+        );
+
+  @override
+  Future<bool> isSupported() async => true;
+
+  @override
+  Future<void> registerCurrentUserPasskey() async {}
+}
+
 Future<ProviderContainer> _pumpSettingsScreen(
   WidgetTester tester, {
   required SharedPreferences prefs,
@@ -132,6 +148,7 @@ Future<ProviderContainer> _pumpSettingsScreen(
   List<Transaction>? transactions,
   bool isPremium = false,
   PageStorageBucket? pageStorageBucket,
+  List<Override> overrides = const [],
 }) async {
   final container = ProviderContainer(
     overrides: [
@@ -161,6 +178,7 @@ Future<ProviderContainer> _pumpSettingsScreen(
         transactionListProvider.overrideWith(
           (ref) => TransactionListNotifier.fromList(transactions),
         ),
+      ...overrides,
     ],
   );
   addTearDown(container.dispose);
@@ -333,6 +351,49 @@ void main() {
       container.read(locationAssistanceProvider).isEnabled,
       isFalse,
     );
+  });
+
+  testWidgets('settings removes the legacy biometric toggle', (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+
+    await _pumpSettingsScreen(
+      tester,
+      prefs: prefs,
+      locationService:
+          _RecordingLocationAssistanceService(permissionGranted: true),
+      overrides: [
+        passkeyAvailabilityProvider.overrideWith((ref) async => false),
+      ],
+    );
+
+    await tester.pumpAndSettle();
+
+    expect(find.text('Biometric Sign-In'), findsNothing);
+  });
+
+  testWidgets('settings shows passkey setup for cognito sessions', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+
+    await _pumpSettingsScreen(
+      tester,
+      prefs: prefs,
+      locationService:
+          _RecordingLocationAssistanceService(permissionGranted: true),
+      overrides: [
+        passkeyAvailabilityProvider.overrideWith((ref) async => true),
+        currentSessionSupportsPasskeysProvider.overrideWith((ref) => true),
+        passkeyServiceProvider.overrideWithValue(_RecordingPasskeyService()),
+      ],
+    );
+
+    await tester.pumpAndSettle();
+
+    expect(find.text('Set Up Passkey'), findsOneWidget);
+    expect(find.text('Biometric Sign-In'), findsNothing);
   });
 
   testWidgets('settings can change region format', (tester) async {

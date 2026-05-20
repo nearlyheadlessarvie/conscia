@@ -1,4 +1,5 @@
 using Asp.Versioning.Builder;
+using Conscia.Application.DTOs;
 using Conscia.Application.Interfaces;
 
 namespace Conscia.Api.Endpoints;
@@ -100,7 +101,100 @@ public static class AuthEndpoints
                 : Results.BadRequest(new { result.Error });
         }).WithName("AppleLogin").RequireRateLimiting("standard");
 
+        group.MapPost("/passkeys/register/start", async (
+            HttpContext ctx,
+            IPasskeyAuthService passkeys) =>
+        {
+            var accessToken = ReadBearerToken(ctx.Request.Headers.Authorization.ToString());
+            if (accessToken is null || !LooksLikeCognitoToken(accessToken))
+            {
+                return Results.Json(
+                    new { error = "Passkeys are only available for Conscia account sessions." },
+                    statusCode: StatusCodes.Status403Forbidden);
+            }
+
+            var result = await passkeys.StartRegistrationAsync(accessToken, ctx.RequestAborted);
+            return Results.Ok(result);
+        }).WithName("StartPasskeyRegistration").RequireAuthorization().RequireRateLimiting("auth");
+
+        group.MapPost("/passkeys/register/complete", async (
+            HttpContext ctx,
+            CompletePasskeyRegistrationRequest req,
+            IPasskeyAuthService passkeys) =>
+        {
+            var accessToken = ReadBearerToken(ctx.Request.Headers.Authorization.ToString());
+            if (accessToken is null || !LooksLikeCognitoToken(accessToken))
+            {
+                return Results.Json(
+                    new { error = "Passkeys are only available for Conscia account sessions." },
+                    statusCode: StatusCodes.Status403Forbidden);
+            }
+
+            await passkeys.CompleteRegistrationAsync(accessToken, req.Credential, ctx.RequestAborted);
+            return Results.NoContent();
+        }).WithName("CompletePasskeyRegistration").RequireAuthorization().RequireRateLimiting("auth");
+
+        group.MapPost("/passkeys/login/start", async (
+            HttpContext ctx,
+            StartPasskeyAuthenticationRequest req,
+            IPasskeyAuthService passkeys) =>
+        {
+            if (string.IsNullOrWhiteSpace(req.Email))
+            {
+                return Results.BadRequest(new { error = "Email is required" });
+            }
+
+            var result = await passkeys.StartAuthenticationAsync(req.Email, ctx.RequestAborted);
+            return Results.Ok(result);
+        }).WithName("StartPasskeyLogin").RequireRateLimiting("auth");
+
+        group.MapPost("/passkeys/login/complete", async (
+            HttpContext ctx,
+            CompletePasskeyAuthenticationRequest req,
+            IPasskeyAuthService passkeys) =>
+        {
+            if (string.IsNullOrWhiteSpace(req.Email) ||
+                string.IsNullOrWhiteSpace(req.Session) ||
+                string.IsNullOrWhiteSpace(req.ChallengeName) ||
+                string.IsNullOrWhiteSpace(req.Credential))
+            {
+                return Results.BadRequest(new { error = "Email, session, challenge, and credential are required" });
+            }
+
+            var result = await passkeys.CompleteAuthenticationAsync(
+                req.Email,
+                req.Session,
+                req.ChallengeName,
+                req.Credential,
+                ctx.RequestAborted);
+
+            return result.Success
+                ? Results.Ok(new { result.AccessToken, result.RefreshToken, result.UserId })
+                : Results.BadRequest(new { result.Error });
+        }).WithName("CompletePasskeyLogin").RequireRateLimiting("auth");
+
         return group;
+    }
+
+    private static string? ReadBearerToken(string authorizationHeader)
+    {
+        const string bearer = "Bearer ";
+        return authorizationHeader.StartsWith(bearer, StringComparison.OrdinalIgnoreCase)
+            ? authorizationHeader[bearer.Length..].Trim()
+            : null;
+    }
+
+    private static bool LooksLikeCognitoToken(string token)
+    {
+        try
+        {
+            var jwt = new System.IdentityModel.Tokens.Jwt.JwtSecurityTokenHandler().ReadJwtToken(token);
+            return jwt.Issuer.Contains("cognito-idp.", StringComparison.OrdinalIgnoreCase);
+        }
+        catch
+        {
+            return false;
+        }
     }
 }
 

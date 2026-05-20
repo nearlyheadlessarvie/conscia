@@ -14,6 +14,7 @@ sealed class Program
             Region = System.Environment.GetEnvironmentVariable("CDK_DEFAULT_REGION") ?? "ap-southeast-1"
         };
         var domainSettings = DomainSettings.FromEnvironment();
+        var runtimeSettings = ProductionRuntimeSettings.FromEnvironment();
 
         var database = new DatabaseStack(app, "Conscia-Database", new StackProps { Env = env });
 
@@ -22,7 +23,11 @@ sealed class Program
             Env = env,
             AllowedCorsOrigins = domainSettings?.AllowedCorsOrigins ?? ["*"]
         });
-        var auth = new AuthStack(app, "Conscia-Auth", new StackProps { Env = env });
+        var auth = new AuthStack(app, "Conscia-Auth", new AuthStackProps
+        {
+            Env = env,
+            DomainSettings = domainSettings
+        });
 
         var ai = new AIStack(app, "Conscia-AI", new StackProps { Env = env });
 
@@ -44,6 +49,7 @@ sealed class Program
             PushDeviceTokensTable = database.PushDeviceTokensTable,
             ConscienceJourneyTable = database.ConscienceJourneyTable,
             AiQueue = ai.AiQueue,
+            RuntimeSettings = runtimeSettings,
             DomainSettings = domainSettings
         });
 
@@ -55,6 +61,8 @@ sealed class Program
             OutboxEventsTable = database.OutboxEventsTable,
             InAppAlertsTable = database.InAppAlertsTable,
             MonthlyCategorySpendsTable = database.MonthlyCategorySpendsTable,
+            PushDeviceTokensTable = database.PushDeviceTokensTable,
+            RuntimeSettings = runtimeSettings,
             DomainSettings = domainSettings
         });
 

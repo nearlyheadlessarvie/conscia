@@ -4,10 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
-import 'package:local_auth/local_auth.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:share_plus/share_plus.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/constants/api_constants.dart';
 import '../../core/constants/app_icons.dart';
@@ -20,9 +18,11 @@ import '../../models/family_space.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/family_space_provider.dart';
 import '../../providers/location_assistance_provider.dart';
+import '../../providers/passkey_provider.dart';
 import '../../providers/subscription_provider.dart';
 import '../../providers/transaction_providers.dart';
 import '../../providers/user_provider.dart';
+import '../../services/passkey_service.dart';
 import '../../services/user_service.dart';
 import '../../widgets/conscia_app_bar.dart';
 import '../../widgets/conscia_bottom_sheet.dart';
@@ -37,7 +37,6 @@ final _packageInfoProvider = FutureProvider<PackageInfo>(
   (_) => PackageInfo.fromPlatform(),
 );
 
-const _biometricEnabledKey = 'biometric_enabled';
 const _aiIntensityOptions = <({
   String value,
   String label,
@@ -77,15 +76,13 @@ class SettingsScreen extends ConsumerStatefulWidget {
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   final _appBarScrollProgress = ValueNotifier<double>(0);
   final _scrollController = ScrollController();
-  bool _biometricSupported = false;
-  bool _biometricEnabled = false;
+  bool _isRegisteringPasskey = false;
 
   @override
   void initState() {
     super.initState();
     _scrollController.addListener(_syncAppBarProgressFromController);
     WidgetsBinding.instance.addObserver(_appLifecycleObserver);
-    _loadBiometricState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       _syncAppBarProgressFromController();
@@ -129,34 +126,32 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     }
   }
 
-  Future<void> _loadBiometricState() async {
-    final auth = LocalAuthentication();
-    try {
-      final canCheck = await auth.canCheckBiometrics;
-      final isSupported = await auth.isDeviceSupported();
-      final prefs = await SharedPreferences.getInstance();
-      if (mounted) {
-        setState(() {
-          _biometricSupported = canCheck && isSupported;
-          _biometricEnabled = prefs.getBool(_biometricEnabledKey) ?? false;
-        });
-      }
-    } catch (_) {}
-  }
+  Future<void> _registerPasskey(BuildContext context) async {
+    if (_isRegisteringPasskey) return;
 
-  Future<void> _toggleBiometric(bool value) async {
-    if (value) {
-      final auth = LocalAuthentication();
-      final authenticated = await auth.authenticate(
-        localizedReason: 'Verify your identity to enable biometric sign-in',
-        options:
-            const AuthenticationOptions(stickyAuth: true, biometricOnly: true),
-      );
-      if (!authenticated) return;
+    setState(() => _isRegisteringPasskey = true);
+    try {
+      await ref.read(passkeyServiceProvider).registerCurrentUserPasskey();
+      if (!mounted || !context.mounted) return;
+      ScaffoldMessenger.of(context)
+        ..clearSnackBars()
+        ..showSnackBar(
+          const SnackBar(content: Text('Passkey ready on this device.')),
+        );
+    } catch (error) {
+      if (!mounted || !context.mounted) return;
+      if (!isPasskeyCancellation(error)) {
+        ScaffoldMessenger.of(context)
+          ..clearSnackBars()
+          ..showSnackBar(
+            SnackBar(content: Text(friendlyPasskeyErrorMessage(error))),
+          );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isRegisteringPasskey = false);
+      }
     }
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(_biometricEnabledKey, value);
-    if (mounted) setState(() => _biometricEnabled = value);
   }
 
   @override
@@ -166,6 +161,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final familySpaceAsync = ref.watch(familySpaceProvider);
     final subAsync = ref.watch(subscriptionProvider);
     final locationAssistance = ref.watch(locationAssistanceProvider);
+    final passkeysAvailable =
+        ref.watch(passkeyAvailabilityProvider).valueOrNull ?? false;
+    final sessionSupportsPasskeys =
+        ref.watch(currentSessionSupportsPasskeysProvider);
     final userPreferences = ref.watch(userPreferencesProvider);
     final hasTransactionHistory =
         ref.watch(transactionListProvider).transactions.isNotEmpty;
@@ -304,16 +303,21 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                                 : () => _showCurrencyPicker(context, ref),
                             showChevron: !hasTransactionHistory,
                           ),
-                          if (_biometricSupported)
-                            _SettingsSwitchRow(
+                          if (passkeysAvailable && sessionSupportsPasskeys)
+                            _SettingsActionRow(
                               leading: _SettingsIconBox(
                                 icon: Icons.fingerprint,
                                 backgroundColor: theme.appColors.navySoft,
                               ),
-                              title: 'Biometric Sign-In',
-                              subtitle: 'Use fingerprint or face to sign in',
-                              value: _biometricEnabled,
-                              onChanged: _toggleBiometric,
+                              title: _isRegisteringPasskey
+                                  ? 'Setting Up Passkey...'
+                                  : 'Set Up Passkey',
+                              subtitle:
+                                  'Use Face ID, fingerprint, or device unlock next time',
+                              onTap: _isRegisteringPasskey
+                                  ? null
+                                  : () => _registerPasskey(context),
+                              showChevron: !_isRegisteringPasskey,
                             ),
                         ],
                       ),
@@ -688,7 +692,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     );
     if (!confirmed || !context.mounted) return;
 
-    ref.read(authProvider.notifier).logout();
+    await ref.read(authProvider.notifier).logout();
+    if (!context.mounted) return;
+    context.go(AppRoutes.signIn);
   }
 
   String _labelForAiIntensity(String intensity) {

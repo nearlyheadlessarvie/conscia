@@ -219,6 +219,62 @@ void main() {
     expect(find.text('Build a calmer money rhythm'), findsNothing);
   });
 
+  test('custom invite deep links resolve to family invites route', () {
+    expect(
+      resolveIncomingAppLink(Uri.parse('conscia://invite?inviteId=invite-123')),
+      '/settings/family-space/invites?inviteId=invite-123',
+    );
+  });
+
+  test('https family invite links resolve to family invites route', () {
+    expect(
+      resolveIncomingAppLink(
+        Uri.parse('https://getconscia.com/open/family-invite?inviteId=invite-123'),
+      ),
+      '/settings/family-space/invites?inviteId=invite-123',
+    );
+  });
+
+  testWidgets('unauthenticated deep links preserve redirect through sign in', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({
+      'has_completed_onboarding': true,
+    });
+    final fakeAuthNotifier = _TestAuthNotifier(const AuthState());
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          authProvider.overrideWith((ref) => fakeAuthNotifier),
+        ],
+        child: Consumer(
+          builder: (context, ref, _) {
+            final router = ref.watch(appRouterProvider);
+            return MaterialApp.router(routerConfig: router);
+          },
+        ),
+      ),
+    );
+
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+
+    final router = tester
+        .widget<MaterialApp>(find.byType(MaterialApp))
+        .routerConfig! as dynamic;
+
+    router.go('/settings/family-space/invites?inviteId=invite-123');
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+
+    expect(find.text('Welcome back'), findsOneWidget);
+    expect(
+      router.routeInformationProvider.value.uri.toString(),
+      '/onboarding/sign-in?redirect=%2Fsettings%2Ffamily-space%2Finvites%3FinviteId%3Dinvite-123',
+    );
+  });
+
   testWidgets(
     'onboarding profile route accepts generic map extras',
     (tester) async {
@@ -519,5 +575,92 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
     expect(find.text('Settings').hitTestable(), findsOneWidget);
+  });
+
+  testWidgets('explicit logout from settings returns to plain sign in without redirect',
+      (tester) async {
+    SharedPreferences.setMockInitialValues({
+      'has_completed_onboarding': true,
+    });
+    final fakeAuthNotifier = _TestAuthNotifier(
+      const AuthState(
+        status: AuthStatus.authenticated,
+        userId: 'user-1',
+      ),
+    );
+    final prefs = await SharedPreferences.getInstance();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          authProvider.overrideWith((ref) => fakeAuthNotifier),
+          currentUserProvider.overrideWith(
+            (ref) async => UserProfile(
+              id: 'user-1',
+              email: 'user@example.com',
+              currencyCode: 'USD',
+              locale: 'en_US',
+              createdAt: DateTime(2026),
+              hasCompletedOnboarding: true,
+            ),
+          ),
+          sharedPreferencesProvider.overrideWithValue(prefs),
+          subscriptionProvider.overrideWith(
+            (ref) async => const SubscriptionStatus(
+              tier: 'free',
+              isPremium: false,
+            ),
+          ),
+          budgetServiceProvider.overrideWithValue(_StaticBudgetService()),
+          transactionServiceProvider
+              .overrideWithValue(_StaticTransactionService()),
+          conscienceJourneyServiceProvider
+              .overrideWithValue(_StaticConscienceJourneyService()),
+          familySpaceProvider.overrideWith((ref) async => null),
+          behavioralInsightsProvider.overrideWith((ref) async => null),
+          insightsSummaryProvider.overrideWith((ref) async => null),
+          insightsCategoriesProvider.overrideWith((ref) async => const []),
+          insightsMerchantsProvider.overrideWith((ref) async => const []),
+          alertsProvider.overrideWith((ref) async => const []),
+          categoryFrequencyProvider.overrideWithValue(
+            const ['Coffee', 'Dining', 'Shopping'],
+          ),
+          locationAssistanceServiceProvider.overrideWithValue(
+            _FakeLocationAssistanceService(),
+          ),
+        ],
+        child: Consumer(
+          builder: (context, ref, _) {
+            final router = ref.watch(appRouterProvider);
+            return MaterialApp.router(routerConfig: router);
+          },
+        ),
+      ),
+    );
+
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+
+    final router = tester
+        .widget<MaterialApp>(find.byType(MaterialApp))
+        .routerConfig! as dynamic;
+
+    router.go(AppRoutes.settings);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(find.text('Settings').hitTestable(), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Sign out'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, 'Sign out'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(find.text('Welcome back'), findsOneWidget);
+    expect(
+      router.routeInformationProvider.value.uri.toString(),
+      AppRoutes.signIn,
+    );
   });
 }
