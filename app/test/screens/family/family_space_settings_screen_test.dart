@@ -44,11 +44,11 @@ void main() {
     expect(find.text('Members'), findsWidgets);
     expect(find.text('Invite family'), findsWidgets);
     expect(find.byType(FeedCard), findsNothing);
-    expect(find.text('HOUSEHOLD'), findsOneWidget);
+    expect(find.text('Household'), findsOneWidget);
     expect(find.text('Household name'), findsOneWidget);
     expect(find.text('Santos Household'), findsWidgets);
     expect(find.text('Edit'), findsNothing);
-    expect(find.text('MANAGE'), findsOneWidget);
+    expect(find.text('Manage'), findsOneWidget);
     expect(find.text('Family overview'), findsNothing);
     expect(find.text('Members'), findsWidgets);
     expect(find.text('Invites'), findsOneWidget);

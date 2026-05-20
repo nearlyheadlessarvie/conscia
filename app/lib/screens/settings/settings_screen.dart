@@ -28,6 +28,7 @@ import '../../widgets/conscia_app_bar.dart';
 import '../../widgets/conscia_bottom_sheet.dart';
 import '../../widgets/conscia_confirm_sheet.dart';
 import '../../widgets/currency_picker_sheet.dart';
+import '../../widgets/editorial_hero_chip.dart';
 import '../../widgets/locale_picker_sheet.dart';
 import '../../widgets/single_select_list.dart';
 import 'widgets/subscription_sheet.dart';
@@ -812,8 +813,8 @@ class _SettingsEditorialHero extends StatelessWidget {
             spacing: 10,
             runSpacing: 10,
             children: [
-              _HeroMetricPill(label: '$currencyCode currency'),
-              _HeroMetricPill(
+              EditorialHeroChip(label: '$currencyCode currency'),
+              EditorialHeroChip(
                 label:
                     '${_regionFormatLabels[locale]?.split(' / ').first ?? 'English'} numbers',
               ),
@@ -891,33 +892,6 @@ class _SettingsEditorialHeroFallback extends StatelessWidget {
       locale: 'en_US',
       onProfileTap: () {},
       onFamilyTap: () {},
-    );
-  }
-}
-
-class _HeroMetricPill extends StatelessWidget {
-  const _HeroMetricPill({required this.label});
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).appColors;
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: colors.surfaceRaised.withValues(alpha: 0.78),
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        child: Text(
-          label,
-          style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                color: colors.deepNavy,
-                fontWeight: FontWeight.w800,
-              ),
-        ),
-      ),
     );
   }
 }

@@ -9,6 +9,7 @@ import '../../core/theme/app_layout.dart';
 import '../../models/family_invite.dart';
 import '../../providers/family_space_provider.dart';
 import '../../widgets/conscia_button_row.dart';
+import '../../widgets/editorial_hero_chip.dart';
 import '../../widgets/floating_label_text_field.dart';
 import '../../widgets/hero_screen_scaffold.dart';
 import '../../widgets/inline_notice.dart';
@@ -189,41 +190,13 @@ class _InvitesHero extends StatelessWidget {
               spacing: 10,
               runSpacing: 10,
               children: [
-                _HeroPill(label: '$pendingCount received'),
-                if (sentCount != null) _HeroPill(label: '$sentCount sent'),
-                const _HeroPill(label: 'Roles stay editable'),
+                EditorialHeroChip(label: '$pendingCount received'),
+                if (sentCount != null)
+                  EditorialHeroChip(label: '$sentCount sent'),
+                const EditorialHeroChip(label: 'Roles stay editable'),
               ],
             ),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-class _HeroPill extends StatelessWidget {
-  const _HeroPill({required this.label});
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).appColors;
-
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: colors.surfaceRaised.withValues(alpha: 0.88),
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        child: Text(
-          label,
-          style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                color: colors.deepNavy,
-                fontWeight: FontWeight.w800,
-                letterSpacing: 0.2,
-              ),
         ),
       ),
     );

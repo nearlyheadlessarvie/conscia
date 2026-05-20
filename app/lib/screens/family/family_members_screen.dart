@@ -11,6 +11,7 @@ import '../../providers/family_space_provider.dart';
 import '../../widgets/conscia_app_bar.dart';
 import '../../widgets/conscia_bottom_sheet.dart';
 import '../../widgets/conscia_confirm_sheet.dart';
+import '../../widgets/editorial_hero_chip.dart';
 import '../../widgets/hero_screen_scaffold.dart';
 import '../../widgets/inline_notice.dart';
 import '../../widgets/screen_section.dart';
@@ -200,45 +201,17 @@ class _FamilyMembersHero extends StatelessWidget {
               spacing: 10,
               runSpacing: 10,
               children: [
-                _HeroPill(label: _roleLabel(role)),
-                if (currencyCode.isNotEmpty) _HeroPill(label: currencyCode),
-                _HeroPill(
+                EditorialHeroChip(label: _roleLabel(role)),
+                if (currencyCode.isNotEmpty)
+                  EditorialHeroChip(label: currencyCode),
+                EditorialHeroChip(
                   label:
                       '$memberCount ${memberCount == 1 ? 'member' : 'members'}',
                 ),
-                if (isReadOnly) const _HeroPill(label: 'View-only'),
+                if (isReadOnly) const EditorialHeroChip(label: 'View-only'),
               ],
             ),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-class _HeroPill extends StatelessWidget {
-  const _HeroPill({required this.label});
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).appColors;
-
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: colors.surfaceRaised.withValues(alpha: 0.88),
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        child: Text(
-          label,
-          style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                color: colors.deepNavy,
-                fontWeight: FontWeight.w800,
-                letterSpacing: 0.2,
-              ),
         ),
       ),
     );

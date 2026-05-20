@@ -3,8 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  testWidgets('FeedCard uses a flat bordered surface without a shadow',
-      (tester) async {
+  testWidgets('FeedCard uses a softly raised bordered surface', (tester) async {
     await tester.pumpWidget(
       const MaterialApp(
         home: Scaffold(
@@ -24,6 +23,7 @@ void main() {
     final decoration = decoratedBox.decoration as BoxDecoration;
 
     expect(decoration.border, isNotNull);
-    expect(decoration.boxShadow, isNull);
+    expect(decoration.boxShadow, isNotNull);
+    expect(decoration.boxShadow, isNotEmpty);
   });
 }

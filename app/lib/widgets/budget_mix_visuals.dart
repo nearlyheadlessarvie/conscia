@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../core/constants/category_icons.dart';
 import '../core/theme/app_colors.dart';
+import 'conscia_glyph.dart';
 
 class BudgetMixPalette {
   const BudgetMixPalette._();
@@ -449,11 +450,13 @@ class BudgetCategoryGlyph extends StatelessWidget {
       child: SizedBox(
         width: 42,
         height: 42,
-        child: Icon(
-          CategoryIcons.forCategory(category),
-          key: iconKey,
-          size: 30,
-          color: color,
+        child: Center(
+          child: ConsciaGlyph.category(
+            CategoryIcons.visualFor(category).iconKey,
+            key: iconKey,
+            color: color,
+            size: 30,
+          ),
         ),
       ),
     );

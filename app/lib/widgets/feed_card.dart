@@ -22,6 +22,13 @@ class FeedCard extends StatelessWidget {
         color: colors.surfaceRaised,
         borderRadius: BorderRadius.circular(22),
         border: Border.all(color: colors.sectionBorder),
+        boxShadow: [
+          BoxShadow(
+            color: colors.deepNavy.withValues(alpha: 0.035),
+            blurRadius: 22,
+            offset: const Offset(0, 10),
+          ),
+        ],
       ),
       child: Padding(
         padding: padding,

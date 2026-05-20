@@ -6,6 +6,7 @@ import 'package:conscia_app/models/behavioral_insights.dart';
 import 'package:conscia_app/models/conscience_journey.dart';
 import 'package:conscia_app/providers/budget_providers.dart';
 import 'package:conscia_app/providers/conscience_journey_provider.dart';
+import 'package:conscia_app/providers/family_space_provider.dart';
 import 'package:conscia_app/providers/insight_feed_provider.dart';
 import 'package:conscia_app/providers/insights_provider.dart';
 import 'package:conscia_app/providers/subscription_provider.dart';
@@ -96,11 +97,27 @@ class _StaticTransactionService extends TransactionService {
   }
 }
 
-class _StaticConscienceJourneyService extends ConscienceJourneyService {
-  _StaticConscienceJourneyService() : super(Dio());
+class _RecordingTransactionService extends _StaticTransactionService {
+  _RecordingTransactionService(super.transactions);
+
+  String? updatedRegretTransactionId;
+  int? updatedRegretLevel;
 
   @override
-  Future<ConscienceJourneySummary> fetchJourney() async => _testJourneySummary;
+  Future<void> updateRegret(String id, int regretLevel) async {
+    updatedRegretTransactionId = id;
+    updatedRegretLevel = regretLevel;
+  }
+}
+
+class _StaticConscienceJourneyService extends ConscienceJourneyService {
+  _StaticConscienceJourneyService([this.summary = _testJourneySummary])
+      : super(Dio());
+
+  final ConscienceJourneySummary summary;
+
+  @override
+  Future<ConscienceJourneySummary> fetchJourney() async => summary;
 }
 
 class _PendingConscienceJourneyService extends ConscienceJourneyService {
@@ -109,6 +126,43 @@ class _PendingConscienceJourneyService extends ConscienceJourneyService {
   @override
   Future<ConscienceJourneySummary> fetchJourney() =>
       Completer<ConscienceJourneySummary>().future;
+}
+
+class _StaticConscienceJourneyNotifier extends ConscienceJourneyNotifier {
+  _StaticConscienceJourneyNotifier(this.summary);
+
+  final ConscienceJourneySummary summary;
+
+  @override
+  Future<ConscienceJourneySummary> build() async => summary;
+}
+
+class _RecordingConscienceJourneyNotifier extends ConscienceJourneyNotifier {
+  _RecordingConscienceJourneyNotifier(this.summary);
+
+  final ConscienceJourneySummary summary;
+  String? recordedEventType;
+  String? recordedSourceId;
+
+  @override
+  Future<ConscienceJourneySummary> build() async => summary;
+
+  @override
+  Future<ConscienceJourneyUpdate> recordEvent({
+    required String eventType,
+    required String sourceId,
+  }) async {
+    recordedEventType = eventType;
+    recordedSourceId = sourceId;
+    return ConscienceJourneyUpdate(
+      summary: summary,
+      xpAwarded: 0,
+      wasDuplicate: false,
+      leveledUp: false,
+      completedQuestKeys: const [],
+      unlockedBadgeKeys: const [],
+    );
+  }
 }
 
 class _LocalAlertsTestNotifier extends LocalAlertsNotifier {
@@ -177,6 +231,35 @@ Widget _buildApp(
         ),
       ),
       GoRoute(
+        path: '/journey',
+        builder: (context, state) => const Scaffold(
+          body: Center(child: Text('Journey placeholder')),
+        ),
+      ),
+      GoRoute(
+        path: '/assistant',
+        builder: (context, state) => const Scaffold(
+          body: Center(child: Text('Assistant placeholder')),
+        ),
+      ),
+      GoRoute(
+        path: '/transactions',
+        builder: (context, state) => const Scaffold(
+          body: Center(child: Text('Transactions placeholder')),
+        ),
+      ),
+      GoRoute(
+        path: '/transactions/add',
+        builder: (context, state) {
+          final extra = state.extra as Map<String, String?>?;
+          return Scaffold(
+            body: Center(
+              child: Text('add:${state.uri.path}:${extra?['scope']}'),
+            ),
+          );
+        },
+      ),
+      GoRoute(
         path: '/transactions/:id',
         builder: (context, state) => Scaffold(
           body: Center(
@@ -193,6 +276,7 @@ Widget _buildApp(
       overrides: [
         conscienceJourneyServiceProvider
             .overrideWithValue(journeyService ?? _testJourneyService),
+        familySpaceProvider.overrideWith((ref) async => null),
       ],
       child: MaterialApp.router(routerConfig: router),
     ),
@@ -205,6 +289,7 @@ Widget _buildNestedShellApp(ProviderContainer container) {
     child: ProviderScope(
       overrides: [
         conscienceJourneyServiceProvider.overrideWithValue(_testJourneyService),
+        familySpaceProvider.overrideWith((ref) async => null),
       ],
       child: MaterialApp(
         home: Scaffold(
@@ -221,6 +306,13 @@ Widget _buildNestedShellApp(ProviderContainer container) {
       ),
     ),
   );
+}
+
+void _useTallDashboardViewport(WidgetTester tester) {
+  tester.view.devicePixelRatio = 1;
+  tester.view.physicalSize = const Size(900, 2600);
+  addTearDown(tester.view.resetPhysicalSize);
+  addTearDown(tester.view.resetDevicePixelRatio);
 }
 
 void main() {
@@ -255,6 +347,8 @@ void main() {
 
   testWidgets('dashboard recent transactions use shared icon-only status tags',
       (tester) async {
+    _useTallDashboardViewport(tester);
+
     final container = ProviderContainer(
       overrides: [
         sharedPreferencesProvider.overrideWithValue(prefs),
@@ -300,7 +394,12 @@ void main() {
     );
     addTearDown(container.dispose);
 
-    await tester.pumpWidget(_buildApp(container));
+    await tester.pumpWidget(
+      _buildApp(
+        container,
+        journeyService: _PendingConscienceJourneyService(),
+      ),
+    );
     await tester.pumpAndSettle();
 
     for (var i = 0; i < 8 && find.text('Starbucks').evaluate().isEmpty; i++) {
@@ -310,6 +409,8 @@ void main() {
 
     expect(find.text('Starbucks'), findsOneWidget);
     expect(find.byType(RecentTransactionTile), findsAtLeastNWidgets(5));
+    expect(find.byKey(const ValueKey('dashboard-recent-transaction-card')),
+        findsAtLeastNWidgets(5));
     expect(find.text('Family Dining'), findsNothing);
     expect(find.text('Dining'), findsWidgets);
     expect(
@@ -342,6 +443,91 @@ void main() {
     );
 
     expect(find.text('Corner Bakery'), findsOneWidget);
+  });
+
+  testWidgets('dashboard reflection prompt advances the reflect quest',
+      (tester) async {
+    _useTallDashboardViewport(tester);
+
+    final transactions = [
+      Transaction(
+        id: 'tx-reflect',
+        amount: 200,
+        currencyCode: 'PHP',
+        category: 'Dining',
+        description: 'Starbucks',
+        type: 'expense',
+        date: DateTime(2026, 5, 18),
+      ),
+    ];
+    final transactionService = _RecordingTransactionService(transactions);
+    const journey = ConscienceJourneySummary(
+      xpTotal: 0,
+      currentLevel: ConscienceLevel(
+        key: 'awakening',
+        title: 'Awakening',
+        requiredXp: 0,
+      ),
+      nextLevel: ConscienceLevel(
+        key: 'impulse_spotter',
+        title: 'Impulse Spotter',
+        requiredXp: 120,
+      ),
+      xpIntoLevel: 0,
+      xpToNextLevel: 120,
+      momentumDays: 0,
+      bestMomentumDays: 0,
+      weeklyQuests: [
+        ConscienceQuest(
+          key: 'reflect_three_purchases',
+          title: 'Reflect on 3 purchases',
+          description: 'Turn recent decisions into useful signal.',
+          progress: 0,
+          target: 3,
+          xpReward: 40,
+          isCompleted: false,
+        ),
+      ],
+      badges: [],
+    );
+    final journeyNotifier = _RecordingConscienceJourneyNotifier(journey);
+    final container = ProviderContainer(
+      overrides: [
+        sharedPreferencesProvider.overrideWithValue(prefs),
+        budgetServiceProvider.overrideWithValue(_StaticBudgetService(const [])),
+        transactionServiceProvider.overrideWithValue(transactionService),
+        transactionListProvider.overrideWith(
+          (ref) => TransactionListNotifier.fromList(transactions),
+        ),
+        currentUserProvider.overrideWith((ref) async => _testUser),
+        subscriptionProvider.overrideWith((ref) async => _testSubscription),
+        behavioralInsightsProvider.overrideWith((ref) async => null),
+        insightsSummaryProvider.overrideWith((ref) async => null),
+        insightsCategoriesProvider.overrideWith((ref) async => const []),
+        insightsMerchantsProvider.overrideWith((ref) async => const []),
+        conscienceJourneyProvider.overrideWith(() => journeyNotifier),
+        localAlertsProvider.overrideWith(
+          (ref) => _LocalAlertsTestNotifier(const []),
+        ),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    await tester.pumpWidget(_buildApp(container));
+    await tester.pumpAndSettle();
+
+    await tester.drag(
+      find.byKey(const PageStorageKey('dashboard-shell-scroll')),
+      const Offset(0, -500),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Worth It'));
+    await tester.pumpAndSettle();
+
+    expect(transactionService.updatedRegretTransactionId, 'tx-reflect');
+    expect(transactionService.updatedRegretLevel, 0);
+    expect(journeyNotifier.recordedEventType, 'reflection_completed');
+    expect(journeyNotifier.recordedSourceId, 'tx-reflect');
   });
 
   testWidgets(
@@ -411,7 +597,12 @@ void main() {
     );
     addTearDown(container.dispose);
 
-    await tester.pumpWidget(_buildApp(container));
+    await tester.pumpWidget(
+      _buildApp(
+        container,
+        journeyService: _PendingConscienceJourneyService(),
+      ),
+    );
     await tester.pumpAndSettle();
 
     final headerFinder =
@@ -661,6 +852,8 @@ void main() {
 
   testWidgets('dashboard uses editorial hero and grouped recent activity',
       (tester) async {
+    _useTallDashboardViewport(tester);
+
     final transactions = List.generate(
       3,
       (index) => Transaction(
@@ -676,6 +869,7 @@ void main() {
 
     final container = ProviderContainer(
       overrides: [
+        _authenticatedOverride,
         sharedPreferencesProvider.overrideWithValue(prefs),
         budgetServiceProvider.overrideWithValue(_StaticBudgetService(const [])),
         transactionServiceProvider
@@ -699,10 +893,23 @@ void main() {
       find.byKey(const ValueKey('dashboard-editorial-hero')),
       findsOneWidget,
     );
+    expect(find.text('Today with Conscia'), findsNothing);
+    expect(find.text('This Week'), findsOneWidget);
+    expect(find.text('Insights'), findsOneWidget);
+    expect(find.text('Budgets'), findsOneWidget);
+    expect(find.text('A quick pulse check on your monthly guardrails.'),
+        findsOneWidget);
+    expect(find.text('Recent transactions'), findsOneWidget);
+    expect(find.text('The latest money moments feeding your Journey.'),
+        findsOneWidget);
+    expect(find.byKey(const ValueKey('dashboard-journey-link')), findsNothing);
   });
 
-  testWidgets('dashboard hero distinguishes shortcut cards from static pills',
+  testWidgets(
+      'dashboard renders journey-led home sections instead of shortcuts',
       (tester) async {
+    _useTallDashboardViewport(tester);
+
     final container = ProviderContainer(
       overrides: [
         sharedPreferencesProvider.overrideWithValue(prefs),
@@ -724,24 +931,22 @@ void main() {
     await tester.pumpWidget(_buildApp(container));
     await tester.pumpAndSettle();
 
-    for (final id in [
-      'dashboard-journey-link',
-      'dashboard-insights-link',
-    ]) {
-      final material = tester.widget<Material>(
-        find.descendant(
-          of: find.byKey(ValueKey(id)),
-          matching: find.byType(Material),
-        ),
-      );
-      expect(material.color, isNot(Colors.transparent));
-      expect(material.shape, isA<RoundedRectangleBorder>());
-    }
-
+    expect(
+      find.byKey(const ValueKey('dashboard-editorial-hero')),
+      findsOneWidget,
+    );
+    expect(find.text('Today with Conscia'), findsNothing);
+    expect(find.text('This Week'), findsOneWidget);
+    expect(find.text('Insights'), findsOneWidget);
+    expect(find.text('Budgets'), findsOneWidget);
+    expect(find.text('A quick pulse check on your monthly guardrails.'),
+        findsOneWidget);
+    expect(find.text('Recent transactions'), findsOneWidget);
+    expect(find.text('The latest money moments feeding your Journey.'),
+        findsOneWidget);
+    expect(find.byKey(const ValueKey('dashboard-journey-link')), findsNothing);
+    expect(find.byKey(const ValueKey('dashboard-insights-link')), findsNothing);
     expect(find.byKey(const ValueKey('dashboard-add-link')), findsNothing);
-    expect(find.text('Add'), findsNothing);
-    expect(find.text('Momentum and quests'), findsOneWidget);
-    expect(find.text('Patterns and signals'), findsOneWidget);
     expect(find.byKey(const ValueKey('hero-shortcut-card-6-day streak')),
         findsNothing);
     expect(find.byKey(const ValueKey('hero-shortcut-card-0/0 quests')),
@@ -750,6 +955,8 @@ void main() {
 
   testWidgets('dashboard shows editorial hero before utility sections',
       (tester) async {
+    _useTallDashboardViewport(tester);
+
     final container = ProviderContainer(
       overrides: [
         sharedPreferencesProvider.overrideWithValue(prefs),
@@ -794,16 +1001,19 @@ void main() {
     await tester.pumpWidget(_buildApp(container));
     await tester.pumpAndSettle();
 
-    final hero = find.byKey(const ValueKey('dashboard-editorial-hero'));
-    final budgets = find.text('BUDGETS');
+    final journeySection = find.text('This Week');
+    final budgets = find.text('Budgets');
 
-    expect(hero, findsOneWidget);
+    expect(journeySection, findsOneWidget);
     expect(budgets, findsOneWidget);
-    expect(tester.getTopLeft(hero).dy, lessThan(tester.getTopLeft(budgets).dy));
+    expect(tester.getTopLeft(journeySection).dy,
+        lessThan(tester.getTopLeft(budgets).dy));
   });
 
   testWidgets('dashboard summarizes budgets by scope without detailed rows',
       (tester) async {
+    _useTallDashboardViewport(tester);
+
     final container = ProviderContainer(
       overrides: [
         _authenticatedOverride,
@@ -817,6 +1027,15 @@ void main() {
               spent: 3720,
               currencyCode: 'PHP',
               percentage: 0.93,
+              isOverBudget: false,
+            ),
+            Budget(
+              id: 'budget-personal-bills',
+              category: 'Bills',
+              monthlyLimit: 8000,
+              spent: 0,
+              currencyCode: 'PHP',
+              percentage: 0,
               isOverBudget: false,
             ),
             Budget(
@@ -851,24 +1070,31 @@ void main() {
 
     expect(
         find.byKey(const ValueKey('dashboard-budget-summary')), findsOneWidget);
+    expect(find.byKey(const ValueKey('dashboard-budget-editorial-card')),
+        findsOneWidget);
     expect(
         find.byKey(const ValueKey('dashboard-budget-donut')), findsOneWidget);
     expect(find.text('PERSONAL BUDGET MIX'), findsNothing);
     expect(find.text('FAMILY BUDGET MIX'), findsNothing);
     expect(find.text('₱3,720.00 used'), findsOneWidget);
-    expect(find.text('of ₱4,000.00 monthly cap'), findsOneWidget);
+    expect(find.text('of ₱12,000.00 monthly cap'), findsOneWidget);
+    expect(find.text('A calmer view of what your money is doing.'),
+        findsOneWidget);
     expect(find.text('Dining 100%'), findsOneWidget);
+    expect(find.text('Bills 0%'), findsNothing);
+    expect(find.byKey(const ValueKey('dashboard-budget-manage-row')),
+        findsOneWidget);
+    expect(
+        find.byKey(const ValueKey('budget-mix-chip-0-active')), findsNothing);
     expect(find.text('₱3,720.00 / ₱4,000.00'), findsNothing);
     expect(find.text('Family budget'), findsNothing);
-    final personalToggleBottom = tester.getBottomLeft(find.text('Personal')).dy;
-    final donutBottom = tester
-        .getBottomLeft(find.byKey(const ValueKey('dashboard-budget-donut')))
-        .dy;
-    expect(donutBottom, greaterThanOrEqualTo(personalToggleBottom - 2));
+    final cardRect = tester
+        .getRect(find.byKey(const ValueKey('dashboard-budget-editorial-card')));
     final donutLaneRect = tester
         .getRect(find.byKey(const ValueKey('dashboard-budget-donut-lane')));
     final donutRect =
         tester.getRect(find.byKey(const ValueKey('dashboard-budget-donut')));
+    expect(cardRect.contains(donutRect.center), isTrue);
     expect(donutRect.center.dx, closeTo(donutLaneRect.center.dx, 1));
     final summaryRect =
         tester.getRect(find.byKey(const ValueKey('dashboard-budget-top-row')));
@@ -877,6 +1103,12 @@ void main() {
       closeTo(summaryRect.width / 2, 1),
     );
 
+    await tester.tapAt(donutRect.centerRight - const Offset(8, 0));
+    await tester.pump();
+
+    expect(
+        find.byKey(const ValueKey('budget-mix-chip-0-active')), findsOneWidget);
+
     await tester.tap(find.text('Family'));
     await tester.pumpAndSettle();
 
@@ -884,7 +1116,7 @@ void main() {
     expect(find.text('of ₱6,500.00 monthly cap'), findsOneWidget);
   });
 
-  testWidgets('dashboard hero aggregates monthly spend in user currency',
+  testWidgets('dashboard hero uses storybook typography and clean momentum',
       (tester) async {
     final user = UserProfile(
       id: _testUser.id,
@@ -907,6 +1139,36 @@ void main() {
         exchangeRateToBase: 56,
       ),
     ];
+    final journey = ConscienceJourneySummary(
+      xpTotal: 500,
+      currentLevel: const ConscienceLevel(
+        key: 'budget_guardian',
+        title: 'Budget Guardian',
+        requiredXp: 400,
+      ),
+      nextLevel: const ConscienceLevel(
+        key: 'pattern_keeper',
+        title: 'Pattern Keeper',
+        requiredXp: 700,
+      ),
+      xpIntoLevel: 100,
+      xpToNextLevel: 200,
+      momentumDays: 18,
+      bestMomentumDays: 20,
+      weeklyQuests: List.generate(
+        5,
+        (index) => ConscienceQuest(
+          key: 'quest-$index',
+          title: 'Quest $index',
+          description: 'Quest description $index.',
+          progress: 0,
+          target: 1,
+          xpReward: 10,
+          isCompleted: false,
+        ),
+      ),
+      badges: const [],
+    );
     final container = ProviderContainer(
       overrides: [
         sharedPreferencesProvider.overrideWithValue(prefs),
@@ -922,6 +1184,16 @@ void main() {
         insightsSummaryProvider.overrideWith((ref) async => null),
         insightsCategoriesProvider.overrideWith((ref) async => const []),
         insightsMerchantsProvider.overrideWith((ref) async => const []),
+        dashboardInsightSummaryProvider.overrideWith(
+          (ref) async => const DashboardInsightSummary(
+            text:
+                'Shopping is carrying your strongest regret signal right now.',
+            tone: InsightFeedTone.caution,
+          ),
+        ),
+        conscienceJourneyProvider.overrideWith(
+          () => _StaticConscienceJourneyNotifier(journey),
+        ),
         localAlertsProvider.overrideWith(
           (ref) => _LocalAlertsTestNotifier(const []),
         ),
@@ -932,7 +1204,45 @@ void main() {
     await tester.pumpWidget(_buildApp(container));
     await tester.pumpAndSettle();
 
-    expect(find.text('₱5.600,00'), findsOneWidget);
+    expect(find.text('SPENT THIS MONTH'), findsNothing);
+    expect(find.text('₱5.600,00'), findsNothing);
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('dashboard-editorial-hero')),
+        matching: find.text(
+          'Shopping is carrying your strongest regret signal right now.',
+        ),
+      ),
+      findsNothing,
+    );
+    final title = tester.widget<Text>(
+      find.byKey(const ValueKey('dashboard-journey-hero-title')),
+    );
+    final subtitle = tester.widget<Text>(
+      find.byKey(const ValueKey('dashboard-journey-hero-subtitle')),
+    );
+    final momentumValue = tester.widget<Text>(
+      find.byKey(const ValueKey('dashboard-journey-momentum-value')),
+    );
+    final momentumDetail = tester.widget<Text>(
+      find.byKey(const ValueKey('dashboard-journey-momentum-detail')),
+    );
+
+    expect(momentumValue.data, '18 day streak');
+    expect(momentumDetail.data, '2 more days to strengthen your stride.');
+    expect(find.text('0/5 quests'), findsNothing);
+    expect(find.text('Budget Guardian'), findsNothing);
+    expect(find.byKey(const ValueKey('dashboard-journey-level-badge')),
+        findsNothing);
+    expect(find.byKey(const ValueKey('dashboard-journey-level-icon')),
+        findsNothing);
+    expect(find.byKey(const ValueKey('dashboard-journey-hero-mascots')),
+        findsNothing);
+    expect(find.byKey(const ValueKey('dashboard-journey-next-step-chevron')),
+        findsOneWidget);
+    expect(title.style?.fontFamily, contains('LibreBaskerville'));
+    expect(subtitle.style?.fontFamily, contains('Nunito'));
+    expect(momentumValue.style?.fontFamily, contains('Nunito'));
   });
 
   testWidgets('dashboard uses a personal welcome header', (tester) async {
@@ -1035,10 +1345,14 @@ void main() {
     final pendingSummary = Completer<DashboardInsightSummary?>();
     final container = ProviderContainer(
       overrides: [
+        _authenticatedOverride,
         sharedPreferencesProvider.overrideWithValue(prefs),
         budgetServiceProvider.overrideWithValue(_StaticBudgetService(const [])),
         transactionServiceProvider
             .overrideWithValue(_StaticTransactionService()),
+        currentUserProvider.overrideWith((ref) async => _testUser),
+        subscriptionProvider.overrideWith((ref) async => _testSubscription),
+        behavioralInsightsProvider.overrideWith((ref) async => null),
         dashboardInsightSummaryProvider.overrideWith(
           (ref) => pendingSummary.future,
         ),
@@ -1060,11 +1374,312 @@ void main() {
 
     expect(
         find.byKey(const ValueKey('dashboard-hero-skeleton')), findsOneWidget);
+    expect(find.text('Today with Conscia'), findsNothing);
+    expect(find.text('This Week'), findsNothing);
+    expect(find.text('Insights'), findsNothing);
     expect(find.byType(InsightSkeletonCard), findsNothing);
   });
 
-  testWidgets(
-      'dashboard summarizes budget trends when behavioral insights include trends',
+  testWidgets('dashboard next step CTA opens the outstanding quest destination',
+      (tester) async {
+    _useTallDashboardViewport(tester);
+
+    const journey = ConscienceJourneySummary(
+      xpTotal: 0,
+      currentLevel: ConscienceLevel(
+        key: 'awakening',
+        title: 'Awakening',
+        requiredXp: 0,
+      ),
+      nextLevel: ConscienceLevel(
+        key: 'impulse_spotter',
+        title: 'Impulse Spotter',
+        requiredXp: 120,
+      ),
+      xpIntoLevel: 0,
+      xpToNextLevel: 120,
+      momentumDays: 0,
+      bestMomentumDays: 0,
+      weeklyQuests: [
+        ConscienceQuest(
+          key: 'reflect_three_purchases',
+          title: 'Reflect on 3 purchases',
+          description: 'Turn recent decisions into useful signal.',
+          progress: 0,
+          target: 3,
+          xpReward: 40,
+          isCompleted: false,
+        ),
+      ],
+      badges: [],
+    );
+
+    final container = ProviderContainer(
+      overrides: [
+        sharedPreferencesProvider.overrideWithValue(prefs),
+        budgetServiceProvider.overrideWithValue(_StaticBudgetService(const [])),
+        transactionServiceProvider
+            .overrideWithValue(_StaticTransactionService()),
+        behavioralInsightsProvider.overrideWith((ref) async => null),
+        insightsSummaryProvider.overrideWith((ref) async => null),
+        insightsCategoriesProvider.overrideWith((ref) async => const []),
+        insightsMerchantsProvider.overrideWith((ref) async => const []),
+        conscienceJourneyProvider.overrideWith(
+          () => _StaticConscienceJourneyNotifier(journey),
+        ),
+        localAlertsProvider.overrideWith(
+          (ref) => _LocalAlertsTestNotifier(const []),
+        ),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    await tester.pumpWidget(_buildApp(container));
+    await tester.pumpAndSettle();
+
+    await tester.tap(
+      find.byKey(const ValueKey('dashboard-journey-next-step-button')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Transactions placeholder'), findsOneWidget);
+  });
+
+  testWidgets('dashboard weekly quest rail is not a section link',
+      (tester) async {
+    _useTallDashboardViewport(tester);
+
+    final container = ProviderContainer(
+      overrides: [
+        sharedPreferencesProvider.overrideWithValue(prefs),
+        budgetServiceProvider.overrideWithValue(_StaticBudgetService(const [])),
+        transactionServiceProvider
+            .overrideWithValue(_StaticTransactionService()),
+        behavioralInsightsProvider.overrideWith((ref) async => null),
+        insightsSummaryProvider.overrideWith((ref) async => null),
+        insightsCategoriesProvider.overrideWith((ref) async => const []),
+        insightsMerchantsProvider.overrideWith((ref) async => const []),
+        conscienceJourneyServiceProvider.overrideWithValue(_testJourneyService),
+        localAlertsProvider.overrideWith(
+          (ref) => _LocalAlertsTestNotifier(const []),
+        ),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    await tester.pumpWidget(_buildApp(container));
+    await tester.pumpAndSettle();
+
+    expect(
+        find.byKey(const ValueKey('journey-home-weekly-link')), findsNothing);
+    expect(find.text('Your weekly arc'), findsNothing);
+    expect(find.text('This Week'), findsOneWidget);
+  });
+
+  testWidgets('dashboard quest card opens the matching quest destination',
+      (tester) async {
+    _useTallDashboardViewport(tester);
+
+    const journey = ConscienceJourneySummary(
+      xpTotal: 0,
+      currentLevel: ConscienceLevel(
+        key: 'awakening',
+        title: 'Awakening',
+        requiredXp: 0,
+      ),
+      nextLevel: ConscienceLevel(
+        key: 'impulse_spotter',
+        title: 'Impulse Spotter',
+        requiredXp: 120,
+      ),
+      xpIntoLevel: 0,
+      xpToNextLevel: 120,
+      momentumDays: 0,
+      bestMomentumDays: 0,
+      weeklyQuests: [
+        ConscienceQuest(
+          key: 'review_regret_pattern',
+          title: 'Review 1 regret pattern',
+          description: 'Spot one repeat spending signal.',
+          progress: 0,
+          target: 1,
+          xpReward: 20,
+          isCompleted: false,
+        ),
+      ],
+      badges: [],
+    );
+    final container = ProviderContainer(
+      overrides: [
+        sharedPreferencesProvider.overrideWithValue(prefs),
+        budgetServiceProvider.overrideWithValue(_StaticBudgetService(const [])),
+        transactionServiceProvider
+            .overrideWithValue(_StaticTransactionService()),
+        behavioralInsightsProvider.overrideWith((ref) async => null),
+        insightsSummaryProvider.overrideWith((ref) async => null),
+        insightsCategoriesProvider.overrideWith((ref) async => const []),
+        insightsMerchantsProvider.overrideWith((ref) async => const []),
+        conscienceJourneyProvider.overrideWith(
+          () => _StaticConscienceJourneyNotifier(journey),
+        ),
+        localAlertsProvider.overrideWith(
+          (ref) => _LocalAlertsTestNotifier(const []),
+        ),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    await tester.pumpWidget(_buildApp(container));
+    await tester.pumpAndSettle();
+
+    await tester.drag(
+      find.byKey(const PageStorageKey('dashboard-shell-scroll')),
+      const Offset(0, -360),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('journey-home-quest-card')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Insights placeholder'), findsOneWidget);
+  });
+
+  testWidgets('dashboard add family expense quest opens add form directly',
+      (tester) async {
+    _useTallDashboardViewport(tester);
+
+    const journey = ConscienceJourneySummary(
+      xpTotal: 0,
+      currentLevel: ConscienceLevel(
+        key: 'awakening',
+        title: 'Awakening',
+        requiredXp: 0,
+      ),
+      nextLevel: ConscienceLevel(
+        key: 'impulse_spotter',
+        title: 'Impulse Spotter',
+        requiredXp: 120,
+      ),
+      xpIntoLevel: 0,
+      xpToNextLevel: 120,
+      momentumDays: 0,
+      bestMomentumDays: 0,
+      weeklyQuests: [
+        ConscienceQuest(
+          key: 'add_family_expense',
+          title: 'Add a family expense',
+          description: 'Track one shared purchase.',
+          progress: 0,
+          target: 1,
+          xpReward: 20,
+          isCompleted: false,
+        ),
+      ],
+      badges: [],
+    );
+    final container = ProviderContainer(
+      overrides: [
+        sharedPreferencesProvider.overrideWithValue(prefs),
+        budgetServiceProvider.overrideWithValue(_StaticBudgetService(const [])),
+        transactionServiceProvider
+            .overrideWithValue(_StaticTransactionService()),
+        behavioralInsightsProvider.overrideWith((ref) async => null),
+        insightsSummaryProvider.overrideWith((ref) async => null),
+        insightsCategoriesProvider.overrideWith((ref) async => const []),
+        insightsMerchantsProvider.overrideWith((ref) async => const []),
+        conscienceJourneyProvider.overrideWith(
+          () => _StaticConscienceJourneyNotifier(journey),
+        ),
+        localAlertsProvider.overrideWith(
+          (ref) => _LocalAlertsTestNotifier(const []),
+        ),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    await tester.pumpWidget(_buildApp(container));
+    await tester.pumpAndSettle();
+
+    await tester.drag(
+      find.byKey(const PageStorageKey('dashboard-shell-scroll')),
+      const Offset(0, -360),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('journey-home-quest-card')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('add:/transactions/add:family'), findsOneWidget);
+    expect(find.text('detail:/transactions/add'), findsNothing);
+  });
+
+  testWidgets('dashboard insights section renders real summary and graph',
+      (tester) async {
+    _useTallDashboardViewport(tester);
+
+    final container = ProviderContainer(
+      overrides: [
+        sharedPreferencesProvider.overrideWithValue(prefs),
+        budgetServiceProvider.overrideWithValue(_StaticBudgetService(const [])),
+        transactionServiceProvider
+            .overrideWithValue(_StaticTransactionService()),
+        behavioralInsightsProvider
+            .overrideWith((ref) async => const BehavioralInsights(
+                  mood: FinancialMood.balanced,
+                  worthItPercentage: 72,
+                  worthItCount: 9,
+                  previousMonthWorthItCount: 7,
+                  impulseeTrends: [],
+                  budgetTrends: [
+                    BudgetTrendInsight(
+                      category: 'Dining',
+                      hasBudget: true,
+                      currencyCode: 'PHP',
+                      months: [42, 54, 68, 82],
+                      currentMonthSpend: 8200,
+                      currentMonthPercentUsed: 82,
+                      insightLabel: 'Dining is trending higher.',
+                    ),
+                  ],
+                )),
+        insightsSummaryProvider.overrideWith((ref) async => null),
+        insightsCategoriesProvider.overrideWith((ref) async => const []),
+        insightsMerchantsProvider.overrideWith((ref) async => const []),
+        dashboardInsightSummaryProvider.overrideWith(
+          (ref) async => const DashboardInsightSummary(
+            text: 'Dining is above your recent 3-month pace.',
+            tone: InsightFeedTone.caution,
+          ),
+        ),
+        conscienceJourneyServiceProvider.overrideWithValue(_testJourneyService),
+        localAlertsProvider.overrideWith(
+          (ref) => _LocalAlertsTestNotifier(const []),
+        ),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    await tester.pumpWidget(_buildApp(container));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Insights'), findsOneWidget);
+    expect(
+        find.byKey(const ValueKey('journey-home-patterns-link')), findsNothing);
+    expect(find.text('Signals from your week'), findsNothing);
+    expect(
+      find.text('Dining is above your recent 3-month pace.'),
+      findsOneWidget,
+    );
+    expect(find.byKey(const ValueKey('journey-home-insight-graph')),
+        findsOneWidget);
+
+    await tester.tap(find.byKey(const ValueKey('journey-home-insight-card')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Insights placeholder'), findsOneWidget);
+  });
+
+  testWidgets('dashboard keeps budget trend summaries out of the Journey hero',
       (tester) async {
     final container = ProviderContainer(
       overrides: [
@@ -1116,15 +1731,18 @@ void main() {
     expect(
         find.byKey(const ValueKey('dashboard-editorial-hero')), findsOneWidget);
     expect(
-      find.text('Dining is above your recent 3-month pace.'),
-      findsOneWidget,
+      find.descendant(
+        of: find.byKey(const ValueKey('dashboard-editorial-hero')),
+        matching: find.text('Dining is above your recent 3-month pace.'),
+      ),
+      findsNothing,
     );
     expect(find.text('Subscriptions has enough activity for a budget'),
         findsNothing);
     expect(find.text('Budget trends'), findsNothing);
   });
 
-  testWidgets('dashboard shows an inferred insight summary in the hero card',
+  testWidgets('dashboard keeps inferred insight summaries out of the hero card',
       (tester) async {
     final container = ProviderContainer(
       overrides: [
@@ -1165,11 +1783,14 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(
-      find.text('Dining is above your recent 3-month pace.'),
-      findsOneWidget,
-    );
-    expect(
         find.byKey(const ValueKey('dashboard-editorial-hero')), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('dashboard-editorial-hero')),
+        matching: find.text('Dining is above your recent 3-month pace.'),
+      ),
+      findsNothing,
+    );
     expect(find.text('Your financial mood is confident'), findsNothing);
     expect(find.text('More insights inside'), findsNothing);
     expect(find.byTooltip('Dismiss insight'), findsNothing);

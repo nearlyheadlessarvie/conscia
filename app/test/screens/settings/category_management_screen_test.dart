@@ -5,6 +5,7 @@ import 'package:conscia_app/screens/settings/category_management_screen.dart';
 import 'package:conscia_app/services/subscription_service.dart';
 import 'package:conscia_app/widgets/feed_card.dart';
 import 'package:conscia_app/widgets/floating_label_text_field.dart';
+import 'package:conscia_app/widgets/conscia_glyph.dart';
 import 'package:conscia_app/core/network/api_exception.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -283,8 +284,14 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    final icon = tester.widget<Icon>(find.byIcon(Icons.restaurant_rounded));
+    final glyph = tester.widget<ConsciaGlyph>(
+      find.descendant(
+        of: find.byType(CategoryManagementScreen),
+        matching: find.byType(ConsciaGlyph),
+      ),
+    );
 
-    expect(icon.color, const Color(0xFF43A047));
+    expect(glyph.kind, ConsciaGlyphKind.dining);
+    expect(glyph.color, const Color(0xFF43A047));
   });
 }

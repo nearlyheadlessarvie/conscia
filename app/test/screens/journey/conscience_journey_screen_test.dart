@@ -1,6 +1,7 @@
 import 'package:conscia_app/models/conscience_journey.dart';
 import 'package:conscia_app/providers/auth_provider.dart';
 import 'package:conscia_app/providers/conscience_journey_provider.dart';
+import 'package:conscia_app/providers/family_space_provider.dart';
 import 'package:conscia_app/screens/journey/conscience_journey_screen.dart';
 import 'package:conscia_app/services/auth_service.dart';
 import 'package:conscia_app/services/conscience_journey_service.dart';
@@ -24,13 +25,13 @@ void main() {
 
     expect(find.text('Budget Guardian'), findsOneWidget);
     expect(find.text('85 / 600 XP to Conscience Captain'), findsOneWidget);
-    expect(find.text("THIS WEEK'S QUESTS"), findsOneWidget);
+    expect(find.text("This week's quests"), findsOneWidget);
     expect(
       find.text('Habits to focus on this week. They reset every Sunday.'),
       findsOneWidget,
     );
     expect(find.text('Reflect on 3 purchases'), findsOneWidget);
-    expect(find.text('ACHIEVEMENTS'), findsOneWidget);
+    expect(find.text('Achievements'), findsOneWidget);
     expect(
       find.text('Badges earned by sticking to better money habits.'),
       findsOneWidget,
@@ -55,11 +56,13 @@ void main() {
           ),
           conscienceJourneyServiceProvider
               .overrideWithValue(_StaticConscienceJourneyService()),
+          familySpaceProvider.overrideWith((ref) async => null),
         ],
         child: const MaterialApp(home: ConscienceJourneyScreen()),
       ),
     );
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
 
     expect(find.byKey(const ValueKey('journey-sticky-header')), findsOneWidget);
     expect(find.text('Journey'), findsOneWidget);

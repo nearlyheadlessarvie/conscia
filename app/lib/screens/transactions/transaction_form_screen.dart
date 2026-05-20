@@ -1,14 +1,19 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/constants/app_icons.dart';
+import '../../core/constants/conscience_journey.dart';
 import '../../core/errors/app_error.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/utils/localized_date_format.dart';
 import '../../core/utils/localized_number_input.dart';
 import '../../providers/alert_provider.dart';
+import '../../providers/auth_provider.dart';
 import '../../providers/budget_providers.dart';
 import '../../providers/category_recents_provider.dart';
+import '../../providers/conscience_journey_provider.dart';
 import '../../providers/exchange_rate_provider.dart';
 import '../../providers/family_space_provider.dart';
 import '../../providers/location_assistance_provider.dart';
@@ -35,6 +40,7 @@ class TransactionFormScreen extends StatefulWidget {
   final String? initialCurrencyCode;
   final String? initialCategory;
   final String? initialCounterparty;
+  final String? initialScope;
 
   const TransactionFormScreen({
     super.key,
@@ -43,11 +49,11 @@ class TransactionFormScreen extends StatefulWidget {
     this.initialCurrencyCode,
     this.initialCategory,
     this.initialCounterparty,
+    this.initialScope,
   });
 
   @override
-  State<TransactionFormScreen> createState() =>
-      _TransactionFormScreenState();
+  State<TransactionFormScreen> createState() => _TransactionFormScreenState();
 }
 
 class _TransactionFormScreenState extends State<TransactionFormScreen> {
@@ -70,6 +76,7 @@ class _TransactionFormScreenState extends State<TransactionFormScreen> {
       initialCurrencyCode: widget.initialCurrencyCode,
       initialCategory: widget.initialCategory,
       initialCounterparty: widget.initialCounterparty,
+      initialScope: widget.initialScope,
     );
     if (!mounted) return;
 
@@ -94,6 +101,7 @@ class TransactionFormSheet extends ConsumerStatefulWidget {
   final String? initialCurrencyCode;
   final String? initialCategory;
   final String? initialCounterparty;
+  final String? initialScope;
   final ScrollController? scrollController;
 
   const TransactionFormSheet({
@@ -103,6 +111,7 @@ class TransactionFormSheet extends ConsumerStatefulWidget {
     this.initialCurrencyCode,
     this.initialCategory,
     this.initialCounterparty,
+    this.initialScope,
     this.scrollController,
   });
 
@@ -113,6 +122,7 @@ class TransactionFormSheet extends ConsumerStatefulWidget {
     String? initialCurrencyCode,
     String? initialCategory,
     String? initialCounterparty,
+    String? initialScope,
   }) {
     return showModalBottomSheet<Transaction>(
       context: context,
@@ -130,6 +140,7 @@ class TransactionFormSheet extends ConsumerStatefulWidget {
           initialCurrencyCode: initialCurrencyCode,
           initialCategory: initialCategory,
           initialCounterparty: initialCounterparty,
+          initialScope: initialScope,
           scrollController: controller,
         ),
       ),
@@ -197,6 +208,10 @@ class _TransactionFormSheetState extends ConsumerState<TransactionFormSheet> {
     if (widget.initialCounterparty case final counterparty?
         when counterparty.trim().isNotEmpty) {
       _counterpartyController.text = counterparty;
+    }
+    if (widget.initialScope case final scope?
+        when scope == 'personal' || scope == 'family') {
+      _scope = scope;
     }
   }
 
@@ -348,6 +363,12 @@ class _TransactionFormSheetState extends ConsumerState<TransactionFormSheet> {
       if (didUpdateBudget && ref.read(budgetReconciliationEnabledProvider)) {
         budgetNotifier.scheduleRefreshInBackground();
       }
+      if (!_isEditing && savedTransaction.isFamily) {
+        _recordJourneyEvent(
+          eventType: ConscienceJourneyEvents.familyExpenseAdded,
+          sourceId: savedTransaction.id,
+        );
+      }
 
       if (!mounted) return;
       _originalTransaction = savedTransaction;
@@ -381,6 +402,24 @@ class _TransactionFormSheetState extends ConsumerState<TransactionFormSheet> {
         SnackBar(content: Text(error.userMessage)),
       );
     }
+  }
+
+  void _recordJourneyEvent({
+    required String eventType,
+    required String sourceId,
+  }) {
+    if (!ref.read(authProvider).isAuthenticated) return;
+    unawaited(
+      () async {
+        try {
+          await ref
+              .read(conscienceJourneyProvider.notifier)
+              .recordEvent(eventType: eventType, sourceId: sourceId);
+        } catch (_) {
+          // Transaction saves should not be blocked by Journey progress sync.
+        }
+      }(),
+    );
   }
 
   Future<void> _pickDate() async {

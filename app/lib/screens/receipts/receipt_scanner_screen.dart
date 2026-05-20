@@ -11,6 +11,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_layout.dart';
 import '../../providers/subscription_provider.dart';
 import '../../widgets/conscia_app_bar.dart';
+import '../../widgets/editorial_hero_chip.dart';
 import '../../widgets/hero_screen_scaffold.dart';
 import '../../widgets/screen_section.dart';
 import 'widgets/premium_gate.dart';
@@ -269,39 +270,12 @@ class _ReceiptScanHero extends StatelessWidget {
               spacing: 8,
               runSpacing: 8,
               children: [
-                _ReceiptHeroChip(label: 'Merchant'),
-                _ReceiptHeroChip(label: 'Total'),
-                _ReceiptHeroChip(label: 'Category'),
+                EditorialHeroChip(label: 'Merchant'),
+                EditorialHeroChip(label: 'Total'),
+                EditorialHeroChip(label: 'Category'),
               ],
             ),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-class _ReceiptHeroChip extends StatelessWidget {
-  const _ReceiptHeroChip({required this.label});
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).appColors;
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.82),
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 8),
-        child: Text(
-          label,
-          style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                color: colors.deepNavy,
-                fontWeight: FontWeight.w800,
-              ),
         ),
       ),
     );

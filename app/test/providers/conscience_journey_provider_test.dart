@@ -1,8 +1,10 @@
 import 'package:conscia_app/models/conscience_journey.dart';
+import 'package:conscia_app/models/family_space.dart';
 import 'package:conscia_app/providers/alert_provider.dart';
 import 'package:conscia_app/providers/auth_provider.dart';
 import 'package:conscia_app/providers/budget_providers.dart';
 import 'package:conscia_app/providers/conscience_journey_provider.dart';
+import 'package:conscia_app/providers/family_space_provider.dart';
 import 'package:conscia_app/services/auth_service.dart';
 import 'package:conscia_app/services/budget_service.dart';
 import 'package:conscia_app/services/conscience_journey_service.dart';
@@ -17,6 +19,7 @@ void main() {
     final container = ProviderContainer(
       overrides: [
         _authenticatedAuthOverride(),
+        familySpaceProvider.overrideWith((ref) async => null),
         conscienceJourneyServiceProvider.overrideWithValue(service),
       ],
     );
@@ -40,6 +43,7 @@ void main() {
     final container = ProviderContainer(
       overrides: [
         _authenticatedAuthOverride(),
+        familySpaceProvider.overrideWith((ref) async => null),
         conscienceJourneyServiceProvider.overrideWithValue(service),
         budgetServiceProvider.overrideWithValue(_StaticBudgetService()),
         alertsProvider.overrideWith((ref) async => const []),
@@ -56,7 +60,22 @@ void main() {
     expect(alerts.map((alert) => alert.type), contains('journey_level_up'));
     expect(alerts.map((alert) => alert.type), contains('journey_badge'));
     expect(alerts.map((alert) => alert.type), contains('journey_quest'));
-    expect(alerts.first.actionRoute, '/journey');
+
+    final journeyAlertTypes = {
+      'journey_level_up',
+      'journey_badge',
+      'journey_quest',
+    };
+    final journeyAlerts = alerts
+        .where((alert) => journeyAlertTypes.contains(alert.type))
+        .toList();
+
+    expect(journeyAlerts, hasLength(3));
+    expect(journeyAlerts.map((alert) => alert.actionRoute), everyElement('/'));
+    expect(
+      journeyAlerts.map((alert) => alert.actionLabel),
+      everyElement('Open Journey Home'),
+    );
   });
 
   test('conscienceJourneyProvider refreshes when authenticated user changes',
@@ -71,6 +90,7 @@ void main() {
     final container = ProviderContainer(
       overrides: [
         authProvider.overrideWith((ref) => authNotifier),
+        familySpaceProvider.overrideWith((ref) async => null),
         conscienceJourneyServiceProvider.overrideWithValue(service),
       ],
     );
@@ -111,6 +131,59 @@ void main() {
       throwsA(isA<StateError>()),
     );
     expect(service.fetchCount, 0);
+  });
+
+  test('conscienceJourneyProvider hides family quests without a family space',
+      () async {
+    final service = _FamilyQuestConscienceJourneyService();
+    final container = ProviderContainer(
+      overrides: [
+        _authenticatedAuthOverride(),
+        familySpaceProvider.overrideWith((ref) async => null),
+        conscienceJourneyServiceProvider.overrideWithValue(service),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    final summary = await container.read(conscienceJourneyProvider.future);
+
+    expect(summary.weeklyQuests.map((quest) => quest.key), [
+      'reflect_three_purchases',
+      'check_before_purchase',
+      'review_regret_pattern',
+      'read_two_insights',
+      'create_budget_guardrail',
+    ]);
+  });
+
+  test('conscienceJourneyProvider caps family weekly quests at five', () async {
+    final service = _FamilyQuestConscienceJourneyService();
+    final container = ProviderContainer(
+      overrides: [
+        _authenticatedAuthOverride(),
+        familySpaceProvider.overrideWith(
+          (ref) async => const FamilySpace(
+            id: 'family-1',
+            name: 'Home',
+            currencyCode: 'PHP',
+            isReadOnly: false,
+            role: 'Owner',
+          ),
+        ),
+        conscienceJourneyServiceProvider.overrideWithValue(service),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    final summary = await container.read(conscienceJourneyProvider.future);
+
+    expect(summary.weeklyQuests.map((quest) => quest.key), [
+      'reflect_three_purchases',
+      'check_before_purchase',
+      'review_regret_pattern',
+      'send_family_invite',
+      'add_family_expense',
+    ]);
   });
 }
 
@@ -191,6 +264,79 @@ class _UserScopedConscienceJourneyService extends ConscienceJourneyService {
   }
 }
 
+class _FamilyQuestConscienceJourneyService extends ConscienceJourneyService {
+  _FamilyQuestConscienceJourneyService() : super(Dio());
+
+  @override
+  Future<ConscienceJourneySummary> fetchJourney() async => _summaryWithQuests(
+        const [
+          ConscienceQuest(
+            key: 'reflect_three_purchases',
+            title: 'Reflect on 3 purchases',
+            description: 'Turn recent decisions into useful signal.',
+            progress: 0,
+            target: 3,
+            xpReward: 15,
+            isCompleted: false,
+          ),
+          ConscienceQuest(
+            key: 'check_before_purchase',
+            title: 'Check before 1 purchase',
+            description: 'Pause with Conscia before spending.',
+            progress: 0,
+            target: 1,
+            xpReward: 10,
+            isCompleted: false,
+          ),
+          ConscienceQuest(
+            key: 'review_regret_pattern',
+            title: 'Review 1 regret pattern',
+            description: 'Spot one repeat spending signal.',
+            progress: 0,
+            target: 1,
+            xpReward: 15,
+            isCompleted: false,
+          ),
+          ConscienceQuest(
+            key: 'read_two_insights',
+            title: 'Read 2 insights',
+            description: 'Open signals that explain your recent patterns.',
+            progress: 0,
+            target: 2,
+            xpReward: 10,
+            isCompleted: false,
+          ),
+          ConscienceQuest(
+            key: 'create_budget_guardrail',
+            title: 'Create 1 budget guardrail',
+            description: 'Turn one nudge into a monthly cap.',
+            progress: 0,
+            target: 1,
+            xpReward: 15,
+            isCompleted: false,
+          ),
+          ConscienceQuest(
+            key: 'send_family_invite',
+            title: 'Invite 1 family member',
+            description: 'Start planning with someone in your household.',
+            progress: 0,
+            target: 1,
+            xpReward: 20,
+            isCompleted: false,
+          ),
+          ConscienceQuest(
+            key: 'add_family_expense',
+            title: 'Add 1 family expense',
+            description: 'Keep shared spending visible to the household.',
+            progress: 0,
+            target: 1,
+            xpReward: 20,
+            isCompleted: false,
+          ),
+        ],
+      );
+}
+
 class _StaticBudgetService extends BudgetService {
   _StaticBudgetService() : super(Dio());
 
@@ -243,4 +389,25 @@ ConscienceJourneySummary _summary(int xp) => ConscienceJourneySummary(
           unlockedAt: DateTime.utc(2026, 5, 11),
         ),
       ],
+    );
+
+ConscienceJourneySummary _summaryWithQuests(List<ConscienceQuest> quests) =>
+    ConscienceJourneySummary(
+      xpTotal: 100,
+      currentLevel: const ConscienceLevel(
+        key: 'awakening',
+        title: 'Awakening',
+        requiredXp: 0,
+      ),
+      nextLevel: const ConscienceLevel(
+        key: 'budget_guardian',
+        title: 'Budget Guardian',
+        requiredXp: 400,
+      ),
+      xpIntoLevel: 100,
+      xpToNextLevel: 300,
+      momentumDays: 1,
+      bestMomentumDays: 1,
+      weeklyQuests: quests,
+      badges: const [],
     );

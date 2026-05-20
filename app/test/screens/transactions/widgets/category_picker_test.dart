@@ -1,6 +1,7 @@
 import 'package:conscia_app/models/managed_category.dart';
 import 'package:conscia_app/providers/category_provider.dart';
 import 'package:conscia_app/screens/transactions/widgets/category_picker.dart';
+import 'package:conscia_app/widgets/conscia_glyph.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -153,9 +154,10 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    final icon = tester.widget<Icon>(find.byIcon(Icons.more_horiz_rounded));
+    final glyph = tester.widget<ConsciaGlyph>(find.byType(ConsciaGlyph));
 
-    expect(icon.color, const Color(0xFFEC407A));
+    expect(glyph.kind, ConsciaGlyphKind.more);
+    expect(glyph.color, const Color(0xFFEC407A));
   });
 
   testWidgets('default managed categories ignore stale stored blue metadata',
@@ -176,8 +178,9 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    final icon = tester.widget<Icon>(find.byIcon(Icons.restaurant_rounded));
+    final glyph = tester.widget<ConsciaGlyph>(find.byType(ConsciaGlyph));
 
-    expect(icon.color, const Color(0xFF43A047));
+    expect(glyph.kind, ConsciaGlyphKind.dining);
+    expect(glyph.color, const Color(0xFF43A047));
   });
 }

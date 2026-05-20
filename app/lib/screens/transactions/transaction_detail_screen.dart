@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../core/errors/app_error.dart';
+import '../../core/constants/conscience_journey.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_layout.dart';
 import '../../core/utils/currency_formatter.dart';
@@ -12,6 +13,7 @@ import '../../providers/alert_provider.dart';
 import '../../providers/ai_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/budget_providers.dart';
+import '../../providers/conscience_journey_provider.dart';
 import '../../providers/transaction_providers.dart';
 import '../../providers/usage_provider.dart';
 import '../../providers/user_provider.dart';
@@ -160,8 +162,21 @@ class _TransactionDetailScreenState
       ref.invalidate(transactionDetailProvider(widget.transactionId));
       ref.invalidate(transactionListProvider);
       ref.invalidate(filteredTransactionListProvider);
+      await _recordJourneyReflectionEvent();
     } catch (_) {
       // Optimistic update — ignore errors silently
+    }
+  }
+
+  Future<void> _recordJourneyReflectionEvent() async {
+    if (!ref.read(authProvider).isAuthenticated) return;
+    try {
+      await ref.read(conscienceJourneyProvider.notifier).recordEvent(
+            eventType: ConscienceJourneyEvents.reflectionCompleted,
+            sourceId: widget.transactionId,
+          );
+    } catch (_) {
+      // Journey progress is best-effort and must not block reflection.
     }
   }
 
@@ -191,6 +206,7 @@ class _TransactionDetailScreenState
       ref.invalidate(transactionDetailProvider(widget.transactionId));
       ref.invalidate(transactionListProvider);
       ref.invalidate(filteredTransactionListProvider);
+      await _recordJourneyReflectionEvent();
     } catch (_) {
       // Best-effort
     }

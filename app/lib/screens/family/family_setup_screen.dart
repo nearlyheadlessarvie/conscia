@@ -9,6 +9,7 @@ import '../../core/theme/app_layout.dart';
 import '../../core/routing/app_router.dart';
 import '../../providers/family_space_provider.dart';
 import '../../providers/user_provider.dart';
+import '../../widgets/editorial_hero_chip.dart';
 import '../../widgets/floating_label_text_field.dart';
 import '../../widgets/hero_screen_scaffold.dart';
 import '../../widgets/inline_notice.dart';
@@ -209,41 +210,12 @@ class _CreateFamilyHero extends StatelessWidget {
               spacing: 10,
               runSpacing: 10,
               children: [
-                _HeroPill(label: 'Private by default'),
-                _HeroPill(label: 'Premium host'),
-                _HeroPill(label: 'Members join free'),
+                EditorialHeroChip(label: 'Private by default'),
+                EditorialHeroChip(label: 'Premium host'),
+                EditorialHeroChip(label: 'Members join free'),
               ],
             ),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-class _HeroPill extends StatelessWidget {
-  const _HeroPill({required this.label});
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).appColors;
-
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: colors.surfaceRaised.withValues(alpha: 0.88),
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        child: Text(
-          label,
-          style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                color: colors.deepNavy,
-                fontWeight: FontWeight.w800,
-                letterSpacing: 0.2,
-              ),
         ),
       ),
     );

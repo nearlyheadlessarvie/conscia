@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../core/assets/mascot_sprite_sheet.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_layout.dart';
 import '../../models/conscience_journey.dart';
 import '../../providers/conscience_journey_provider.dart';
+import '../../widgets/conscia_glyph.dart';
 import '../../widgets/editorial_sticky_header.dart';
 import '../../widgets/screen_section.dart';
 import '../../widgets/feed_card.dart';
@@ -255,34 +255,28 @@ class _JourneyHeroBleed extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          const SizedBox(
-            width: 220,
-            height: 80,
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                Positioned(
-                  left: 16,
-                  top: 0,
-                  child: MascotSpriteFrame(
-                    atlas: angelMascotAtlas,
-                    frameName: '4_win.png',
-                    width: 74,
-                  ),
-                ),
-                Positioned(
-                  child: Text('⚔️', style: TextStyle(fontSize: 56)),
-                ),
-                Positioned(
-                  right: 16,
-                  top: 0,
-                  child: MascotSpriteFrame(
-                    atlas: devilMascotAtlas,
-                    frameName: '5_win.png',
-                    width: 74,
-                  ),
+          Container(
+            width: 82,
+            height: 82,
+            decoration: BoxDecoration(
+              color: colors.surfaceRaised.withValues(alpha: 0.64),
+              borderRadius: BorderRadius.circular(28),
+              border: Border.all(color: colors.deepNavy.withValues(alpha: 0.1)),
+              boxShadow: [
+                BoxShadow(
+                  color: colors.deepNavy.withValues(alpha: 0.08),
+                  blurRadius: 24,
+                  offset: const Offset(0, 12),
                 ),
               ],
+            ),
+            child: Center(
+              child: ConsciaGlyph.level(
+                summary.currentLevel.key,
+                color: colors.deepNavy,
+                size: 42,
+                strokeWidth: 3,
+              ),
             ),
           ),
           const SizedBox(height: 4),
@@ -370,17 +364,6 @@ class _QuestCard extends StatelessWidget {
 
   final ConscienceQuest quest;
 
-  static IconData _iconFor(String key) {
-    return switch (key) {
-      'reflect_three_purchases' => Icons.auto_stories_rounded,
-      'check_before_purchase' => Icons.psychology_rounded,
-      'review_regret_pattern' => Icons.loop_rounded,
-      'send_family_invite' => Icons.group_add_rounded,
-      'add_family_expense' => Icons.receipt_long_rounded,
-      _ => Icons.flag_rounded,
-    };
-  }
-
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
@@ -398,8 +381,13 @@ class _QuestCard extends StatelessWidget {
         child: Row(
           children: [
             _IconBadge(
-              icon:
-                  quest.isCompleted ? Icons.check_rounded : _iconFor(quest.key),
+              glyph: quest.isCompleted
+                  ? Icon(Icons.check_rounded, color: iconColor, size: 22)
+                  : ConsciaGlyph.quest(
+                      quest.key,
+                      color: iconColor,
+                      size: 22,
+                    ),
               color: iconColor,
             ),
             const SizedBox(width: 12),
@@ -494,26 +482,6 @@ class _BadgeTile extends StatelessWidget {
 
   final ConscienceBadge badge;
 
-  static IconData _iconFor(String key) {
-    return switch (key) {
-      'first_reflection' => Icons.auto_stories_rounded,
-      'pause_before_purchase' => Icons.pause_circle_outline_rounded,
-      'budget_rescuer' => Icons.savings_rounded,
-      'regret_pattern_spotted' => Icons.loop_rounded,
-      'worth_it_week' => Icons.emoji_events_rounded,
-      'family_founder' => Icons.group_add_rounded,
-      'family_planner' => Icons.receipt_long_rounded,
-      'insight_reader' => Icons.lightbulb_outline_rounded,
-      'deep_thinker' => Icons.psychology_rounded,
-      'pre_purchase_habit' => Icons.check_circle_outline_rounded,
-      'reflection_habit' => Icons.local_fire_department_rounded,
-      'family_connector' => Icons.handshake_rounded,
-      'family_budget_tracker' => Icons.account_balance_wallet_rounded,
-      'budget_builder' => Icons.construction_rounded,
-      _ => Icons.workspace_premium_rounded,
-    };
-  }
-
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
@@ -538,13 +506,15 @@ class _BadgeTile extends StatelessWidget {
                     )
                   : null,
             ),
-            child: Icon(
-              badge.isUnlocked
-                  ? _iconFor(badge.key)
-                  : Icons.lock_outline_rounded,
-              color: badge.isUnlocked
-                  ? Theme.of(context).appColors.family
-                  : colors.outline,
+            child: Center(
+              child: ConsciaGlyph.milestone(
+                badge.key,
+                unlocked: badge.isUnlocked,
+                color: badge.isUnlocked
+                    ? Theme.of(context).appColors.family
+                    : colors.outline,
+                size: 26,
+              ),
             ),
           ),
           const SizedBox(height: 6),
@@ -572,26 +542,6 @@ class _AllAchievementsSheet extends StatelessWidget {
 
   final List<ConscienceBadge> badges;
   final ScrollController scrollController;
-
-  static IconData _iconFor(String key) {
-    return switch (key) {
-      'first_reflection' => Icons.auto_stories_rounded,
-      'pause_before_purchase' => Icons.pause_circle_outline_rounded,
-      'budget_rescuer' => Icons.savings_rounded,
-      'regret_pattern_spotted' => Icons.loop_rounded,
-      'worth_it_week' => Icons.emoji_events_rounded,
-      'family_founder' => Icons.group_add_rounded,
-      'family_planner' => Icons.receipt_long_rounded,
-      'insight_reader' => Icons.lightbulb_outline_rounded,
-      'deep_thinker' => Icons.psychology_rounded,
-      'pre_purchase_habit' => Icons.check_circle_outline_rounded,
-      'reflection_habit' => Icons.local_fire_department_rounded,
-      'family_connector' => Icons.handshake_rounded,
-      'family_budget_tracker' => Icons.account_balance_wallet_rounded,
-      'budget_builder' => Icons.construction_rounded,
-      _ => Icons.workspace_premium_rounded,
-    };
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -633,7 +583,6 @@ class _AllAchievementsSheet extends StatelessWidget {
                 itemCount: unlocked.length,
                 itemBuilder: (context, i) => _AchievementSheetRow(
                   badge: unlocked[i],
-                  icon: _iconFor(unlocked[i].key),
                 ),
               ),
             ),
@@ -666,7 +615,6 @@ class _AllAchievementsSheet extends StatelessWidget {
                 itemCount: locked.length,
                 itemBuilder: (context, i) => _AchievementSheetRow(
                   badge: locked[i],
-                  icon: _iconFor(locked[i].key),
                 ),
               ),
             ),
@@ -678,10 +626,9 @@ class _AllAchievementsSheet extends StatelessWidget {
 }
 
 class _AchievementSheetRow extends StatelessWidget {
-  const _AchievementSheetRow({required this.badge, required this.icon});
+  const _AchievementSheetRow({required this.badge});
 
   final ConscienceBadge badge;
-  final IconData icon;
 
   @override
   Widget build(BuildContext context) {
@@ -709,10 +656,13 @@ class _AchievementSheetRow extends StatelessWidget {
                   ? Border.all(color: appColors.family, width: 1.5)
                   : null,
             ),
-            child: Icon(
-              badge.isUnlocked ? icon : Icons.lock_outline_rounded,
-              color: iconColor,
-              size: 20,
+            child: Center(
+              child: ConsciaGlyph.milestone(
+                badge.key,
+                unlocked: badge.isUnlocked,
+                color: iconColor,
+                size: 20,
+              ),
             ),
           ),
           const SizedBox(width: 12),
@@ -751,11 +701,11 @@ class _AchievementSheetRow extends StatelessWidget {
 
 class _IconBadge extends StatelessWidget {
   const _IconBadge({
-    required this.icon,
+    required this.glyph,
     required this.color,
   });
 
-  final IconData icon;
+  final Widget glyph;
   final Color color;
 
   @override
@@ -767,7 +717,7 @@ class _IconBadge extends StatelessWidget {
         color: color.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(14),
       ),
-      child: Icon(icon, color: color, size: 22),
+      child: Center(child: glyph),
     );
   }
 }

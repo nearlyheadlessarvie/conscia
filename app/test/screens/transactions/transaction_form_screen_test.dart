@@ -411,8 +411,7 @@ void main() {
     expect(dto.toJson()['familySpaceId'], 'family-1');
   });
 
-  testWidgets(
-      'transaction form route presents as a Conscia pull-up sheet', (
+  testWidgets('transaction form route presents as a Conscia pull-up sheet', (
     tester,
   ) async {
     await _pumpTransactionForm(tester);
@@ -474,13 +473,13 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('AMOUNT'), findsNothing);
-    expect(find.text('TRANSACTION DETAILS'), findsOneWidget);
+    expect(find.text('Transaction Details'), findsOneWidget);
 
-    final detailsTop = tester.getTopLeft(find.text('TRANSACTION DETAILS')).dy;
+    final detailsTop = tester.getTopLeft(find.text('Transaction Details')).dy;
     final merchantTop =
         tester.getTopLeft(_floatingLabelInput('Merchant (optional)')).dy;
     final amountTop = tester.getTopLeft(find.byType(AmountHeroField)).dy;
-    final categoryTop = tester.getTopLeft(find.text('CATEGORY')).dy;
+    final categoryTop = tester.getTopLeft(find.text('Category')).dy;
 
     expect(detailsTop, lessThan(merchantTop));
     expect(merchantTop, lessThan(amountTop));
@@ -514,7 +513,7 @@ void main() {
     await _pumpTransactionForm(tester);
     await tester.pumpAndSettle();
 
-    final categoryTitle = find.text('CATEGORY', skipOffstage: false);
+    final categoryTitle = find.text('Category', skipOffstage: false);
     final before = tester.getTopLeft(categoryTitle).dy;
 
     tester.widget<EditableText>(_amountInput()).onSubmitted?.call('12.50');
@@ -616,10 +615,10 @@ void main() {
 
     await tester.pumpAndSettle();
 
-    expect(find.text('TRANSACTION'), findsOneWidget);
+    expect(find.text('Transaction'), findsOneWidget);
     expect(find.text('Was this money in or out?'), findsOneWidget);
-    expect(find.text('CLASSIFY'), findsNothing);
-    expect(find.text('CATEGORY'), findsOneWidget);
+    expect(find.text('Classify'), findsNothing);
+    expect(find.text('Category'), findsOneWidget);
     expect(
       find.text(
         'Choose where this transaction belongs so budgets and insights stay accurate.',
@@ -636,7 +635,7 @@ void main() {
     await tester.tap(find.text('Income'));
     await tester.pumpAndSettle();
 
-    expect(find.text('CATEGORY'), findsOneWidget);
+    expect(find.text('Category'), findsOneWidget);
     expect(
       find.text(
         'Choose where this money came from so Conscia can understand your income rhythm separately from spending.',
@@ -658,12 +657,12 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('CLASSIFY'), findsOneWidget);
+    expect(find.text('Classify'), findsOneWidget);
     expect(
       find.text('Where should this live in your money story?'),
       findsOneWidget,
     );
-    expect(find.text('CATEGORY'), findsOneWidget);
+    expect(find.text('Category'), findsOneWidget);
     expect(find.text('SCOPE'), findsNothing);
   });
 
@@ -681,7 +680,7 @@ void main() {
     await tester.pumpWidget(await buildTransactionFormApp(tester));
     await tester.pumpAndSettle();
 
-    expect(find.text('CATEGORY'), findsOneWidget);
+    expect(find.text('Category'), findsOneWidget);
     expect(find.text('Premium categories'), findsOneWidget);
   });
 
@@ -1176,7 +1175,7 @@ void main() {
 
     await tester.pumpAndSettle();
 
-    expect(find.text('CLASSIFY'), findsOneWidget);
+    expect(find.text('Classify'), findsOneWidget);
     expect(find.text('Family'), findsOneWidget);
 
     await tester.tap(find.text('Update Transaction'));

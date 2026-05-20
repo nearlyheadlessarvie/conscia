@@ -292,7 +292,7 @@ void main() {
         tester.getTopLeft(find.byType(InsightListEditorialHero)).dx;
     final labelTop = tester.getTopLeft(find.text('TOP REGRET CATEGORY')).dy;
     final sectionLeft =
-        tester.getTopLeft(find.text('TOP REGRET CATEGORIES')).dx;
+        tester.getTopLeft(find.text('Top regret categories')).dx;
     final headerBottom = tester
         .getBottomLeft(
           find.byKey(const ValueKey('editorial-sticky-header-Categories')),
@@ -439,10 +439,10 @@ void main() {
     expect(
         find.byKey(const ValueKey('insights-sticky-header')), findsOneWidget);
     expect(find.text('😇  ⚔️  😈'), findsNothing);
-    expect(find.text('BUDGET TRENDS'), findsOneWidget);
-    expect(find.text('REGRET PATTERNS'), findsOneWidget);
-    expect(find.text('RECENT SIGNALS'), findsOneWidget);
-    expect(find.text('Regret patterns'), findsNothing);
+    expect(find.text('Budget trends'), findsOneWidget);
+    expect(find.text('Regret patterns'), findsOneWidget);
+    expect(find.text('Recent signals'), findsOneWidget);
+    expect(find.text('REGRET PATTERNS'), findsNothing);
     expect(
       find.text('Subscriptions has enough activity for a budget'),
       findsOneWidget,
@@ -727,7 +727,7 @@ void main() {
       find.byKey(const ValueKey('regret-transaction-badge')),
       findsOneWidget,
     );
-    expect(find.text('LATEST MATCHES'), findsOneWidget);
+    expect(find.text('Latest matches'), findsOneWidget);
     expect(
       find.text('Last 30 days of purchases matching this category.'),
       findsOneWidget,
@@ -780,7 +780,7 @@ void main() {
     expect(find.text('3 visits'), findsOneWidget);
     expect(find.text('1 regret'), findsOneWidget);
     expect(find.text('33% rate'), findsOneWidget);
-    expect(find.text('LATEST MATCHES'), findsOneWidget);
+    expect(find.text('Latest matches'), findsOneWidget);
     expect(
       find.text('Last 30 days of purchases matching this merchant.'),
       findsOneWidget,

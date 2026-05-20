@@ -16,22 +16,23 @@ void main() {
     expect(source, isNot(contains('elevation: 2,')));
   });
 
-  test('AppTheme maps section and card typography to Conscia v2 weights', () {
+  test('AppTheme maps editorial typography to locked brand fonts', () {
     final source = File('lib/core/theme/app_theme.dart').readAsStringSync();
 
     expect(
       source,
       matches(RegExp(
-        r'titleLarge:\s+GoogleFonts\.poppins\(\s+fontSize:\s+18,\s+fontWeight:\s+FontWeight\.w700,',
+        r'displayLarge:\s+GoogleFonts\.libreBaskerville\(\s+fontSize:\s+32,\s+fontWeight:\s+FontWeight\.w700,',
       )),
     );
     expect(
       source,
       matches(RegExp(
-        r'titleMedium:\s+GoogleFonts\.poppins\(\s+fontSize:\s+16,\s+fontWeight:\s+FontWeight\.w700,',
+        r'titleMedium:\s+GoogleFonts\.nunitoSans\(\s+fontSize:\s+16,\s+fontWeight:\s+FontWeight\.w800,',
       )),
     );
-    expect(source, contains('letterSpacing: 0,'));
+    expect(source, contains('headlineSmall: GoogleFonts.libreBaskerville('));
+    expect(source, contains('labelSmall: GoogleFonts.nunitoSans('));
   });
 
   test('AppTheme makes primary and secondary buttons pill CTAs', () {

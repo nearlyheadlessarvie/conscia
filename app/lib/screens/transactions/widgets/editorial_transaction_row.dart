@@ -65,11 +65,13 @@ class EditorialTransactionRowsGroup extends StatelessWidget {
     required this.children,
     this.horizontalPadding = 16,
     this.verticalPadding = 4,
+    this.surface = true,
   });
 
   final List<Widget> children;
   final double horizontalPadding;
   final double verticalPadding;
+  final bool surface;
 
   @override
   Widget build(BuildContext context) {
@@ -79,14 +81,27 @@ class EditorialTransactionRowsGroup extends StatelessWidget {
     for (var index = 0; index < children.length; index++) {
       separatedChildren.add(children[index]);
       if (index < children.length - 1) {
-        separatedChildren.add(
-          Divider(
-            height: 10,
-            thickness: 1,
-            color: colors.border,
-          ),
-        );
+        separatedChildren.add(surface
+            ? Divider(
+                height: 10,
+                thickness: 1,
+                color: colors.border,
+              )
+            : const SizedBox(height: 10));
       }
+    }
+
+    if (!surface) {
+      return Padding(
+        padding: EdgeInsets.symmetric(
+          horizontal: horizontalPadding,
+          vertical: verticalPadding,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: separatedChildren,
+        ),
+      );
     }
 
     return Padding(
@@ -94,9 +109,24 @@ class EditorialTransactionRowsGroup extends StatelessWidget {
         horizontal: horizontalPadding,
         vertical: verticalPadding,
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: separatedChildren,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: colors.surfaceRaised,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: colors.border),
+          boxShadow: [
+            BoxShadow(
+              color: colors.ink.withValues(alpha: 0.035),
+              blurRadius: 18,
+              offset: const Offset(0, 10),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: separatedChildren,
+        ),
       ),
     );
   }
@@ -129,16 +159,16 @@ class EditorialTransactionRow extends StatelessWidget {
     return InkWell(
       onTap: onTap ?? () => context.push('/transactions/${data.id}'),
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 6),
+        padding: const EdgeInsets.symmetric(vertical: 10),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             CategoryIcons.badge(
               data.category,
-              size: 30,
+              size: 32,
               type: data.isIncome ? 'Income' : 'Expense',
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: 14),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -154,6 +184,7 @@ class EditorialTransactionRow extends StatelessWidget {
                     data.category,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: colors.mutedInk,
+                          fontWeight: FontWeight.w600,
                         ),
                   ),
                 ],
@@ -165,7 +196,10 @@ class EditorialTransactionRow extends StatelessWidget {
               children: [
                 Text(
                   amountText,
-                  style: rowStyle?.copyWith(color: amountColor),
+                  style: rowStyle?.copyWith(
+                    color: amountColor,
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
                 if (data.isFamily ||
                     data.isRecurring ||

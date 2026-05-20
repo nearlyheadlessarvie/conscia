@@ -908,10 +908,13 @@ class _IconOptionChip extends StatelessWidget {
                   : Colors.transparent,
             ),
           ),
-          child: Icon(
-            visual.icon,
-            size: 18,
-            color: visual.accent,
+          child: Center(
+            child: CategoryIcons.rawIcon(
+              option.label,
+              iconKey: option.key,
+              colorKey: colorKey,
+              size: 18,
+            ),
           ),
         ),
       ),
@@ -954,10 +957,11 @@ class _MoreIconChip extends StatelessWidget {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(
-                Icons.grid_view_rounded,
+              CategoryIcons.rawIcon(
+                'Other',
+                iconKey: 'other',
+                colorKey: colorKey,
                 size: 16,
-                color: visual.accent,
               ),
               const SizedBox(width: 6),
               Text(

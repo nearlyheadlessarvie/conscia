@@ -10,6 +10,7 @@ import '../../widgets/conscia_app_bar.dart';
 import '../../widgets/budget_mix_visuals.dart';
 import '../../widgets/conscia_confirm_sheet.dart';
 import '../../widgets/empty_state.dart';
+import '../../widgets/horizontal_edge_fade.dart';
 import '../../widgets/scope_pill_switch.dart';
 import '../../widgets/skeleton_loader.dart';
 import '../../widgets/swipe_action_tile.dart';
@@ -359,30 +360,32 @@ class _BudgetsEditorialHeroState extends State<_BudgetsEditorialHero> {
           ),
           if (budgets.isNotEmpty) ...[
             const SizedBox(height: 14),
-            SingleChildScrollView(
-              key: const ValueKey('budgets-mix-pill-rail'),
-              controller: _mixRailController,
-              scrollDirection: Axis.horizontal,
-              clipBehavior: Clip.none,
-              child: Row(
-                children: [
-                  for (final entry in mix.indexed)
-                    Padding(
-                      padding: EdgeInsets.only(
-                        right: entry.$1 == mix.length - 1 ? 0 : 8,
+            HorizontalEdgeFade(
+              child: SingleChildScrollView(
+                key: const ValueKey('budgets-mix-pill-rail'),
+                controller: _mixRailController,
+                scrollDirection: Axis.horizontal,
+                clipBehavior: Clip.hardEdge,
+                child: Row(
+                  children: [
+                    for (final entry in mix.indexed)
+                      Padding(
+                        padding: EdgeInsets.only(
+                          right: entry.$1 == mix.length - 1 ? 20 : 8,
+                        ),
+                        child: BudgetMixPill(
+                          key: _pillKeys[entry.$1],
+                          index: entry.$1,
+                          category: entry.$2.category,
+                          type: 'Expense',
+                          share:
+                              totalSpent <= 0 ? 0 : entry.$2.spent / totalSpent,
+                          active: _calledOutMixIndex == entry.$1,
+                          shakeSerial: _shakeSerial,
+                        ),
                       ),
-                      child: BudgetMixPill(
-                        key: _pillKeys[entry.$1],
-                        index: entry.$1,
-                        category: entry.$2.category,
-                        type: 'Expense',
-                        share:
-                            totalSpent <= 0 ? 0 : entry.$2.spent / totalSpent,
-                        active: _calledOutMixIndex == entry.$1,
-                        shakeSerial: _shakeSerial,
-                      ),
-                    ),
-                ],
+                  ],
+                ),
               ),
             ),
           ],

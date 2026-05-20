@@ -15,6 +15,7 @@ import '../../providers/transaction_providers.dart';
 import '../../providers/user_provider.dart';
 import '../../widgets/amount_hero_field.dart';
 import '../../widgets/conscia_app_bar.dart';
+import '../../widgets/editorial_hero_chip.dart';
 import '../../widgets/floating_label_text_field.dart';
 import '../../widgets/hero_screen_scaffold.dart';
 import '../../widgets/screen_section.dart';
@@ -186,6 +187,8 @@ class _ReceiptReviewScreenState extends ConsumerState<ReceiptReviewScreen> {
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
+    final hasFatalLoadError =
+        _error != null && _merchantController.text.isEmpty;
 
     return HeroScreenScaffold(
       bleedBehindAppBar: true,
@@ -197,11 +200,24 @@ class _ReceiptReviewScreenState extends ConsumerState<ReceiptReviewScreen> {
           onPressed: () => Navigator.of(context).maybePop(),
         ),
       ),
+      bottom: !_loading && !hasFatalLoadError ? _buildConfirmDock() : null,
       child: _loading
           ? _buildLoading()
-          : _error != null && _merchantController.text.isEmpty
+          : hasFatalLoadError
               ? _buildError(textTheme)
               : _buildContent(textTheme),
+    );
+  }
+
+  Widget _buildConfirmDock() {
+    return SizedBox(
+      key: const ValueKey('receipt-review-confirm-dock'),
+      width: double.infinity,
+      child: FilledButton.icon(
+        onPressed: _isValid && !_submitting ? _confirm : null,
+        icon: const Icon(Icons.check_rounded),
+        label: Text(_submitting ? 'Saving...' : 'Confirm and save'),
+      ),
     );
   }
 
@@ -360,24 +376,6 @@ class _ReceiptReviewScreenState extends ConsumerState<ReceiptReviewScreen> {
                   ),
                   child: _buildLineItems(textTheme),
                 ),
-              const SizedBox(height: 4),
-              FilledButton.icon(
-                onPressed: _isValid && !_submitting ? _confirm : null,
-                icon: const Icon(Icons.check_rounded),
-                label: Text(_submitting ? 'Saving...' : 'Confirm and save'),
-              ),
-              const SizedBox(height: 10),
-              OutlinedButton(
-                onPressed: _submitting
-                    ? null
-                    : () {
-                        Navigator.of(context).maybePop();
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Receipt discarded')),
-                        );
-                      },
-                child: const Text('Discard'),
-              ),
             ],
           ),
         ),
@@ -621,37 +619,14 @@ class _ReceiptReviewHero extends StatelessWidget {
             spacing: 8,
             runSpacing: 8,
             children: [
-              _HeroChip(label: '$percentage% confidence'),
-              _HeroChip(label: needsReview ? 'Needs review' : 'Looks ready'),
-              const _HeroChip(label: 'Editable'),
+              EditorialHeroChip(label: '$percentage% confidence'),
+              EditorialHeroChip(
+                label: needsReview ? 'Needs review' : 'Looks ready',
+              ),
+              const EditorialHeroChip(label: 'Editable'),
             ],
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _HeroChip extends StatelessWidget {
-  const _HeroChip({required this.label});
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).appColors;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
-      decoration: BoxDecoration(
-        color: colors.paper.withAlpha(235),
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Text(
-        label,
-        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: colors.deepNavy,
-              fontWeight: FontWeight.w800,
-            ),
       ),
     );
   }

@@ -13,6 +13,7 @@ import 'package:conscia_app/services/subscription_service.dart';
 import 'package:conscia_app/services/user_service.dart';
 import 'package:conscia_app/providers/user_provider.dart';
 import 'package:conscia_app/widgets/budget_mix_visuals.dart';
+import 'package:conscia_app/widgets/conscia_glyph.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -300,11 +301,12 @@ void main() {
       find.byKey(const ValueKey('budgets-mix-pill-rail')),
     );
     expect(rail.scrollDirection, Axis.horizontal);
-    final diningIcon = tester.widget<Icon>(
+    final diningIcon = tester.widget<ConsciaGlyph>(
       find.byKey(const ValueKey('budget-row-icon-budget-1')),
     );
     expect(diningIcon.size, 30);
     expect(diningIcon.color, const Color(0xFF43A047));
+    expect(diningIcon.kind, ConsciaGlyphKind.dining);
 
     await tester.tap(find.text('Family'));
     await tester.pumpAndSettle();

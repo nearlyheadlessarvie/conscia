@@ -124,8 +124,8 @@ class LocalAlertsNotifier extends StateNotifier<List<AppAlert>> {
           message:
               'Your conscience journey reached a new level. The mascots noticed.',
           priority: 75,
-          actionLabel: 'View journey',
-          actionRoute: '/journey',
+          actionLabel: 'Open Journey Home',
+          actionRoute: '/',
           isDismissed: false,
           createdAt: now,
         ),
@@ -143,8 +143,8 @@ class LocalAlertsNotifier extends StateNotifier<List<AppAlert>> {
               ? 'A new achievement joined your shelf.'
               : '${badge.title}: ${badge.description}',
           priority: 65,
-          actionLabel: 'View achievements',
-          actionRoute: '/journey',
+          actionLabel: 'Open Journey Home',
+          actionRoute: '/',
           isDismissed: false,
           createdAt: now,
         ),
@@ -162,8 +162,8 @@ class LocalAlertsNotifier extends StateNotifier<List<AppAlert>> {
               ? 'One weekly quest is complete.'
               : '${quest.title} earned +${quest.xpReward} XP.',
           priority: 55,
-          actionLabel: 'View quests',
-          actionRoute: '/journey',
+          actionLabel: 'Open Journey Home',
+          actionRoute: '/',
           isDismissed: false,
           createdAt: now,
         ),

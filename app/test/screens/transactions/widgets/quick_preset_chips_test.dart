@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:conscia_app/core/constants/category_icons.dart';
 import 'package:conscia_app/models/managed_category.dart';
 import 'package:conscia_app/providers/category_provider.dart';
 import 'package:conscia_app/providers/usage_provider.dart';
 import 'package:conscia_app/screens/transactions/widgets/quick_preset_chips.dart';
+import 'package:conscia_app/widgets/conscia_glyph.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 ManagedCategory _category({
@@ -69,7 +69,13 @@ void main() {
     expect(find.text('Coffee'), findsOneWidget);
     expect(find.text('Dining'), findsOneWidget);
     expect(find.text('Gaming'), findsOneWidget);
-    expect(find.byIcon(CategoryIcons.forCategory('Coffee')), findsOneWidget);
+    expect(find.byType(ConsciaGlyph), findsNWidgets(5));
+    expect(
+      tester
+          .widgetList<ConsciaGlyph>(find.byType(ConsciaGlyph))
+          .map((glyph) => glyph.kind),
+      contains(ConsciaGlyphKind.coffee),
+    );
   });
 
   testWidgets('highlights selected chip', (tester) async {
@@ -144,7 +150,8 @@ void main() {
     expect(find.text('Salary'), findsNothing);
   });
 
-  testWidgets('free-tier expense chips only show allowed transaction categories',
+  testWidgets(
+      'free-tier expense chips only show allowed transaction categories',
       (tester) async {
     await tester.pumpWidget(await _buildQuickPresetChipsApp(
       initialPrefs: const {

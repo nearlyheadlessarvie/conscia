@@ -1,14 +1,5 @@
 import 'package:flutter/material.dart';
 
-import 'mascot_sprite_sheet.dart';
-
-const _devilNeutralAsset = '1_neutral.png';
-const _devilWhisperAsset = '8_whisper.png';
-const _angelNeutralAsset = '1_neutral.png';
-const _angelShieldAsset = '8_shield.png';
-const _moneyNeutralAsset = '1_neutral.png';
-const _moneySaveAsset = '4_save.png';
-
 class OnboardingIllustration1 extends StatelessWidget {
   final double size;
 
@@ -16,45 +7,13 @@ class OnboardingIllustration1 extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return _StoryboardScene(
+    return _CalmOnboardingScene(
       size: size,
-      mood: const _SceneMood(
-        red: 0.48,
-        gold: 0.42,
-        blue: 0.44,
-      ),
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          Positioned(
-            left: size * 0.01,
-            bottom: size * 0.035,
-            child: _StoryAsset(
-              atlas: devilMascotAtlas,
-              frameName: _devilNeutralAsset,
-              width: size * 0.58,
-            ),
-          ),
-          Positioned(
-            left: size * 0.37,
-            bottom: size * 0.05,
-            child: _StoryAsset(
-              atlas: moneyMascotAtlas,
-              frameName: _moneyNeutralAsset,
-              width: size * 0.42,
-            ),
-          ),
-          Positioned(
-            right: size * 0.06,
-            bottom: size * 0.14,
-            child: _StoryAsset(
-              atlas: angelMascotAtlas,
-              frameName: _angelNeutralAsset,
-              width: size * 0.6,
-            ),
-          ),
-        ],
-      ),
+      icon: Icons.spa_outlined,
+      title: 'A calmer start',
+      lineWidths: const [0.78, 0.58],
+      accent: const Color(0xFF7BAF9E),
+      glow: const Color(0xFFFFD99B),
     );
   }
 }
@@ -66,46 +25,14 @@ class OnboardingIllustration2 extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return _StoryboardScene(
+    return _CalmOnboardingScene(
       size: size,
-      mood: const _SceneMood(
-        red: 0.58,
-        gold: 0.36,
-        blue: 0.3,
-      ),
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          Positioned(
-            left: size * 0.01,
-            bottom: size * 0.03,
-            child: _StoryAsset(
-              atlas: devilMascotAtlas,
-              frameName: _devilWhisperAsset,
-              width: size * 0.62,
-            ),
-          ),
-          Positioned(
-            left: size * 0.38,
-            bottom: size * 0.06,
-            child: _StoryAsset(
-              atlas: moneyMascotAtlas,
-              frameName: _moneySaveAsset,
-              width: size * 0.38,
-              foreground: true,
-            ),
-          ),
-          Positioned(
-            right: size * 0.02,
-            top: size * 0.06,
-            child: _SceneUiCard(
-              size: size,
-              title: 'Logged in seconds',
-              lines: const [1.0, 0.68, 0.52],
-            ),
-          ),
-        ],
-      ),
+      icon: Icons.auto_graph_rounded,
+      title: 'Patterns, softly',
+      lineWidths: const [0.9, 0.64, 0.46],
+      accent: const Color(0xFF8DA2E8),
+      glow: const Color(0xFFC9E7F2),
+      showChart: true,
     );
   }
 }
@@ -117,60 +44,38 @@ class OnboardingIllustration3 extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return _StoryboardScene(
+    return _CalmOnboardingScene(
       size: size,
-      mood: const _SceneMood(
-        red: 0.24,
-        gold: 0.38,
-        blue: 0.6,
-      ),
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          Positioned(
-            left: size * 0.04,
-            top: size * 0.08,
-            child: _SceneUiCard(
-              size: size,
-              title: 'Reflection + budgets',
-              lines: const [1.0, 0.84, 0.58],
-            ),
-          ),
-          Positioned(
-            right: size * 0.01,
-            bottom: 0,
-            child: _StoryAsset(
-              atlas: angelMascotAtlas,
-              frameName: _angelShieldAsset,
-              width: size * 0.64,
-            ),
-          ),
-          Positioned(
-            left: size * 0.36,
-            bottom: size * 0.05,
-            child: _StoryAsset(
-              atlas: moneyMascotAtlas,
-              frameName: _moneyNeutralAsset,
-              width: size * 0.38,
-              foreground: true,
-            ),
-          ),
-        ],
-      ),
+      icon: Icons.shield_outlined,
+      title: 'Gentle guardrails',
+      lineWidths: const [0.72, 0.86],
+      accent: const Color(0xFFE8A15F),
+      glow: const Color(0xFFE9EDFF),
+      showRing: true,
     );
   }
 }
 
-class _StoryboardScene extends StatelessWidget {
-  const _StoryboardScene({
+class _CalmOnboardingScene extends StatelessWidget {
+  const _CalmOnboardingScene({
     required this.size,
-    required this.mood,
-    required this.child,
+    required this.icon,
+    required this.title,
+    required this.lineWidths,
+    required this.accent,
+    required this.glow,
+    this.showChart = false,
+    this.showRing = false,
   });
 
   final double size;
-  final _SceneMood mood;
-  final Widget child;
+  final IconData icon;
+  final String title;
+  final List<double> lineWidths;
+  final Color accent;
+  final Color glow;
+  final bool showChart;
+  final bool showRing;
 
   @override
   Widget build(BuildContext context) {
@@ -191,11 +96,12 @@ class _StoryboardScene extends StatelessWidget {
                   color: const Color(0xFFDAE2F6).withValues(alpha: 0.78),
                 ),
                 gradient: const LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
                   colors: [
-                    Color(0xFFFDFEFF),
-                    Color(0xFFF5F8FF),
+                    Color(0xFFFFFFFF),
+                    Color(0xFFF7F9F2),
+                    Color(0xFFF3F7FF),
                   ],
                 ),
                 boxShadow: [
@@ -209,120 +115,63 @@ class _StoryboardScene extends StatelessWidget {
             ),
           ),
           Positioned(
-            left: size * 0.02,
-            right: size * 0.5,
-            top: size * 0.1,
-            bottom: size * 0.1,
-            child: _GlowBlob(
-              color: const Color(0xFFFF8E7C).withValues(alpha: mood.red),
-              blurScale: 1.2,
+            left: size * 0.06,
+            top: size * 0.06,
+            right: size * 0.06,
+            bottom: size * 0.06,
+            child: CustomPaint(
+              painter: _CalmScenePainter(accent: accent, glow: glow),
             ),
           ),
           Positioned(
-            left: size * 0.37,
-            right: size * 0.37,
-            top: 0,
-            bottom: size * 0.22,
-            child: _GlowBlob(
-              color: const Color(0xFFFFDD7B).withValues(alpha: mood.gold),
-              blurScale: 1.18,
+            left: size * 0.08,
+            top: size * 0.12,
+            child: _SoftNoteCard(
+              size: size,
+              title: title,
+              icon: icon,
+              accent: accent,
+              lineWidths: lineWidths,
             ),
           ),
-          Positioned(
-            left: size * 0.52,
-            right: size * 0.03,
-            top: size * 0.08,
-            bottom: size * 0.08,
-            child: _GlowBlob(
-              color: const Color(0xFF7ACDFF).withValues(alpha: mood.blue),
-              blurScale: 1.22,
+          if (showChart)
+            Positioned(
+              right: size * 0.1,
+              bottom: size * 0.16,
+              child: _MiniChart(size: size, accent: accent),
             ),
-          ),
-          child,
+          if (showRing)
+            Positioned(
+              right: size * 0.12,
+              bottom: size * 0.13,
+              child: _ProgressRing(size: size, accent: accent),
+            ),
+          if (!showChart && !showRing)
+            Positioned(
+              right: size * 0.1,
+              bottom: size * 0.13,
+              child: _QuietCoinStack(size: size, accent: accent),
+            ),
         ],
       ),
     );
   }
 }
 
-class _GlowBlob extends StatelessWidget {
-  const _GlowBlob({
-    required this.color,
-    this.blurScale = 1,
-  });
-
-  final Color color;
-  final double blurScale;
-
-  @override
-  Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        boxShadow: [
-          BoxShadow(
-            color: color.withValues(alpha: color.a * 0.42),
-            blurRadius: 52 * blurScale,
-            spreadRadius: 12 * blurScale,
-          ),
-        ],
-        gradient: RadialGradient(
-          colors: [
-            color,
-            color.withValues(alpha: color.a * 0.42),
-            Colors.transparent,
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _SceneMood {
-  const _SceneMood({
-    required this.red,
-    required this.gold,
-    required this.blue,
-  });
-
-  final double red;
-  final double gold;
-  final double blue;
-}
-
-class _StoryAsset extends StatelessWidget {
-  const _StoryAsset({
-    required this.atlas,
-    required this.frameName,
-    required this.width,
-    this.foreground = false,
-  });
-
-  final MascotSpriteAtlas atlas;
-  final String frameName;
-  final double width;
-  final bool foreground;
-
-  @override
-  Widget build(BuildContext context) {
-    return MascotSpriteFrame(
-      atlas: atlas,
-      frameName: frameName,
-      width: width,
-    );
-  }
-}
-
-class _SceneUiCard extends StatelessWidget {
-  const _SceneUiCard({
+class _SoftNoteCard extends StatelessWidget {
+  const _SoftNoteCard({
     required this.size,
     required this.title,
-    required this.lines,
+    required this.icon,
+    required this.accent,
+    required this.lineWidths,
   });
 
   final double size;
   final String title;
-  final List<double> lines;
+  final IconData icon;
+  final Color accent;
+  final List<double> lineWidths;
 
   @override
   Widget build(BuildContext context) {
@@ -344,37 +193,42 @@ class _SceneUiCard extends StatelessWidget {
       child: Padding(
         padding: EdgeInsets.all(size * 0.06),
         child: SizedBox(
-          width: size * 0.33,
+          width: size * 0.42,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              DecoratedBox(
-                decoration: BoxDecoration(
-                  color: const Color(0xFFFFECAF),
-                  borderRadius: BorderRadius.circular(size * 0.07),
-                ),
-                child: Padding(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: size * 0.04,
-                    vertical: size * 0.024,
+              Row(
+                children: [
+                  Container(
+                    width: size * 0.13,
+                    height: size * 0.13,
+                    decoration: BoxDecoration(
+                      color: accent.withValues(alpha: 0.16),
+                      borderRadius: BorderRadius.circular(size * 0.05),
+                    ),
+                    child: Icon(icon, size: size * 0.07, color: accent),
                   ),
-                  child: Text(
-                    title,
-                    style: TextStyle(
-                      fontSize: size * 0.042,
-                      fontWeight: FontWeight.w700,
-                      color: const Color(0xFF2E3A78),
+                  SizedBox(width: size * 0.035),
+                  Expanded(
+                    child: Text(
+                      title,
+                      style: TextStyle(
+                        fontSize: size * 0.042,
+                        fontWeight: FontWeight.w800,
+                        color: const Color(0xFF18245C),
+                        height: 1.08,
+                      ),
                     ),
                   ),
-                ),
+                ],
               ),
-              SizedBox(height: size * 0.04),
-              for (final widthFactor in lines) ...[
+              SizedBox(height: size * 0.05),
+              for (final widthFactor in lineWidths) ...[
                 FractionallySizedBox(
                   widthFactor: widthFactor,
                   child: Container(
-                    height: size * 0.03,
+                    height: size * 0.028,
                     decoration: BoxDecoration(
                       color: const Color(0xFFDDE4F7),
                       borderRadius: BorderRadius.circular(size * 0.03),
@@ -388,5 +242,181 @@ class _SceneUiCard extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+class _QuietCoinStack extends StatelessWidget {
+  const _QuietCoinStack({required this.size, required this.accent});
+
+  final double size;
+  final Color accent;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: size * 0.34,
+      height: size * 0.24,
+      child: Stack(
+        alignment: Alignment.bottomCenter,
+        children: [
+          for (var index = 0; index < 4; index++)
+            Positioned(
+              bottom: index * size * 0.032,
+              child: Container(
+                width: size * (0.25 - index * 0.018),
+                height: size * 0.052,
+                decoration: BoxDecoration(
+                  color: Color.lerp(accent, const Color(0xFFFFD99B), 0.46),
+                  borderRadius: BorderRadius.circular(size * 0.04),
+                  border: Border.all(color: Colors.white.withValues(alpha: 0.7)),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MiniChart extends StatelessWidget {
+  const _MiniChart({required this.size, required this.accent});
+
+  final double size;
+  final Color accent;
+
+  @override
+  Widget build(BuildContext context) {
+    final heights = [0.28, 0.46, 0.34, 0.62];
+    return Container(
+      width: size * 0.34,
+      height: size * 0.28,
+      padding: EdgeInsets.all(size * 0.05),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.82),
+        borderRadius: BorderRadius.circular(size * 0.09),
+        border: Border.all(color: const Color(0xFFD9E1F4)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          for (final height in heights)
+            Container(
+              width: size * 0.04,
+              height: size * height * 0.22,
+              decoration: BoxDecoration(
+                color: accent.withValues(alpha: 0.78),
+                borderRadius: BorderRadius.circular(size * 0.03),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ProgressRing extends StatelessWidget {
+  const _ProgressRing({required this.size, required this.accent});
+
+  final double size;
+  final Color accent;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: size * 0.33,
+      height: size * 0.33,
+      child: CustomPaint(
+        painter: _ProgressRingPainter(accent),
+        child: Center(
+          child: Icon(
+            Icons.check_rounded,
+            color: accent,
+            size: size * 0.12,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _CalmScenePainter extends CustomPainter {
+  const _CalmScenePainter({required this.accent, required this.glow});
+
+  final Color accent;
+  final Color glow;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final glowPaint = Paint()
+      ..shader = RadialGradient(
+        colors: [
+          glow.withValues(alpha: 0.7),
+          glow.withValues(alpha: 0.18),
+          Colors.transparent,
+        ],
+      ).createShader(
+        Rect.fromCircle(
+          center: Offset(size.width * 0.72, size.height * 0.38),
+          radius: size.width * 0.44,
+        ),
+      );
+    canvas.drawCircle(
+      Offset(size.width * 0.72, size.height * 0.38),
+      size.width * 0.44,
+      glowPaint,
+    );
+
+    final wavePaint = Paint()
+      ..color = accent.withValues(alpha: 0.16)
+      ..style = PaintingStyle.fill;
+    final wave = Path()
+      ..moveTo(0, size.height * 0.64)
+      ..cubicTo(
+        size.width * 0.28,
+        size.height * 0.5,
+        size.width * 0.52,
+        size.height * 0.76,
+        size.width,
+        size.height * 0.58,
+      )
+      ..lineTo(size.width, size.height)
+      ..lineTo(0, size.height)
+      ..close();
+    canvas.drawPath(wave, wavePaint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _CalmScenePainter oldDelegate) {
+    return oldDelegate.accent != accent || oldDelegate.glow != glow;
+  }
+}
+
+class _ProgressRingPainter extends CustomPainter {
+  const _ProgressRingPainter(this.accent);
+
+  final Color accent;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final stroke = size.width * 0.1;
+    final rect = Offset.zero & size;
+    final base = Paint()
+      ..color = const Color(0xFFDDE4F7)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = stroke
+      ..strokeCap = StrokeCap.round;
+    final progress = Paint()
+      ..color = accent
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = stroke
+      ..strokeCap = StrokeCap.round;
+    canvas.drawArc(rect.deflate(stroke), 0, 6.28, false, base);
+    canvas.drawArc(rect.deflate(stroke), -1.57, 4.45, false, progress);
+  }
+
+  @override
+  bool shouldRepaint(covariant _ProgressRingPainter oldDelegate) {
+    return oldDelegate.accent != accent;
   }
 }

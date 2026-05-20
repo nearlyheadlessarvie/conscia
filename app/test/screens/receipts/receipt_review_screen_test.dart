@@ -98,11 +98,21 @@ void main() {
       (tester) async {
     await _pumpReceiptReviewScreen(tester);
 
-    expect(find.text('AI READ QUALITY'), findsOneWidget);
-    expect(find.text('TRANSACTION DETAILS'), findsOneWidget);
+    expect(find.text('AI read quality'), findsOneWidget);
+    expect(find.text('Transaction details'), findsOneWidget);
     expect(find.byType(AmountHeroField), findsOneWidget);
     expect(find.byType(TransactionStyleCategorySelector), findsOneWidget);
+    expect(find.byKey(const ValueKey('receipt-review-confirm-dock')),
+        findsOneWidget);
     expect(find.text('Confirm and save'), findsOneWidget);
+    expect(find.text('Discard'), findsNothing);
+    expect(
+      find.ancestor(
+        of: find.byKey(const ValueKey('receipt-review-confirm-dock')),
+        matching: find.byType(SingleChildScrollView),
+      ),
+      findsNothing,
+    );
     expect(find.text('Latte'), findsOneWidget);
   });
 

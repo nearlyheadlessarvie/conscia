@@ -70,6 +70,7 @@ class AIService {
       final response = await _dio.post(
         ApiConstants.aiAdvice,
         cancelToken: cancelToken,
+        options: Options(receiveTimeout: ApiConstants.aiReceiveTimeout),
         data: {
           'description': description,
           'amount': amount,
@@ -94,6 +95,7 @@ class AIService {
       final response = await _dio.post(
         ApiConstants.aiReflection,
         cancelToken: cancelToken,
+        options: Options(receiveTimeout: ApiConstants.aiReceiveTimeout),
         data: {'transactionId': transactionId},
       );
       return AIResponse.fromJson(response.data as Map<String, dynamic>);

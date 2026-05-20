@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
@@ -6,14 +7,16 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import 'package:conscia_app/core/constants/generated/app_constants.g.dart';
+import 'package:conscia_app/core/constants/conscience_journey.dart';
 import 'package:conscia_app/core/constants/category_icons.dart';
-import 'package:conscia_app/core/assets/mascot_sprite_sheet.dart';
 import 'package:conscia_app/core/routing/app_router.dart';
 import 'package:conscia_app/core/theme/app_colors.dart';
 import 'package:conscia_app/core/theme/app_layout.dart';
 import 'package:conscia_app/core/utils/currency_formatter.dart';
+import 'package:conscia_app/models/behavioral_insights.dart';
 import 'package:conscia_app/models/conscience_journey.dart';
 import 'package:conscia_app/providers/alert_provider.dart';
+import 'package:conscia_app/providers/auth_provider.dart';
 import 'package:conscia_app/providers/behavioral_insights_provider.dart';
 import 'package:conscia_app/providers/budget_providers.dart';
 import 'package:conscia_app/providers/conscience_journey_provider.dart';
@@ -22,6 +25,8 @@ import 'package:conscia_app/providers/subscription_provider.dart';
 import 'package:conscia_app/providers/transaction_providers.dart';
 import 'package:conscia_app/providers/user_provider.dart';
 import 'package:conscia_app/providers/usage_provider.dart';
+import 'package:conscia_app/screens/dashboard/journey_home_presenter.dart';
+import 'package:conscia_app/screens/dashboard/widgets/journey_led_home_sections.dart';
 import 'package:conscia_app/screens/dashboard/widgets/recent_transaction_tile.dart';
 import 'package:conscia_app/screens/dashboard/widgets/regret_prompt_card.dart';
 import 'package:conscia_app/screens/budgets/widgets/budget_form_sheet.dart';
@@ -33,8 +38,8 @@ import 'package:conscia_app/services/user_service.dart';
 import 'package:conscia_app/widgets/empty_state.dart';
 import 'package:conscia_app/widgets/budget_mix_visuals.dart';
 import 'package:conscia_app/widgets/conscia_bottom_sheet.dart';
-import 'package:conscia_app/widgets/hero_shortcut_card.dart';
 import 'package:conscia_app/widgets/premium_upgrade_dialog.dart';
+import 'package:conscia_app/widgets/horizontal_edge_fade.dart';
 import 'package:conscia_app/widgets/scope_pill_switch.dart';
 import 'package:conscia_app/widgets/skeleton_loader.dart';
 import 'package:conscia_app/widgets/swipe_action_tile.dart';
@@ -149,6 +154,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       await service.updateRegret(tx.id, level);
       ref.invalidate(transactionListProvider);
       ref.invalidate(transactionDetailProvider(tx.id));
+      await ref.read(conscienceJourneyProvider.notifier).recordEvent(
+            eventType: ConscienceJourneyEvents.reflectionCompleted,
+            sourceId: tx.id,
+          );
     } catch (_) {}
 
     final label = switch (feeling) {
@@ -163,6 +172,81 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text('$displayCounterparty: $label')),
     );
+  }
+
+  void _openJourneyQuest(ConscienceQuest quest) {
+    if (quest.key == 'add_family_expense') {
+      context.push(AppRoutes.addTransaction, extra: {'scope': 'family'});
+      return;
+    }
+    if (quest.key == 'review_regret_pattern') {
+      _recordJourneyEvent(
+        eventType: ConscienceJourneyEvents.regretPatternReviewed,
+        sourceId: 'quest:${quest.key}:${DateTime.now().millisecondsSinceEpoch}',
+      );
+    } else if (quest.key == 'read_two_insights') {
+      _recordJourneyEvent(
+        eventType: ConscienceJourneyEvents.insightReviewed,
+        sourceId: 'quest:${quest.key}:${DateTime.now().millisecondsSinceEpoch}',
+      );
+    }
+    context.push(_journeyQuestRoute(quest));
+  }
+
+  void _openWeeklyInsights() {
+    _recordJourneyEvent(
+      eventType: ConscienceJourneyEvents.insightReviewed,
+      sourceId: 'dashboard-insights:${DateTime.now().millisecondsSinceEpoch}',
+    );
+    context.push(AppRoutes.insights);
+  }
+
+  void _recordJourneyEvent({
+    required String eventType,
+    required String sourceId,
+  }) {
+    if (!ref.read(authProvider).isAuthenticated) return;
+    unawaited(
+      () async {
+        try {
+          await ref.read(conscienceJourneyProvider.notifier).recordEvent(
+                eventType: eventType,
+                sourceId: sourceId,
+              );
+        } catch (_) {
+          // Journey progress is supportive context; never block navigation on it.
+        }
+      }(),
+    );
+  }
+
+  String _journeyQuestRoute(ConscienceQuest quest) {
+    return switch (quest.key) {
+      'reflect_three_purchases' => AppRoutes.transactions,
+      'check_before_purchase' => AppRoutes.assistant,
+      'review_regret_pattern' => AppRoutes.insights,
+      'read_two_insights' => AppRoutes.insights,
+      'create_budget_guardrail' => AppRoutes.budgets,
+      'send_family_invite' => AppRoutes.familyInvites,
+      _ => AppRoutes.journey,
+    };
+  }
+
+  ConscienceQuest? _nextOutstandingQuest(ConscienceJourneySummary? journey) {
+    for (final quest in journey?.weeklyQuests ?? const <ConscienceQuest>[]) {
+      if (!quest.isCompleted) return quest;
+    }
+    return null;
+  }
+
+  BudgetTrendInsight? _graphableBudgetTrend(
+    List<BudgetTrendInsight>? trends,
+  ) {
+    if (trends == null) return null;
+    for (final trend in trends) {
+      if (trend.months.length >= 2) return trend;
+    }
+    return null;
   }
 
   void _handleAlertAction(AppAlert alert) {
@@ -367,7 +451,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   Widget build(BuildContext context) {
     final budgetState = ref.watch(budgetListProvider);
     final txState = ref.watch(transactionListProvider);
-    final insightSummaryState = ref.watch(dashboardInsightSummaryProvider);
     final journeyState = ref.watch(conscienceJourneyProvider);
     final profile = ref.watch(currentUserProvider).valueOrNull;
     final userPreferences = ref.watch(userPreferencesProvider);
@@ -389,8 +472,16 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         : budgets;
     final transactions = txState.transactions;
     final recentTransactions = transactions.take(5).toList();
-    final insightSummary = insightSummaryState.valueOrNull;
     final journey = journeyState.valueOrNull;
+    final journeyLoadingWithoutData = journeyState.isLoading && journey == null;
+    final journeyHome = buildJourneyHomePresentation(journey);
+    final dashboardInsightSummary =
+        ref.watch(dashboardInsightSummaryProvider).valueOrNull;
+    final behavioralInsights =
+        ref.watch(behavioralInsightsProvider).valueOrNull;
+    final dashboardInsightTrend =
+        _graphableBudgetTrend(behavioralInsights?.budgetTrends);
+    final nextJourneyQuest = _nextOutstandingQuest(journey);
     final regretPrompts = transactions
         .where((t) =>
             t.regretLevel == null &&
@@ -399,10 +490,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         .take(3)
         .toList();
     final greetingName = _greetingName(profile);
-    final monthExpenseTotal = _currentMonthExpenseTotal(
-      transactions,
-      userPreferences.currency,
-    );
     final stickyProgress = ((_scrollOffset - 5) / 10).clamp(0.0, 1.0);
 
     return Stack(
@@ -416,19 +503,35 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             slivers: [
               SliverToBoxAdapter(
                 child: _DashboardEditorialHeroCard(
-                  monthExpenseTotal: monthExpenseTotal,
-                  currencyCode: userPreferences.currency,
-                  locale: userPreferences.locale,
                   journey: journey,
-                  summary: insightSummary,
-                  loading: (journeyState.isLoading && journey == null) ||
-                      (insightSummaryState.isLoading && insightSummary == null),
-                  onJourneyTap: () => context.push(AppRoutes.journey),
-                  onInsightsTap: () => context.push(AppRoutes.insights),
+                  presentation: journeyHome,
+                  loading: journeyLoadingWithoutData,
+                  onContinueJourney: nextJourneyQuest == null
+                      ? () => context.push(AppRoutes.transactions)
+                      : () => _openJourneyQuest(nextJourneyQuest),
                 ),
               ),
+              if (!journeyLoadingWithoutData)
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.only(top: 18),
+                    child: JourneyLedHomeSections(
+                      summary: journey,
+                      presentation: journeyHome,
+                      insightSummary: dashboardInsightSummary,
+                      insightTrend: dashboardInsightTrend,
+                      onQuestSelected: _openJourneyQuest,
+                      onOpenInsights: _openWeeklyInsights,
+                    ),
+                  ),
+                ),
               SliverToBoxAdapter(
-                child: _buildSectionHeader(context, 'BUDGETS'),
+                child: _buildSectionHeader(
+                  context,
+                  'Budgets',
+                  subtitle: 'A quick pulse check on your monthly guardrails.',
+                  topPadding: 10,
+                ),
               ),
               if (budgetState.isLoading && budgets.isEmpty)
                 const SliverPadding(
@@ -507,7 +610,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 ),
               ],
               SliverToBoxAdapter(
-                child: _buildSectionHeader(context, 'RECENT TRANSACTIONS'),
+                child: _buildSectionHeader(
+                  context,
+                  'Recent transactions',
+                  subtitle: 'The latest money moments feeding your Journey.',
+                ),
               ),
               if (txState.isLoading && transactions.isEmpty)
                 const SliverPadding(
@@ -536,8 +643,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 )
               else
                 SliverToBoxAdapter(
-                  child: EditorialTransactionRowsGroup(
-                    horizontalPadding: 20,
+                  child: _DashboardRecentTransactionsList(
                     children: [
                       for (final transaction in recentTransactions)
                         RecentTransactionTile(
@@ -598,25 +704,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     return 'there';
   }
 
-  double _currentMonthExpenseTotal(
-    List<Transaction> transactions,
-    String currencyCode,
-  ) {
-    final now = DateTime.now();
-    return transactions
-        .where((t) => t.type != 'income')
-        .where((t) => t.date.year == now.year && t.date.month == now.month)
-        .fold(0.0, (sum, t) => sum + _amountInUserCurrency(t, currencyCode));
-  }
-
-  double _amountInUserCurrency(Transaction tx, String currencyCode) {
-    final amount = tx.amount.abs();
-    if (tx.currencyCode == currencyCode) return amount;
-    final rate = tx.exchangeRateToBase;
-    if (rate == null || rate <= 0) return amount;
-    return amount * rate;
-  }
-
   List<AppAlert> _visibleAlerts(List<AppAlert> alerts, List<Budget> budgets) {
     final budgetCategories =
         budgets.map((budget) => budget.category.toLowerCase()).toSet();
@@ -629,17 +716,47 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     }).toList(growable: false);
   }
 
-  Widget _buildSectionHeader(BuildContext context, String title) {
+  Widget _buildSectionHeader(
+    BuildContext context,
+    String title, {
+    String? subtitle,
+    double topPadding = 24,
+  }) {
     final colors = Theme.of(context).appColors;
+    final isEditorial = title != title.toUpperCase();
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 24, 20, 12),
-      child: Text(
-        title,
-        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: colors.mutedInk,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 1.0,
+      padding: EdgeInsets.fromLTRB(20, topPadding, 20, 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: isEditorial
+                ? GoogleFonts.libreBaskerville(
+                    textStyle: Theme.of(context).textTheme.titleLarge,
+                    color: colors.deepNavy,
+                    fontWeight: FontWeight.w700,
+                    height: 1.05,
+                  )
+                : Theme.of(context).textTheme.labelSmall?.copyWith(
+                      color: colors.mutedInk,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 1.0,
+                    ),
+          ),
+          if (subtitle != null) ...[
+            const SizedBox(height: 4),
+            Text(
+              subtitle,
+              style: GoogleFonts.nunitoSans(
+                textStyle: Theme.of(context).textTheme.bodySmall,
+                color: colors.mutedInk,
+                fontWeight: FontWeight.w500,
+                height: 1.35,
+              ),
             ),
+          ],
+        ],
       ),
     );
   }
@@ -647,24 +764,16 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
 class _DashboardEditorialHeroCard extends StatelessWidget {
   const _DashboardEditorialHeroCard({
-    required this.monthExpenseTotal,
-    required this.currencyCode,
-    required this.locale,
     required this.journey,
-    required this.summary,
+    required this.presentation,
     required this.loading,
-    required this.onJourneyTap,
-    required this.onInsightsTap,
+    required this.onContinueJourney,
   });
 
-  final double monthExpenseTotal;
-  final String currencyCode;
-  final String? locale;
   final ConscienceJourneySummary? journey;
-  final DashboardInsightSummary? summary;
+  final JourneyHomePresentation presentation;
   final bool loading;
-  final VoidCallback onJourneyTap;
-  final VoidCallback onInsightsTap;
+  final VoidCallback onContinueJourney;
 
   @override
   Widget build(BuildContext context) {
@@ -676,107 +785,67 @@ class _DashboardEditorialHeroCard extends StatelessWidget {
     }
 
     final heroTopPadding = AppLayout.dashboardHeroTop(context);
-
     return Container(
       key: const ValueKey('dashboard-editorial-hero'),
       width: double.infinity,
-      padding: EdgeInsets.fromLTRB(20, heroTopPadding, 20, 28),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            colors.navySoft,
+            colors.paper,
             colors.amberSoft,
+            colors.navySoft.withValues(alpha: 0.72),
           ],
         ),
         borderRadius: const BorderRadius.vertical(
           bottom: Radius.circular(32),
         ),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Stack(
         children: [
-          Text(
-            'SPENT THIS MONTH',
-            style: textTheme.labelSmall?.copyWith(
-              color: colors.deepNavy,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 0.8,
+          const Positioned.fill(
+            child: CustomPaint(
+              painter: _JourneyHeroAtmospherePainter(),
             ),
           ),
-          const SizedBox(height: 6),
-          Text(
-            CurrencyFormatter.format(
-              monthExpenseTotal,
-              currencyCode: currencyCode,
-              locale: locale,
-            ),
-            style: GoogleFonts.inter(
-              textStyle: textTheme.displaySmall,
-              color: colors.deepNavy,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            summary?.text ??
-                (journey == null
-                    ? 'Conscia will turn your next few transactions into a clearer monthly story.'
-                    : '${journey!.momentumDays}-day mindful streak · ${_DashboardJourneyCard._completedQuestCount(journey!.weeklyQuests)}/${journey!.weeklyQuests.length} quests this week'),
-            style: textTheme.bodyMedium?.copyWith(
-              color: colors.ink,
-              height: 1.35,
-            ),
-          ),
-          const SizedBox(height: 18),
-          Wrap(
-            spacing: 10,
-            runSpacing: 10,
-            children: [
-              _HeroMetricPill(
-                icon: Icons.local_fire_department_rounded,
-                label: journey == null
-                    ? '0-day streak'
-                    : '${journey!.momentumDays}-day streak',
-                backgroundColor: colors.surfaceRaised.withValues(alpha: 0.75),
-                foregroundColor: colors.deepNavy,
-              ),
-              _HeroMetricPill(
-                icon: Icons.flag_rounded,
-                label: journey == null
-                    ? '0/0 quests'
-                    : '${_DashboardJourneyCard._completedQuestCount(journey!.weeklyQuests)}/${journey!.weeklyQuests.length} quests',
-                backgroundColor: colors.surfaceRaised.withValues(alpha: 0.75),
-                foregroundColor: colors.deepNavy,
-              ),
-            ],
-          ),
-          const SizedBox(height: 18),
-          Row(
-            children: [
-              Expanded(
-                child: HeroShortcutCard(
-                  key: const ValueKey('dashboard-journey-link'),
-                  icon: Icons.flag_rounded,
-                  label: 'Journey',
-                  subtitle: 'Momentum and quests',
-                  minHeight: 54,
-                  onPressed: onJourneyTap,
+          Padding(
+            padding: EdgeInsets.fromLTRB(20, heroTopPadding, 20, 22),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Journey',
+                  key: const ValueKey('dashboard-journey-hero-title'),
+                  style: GoogleFonts.libreBaskerville(
+                    textStyle: textTheme.displayMedium,
+                    color: colors.deepNavy,
+                    fontWeight: FontWeight.w700,
+                    height: 0.96,
+                  ),
                 ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: HeroShortcutCard(
-                  key: const ValueKey('dashboard-insights-link'),
-                  icon: Icons.auto_graph_rounded,
-                  label: 'Insights',
-                  subtitle: 'Patterns and signals',
-                  minHeight: 54,
-                  onPressed: onInsightsTap,
+                const SizedBox(height: 6),
+                Text(
+                  'Small choices, big freedom.',
+                  key: const ValueKey('dashboard-journey-hero-subtitle'),
+                  style: GoogleFonts.nunitoSans(
+                    textStyle: textTheme.bodyMedium,
+                    color: colors.ink.withValues(alpha: 0.78),
+                    fontWeight: FontWeight.w500,
+                    height: 1.3,
+                  ),
                 ),
-              ),
-            ],
+                const SizedBox(height: 20),
+                _JourneyHeroMomentum(
+                  journey: journey,
+                ),
+                const SizedBox(height: 20),
+                _JourneyHeroNextStepCard(
+                  action: presentation.todayAction,
+                  onPressed: onContinueJourney,
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -784,46 +853,250 @@ class _DashboardEditorialHeroCard extends StatelessWidget {
   }
 }
 
-class _HeroMetricPill extends StatelessWidget {
-  const _HeroMetricPill({
-    required this.icon,
-    required this.label,
-    required this.backgroundColor,
-    required this.foregroundColor,
-  });
+class _JourneyHeroMomentum extends StatelessWidget {
+  const _JourneyHeroMomentum({required this.journey});
 
-  final IconData icon;
-  final String label;
-  final Color backgroundColor;
-  final Color foregroundColor;
+  final ConscienceJourneySummary? journey;
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).appColors;
+    final textTheme = Theme.of(context).textTheme;
+    final momentumDays = journey?.momentumDays ?? 0;
+    final bestMomentumDays = journey?.bestMomentumDays ?? 0;
+    final remainingDays =
+        bestMomentumDays > momentumDays ? bestMomentumDays - momentumDays : 0;
+    final detail = momentumDays <= 0
+        ? 'Start with one check-in to begin your stride.'
+        : remainingDays > 0
+            ? '$remainingDays more days to strengthen your stride.'
+            : 'Your stride is getting stronger.';
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'MOMENTUM',
+          style: GoogleFonts.nunitoSans(
+            textStyle: textTheme.labelSmall,
+            color: colors.deepNavy.withValues(alpha: 0.72),
+            fontWeight: FontWeight.w900,
+            letterSpacing: 0.9,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 21,
+              height: 21,
+              decoration: BoxDecoration(
+                color: const Color(0xFFE97552),
+                borderRadius: BorderRadius.circular(999),
+              ),
+              child: const Icon(
+                Icons.local_fire_department_rounded,
+                color: Colors.white,
+                size: 14,
+              ),
+            ),
+            const SizedBox(width: 7),
+            Text(
+              '$momentumDays day streak',
+              key: const ValueKey('dashboard-journey-momentum-value'),
+              style: GoogleFonts.nunitoSans(
+                textStyle: textTheme.titleMedium,
+                color: colors.deepNavy,
+                fontWeight: FontWeight.w800,
+                height: 1.0,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 5),
+        Text(
+          detail,
+          key: const ValueKey('dashboard-journey-momentum-detail'),
+          style: GoogleFonts.nunitoSans(
+            textStyle: textTheme.bodySmall,
+            color: colors.ink.withValues(alpha: 0.72),
+            height: 1.25,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _JourneyHeroNextStepCard extends StatelessWidget {
+  const _JourneyHeroNextStepCard({
+    required this.action,
+    required this.onPressed,
+  });
+
+  final JourneyHomeAction action;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    const foreground = Colors.white;
+
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      key: const ValueKey('dashboard-journey-next-step-card'),
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(18, 16, 14, 16),
       decoration: BoxDecoration(
-        color: backgroundColor,
-        borderRadius: BorderRadius.circular(999),
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFF071A34), Color(0xFF132D55)],
+        ),
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.16),
+            blurRadius: 24,
+            offset: const Offset(0, 12),
+          ),
+        ],
       ),
       child: Row(
-        mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 15, color: foregroundColor),
-          const SizedBox(width: 6),
-          Flexible(
-            child: Text(
-              label,
-              overflow: TextOverflow.ellipsis,
-              style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                    color: foregroundColor,
-                    fontWeight: FontWeight.w700,
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'NEXT STEP',
+                  style: GoogleFonts.nunitoSans(
+                    textStyle: textTheme.labelSmall,
+                    color: foreground.withValues(alpha: 0.76),
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0.8,
                   ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  action.title,
+                  style: GoogleFonts.libreBaskerville(
+                    textStyle: textTheme.titleLarge,
+                    color: foreground,
+                    fontWeight: FontWeight.w800,
+                    height: 1.05,
+                  ),
+                ),
+                const SizedBox(height: 5),
+                Text(
+                  '2 min  •  ${action.description}',
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.nunitoSans(
+                    textStyle: textTheme.bodySmall,
+                    color: foreground.withValues(alpha: 0.76),
+                    height: 1.25,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 14),
+          SizedBox(
+            width: 54,
+            height: 54,
+            child: FilledButton(
+              key: const ValueKey('dashboard-journey-next-step-button'),
+              style: FilledButton.styleFrom(
+                padding: EdgeInsets.zero,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                backgroundColor: const Color(0xFFE97552),
+                foregroundColor: foreground,
+              ),
+              onPressed: onPressed,
+              child: const Icon(
+                Icons.chevron_right_rounded,
+                key: ValueKey('dashboard-journey-next-step-chevron'),
+                size: 30,
+              ),
             ),
           ),
         ],
       ),
     );
   }
+}
+
+class _JourneyHeroAtmospherePainter extends CustomPainter {
+  const _JourneyHeroAtmospherePainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final sunPaint = Paint()
+      ..shader = RadialGradient(
+        colors: [
+          const Color(0xFFFFD98A).withValues(alpha: 0.42),
+          const Color(0x00FFD98A),
+        ],
+      ).createShader(Rect.fromCircle(
+        center: Offset(size.width * 0.72, size.height * 0.26),
+        radius: size.width * 0.38,
+      ));
+
+    canvas.drawCircle(
+      Offset(size.width * 0.72, size.height * 0.26),
+      size.width * 0.38,
+      sunPaint,
+    );
+
+    final hillPaint = Paint()
+      ..color = const Color(0xFF8CA889).withValues(alpha: 0.16)
+      ..style = PaintingStyle.fill;
+
+    final backHill = Path()
+      ..moveTo(0, size.height * 0.58)
+      ..cubicTo(
+        size.width * 0.24,
+        size.height * 0.46,
+        size.width * 0.48,
+        size.height * 0.66,
+        size.width,
+        size.height * 0.52,
+      )
+      ..lineTo(size.width, size.height)
+      ..lineTo(0, size.height)
+      ..close();
+    canvas.drawPath(backHill, hillPaint);
+
+    final pathPaint = Paint()
+      ..color = const Color(0xFFD9B778).withValues(alpha: 0.18)
+      ..style = PaintingStyle.fill;
+    final path = Path()
+      ..moveTo(size.width * 0.48, size.height)
+      ..cubicTo(
+        size.width * 0.54,
+        size.height * 0.74,
+        size.width * 0.64,
+        size.height * 0.65,
+        size.width * 0.78,
+        size.height * 0.52,
+      )
+      ..cubicTo(
+        size.width * 0.68,
+        size.height * 0.66,
+        size.width * 0.68,
+        size.height * 0.82,
+        size.width * 0.64,
+        size.height,
+      )
+      ..close();
+    canvas.drawPath(path, pathPaint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
 class _DashboardStickyOverlayHeader extends StatelessWidget {
@@ -966,10 +1239,10 @@ class _DashboardIdentityRow extends StatelessWidget {
           Expanded(
             child: Text(
               greetingName,
-              style: GoogleFonts.poppins(
+              style: GoogleFonts.nunitoSans(
                 textStyle: textTheme.titleSmall,
                 color: colors.ink,
-                fontWeight: FontWeight.w700,
+                fontWeight: FontWeight.w800,
               ),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
@@ -1000,18 +1273,18 @@ class _DashboardIdentityRow extends StatelessWidget {
             children: [
               Text(
                 'Welcome back',
-                style: textTheme.bodySmall?.copyWith(
+                style: GoogleFonts.nunitoSans(
+                  textStyle: textTheme.bodySmall,
                   color: colors.mutedInk,
-                  fontWeight: FontWeight.w600,
+                  fontWeight: FontWeight.w700,
                 ),
               ),
-              const SizedBox(height: 2),
               Text(
                 greetingName,
-                style: GoogleFonts.poppins(
+                style: GoogleFonts.nunitoSans(
                   textStyle: textTheme.titleLarge,
                   color: colors.ink,
-                  fontWeight: FontWeight.w600,
+                  fontWeight: FontWeight.w700,
                 ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
@@ -1063,7 +1336,125 @@ class _ProfileAvatar extends StatelessWidget {
   }
 }
 
-class _DashboardBudgetSummary extends StatelessWidget {
+class _DashboardRecentTransactionsList extends StatelessWidget {
+  const _DashboardRecentTransactionsList({required this.children});
+
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).appColors;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 2),
+      child: Column(
+        children: [
+          for (final entry in children.indexed)
+            Padding(
+              padding: EdgeInsets.only(
+                bottom: entry.$1 == children.length - 1 ? 0 : 10,
+              ),
+              child: Container(
+                key: const ValueKey('dashboard-recent-transaction-card'),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: colors.surfaceRaised,
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(color: colors.border),
+                  boxShadow: [
+                    BoxShadow(
+                      color: colors.deepNavy.withValues(alpha: 0.025),
+                      blurRadius: 18,
+                      offset: const Offset(0, 8),
+                    ),
+                  ],
+                ),
+                child: entry.$2,
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _BudgetManageRow extends StatelessWidget {
+  const _BudgetManageRow({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).appColors;
+    final textTheme = Theme.of(context).textTheme;
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        key: const ValueKey('dashboard-budget-manage-row'),
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Ink(
+          padding: const EdgeInsets.fromLTRB(12, 10, 10, 10),
+          decoration: BoxDecoration(
+            color: colors.navySoft.withValues(alpha: 0.42),
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                  color: colors.deepNavy.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  Icons.pie_chart_rounded,
+                  color: colors.deepNavy,
+                  size: 18,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Manage budgets',
+                      style: GoogleFonts.nunitoSans(
+                        textStyle: textTheme.labelLarge,
+                        color: colors.deepNavy,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Tune caps and scope',
+                      style: GoogleFonts.nunitoSans(
+                        textStyle: textTheme.labelSmall,
+                        color: colors.mutedInk,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(
+                Icons.chevron_right_rounded,
+                color: colors.mutedInk,
+                size: 22,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _DashboardBudgetSummary extends StatefulWidget {
   const _DashboardBudgetSummary({
     required this.budgets,
     required this.selectedScope,
@@ -1081,14 +1472,35 @@ class _DashboardBudgetSummary extends StatelessWidget {
   final VoidCallback onManageTap;
 
   @override
+  State<_DashboardBudgetSummary> createState() =>
+      _DashboardBudgetSummaryState();
+}
+
+class _DashboardBudgetSummaryState extends State<_DashboardBudgetSummary> {
+  final _mixRailController = ScrollController();
+  final _pillKeys = <GlobalKey>[];
+  int? _calledOutMixIndex;
+  int _shakeSerial = 0;
+
+  @override
+  void dispose() {
+    _mixRailController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).appColors;
     final textTheme = Theme.of(context).textTheme;
-    final mix = _budgetMix(budgets);
-    final totalSpent = budgets.fold<double>(0, (sum, b) => sum + b.spent);
+    final mix = _budgetMix(widget.budgets);
+    final activeMix = mix.where((budget) => budget.spent > 0).toList();
+    _syncPillKeys(activeMix.length);
+    final totalSpent =
+        widget.budgets.fold<double>(0, (sum, b) => sum + b.spent);
     final totalLimit =
-        budgets.fold<double>(0, (sum, b) => sum + b.monthlyLimit);
-    final currencyCode = budgets.isEmpty ? 'PHP' : budgets.first.currencyCode;
+        widget.budgets.fold<double>(0, (sum, b) => sum + b.monthlyLimit);
+    final currencyCode =
+        widget.budgets.isEmpty ? 'PHP' : widget.budgets.first.currencyCode;
     final usedPercent =
         totalLimit <= 0 ? 0 : ((totalSpent / totalLimit) * 100).round();
 
@@ -1096,112 +1508,189 @@ class _DashboardBudgetSummary extends StatelessWidget {
       key: const ValueKey('dashboard-budget-summary'),
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        LayoutBuilder(
-          key: const ValueKey('dashboard-budget-top-row'),
-          builder: (context, constraints) {
-            final columnWidth = constraints.maxWidth / 2;
-            final donutSize = columnWidth.clamp(96.0, 120.0);
-
-            return Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                SizedBox(
-                  width: columnWidth,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        '${CurrencyFormatter.format(
-                          totalSpent,
-                          currencyCode: currencyCode,
-                          locale: locale,
-                        )} used',
-                        style: textTheme.headlineSmall?.copyWith(
-                          color: colors.deepNavy,
-                          fontWeight: FontWeight.w800,
-                          height: 1.0,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'of ${CurrencyFormatter.format(
-                          totalLimit,
-                          currencyCode: currencyCode,
-                          locale: locale,
-                        )} monthly cap',
-                        style: textTheme.bodySmall?.copyWith(
-                          color: colors.mutedInk,
-                        ),
-                      ),
-                      if (showScopeSwitch) ...[
-                        const SizedBox(height: 12),
-                        ScopePillSwitch(
-                          value: selectedScope,
-                          familyEnabled: true,
-                          onChanged: onScopeChanged,
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-                SizedBox(
-                  key: const ValueKey('dashboard-budget-donut-lane'),
-                  width: columnWidth,
-                  child: Center(
-                    child: BudgetMixDonut(
-                      key: const ValueKey('dashboard-budget-donut'),
-                      size: donutSize,
-                      trackStrokeWidth: donutSize * 0.17,
-                      segmentStrokeWidth: donutSize * 0.125,
-                      segments: _budgetSegments(mix, totalSpent),
-                      center: Text(
-                        '$usedPercent%',
-                        style: textTheme.labelSmall?.copyWith(
-                          color: colors.deepNavy,
-                          fontWeight: FontWeight.w900,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            );
-          },
-        ),
-        if (mix.isNotEmpty) ...[
-          const SizedBox(height: 12),
-          SingleChildScrollView(
-            key: const ValueKey('dashboard-budget-mix-pill-rail'),
-            scrollDirection: Axis.horizontal,
-            clipBehavior: Clip.none,
-            child: Row(
-              children: [
-                for (final entry in mix.indexed)
-                  Padding(
-                    padding: EdgeInsets.only(
-                      right: entry.$1 == mix.length - 1 ? 0 : 8,
-                    ),
-                    child: BudgetMixPill(
-                      index: entry.$1,
-                      category: entry.$2.category,
-                      type: 'Expense',
-                      share: totalSpent <= 0 ? 0 : entry.$2.spent / totalSpent,
-                    ),
-                  ),
-              ],
-            ),
+        Container(
+          key: const ValueKey('dashboard-budget-editorial-card'),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: colors.surfaceRaised,
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: colors.border),
+            boxShadow: [
+              BoxShadow(
+                color: colors.deepNavy.withValues(alpha: 0.04),
+                blurRadius: 24,
+                offset: const Offset(0, 12),
+              ),
+            ],
           ),
-        ],
-        const SizedBox(height: 12),
-        HeroShortcutCard(
-          key: const ValueKey('dashboard-manage-budgets'),
-          icon: Icons.pie_chart_rounded,
-          label: 'Manage budgets',
-          subtitle: 'Tune caps and scope',
-          onPressed: onManageTap,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              LayoutBuilder(
+                key: const ValueKey('dashboard-budget-top-row'),
+                builder: (context, constraints) {
+                  final columnWidth = constraints.maxWidth / 2;
+                  final donutSize = columnWidth.clamp(96.0, 120.0);
+
+                  return Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      SizedBox(
+                        width: columnWidth,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Used this month',
+                              style: GoogleFonts.nunitoSans(
+                                textStyle: textTheme.labelSmall,
+                                color: colors.mutedInk,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: 0.7,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              '${CurrencyFormatter.format(
+                                totalSpent,
+                                currencyCode: currencyCode,
+                                locale: widget.locale,
+                              )} used',
+                              style: GoogleFonts.libreBaskerville(
+                                textStyle: textTheme.titleLarge,
+                                color: colors.deepNavy,
+                                fontWeight: FontWeight.w700,
+                                height: 1.05,
+                              ),
+                            ),
+                            const SizedBox(height: 5),
+                            Text(
+                              'of ${CurrencyFormatter.format(
+                                totalLimit,
+                                currencyCode: currencyCode,
+                                locale: widget.locale,
+                              )} monthly cap',
+                              style: GoogleFonts.nunitoSans(
+                                textStyle: textTheme.bodySmall,
+                                color: colors.mutedInk,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              'A calmer view of what your money is doing.',
+                              style: GoogleFonts.nunitoSans(
+                                textStyle: textTheme.bodySmall,
+                                color: colors.mutedInk,
+                                fontWeight: FontWeight.w500,
+                                height: 1.25,
+                              ),
+                            ),
+                            if (widget.showScopeSwitch) ...[
+                              const SizedBox(height: 12),
+                              ScopePillSwitch(
+                                value: widget.selectedScope,
+                                familyEnabled: true,
+                                onChanged: widget.onScopeChanged,
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                      SizedBox(
+                        key: const ValueKey('dashboard-budget-donut-lane'),
+                        width: columnWidth,
+                        child: Center(
+                          child: BudgetMixDonut(
+                            key: const ValueKey('dashboard-budget-donut'),
+                            size: donutSize,
+                            trackStrokeWidth: donutSize * 0.17,
+                            segmentStrokeWidth: donutSize * 0.125,
+                            segments: _budgetSegments(mix, totalSpent),
+                            onSegmentTap: _callOutMixPill,
+                            center: Text(
+                              '$usedPercent%',
+                              style: GoogleFonts.nunitoSans(
+                                textStyle: textTheme.labelSmall,
+                                color: colors.deepNavy,
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  );
+                },
+              ),
+              if (activeMix.isNotEmpty) ...[
+                const SizedBox(height: 14),
+                HorizontalEdgeFade(
+                  child: SingleChildScrollView(
+                    key: const ValueKey('dashboard-budget-mix-pill-rail'),
+                    controller: _mixRailController,
+                    scrollDirection: Axis.horizontal,
+                    clipBehavior: Clip.hardEdge,
+                    child: Row(
+                      children: [
+                        for (final entry in activeMix.indexed)
+                          Padding(
+                            padding: EdgeInsets.only(
+                              right: entry.$1 == activeMix.length - 1 ? 20 : 8,
+                            ),
+                            child: BudgetMixPill(
+                              key: _pillKeys[entry.$1],
+                              index: entry.$1,
+                              category: entry.$2.category,
+                              type: 'Expense',
+                              share: totalSpent <= 0
+                                  ? 0
+                                  : entry.$2.spent / totalSpent,
+                              active: _calledOutMixIndex == entry.$1,
+                              shakeSerial: _shakeSerial,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+              const SizedBox(height: 14),
+              _BudgetManageRow(onTap: widget.onManageTap),
+            ],
+          ),
         ),
       ],
     );
+  }
+
+  void _syncPillKeys(int count) {
+    while (_pillKeys.length < count) {
+      _pillKeys.add(GlobalKey());
+    }
+    while (_pillKeys.length > count) {
+      _pillKeys.removeLast();
+    }
+  }
+
+  void _callOutMixPill(int index) {
+    if (index < 0 || index >= _pillKeys.length) return;
+    setState(() {
+      _calledOutMixIndex = index;
+      _shakeSerial++;
+    });
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final context = _pillKeys[index].currentContext;
+      if (context == null) return;
+      Scrollable.ensureVisible(
+        context,
+        duration: const Duration(milliseconds: 260),
+        curve: Curves.easeOutCubic,
+        alignment: 0.5,
+      );
+    });
   }
 
   List<Budget> _budgetMix(List<Budget> budgets) {
@@ -1347,176 +1836,6 @@ class _DashboardHeroSkeleton extends StatelessWidget {
               SizedBox(width: 10),
               Expanded(child: SkeletonLoader(height: 64, borderRadius: 18)),
             ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _DashboardJourneyCard extends StatelessWidget {
-  const _DashboardJourneyCard({
-    required this.journey,
-    required this.onTap,
-  });
-
-  final ConscienceJourneySummary journey;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
-    final nextLevel = journey.nextLevel;
-
-    return Card(
-      child: InkWell(
-        borderRadius: BorderRadius.circular(12),
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Icon(
-                    Icons.workspace_premium_rounded,
-                    color: colors.primary,
-                    size: 18,
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'Conscience Journey',
-                      style: textTheme.labelMedium?.copyWith(
-                        color: colors.onSurfaceVariant,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
-                  Icon(
-                    Icons.chevron_right_rounded,
-                    color: colors.onSurfaceVariant,
-                    size: 20,
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  const _JourneyCardMascots(),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          journey.currentLevel.title,
-                          style: textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          nextLevel == null
-                              ? '${journey.xpTotal} XP earned'
-                              : '${journey.xpTotal} XP · ${journey.xpToNextLevel} to ${nextLevel.title}',
-                          style: textTheme.bodySmall?.copyWith(
-                            color: colors.onSurfaceVariant,
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: [
-                            _JourneyMiniPill(
-                              label: '${journey.momentumDays}-day streak',
-                              icon: Icons.local_fire_department_rounded,
-                            ),
-                            _JourneyMiniPill(
-                              label:
-                                  '${_completedQuestCount(journey.weeklyQuests)}/${journey.weeklyQuests.length} quests',
-                              icon: Icons.flag_rounded,
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  static int _completedQuestCount(List<ConscienceQuest> quests) =>
-      quests.where((quest) => quest.isCompleted == true).length;
-}
-
-class _JourneyCardMascots extends StatelessWidget {
-  const _JourneyCardMascots();
-
-  @override
-  Widget build(BuildContext context) {
-    return const SizedBox(
-      width: 74,
-      height: 58,
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          Positioned(
-            left: 24,
-            child: MascotSpriteFrame(
-              atlas: angelMascotAtlas,
-              frameName: '4_win.png',
-              width: 54,
-            ),
-          ),
-          MascotSpriteFrame(
-            atlas: devilMascotAtlas,
-            frameName: '9_coin.png',
-            width: 54,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _JourneyMiniPill extends StatelessWidget {
-  const _JourneyMiniPill({
-    required this.label,
-    required this.icon,
-  });
-
-  final String label;
-  final IconData icon;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
-      decoration: BoxDecoration(
-        color: colors.primaryContainer.withValues(alpha: 0.55),
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 14, color: colors.primary),
-          const SizedBox(width: 5),
-          Text(
-            label,
-            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: colors.primary,
-                  fontWeight: FontWeight.w800,
-                ),
           ),
         ],
       ),

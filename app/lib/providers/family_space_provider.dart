@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/constants/api_constants.dart';
+import '../core/constants/conscience_journey.dart';
 import '../core/network/dio_client.dart';
 import '../models/family_overview.dart';
 import '../models/family_invite.dart';
@@ -10,6 +13,7 @@ import 'alert_provider.dart';
 import 'auth_provider.dart';
 import 'behavioral_insights_provider.dart';
 import 'budget_providers.dart';
+import 'conscience_journey_provider.dart';
 import 'insight_feed_provider.dart';
 import 'insights_provider.dart';
 import 'transaction_providers.dart';
@@ -169,6 +173,11 @@ class FamilySpaceActions {
         'role': role,
       },
     );
+    _recordJourneyEvent(
+      ref,
+      ConscienceJourneyEvents.familyInviteSent,
+      'family-invite:$email',
+    );
     ref.invalidate(familyOutgoingInvitesProvider);
   }
 
@@ -236,4 +245,19 @@ class FamilySpaceActions {
     await dio.post(ApiConstants.familyLeave);
     invalidateFamilyScopedProviders(ref, resetScope: true);
   }
+}
+
+void _recordJourneyEvent(Ref ref, String eventType, String sourceId) {
+  if (!ref.read(authProvider).isAuthenticated) return;
+  unawaited(
+    () async {
+      try {
+        await ref
+            .read(conscienceJourneyProvider.notifier)
+            .recordEvent(eventType: eventType, sourceId: sourceId);
+      } catch (_) {
+        // Family actions should succeed even if Journey progress is unavailable.
+      }
+    }(),
+  );
 }

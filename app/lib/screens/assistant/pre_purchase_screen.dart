@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/routing/app_router.dart';
+import '../../core/constants/conscience_journey.dart';
 import '../../core/constants/generated/app_constants.g.dart';
 import '../../core/constants/category_icons.dart';
 import '../../core/errors/app_error.dart';
@@ -15,6 +16,8 @@ import '../../core/utils/voice_input_parser.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_layout.dart';
 import '../../providers/ai_provider.dart';
+import '../../providers/auth_provider.dart';
+import '../../providers/conscience_journey_provider.dart';
 import '../../providers/family_space_provider.dart';
 import '../../providers/insight_feed_provider.dart';
 import '../../providers/category_recents_provider.dart';
@@ -253,6 +256,10 @@ class _PrePurchaseScreenState extends ConsumerState<PrePurchaseScreen> {
       );
 
       ref.read(monthlyUsageProvider.notifier).recordAiAssist();
+      _recordJourneyEvent(
+        eventType: ConscienceJourneyEvents.prePurchaseChecked,
+        sourceId: 'prepurchase:${DateTime.now().millisecondsSinceEpoch}',
+      );
       return response;
     } on DioException catch (e, s) {
       if (CancelToken.isCancel(e)) {
@@ -265,6 +272,24 @@ class _PrePurchaseScreenState extends ConsumerState<PrePurchaseScreen> {
     } catch (e, s) {
       throw AppError.from(e, stackTrace: s).userMessage;
     }
+  }
+
+  void _recordJourneyEvent({
+    required String eventType,
+    required String sourceId,
+  }) {
+    if (!ref.read(authProvider).isAuthenticated) return;
+    unawaited(
+      () async {
+        try {
+          await ref
+              .read(conscienceJourneyProvider.notifier)
+              .recordEvent(eventType: eventType, sourceId: sourceId);
+        } catch (_) {
+          // The purchase assistant result should not depend on Journey sync.
+        }
+      }(),
+    );
   }
 
   Future<void> _showConscienceCheckSheet() async {
@@ -413,11 +438,14 @@ class _PrePurchaseScreenState extends ConsumerState<PrePurchaseScreen> {
     final colors = Theme.of(context).appColors;
     final stickyProgress = ((_inputScrollOffset - 5) / 10).clamp(0.0, 1.0);
     final keyboardInset = MediaQuery.viewInsetsOf(context).bottom;
-    final ctaBottomSpacer = keyboardInset > 0 ? keyboardInset + 28 : 112.0;
+    final safeBottom = MediaQuery.paddingOf(context).bottom;
+    final ctaLift = keyboardInset > 0 ? keyboardInset + 12 : safeBottom + 16;
+    final ctaBottomSpacer = keyboardInset > 0 ? keyboardInset + 112 : 128.0;
 
     _scheduleInputScrollSync();
 
     return Scaffold(
+      resizeToAvoidBottomInset: false,
       body: DecoratedBox(
         decoration: BoxDecoration(
           gradient: LinearGradient(
@@ -546,15 +574,6 @@ class _PrePurchaseScreenState extends ConsumerState<PrePurchaseScreen> {
                               ),
                             ),
                           ),
-                        const SizedBox(height: 18),
-                        SizedBox(
-                          key: const ValueKey('assistant-submit-cta'),
-                          width: double.infinity,
-                          child: FilledButton(
-                            onPressed: _formValid ? _submit : null,
-                            child: const Text('Ask Conscia ✦'),
-                          ),
-                        ),
                       ],
                     ),
                   ),
@@ -569,6 +588,24 @@ class _PrePurchaseScreenState extends ConsumerState<PrePurchaseScreen> {
                 title: 'Purchase Assistant',
                 progress: stickyProgress,
                 topPadding: MediaQuery.paddingOf(context).top,
+              ),
+            ),
+            Positioned(
+              left: 16,
+              right: 16,
+              bottom: 0,
+              child: AnimatedPadding(
+                duration: const Duration(milliseconds: 180),
+                curve: Curves.easeOutCubic,
+                padding: EdgeInsets.only(bottom: ctaLift),
+                child: SizedBox(
+                  key: const ValueKey('assistant-submit-cta'),
+                  width: double.infinity,
+                  child: FilledButton(
+                    onPressed: _formValid ? _submit : null,
+                    child: const Text('Ask Conscia ✦'),
+                  ),
+                ),
               ),
             ),
           ],
