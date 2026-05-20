@@ -1454,7 +1454,7 @@ class _BudgetManageRow extends StatelessWidget {
   }
 }
 
-class _DashboardBudgetSummary extends StatelessWidget {
+class _DashboardBudgetSummary extends StatefulWidget {
   const _DashboardBudgetSummary({
     required this.budgets,
     required this.selectedScope,
@@ -1472,15 +1472,35 @@ class _DashboardBudgetSummary extends StatelessWidget {
   final VoidCallback onManageTap;
 
   @override
+  State<_DashboardBudgetSummary> createState() =>
+      _DashboardBudgetSummaryState();
+}
+
+class _DashboardBudgetSummaryState extends State<_DashboardBudgetSummary> {
+  final _mixRailController = ScrollController();
+  final _pillKeys = <GlobalKey>[];
+  int? _calledOutMixIndex;
+  int _shakeSerial = 0;
+
+  @override
+  void dispose() {
+    _mixRailController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).appColors;
     final textTheme = Theme.of(context).textTheme;
-    final mix = _budgetMix(budgets);
+    final mix = _budgetMix(widget.budgets);
     final activeMix = mix.where((budget) => budget.spent > 0).toList();
-    final totalSpent = budgets.fold<double>(0, (sum, b) => sum + b.spent);
+    _syncPillKeys(activeMix.length);
+    final totalSpent =
+        widget.budgets.fold<double>(0, (sum, b) => sum + b.spent);
     final totalLimit =
-        budgets.fold<double>(0, (sum, b) => sum + b.monthlyLimit);
-    final currencyCode = budgets.isEmpty ? 'PHP' : budgets.first.currencyCode;
+        widget.budgets.fold<double>(0, (sum, b) => sum + b.monthlyLimit);
+    final currencyCode =
+        widget.budgets.isEmpty ? 'PHP' : widget.budgets.first.currencyCode;
     final usedPercent =
         totalLimit <= 0 ? 0 : ((totalSpent / totalLimit) * 100).round();
 
@@ -1534,7 +1554,7 @@ class _DashboardBudgetSummary extends StatelessWidget {
                               '${CurrencyFormatter.format(
                                 totalSpent,
                                 currencyCode: currencyCode,
-                                locale: locale,
+                                locale: widget.locale,
                               )} used',
                               style: GoogleFonts.libreBaskerville(
                                 textStyle: textTheme.titleLarge,
@@ -1548,7 +1568,7 @@ class _DashboardBudgetSummary extends StatelessWidget {
                               'of ${CurrencyFormatter.format(
                                 totalLimit,
                                 currencyCode: currencyCode,
-                                locale: locale,
+                                locale: widget.locale,
                               )} monthly cap',
                               style: GoogleFonts.nunitoSans(
                                 textStyle: textTheme.bodySmall,
@@ -1566,12 +1586,12 @@ class _DashboardBudgetSummary extends StatelessWidget {
                                 height: 1.25,
                               ),
                             ),
-                            if (showScopeSwitch) ...[
+                            if (widget.showScopeSwitch) ...[
                               const SizedBox(height: 12),
                               ScopePillSwitch(
-                                value: selectedScope,
+                                value: widget.selectedScope,
                                 familyEnabled: true,
-                                onChanged: onScopeChanged,
+                                onChanged: widget.onScopeChanged,
                               ),
                             ],
                           ],
@@ -1587,6 +1607,7 @@ class _DashboardBudgetSummary extends StatelessWidget {
                             trackStrokeWidth: donutSize * 0.17,
                             segmentStrokeWidth: donutSize * 0.125,
                             segments: _budgetSegments(mix, totalSpent),
+                            onSegmentTap: _callOutMixPill,
                             center: Text(
                               '$usedPercent%',
                               style: GoogleFonts.nunitoSans(
@@ -1607,6 +1628,7 @@ class _DashboardBudgetSummary extends StatelessWidget {
                 HorizontalEdgeFade(
                   child: SingleChildScrollView(
                     key: const ValueKey('dashboard-budget-mix-pill-rail'),
+                    controller: _mixRailController,
                     scrollDirection: Axis.horizontal,
                     clipBehavior: Clip.hardEdge,
                     child: Row(
@@ -1617,12 +1639,15 @@ class _DashboardBudgetSummary extends StatelessWidget {
                               right: entry.$1 == activeMix.length - 1 ? 20 : 8,
                             ),
                             child: BudgetMixPill(
+                              key: _pillKeys[entry.$1],
                               index: entry.$1,
                               category: entry.$2.category,
                               type: 'Expense',
                               share: totalSpent <= 0
                                   ? 0
                                   : entry.$2.spent / totalSpent,
+                              active: _calledOutMixIndex == entry.$1,
+                              shakeSerial: _shakeSerial,
                             ),
                           ),
                       ],
@@ -1631,12 +1656,41 @@ class _DashboardBudgetSummary extends StatelessWidget {
                 ),
               ],
               const SizedBox(height: 14),
-              _BudgetManageRow(onTap: onManageTap),
+              _BudgetManageRow(onTap: widget.onManageTap),
             ],
           ),
         ),
       ],
     );
+  }
+
+  void _syncPillKeys(int count) {
+    while (_pillKeys.length < count) {
+      _pillKeys.add(GlobalKey());
+    }
+    while (_pillKeys.length > count) {
+      _pillKeys.removeLast();
+    }
+  }
+
+  void _callOutMixPill(int index) {
+    if (index < 0 || index >= _pillKeys.length) return;
+    setState(() {
+      _calledOutMixIndex = index;
+      _shakeSerial++;
+    });
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final context = _pillKeys[index].currentContext;
+      if (context == null) return;
+      Scrollable.ensureVisible(
+        context,
+        duration: const Duration(milliseconds: 260),
+        curve: Curves.easeOutCubic,
+        alignment: 0.5,
+      );
+    });
   }
 
   List<Budget> _budgetMix(List<Budget> budgets) {

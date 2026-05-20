@@ -1084,6 +1084,8 @@ void main() {
     expect(find.text('Bills 0%'), findsNothing);
     expect(find.byKey(const ValueKey('dashboard-budget-manage-row')),
         findsOneWidget);
+    expect(
+        find.byKey(const ValueKey('budget-mix-chip-0-active')), findsNothing);
     expect(find.text('₱3,720.00 / ₱4,000.00'), findsNothing);
     expect(find.text('Family budget'), findsNothing);
     final cardRect = tester
@@ -1100,6 +1102,12 @@ void main() {
       donutLaneRect.width,
       closeTo(summaryRect.width / 2, 1),
     );
+
+    await tester.tapAt(donutRect.centerRight - const Offset(8, 0));
+    await tester.pump();
+
+    expect(
+        find.byKey(const ValueKey('budget-mix-chip-0-active')), findsOneWidget);
 
     await tester.tap(find.text('Family'));
     await tester.pumpAndSettle();
