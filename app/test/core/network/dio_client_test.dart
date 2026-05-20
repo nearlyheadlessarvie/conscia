@@ -5,7 +5,6 @@ import 'package:conscia_app/core/network/dio_client.dart';
 import 'package:conscia_app/providers/auth_provider.dart';
 import 'package:conscia_app/services/auth_service.dart';
 import 'package:dio/dio.dart';
-import 'package:flutter/widgets.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
