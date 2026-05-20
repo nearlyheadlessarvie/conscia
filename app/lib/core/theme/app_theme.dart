@@ -321,6 +321,12 @@ class AppTheme {
         height: 1.04,
         color: color,
       ),
+      displaySmall: GoogleFonts.libreBaskerville(
+        fontSize: 24,
+        fontWeight: FontWeight.w700,
+        height: 1.06,
+        color: color,
+      ),
       headlineLarge: GoogleFonts.libreBaskerville(
         fontSize: 24,
         fontWeight: FontWeight.w700,
@@ -331,6 +337,12 @@ class AppTheme {
         fontSize: 20,
         fontWeight: FontWeight.w700,
         height: 1.1,
+        color: color,
+      ),
+      headlineSmall: GoogleFonts.libreBaskerville(
+        fontSize: 18,
+        fontWeight: FontWeight.w700,
+        height: 1.12,
         color: color,
       ),
       titleLarge: GoogleFonts.libreBaskerville(
