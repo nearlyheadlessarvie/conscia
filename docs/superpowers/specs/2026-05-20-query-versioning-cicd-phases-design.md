@@ -65,7 +65,7 @@ The Flutter app separately enforces store updates using store-version discovery.
 
 ## Recommended Approach
 
-Use query-string API versioning with a single version parameter, plus explicit app-version headers.
+Use ASP.NET API versioning with query-string API versioning as the canonical public contract, while also accepting header-based API versioning for flexibility. Keep explicit app-version headers for client-release compatibility.
 
 ### Request Contract
 
@@ -82,6 +82,12 @@ to:
 - `/api/transactions?v=1`
 
 The Flutter client should not manually append `?v=1` in every service. Instead, the shared Dio client should inject the query parameter automatically for relative API calls.
+
+The API may also accept a version header such as:
+
+- `X-Api-Version: 1`
+
+but query-string versioning remains the canonical external contract for documentation, testing defaults, and client examples.
 
 ### App Metadata
 
@@ -111,12 +117,14 @@ This policy is intentionally based on app release compatibility, not permanent s
 - Avoids scattering version logic across Flutter services
 - Gives the backend a real compatibility mechanism instead of relying only on app-store update prompts
 - Matches the team’s preference for one coordinated cutover instead of a long migration tail
+- Uses standard ASP.NET API versioning support instead of custom request parsing
 
 ### Trade-Offs
 
 - This is a broad repo-wide change because tests, docs, and examples all reference `/api/v1`
 - Query-string versioning is slightly less conventional than path versioning in public APIs
 - The first release still needs some backend infrastructure to validate and compare client app versions
+- Supporting both query string and header readers adds a small amount of documentation and test surface, even with query string remaining canonical
 
 ## Alternatives Considered
 
@@ -134,7 +142,7 @@ Rejected for now because it is more verbose than needed and does not buy much at
 
 Example: `X-API-Version: 1`
 
-Rejected because the request requirement is specifically to use query-string versioning.
+Rejected as the canonical contract because the request requirement is specifically to use query-string versioning, and because query-string versioning is easier to inspect in logs, browsers, cURL, and edge tooling.
 
 ### 4. Dual-Route Transition (`/api/v1/...` and `/api/...`) For Multiple Releases
 
@@ -175,17 +183,49 @@ The API root endpoint becomes:
 
 ## Version Resolution
 
-Introduce a small API-version resolution layer that:
+Use the ASP.NET API versioning package rather than custom middleware or ad hoc endpoint parsing.
 
-1. Reads `v` from the query string
-2. Applies only to versioned `/api/...` endpoints
-3. Rejects missing versions
-4. Rejects unknown versions
-5. Stores the resolved version in request context for downstream code
+The runtime version reader should:
 
-For this release, the only accepted version is `1`.
+1. Read `v` from the query string
+2. Optionally also read a version header such as `X-Api-Version`
+3. Apply only to versioned `/api/...` endpoints
+4. Reject missing versions
+5. Reject unknown versions
+6. Expose the resolved version consistently to downstream endpoint logic and OpenAPI generation
 
-This resolution can live in middleware or a focused helper, but it should be centralized so endpoint code does not duplicate version parsing.
+For this release, the only accepted API version is `1`.
+
+Query string should be canonical even if the API accepts headers too. That means:
+
+- docs should lead with `?v=1`
+- Flutter should send query-string versioning by default
+- tests should primarily assert query-string behavior
+- header versioning is supported but not the main documented path
+
+## Why Query String Should Be Canonical
+
+Although the API can support both query-string and header readers, query string is the better canonical contract here.
+
+### Advantages Of Query String As Canonical
+
+- Easier to inspect in browser devtools, cURL, logs, and CloudWatch traces
+- Easier to document in README examples and support/debugging messages
+- Less likely to be dropped or hidden by intermediate tooling unfamiliar with custom headers
+- Simpler for ad hoc testing by humans
+
+### Caveat For Header Versioning
+
+Header-based versioning is still useful and can be supported, but infrastructure layers may treat headers less predictably than query parameters.
+
+Examples of future risk include:
+
+- WAF rules that inspect, normalize, or block unfamiliar custom headers
+- reverse proxies that strip unknown headers
+- CDN/cache policies that do not vary on custom headers unless explicitly configured
+- observability tooling that logs URLs by default but not custom headers
+
+Because of that, header versioning should be treated as optional flexibility, not the primary contract.
 
 ## App Release Compatibility Resolution
 
@@ -258,6 +298,8 @@ That logic should:
 - avoid touching absolute health URLs
 
 This keeps version policy in one place and prevents accidental drift between services.
+
+Flutter does not need to send the API version header by default. Keeping the mobile client on the canonical query-string path reduces ambiguity.
 
 ## Automatic App-Version Header Injection
 
@@ -361,6 +403,7 @@ Add tests for:
 - `/api/...` request succeeds with `v=1`
 - request fails when `v` is missing
 - request fails when `v` is unsupported
+- request succeeds when API version is supplied by a supported header reader, if header support is enabled
 - request succeeds when app version equals current supported release
 - request succeeds when app version equals previous supported release
 - request fails with upgrade-required response when app version is older than previous supported release
@@ -385,10 +428,12 @@ Update:
 - release matrix
 - any architecture docs that describe `/api/v1`
 
-Examples should prefer the conceptual style:
+Examples should prefer the canonical style:
 
 - base URL: `https://api.getconscia.com/api/`
 - version: query parameter `v=1`
+
+If header versioning is supported, document it as an alternative rather than the default recommendation.
 
 ## Rollout Notes
 
@@ -450,7 +495,8 @@ Mitigation:
 Implement a coordinated cutover to:
 
 - `/api/...` routes
-- query-string API versioning using `?v=1`
+- ASP.NET API versioning with canonical query-string versioning using `?v=1`
+- optional header-based API version input as secondary support
 - automatic Flutter injection of `v=1`
 - automatic Flutter app-version header injection
 - backend enforcement of current + previous app release support
