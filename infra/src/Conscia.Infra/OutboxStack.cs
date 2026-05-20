@@ -14,7 +14,8 @@ public class OutboxStackProps : StackProps
     public required ITable OutboxEventsTable { get; set; }
     public required ITable InAppAlertsTable { get; set; }
     public required ITable MonthlyCategorySpendsTable { get; set; }
-    public string AssetPath { get; set; } = "../publish/outbox";
+    public string AssetPath { get; set; } =
+        AssetPathResolver.ResolvePublishedAsset("../publish/outbox", "outbox");
     public DomainSettings? DomainSettings { get; set; }
 }
 
