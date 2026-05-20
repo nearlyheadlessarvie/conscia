@@ -1,0 +1,33 @@
+{
+  "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
+  "bootstrap-sha": "8f3e754fa72a1723c34e361135e8f738b4fa8563",
+  "release-type": "simple",
+  "include-v-in-tag": true,
+  "include-component-in-tag": true,
+  "tag-separator": "/",
+  "separate-pull-requests": true,
+  "packages": {
+    "app": {
+      "release-type": "dart",
+      "component": "app",
+      "package-name": "app"
+    },
+    "src/Conscia.Api": {
+      "release-type": "simple",
+      "component": "api",
+      "package-name": "api",
+      "version-file": "src/Conscia.Api/Conscia.Api.csproj"
+    },
+    "infra/src/Conscia.Infra": {
+      "release-type": "simple",
+      "component": "infra",
+      "package-name": "infra",
+      "version-file": "infra/src/Conscia.Infra/Conscia.Infra.csproj"
+    },
+    "web": {
+      "release-type": "node",
+      "component": "web",
+      "package-name": "web"
+    }
+  }
+}

@@ -29,14 +29,14 @@ public class FamilySpaceEndpointTests
             });
 
         var client = CreateAuthorizedClient(factory);
-        var response = await client.PostAsJsonAsync("/api/v1/family-space", new
+        var response = await client.PostAsJsonAsync("/api/family-space", new
         {
             name = "Santos Household",
             currencyCode = "PHP"
         });
 
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
-        Assert.Equal($"/api/v1/family-space/{familySpaceId}", response.Headers.Location?.ToString());
+        Assert.Equal($"/api/family-space/{familySpaceId}", response.Headers.Location?.ToString());
 
         var json = await response.Content.ReadFromJsonAsync<JsonElement>();
         Assert.Equal("Santos Household", json.GetProperty("name").GetString());
@@ -52,7 +52,7 @@ public class FamilySpaceEndpointTests
             .ThrowsAsync(new InvalidOperationException("Family Space requires Premium."));
 
         var client = CreateAuthorizedClient(factory, tier: "Free");
-        var response = await client.PostAsJsonAsync("/api/v1/family-space", new
+        var response = await client.PostAsJsonAsync("/api/family-space", new
         {
             name = "Santos Household",
             currencyCode = "PHP"
@@ -78,7 +78,7 @@ public class FamilySpaceEndpointTests
                 FamilyMemberRole.Owner.ToString()));
 
         var client = CreateAuthorizedClient(factory);
-        var response = await client.GetAsync("/api/v1/family-space");
+        var response = await client.GetAsync("/api/family-space");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
@@ -96,7 +96,7 @@ public class FamilySpaceEndpointTests
             .ReturnsAsync((FamilySpaceDto?)null);
 
         var client = CreateAuthorizedClient(factory);
-        var response = await client.GetAsync("/api/v1/family-space");
+        var response = await client.GetAsync("/api/family-space");
 
         Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
     }
@@ -116,7 +116,7 @@ public class FamilySpaceEndpointTests
                 FamilyMemberRole.Owner.ToString()));
 
         var client = CreateAuthorizedClient(factory);
-        var response = await client.PatchAsJsonAsync("/api/v1/family-space", new
+        var response = await client.PatchAsJsonAsync("/api/family-space", new
         {
             name = "Santos Family"
         });
@@ -144,7 +144,7 @@ public class FamilySpaceEndpointTests
                 FamilyMemberRole.Owner.ToString()));
 
         var client = CreateAuthorizedClient(factory);
-        var response = await client.PutAsJsonAsync("/api/v1/family-space", new
+        var response = await client.PutAsJsonAsync("/api/family-space", new
         {
             name = "Santos Family"
         });
@@ -166,7 +166,7 @@ public class FamilySpaceEndpointTests
             .ThrowsAsync(new UnauthorizedAccessException("Only Family Space owners can edit household settings."));
 
         var client = CreateAuthorizedClient(factory);
-        var response = await client.PatchAsJsonAsync("/api/v1/family-space", new
+        var response = await client.PatchAsJsonAsync("/api/family-space", new
         {
             name = "Santos Family"
         });
@@ -191,14 +191,14 @@ public class FamilySpaceEndpointTests
             });
 
         var client = CreateAuthorizedClient(factory);
-        var response = await client.PostAsJsonAsync("/api/v1/family-space/invites", new
+        var response = await client.PostAsJsonAsync("/api/family-space/invites", new
         {
             email = "wife@example.com",
             role = "Contributor"
         });
 
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
-        Assert.Equal($"/api/v1/family-space/invites/{inviteId}", response.Headers.Location?.ToString());
+        Assert.Equal($"/api/family-space/invites/{inviteId}", response.Headers.Location?.ToString());
 
         var json = await response.Content.ReadFromJsonAsync<JsonElement>();
         Assert.Equal("wife@example.com", json.GetProperty("email").GetString());
@@ -214,7 +214,7 @@ public class FamilySpaceEndpointTests
             .ThrowsAsync(new UnauthorizedAccessException("Only Family Space owners can invite members."));
 
         var client = CreateAuthorizedClient(factory);
-        var response = await client.PostAsJsonAsync("/api/v1/family-space/invites", new
+        var response = await client.PostAsJsonAsync("/api/family-space/invites", new
         {
             email = "wife@example.com",
             role = "Contributor"
@@ -242,7 +242,7 @@ public class FamilySpaceEndpointTests
             ]);
 
         var client = CreateAuthorizedClient(factory, email: "alice@example.com");
-        var response = await client.GetAsync("/api/v1/family-space/invites");
+        var response = await client.GetAsync("/api/family-space/invites");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var json = await response.Content.ReadFromJsonAsync<JsonElement>();
@@ -271,7 +271,7 @@ public class FamilySpaceEndpointTests
             ]);
 
         var client = CreateAuthorizedClient(factory);
-        var response = await client.GetAsync("/api/v1/family-space/invites/outgoing");
+        var response = await client.GetAsync("/api/family-space/invites/outgoing");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var json = await response.Content.ReadFromJsonAsync<JsonElement>();
@@ -290,7 +290,7 @@ public class FamilySpaceEndpointTests
             .ThrowsAsync(new UnauthorizedAccessException("Only Family Space owners can manage invites."));
 
         var client = CreateAuthorizedClient(factory);
-        var response = await client.GetAsync("/api/v1/family-space/invites/outgoing");
+        var response = await client.GetAsync("/api/family-space/invites/outgoing");
 
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
@@ -305,7 +305,7 @@ public class FamilySpaceEndpointTests
             .Returns(Task.CompletedTask);
 
         var client = CreateAuthorizedClient(factory);
-        var response = await client.DeleteAsync($"/api/v1/family-space/invites/{inviteId}");
+        var response = await client.DeleteAsync($"/api/family-space/invites/{inviteId}");
 
         Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
         factory.FamilySpaceServiceMock.Verify(s =>
@@ -331,7 +331,7 @@ public class FamilySpaceEndpointTests
             });
 
         var client = CreateAuthorizedClient(factory, email: "alice@example.com");
-        var response = await client.PostAsync($"/api/v1/family-space/invites/{inviteId}/accept", null);
+        var response = await client.PostAsync($"/api/family-space/invites/{inviteId}/accept", null);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var json = await response.Content.ReadFromJsonAsync<JsonElement>();
@@ -349,7 +349,7 @@ public class FamilySpaceEndpointTests
             .Returns(Task.CompletedTask);
 
         var client = CreateAuthorizedClient(factory, email: "alice@example.com");
-        var response = await client.PostAsync($"/api/v1/family-space/invites/{inviteId}/decline", null);
+        var response = await client.PostAsync($"/api/family-space/invites/{inviteId}/decline", null);
 
         Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
         factory.FamilySpaceServiceMock.Verify(s =>
@@ -375,7 +375,7 @@ public class FamilySpaceEndpointTests
             ]);
 
         var client = CreateAuthorizedClient(factory);
-        var response = await client.GetAsync("/api/v1/family-space/members");
+        var response = await client.GetAsync("/api/family-space/members");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var json = await response.Content.ReadFromJsonAsync<JsonElement>();
@@ -402,7 +402,7 @@ public class FamilySpaceEndpointTests
                 false));
 
         var client = CreateAuthorizedClient(factory);
-        var response = await client.PatchAsJsonAsync($"/api/v1/family-space/members/{memberId}/role", new
+        var response = await client.PatchAsJsonAsync($"/api/family-space/members/{memberId}/role", new
         {
             role = "Viewer"
         });
@@ -422,7 +422,7 @@ public class FamilySpaceEndpointTests
             .Returns(Task.CompletedTask);
 
         var client = CreateAuthorizedClient(factory);
-        var response = await client.DeleteAsync($"/api/v1/family-space/members/{memberId}");
+        var response = await client.DeleteAsync($"/api/family-space/members/{memberId}");
 
         Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
         factory.FamilySpaceServiceMock.Verify(s =>
@@ -439,7 +439,7 @@ public class FamilySpaceEndpointTests
             .Returns(Task.CompletedTask);
 
         var client = CreateAuthorizedClient(factory);
-        var response = await client.PostAsync("/api/v1/family-space/leave", null);
+        var response = await client.PostAsync("/api/family-space/leave", null);
 
         Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
         factory.FamilySpaceServiceMock.Verify(s =>
@@ -488,7 +488,7 @@ public class FamilySpaceEndpointTests
                 ]));
 
         var client = CreateAuthorizedClient(factory);
-        var response = await client.GetAsync("/api/v1/family-space/overview");
+        var response = await client.GetAsync("/api/family-space/overview");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var json = await response.Content.ReadFromJsonAsync<JsonElement>();

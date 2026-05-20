@@ -721,14 +721,13 @@ void main() {
     await tester.pumpWidget(await buildTransactionFormApp(tester));
     await tester.pumpAndSettle();
 
-    expect(find.text('RECURRING'), findsOneWidget);
+    expect(find.text('Recurring'), findsOneWidget);
+    expect(find.text('RECURRING'), findsNothing);
     expect(find.text('Repeat on a schedule.'), findsOneWidget);
     expect(find.byType(SwitchListTile), findsNothing);
 
-    final title = tester.widget<Text>(find.text('RECURRING'));
-    expect(title.style?.fontSize, 12);
-    expect(title.style?.fontWeight, FontWeight.w800);
-    expect(title.style?.letterSpacing, 0.9);
+    final title = tester.widget<Text>(find.text('Recurring'));
+    expect(title.style?.fontWeight, FontWeight.w700);
     expect(find.text('Weekly'), findsNothing);
   });
 

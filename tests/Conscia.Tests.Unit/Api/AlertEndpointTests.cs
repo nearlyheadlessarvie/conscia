@@ -40,7 +40,7 @@ public class AlertEndpointTests : IClassFixture<TestWebAppFactory>
                 }
             });
 
-        var response = await _client.GetAsync("/api/v1/alerts");
+        var response = await _client.GetAsync("/api/alerts");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var body = await response.Content.ReadAsStringAsync();
@@ -53,7 +53,7 @@ public class AlertEndpointTests : IClassFixture<TestWebAppFactory>
     public async Task ListAlerts_Unauthenticated_Returns401()
     {
         var client = _factory.CreateClient();
-        var response = await client.GetAsync("/api/v1/alerts");
+        var response = await client.GetAsync("/api/alerts");
 
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }

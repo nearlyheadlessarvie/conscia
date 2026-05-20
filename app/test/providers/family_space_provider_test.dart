@@ -15,7 +15,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 void main() {
   test('family membership changes refresh family-scoped money data', () async {
     final adapter = _FamilyCacheAdapter();
-    final dio = Dio(BaseOptions(baseUrl: 'http://test.local/api/v1/'))
+    final dio = Dio(BaseOptions(baseUrl: 'http://test.local/api/'))
       ..httpClientAdapter = adapter;
 
     final container = ProviderContainer(

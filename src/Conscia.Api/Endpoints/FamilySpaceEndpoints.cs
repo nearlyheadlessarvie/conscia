@@ -1,3 +1,4 @@
+using Asp.Versioning.Builder;
 using Conscia.Api.Extensions;
 using Conscia.Application.DTOs;
 using Conscia.Application.Interfaces;
@@ -6,9 +7,11 @@ namespace Conscia.Api.Endpoints;
 
 public static class FamilySpaceEndpoints
 {
-    public static RouteGroupBuilder MapFamilySpaceEndpoints(this IEndpointRouteBuilder routes)
+    public static RouteGroupBuilder MapFamilySpaceEndpoints(this IEndpointRouteBuilder routes, ApiVersionSet apiVersionSet)
     {
-        var group = routes.MapGroup("/api/v1/family-space")
+        var group = routes.MapGroup("/api/family-space")
+            .WithApiVersionSet(apiVersionSet)
+            .MapToApiVersion(1.0)
             .RequireAuthorization()
             .WithTags("Family Space");
 
@@ -43,7 +46,7 @@ public static class FamilySpaceEndpoints
             {
                 var userId = ctx.User.GetUserId();
                 var space = await svc.CreateAsync(userId, dto.Name, dto.CurrencyCode, ctx.RequestAborted);
-                return Results.Created($"/api/v1/family-space/{space.Id}", new
+                return Results.Created($"/api/family-space/{space.Id}", new
                 {
                     space.Id,
                     space.Name,
@@ -69,7 +72,7 @@ public static class FamilySpaceEndpoints
             try
             {
                 var invite = await svc.InviteAsync(ctx.User.GetUserId(), dto.Email, dto.Role, ctx.RequestAborted);
-                return Results.Created($"/api/v1/family-space/invites/{invite.Id}", new
+                return Results.Created($"/api/family-space/invites/{invite.Id}", new
                 {
                     invite.Id,
                     invite.Email,

@@ -13,9 +13,9 @@ void main() {
     );
 
     final error = DioException(
-      requestOptions: RequestOptions(path: '/api/v1/transactions'),
+      requestOptions: RequestOptions(path: '/api/transactions'),
       response: Response(
-        requestOptions: RequestOptions(path: '/api/v1/transactions'),
+        requestOptions: RequestOptions(path: '/api/transactions'),
         statusCode: 500,
         data: {'error': 'Database stack trace'},
       ),
@@ -39,9 +39,9 @@ void main() {
     );
 
     final error = DioException(
-      requestOptions: RequestOptions(path: '/api/v1/auth/register'),
+      requestOptions: RequestOptions(path: '/api/auth/register'),
       response: Response(
-        requestOptions: RequestOptions(path: '/api/v1/auth/register'),
+        requestOptions: RequestOptions(path: '/api/auth/register'),
         statusCode: 400,
         data: {'error': 'Account already exists. Please sign in.'},
       ),

@@ -33,10 +33,12 @@ public class SuggestionEndpointTests : IClassFixture<TestWebAppFactory>
             b.ConfigureServices(s =>
                 s.AddScoped<IPurchaseSuggestionService>(_ => mock.Object)))
             .CreateClient();
+        client.DefaultRequestHeaders.Add("X-Api-Version", "1");
+        client.DefaultRequestHeaders.Add("X-Conscia-App-Version", "1.0.0+1");
         client.DefaultRequestHeaders.Authorization =
             new AuthenticationHeaderValue("Bearer", _factory.GenerateTestToken());
 
-        var response = await client.GetAsync("/api/v1/suggestions/purchases");
+        var response = await client.GetAsync("/api/suggestions/purchases");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var body = await response.Content.ReadFromJsonAsync<List<PurchaseSuggestionDto>>();
@@ -57,10 +59,12 @@ public class SuggestionEndpointTests : IClassFixture<TestWebAppFactory>
             b.ConfigureServices(s =>
                 s.AddScoped<IPurchaseSuggestionService>(_ => mock.Object)))
             .CreateClient();
+        client.DefaultRequestHeaders.Add("X-Api-Version", "1");
+        client.DefaultRequestHeaders.Add("X-Conscia-App-Version", "1.0.0+1");
         client.DefaultRequestHeaders.Authorization =
             new AuthenticationHeaderValue("Bearer", _factory.GenerateTestToken());
 
-        var response = await client.GetAsync("/api/v1/suggestions/purchases");
+        var response = await client.GetAsync("/api/suggestions/purchases");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var body = await response.Content.ReadFromJsonAsync<List<PurchaseSuggestionDto>>();
@@ -73,7 +77,7 @@ public class SuggestionEndpointTests : IClassFixture<TestWebAppFactory>
     {
         var client = _factory.CreateClient();
 
-        var response = await client.GetAsync("/api/v1/suggestions/purchases");
+        var response = await client.GetAsync("/api/suggestions/purchases");
 
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }

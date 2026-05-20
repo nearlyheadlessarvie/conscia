@@ -28,7 +28,7 @@ public class SubscriptionEndpointTests : IClassFixture<TestWebAppFactory>
             .Setup(s => s.GetStatusAsync(UserId, It.IsAny<CancellationToken>()))
             .ReturnsAsync((UserSubscription?)null);
 
-        var response = await _client.GetAsync("/api/v1/subscriptions/status");
+        var response = await _client.GetAsync("/api/subscriptions/status");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var body = await response.Content.ReadAsStringAsync();
@@ -47,7 +47,7 @@ public class SubscriptionEndpointTests : IClassFixture<TestWebAppFactory>
                 ExpiresAt = DateTime.UtcNow.AddYears(1)
             });
 
-        var response = await _client.GetAsync("/api/v1/subscriptions/status");
+        var response = await _client.GetAsync("/api/subscriptions/status");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var body = await response.Content.ReadAsStringAsync();
@@ -57,7 +57,7 @@ public class SubscriptionEndpointTests : IClassFixture<TestWebAppFactory>
     [Fact]
     public async Task VerifyiOS_EmptyToken_Returns400()
     {
-        var response = await _client.PostAsJsonAsync("/api/v1/subscriptions/verify/ios", new
+        var response = await _client.PostAsJsonAsync("/api/subscriptions/verify/ios", new
         {
             token = ""
         });

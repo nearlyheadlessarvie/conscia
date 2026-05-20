@@ -1,3 +1,4 @@
+using Asp.Versioning.Builder;
 using Conscia.Api.Extensions;
 using Conscia.Application.Constants;
 using Conscia.Application.DTOs;
@@ -8,9 +9,11 @@ namespace Conscia.Api.Endpoints;
 
 public static class CategoryEndpoints
 {
-    public static RouteGroupBuilder MapCategoryEndpoints(this IEndpointRouteBuilder routes)
+    public static RouteGroupBuilder MapCategoryEndpoints(this IEndpointRouteBuilder routes, ApiVersionSet apiVersionSet)
     {
-        var group = routes.MapGroup("/api/v1/categories")
+        var group = routes.MapGroup("/api/categories")
+            .WithApiVersionSet(apiVersionSet)
+            .MapToApiVersion(1.0)
             .RequireAuthorization()
             .WithTags("Categories");
 
@@ -59,7 +62,7 @@ public static class CategoryEndpoints
                 }
 
                 var category = await svc.CreateAsync(userId, dto, ctx.RequestAborted);
-                return Results.Created($"/api/v1/categories/{category.Id}", category);
+                return Results.Created($"/api/categories/{category.Id}", category);
             }
             catch (UnauthorizedAccessException ex)
             {

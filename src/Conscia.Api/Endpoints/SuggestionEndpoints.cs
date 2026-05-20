@@ -1,3 +1,4 @@
+using Asp.Versioning.Builder;
 using Conscia.Api.Extensions;
 using Conscia.Application.DTOs;
 using Conscia.Application.Interfaces;
@@ -6,9 +7,11 @@ namespace Conscia.Api.Endpoints;
 
 public static class SuggestionEndpoints
 {
-    public static RouteGroupBuilder MapSuggestionEndpoints(this IEndpointRouteBuilder app)
+    public static RouteGroupBuilder MapSuggestionEndpoints(this IEndpointRouteBuilder app, ApiVersionSet apiVersionSet)
     {
-        var group = app.MapGroup("/api/v1/suggestions")
+        var group = app.MapGroup("/api/suggestions")
+            .WithApiVersionSet(apiVersionSet)
+            .MapToApiVersion(1.0)
             .RequireAuthorization()
             .WithTags("Suggestions");
 

@@ -28,7 +28,7 @@ public class ConscienceJourneyEndpointTests : IClassFixture<TestWebAppFactory>
             .Setup(s => s.GetJourneyAsync(UserId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(Summary());
 
-        var response = await _client.GetAsync("/api/v1/conscience-journey");
+        var response = await _client.GetAsync("/api/conscience-journey");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var body = await response.Content.ReadAsStringAsync();
@@ -47,7 +47,7 @@ public class ConscienceJourneyEndpointTests : IClassFixture<TestWebAppFactory>
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(Update(xpAwarded: 20, wasDuplicate: false));
 
-        var response = await _client.PostAsJsonAsync("/api/v1/conscience-journey/events", new
+        var response = await _client.PostAsJsonAsync("/api/conscience-journey/events", new
         {
             eventType = ConscienceEventTypes.ReflectionCompleted,
             sourceId = "tx-1"
@@ -70,7 +70,7 @@ public class ConscienceJourneyEndpointTests : IClassFixture<TestWebAppFactory>
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(Update(xpAwarded: 0, wasDuplicate: true));
 
-        var response = await _client.PostAsJsonAsync("/api/v1/conscience-journey/events", new
+        var response = await _client.PostAsJsonAsync("/api/conscience-journey/events", new
         {
             eventType = ConscienceEventTypes.ReflectionCompleted,
             sourceId = "tx-1"
@@ -85,7 +85,7 @@ public class ConscienceJourneyEndpointTests : IClassFixture<TestWebAppFactory>
     [Fact]
     public async Task RecordEvent_UnsupportedEvent_Returns400()
     {
-        var response = await _client.PostAsJsonAsync("/api/v1/conscience-journey/events", new
+        var response = await _client.PostAsJsonAsync("/api/conscience-journey/events", new
         {
             eventType = "money_farmed",
             sourceId = "bad-1"
@@ -99,7 +99,7 @@ public class ConscienceJourneyEndpointTests : IClassFixture<TestWebAppFactory>
     {
         var client = _factory.CreateClient();
 
-        var response = await client.GetAsync("/api/v1/conscience-journey");
+        var response = await client.GetAsync("/api/conscience-journey");
 
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }

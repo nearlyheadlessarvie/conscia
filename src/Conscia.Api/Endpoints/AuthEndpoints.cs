@@ -1,12 +1,16 @@
+using Asp.Versioning.Builder;
 using Conscia.Application.Interfaces;
 
 namespace Conscia.Api.Endpoints;
 
 public static class AuthEndpoints
 {
-    public static RouteGroupBuilder MapAuthEndpoints(this IEndpointRouteBuilder routes)
+    public static RouteGroupBuilder MapAuthEndpoints(this IEndpointRouteBuilder routes, ApiVersionSet apiVersionSet)
     {
-        var group = routes.MapGroup("/api/v1/auth").WithTags("Auth");
+        var group = routes.MapGroup("/api/auth")
+            .WithApiVersionSet(apiVersionSet)
+            .MapToApiVersion(1.0)
+            .WithTags("Auth");
 
         group.MapPost("/register", async (HttpContext ctx, RegisterRequest req, IAuthService auth) =>
         {
@@ -16,7 +20,7 @@ public static class AuthEndpoints
             var result = await auth.RegisterAsync(req.Email, req.Password, ctx.RequestAborted);
             return result.Success
                 ? Results.Accepted(
-                    "/api/v1/auth/confirm",
+                    "/api/auth/confirm",
                     new { result.Success, result.RequiresConfirmation, result.Email, result.UserId })
                 : Results.BadRequest(new { result.Error });
         }).WithName("Register").RequireRateLimiting("auth");

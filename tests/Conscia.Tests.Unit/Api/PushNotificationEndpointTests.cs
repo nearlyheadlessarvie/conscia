@@ -25,7 +25,7 @@ public class PushNotificationEndpointTests : IClassFixture<TestWebAppFactory>
     public async Task RegisterDeviceToken_StoresTokenForCurrentUser()
     {
         var response = await _client.PostAsJsonAsync(
-            "/api/v1/push/device-tokens",
+            "/api/push/device-tokens",
             new { token = "fcm-token-123", platform = "android" });
 
         Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
@@ -44,7 +44,7 @@ public class PushNotificationEndpointTests : IClassFixture<TestWebAppFactory>
     public async Task RegisterDeviceToken_WhenTokenIsBlank_ReturnsBadRequest()
     {
         var response = await _client.PostAsJsonAsync(
-            "/api/v1/push/device-tokens",
+            "/api/push/device-tokens",
             new { token = " ", platform = "android" });
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
@@ -59,7 +59,7 @@ public class PushNotificationEndpointTests : IClassFixture<TestWebAppFactory>
         var client = _factory.CreateClient();
 
         var response = await client.PostAsJsonAsync(
-            "/api/v1/push/device-tokens",
+            "/api/push/device-tokens",
             new { token = "fcm-token-123", platform = "ios" });
 
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);

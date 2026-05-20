@@ -1,3 +1,4 @@
+using Asp.Versioning.Builder;
 using Conscia.Api.Extensions;
 using Conscia.Application.Constants;
 using Conscia.Application.DTOs;
@@ -7,9 +8,11 @@ namespace Conscia.Api.Endpoints;
 
 public static class ConscienceJourneyEndpoints
 {
-    public static RouteGroupBuilder MapConscienceJourneyEndpoints(this IEndpointRouteBuilder routes)
+    public static RouteGroupBuilder MapConscienceJourneyEndpoints(this IEndpointRouteBuilder routes, ApiVersionSet apiVersionSet)
     {
-        var group = routes.MapGroup("/api/v1/conscience-journey")
+        var group = routes.MapGroup("/api/conscience-journey")
+            .WithApiVersionSet(apiVersionSet)
+            .MapToApiVersion(1.0)
             .RequireAuthorization()
             .WithTags("Conscience Journey");
 

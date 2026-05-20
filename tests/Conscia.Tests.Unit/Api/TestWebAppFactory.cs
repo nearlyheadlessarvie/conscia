@@ -7,8 +7,8 @@ using Conscia.Domain.Entities;
 using Conscia.Domain.Enums;
 using Conscia.Domain.ValueObjects;
 using Conscia.Tests.Unit.Infrastructure;
-using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
 using Moq;
@@ -44,6 +44,16 @@ public class TestWebAppFactory : WebApplicationFactory<Program>
     public InMemoryUserRepository UserRepo { get; } = new();
 
     private const string SigningKey = "this-is-a-test-signing-key-at-least-32-chars!!";
+
+    public HttpClient CreateRawClient() => base.CreateClient();
+
+    public new HttpClient CreateClient()
+    {
+        var client = CreateRawClient();
+        client.DefaultRequestHeaders.Add("X-Api-Version", "1");
+        client.DefaultRequestHeaders.Add("X-Conscia-App-Version", "1.0.0+1");
+        return client;
+    }
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
@@ -84,6 +94,8 @@ public class TestWebAppFactory : WebApplicationFactory<Program>
         builder.UseSetting("AWS:S3:ServiceURL", "http://localhost:9000");
         builder.UseSetting("AWS:S3:ForcePathStyle", "true");
         builder.UseSetting("AWS:SQS:ServiceURL", "http://localhost:9324");
+        builder.UseSetting("AppCompatibility:CurrentSupportedAppVersion", "1.0.0+1");
+        builder.UseSetting("AppCompatibility:PreviousSupportedAppVersion", "1.0.0+1");
     }
 
     public string GenerateTestToken(string userId = "a1b2c3d4-0001-4000-8000-000000000001",

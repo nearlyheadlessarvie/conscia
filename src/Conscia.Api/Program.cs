@@ -9,12 +9,14 @@ using Amazon.DynamoDBv2;
 using Amazon.Runtime;
 using Amazon.S3;
 using Amazon.SQS;
+using Asp.Versioning;
 using Conscia.AI.Services;
 using Conscia.Api.Endpoints;
 using Conscia.Api.Health;
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.RateLimiting;
 using Conscia.Api.Middleware;
+using Conscia.Api.Versioning;
 using Conscia.Application.Configuration;
 using Conscia.Application.Constants;
 using Conscia.Application.Interfaces;
@@ -306,8 +308,24 @@ else
 
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddProblemDetails();
+builder.Services.Configure<AppCompatibilityOptions>(
+    builder.Configuration.GetSection(AppCompatibilityOptions.SectionName));
 
 builder.Services.AddAuthorization();
+builder.Services.AddApiVersioning(options =>
+{
+    options.DefaultApiVersion = new ApiVersion(1, 0);
+    options.AssumeDefaultVersionWhenUnspecified = false;
+    options.ReportApiVersions = true;
+    options.ApiVersionReader = ApiVersionReader.Combine(
+        new QueryStringApiVersionReader("v"),
+        new HeaderApiVersionReader("X-Api-Version"));
+})
+.AddApiExplorer(options =>
+{
+    options.GroupNameFormat = "'v'VVV";
+    options.SubstituteApiVersionInUrl = false;
+});
 
 builder.Services.AddRateLimiter(options =>
 {
@@ -379,6 +397,7 @@ if (app.Environment.IsDevelopment())
     app.UseCors("DevelopmentPolicy");
 }
 
+app.UseMiddleware<AppCompatibilityMiddleware>();
 app.UseAuthentication();
 app.UseAuthorization();
 app.UseRateLimiter();
@@ -401,28 +420,33 @@ app.MapHealthChecks("/health", new HealthCheckOptions
     ResponseWriter = HealthResponseWriter.WriteAsync
 }).AllowAnonymous();
 
-app.MapGet("/api/v1", () => Results.Ok(new { version = "1.0", service = "Conscia API" }))
+app.MapGet("/api", () => Results.Ok(new { version = "1.0", service = "Conscia API" }))
     .WithName("ApiRoot")
     .WithTags("System");
 
 // --- API Endpoints ---
-app.MapAuthEndpoints().RequireRateLimiting("standard");
-app.MapUserEndpoints().RequireRateLimiting("standard");
-app.MapTransactionEndpoints().RequireRateLimiting("standard");
-app.MapRecurringEndpoints().RequireRateLimiting("standard");
-app.MapBudgetEndpoints().RequireRateLimiting("standard");
-app.MapFamilySpaceEndpoints().RequireRateLimiting("standard");
-app.MapCategoryEndpoints().RequireRateLimiting("standard");
-app.MapSubscriptionEndpoints().RequireRateLimiting("standard");
-app.MapAlertEndpoints().RequireRateLimiting("standard");
-app.MapPushNotificationEndpoints().RequireRateLimiting("standard");
-app.MapReceiptEndpoints().RequireRateLimiting("standard");
-app.MapAIEndpoints().RequireRateLimiting("ai");
-app.MapInsightsEndpoints().RequireRateLimiting("standard");
-app.MapConscienceJourneyEndpoints().RequireRateLimiting("standard");
-app.MapSuggestionEndpoints().RequireRateLimiting("standard");
-app.MapExchangeRateEndpoints().RequireRateLimiting("standard");
-app.MapUtteranceEndpoints().RequireRateLimiting("ai");
+var apiVersionSet = app.NewApiVersionSet("Conscia")
+    .HasApiVersion(new ApiVersion(1, 0))
+    .ReportApiVersions()
+    .Build();
+
+app.MapAuthEndpoints(apiVersionSet).RequireRateLimiting("standard");
+app.MapUserEndpoints(apiVersionSet).RequireRateLimiting("standard");
+app.MapTransactionEndpoints(apiVersionSet).RequireRateLimiting("standard");
+app.MapRecurringEndpoints(apiVersionSet).RequireRateLimiting("standard");
+app.MapBudgetEndpoints(apiVersionSet).RequireRateLimiting("standard");
+app.MapFamilySpaceEndpoints(apiVersionSet).RequireRateLimiting("standard");
+app.MapCategoryEndpoints(apiVersionSet).RequireRateLimiting("standard");
+app.MapSubscriptionEndpoints(apiVersionSet).RequireRateLimiting("standard");
+app.MapAlertEndpoints(apiVersionSet).RequireRateLimiting("standard");
+app.MapPushNotificationEndpoints(apiVersionSet).RequireRateLimiting("standard");
+app.MapReceiptEndpoints(apiVersionSet).RequireRateLimiting("standard");
+app.MapAIEndpoints(apiVersionSet).RequireRateLimiting("ai");
+app.MapInsightsEndpoints(apiVersionSet).RequireRateLimiting("standard");
+app.MapConscienceJourneyEndpoints(apiVersionSet).RequireRateLimiting("standard");
+app.MapSuggestionEndpoints(apiVersionSet).RequireRateLimiting("standard");
+app.MapExchangeRateEndpoints(apiVersionSet).RequireRateLimiting("standard");
+app.MapUtteranceEndpoints(apiVersionSet).RequireRateLimiting("ai");
 
 app.Run();
 

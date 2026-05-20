@@ -25,7 +25,7 @@ public class ExchangeRateEndpointTests : IClassFixture<TestWebAppFactory>
             .Setup(s => s.GetRateAsync("EUR", "USD", It.IsAny<CancellationToken>()))
             .ReturnsAsync(1.0857m);
 
-        var response = await _client.GetAsync("/api/v1/exchange-rates/EUR/USD");
+        var response = await _client.GetAsync("/api/exchange-rates/EUR/USD");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var body = await response.Content.ReadAsStringAsync();
@@ -41,7 +41,7 @@ public class ExchangeRateEndpointTests : IClassFixture<TestWebAppFactory>
             .Setup(s => s.GetRateAsync("EUR", "XYZ", It.IsAny<CancellationToken>()))
             .ReturnsAsync((decimal?)null);
 
-        var response = await _client.GetAsync("/api/v1/exchange-rates/EUR/XYZ");
+        var response = await _client.GetAsync("/api/exchange-rates/EUR/XYZ");
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
@@ -50,7 +50,7 @@ public class ExchangeRateEndpointTests : IClassFixture<TestWebAppFactory>
     public async Task GetRate_Returns401_WhenUnauthenticated()
     {
         var anonClient = _factory.CreateClient();
-        var response = await anonClient.GetAsync("/api/v1/exchange-rates/EUR/USD");
+        var response = await anonClient.GetAsync("/api/exchange-rates/EUR/USD");
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
 }

@@ -16,7 +16,7 @@ This file documents the GitHub Actions secrets and variables needed to release C
 | `CONSCIA_DOMAIN_NAME` | Variable | `release-infra.yml`, `release-api.yml`, `release-web.yml` | `getconscia.com`. Turns on domain-aware CDK resources. |
 | `CONSCIA_WWW_DOMAIN_NAME` | Variable | `release-infra.yml`, `release-web.yml` | `www.getconscia.com`. Defaults to `www.<CONSCIA_DOMAIN_NAME>` in CDK if omitted. |
 | `CONSCIA_API_DOMAIN_NAME` | Variable | `release-infra.yml`, `release-api.yml` | `api.getconscia.com`. Defaults to `api.<CONSCIA_DOMAIN_NAME>` in CDK if omitted. |
-| `ROUTE53_HOSTED_ZONE_ID` | Variable or Secret | `release-infra.yml`, `release-api.yml`, `release-web.yml` | Existing hosted zone for `getconscia.com`. Secret if you prefer not exposing account topology. |
+| `ROUTE53_HOSTED_ZONE_ID` | Variable | `release-infra.yml`, `release-api.yml`, `release-web.yml` | Existing hosted zone for `getconscia.com`. The current workflows read this from `vars`, so store it as a variable. |
 
 ## ACM Certificates
 
@@ -31,7 +31,7 @@ CDK now creates and validates certificates when `CONSCIA_DOMAIN_NAME` and `ROUTE
 
 | Name | Type | Used By | Notes |
 |---|---|---|---|
-| `API_BASE_URL` | Variable | Future `release-app.yml` / Flutter web app build | `https://api.getconscia.com/api/v1/`. Keep the trailing slash. |
+| `API_BASE_URL` | Variable | Future `release-app.yml` / Flutter web app build | `https://api.getconscia.com/api/`. Keep the trailing slash. The app injects `?v=1` automatically. |
 | `MOCK_AUTH` | Variable | Future `release-app.yml` | `false` for production. |
 | `GOOGLE_SERVER_CLIENT_ID` | Secret | Future `release-app.yml` | Google web/server OAuth client ID used by native Google sign-in. |
 | `PUSH_NOTIFICATIONS_ENABLED` | Variable | Future `release-app.yml` | `true` only after Firebase is fully configured. |
@@ -39,6 +39,12 @@ CDK now creates and validates certificates when `CONSCIA_DOMAIN_NAME` and `ROUTE
 ## API Runtime Secrets
 
 These should ultimately live in AWS Secrets Manager or SSM Parameter Store and be injected into Lambda by CDK, not passed directly from GitHub into deployed code.
+
+The runtime API contract is now:
+
+- Canonical: query-string versioning, for example `/api/users/me?v=1`
+- Secondary: `X-Api-Version: 1`
+- App compatibility: current app release plus previous app release
 
 | Name | Type | Used By | Notes |
 |---|---|---|---|

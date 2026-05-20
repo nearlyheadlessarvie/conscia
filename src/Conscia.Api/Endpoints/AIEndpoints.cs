@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Globalization;
+using Asp.Versioning.Builder;
 using Conscia.Api.Extensions;
 using Conscia.Api.Telemetry;
 using Conscia.Application.Constants;
@@ -14,9 +15,11 @@ namespace Conscia.Api.Endpoints;
 
 public static class AIEndpoints
 {
-    public static RouteGroupBuilder MapAIEndpoints(this IEndpointRouteBuilder routes)
+    public static RouteGroupBuilder MapAIEndpoints(this IEndpointRouteBuilder routes, ApiVersionSet apiVersionSet)
     {
-        var group = routes.MapGroup("/api/v1/ai")
+        var group = routes.MapGroup("/api/ai")
+            .WithApiVersionSet(apiVersionSet)
+            .MapToApiVersion(1.0)
             .RequireAuthorization()
             .WithTags("AI");
 

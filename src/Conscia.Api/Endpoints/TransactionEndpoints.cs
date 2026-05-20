@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using Asp.Versioning.Builder;
 using Conscia.Api.Extensions;
 using Conscia.Api.Telemetry;
 using Conscia.Application.Constants;
@@ -11,9 +12,11 @@ namespace Conscia.Api.Endpoints;
 
 public static class TransactionEndpoints
 {
-    public static RouteGroupBuilder MapTransactionEndpoints(this IEndpointRouteBuilder routes)
+    public static RouteGroupBuilder MapTransactionEndpoints(this IEndpointRouteBuilder routes, ApiVersionSet apiVersionSet)
     {
-        var group = routes.MapGroup("/api/v1/transactions")
+        var group = routes.MapGroup("/api/transactions")
+            .WithApiVersionSet(apiVersionSet)
+            .MapToApiVersion(1.0)
             .RequireAuthorization()
             .WithTags("Transactions");
 
@@ -49,7 +52,7 @@ public static class TransactionEndpoints
 
             var txn = await svc.CreateAsync(userId, dto, ctx.RequestAborted);
             ConsciaMetrics.TransactionsCreated.Add(1);
-            return Results.Created($"/api/v1/transactions/{txn.Id}", new
+            return Results.Created($"/api/transactions/{txn.Id}", new
             {
                 txn.Id,
                 txn.UserId,

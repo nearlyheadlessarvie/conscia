@@ -1,6 +1,9 @@
+import 'dart:convert';
+
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../core/constants/api_constants.dart';
@@ -89,21 +92,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       final refreshToken = await _storage.read(key: _refreshTokenKey);
       final userId = await _storage.read(key: _userIdKey);
 
-      if (accessToken == null || refreshToken == null || userId == null) {
-        return;
-      }
-
-      // Reject tokens that aren't valid JWTs (e.g. stale mock_access_token_*)
-      final parts = accessToken.split('.');
-      if (parts.length != 3) {
-        await _storage.delete(key: _accessTokenKey);
-        await _storage.delete(key: _refreshTokenKey);
-        await _storage.delete(key: _userIdKey);
-        return;
-      }
-
-      state = state.copyWith(
-        status: AuthStatus.authenticated,
+      await _restoreStoredSession(
         accessToken: accessToken,
         refreshToken: refreshToken,
         userId: userId,
@@ -124,12 +113,16 @@ class AuthNotifier extends StateNotifier<AuthState> {
       throw Exception('No stored session');
     }
 
-    state = state.copyWith(
-      status: AuthStatus.authenticated,
+    final restored = await _restoreStoredSession(
       accessToken: accessToken,
       refreshToken: refreshToken,
       userId: userId,
+      throwIfMissing: true,
     );
+
+    if (!restored) {
+      throw Exception('No stored session');
+    }
   }
 
   Future<void> login(String email, String password) async {
@@ -368,6 +361,93 @@ class AuthNotifier extends StateNotifier<AuthState> {
     await _storage.delete(key: _userIdKey);
   }
 
+  Future<bool> _restoreStoredSession({
+    required String? accessToken,
+    required String? refreshToken,
+    required String? userId,
+    bool throwIfMissing = false,
+  }) async {
+    if (accessToken == null || refreshToken == null || userId == null) {
+      if (throwIfMissing) {
+        throw Exception('No stored session');
+      }
+      return false;
+    }
+
+    if (!_looksLikeJwt(accessToken)) {
+      await _storage.delete(key: _accessTokenKey);
+      await _storage.delete(key: _refreshTokenKey);
+      await _storage.delete(key: _userIdKey);
+      if (throwIfMissing) {
+        throw Exception('No stored session');
+      }
+      return false;
+    }
+
+    final isExpired = _isJwtExpired(accessToken);
+    if (isExpired) {
+      try {
+        final tokens = await _authService.refreshSession(refreshToken);
+        await _persistTokens(tokens);
+        state = state.copyWith(
+          status: AuthStatus.authenticated,
+          accessToken: tokens.accessToken,
+          refreshToken: tokens.refreshToken,
+          userId: tokens.userId,
+          pendingEmail: null,
+          isLoading: false,
+          error: null,
+        );
+        return true;
+      } catch (_) {
+        await markSessionExpired();
+        return false;
+      }
+    }
+
+    state = state.copyWith(
+      status: AuthStatus.authenticated,
+      accessToken: accessToken,
+      refreshToken: refreshToken,
+      userId: userId,
+      error: null,
+    );
+    return true;
+  }
+
+  static bool _looksLikeJwt(String token) => token.split('.').length == 3;
+
+  static bool _isJwtExpired(String token) {
+    final payload = _tryDecodeJwtPayload(token);
+    final exp = payload?['exp'];
+    if (exp is! num) {
+      return false;
+    }
+
+    final expiresAt = DateTime.fromMillisecondsSinceEpoch(
+      exp.toInt() * 1000,
+      isUtc: true,
+    );
+
+    return !expiresAt.isAfter(
+      DateTime.now().toUtc().add(const Duration(seconds: 30)),
+    );
+  }
+
+  static Map<String, dynamic>? _tryDecodeJwtPayload(String token) {
+    final parts = token.split('.');
+    if (parts.length != 3) return null;
+
+    try {
+      final normalized = base64Url.normalize(parts[1]);
+      final decoded = utf8.decode(base64Url.decode(normalized));
+      final payload = jsonDecode(decoded);
+      return payload is Map<String, dynamic> ? payload : null;
+    } catch (_) {
+      return null;
+    }
+  }
+
   Future<void> _persistTokens(AuthTokens tokens) async {
     await _storage.write(key: _accessTokenKey, value: tokens.accessToken);
     await _storage.write(key: _refreshTokenKey, value: tokens.refreshToken);
@@ -472,7 +552,7 @@ final secureStorageProvider = Provider<FlutterSecureStorage>(
 );
 
 final authDioProvider = Provider<Dio>((ref) {
-  return Dio(
+  final dio = Dio(
     BaseOptions(
       baseUrl: ApiConstants.baseUrl,
       connectTimeout: ApiConstants.connectTimeout,
@@ -483,6 +563,25 @@ final authDioProvider = Provider<Dio>((ref) {
       },
     ),
   );
+
+  dio.interceptors.add(
+    InterceptorsWrapper(
+      onRequest: (options, handler) async {
+        options.queryParameters = <String, dynamic>{
+          ...options.queryParameters,
+          'v': options.queryParameters['v'] ?? '1',
+        };
+
+        final info = await PackageInfo.fromPlatform();
+        options.headers['X-Conscia-App-Version'] =
+            '${info.version}+${info.buildNumber}';
+
+        handler.next(options);
+      },
+    ),
+  );
+
+  return dio;
 });
 
 final authServiceProvider = Provider<AuthService>((ref) {

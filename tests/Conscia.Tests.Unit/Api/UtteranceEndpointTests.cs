@@ -31,7 +31,7 @@ public class UtteranceEndpointTests : IClassFixture<TestWebAppFactory>
         client.DefaultRequestHeaders.Authorization =
             new AuthenticationHeaderValue("Bearer", _factory.GenerateTestToken(tier: "Premium"));
 
-        var response = await client.PostAsJsonAsync("/api/v1/transactions/parse-utterance", new
+        var response = await client.PostAsJsonAsync("/api/transactions/parse-utterance", new
         {
             transcript = "I spent 5 dollars on coffee"
         });
@@ -58,7 +58,7 @@ public class UtteranceEndpointTests : IClassFixture<TestWebAppFactory>
         client.DefaultRequestHeaders.Authorization =
             new AuthenticationHeaderValue("Bearer", _factory.GenerateTestToken(tier: "Free"));
 
-        var response = await client.PostAsJsonAsync("/api/v1/transactions/parse-utterance", new
+        var response = await client.PostAsJsonAsync("/api/transactions/parse-utterance", new
         {
             transcript = "I spent 5 dollars on coffee"
         });
@@ -79,7 +79,7 @@ public class UtteranceEndpointTests : IClassFixture<TestWebAppFactory>
         client.DefaultRequestHeaders.Authorization =
             new AuthenticationHeaderValue("Bearer", _factory.GenerateTestToken(tier: "Free"));
 
-        var response = await client.PostAsJsonAsync("/api/v1/transactions/parse-utterance", new
+        var response = await client.PostAsJsonAsync("/api/transactions/parse-utterance", new
         {
             transcript = "I spent 5 dollars on coffee"
         });
@@ -92,7 +92,7 @@ public class UtteranceEndpointTests : IClassFixture<TestWebAppFactory>
     {
         var client = _factory.CreateClient();
 
-        var response = await client.PostAsJsonAsync("/api/v1/transactions/parse-utterance", new
+        var response = await client.PostAsJsonAsync("/api/transactions/parse-utterance", new
         {
             transcript = "I spent 5 dollars on coffee"
         });
@@ -113,7 +113,7 @@ public class UtteranceEndpointTests : IClassFixture<TestWebAppFactory>
         client.DefaultRequestHeaders.Authorization =
             new AuthenticationHeaderValue("Bearer", _factory.GenerateTestToken(tier: "Premium"));
 
-        var response = await client.PostAsJsonAsync("/api/v1/transactions/parse-utterance", new
+        var response = await client.PostAsJsonAsync("/api/transactions/parse-utterance", new
         {
             transcript = "   "
         });

@@ -94,9 +94,9 @@ class _FailingCurrencyUserService extends _RecordingUserService {
   }) async {
     if (preferredCurrency != null) {
       throw DioException(
-        requestOptions: RequestOptions(path: '/api/v1/users/me'),
+        requestOptions: RequestOptions(path: '/api/users/me'),
         response: Response(
-          requestOptions: RequestOptions(path: '/api/v1/users/me'),
+          requestOptions: RequestOptions(path: '/api/users/me'),
           statusCode: 409,
           data: const {
             'error': 'Default currency is locked after your first transaction.',

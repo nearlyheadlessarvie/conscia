@@ -243,7 +243,7 @@ All configuration is managed via `appsettings.json` / `appsettings.Development.j
 | `Auth__Google__ClientId` / `Auth__Google__ClientIds__0` | — | Allowed Google OAuth client ID(s) for native social sign-in |
 | `Auth__Apple__ClientId` | — | Allowed Apple token audience, usually the iOS bundle id |
 
-Production email/password auth uses Cognito email verification. Keep `Auth__UseMock=true` locally unless you have a Cognito user pool available; set it to `false` in deployed API environments so `/api/v1/auth/register` sends a confirmation code, `/api/v1/auth/confirm` verifies it, and login/refresh exchange Cognito tokens.
+Production email/password auth uses Cognito email verification. Keep `Auth__UseMock=true` locally unless you have a Cognito user pool available; set it to `false` in deployed API environments so `/api/auth/register?v=1` sends a confirmation code, `/api/auth/confirm?v=1` verifies it, and login/refresh exchange Cognito tokens.
 
 Native Google/Apple social auth is intentionally not Cognito Hosted UI. Flutter uses the platform SDKs, sends provider identity tokens to the API, and the API verifies those tokens, creates/links a `UserIdentity`, creates a suppressed Cognito shadow user on first social sign-in, then returns app-signed JWTs. Production API auth accepts both Cognito JWTs and these app JWTs.
 
@@ -254,7 +254,7 @@ Compile-time constants passed via `--dart-define`:
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `MOCK_AUTH` | `true` | Use mock authentication (bypasses Cognito, creates local JWT) |
-| `API_BASE_URL` | `http://localhost:5248/api/v1` | Backend API base URL |
+| `API_BASE_URL` | `http://localhost:5248/api/` | Backend API base URL |
 | `PUSH_NOTIFICATIONS_ENABLED` | `false` | Enables Firebase Cloud Messaging token registration after the user signs in |
 | `GOOGLE_SERVER_CLIENT_ID` | empty | Google web/server OAuth client ID used by native Google sign-in to request an ID token |
 
@@ -263,12 +263,12 @@ Compile-time constants passed via `--dart-define`:
 flutter run
 
 # Run against a deployed API with real auth
-flutter run --dart-define=MOCK_AUTH=false --dart-define=API_BASE_URL=https://api.getconscia.com/api/v1 --dart-define=GOOGLE_SERVER_CLIENT_ID=<web-client-id>.apps.googleusercontent.com
+flutter run --dart-define=MOCK_AUTH=false --dart-define=API_BASE_URL=https://api.getconscia.com/api/ --dart-define=GOOGLE_SERVER_CLIENT_ID=<web-client-id>.apps.googleusercontent.com
 ```
 
 ### Device Push Notification Setup
 
-Device push is scaffolded but intentionally disabled until Firebase credentials are ready. Today the app can request notification permission, read the Firebase Cloud Messaging token, and register it with `POST /api/v1/push/device-tokens`. The API stores tokens in DynamoDB table `PushDeviceTokens`; actual push delivery can be wired to Firebase Admin/FCM after credentials are available.
+Device push is scaffolded but intentionally disabled until Firebase credentials are ready. Today the app can request notification permission, read the Firebase Cloud Messaging token, and register it with `POST /api/push/device-tokens?v=1`. The API stores tokens in DynamoDB table `PushDeviceTokens`; actual push delivery can be wired to Firebase Admin/FCM after credentials are available.
 
 Keep `PUSH_NOTIFICATIONS_ENABLED=false` for normal local web/dev runs. Browser/web push is not wired yet; the current scaffold is for Android/iOS device token registration.
 
@@ -355,8 +355,8 @@ Auth__Google__ClientIds__2=<android client id>
 
 The social endpoints are already present:
 
-- `POST /api/v1/auth/google` with `{ "idToken": "<Google ID token>" }`
-- `POST /api/v1/auth/apple` with `{ "identityToken": "<Apple identity token>", "authorizationCode": "<code>" }`
+- `POST /api/auth/google?v=1` with `{ "idToken": "<Google ID token>" }`
+- `POST /api/auth/apple?v=1` with `{ "identityToken": "<Apple identity token>", "authorizationCode": "<code>" }`
 
 On first social sign-in, the API creates or links the local `User`, stores `UserIdentity(provider, providerSub)`, creates a suppressed Cognito shadow user for operational consistency, and returns `{ accessToken, refreshToken, userId }`. New social users then enter onboarding because `HasCompletedOnboarding` defaults to `false`.
 
@@ -461,7 +461,7 @@ Set `Auth__Apple__ClientId` to the audience Apple places in the identity token. 
 `MOCK_AUTH=true` is the compile-time default (see `ApiConstants`). It lets you run the app locally without real credentials. To switch to real OAuth, pass the flag at run time:
 
 ```bash
-cd app && flutter run --dart-define=MOCK_AUTH=false --dart-define=API_BASE_URL=https://your-api-host/api/v1/
+cd app && flutter run --dart-define=MOCK_AUTH=false --dart-define=API_BASE_URL=https://your-api-host/api/
 ```
 
 ---
@@ -486,13 +486,28 @@ cd app && flutter test
 
 ## API Endpoints
 
+All `/api/...` endpoints require API version `v=1` during this release. Query-string versioning is the canonical contract, so requests should use `?v=1`. The API also accepts `X-Api-Version: 1` as a secondary input for non-Flutter clients.
+
+The Flutter app automatically appends `?v=1` and sends `X-Conscia-App-Version`, so most app code should treat `API_BASE_URL` as `.../api/` and avoid hand-building versioned URLs.
+
+## Release Automation
+
+Component releases are prepared with release PRs rather than cut directly from every merge. We use Conventional Commits to drive semver for each deployable unit:
+
+- `app/vX.Y.Z`
+- `api/vX.Y.Z`
+- `infra/vX.Y.Z`
+- `web/vX.Y.Z`
+
+When an app release PR is prepared, the repo also syncs the API compatibility window so the backend continues to support the current app build and the previous one. See [release-matrix.md](./release-matrix.md) for the live contract and support window.
+
 All endpoints (except Auth and health) require a Bearer JWT in the `Authorization` header.
 
 ### System
 
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
-| `GET` | `/api/v1` | No | API version info |
+| `GET` | `/api?v=1` | No | API version info |
 | `GET` | `/health` | No | Full health check (PostgreSQL, DynamoDB, AI) |
 | `GET` | `/health/live` | No | Liveness probe |
 | `GET` | `/health/ready` | No | Readiness probe |
@@ -501,74 +516,74 @@ All endpoints (except Auth and health) require a Bearer JWT in the `Authorizatio
 
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
-| `POST` | `/api/v1/auth/register` | No | Register with email/password and request email confirmation |
-| `POST` | `/api/v1/auth/confirm` | No | Confirm registration with the email verification code |
-| `POST` | `/api/v1/auth/resend-confirmation` | No | Resend the email verification code |
-| `POST` | `/api/v1/auth/login` | No | Authenticate with email/password |
-| `POST` | `/api/v1/auth/google` | No | Sign in with Google (ID token) |
-| `POST` | `/api/v1/auth/apple` | No | Sign in with Apple (identity token) |
+| `POST` | `/api/auth/register?v=1` | No | Register with email/password and request email confirmation |
+| `POST` | `/api/auth/confirm?v=1` | No | Confirm registration with the email verification code |
+| `POST` | `/api/auth/resend-confirmation?v=1` | No | Resend the email verification code |
+| `POST` | `/api/auth/login?v=1` | No | Authenticate with email/password |
+| `POST` | `/api/auth/google?v=1` | No | Sign in with Google (ID token) |
+| `POST` | `/api/auth/apple?v=1` | No | Sign in with Apple (identity token) |
 
 ### Users
 
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
-| `GET` | `/api/v1/users/me` | Yes | Get current user profile |
-| `PUT` | `/api/v1/users/me` | Yes | Update currency/locale preferences |
+| `GET` | `/api/users/me?v=1` | Yes | Get current user profile |
+| `PUT` | `/api/users/me?v=1` | Yes | Update currency/locale preferences |
 
 ### Transactions
 
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
-| `POST` | `/api/v1/transactions` | Yes | Create a transaction |
-| `GET` | `/api/v1/transactions` | Yes | List transactions (paginated, filterable by category) |
-| `GET` | `/api/v1/transactions/{id}` | Yes | Get transaction detail |
-| `PUT` | `/api/v1/transactions/{id}` | Yes | Update a transaction |
-| `DELETE` | `/api/v1/transactions/{id}` | Yes | Delete a transaction |
-| `POST` | `/api/v1/transactions/{id}/regret` | Yes | Submit regret-level feedback |
+| `POST` | `/api/transactions?v=1` | Yes | Create a transaction |
+| `GET` | `/api/transactions?v=1` | Yes | List transactions (paginated, filterable by category) |
+| `GET` | `/api/transactions/{id}?v=1` | Yes | Get transaction detail |
+| `PUT` | `/api/transactions/{id}?v=1` | Yes | Update a transaction |
+| `DELETE` | `/api/transactions/{id}?v=1` | Yes | Delete a transaction |
+| `POST` | `/api/transactions/{id}/regret?v=1` | Yes | Submit regret-level feedback |
 
 ### Budgets
 
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
-| `POST` | `/api/v1/budgets` | Yes | Create a budget |
-| `GET` | `/api/v1/budgets` | Yes | List all budgets with spend tracking |
-| `GET` | `/api/v1/budgets/{id}` | Yes | Get budget detail |
-| `PUT` | `/api/v1/budgets/{id}` | Yes | Update a budget |
-| `DELETE` | `/api/v1/budgets/{id}` | Yes | Delete a budget |
+| `POST` | `/api/budgets?v=1` | Yes | Create a budget |
+| `GET` | `/api/budgets?v=1` | Yes | List all budgets with spend tracking |
+| `GET` | `/api/budgets/{id}?v=1` | Yes | Get budget detail |
+| `PUT` | `/api/budgets/{id}?v=1` | Yes | Update a budget |
+| `DELETE` | `/api/budgets/{id}?v=1` | Yes | Delete a budget |
 
 ### Subscriptions
 
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
-| `GET` | `/api/v1/subscriptions/status` | Yes | Get current subscription tier |
-| `POST` | `/api/v1/subscriptions/verify/ios` | Yes | Verify iOS App Store receipt |
-| `POST` | `/api/v1/subscriptions/verify/android` | Yes | Verify Android Play Store token |
+| `GET` | `/api/subscriptions/status?v=1` | Yes | Get current subscription tier |
+| `POST` | `/api/subscriptions/verify/ios?v=1` | Yes | Verify iOS App Store receipt |
+| `POST` | `/api/subscriptions/verify/android?v=1` | Yes | Verify Android Play Store token |
 
 ### AI (Dual-Personality)
 
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
-| `POST` | `/api/v1/ai/pre-purchase` | Yes | Get Impulse/Reason advice before buying |
-| `POST` | `/api/v1/ai/reflection` | Yes | Get post-purchase reflection on a transaction |
+| `POST` | `/api/ai/pre-purchase?v=1` | Yes | Get Impulse/Reason advice before buying |
+| `POST` | `/api/ai/reflection?v=1` | Yes | Get post-purchase reflection on a transaction |
 
 ### Receipts (Premium)
 
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
-| `POST` | `/api/v1/receipts/scan` | Yes | Upload and scan a receipt image |
-| `POST` | `/api/v1/receipts/{id}/confirm` | Yes | Confirm extracted data and create transaction |
+| `POST` | `/api/receipts/scan?v=1` | Yes | Upload and scan a receipt image |
+| `POST` | `/api/receipts/{id}/confirm?v=1` | Yes | Confirm extracted data and create transaction |
 
 ### Alerts
 
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
-| `GET` | `/api/v1/alerts` | Yes | List in-app alerts for current user |
+| `GET` | `/api/alerts?v=1` | Yes | List in-app alerts for current user |
 
 ### Push Notifications
 
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
-| `POST` | `/api/v1/push/device-tokens` | Yes | Register or refresh the current device's Firebase Cloud Messaging token |
+| `POST` | `/api/push/device-tokens?v=1` | Yes | Register or refresh the current device's Firebase Cloud Messaging token |
 
 ---
 

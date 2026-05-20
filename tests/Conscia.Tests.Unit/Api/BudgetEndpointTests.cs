@@ -52,7 +52,7 @@ public class BudgetEndpointTests : IClassFixture<TestWebAppFactory>
                 CurrencyCode = "USD"
             });
 
-        var response = await _client.PostAsJsonAsync("/api/v1/budgets", new
+        var response = await _client.PostAsJsonAsync("/api/budgets", new
         {
             category = "Food",
             monthlyLimit = 500,
@@ -72,7 +72,7 @@ public class BudgetEndpointTests : IClassFixture<TestWebAppFactory>
                 new() { Id = Guid.NewGuid(), Category = "Food", MonthlyLimit = 500, CurrentSpend = 200, CurrencyCode = "USD" }
             });
 
-        var response = await _client.GetAsync("/api/v1/budgets");
+        var response = await _client.GetAsync("/api/budgets");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
@@ -84,7 +84,7 @@ public class BudgetEndpointTests : IClassFixture<TestWebAppFactory>
             .Setup(s => s.GetStatusByIdAsync(UserId, It.IsAny<Guid>(), null, It.IsAny<CancellationToken>()))
             .ReturnsAsync((BudgetStatus?)null);
 
-        var response = await _client.GetAsync($"/api/v1/budgets/{Guid.NewGuid()}");
+        var response = await _client.GetAsync($"/api/budgets/{Guid.NewGuid()}");
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
@@ -96,7 +96,7 @@ public class BudgetEndpointTests : IClassFixture<TestWebAppFactory>
             .Setup(s => s.DeleteAsync(UserId, It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new UnauthorizedAccessException());
 
-        var response = await _client.DeleteAsync($"/api/v1/budgets/{Guid.NewGuid()}");
+        var response = await _client.DeleteAsync($"/api/budgets/{Guid.NewGuid()}");
 
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
@@ -104,7 +104,7 @@ public class BudgetEndpointTests : IClassFixture<TestWebAppFactory>
     [Fact]
     public async Task CreateBudget_ZeroLimit_Returns400()
     {
-        var response = await _client.PostAsJsonAsync("/api/v1/budgets", new
+        var response = await _client.PostAsJsonAsync("/api/budgets", new
         {
             category = "Food",
             monthlyLimit = 0,
@@ -145,7 +145,7 @@ public class BudgetEndpointTests : IClassFixture<TestWebAppFactory>
                 CurrencyCode = "USD"
             });
 
-        var response = await _client.PostAsJsonAsync("/api/v1/budgets", new
+        var response = await _client.PostAsJsonAsync("/api/budgets", new
         {
             category = "Shopping",
             monthlyLimit = 98,

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
-import '../core/theme/app_colors.dart';
 import 'selection_chip_group.dart';
 import '../../../widgets/form_label.dart';
+import 'editorial_section_header.dart';
 
 class RecurringScheduleSection extends StatelessWidget {
   const RecurringScheduleSection({
@@ -37,44 +37,16 @@ class RecurringScheduleSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final appColors = theme.appColors;
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'RECURRING',
-                    style: theme.textTheme.labelSmall?.copyWith(
-                      color: appColors.mutedInk,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 0.9,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Repeat on a schedule.',
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                      height: 1.35,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Switch.adaptive(
-              value: enabled,
-              onChanged: onEnabledChanged,
-            ),
-          ],
+        EditorialSectionHeader(
+          title: 'Recurring',
+          subtitle: 'Repeat on a schedule.',
+          trailing: Switch.adaptive(
+            value: enabled,
+            onChanged: onEnabledChanged,
+          ),
         ),
         if (enabled) ...[
           const SizedBox(height: 12),

@@ -1,3 +1,4 @@
+using Asp.Versioning.Builder;
 using Conscia.Api.Extensions;
 using Conscia.Api.Middleware;
 using Conscia.Application.Interfaces;
@@ -6,9 +7,11 @@ namespace Conscia.Api.Endpoints;
 
 public static class ReceiptEndpoints
 {
-    public static RouteGroupBuilder MapReceiptEndpoints(this IEndpointRouteBuilder routes)
+    public static RouteGroupBuilder MapReceiptEndpoints(this IEndpointRouteBuilder routes, ApiVersionSet apiVersionSet)
     {
-        var group = routes.MapGroup("/api/v1/receipts")
+        var group = routes.MapGroup("/api/receipts")
+            .WithApiVersionSet(apiVersionSet)
+            .MapToApiVersion(1.0)
             .RequireAuthorization()
             .WithTags("Receipts");
 

@@ -50,7 +50,7 @@ public class AIEndpointTests : IClassFixture<TestWebAppFactory>
             .Setup(r => r.AddAsync(It.IsAny<AIInteraction>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((AIInteraction i, CancellationToken _) => i);
 
-        var response = await _client.PostAsJsonAsync("/api/v1/ai/pre-purchase", new
+        var response = await _client.PostAsJsonAsync("/api/ai/pre-purchase", new
         {
             description = "New headphones",
             amount = 299.99,
@@ -67,7 +67,7 @@ public class AIEndpointTests : IClassFixture<TestWebAppFactory>
     [Fact]
     public async Task PrePurchase_EmptyDescription_Returns400()
     {
-        var response = await _client.PostAsJsonAsync("/api/v1/ai/pre-purchase", new
+        var response = await _client.PostAsJsonAsync("/api/ai/pre-purchase", new
         {
             description = "",
             amount = 10,
@@ -85,7 +85,7 @@ public class AIEndpointTests : IClassFixture<TestWebAppFactory>
             .Setup(r => r.GetMembershipByUserIdAsync(UserId, It.IsAny<CancellationToken>()))
             .ReturnsAsync((FamilyMember?)null);
 
-        var response = await _client.PostAsJsonAsync("/api/v1/ai/pre-purchase", new
+        var response = await _client.PostAsJsonAsync("/api/ai/pre-purchase", new
         {
             description = "Dinner delivery",
             amount = 1200,
@@ -191,7 +191,7 @@ public class AIEndpointTests : IClassFixture<TestWebAppFactory>
                 NeutralMessage = "Family context included."
             });
 
-        var response = await _client.PostAsJsonAsync("/api/v1/ai/pre-purchase", new
+        var response = await _client.PostAsJsonAsync("/api/ai/pre-purchase", new
         {
             description = "Dinner delivery",
             amount = 1200,

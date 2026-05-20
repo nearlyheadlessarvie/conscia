@@ -1,10 +1,17 @@
 import 'package:dio/dio.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../providers/auth_provider.dart';
 import '../constants/api_constants.dart';
 
 const _tokenKey = 'access_token';
+const _apiVersion = '1';
+
+final appVersionProvider = FutureProvider<String>((ref) async {
+  final info = await PackageInfo.fromPlatform();
+  return '${info.version}+${info.buildNumber}';
+});
 
 final dioProvider = Provider<Dio>((ref) {
   final dio = Dio(
@@ -25,6 +32,15 @@ final dioProvider = Provider<Dio>((ref) {
   dio.interceptors.add(
     InterceptorsWrapper(
       onRequest: (options, handler) async {
+        if (!_isHealthRequest(options)) {
+          options.queryParameters = <String, dynamic>{
+            ...options.queryParameters,
+            'v': options.queryParameters['v'] ?? _apiVersion,
+          };
+          options.headers['X-Conscia-App-Version'] =
+              await ref.read(appVersionProvider.future);
+        }
+
         if (_isPublicRequest(options)) {
           return handler.next(options);
         }
@@ -112,3 +128,5 @@ bool _isPublicRequest(RequestOptions options) {
   final path = options.uri.path;
   return path == '/health' || path.startsWith('/health/');
 }
+
+bool _isHealthRequest(RequestOptions options) => _isPublicRequest(options);
