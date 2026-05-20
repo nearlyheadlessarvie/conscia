@@ -575,14 +575,20 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 ),
               if (regretPrompts.isNotEmpty) ...[
                 SliverToBoxAdapter(
-                  child: _buildSectionHeader(context, 'REFLECT'),
+                  child: _buildSectionHeader(
+                    context,
+                    'Reflect',
+                    subtitle:
+                        'A small pause can show whether this moment fit your rhythm.',
+                  ),
                 ),
                 SliverPadding(
                   padding: const EdgeInsets.symmetric(horizontal: 20),
-                  sliver: SliverList.builder(
-                    itemCount: regretPrompts.length,
-                    itemBuilder: (context, index) {
-                      final tx = regretPrompts[index];
+                  sliver: SliverToBoxAdapter(
+                    child: () {
+                      final tx = regretPrompts.first;
+                      final remainingPromptCount =
+                          (regretPrompts.length - 1).clamp(0, 99);
                       final displayCounterparty = tx.description.isNotEmpty
                           ? tx.description
                           : 'Unknown';
@@ -595,9 +601,13 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                             filled: false,
                           ),
                           counterparty: displayCounterparty,
-                          amount: tx.amount,
+                          amount: tx.amount.abs(),
                           currencyCode: tx.currencyCode,
                           date: tx.date,
+                          queueHint: remainingPromptCount > 0
+                              ? '$remainingPromptCount more moments waiting'
+                              : null,
+                          showStackedPreview: remainingPromptCount > 0,
                           onWorthIt: () => _recordReflection(tx, 'worth_it'),
                           onNotSure: () => _recordReflection(tx, 'not_sure'),
                           onRegret: () => _recordReflection(tx, 'regret'),
@@ -605,7 +615,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                               setState(() => _dismissedPrompts.add(tx.id)),
                         ),
                       );
-                    },
+                    }(),
                   ),
                 ),
               ],

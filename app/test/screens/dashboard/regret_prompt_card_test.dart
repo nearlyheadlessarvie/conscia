@@ -64,6 +64,34 @@ void main() {
     expect(find.byIcon(Icons.sentiment_dissatisfied), findsNothing);
   });
 
+  testWidgets('shows gentle guidance copy and queue hint when provided', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: RegretPromptCard(
+            categoryBadge: CategoryIcons.badge('Dining', size: 16),
+            counterparty: 'Starbucks',
+            amount: 600,
+            currencyCode: 'PHP',
+            date: DateTime.now(),
+            queueHint: '2 more moments waiting',
+            showStackedPreview: true,
+          ),
+        ),
+      ),
+    );
+
+    expect(
+      find.text('Notice what this moment gave you before you decide how it felt.'),
+      findsOneWidget,
+    );
+    expect(find.text('2 more moments waiting'), findsOneWidget);
+    expect(find.byKey(const ValueKey('dashboard-reflect-queue-hint')), findsOneWidget);
+    expect(find.byKey(const ValueKey('dashboard-reflect-feature-card')), findsOneWidget);
+  });
+
   testWidgets('right swipe tags the prompt as worth it', (tester) async {
     var worthItCount = 0;
     var regretCount = 0;

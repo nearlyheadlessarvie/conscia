@@ -531,6 +531,88 @@ void main() {
   });
 
   testWidgets(
+      'dashboard reflect section shows one featured prompt and queue hint',
+      (tester) async {
+    _useTallDashboardViewport(tester);
+
+    final transactions = [
+      Transaction(
+        id: 'tx-1',
+        amount: 600,
+        currencyCode: 'PHP',
+        category: 'Dining',
+        description: 'Starbucks',
+        type: 'expense',
+        date: DateTime(2026, 5, 18),
+      ),
+      Transaction(
+        id: 'tx-2',
+        amount: 250,
+        currencyCode: 'PHP',
+        category: 'Coffee',
+        description: 'Daily Grind',
+        type: 'expense',
+        date: DateTime(2026, 5, 17),
+      ),
+      Transaction(
+        id: 'tx-3',
+        amount: 1200,
+        currencyCode: 'PHP',
+        category: 'Shopping',
+        description: 'Uniqlo',
+        type: 'expense',
+        date: DateTime(2026, 5, 16),
+      ),
+    ];
+
+    final container = ProviderContainer(
+      overrides: [
+        sharedPreferencesProvider.overrideWithValue(prefs),
+        budgetServiceProvider.overrideWithValue(_StaticBudgetService(const [])),
+        transactionServiceProvider
+            .overrideWithValue(_StaticTransactionService(transactions)),
+        transactionListProvider.overrideWith(
+          (ref) => TransactionListNotifier.fromList(transactions),
+        ),
+        currentUserProvider.overrideWith((ref) async => _testUser),
+        subscriptionProvider.overrideWith((ref) async => _testSubscription),
+        behavioralInsightsProvider.overrideWith((ref) async => null),
+        insightsSummaryProvider.overrideWith((ref) async => null),
+        insightsCategoriesProvider.overrideWith((ref) async => const []),
+        insightsMerchantsProvider.overrideWith((ref) async => const []),
+        localAlertsProvider.overrideWith(
+          (ref) => _LocalAlertsTestNotifier(const []),
+        ),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    await tester.pumpWidget(_buildApp(container));
+    await tester.pumpAndSettle();
+
+    await tester.drag(
+      find.byKey(const PageStorageKey('dashboard-shell-scroll')),
+      const Offset(0, -500),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Reflect'), findsOneWidget);
+    expect(
+      find.text('A small pause can show whether this moment fit your rhythm.'),
+      findsOneWidget,
+    );
+    expect(find.byKey(const ValueKey('dashboard-reflect-feature-card')), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('dashboard-reflect-feature-card')),
+        matching: find.text('Starbucks'),
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('2 more moments waiting'), findsOneWidget);
+  });
+
+  testWidgets(
       'insight feed card displays content without forced dismiss action',
       (tester) async {
     var dismissed = false;
