@@ -143,10 +143,14 @@ class _OfflineBlockerState extends ConsumerState<_OfflineBlocker> {
                           );
                           return;
                         }
-                        await ref.read(appAvailabilityProvider.notifier).refresh();
+                        await ref
+                            .read(appAvailabilityProvider.notifier)
+                            .refresh();
                       },
                       icon: Icon(
-                        state.isUpdateRequired ? Icons.system_update : Icons.refresh,
+                        state.isUpdateRequired
+                            ? Icons.system_update
+                            : Icons.refresh,
                       ),
                       label: Text(
                         state.isUpdateRequired ? 'Update Now' : 'Retry Now',
@@ -197,7 +201,7 @@ class _BlockerContent {
           icon: Icons.cloud_off_outlined,
           title: 'Conscia Unavailable',
           message:
-              'Your device is online, but the Conscia API is temporarily unavailable.',
+              'Your device is online, but the Conscia is temporarily unavailable.',
         );
       case AvailabilityIssue.updateRequired:
         return const _BlockerContent(
