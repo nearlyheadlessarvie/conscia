@@ -774,7 +774,7 @@ enum _ReflectDeckMotion {
 
 class _DashboardReflectQueueState extends State<_DashboardReflectQueue> {
   static const _advanceDuration = Duration(milliseconds: 560);
-  static const _deckHeight = 290.0;
+  static const _deckHeight = 248.0;
 
   late List<Transaction> _visiblePrompts;
   List<Transaction>? _bufferedExternalPrompts;
@@ -809,7 +809,9 @@ class _DashboardReflectQueueState extends State<_DashboardReflectQueue> {
 
   @override
   Widget build(BuildContext context) {
-    if (_visiblePrompts.isEmpty) {
+    final hasMountedDeck =
+        _visiblePrompts.isNotEmpty || _exitingPrompt != null || _isAdvancing;
+    if (!hasMountedDeck) {
       return const SizedBox.shrink();
     }
 
@@ -825,9 +827,9 @@ class _DashboardReflectQueueState extends State<_DashboardReflectQueue> {
           if (previewPrompts.length > 1)
             Positioned(
               key: const ValueKey('dashboard-reflect-preview-card-1'),
-              left: 28,
-              right: 28,
-              top: 34,
+              left: 26,
+              right: 26,
+              top: 24,
               child: _ReflectDeckPreviewCard(
                 prompt: previewPrompts[1],
                 insetOpacity: 0.62,
@@ -836,9 +838,9 @@ class _DashboardReflectQueueState extends State<_DashboardReflectQueue> {
           if (previewPrompts.isNotEmpty)
             Positioned(
               key: const ValueKey('dashboard-reflect-preview-card-0'),
-              left: 14,
-              right: 14,
-              top: 16,
+              left: 13,
+              right: 13,
+              top: 12,
               child: _ReflectDeckPreviewCard(
                 prompt: previewPrompts.first,
                 insetOpacity: 0.82,
@@ -869,8 +871,10 @@ class _DashboardReflectQueueState extends State<_DashboardReflectQueue> {
         final translateY = _isAdvancing ? (26 * (1 - value)) : 0.0;
         final scale = _isAdvancing ? (0.95 + (0.05 * value)) : 1.0;
         final opacity = _isAdvancing ? (0.72 + (0.28 * value)) : 1.0;
-        return Align(
-          alignment: Alignment.topCenter,
+        return Positioned(
+          left: 0,
+          right: 0,
+          top: 0,
           child: Opacity(
             opacity: opacity.clamp(0, 1),
             child: Transform.translate(
@@ -918,8 +922,10 @@ class _DashboardReflectQueueState extends State<_DashboardReflectQueue> {
           _ => 1 - (0.035 * value),
         };
         final opacity = 1 - (0.88 * value);
-        return Align(
-          alignment: Alignment.topCenter,
+        return Positioned(
+          left: 0,
+          right: 0,
+          top: 0,
           child: Opacity(
             opacity: opacity.clamp(0, 1),
             child: Transform.translate(
@@ -1052,7 +1058,7 @@ class _ReflectDeckPreviewCard extends StatelessWidget {
           ],
         ),
         child: SizedBox(
-          height: 184,
+          height: 226,
           child: Padding(
             padding: const EdgeInsets.fromLTRB(18, 18, 18, 16),
             child: Align(

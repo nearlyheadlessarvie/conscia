@@ -59,6 +59,7 @@ class RegretPromptCard extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.fromLTRB(18, 18, 18, 16),
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
@@ -134,23 +135,17 @@ class RegretPromptCard extends StatelessWidget {
                 ),
               ],
             ),
-            const SizedBox(height: 14),
-            SizedBox(
-              height: 18,
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: queueHint == null
-                    ? const SizedBox.shrink()
-                    : Text(
-                        queueHint!,
-                        key: const ValueKey('dashboard-reflect-queue-hint'),
-                        style: textTheme.labelMedium?.copyWith(
-                          color: colors.onSurfaceVariant,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
+            if (queueHint != null) ...[
+              const SizedBox(height: 14),
+              Text(
+                queueHint!,
+                key: const ValueKey('dashboard-reflect-queue-hint'),
+                style: textTheme.labelMedium?.copyWith(
+                  color: colors.onSurfaceVariant,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
-            ),
+            ],
           ],
         ),
       ),
