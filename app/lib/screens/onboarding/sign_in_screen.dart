@@ -198,184 +198,217 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
     final colors = Theme.of(context).colorScheme;
 
     return Scaffold(
+      extendBodyBehindAppBar: true,
       appBar: const ConsciaAppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
       ),
-      body: SafeArea(
+      body: DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              colors.primaryContainer.withValues(alpha: 0.18),
+              colors.surface,
+            ],
+          ),
+        ),
         child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const SizedBox(height: 16),
               const AuthIntroPanel(
-                title: 'Welcome Back',
-                subtitle: 'Sign in to continue your money story.',
-                icon: Icons.shield_outlined,
+                title: 'Welcome back',
+                subtitle: 'Return to your money rhythm with a little more calm.',
+                icon: Icons.spa_outlined,
               ),
-              const SizedBox(height: 28),
-              if (_errorMessage != null) ...[
-                InlineNotice(
-                  message: _errorMessage!,
-                  tone: InlineNoticeTone.error,
-                  icon: const Icon(Icons.lock_outline_rounded),
+              Padding(
+                padding: EdgeInsets.fromLTRB(
+                  20,
+                  28,
+                  20,
+                  32 + MediaQuery.paddingOf(context).bottom,
                 ),
-                const SizedBox(height: 16),
-              ],
-              Form(
-                key: _formKey,
                 child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    FloatingLabelTextField(
-                      controller: _emailController,
-                      label: 'Email',
-                      prefix: const Icon(Icons.email_outlined),
-                      keyboardType: TextInputType.emailAddress,
-                      textInputAction: TextInputAction.next,
-                      onChanged: (_) => _clearInlineErrors(),
-                      errorText: _emailFieldError,
-                      autofillHints: const [AutofillHints.email],
+                    if (_errorMessage != null) ...[
+                      InlineNotice(
+                        message: _errorMessage!,
+                        tone: InlineNoticeTone.error,
+                        icon: const Icon(Icons.lock_outline_rounded),
+                      ),
+                      const SizedBox(height: 16),
+                    ],
+                    Form(
+                      key: _formKey,
+                      child: Column(
+                        children: [
+                          FloatingLabelTextField(
+                            controller: _emailController,
+                            label: 'Email',
+                            prefix: const Icon(Icons.email_outlined),
+                            keyboardType: TextInputType.emailAddress,
+                            textInputAction: TextInputAction.next,
+                            onChanged: (_) => _clearInlineErrors(),
+                            errorText: _emailFieldError,
+                            autofillHints: const [AutofillHints.email],
+                          ),
+                          const SizedBox(height: 16),
+                          FloatingLabelTextField(
+                            controller: _passwordController,
+                            label: 'Password',
+                            prefix: const Icon(Icons.lock_outline),
+                            obscureText: _obscurePassword,
+                            textInputAction: TextInputAction.done,
+                            onChanged: (_) => _clearInlineErrors(),
+                            onSubmitted: (_) {
+                              if (!_isLoading) {
+                                _submit();
+                              }
+                            },
+                            errorText: _passwordFieldError,
+                            enableSuggestions: false,
+                            autocorrect: false,
+                            autofillHints: const [AutofillHints.password],
+                            trailing: IconButton(
+                              icon: Icon(
+                                _obscurePassword
+                                    ? Icons.visibility_outlined
+                                    : Icons.visibility_off_outlined,
+                                color: _obscurePassword
+                                    ? Theme.of(context)
+                                        .colorScheme
+                                        .onSurfaceVariant
+                                    : Theme.of(context).colorScheme.primary,
+                              ),
+                              onPressed: () => setState(
+                                () => _obscurePassword = !_obscurePassword,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                    const SizedBox(height: 16),
-                    FloatingLabelTextField(
-                      controller: _passwordController,
-                      label: 'Password',
-                      prefix: const Icon(Icons.lock_outline),
-                      obscureText: _obscurePassword,
-                      textInputAction: TextInputAction.done,
-                      onChanged: (_) => _clearInlineErrors(),
-                      onSubmitted: (_) {
-                        if (!_isLoading) {
-                          _submit();
+                    const SizedBox(height: 32),
+                    SizedBox(
+                      height: 48,
+                      child: FilledButton(
+                        onPressed: _isLoading ? null : _submit,
+                        child: _isLoading
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child:
+                                    CircularProgressIndicator(strokeWidth: 2),
+                              )
+                            : const Text('Sign In'),
+                      ),
+                    ),
+                    if (_biometricsAvailable) ...[
+                      const SizedBox(height: 12),
+                      SizedBox(
+                        height: 48,
+                        child: OutlinedButton.icon(
+                          icon: const Icon(Icons.fingerprint, size: 24),
+                          label: const Text('Sign in with Biometrics'),
+                          onPressed:
+                              _isLoading ? null : _authenticateWithBiometrics,
+                        ),
+                      ),
+                    ],
+                    const SizedBox(height: 24),
+                    Row(
+                      children: [
+                        const Expanded(child: Divider()),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          child: Text(
+                            'or',
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodyMedium
+                                ?.copyWith(
+                                  color: colors.onSurfaceVariant,
+                                ),
+                          ),
+                        ),
+                        const Expanded(child: Divider()),
+                      ],
+                    ),
+                    const SizedBox(height: 24),
+                    if (defaultTargetPlatform == TargetPlatform.iOS) ...[
+                      SizedBox(
+                        height: 48,
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.black,
+                            foregroundColor: Colors.white,
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(24),
+                            ),
+                          ),
+                          icon: const Icon(Icons.apple, size: 24),
+                          label: const Text('Sign in with Apple'),
+                          onPressed: _isLoading
+                              ? null
+                              : () async {
+                                  setState(() {
+                                    _isLoading = true;
+                                    _errorMessage = null;
+                                  });
+                                  try {
+                                    await ref
+                                        .read(authProvider.notifier)
+                                        .signInWithApple();
+                                  } catch (e) {
+                                    if (!mounted) return;
+                                    setState(() {
+                                      _errorMessage =
+                                          friendlySignInErrorMessage(e);
+                                    });
+                                  } finally {
+                                    if (mounted) {
+                                      setState(() => _isLoading = false);
+                                    }
+                                  }
+                                },
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                    ],
+                    _GoogleSignInButton(
+                      isLoading: _isLoading,
+                      onPressed: () async {
+                        setState(() {
+                          _isLoading = true;
+                          _errorMessage = null;
+                        });
+                        try {
+                          await ref
+                              .read(authProvider.notifier)
+                              .signInWithGoogle();
+                        } catch (e) {
+                          if (!mounted) return;
+                          setState(() {
+                            _errorMessage = friendlySignInErrorMessage(e);
+                          });
+                        } finally {
+                          if (mounted) setState(() => _isLoading = false);
                         }
                       },
-                      errorText: _passwordFieldError,
-                      enableSuggestions: false,
-                      autocorrect: false,
-                      autofillHints: const [AutofillHints.password],
-                      trailing: IconButton(
-                        icon: Icon(
-                          _obscurePassword
-                              ? Icons.visibility_outlined
-                              : Icons.visibility_off_outlined,
-                          color: _obscurePassword
-                              ? Theme.of(context).colorScheme.onSurfaceVariant
-                              : Theme.of(context).colorScheme.primary,
-                        ),
-                        onPressed: () => setState(
-                          () => _obscurePassword = !_obscurePassword,
-                        ),
+                    ),
+                    const SizedBox(height: 16),
+                    Center(
+                      child: TextButton(
+                        onPressed: () => context.go('/onboarding/sign-up'),
+                        child: const Text("Don't have an account? Sign Up"),
                       ),
                     ),
                   ],
-                ),
-              ),
-              const SizedBox(height: 32),
-              SizedBox(
-                height: 48,
-                child: FilledButton(
-                  onPressed: _isLoading ? null : _submit,
-                  child: _isLoading
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Text('Sign In'),
-                ),
-              ),
-              if (_biometricsAvailable) ...[
-                const SizedBox(height: 12),
-                SizedBox(
-                  height: 48,
-                  child: OutlinedButton.icon(
-                    icon: const Icon(Icons.fingerprint, size: 24),
-                    label: const Text('Sign in with Biometrics'),
-                    onPressed: _isLoading ? null : _authenticateWithBiometrics,
-                  ),
-                ),
-              ],
-              const SizedBox(height: 24),
-              Row(
-                children: [
-                  const Expanded(child: Divider()),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: Text(
-                      'or',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: colors.onSurfaceVariant,
-                          ),
-                    ),
-                  ),
-                  const Expanded(child: Divider()),
-                ],
-              ),
-              const SizedBox(height: 24),
-              if (defaultTargetPlatform == TargetPlatform.iOS) ...[
-                SizedBox(
-                  height: 48,
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.black,
-                      foregroundColor: Colors.white,
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(24),
-                      ),
-                    ),
-                    icon: const Icon(Icons.apple, size: 24),
-                    label: const Text('Sign in with Apple'),
-                    onPressed: _isLoading
-                        ? null
-                        : () async {
-                            setState(() {
-                              _isLoading = true;
-                              _errorMessage = null;
-                            });
-                            try {
-                              await ref
-                                  .read(authProvider.notifier)
-                                  .signInWithApple();
-                            } catch (e) {
-                              if (!mounted) return;
-                              setState(() {
-                                _errorMessage = friendlySignInErrorMessage(e);
-                              });
-                            } finally {
-                              if (mounted) setState(() => _isLoading = false);
-                            }
-                          },
-                  ),
-                ),
-                const SizedBox(height: 12),
-              ],
-              _GoogleSignInButton(
-                isLoading: _isLoading,
-                onPressed: () async {
-                  setState(() {
-                    _isLoading = true;
-                    _errorMessage = null;
-                  });
-                  try {
-                    await ref.read(authProvider.notifier).signInWithGoogle();
-                  } catch (e) {
-                    if (!mounted) return;
-                    setState(() {
-                      _errorMessage = friendlySignInErrorMessage(e);
-                    });
-                  } finally {
-                    if (mounted) setState(() => _isLoading = false);
-                  }
-                },
-              ),
-              const SizedBox(height: 16),
-              Center(
-                child: TextButton(
-                  onPressed: () => context.go('/onboarding/sign-up'),
-                  child: const Text("Don't have an account? Sign Up"),
                 ),
               ),
             ],

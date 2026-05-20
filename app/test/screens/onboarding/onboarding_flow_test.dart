@@ -192,7 +192,7 @@ void main() {
     },
   );
 
-  testWidgets('onboarding first slide uses the mascot standoff scene', (
+  testWidgets('onboarding first slide uses a calm abstract scene', (
     tester,
   ) async {
     tester.view.physicalSize = const Size(1080, 1920);
@@ -208,69 +208,20 @@ void main() {
 
     await tester.pumpAndSettle();
 
+    expect(find.text('Build a calmer money rhythm'), findsOneWidget);
+    expect(find.text('A calmer start'), findsOneWidget);
     expect(
       find.byWidgetPredicate(
         (widget) =>
             widget is Image &&
             widget.image is AssetImage &&
-            (widget.image as AssetImage).assetName ==
-                'assets/images/sprites/devil/1_neutral.PNG',
+            (widget.image as AssetImage).assetName.contains('/sprites/'),
       ),
       findsNothing,
-    );
-    expect(
-      find.byWidgetPredicate(
-        (widget) =>
-            widget is Image &&
-            widget.image is AssetImage &&
-            (widget.image as AssetImage).assetName ==
-                'assets/images/sprites/angel/1_neutral.PNG',
-      ),
-      findsNothing,
-    );
-    expect(
-      find.byWidgetPredicate(
-        (widget) =>
-            widget is Image &&
-            widget.image is AssetImage &&
-            (widget.image as AssetImage).assetName ==
-                'assets/images/sprites/money/1_neutral.PNG',
-      ),
-      findsNothing,
-    );
-    expect(
-      find.byWidgetPredicate(
-        (widget) =>
-            widget is Image &&
-            widget.image is AssetImage &&
-            (widget.image as AssetImage).assetName ==
-                'assets/images/sprites/devil/sprite_sheet.png',
-      ),
-      findsOneWidget,
-    );
-    expect(
-      find.byWidgetPredicate(
-        (widget) =>
-            widget is Image &&
-            widget.image is AssetImage &&
-            (widget.image as AssetImage).assetName ==
-                'assets/images/sprites/angel/sprite_sheet.png',
-      ),
-      findsOneWidget,
-    );
-    expect(
-      find.byWidgetPredicate(
-        (widget) =>
-            widget is Image &&
-            widget.image is AssetImage &&
-            (widget.image as AssetImage).assetName ==
-                'assets/images/sprites/money/sprite_sheet.png',
-      ),
-      findsOneWidget,
     );
   });
 
-  testWidgets('onboarding uses refreshed copy on slides two and three', (
+  testWidgets('onboarding uses calm copy on slides two and three', (
     tester,
   ) async {
     tester.view.physicalSize = const Size(1080, 1920);
@@ -289,51 +240,11 @@ void main() {
     await tester.tap(find.text('Next'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Track Without Shame'), findsOneWidget);
-    expect(find.text('Logged in seconds'), findsOneWidget);
-    expect(
-      find.byWidgetPredicate(
-        (widget) =>
-            widget is Image &&
-            widget.image is AssetImage &&
-            (widget.image as AssetImage).assetName ==
-                'assets/images/sprites/devil/8_whisper.PNG',
-      ),
-      findsNothing,
-    );
-    expect(
-      find.byWidgetPredicate(
-        (widget) =>
-            widget is Image &&
-            widget.image is AssetImage &&
-            (widget.image as AssetImage).assetName ==
-                'assets/images/sprites/money/4_save.PNG',
-      ),
-      findsNothing,
-    );
-    expect(
-      find.byWidgetPredicate(
-        (widget) =>
-            widget is Image &&
-            widget.image is AssetImage &&
-            (widget.image as AssetImage).assetName ==
-                'assets/images/sprites/devil/sprite_sheet.png',
-      ),
-      findsWidgets,
-    );
-    expect(
-      find.byWidgetPredicate(
-        (widget) =>
-            widget is Image &&
-            widget.image is AssetImage &&
-            (widget.image as AssetImage).assetName ==
-                'assets/images/sprites/money/sprite_sheet.png',
-      ),
-      findsWidgets,
-    );
+    expect(find.text('Notice patterns without shame'), findsOneWidget);
+    expect(find.text('Patterns, softly'), findsOneWidget);
     expect(
       find.text(
-        'Log spending in seconds, spot patterns, and stay honest without guilt.',
+        'Log what happened, see the signal, and keep the tone kind.',
       ),
       findsOneWidget,
     );
@@ -341,51 +252,11 @@ void main() {
     await tester.tap(find.text('Next'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Turn Reflection Into Better Habits'), findsOneWidget);
-    expect(find.text('Reflection + budgets'), findsOneWidget);
-    expect(
-      find.byWidgetPredicate(
-        (widget) =>
-            widget is Image &&
-            widget.image is AssetImage &&
-            (widget.image as AssetImage).assetName ==
-                'assets/images/sprites/angel/8_shield.PNG',
-      ),
-      findsNothing,
-    );
-    expect(
-      find.byWidgetPredicate(
-        (widget) =>
-            widget is Image &&
-            widget.image is AssetImage &&
-            (widget.image as AssetImage).assetName ==
-                'assets/images/sprites/money/1_neutral.PNG',
-      ),
-      findsNothing,
-    );
-    expect(
-      find.byWidgetPredicate(
-        (widget) =>
-            widget is Image &&
-            widget.image is AssetImage &&
-            (widget.image as AssetImage).assetName ==
-                'assets/images/sprites/angel/sprite_sheet.png',
-      ),
-      findsWidgets,
-    );
-    expect(
-      find.byWidgetPredicate(
-        (widget) =>
-            widget is Image &&
-            widget.image is AssetImage &&
-            (widget.image as AssetImage).assetName ==
-                'assets/images/sprites/money/sprite_sheet.png',
-      ),
-      findsWidgets,
-    );
+    expect(find.text('Let gentle guardrails help'), findsOneWidget);
+    expect(find.text('Gentle guardrails'), findsOneWidget);
     expect(
       find.text(
-        'Set budgets, notice regrets, and build a money routine that actually sticks.',
+        'Budgets, reflections, and insights work together without the pressure.',
       ),
       findsOneWidget,
     );

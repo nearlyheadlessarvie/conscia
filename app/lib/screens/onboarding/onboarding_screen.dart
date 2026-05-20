@@ -45,21 +45,21 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   children: const [
                     _Slide(
                       illustration: OnboardingIllustration1(size: 252),
-                      title: 'Meet Your Financial Conscience',
+                      title: 'Build a calmer money rhythm',
                       subtitle:
-                          'A devil and angel on your shoulder, guiding every spending decision.',
+                          'Start with small check-ins that make spending feel easier to understand.',
                     ),
                     _Slide(
                       illustration: OnboardingIllustration2(size: 252),
-                      title: 'Track Without Shame',
+                      title: 'Notice patterns without shame',
                       subtitle:
-                          'Log spending in seconds, spot patterns, and stay honest without guilt.',
+                          'Log what happened, see the signal, and keep the tone kind.',
                     ),
                     _Slide(
                       illustration: OnboardingIllustration3(size: 252),
-                      title: 'Turn Reflection Into Better Habits',
+                      title: 'Let gentle guardrails help',
                       subtitle:
-                          'Set budgets, notice regrets, and build a money routine that actually sticks.',
+                          'Budgets, reflections, and insights work together without the pressure.',
                     ),
                   ],
                 ),

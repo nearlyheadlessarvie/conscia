@@ -146,6 +146,7 @@ void main() {
       ),
     );
 
+    await tester.ensureVisible(find.text('Back to sign in'));
     await tester.tap(find.text('Back to sign in'));
     await tester.pumpAndSettle();
 

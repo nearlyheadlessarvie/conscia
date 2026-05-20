@@ -6,6 +6,7 @@ import 'package:conscia_app/core/routing/app_router.dart';
 import 'package:conscia_app/providers/auth_provider.dart';
 import 'package:conscia_app/providers/category_frequency_provider.dart';
 import 'package:conscia_app/providers/conscience_journey_provider.dart';
+import 'package:conscia_app/providers/family_space_provider.dart';
 import 'package:conscia_app/providers/insights_provider.dart';
 import 'package:conscia_app/providers/subscription_provider.dart';
 import 'package:conscia_app/providers/transaction_providers.dart';
@@ -352,9 +353,13 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 100));
 
-    expect(find.text('Verify your email'), findsOneWidget);
-    expect(find.text('We sent a confirmation code to new@example.com.'),
-        findsOneWidget);
+    expect(find.text('Confirm your email'), findsOneWidget);
+    expect(
+      find.text(
+        'A short code is waiting at new@example.com so we can keep your account safe.',
+      ),
+      findsOneWidget,
+    );
   });
 
   testWidgets('authenticated shell routes keep visible content in the viewport',
@@ -393,6 +398,7 @@ void main() {
               .overrideWithValue(_StaticTransactionService()),
           conscienceJourneyServiceProvider
               .overrideWithValue(_StaticConscienceJourneyService()),
+          familySpaceProvider.overrideWith((ref) async => null),
           behavioralInsightsProvider.overrideWith((ref) async => null),
           insightsSummaryProvider.overrideWith((ref) async => null),
           insightsCategoriesProvider.overrideWith((ref) async => const []),
@@ -415,13 +421,23 @@ void main() {
     );
 
     await tester.pump();
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(seconds: 1));
 
     expect(find.byKey(const ValueKey('floating-dock-nav')), findsOneWidget);
     expect(
-        find.byKey(const ValueKey('dashboard-editorial-hero')), findsOneWidget);
-    expect(find.byKey(const ValueKey('dashboard-sticky-identity-header')),
-        findsOneWidget);
+      find.byKey(
+        const ValueKey('dashboard-editorial-hero'),
+        skipOffstage: false,
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(
+        const ValueKey('dashboard-sticky-identity-header'),
+        skipOffstage: false,
+      ),
+      findsOneWidget,
+    );
     expect(find.byTooltip('Notifications').hitTestable(), findsWidgets);
 
     final router = tester

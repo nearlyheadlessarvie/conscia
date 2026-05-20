@@ -1,6 +1,7 @@
 import 'package:conscia_app/models/conscience_journey.dart';
 import 'package:conscia_app/providers/auth_provider.dart';
 import 'package:conscia_app/providers/conscience_journey_provider.dart';
+import 'package:conscia_app/providers/family_space_provider.dart';
 import 'package:conscia_app/screens/journey/conscience_journey_screen.dart';
 import 'package:conscia_app/services/auth_service.dart';
 import 'package:conscia_app/services/conscience_journey_service.dart';
@@ -55,11 +56,13 @@ void main() {
           ),
           conscienceJourneyServiceProvider
               .overrideWithValue(_StaticConscienceJourneyService()),
+          familySpaceProvider.overrideWith((ref) async => null),
         ],
         child: const MaterialApp(home: ConscienceJourneyScreen()),
       ),
     );
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
 
     expect(find.byKey(const ValueKey('journey-sticky-header')), findsOneWidget);
     expect(find.text('Journey'), findsOneWidget);

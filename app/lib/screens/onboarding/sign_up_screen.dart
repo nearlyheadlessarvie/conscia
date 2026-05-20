@@ -117,118 +117,147 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+
     return Scaffold(
+      extendBodyBehindAppBar: true,
       appBar: const ConsciaAppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
       ),
-      body: SafeArea(
+      body: DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              colors.primaryContainer.withValues(alpha: 0.18),
+              colors.surface,
+            ],
+          ),
+        ),
         child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const SizedBox(height: 16),
               const AuthIntroPanel(
-                title: 'Create Account',
-                subtitle: 'Start a calmer, clearer financial journey.',
+                title: 'Start with clarity',
+                subtitle:
+                    'Build a calmer relationship with spending, one small check-in at a time.',
                 icon: Icons.local_florist_outlined,
               ),
-              const SizedBox(height: 28),
-              if (_errorMessage != null) ...[
-                InlineNotice(
-                  message: _errorMessage!,
-                  tone: InlineNoticeTone.error,
-                  icon: const Icon(Icons.lock_outline_rounded),
+              Padding(
+                padding: EdgeInsets.fromLTRB(
+                  20,
+                  28,
+                  20,
+                  32 + MediaQuery.paddingOf(context).bottom,
                 ),
-                const SizedBox(height: 16),
-              ],
-              Form(
-                key: _formKey,
                 child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    FloatingLabelTextField(
-                      controller: _emailController,
-                      label: 'Email',
-                      prefix: const Icon(Icons.email_outlined),
-                      keyboardType: TextInputType.emailAddress,
-                      textInputAction: TextInputAction.next,
-                      onChanged: (_) => _clearInlineErrors(),
-                      errorText: _emailFieldError,
-                      autofillHints: const [AutofillHints.email],
+                    if (_errorMessage != null) ...[
+                      InlineNotice(
+                        message: _errorMessage!,
+                        tone: InlineNoticeTone.error,
+                        icon: const Icon(Icons.lock_outline_rounded),
+                      ),
+                      const SizedBox(height: 16),
+                    ],
+                    Form(
+                      key: _formKey,
+                      child: Column(
+                        children: [
+                          FloatingLabelTextField(
+                            controller: _emailController,
+                            label: 'Email',
+                            prefix: const Icon(Icons.email_outlined),
+                            keyboardType: TextInputType.emailAddress,
+                            textInputAction: TextInputAction.next,
+                            onChanged: (_) => _clearInlineErrors(),
+                            errorText: _emailFieldError,
+                            autofillHints: const [AutofillHints.email],
+                          ),
+                          const SizedBox(height: 16),
+                          FloatingLabelTextField(
+                            controller: _passwordController,
+                            label: 'Password',
+                            prefix: const Icon(Icons.lock_outline),
+                            obscureText: _obscurePassword,
+                            textInputAction: TextInputAction.next,
+                            onChanged: (_) => _clearInlineErrors(),
+                            errorText: _passwordFieldError,
+                            enableSuggestions: false,
+                            autocorrect: false,
+                            trailing: IconButton(
+                              icon: Icon(
+                                _obscurePassword
+                                    ? Icons.visibility_outlined
+                                    : Icons.visibility_off_outlined,
+                                color: _obscurePassword
+                                    ? Theme.of(context)
+                                        .colorScheme
+                                        .onSurfaceVariant
+                                    : Theme.of(context).colorScheme.primary,
+                              ),
+                              onPressed: () => setState(
+                                () => _obscurePassword = !_obscurePassword,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          FloatingLabelTextField(
+                            controller: _confirmPasswordController,
+                            label: 'Confirm Password',
+                            prefix: const Icon(Icons.lock_outline),
+                            obscureText: _obscureConfirm,
+                            textInputAction: TextInputAction.done,
+                            onChanged: (_) => _clearInlineErrors(),
+                            errorText: _confirmPasswordFieldError,
+                            enableSuggestions: false,
+                            autocorrect: false,
+                            trailing: IconButton(
+                              icon: Icon(
+                                _obscureConfirm
+                                    ? Icons.visibility_outlined
+                                    : Icons.visibility_off_outlined,
+                                color: _obscureConfirm
+                                    ? Theme.of(context)
+                                        .colorScheme
+                                        .onSurfaceVariant
+                                    : Theme.of(context).colorScheme.primary,
+                              ),
+                              onPressed: () => setState(
+                                () => _obscureConfirm = !_obscureConfirm,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                    const SizedBox(height: 16),
-                    FloatingLabelTextField(
-                      controller: _passwordController,
-                      label: 'Password',
-                      prefix: const Icon(Icons.lock_outline),
-                      obscureText: _obscurePassword,
-                      textInputAction: TextInputAction.next,
-                      onChanged: (_) => _clearInlineErrors(),
-                      errorText: _passwordFieldError,
-                      enableSuggestions: false,
-                      autocorrect: false,
-                      trailing: IconButton(
-                        icon: Icon(
-                          _obscurePassword
-                              ? Icons.visibility_outlined
-                              : Icons.visibility_off_outlined,
-                          color: _obscurePassword
-                              ? Theme.of(context).colorScheme.onSurfaceVariant
-                              : Theme.of(context).colorScheme.primary,
-                        ),
-                        onPressed: () => setState(
-                          () => _obscurePassword = !_obscurePassword,
-                        ),
+                    const SizedBox(height: 32),
+                    SizedBox(
+                      height: 48,
+                      child: FilledButton(
+                        onPressed: _isLoading ? null : _submit,
+                        child: _isLoading
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child:
+                                    CircularProgressIndicator(strokeWidth: 2),
+                              )
+                            : const Text('Create Account'),
                       ),
                     ),
                     const SizedBox(height: 16),
-                    FloatingLabelTextField(
-                      controller: _confirmPasswordController,
-                      label: 'Confirm Password',
-                      prefix: const Icon(Icons.lock_outline),
-                      obscureText: _obscureConfirm,
-                      textInputAction: TextInputAction.done,
-                      onChanged: (_) => _clearInlineErrors(),
-                      errorText: _confirmPasswordFieldError,
-                      enableSuggestions: false,
-                      autocorrect: false,
-                      trailing: IconButton(
-                        icon: Icon(
-                          _obscureConfirm
-                              ? Icons.visibility_outlined
-                              : Icons.visibility_off_outlined,
-                          color: _obscureConfirm
-                              ? Theme.of(context).colorScheme.onSurfaceVariant
-                              : Theme.of(context).colorScheme.primary,
-                        ),
-                        onPressed: () => setState(
-                          () => _obscureConfirm = !_obscureConfirm,
-                        ),
+                    Center(
+                      child: TextButton(
+                        onPressed: () => context.go('/onboarding/sign-in'),
+                        child: const Text('Already have an account? Sign In'),
                       ),
                     ),
                   ],
-                ),
-              ),
-              const SizedBox(height: 32),
-              SizedBox(
-                height: 48,
-                child: FilledButton(
-                  onPressed: _isLoading ? null : _submit,
-                  child: _isLoading
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Text('Create Account'),
-                ),
-              ),
-              const SizedBox(height: 16),
-              Center(
-                child: TextButton(
-                  onPressed: () => context.go('/onboarding/sign-in'),
-                  child: const Text('Already have an account? Sign In'),
                 ),
               ),
             ],

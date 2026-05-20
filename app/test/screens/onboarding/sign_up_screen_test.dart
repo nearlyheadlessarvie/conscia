@@ -60,7 +60,8 @@ void main() {
 
     expect(find.text('Sign up with Google'), findsNothing);
     expect(find.text('Sign up with Apple'), findsNothing);
-    expect(find.text('Create Account'), findsNWidgets(2));
+    expect(find.text('Start with clarity'), findsOneWidget);
+    expect(find.text('Create Account'), findsOneWidget);
   });
 
   testWidgets('sign up shows friendly API errors instead of DioException text',

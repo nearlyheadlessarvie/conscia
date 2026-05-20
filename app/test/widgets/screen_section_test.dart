@@ -28,8 +28,8 @@ void main() {
     );
 
     final title = tester.widget<Text>(find.text('REGRET PATTERNS'));
-    expect(title.style?.fontSize, 12);
-    expect(title.style?.fontWeight, FontWeight.w800);
+    expect(title.style?.fontSize, 11);
+    expect(title.style?.fontWeight, FontWeight.w900);
     expect(title.style?.letterSpacing, greaterThanOrEqualTo(0.8));
   });
 }

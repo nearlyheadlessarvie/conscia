@@ -156,6 +156,7 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
     final pendingEmail = ref.watch(authProvider).pendingEmail ?? 'your email';
 
     return Scaffold(
+      extendBodyBehindAppBar: true,
       appBar: ConsciaAppBar(
         leading: IconButton(
           tooltip: 'Back',
@@ -165,112 +166,137 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
         backgroundColor: Colors.transparent,
         elevation: 0,
       ),
-      body: SafeArea(
+      body: DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              colors.primaryContainer.withValues(alpha: 0.18),
+              colors.surface,
+            ],
+          ),
+        ),
         child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const SizedBox(height: 16),
               AuthIntroPanel(
-                title: 'Verify your email',
-                subtitle: 'We sent a confirmation code to $pendingEmail.',
+                title: 'Confirm your email',
+                subtitle:
+                    'A short code is waiting at $pendingEmail so we can keep your account safe.',
                 icon: Icons.mark_email_read_outlined,
               ),
-              if (ApiConstants.useMockAuth) ...[
-                const SizedBox(height: 12),
-                DecoratedBox(
-                  decoration: BoxDecoration(
-                    color: colors.secondaryContainer,
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 14,
-                      vertical: 12,
-                    ),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Icon(
-                          Icons.code,
-                          size: 18,
-                          color: colors.onSecondaryContainer,
+              Padding(
+                padding: EdgeInsets.fromLTRB(
+                  20,
+                  28,
+                  20,
+                  32 + MediaQuery.paddingOf(context).bottom,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    if (ApiConstants.useMockAuth) ...[
+                      DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: colors.secondaryContainer,
+                          borderRadius: BorderRadius.circular(16),
                         ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Text(
-                            'Local dev: no email was sent. Enter any code to continue.',
-                            style:
-                                Theme.of(context).textTheme.bodySmall?.copyWith(
-                                      color: colors.onSecondaryContainer,
-                                      fontWeight: FontWeight.w600,
-                                    ),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 12,
+                          ),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Icon(
+                                Icons.code,
+                                size: 18,
+                                color: colors.onSecondaryContainer,
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Text(
+                                  'Local dev: no email was sent. Enter any code to continue.',
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .bodySmall
+                                      ?.copyWith(
+                                        color: colors.onSecondaryContainer,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                      ],
+                      ),
+                      const SizedBox(height: 24),
+                    ],
+                    if (_errorMessage != null) ...[
+                      InlineNotice(
+                        message: _errorMessage!,
+                        tone: InlineNoticeTone.error,
+                        icon: const Icon(Icons.lock_outline_rounded),
+                      ),
+                      const SizedBox(height: 16),
+                    ],
+                    if (_message != null) ...[
+                      InlineNotice(
+                        message: _message!,
+                        tone: InlineNoticeTone.info,
+                        icon: const Icon(Icons.mark_email_read_outlined),
+                      ),
+                      const SizedBox(height: 16),
+                    ],
+                    FloatingLabelTextField(
+                      controller: _codeController,
+                      label: 'Verification code',
+                      prefix: const Icon(Icons.verified_user_outlined),
+                      keyboardType: TextInputType.number,
+                      textInputAction: TextInputAction.done,
+                      autofillHints: const [AutofillHints.oneTimeCode],
+                      maxLength: 6,
+                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                      counterText: '',
+                      onChanged: (_) {
+                        if (_errorMessage != null) {
+                          setState(() => _errorMessage = null);
+                        }
+                      },
                     ),
-                  ),
+                    const SizedBox(height: 32),
+                    SizedBox(
+                      height: 48,
+                      child: FilledButton(
+                        onPressed: _isSubmitting ? null : _confirm,
+                        child: _isSubmitting
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child:
+                                    CircularProgressIndicator(strokeWidth: 2),
+                              )
+                            : const Text('Verify and continue'),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    TextButton(
+                      onPressed: _isResending || _resendCooldownSeconds > 0
+                          ? null
+                          : _resend,
+                      child: Text(
+                        _resendButtonLabel,
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: _returnToSignIn,
+                      child: const Text('Back to sign in'),
+                    ),
+                  ],
                 ),
-              ],
-              const SizedBox(height: 32),
-              if (_errorMessage != null) ...[
-                InlineNotice(
-                  message: _errorMessage!,
-                  tone: InlineNoticeTone.error,
-                  icon: const Icon(Icons.lock_outline_rounded),
-                ),
-                const SizedBox(height: 16),
-              ],
-              if (_message != null) ...[
-                InlineNotice(
-                  message: _message!,
-                  tone: InlineNoticeTone.info,
-                  icon: const Icon(Icons.mark_email_read_outlined),
-                ),
-                const SizedBox(height: 16),
-              ],
-              FloatingLabelTextField(
-                controller: _codeController,
-                label: 'Verification code',
-                prefix: const Icon(Icons.verified_user_outlined),
-                keyboardType: TextInputType.number,
-                textInputAction: TextInputAction.done,
-                autofillHints: const [AutofillHints.oneTimeCode],
-                maxLength: 6,
-                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                counterText: '',
-                onChanged: (_) {
-                  if (_errorMessage != null) {
-                    setState(() => _errorMessage = null);
-                  }
-                },
-              ),
-              const SizedBox(height: 32),
-              SizedBox(
-                height: 48,
-                child: FilledButton(
-                  onPressed: _isSubmitting ? null : _confirm,
-                  child: _isSubmitting
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Text('Verify and continue'),
-                ),
-              ),
-              const SizedBox(height: 16),
-              TextButton(
-                onPressed:
-                    _isResending || _resendCooldownSeconds > 0 ? null : _resend,
-                child: Text(
-                  _resendButtonLabel,
-                ),
-              ),
-              TextButton(
-                onPressed: _returnToSignIn,
-                child: const Text('Back to sign in'),
               ),
             ],
           ),
