@@ -385,8 +385,12 @@ void main() {
     ));
 
     expect(find.text('Milestones'), findsOneWidget);
-    expect(find.byKey(const ValueKey('journey-home-milestone-card')),
-        findsOneWidget);
+    expect(
+      find.byKey(
+        const ValueKey('journey-home-milestone-card-first_reflection'),
+      ),
+      findsOneWidget,
+    );
     expect(find.text('First Reflection'), findsOneWidget);
     expect(find.text('Reflected on your first purchase.'), findsOneWidget);
     expect(find.text('1/1'), findsOneWidget);

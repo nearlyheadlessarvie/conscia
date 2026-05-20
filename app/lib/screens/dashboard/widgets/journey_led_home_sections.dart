@@ -455,7 +455,7 @@ class _MilestoneStrip extends StatelessWidget {
         children: [
           for (final badge in badges)
             Container(
-              key: const ValueKey('journey-home-milestone-card'),
+              key: ValueKey('journey-home-milestone-card-${badge.key}'),
               width: 176,
               margin: const EdgeInsets.only(right: 10),
               padding: const EdgeInsets.all(12),
