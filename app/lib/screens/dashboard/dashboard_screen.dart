@@ -766,7 +766,7 @@ class _DashboardReflectQueue extends StatefulWidget {
 }
 
 class _DashboardReflectQueueState extends State<_DashboardReflectQueue> {
-  static const _advanceDuration = Duration(milliseconds: 280);
+  static const _advanceDuration = Duration(milliseconds: 420);
 
   late List<Transaction> _visiblePrompts;
   bool _isAdvancing = false;
@@ -813,24 +813,26 @@ class _DashboardReflectQueueState extends State<_DashboardReflectQueue> {
       children: [
         if (remainingPromptCount > 0)
           const Positioned(
-            left: 12,
-            right: 12,
-            top: 12,
+            key: ValueKey('dashboard-reflect-ghost-back'),
+            left: 14,
+            right: 14,
+            top: 16,
             child: _ReflectQueueGhostLayer(
-              height: 130,
-              radius: 22,
-              alpha: 0.32,
+              height: 148,
+              radius: 24,
+              alpha: 0.42,
             ),
           ),
         if (remainingPromptCount > 0)
           const Positioned(
-            left: 6,
-            right: 6,
-            top: 6,
+            key: ValueKey('dashboard-reflect-ghost-front'),
+            left: 8,
+            right: 8,
+            top: 8,
             child: _ReflectQueueGhostLayer(
-              height: 136,
+              height: 152,
               radius: 24,
-              alpha: 0.18,
+              alpha: 0.28,
             ),
           ),
         AnimatedSwitcher(
@@ -851,9 +853,9 @@ class _DashboardReflectQueueState extends State<_DashboardReflectQueue> {
               parent: animation,
               curve: Curves.easeOutCubic,
             );
-            final scale = Tween<double>(begin: 0.96, end: 1).animate(fade);
+            final scale = Tween<double>(begin: 0.94, end: 1).animate(fade);
             final slide =
-                Tween<Offset>(begin: const Offset(0, 0.035), end: Offset.zero)
+                Tween<Offset>(begin: const Offset(0, 0.065), end: Offset.zero)
                     .animate(fade);
             return FadeTransition(
               opacity: fade,
@@ -936,8 +938,18 @@ class _ReflectQueueGhostLayer extends StatelessWidget {
     final colors = Theme.of(context).colorScheme;
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: colors.surfaceContainerHighest.withValues(alpha: alpha),
+        color: colors.surface.withValues(alpha: 0.92),
         borderRadius: BorderRadius.circular(radius),
+        border: Border.all(
+          color: colors.outlineVariant.withValues(alpha: alpha),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: colors.shadow.withValues(alpha: alpha * 0.18),
+            blurRadius: 24,
+            offset: const Offset(0, 14),
+          ),
+        ],
       ),
       child: SizedBox(height: height),
     );

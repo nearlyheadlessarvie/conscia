@@ -91,7 +91,7 @@ void main() {
     expect(find.byKey(const ValueKey('dashboard-reflect-feature-card')), findsOneWidget);
   });
 
-  testWidgets('right swipe tags the prompt as worth it', (tester) async {
+  testWidgets('uses button taps instead of a swipe wrapper', (tester) async {
     var worthItCount = 0;
     var regretCount = 0;
 
@@ -111,39 +111,18 @@ void main() {
       ),
     );
 
-    await tester.drag(find.text('Starbucks'), const Offset(220, 0));
-    await tester.pumpAndSettle();
+    expect(find.byType(Dismissible), findsNothing);
+
+    await tester.tap(find.widgetWithText(FilledButton, 'Worth It'));
+    await tester.pump();
 
     expect(worthItCount, 1);
     expect(regretCount, 0);
-    expect(find.text('Dismiss'), findsNothing);
-  });
+ 
+    await tester.tap(find.widgetWithText(FilledButton, 'Regret'));
+    await tester.pump();
 
-  testWidgets('left swipe tags the prompt as regret', (tester) async {
-    var worthItCount = 0;
-    var regretCount = 0;
-
-    await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
-          body: RegretPromptCard(
-            categoryBadge: CategoryIcons.badge('Dining', size: 16),
-            counterparty: 'Starbucks',
-            amount: 280,
-            currencyCode: 'PHP',
-            date: DateTime.now(),
-            onWorthIt: () => worthItCount += 1,
-            onRegret: () => regretCount += 1,
-          ),
-        ),
-      ),
-    );
-
-    await tester.drag(find.text('Starbucks'), const Offset(-220, 0));
-    await tester.pumpAndSettle();
-
-    expect(worthItCount, 0);
+    expect(worthItCount, 1);
     expect(regretCount, 1);
-    expect(find.text('Dismiss'), findsNothing);
   });
 }

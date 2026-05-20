@@ -523,7 +523,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.widgetWithText(FilledButton, 'Worth It').first);
     await tester.pump();
-    await tester.pump(const Duration(milliseconds: 320));
+    await tester.pump(const Duration(milliseconds: 460));
 
     expect(transactionService.updatedRegretTransactionId, 'tx-reflect');
     expect(transactionService.updatedRegretLevel, 0);
@@ -611,6 +611,8 @@ void main() {
       findsOneWidget,
     );
     expect(find.text('2 more moments waiting'), findsOneWidget);
+    expect(find.byKey(const ValueKey('dashboard-reflect-ghost-back')), findsOneWidget);
+    expect(find.byKey(const ValueKey('dashboard-reflect-ghost-front')), findsOneWidget);
   });
 
   testWidgets('dashboard reflect queue advances locally after a reflection tap',
@@ -682,7 +684,7 @@ void main() {
 
     await tester.tap(find.widgetWithText(FilledButton, 'Worth It').first);
     await tester.pump();
-    await tester.pump(const Duration(milliseconds: 320));
+    await tester.pump(const Duration(milliseconds: 460));
 
     expect(
       find.descendant(
