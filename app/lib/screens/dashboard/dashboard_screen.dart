@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import 'package:conscia_app/core/constants/generated/app_constants.g.dart';
+import 'package:conscia_app/core/constants/conscience_journey.dart';
 import 'package:conscia_app/core/constants/category_icons.dart';
 import 'package:conscia_app/core/routing/app_router.dart';
 import 'package:conscia_app/core/theme/app_colors.dart';
@@ -150,6 +151,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       await service.updateRegret(tx.id, level);
       ref.invalidate(transactionListProvider);
       ref.invalidate(transactionDetailProvider(tx.id));
+      await ref.read(conscienceJourneyProvider.notifier).recordEvent(
+            eventType: ConscienceJourneyEvents.reflectionCompleted,
+            sourceId: tx.id,
+          );
     } catch (_) {}
 
     final label = switch (feeling) {

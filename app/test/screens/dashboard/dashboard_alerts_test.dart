@@ -6,6 +6,7 @@ import 'package:conscia_app/models/behavioral_insights.dart';
 import 'package:conscia_app/models/conscience_journey.dart';
 import 'package:conscia_app/providers/budget_providers.dart';
 import 'package:conscia_app/providers/conscience_journey_provider.dart';
+import 'package:conscia_app/providers/family_space_provider.dart';
 import 'package:conscia_app/providers/insight_feed_provider.dart';
 import 'package:conscia_app/providers/insights_provider.dart';
 import 'package:conscia_app/providers/subscription_provider.dart';
@@ -96,6 +97,19 @@ class _StaticTransactionService extends TransactionService {
   }
 }
 
+class _RecordingTransactionService extends _StaticTransactionService {
+  _RecordingTransactionService(super.transactions);
+
+  String? updatedRegretTransactionId;
+  int? updatedRegretLevel;
+
+  @override
+  Future<void> updateRegret(String id, int regretLevel) async {
+    updatedRegretTransactionId = id;
+    updatedRegretLevel = regretLevel;
+  }
+}
+
 class _StaticConscienceJourneyService extends ConscienceJourneyService {
   _StaticConscienceJourneyService([this.summary = _testJourneySummary])
       : super(Dio());
@@ -121,6 +135,34 @@ class _StaticConscienceJourneyNotifier extends ConscienceJourneyNotifier {
 
   @override
   Future<ConscienceJourneySummary> build() async => summary;
+}
+
+class _RecordingConscienceJourneyNotifier extends ConscienceJourneyNotifier {
+  _RecordingConscienceJourneyNotifier(this.summary);
+
+  final ConscienceJourneySummary summary;
+  String? recordedEventType;
+  String? recordedSourceId;
+
+  @override
+  Future<ConscienceJourneySummary> build() async => summary;
+
+  @override
+  Future<ConscienceJourneyUpdate> recordEvent({
+    required String eventType,
+    required String sourceId,
+  }) async {
+    recordedEventType = eventType;
+    recordedSourceId = sourceId;
+    return ConscienceJourneyUpdate(
+      summary: summary,
+      xpAwarded: 0,
+      wasDuplicate: false,
+      leveledUp: false,
+      completedQuestKeys: const [],
+      unlockedBadgeKeys: const [],
+    );
+  }
 }
 
 class _LocalAlertsTestNotifier extends LocalAlertsNotifier {
@@ -234,6 +276,7 @@ Widget _buildApp(
       overrides: [
         conscienceJourneyServiceProvider
             .overrideWithValue(journeyService ?? _testJourneyService),
+        familySpaceProvider.overrideWith((ref) async => null),
       ],
       child: MaterialApp.router(routerConfig: router),
     ),
@@ -246,6 +289,7 @@ Widget _buildNestedShellApp(ProviderContainer container) {
     child: ProviderScope(
       overrides: [
         conscienceJourneyServiceProvider.overrideWithValue(_testJourneyService),
+        familySpaceProvider.overrideWith((ref) async => null),
       ],
       child: MaterialApp(
         home: Scaffold(
@@ -399,6 +443,91 @@ void main() {
     );
 
     expect(find.text('Corner Bakery'), findsOneWidget);
+  });
+
+  testWidgets('dashboard reflection prompt advances the reflect quest',
+      (tester) async {
+    _useTallDashboardViewport(tester);
+
+    final transactions = [
+      Transaction(
+        id: 'tx-reflect',
+        amount: 200,
+        currencyCode: 'PHP',
+        category: 'Dining',
+        description: 'Starbucks',
+        type: 'expense',
+        date: DateTime(2026, 5, 18),
+      ),
+    ];
+    final transactionService = _RecordingTransactionService(transactions);
+    const journey = ConscienceJourneySummary(
+      xpTotal: 0,
+      currentLevel: ConscienceLevel(
+        key: 'awakening',
+        title: 'Awakening',
+        requiredXp: 0,
+      ),
+      nextLevel: ConscienceLevel(
+        key: 'impulse_spotter',
+        title: 'Impulse Spotter',
+        requiredXp: 120,
+      ),
+      xpIntoLevel: 0,
+      xpToNextLevel: 120,
+      momentumDays: 0,
+      bestMomentumDays: 0,
+      weeklyQuests: [
+        ConscienceQuest(
+          key: 'reflect_three_purchases',
+          title: 'Reflect on 3 purchases',
+          description: 'Turn recent decisions into useful signal.',
+          progress: 0,
+          target: 3,
+          xpReward: 40,
+          isCompleted: false,
+        ),
+      ],
+      badges: [],
+    );
+    final journeyNotifier = _RecordingConscienceJourneyNotifier(journey);
+    final container = ProviderContainer(
+      overrides: [
+        sharedPreferencesProvider.overrideWithValue(prefs),
+        budgetServiceProvider.overrideWithValue(_StaticBudgetService(const [])),
+        transactionServiceProvider.overrideWithValue(transactionService),
+        transactionListProvider.overrideWith(
+          (ref) => TransactionListNotifier.fromList(transactions),
+        ),
+        currentUserProvider.overrideWith((ref) async => _testUser),
+        subscriptionProvider.overrideWith((ref) async => _testSubscription),
+        behavioralInsightsProvider.overrideWith((ref) async => null),
+        insightsSummaryProvider.overrideWith((ref) async => null),
+        insightsCategoriesProvider.overrideWith((ref) async => const []),
+        insightsMerchantsProvider.overrideWith((ref) async => const []),
+        conscienceJourneyProvider.overrideWith(() => journeyNotifier),
+        localAlertsProvider.overrideWith(
+          (ref) => _LocalAlertsTestNotifier(const []),
+        ),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    await tester.pumpWidget(_buildApp(container));
+    await tester.pumpAndSettle();
+
+    await tester.drag(
+      find.byKey(const PageStorageKey('dashboard-shell-scroll')),
+      const Offset(0, -500),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Worth It'));
+    await tester.pumpAndSettle();
+
+    expect(transactionService.updatedRegretTransactionId, 'tx-reflect');
+    expect(transactionService.updatedRegretLevel, 0);
+    expect(journeyNotifier.recordedEventType, 'reflection_completed');
+    expect(journeyNotifier.recordedSourceId, 'tx-reflect');
   });
 
   testWidgets(

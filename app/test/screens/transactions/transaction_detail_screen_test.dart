@@ -5,8 +5,10 @@ import 'package:conscia_app/providers/budget_providers.dart';
 import 'package:conscia_app/providers/alert_provider.dart';
 import 'package:conscia_app/providers/ai_provider.dart';
 import 'package:conscia_app/providers/auth_provider.dart';
+import 'package:conscia_app/providers/conscience_journey_provider.dart';
 import 'package:conscia_app/providers/usage_provider.dart';
 import 'package:conscia_app/providers/user_provider.dart';
+import 'package:conscia_app/models/conscience_journey.dart';
 import 'package:conscia_app/core/utils/currency_formatter.dart';
 import 'package:conscia_app/screens/transactions/transaction_detail_screen.dart';
 import 'package:conscia_app/screens/assistant/widgets/ai_message_bubble.dart';
@@ -33,6 +35,8 @@ class _RecordingTransactionService extends TransactionService {
   Transaction? transaction;
   Transaction? updatedTransaction;
   CreateTransactionDto? updateDto;
+  String? updatedRegretId;
+  int? updatedRegretLevel;
 
   @override
   Future<Transaction> getById(String id) async {
@@ -55,7 +59,51 @@ class _RecordingTransactionService extends TransactionService {
   }
 
   @override
-  Future<void> updateRegret(String id, int regretLevel) async {}
+  Future<void> updateRegret(String id, int regretLevel) async {
+    updatedRegretId = id;
+    updatedRegretLevel = regretLevel;
+  }
+}
+
+class _RecordingConscienceJourneyNotifier extends ConscienceJourneyNotifier {
+  String? recordedEventType;
+  String? recordedSourceId;
+
+  @override
+  Future<ConscienceJourneySummary> build() async =>
+      const ConscienceJourneySummary(
+        xpTotal: 0,
+        currentLevel: ConscienceLevel(
+          key: 'awakening',
+          title: 'Awakening',
+          requiredXp: 0,
+        ),
+        nextLevel: null,
+        xpIntoLevel: 0,
+        xpToNextLevel: 0,
+        momentumDays: 0,
+        bestMomentumDays: 0,
+        weeklyQuests: [],
+        badges: [],
+      );
+
+  @override
+  Future<ConscienceJourneyUpdate> recordEvent({
+    required String eventType,
+    required String sourceId,
+  }) async {
+    recordedEventType = eventType;
+    recordedSourceId = sourceId;
+    final summary = await future;
+    return ConscienceJourneyUpdate(
+      summary: summary,
+      xpAwarded: 0,
+      wasDuplicate: false,
+      leveledUp: false,
+      completedQuestKeys: const [],
+      unlockedBadgeKeys: const [],
+    );
+  }
 }
 
 class _StaticBudgetService extends BudgetService {
@@ -370,6 +418,55 @@ void main() {
       );
       expect(button.style?.minimumSize?.resolve({})?.height, 72);
     }
+  });
+
+  testWidgets('detail feeling choice advances the reflect quest',
+      (tester) async {
+    final transaction = Transaction(
+      id: 'tx-detail-reflect',
+      amount: 280,
+      currencyCode: 'PHP',
+      category: 'Dining',
+      description: 'Starbucks',
+      type: 'expense',
+      date: DateTime(2026, 5, 11, 15, 12),
+    );
+    final transactionService = _RecordingTransactionService()
+      ..transaction = transaction;
+    final journeyNotifier = _RecordingConscienceJourneyNotifier();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          authProvider.overrideWith(
+            (ref) => _TestAuthNotifier(
+              const AuthState(
+                status: AuthStatus.authenticated,
+                userId: 'user-1',
+              ),
+            ),
+          ),
+          transactionServiceProvider.overrideWithValue(transactionService),
+          transactionDetailProvider
+              .overrideWith((ref, id) async => transaction),
+          conscienceJourneyProvider.overrideWith(() => journeyNotifier),
+        ],
+        child: const MaterialApp(
+          home: TransactionDetailScreen(transactionId: 'tx-detail-reflect'),
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Worth It'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Worth It'));
+    await tester.pumpAndSettle();
+
+    expect(transactionService.updatedRegretId, 'tx-detail-reflect');
+    expect(transactionService.updatedRegretLevel, 0);
+    expect(journeyNotifier.recordedEventType, 'reflection_completed');
+    expect(journeyNotifier.recordedSourceId, 'tx-detail-reflect');
   });
 
   testWidgets('selected detail feeling shrinks to a compact changeable button',
