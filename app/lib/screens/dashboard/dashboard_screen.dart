@@ -35,7 +35,6 @@ import 'package:conscia_app/services/user_service.dart';
 import 'package:conscia_app/widgets/empty_state.dart';
 import 'package:conscia_app/widgets/budget_mix_visuals.dart';
 import 'package:conscia_app/widgets/conscia_bottom_sheet.dart';
-import 'package:conscia_app/widgets/hero_shortcut_card.dart';
 import 'package:conscia_app/widgets/premium_upgrade_dialog.dart';
 import 'package:conscia_app/widgets/scope_pill_switch.dart';
 import 'package:conscia_app/widgets/skeleton_loader.dart';
@@ -483,7 +482,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   ),
                 ),
               SliverToBoxAdapter(
-                child: _buildSectionHeader(context, 'BUDGETS'),
+                child: _buildSectionHeader(context, 'Budgets'),
               ),
               if (budgetState.isLoading && budgets.isEmpty)
                 const SliverPadding(
@@ -562,7 +561,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 ),
               ],
               SliverToBoxAdapter(
-                child: _buildSectionHeader(context, 'RECENT TRANSACTIONS'),
+                child: _buildSectionHeader(context, 'Recent transactions'),
               ),
               if (txState.isLoading && transactions.isEmpty)
                 const SliverPadding(
@@ -591,8 +590,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 )
               else
                 SliverToBoxAdapter(
-                  child: EditorialTransactionRowsGroup(
-                    horizontalPadding: 20,
+                  child: _DashboardRecentTransactionsList(
                     children: [
                       for (final transaction in recentTransactions)
                         RecentTransactionTile(
@@ -667,15 +665,23 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
   Widget _buildSectionHeader(BuildContext context, String title) {
     final colors = Theme.of(context).appColors;
+    final isEditorial = title != title.toUpperCase();
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 24, 20, 12),
+      padding: EdgeInsets.fromLTRB(20, isEditorial ? 24 : 24, 20, 12),
       child: Text(
         title,
-        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: colors.mutedInk,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 1.0,
-            ),
+        style: isEditorial
+            ? GoogleFonts.libreBaskerville(
+                textStyle: Theme.of(context).textTheme.titleLarge,
+                color: colors.deepNavy,
+                fontWeight: FontWeight.w700,
+                height: 1.05,
+              )
+            : Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: colors.mutedInk,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 1.0,
+                ),
       ),
     );
   }
@@ -727,11 +733,6 @@ class _DashboardEditorialHeroCard extends StatelessWidget {
             child: CustomPaint(
               painter: _JourneyHeroAtmospherePainter(),
             ),
-          ),
-          Positioned(
-            right: 14,
-            top: heroTopPadding + 28,
-            child: _JourneyHeroLevelBadge(journey: journey),
           ),
           Padding(
             padding: EdgeInsets.fromLTRB(20, heroTopPadding, 20, 22),
@@ -950,95 +951,6 @@ class _JourneyHeroNextStepCard extends StatelessWidget {
         ],
       ),
     );
-  }
-}
-
-class _JourneyHeroLevelBadge extends StatelessWidget {
-  const _JourneyHeroLevelBadge({required this.journey});
-
-  final ConscienceJourneySummary? journey;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).appColors;
-    final textTheme = Theme.of(context).textTheme;
-    final level = journey?.currentLevel;
-
-    return IgnorePointer(
-      child: Container(
-        key: const ValueKey('dashboard-journey-level-badge'),
-        width: 132,
-        padding: const EdgeInsets.fromLTRB(12, 12, 12, 11),
-        decoration: BoxDecoration(
-          color: colors.surfaceRaised.withValues(alpha: 0.68),
-          borderRadius: BorderRadius.circular(22),
-          border: Border.all(color: colors.border.withValues(alpha: 0.75)),
-          boxShadow: [
-            BoxShadow(
-              color: colors.deepNavy.withValues(alpha: 0.06),
-              blurRadius: 22,
-              offset: const Offset(0, 10),
-            ),
-          ],
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              key: const ValueKey('dashboard-journey-level-icon'),
-              width: 42,
-              height: 42,
-              decoration: BoxDecoration(
-                color: colors.deepNavy.withValues(alpha: 0.11),
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: Icon(
-                _journeyLevelIcon(level),
-                color: colors.deepNavy,
-                size: 24,
-              ),
-            ),
-            const SizedBox(height: 10),
-            Text(
-              'LEVEL',
-              style: GoogleFonts.nunitoSans(
-                textStyle: textTheme.labelSmall,
-                color: colors.deepNavy.withValues(alpha: 0.58),
-                fontWeight: FontWeight.w900,
-                letterSpacing: 0.8,
-                height: 1,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              level?.title ?? 'Journey Starter',
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: GoogleFonts.libreBaskerville(
-                textStyle: textTheme.labelLarge,
-                color: colors.deepNavy,
-                fontWeight: FontWeight.w700,
-                height: 1.08,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  IconData _journeyLevelIcon(ConscienceLevel? level) {
-    final key = '${level?.key ?? ''} ${level?.title ?? ''}'.toLowerCase();
-    if (key.contains('budget') || key.contains('guardian')) {
-      return Icons.shield_rounded;
-    }
-    if (key.contains('pattern')) return Icons.auto_graph_rounded;
-    if (key.contains('impulse') || key.contains('spotter')) {
-      return Icons.psychology_rounded;
-    }
-    if (key.contains('family')) return Icons.groups_rounded;
-    return Icons.flag_rounded;
   }
 }
 
@@ -1349,6 +1261,124 @@ class _ProfileAvatar extends StatelessWidget {
   }
 }
 
+class _DashboardRecentTransactionsList extends StatelessWidget {
+  const _DashboardRecentTransactionsList({required this.children});
+
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).appColors;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 2),
+      child: Column(
+        children: [
+          for (final entry in children.indexed)
+            Padding(
+              padding: EdgeInsets.only(
+                bottom: entry.$1 == children.length - 1 ? 0 : 10,
+              ),
+              child: Container(
+                key: const ValueKey('dashboard-recent-transaction-card'),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: colors.surfaceRaised,
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(color: colors.border),
+                  boxShadow: [
+                    BoxShadow(
+                      color: colors.deepNavy.withValues(alpha: 0.025),
+                      blurRadius: 18,
+                      offset: const Offset(0, 8),
+                    ),
+                  ],
+                ),
+                child: entry.$2,
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _BudgetManageRow extends StatelessWidget {
+  const _BudgetManageRow({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).appColors;
+    final textTheme = Theme.of(context).textTheme;
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        key: const ValueKey('dashboard-budget-manage-row'),
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Ink(
+          padding: const EdgeInsets.fromLTRB(12, 10, 10, 10),
+          decoration: BoxDecoration(
+            color: colors.navySoft.withValues(alpha: 0.42),
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                  color: colors.deepNavy.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  Icons.pie_chart_rounded,
+                  color: colors.deepNavy,
+                  size: 18,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Manage budgets',
+                      style: GoogleFonts.nunitoSans(
+                        textStyle: textTheme.labelLarge,
+                        color: colors.deepNavy,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Tune caps and scope',
+                      style: GoogleFonts.nunitoSans(
+                        textStyle: textTheme.labelSmall,
+                        color: colors.mutedInk,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(
+                Icons.chevron_right_rounded,
+                color: colors.mutedInk,
+                size: 22,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _DashboardBudgetSummary extends StatelessWidget {
   const _DashboardBudgetSummary({
     required this.budgets,
@@ -1382,109 +1412,150 @@ class _DashboardBudgetSummary extends StatelessWidget {
       key: const ValueKey('dashboard-budget-summary'),
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        LayoutBuilder(
-          key: const ValueKey('dashboard-budget-top-row'),
-          builder: (context, constraints) {
-            final columnWidth = constraints.maxWidth / 2;
-            final donutSize = columnWidth.clamp(96.0, 120.0);
+        Container(
+          key: const ValueKey('dashboard-budget-editorial-card'),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: colors.surfaceRaised,
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: colors.border),
+            boxShadow: [
+              BoxShadow(
+                color: colors.deepNavy.withValues(alpha: 0.04),
+                blurRadius: 24,
+                offset: const Offset(0, 12),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              LayoutBuilder(
+                key: const ValueKey('dashboard-budget-top-row'),
+                builder: (context, constraints) {
+                  final columnWidth = constraints.maxWidth / 2;
+                  final donutSize = columnWidth.clamp(96.0, 120.0);
 
-            return Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                SizedBox(
-                  width: columnWidth,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                  return Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      Text(
-                        '${CurrencyFormatter.format(
-                          totalSpent,
-                          currencyCode: currencyCode,
-                          locale: locale,
-                        )} used',
-                        style: textTheme.headlineSmall?.copyWith(
-                          color: colors.deepNavy,
-                          fontWeight: FontWeight.w800,
-                          height: 1.0,
+                      SizedBox(
+                        width: columnWidth,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Used this month',
+                              style: GoogleFonts.nunitoSans(
+                                textStyle: textTheme.labelSmall,
+                                color: colors.mutedInk,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: 0.7,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              '${CurrencyFormatter.format(
+                                totalSpent,
+                                currencyCode: currencyCode,
+                                locale: locale,
+                              )} used',
+                              style: GoogleFonts.libreBaskerville(
+                                textStyle: textTheme.titleLarge,
+                                color: colors.deepNavy,
+                                fontWeight: FontWeight.w700,
+                                height: 1.05,
+                              ),
+                            ),
+                            const SizedBox(height: 5),
+                            Text(
+                              'of ${CurrencyFormatter.format(
+                                totalLimit,
+                                currencyCode: currencyCode,
+                                locale: locale,
+                              )} monthly cap',
+                              style: GoogleFonts.nunitoSans(
+                                textStyle: textTheme.bodySmall,
+                                color: colors.mutedInk,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              'A calmer view of what your money is doing.',
+                              style: GoogleFonts.nunitoSans(
+                                textStyle: textTheme.bodySmall,
+                                color: colors.mutedInk,
+                                fontWeight: FontWeight.w500,
+                                height: 1.25,
+                              ),
+                            ),
+                            if (showScopeSwitch) ...[
+                              const SizedBox(height: 12),
+                              ScopePillSwitch(
+                                value: selectedScope,
+                                familyEnabled: true,
+                                onChanged: onScopeChanged,
+                              ),
+                            ],
+                          ],
                         ),
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'of ${CurrencyFormatter.format(
-                          totalLimit,
-                          currencyCode: currencyCode,
-                          locale: locale,
-                        )} monthly cap',
-                        style: textTheme.bodySmall?.copyWith(
-                          color: colors.mutedInk,
+                      SizedBox(
+                        key: const ValueKey('dashboard-budget-donut-lane'),
+                        width: columnWidth,
+                        child: Center(
+                          child: BudgetMixDonut(
+                            key: const ValueKey('dashboard-budget-donut'),
+                            size: donutSize,
+                            trackStrokeWidth: donutSize * 0.17,
+                            segmentStrokeWidth: donutSize * 0.125,
+                            segments: _budgetSegments(mix, totalSpent),
+                            center: Text(
+                              '$usedPercent%',
+                              style: GoogleFonts.nunitoSans(
+                                textStyle: textTheme.labelSmall,
+                                color: colors.deepNavy,
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
+                          ),
                         ),
                       ),
-                      if (showScopeSwitch) ...[
-                        const SizedBox(height: 12),
-                        ScopePillSwitch(
-                          value: selectedScope,
-                          familyEnabled: true,
-                          onChanged: onScopeChanged,
+                    ],
+                  );
+                },
+              ),
+              if (mix.isNotEmpty) ...[
+                const SizedBox(height: 14),
+                SingleChildScrollView(
+                  key: const ValueKey('dashboard-budget-mix-pill-rail'),
+                  scrollDirection: Axis.horizontal,
+                  clipBehavior: Clip.none,
+                  child: Row(
+                    children: [
+                      for (final entry in mix.indexed)
+                        Padding(
+                          padding: EdgeInsets.only(
+                            right: entry.$1 == mix.length - 1 ? 0 : 8,
+                          ),
+                          child: BudgetMixPill(
+                            index: entry.$1,
+                            category: entry.$2.category,
+                            type: 'Expense',
+                            share: totalSpent <= 0
+                                ? 0
+                                : entry.$2.spent / totalSpent,
+                          ),
                         ),
-                      ],
                     ],
                   ),
                 ),
-                SizedBox(
-                  key: const ValueKey('dashboard-budget-donut-lane'),
-                  width: columnWidth,
-                  child: Center(
-                    child: BudgetMixDonut(
-                      key: const ValueKey('dashboard-budget-donut'),
-                      size: donutSize,
-                      trackStrokeWidth: donutSize * 0.17,
-                      segmentStrokeWidth: donutSize * 0.125,
-                      segments: _budgetSegments(mix, totalSpent),
-                      center: Text(
-                        '$usedPercent%',
-                        style: textTheme.labelSmall?.copyWith(
-                          color: colors.deepNavy,
-                          fontWeight: FontWeight.w900,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
               ],
-            );
-          },
-        ),
-        if (mix.isNotEmpty) ...[
-          const SizedBox(height: 12),
-          SingleChildScrollView(
-            key: const ValueKey('dashboard-budget-mix-pill-rail'),
-            scrollDirection: Axis.horizontal,
-            clipBehavior: Clip.none,
-            child: Row(
-              children: [
-                for (final entry in mix.indexed)
-                  Padding(
-                    padding: EdgeInsets.only(
-                      right: entry.$1 == mix.length - 1 ? 0 : 8,
-                    ),
-                    child: BudgetMixPill(
-                      index: entry.$1,
-                      category: entry.$2.category,
-                      type: 'Expense',
-                      share: totalSpent <= 0 ? 0 : entry.$2.spent / totalSpent,
-                    ),
-                  ),
-              ],
-            ),
+              const SizedBox(height: 14),
+              _BudgetManageRow(onTap: onManageTap),
+            ],
           ),
-        ],
-        const SizedBox(height: 12),
-        HeroShortcutCard(
-          key: const ValueKey('dashboard-manage-budgets'),
-          icon: Icons.pie_chart_rounded,
-          label: 'Manage budgets',
-          subtitle: 'Tune caps and scope',
-          onPressed: onManageTap,
         ),
       ],
     );

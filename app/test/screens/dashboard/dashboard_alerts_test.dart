@@ -365,6 +365,8 @@ void main() {
 
     expect(find.text('Starbucks'), findsOneWidget);
     expect(find.byType(RecentTransactionTile), findsAtLeastNWidgets(5));
+    expect(find.byKey(const ValueKey('dashboard-recent-transaction-card')),
+        findsAtLeastNWidgets(5));
     expect(find.text('Family Dining'), findsNothing);
     expect(find.text('Dining'), findsWidgets);
     expect(
@@ -765,8 +767,8 @@ void main() {
     expect(find.text('Today with Conscia'), findsNothing);
     expect(find.text('This Week'), findsOneWidget);
     expect(find.text('Insights'), findsOneWidget);
-    expect(find.text('BUDGETS'), findsOneWidget);
-    expect(find.text('RECENT TRANSACTIONS'), findsOneWidget);
+    expect(find.text('Budgets'), findsOneWidget);
+    expect(find.text('Recent transactions'), findsOneWidget);
     expect(find.byKey(const ValueKey('dashboard-journey-link')), findsNothing);
   });
 
@@ -803,8 +805,8 @@ void main() {
     expect(find.text('Today with Conscia'), findsNothing);
     expect(find.text('This Week'), findsOneWidget);
     expect(find.text('Insights'), findsOneWidget);
-    expect(find.text('BUDGETS'), findsOneWidget);
-    expect(find.text('RECENT TRANSACTIONS'), findsOneWidget);
+    expect(find.text('Budgets'), findsOneWidget);
+    expect(find.text('Recent transactions'), findsOneWidget);
     expect(find.byKey(const ValueKey('dashboard-journey-link')), findsNothing);
     expect(find.byKey(const ValueKey('dashboard-insights-link')), findsNothing);
     expect(find.byKey(const ValueKey('dashboard-add-link')), findsNothing);
@@ -863,7 +865,7 @@ void main() {
     await tester.pumpAndSettle();
 
     final journeySection = find.text('This Week');
-    final budgets = find.text('BUDGETS');
+    final budgets = find.text('Budgets');
 
     expect(journeySection, findsOneWidget);
     expect(budgets, findsOneWidget);
@@ -922,24 +924,28 @@ void main() {
 
     expect(
         find.byKey(const ValueKey('dashboard-budget-summary')), findsOneWidget);
+    expect(find.byKey(const ValueKey('dashboard-budget-editorial-card')),
+        findsOneWidget);
     expect(
         find.byKey(const ValueKey('dashboard-budget-donut')), findsOneWidget);
     expect(find.text('PERSONAL BUDGET MIX'), findsNothing);
     expect(find.text('FAMILY BUDGET MIX'), findsNothing);
     expect(find.text('₱3,720.00 used'), findsOneWidget);
     expect(find.text('of ₱4,000.00 monthly cap'), findsOneWidget);
+    expect(find.text('A calmer view of what your money is doing.'),
+        findsOneWidget);
     expect(find.text('Dining 100%'), findsOneWidget);
+    expect(find.byKey(const ValueKey('dashboard-budget-manage-row')),
+        findsOneWidget);
     expect(find.text('₱3,720.00 / ₱4,000.00'), findsNothing);
     expect(find.text('Family budget'), findsNothing);
-    final personalToggleBottom = tester.getBottomLeft(find.text('Personal')).dy;
-    final donutBottom = tester
-        .getBottomLeft(find.byKey(const ValueKey('dashboard-budget-donut')))
-        .dy;
-    expect(donutBottom, greaterThanOrEqualTo(personalToggleBottom - 2));
+    final cardRect = tester
+        .getRect(find.byKey(const ValueKey('dashboard-budget-editorial-card')));
     final donutLaneRect = tester
         .getRect(find.byKey(const ValueKey('dashboard-budget-donut-lane')));
     final donutRect =
         tester.getRect(find.byKey(const ValueKey('dashboard-budget-donut')));
+    expect(cardRect.contains(donutRect.center), isTrue);
     expect(donutRect.center.dx, closeTo(donutLaneRect.center.dx, 1));
     final summaryRect =
         tester.getRect(find.byKey(const ValueKey('dashboard-budget-top-row')));
@@ -1070,9 +1076,11 @@ void main() {
     expect(momentumValue.data, '18 day streak');
     expect(momentumDetail.data, '2 more days to strengthen your stride.');
     expect(find.text('0/5 quests'), findsNothing);
-    expect(find.text('Budget Guardian'), findsOneWidget);
+    expect(find.text('Budget Guardian'), findsNothing);
+    expect(find.byKey(const ValueKey('dashboard-journey-level-badge')),
+        findsNothing);
     expect(find.byKey(const ValueKey('dashboard-journey-level-icon')),
-        findsOneWidget);
+        findsNothing);
     expect(find.byKey(const ValueKey('dashboard-journey-hero-mascots')),
         findsNothing);
     expect(find.byKey(const ValueKey('dashboard-journey-next-step-chevron')),
