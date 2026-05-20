@@ -84,15 +84,27 @@ const _familyQuestKeys = {
   'add_family_expense',
 };
 
+const _weeklyQuestDisplayLimit = 5;
+
 ConscienceJourneySummary _filterFamilyQuests(
   ConscienceJourneySummary summary, {
   required bool hasFamilySpace,
 }) {
-  if (hasFamilySpace) return summary;
-  final filteredQuests = summary.weeklyQuests
-      .where((quest) => !_familyQuestKeys.contains(quest.key))
-      .toList(growable: false);
-  if (filteredQuests.length == summary.weeklyQuests.length) return summary;
+  final eligibleQuests = hasFamilySpace
+      ? summary.weeklyQuests
+      : summary.weeklyQuests
+          .where((quest) => !_familyQuestKeys.contains(quest.key))
+          .toList(growable: false);
+  final filteredQuests = _weeklyQuestSet(
+    eligibleQuests,
+    hasFamilySpace: hasFamilySpace,
+  );
+  if (filteredQuests.length == summary.weeklyQuests.length &&
+      filteredQuests.indexed.every(
+        (entry) => identical(entry.$2, summary.weeklyQuests[entry.$1]),
+      )) {
+    return summary;
+  }
   return ConscienceJourneySummary(
     xpTotal: summary.xpTotal,
     currentLevel: summary.currentLevel,
@@ -105,4 +117,32 @@ ConscienceJourneySummary _filterFamilyQuests(
     badges: summary.badges,
     recentMascotMoment: summary.recentMascotMoment,
   );
+}
+
+List<ConscienceQuest> _weeklyQuestSet(
+  List<ConscienceQuest> quests, {
+  required bool hasFamilySpace,
+}) {
+  if (quests.length <= _weeklyQuestDisplayLimit) return quests;
+  if (!hasFamilySpace) {
+    return quests.take(_weeklyQuestDisplayLimit).toList(growable: false);
+  }
+
+  final familyQuests = quests
+      .where((quest) => _familyQuestKeys.contains(quest.key))
+      .take(2)
+      .toList(growable: false);
+  final soloQuests = quests
+      .where((quest) => !_familyQuestKeys.contains(quest.key))
+      .take(_weeklyQuestDisplayLimit - familyQuests.length)
+      .toList(growable: false);
+  final selectedKeys = {
+    ...soloQuests.map((quest) => quest.key),
+    ...familyQuests.map((quest) => quest.key),
+  };
+
+  return quests
+      .where((quest) => selectedKeys.contains(quest.key))
+      .take(_weeklyQuestDisplayLimit)
+      .toList(growable: false);
 }

@@ -529,6 +529,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   context,
                   'Budgets',
                   subtitle: 'A quick pulse check on your monthly guardrails.',
+                  topPadding: 10,
                 ),
               ),
               if (budgetState.isLoading && budgets.isEmpty)
@@ -718,11 +719,12 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     BuildContext context,
     String title, {
     String? subtitle,
+    double topPadding = 24,
   }) {
     final colors = Theme.of(context).appColors;
     final isEditorial = title != title.toUpperCase();
     return Padding(
-      padding: EdgeInsets.fromLTRB(20, isEditorial ? 24 : 24, 20, 12),
+      padding: EdgeInsets.fromLTRB(20, topPadding, 20, 12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

@@ -156,8 +156,7 @@ void main() {
     ]);
   });
 
-  test('conscienceJourneyProvider keeps family quests with a family space',
-      () async {
+  test('conscienceJourneyProvider caps family weekly quests at five', () async {
     final service = _FamilyQuestConscienceJourneyService();
     final container = ProviderContainer(
       overrides: [
@@ -182,8 +181,6 @@ void main() {
       'reflect_three_purchases',
       'check_before_purchase',
       'review_regret_pattern',
-      'read_two_insights',
-      'create_budget_guardrail',
       'send_family_invite',
       'add_family_expense',
     ]);
