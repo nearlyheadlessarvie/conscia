@@ -76,7 +76,7 @@ List<ConscienceBadge> _milestones(ConscienceJourneySummary? summary) {
       final bProgress = b.target <= 0 ? 0 : b.progress / b.target;
       return bProgress.compareTo(aProgress);
     });
-  return badges.take(4).toList(growable: false);
+  return badges.toList(growable: false);
 }
 
 JourneyHomeAction _todayAction(ConscienceJourneySummary? summary) {

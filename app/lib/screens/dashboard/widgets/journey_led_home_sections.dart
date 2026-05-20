@@ -7,6 +7,7 @@ import '../../../models/conscience_journey.dart';
 import '../../../models/insight_feed_item.dart';
 import '../../../providers/insight_feed_provider.dart';
 import '../../../widgets/feed_card.dart';
+import '../../../widgets/horizontal_edge_fade.dart';
 import '../journey_home_presenter.dart';
 
 class JourneyLedHomeSections extends StatelessWidget {
@@ -145,17 +146,19 @@ class _WeeklyArc extends StatelessWidget {
 
     return SizedBox(
       height: 180,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        clipBehavior: Clip.none,
-        itemCount: quests.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 10),
-        itemBuilder: (context, index) => SizedBox(
-          width: 164,
-          child: _QuestTile(
-            quest: quests[index],
-            index: index,
-            onTap: () => onQuestSelected(quests[index]),
+      child: HorizontalEdgeFade(
+        child: ListView.separated(
+          scrollDirection: Axis.horizontal,
+          clipBehavior: Clip.hardEdge,
+          itemCount: quests.length,
+          separatorBuilder: (_, __) => const SizedBox(width: 10),
+          itemBuilder: (context, index) => SizedBox(
+            width: 164,
+            child: _QuestTile(
+              quest: quests[index],
+              index: index,
+              onTap: () => onQuestSelected(quests[index]),
+            ),
           ),
         ),
       ),
@@ -448,75 +451,85 @@ class _MilestoneStrip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).appColors;
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      clipBehavior: Clip.none,
-      child: Row(
-        children: [
-          for (final badge in badges)
-            Container(
-              key: ValueKey('journey-home-milestone-card-${badge.key}'),
-              width: 176,
-              margin: const EdgeInsets.only(right: 10),
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: colors.surfaceRaised,
-                borderRadius: BorderRadius.circular(18),
-                border: Border.all(color: colors.border),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    width: 34,
-                    height: 34,
+    final textTheme = Theme.of(context).textTheme;
+    return SizedBox(
+      height: 144,
+      child: HorizontalEdgeFade(
+        child: SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          clipBehavior: Clip.hardEdge,
+          child: Row(
+            children: [
+              for (final badge in badges)
+                SizedBox(
+                  key: ValueKey('journey-home-milestone-card-${badge.key}'),
+                  width: 176,
+                  height: 144,
+                  child: Container(
+                    margin: const EdgeInsets.only(right: 10),
+                    padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: colors.incomeSoft.withValues(alpha: 0.7),
-                      borderRadius: BorderRadius.circular(12),
+                      color: badge.isUnlocked
+                          ? colors.surfaceRaised
+                          : colors.navySoft.withValues(alpha: 0.36),
+                      borderRadius: BorderRadius.circular(18),
+                      border: Border.all(color: colors.border),
                     ),
-                    child: Icon(
-                      Icons.emoji_events_rounded,
-                      color: colors.income,
-                      size: 18,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          width: 34,
+                          height: 34,
+                          decoration: BoxDecoration(
+                            color: badge.isUnlocked
+                                ? colors.incomeSoft.withValues(alpha: 0.7)
+                                : colors.surfaceRaised.withValues(alpha: 0.82),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Icon(
+                            badge.isUnlocked
+                                ? Icons.emoji_events_rounded
+                                : Icons.lock_outline_rounded,
+                            color: badge.isUnlocked
+                                ? colors.income
+                                : colors.mutedInk,
+                            size: 18,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        Text(
+                          badge.isUnlocked ? badge.title : '?????',
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.libreBaskerville(
+                            textStyle: textTheme.labelMedium,
+                            color: colors.deepNavy,
+                            fontWeight: FontWeight.w700,
+                            height: 1.1,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          badge.isUnlocked
+                              ? badge.description
+                              : 'Keep checking in to reveal this milestone.',
+                          maxLines: 3,
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.nunitoSans(
+                            textStyle: textTheme.labelSmall,
+                            color: colors.mutedInk,
+                            fontWeight: FontWeight.w600,
+                            height: 1.2,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  const SizedBox(height: 10),
-                  Text(
-                    badge.title,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.libreBaskerville(
-                      textStyle: Theme.of(context).textTheme.labelMedium,
-                      color: colors.deepNavy,
-                      fontWeight: FontWeight.w700,
-                      height: 1.1,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    badge.description,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.nunitoSans(
-                      textStyle: Theme.of(context).textTheme.labelSmall,
-                      color: colors.mutedInk,
-                      fontWeight: FontWeight.w600,
-                      height: 1.2,
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    '${badge.progress}/${badge.target}',
-                    style: GoogleFonts.nunitoSans(
-                      textStyle: Theme.of(context).textTheme.labelSmall,
-                      color: colors.deepNavy,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-        ],
+                ),
+            ],
+          ),
+        ),
       ),
     );
   }

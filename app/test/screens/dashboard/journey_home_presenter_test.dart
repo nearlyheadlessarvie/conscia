@@ -66,6 +66,24 @@ void main() {
       'Locked',
     ]);
   });
+
+  test('buildJourneyHomePresentation exposes every milestone badge', () {
+    final presentation = buildJourneyHomePresentation(_summary(
+      badges: List.generate(
+        6,
+        (index) => ConscienceBadge(
+          key: 'badge_$index',
+          title: 'Badge $index',
+          description: 'Milestone $index',
+          progress: index,
+          target: 6,
+          isUnlocked: index.isEven,
+        ),
+      ),
+    ));
+
+    expect(presentation.milestones, hasLength(6));
+  });
 }
 
 ConscienceJourneySummary _summary({

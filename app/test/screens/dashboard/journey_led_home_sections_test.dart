@@ -5,6 +5,7 @@ import 'package:conscia_app/models/insight_feed_item.dart';
 import 'package:conscia_app/providers/insight_feed_provider.dart';
 import 'package:conscia_app/screens/dashboard/journey_home_presenter.dart';
 import 'package:conscia_app/screens/dashboard/widgets/journey_led_home_sections.dart';
+import 'package:conscia_app/widgets/horizontal_edge_fade.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -165,6 +166,7 @@ void main() {
     expect(find.text('0/5 commitments complete'), findsNothing);
     expect(find.byKey(const ValueKey('journey-home-quest-card')),
         findsNWidgets(5));
+    expect(find.byType(HorizontalEdgeFade), findsWidgets);
     expect(find.byKey(const ValueKey('journey-home-quest-open-hint')),
         findsNothing);
     expect(find.byKey(const ValueKey('journey-home-quest-pending-icon')),
@@ -362,7 +364,7 @@ void main() {
     expect(cardSize.height, lessThan(120));
   });
 
-  testWidgets('Milestones render as progress cards with description',
+  testWidgets('Milestones render fixed-size cards and tease locked badges',
       (tester) async {
     final summary = _summary(
       weeklyQuests: const [],
@@ -375,6 +377,14 @@ void main() {
           target: 1,
           isUnlocked: true,
         ),
+        ConscienceBadge(
+          key: 'future_badge',
+          title: 'Future Badge',
+          description: 'Should be hidden while locked.',
+          progress: 0,
+          target: 2,
+          isUnlocked: false,
+        ),
       ],
     );
 
@@ -385,15 +395,24 @@ void main() {
     ));
 
     expect(find.text('Milestones'), findsOneWidget);
-    expect(
-      find.byKey(
-        const ValueKey('journey-home-milestone-card-first_reflection'),
-      ),
-      findsOneWidget,
+    final firstCard = find.byKey(
+      const ValueKey('journey-home-milestone-card-first_reflection'),
     );
+    final lockedCard = find.byKey(
+      const ValueKey('journey-home-milestone-card-future_badge'),
+    );
+    expect(firstCard, findsOneWidget);
+    expect(lockedCard, findsOneWidget);
+    expect(tester.getSize(firstCard), const Size(176, 144));
+    expect(tester.getSize(lockedCard), const Size(176, 144));
     expect(find.text('First Reflection'), findsOneWidget);
     expect(find.text('Reflected on your first purchase.'), findsOneWidget);
-    expect(find.text('1/1'), findsOneWidget);
+    expect(find.text('1/1'), findsNothing);
+    expect(find.text('Future Badge'), findsNothing);
+    expect(find.text('Should be hidden while locked.'), findsNothing);
+    expect(find.text('?????'), findsOneWidget);
+    expect(find.text('Keep checking in to reveal this milestone.'),
+        findsOneWidget);
   });
 
   testWidgets('Empty weekly state renders and milestones hide without badges',

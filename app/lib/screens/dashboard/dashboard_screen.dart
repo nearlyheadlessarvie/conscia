@@ -39,6 +39,7 @@ import 'package:conscia_app/widgets/empty_state.dart';
 import 'package:conscia_app/widgets/budget_mix_visuals.dart';
 import 'package:conscia_app/widgets/conscia_bottom_sheet.dart';
 import 'package:conscia_app/widgets/premium_upgrade_dialog.dart';
+import 'package:conscia_app/widgets/horizontal_edge_fade.dart';
 import 'package:conscia_app/widgets/scope_pill_switch.dart';
 import 'package:conscia_app/widgets/skeleton_loader.dart';
 import 'package:conscia_app/widgets/swipe_action_tile.dart';
@@ -1603,16 +1604,7 @@ class _DashboardBudgetSummary extends StatelessWidget {
               ),
               if (activeMix.isNotEmpty) ...[
                 const SizedBox(height: 14),
-                ShaderMask(
-                  shaderCallback: (bounds) => LinearGradient(
-                    colors: [
-                      Colors.white,
-                      Colors.white,
-                      Colors.white.withValues(alpha: 0),
-                    ],
-                    stops: const [0, 0.9, 1],
-                  ).createShader(bounds),
-                  blendMode: BlendMode.dstIn,
+                HorizontalEdgeFade(
                   child: SingleChildScrollView(
                     key: const ValueKey('dashboard-budget-mix-pill-rail'),
                     scrollDirection: Axis.horizontal,
