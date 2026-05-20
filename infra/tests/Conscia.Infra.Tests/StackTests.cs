@@ -202,6 +202,37 @@ public class StackTests
     }
 
     [Fact]
+    public void AssetPathResolver_FallsBackToPlaceholder_WhenPublishAssetIsMissing()
+    {
+        var originalDirectory = Directory.GetCurrentDirectory();
+        var tempRoot = Path.Combine(Path.GetTempPath(), "conscia-infra-tests", Guid.NewGuid().ToString("N"));
+        var infraRoot = Path.Combine(tempRoot, "infra");
+        Directory.CreateDirectory(Path.Combine(infraRoot, "src", "Conscia.Infra"));
+        File.WriteAllText(
+            Path.Combine(infraRoot, "src", "Conscia.Infra", "Conscia.Infra.csproj"),
+            "<Project Sdk=\"Microsoft.NET.Sdk\"></Project>");
+
+        try
+        {
+            Directory.SetCurrentDirectory(infraRoot);
+
+            var resolved = AssetPathResolver.ResolvePublishedAsset("../publish/api", "api");
+
+            Assert.True(Directory.Exists(resolved));
+            Assert.EndsWith(Path.Combine(".asset-placeholders", "api"), resolved);
+            Assert.True(File.Exists(Path.Combine(resolved, "placeholder.txt")));
+        }
+        finally
+        {
+            Directory.SetCurrentDirectory(originalDirectory);
+            if (Directory.Exists(tempRoot))
+            {
+                Directory.Delete(tempRoot, true);
+            }
+        }
+    }
+
+    [Fact]
     public void WebStack_WithDomain_CreatesAliasesAndRoute53Records()
     {
         var app = new App();

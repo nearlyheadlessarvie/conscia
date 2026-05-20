@@ -29,7 +29,8 @@ public class ComputeStackProps : StackProps
     public required ITable PushDeviceTokensTable { get; set; }
     public required ITable ConscienceJourneyTable { get; set; }
     public required IQueue AiQueue { get; set; }
-    public string ApiAssetPath { get; set; } = "../publish/api";
+    public string ApiAssetPath { get; set; } =
+        AssetPathResolver.ResolvePublishedAsset("../publish/api", "api");
     public DomainSettings? DomainSettings { get; set; }
 }
 
