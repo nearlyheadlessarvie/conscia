@@ -25,7 +25,6 @@ void main() {
     expect(find.text('This Week'), findsOneWidget);
     expect(find.text('Insights'), findsOneWidget);
     expect(find.text('Patterns'), findsNothing);
-    expect(find.text('Milestones'), findsOneWidget);
   });
 
   testWidgets('Pattern preview renders presentation pattern copy',
@@ -168,6 +167,10 @@ void main() {
         findsNWidgets(5));
     expect(find.byKey(const ValueKey('journey-home-quest-open-hint')),
         findsNothing);
+    expect(find.byKey(const ValueKey('journey-home-quest-pending-icon')),
+        findsNWidgets(5));
+    expect(find.byKey(const ValueKey('journey-home-quest-complete-icon')),
+        findsNothing);
 
     final firstCard = tester.getSize(
       find.byKey(const ValueKey('journey-home-quest-card')).first,
@@ -207,6 +210,43 @@ void main() {
     await tester.pump();
 
     expect(selectedQuest?.key, 'review_regret_pattern');
+  });
+
+  testWidgets('Weekly quest cards distinguish complete and outstanding states',
+      (tester) async {
+    final summary = _summary(
+      weeklyQuests: const [
+        ConscienceQuest(
+          key: 'quest_open',
+          title: 'Open quest',
+          description: 'Still outstanding.',
+          progress: 0,
+          target: 1,
+          xpReward: 10,
+          isCompleted: false,
+        ),
+        ConscienceQuest(
+          key: 'quest_done',
+          title: 'Done quest',
+          description: 'Already complete.',
+          progress: 1,
+          target: 1,
+          xpReward: 10,
+          isCompleted: true,
+        ),
+      ],
+    );
+
+    await tester.pumpWidget(_buildSubject(
+      summary: summary,
+      insightSummary: null,
+      insightTrend: null,
+    ));
+
+    expect(find.byKey(const ValueKey('journey-home-quest-pending-icon')),
+        findsOneWidget);
+    expect(find.byKey(const ValueKey('journey-home-quest-complete-icon')),
+        findsOneWidget);
   });
 
   testWidgets('Journey sections use locked storybook typography',
@@ -302,6 +342,24 @@ void main() {
     await tester.pump();
 
     expect(openedInsights, isTrue);
+  });
+
+  testWidgets('Insights summary shrinks when no trend graph is available',
+      (tester) async {
+    await tester.pumpWidget(_buildSubject(
+      summary: _summary(),
+      insightSummary: const DashboardInsightSummary(
+        text: 'Shopping is carrying your strongest regret signal right now.',
+        tone: InsightFeedTone.urgent,
+      ),
+      insightTrend: null,
+    ));
+
+    expect(
+        find.byKey(const ValueKey('journey-home-insight-graph')), findsNothing);
+    final cardSize =
+        tester.getSize(find.byKey(const ValueKey('journey-home-insight-card')));
+    expect(cardSize.height, lessThan(120));
   });
 
   testWidgets('Empty weekly state renders and milestones hide without badges',

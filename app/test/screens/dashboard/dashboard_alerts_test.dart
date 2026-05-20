@@ -201,6 +201,12 @@ Widget _buildApp(
         ),
       ),
       GoRoute(
+        path: '/transactions',
+        builder: (context, state) => const Scaffold(
+          body: Center(child: Text('Transactions placeholder')),
+        ),
+      ),
+      GoRoute(
         path: '/transactions/add',
         builder: (context, state) {
           final extra = state.extra as Map<String, String?>?;
@@ -1064,6 +1070,13 @@ void main() {
     expect(momentumValue.data, '18 day streak');
     expect(momentumDetail.data, '2 more days to strengthen your stride.');
     expect(find.text('0/5 quests'), findsNothing);
+    expect(find.text('Budget Guardian'), findsOneWidget);
+    expect(find.byKey(const ValueKey('dashboard-journey-level-icon')),
+        findsOneWidget);
+    expect(find.byKey(const ValueKey('dashboard-journey-hero-mascots')),
+        findsNothing);
+    expect(find.byKey(const ValueKey('dashboard-journey-next-step-chevron')),
+        findsOneWidget);
     expect(title.style?.fontFamily, contains('LibreBaskerville'));
     expect(subtitle.style?.fontFamily, contains('Nunito'));
     expect(momentumValue.style?.fontFamily, contains('Nunito'));
@@ -1204,8 +1217,39 @@ void main() {
     expect(find.byType(InsightSkeletonCard), findsNothing);
   });
 
-  testWidgets('dashboard continue journey CTA opens assistant', (tester) async {
+  testWidgets('dashboard next step CTA opens the outstanding quest destination',
+      (tester) async {
     _useTallDashboardViewport(tester);
+
+    const journey = ConscienceJourneySummary(
+      xpTotal: 0,
+      currentLevel: ConscienceLevel(
+        key: 'awakening',
+        title: 'Awakening',
+        requiredXp: 0,
+      ),
+      nextLevel: ConscienceLevel(
+        key: 'impulse_spotter',
+        title: 'Impulse Spotter',
+        requiredXp: 120,
+      ),
+      xpIntoLevel: 0,
+      xpToNextLevel: 120,
+      momentumDays: 0,
+      bestMomentumDays: 0,
+      weeklyQuests: [
+        ConscienceQuest(
+          key: 'reflect_three_purchases',
+          title: 'Reflect on 3 purchases',
+          description: 'Turn recent decisions into useful signal.',
+          progress: 0,
+          target: 3,
+          xpReward: 40,
+          isCompleted: false,
+        ),
+      ],
+      badges: [],
+    );
 
     final container = ProviderContainer(
       overrides: [
@@ -1217,6 +1261,9 @@ void main() {
         insightsSummaryProvider.overrideWith((ref) async => null),
         insightsCategoriesProvider.overrideWith((ref) async => const []),
         insightsMerchantsProvider.overrideWith((ref) async => const []),
+        conscienceJourneyProvider.overrideWith(
+          () => _StaticConscienceJourneyNotifier(journey),
+        ),
         localAlertsProvider.overrideWith(
           (ref) => _LocalAlertsTestNotifier(const []),
         ),
@@ -1232,7 +1279,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Assistant placeholder'), findsOneWidget);
+    expect(find.text('Transactions placeholder'), findsOneWidget);
   });
 
   testWidgets('dashboard weekly quest rail is not a section link',

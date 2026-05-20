@@ -7,7 +7,6 @@ import 'package:google_fonts/google_fonts.dart';
 
 import 'package:conscia_app/core/constants/generated/app_constants.g.dart';
 import 'package:conscia_app/core/constants/category_icons.dart';
-import 'package:conscia_app/core/assets/mascot_sprite_sheet.dart';
 import 'package:conscia_app/core/routing/app_router.dart';
 import 'package:conscia_app/core/theme/app_colors.dart';
 import 'package:conscia_app/core/theme/app_layout.dart';
@@ -168,10 +167,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     );
   }
 
-  void _continueJourney() {
-    context.push(AppRoutes.assistant);
-  }
-
   void _openJourneyQuest(ConscienceQuest quest) {
     if (quest.key == 'add_family_expense') {
       context.push(AppRoutes.addTransaction, extra: {'scope': 'family'});
@@ -192,6 +187,13 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       'send_family_invite' => AppRoutes.familyInvites,
       _ => AppRoutes.journey,
     };
+  }
+
+  ConscienceQuest? _nextOutstandingQuest(ConscienceJourneySummary? journey) {
+    for (final quest in journey?.weeklyQuests ?? const <ConscienceQuest>[]) {
+      if (!quest.isCompleted) return quest;
+    }
+    return null;
   }
 
   BudgetTrendInsight? _graphableBudgetTrend(
@@ -436,6 +438,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         ref.watch(behavioralInsightsProvider).valueOrNull;
     final dashboardInsightTrend =
         _graphableBudgetTrend(behavioralInsights?.budgetTrends);
+    final nextJourneyQuest = _nextOutstandingQuest(journey);
     final regretPrompts = transactions
         .where((t) =>
             t.regretLevel == null &&
@@ -460,7 +463,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   journey: journey,
                   presentation: journeyHome,
                   loading: journeyLoadingWithoutData,
-                  onContinueJourney: _continueJourney,
+                  onContinueJourney: nextJourneyQuest == null
+                      ? () => context.push(AppRoutes.transactions)
+                      : () => _openJourneyQuest(nextJourneyQuest),
                 ),
               ),
               if (!journeyLoadingWithoutData)
@@ -726,7 +731,7 @@ class _DashboardEditorialHeroCard extends StatelessWidget {
           Positioned(
             right: 14,
             top: heroTopPadding + 28,
-            child: const _JourneyHeroMascots(),
+            child: _JourneyHeroLevelBadge(journey: journey),
           ),
           Padding(
             padding: EdgeInsets.fromLTRB(20, heroTopPadding, 20, 22),
@@ -935,7 +940,11 @@ class _JourneyHeroNextStepCard extends StatelessWidget {
                 foregroundColor: foreground,
               ),
               onPressed: onPressed,
-              child: const Icon(Icons.arrow_forward_rounded, size: 25),
+              child: const Icon(
+                Icons.chevron_right_rounded,
+                key: ValueKey('dashboard-journey-next-step-chevron'),
+                size: 30,
+              ),
             ),
           ),
         ],
@@ -944,55 +953,92 @@ class _JourneyHeroNextStepCard extends StatelessWidget {
   }
 }
 
-class _JourneyHeroMascots extends StatelessWidget {
-  const _JourneyHeroMascots();
+class _JourneyHeroLevelBadge extends StatelessWidget {
+  const _JourneyHeroLevelBadge({required this.journey});
+
+  final ConscienceJourneySummary? journey;
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).appColors;
+    final textTheme = Theme.of(context).textTheme;
+    final level = journey?.currentLevel;
+
     return IgnorePointer(
-      child: Opacity(
-        opacity: 0.88,
-        child: SizedBox(
-          width: 156,
-          height: 132,
-          child: Stack(
-            clipBehavior: Clip.none,
-            children: [
-              Positioned(
-                right: 4,
-                top: 28,
-                child: Container(
-                  width: 96,
-                  height: 96,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.44),
-                    shape: BoxShape.circle,
-                  ),
-                ),
+      child: Container(
+        key: const ValueKey('dashboard-journey-level-badge'),
+        width: 132,
+        padding: const EdgeInsets.fromLTRB(12, 12, 12, 11),
+        decoration: BoxDecoration(
+          color: colors.surfaceRaised.withValues(alpha: 0.68),
+          borderRadius: BorderRadius.circular(22),
+          border: Border.all(color: colors.border.withValues(alpha: 0.75)),
+          boxShadow: [
+            BoxShadow(
+              color: colors.deepNavy.withValues(alpha: 0.06),
+              blurRadius: 22,
+              offset: const Offset(0, 10),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              key: const ValueKey('dashboard-journey-level-icon'),
+              width: 42,
+              height: 42,
+              decoration: BoxDecoration(
+                color: colors.deepNavy.withValues(alpha: 0.11),
+                borderRadius: BorderRadius.circular(14),
               ),
-              const Positioned(
-                right: 2,
-                top: 10,
-                child: MascotSpriteFrame(
-                  atlas: angelMascotAtlas,
-                  frameName: '4_win.png',
-                  width: 92,
-                ),
+              child: Icon(
+                _journeyLevelIcon(level),
+                color: colors.deepNavy,
+                size: 24,
               ),
-              const Positioned(
-                right: 66,
-                top: 50,
-                child: MascotSpriteFrame(
-                  atlas: devilMascotAtlas,
-                  frameName: '9_coin.png',
-                  width: 68,
-                ),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              'LEVEL',
+              style: GoogleFonts.nunitoSans(
+                textStyle: textTheme.labelSmall,
+                color: colors.deepNavy.withValues(alpha: 0.58),
+                fontWeight: FontWeight.w900,
+                letterSpacing: 0.8,
+                height: 1,
               ),
-            ],
-          ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              level?.title ?? 'Journey Starter',
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: GoogleFonts.libreBaskerville(
+                textStyle: textTheme.labelLarge,
+                color: colors.deepNavy,
+                fontWeight: FontWeight.w700,
+                height: 1.08,
+              ),
+            ),
+          ],
         ),
       ),
     );
+  }
+
+  IconData _journeyLevelIcon(ConscienceLevel? level) {
+    final key = '${level?.key ?? ''} ${level?.title ?? ''}'.toLowerCase();
+    if (key.contains('budget') || key.contains('guardian')) {
+      return Icons.shield_rounded;
+    }
+    if (key.contains('pattern')) return Icons.auto_graph_rounded;
+    if (key.contains('impulse') || key.contains('spotter')) {
+      return Icons.psychology_rounded;
+    }
+    if (key.contains('family')) return Icons.groups_rounded;
+    return Icons.flag_rounded;
   }
 }
 
@@ -1246,13 +1292,12 @@ class _DashboardIdentityRow extends StatelessWidget {
                   fontWeight: FontWeight.w700,
                 ),
               ),
-              const SizedBox(height: 2),
               Text(
                 greetingName,
                 style: GoogleFonts.nunitoSans(
                   textStyle: textTheme.titleLarge,
                   color: colors.ink,
-                  fontWeight: FontWeight.w800,
+                  fontWeight: FontWeight.w700,
                 ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,

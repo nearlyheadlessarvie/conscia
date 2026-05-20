@@ -144,7 +144,7 @@ class _WeeklyArc extends StatelessWidget {
     }
 
     return SizedBox(
-      height: 174,
+      height: 180,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         clipBehavior: Clip.none,
@@ -237,10 +237,15 @@ class _QuestTile extends StatelessWidget {
             Row(
               children: [
                 Icon(
+                  key: ValueKey(
+                    quest.isCompleted
+                        ? 'journey-home-quest-complete-icon'
+                        : 'journey-home-quest-pending-icon',
+                  ),
                   quest.isCompleted
                       ? Icons.check_circle_rounded
-                      : Icons.arrow_forward_rounded,
-                  color: quest.isCompleted ? colors.income : colors.deepNavy,
+                      : Icons.radio_button_unchecked_rounded,
+                  color: quest.isCompleted ? colors.income : colors.mutedInk,
                   size: 18,
                 ),
                 const SizedBox(width: 6),
@@ -288,7 +293,6 @@ class _InsightSummaryCard extends StatelessWidget {
       onTap: onOpenInsights,
       borderRadius: BorderRadius.circular(16),
       child: Container(
-        constraints: const BoxConstraints(minHeight: 136),
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
           color: _insightToneBackground(colors, tone),
