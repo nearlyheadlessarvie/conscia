@@ -15,6 +15,7 @@ import '../../providers/auth_provider.dart';
 import '../../widgets/floating_label_text_field.dart';
 import '../../widgets/conscia_app_bar.dart';
 import '../../widgets/inline_notice.dart';
+import 'widgets/auth_intro_panel.dart';
 
 String friendlySignInErrorMessage(
   Object error, {
@@ -208,18 +209,12 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               const SizedBox(height: 16),
-              Text(
-                'Welcome Back',
-                style: Theme.of(context).textTheme.headlineLarge,
+              const AuthIntroPanel(
+                title: 'Welcome Back',
+                subtitle: 'Sign in to continue your money story.',
+                icon: Icons.shield_outlined,
               ),
-              const SizedBox(height: 8),
-              Text(
-                'Sign in to continue',
-                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      color: colors.onSurfaceVariant,
-                    ),
-              ),
-              const SizedBox(height: 32),
+              const SizedBox(height: 28),
               if (_errorMessage != null) ...[
                 InlineNotice(
                   message: _errorMessage!,

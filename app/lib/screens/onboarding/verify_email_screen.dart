@@ -14,6 +14,7 @@ import '../../providers/user_provider.dart';
 import '../../widgets/floating_label_text_field.dart';
 import '../../widgets/conscia_app_bar.dart';
 import '../../widgets/inline_notice.dart';
+import 'widgets/auth_intro_panel.dart';
 
 class VerifyEmailScreen extends ConsumerStatefulWidget {
   const VerifyEmailScreen({super.key});
@@ -171,16 +172,10 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               const SizedBox(height: 16),
-              Text(
-                'Verify your email',
-                style: Theme.of(context).textTheme.headlineLarge,
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'We sent a confirmation code to $pendingEmail.',
-                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      color: colors.onSurfaceVariant,
-                    ),
+              AuthIntroPanel(
+                title: 'Verify your email',
+                subtitle: 'We sent a confirmation code to $pendingEmail.',
+                icon: Icons.mark_email_read_outlined,
               ),
               if (ApiConstants.useMockAuth) ...[
                 const SizedBox(height: 12),

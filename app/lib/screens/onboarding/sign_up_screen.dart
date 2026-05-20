@@ -8,6 +8,7 @@ import '../../providers/auth_provider.dart';
 import '../../widgets/floating_label_text_field.dart';
 import '../../widgets/conscia_app_bar.dart';
 import '../../widgets/inline_notice.dart';
+import 'widgets/auth_intro_panel.dart';
 
 class SignUpScreen extends ConsumerStatefulWidget {
   const SignUpScreen({super.key});
@@ -116,8 +117,6 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-
     return Scaffold(
       appBar: const ConsciaAppBar(
         backgroundColor: Colors.transparent,
@@ -130,18 +129,12 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               const SizedBox(height: 16),
-              Text(
-                'Create Account',
-                style: Theme.of(context).textTheme.headlineLarge,
+              const AuthIntroPanel(
+                title: 'Create Account',
+                subtitle: 'Start a calmer, clearer financial journey.',
+                icon: Icons.local_florist_outlined,
               ),
-              const SizedBox(height: 8),
-              Text(
-                'Start your financial journey',
-                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      color: colors.onSurfaceVariant,
-                    ),
-              ),
-              const SizedBox(height: 32),
+              const SizedBox(height: 28),
               if (_errorMessage != null) ...[
                 InlineNotice(
                   message: _errorMessage!,
