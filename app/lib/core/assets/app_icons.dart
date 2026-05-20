@@ -1,6 +1,5 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 import '../../widgets/conscience_mark.dart';
 
@@ -41,7 +40,7 @@ class ConsciaSvgLogo extends StatelessWidget {
             const SizedBox(height: 8),
             Text(
               'Conscia',
-              style: GoogleFonts.poppins(
+              style: Theme.of(context).textTheme.titleSmall?.copyWith(
                 fontSize: size * 0.14,
                 fontWeight: FontWeight.w700,
                 color: const Color(0xFF1A237E),

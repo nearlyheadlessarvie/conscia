@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:conscia_app/core/assets/onboarding_illustrations.dart';
 
 class OnboardingScreen extends StatefulWidget {
@@ -150,10 +149,7 @@ class _Slide extends StatelessWidget {
                 const SizedBox(height: 12),
                 Text(
                   title,
-                  style: GoogleFonts.poppins(
-                    textStyle: textTheme.displayLarge,
-                    fontWeight: FontWeight.w700,
-                  ),
+                  style: textTheme.displayLarge,
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 16),

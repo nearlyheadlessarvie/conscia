@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 import '../../../core/theme/app_colors.dart';
 
@@ -68,8 +67,7 @@ class InsightListEditorialHero extends StatelessWidget {
                       const SizedBox(height: 6),
                       Text(
                         primary,
-                        style: GoogleFonts.inter(
-                          textStyle: textTheme.displaySmall,
+                        style: textTheme.displaySmall?.copyWith(
                           color: colors.deepNavy,
                           fontWeight: FontWeight.w700,
                           height: 1.05,

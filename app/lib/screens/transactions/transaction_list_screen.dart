@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 import '../../core/constants/category_icons.dart';
 import '../../core/errors/app_error.dart';
@@ -946,8 +945,7 @@ class _TransactionsEditorialHero extends StatelessWidget {
               currencyCode: currencyCode,
               locale: locale,
             ),
-            style: GoogleFonts.inter(
-              textStyle: textTheme.displaySmall,
+            style: textTheme.displaySmall?.copyWith(
               color: colors.deepNavy,
               fontWeight: FontWeight.w600,
             ),

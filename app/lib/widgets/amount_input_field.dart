@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 import '../core/utils/localized_number_input.dart';
 import 'currency_badge.dart';
@@ -30,6 +29,7 @@ class AmountInputField extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
     final prefix = isExpense ? '-' : '+';
     final prefixColor = isExpense
         ? (colors.brightness == Brightness.light
@@ -60,11 +60,7 @@ class AmountInputField extends StatelessWidget {
         children: [
           Text(
             prefix,
-            style: GoogleFonts.poppins(
-              fontSize: 24,
-              fontWeight: FontWeight.w700,
-              color: prefixColor,
-            ),
+            style: textTheme.headlineSmall?.copyWith(color: prefixColor),
           ),
           const SizedBox(width: 10),
           Expanded(
@@ -77,9 +73,7 @@ class AmountInputField extends StatelessWidget {
               inputFormatters: [
                 LocalizedNumberInput.formatter(locale),
               ],
-              style: GoogleFonts.poppins(
-                fontSize: 28,
-                fontWeight: FontWeight.w700,
+              style: textTheme.displaySmall?.copyWith(
                 letterSpacing: -0.8,
                 color: colors.onSurface,
               ),
@@ -87,9 +81,7 @@ class AmountInputField extends StatelessWidget {
                 border: InputBorder.none,
                 isCollapsed: true,
                 hintText: '0.00',
-                hintStyle: GoogleFonts.poppins(
-                  fontSize: 28,
-                  fontWeight: FontWeight.w700,
+                hintStyle: textTheme.displaySmall?.copyWith(
                   letterSpacing: -0.8,
                   color: colors.onSurfaceVariant.withValues(alpha: 0.42),
                 ),
