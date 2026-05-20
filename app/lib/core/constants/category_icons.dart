@@ -488,9 +488,6 @@ class CategoryIcons {
             '',
           );
 
-  static String trialFontAssetPath(String iconKey) =>
-      'assets/icons/conscia-font-src/${_clean(iconKey)}.svg';
-
   static IconData? trialFontIconData(String iconKey) {
     return switch (_clean(iconKey)) {
       'groceries' => ConsciaTrialIcons.groceries,

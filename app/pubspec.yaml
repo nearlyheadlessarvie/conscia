@@ -56,7 +56,6 @@ flutter:
     - assets/images/sprites/angel/
     - assets/images/sprites/devil/
     - assets/images/sprites/money/
-    - assets/icons/conscia-font-src/
   fonts:
     - family: Conscia
       fonts:
