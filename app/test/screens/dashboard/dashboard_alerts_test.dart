@@ -610,9 +610,15 @@ void main() {
       ),
       findsOneWidget,
     );
-    expect(find.text('2 more moments waiting'), findsOneWidget);
-    expect(find.byKey(const ValueKey('dashboard-reflect-ghost-back')), findsOneWidget);
-    expect(find.byKey(const ValueKey('dashboard-reflect-ghost-front')), findsOneWidget);
+    expect(find.text('2 more moments waiting'), findsNothing);
+    expect(
+      find.byKey(const ValueKey('dashboard-reflect-preview-card-0')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('dashboard-reflect-preview-card-1')),
+      findsOneWidget,
+    );
   });
 
   testWidgets('dashboard reflect queue advances locally after a reflection tap',
@@ -684,6 +690,10 @@ void main() {
 
     await tester.tap(find.widgetWithText(FilledButton, 'Worth It').first);
     await tester.pump();
+    expect(
+      find.byKey(const ValueKey('dashboard-reflect-deck-frame')),
+      findsOneWidget,
+    );
     await tester.pump(const Duration(milliseconds: 620));
 
     expect(

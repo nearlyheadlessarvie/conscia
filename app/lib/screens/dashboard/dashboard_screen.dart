@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
 
 import 'package:conscia_app/core/constants/generated/app_constants.g.dart';
 import 'package:conscia_app/core/constants/conscience_journey.dart';
@@ -773,6 +774,7 @@ enum _ReflectDeckMotion {
 
 class _DashboardReflectQueueState extends State<_DashboardReflectQueue> {
   static const _advanceDuration = Duration(milliseconds: 560);
+  static const _deckHeight = 290.0;
 
   late List<Transaction> _visiblePrompts;
   List<Transaction>? _bufferedExternalPrompts;
@@ -812,44 +814,44 @@ class _DashboardReflectQueueState extends State<_DashboardReflectQueue> {
     }
 
     final activePrompt = _visiblePrompts.firstOrNull;
-    final remainingPromptCount =
-        ((activePrompt == null ? 0 : _visiblePrompts.length) - 1).clamp(0, 99);
+    final previewPrompts = _visiblePrompts.skip(1).take(2).toList(growable: false);
 
-    return Stack(
-      key: const ValueKey('dashboard-reflect-stack-preview'),
-      clipBehavior: Clip.none,
-      children: [
-        if (remainingPromptCount > 0 || (_isAdvancing && activePrompt != null))
-          const Positioned(
-            key: ValueKey('dashboard-reflect-ghost-back'),
-            left: 18,
-            right: 18,
-            top: 24,
-            child: _ReflectQueueGhostLayer(
-              height: 154,
-              radius: 24,
-              alpha: 0.48,
+    return SizedBox(
+      height: _deckHeight,
+      child: Stack(
+        key: const ValueKey('dashboard-reflect-deck-frame'),
+        clipBehavior: Clip.none,
+        children: [
+          if (previewPrompts.length > 1)
+            Positioned(
+              key: const ValueKey('dashboard-reflect-preview-card-1'),
+              left: 28,
+              right: 28,
+              top: 34,
+              child: _ReflectDeckPreviewCard(
+                prompt: previewPrompts[1],
+                insetOpacity: 0.62,
+              ),
             ),
-          ),
-        if (remainingPromptCount > 0 || (_isAdvancing && activePrompt != null))
-          const Positioned(
-            key: ValueKey('dashboard-reflect-ghost-front'),
-            left: 10,
-            right: 10,
-            top: 12,
-            child: _ReflectQueueGhostLayer(
-              height: 158,
-              radius: 24,
-              alpha: 0.34,
+          if (previewPrompts.isNotEmpty)
+            Positioned(
+              key: const ValueKey('dashboard-reflect-preview-card-0'),
+              left: 14,
+              right: 14,
+              top: 16,
+              child: _ReflectDeckPreviewCard(
+                prompt: previewPrompts.first,
+                insetOpacity: 0.82,
+              ),
             ),
-          ),
-        if (activePrompt != null) _buildIncomingCard(activePrompt, remainingPromptCount),
-        if (_exitingPrompt != null) _buildOutgoingCard(_exitingPrompt!),
-      ],
+          if (activePrompt != null) _buildIncomingCard(activePrompt),
+          if (_exitingPrompt != null) _buildOutgoingCard(_exitingPrompt!),
+        ],
+      ),
     );
   }
 
-  Widget _buildIncomingCard(Transaction prompt, int remainingPromptCount) {
+  Widget _buildIncomingCard(Transaction prompt) {
     final animationValue = _isAdvancing ? 1.0 : 0.0;
     return TweenAnimationBuilder<double>(
       key: ValueKey('dashboard-reflect-incoming-${prompt.id}'),
@@ -858,26 +860,26 @@ class _DashboardReflectQueueState extends State<_DashboardReflectQueue> {
       curve: Curves.easeOutCubic,
       child: _buildPromptCard(
         prompt,
-        queueHint: remainingPromptCount > 0
-            ? '$remainingPromptCount more moments waiting'
-            : null,
         onWorthIt: _isAdvancing ? null : () => _advanceQueue(prompt, 'worth_it'),
         onNotSure: _isAdvancing ? null : () => _advanceQueue(prompt, 'not_sure'),
         onRegret: _isAdvancing ? null : () => _advanceQueue(prompt, 'regret'),
         onDismiss: _isAdvancing ? null : () => _dismiss(prompt),
       ),
       builder: (context, value, child) {
-        final translateY = _isAdvancing ? (18 * (1 - value)) : 0.0;
-        final scale = _isAdvancing ? (0.955 + (0.045 * value)) : 1.0;
+        final translateY = _isAdvancing ? (26 * (1 - value)) : 0.0;
+        final scale = _isAdvancing ? (0.95 + (0.05 * value)) : 1.0;
         final opacity = _isAdvancing ? (0.72 + (0.28 * value)) : 1.0;
-        return Opacity(
-          opacity: opacity.clamp(0, 1),
-          child: Transform.translate(
-            offset: Offset(0, translateY),
-            child: Transform.scale(
-              scale: scale,
-              alignment: Alignment.topCenter,
-              child: child,
+        return Align(
+          alignment: Alignment.topCenter,
+          child: Opacity(
+            opacity: opacity.clamp(0, 1),
+            child: Transform.translate(
+              offset: Offset(0, translateY),
+              child: Transform.scale(
+                scale: scale,
+                alignment: Alignment.topCenter,
+                child: child,
+              ),
             ),
           ),
         );
@@ -895,9 +897,6 @@ class _DashboardReflectQueueState extends State<_DashboardReflectQueue> {
       child: IgnorePointer(
         child: _buildPromptCard(
           prompt,
-          queueHint: (_visiblePrompts.length - 1).clamp(0, 99) > 0
-              ? '${(_visiblePrompts.length - 1).clamp(0, 99)} more moments waiting'
-              : null,
           onWorthIt: null,
           onNotSure: null,
           onRegret: null,
@@ -906,27 +905,30 @@ class _DashboardReflectQueueState extends State<_DashboardReflectQueue> {
       ),
       builder: (context, value, child) {
         final dx = switch (motion) {
-          _ReflectDeckMotion.worthIt => -92 * value,
-          _ReflectDeckMotion.regret => 92 * value,
+          _ReflectDeckMotion.worthIt => -116 * value,
+          _ReflectDeckMotion.regret => 116 * value,
           _ReflectDeckMotion.notSure => 0.0,
         };
         final dy = switch (motion) {
-          _ReflectDeckMotion.notSure => -12 * value,
-          _ => -4 * value,
+          _ReflectDeckMotion.notSure => -18 * value,
+          _ => -8 * value,
         };
         final scale = switch (motion) {
-          _ReflectDeckMotion.notSure => 1 - (0.08 * value),
-          _ => 1 - (0.03 * value),
+          _ReflectDeckMotion.notSure => 1 - (0.1 * value),
+          _ => 1 - (0.035 * value),
         };
-        final opacity = 1 - (0.82 * value);
-        return Opacity(
-          opacity: opacity.clamp(0, 1),
-          child: Transform.translate(
-            offset: Offset(dx, dy),
-            child: Transform.scale(
-              scale: scale,
-              alignment: Alignment.topCenter,
-              child: child,
+        final opacity = 1 - (0.88 * value);
+        return Align(
+          alignment: Alignment.topCenter,
+          child: Opacity(
+            opacity: opacity.clamp(0, 1),
+            child: Transform.translate(
+              offset: Offset(dx, dy),
+              child: Transform.scale(
+                scale: scale,
+                alignment: Alignment.topCenter,
+                child: child,
+              ),
             ),
           ),
         );
@@ -936,7 +938,6 @@ class _DashboardReflectQueueState extends State<_DashboardReflectQueue> {
 
   Widget _buildPromptCard(
     Transaction prompt, {
-    required String? queueHint,
     required VoidCallback? onWorthIt,
     required VoidCallback? onNotSure,
     required VoidCallback? onRegret,
@@ -954,7 +955,6 @@ class _DashboardReflectQueueState extends State<_DashboardReflectQueue> {
       amount: prompt.amount.abs(),
       currencyCode: prompt.currencyCode,
       date: prompt.date,
-      queueHint: queueHint,
       onWorthIt: onWorthIt,
       onNotSure: onNotSure,
       onRegret: onRegret,
@@ -1015,36 +1015,84 @@ class _DashboardReflectQueueState extends State<_DashboardReflectQueue> {
   }
 }
 
-class _ReflectQueueGhostLayer extends StatelessWidget {
-  const _ReflectQueueGhostLayer({
-    required this.height,
-    required this.radius,
-    required this.alpha,
+class _ReflectDeckPreviewCard extends StatelessWidget {
+  const _ReflectDeckPreviewCard({
+    required this.prompt,
+    required this.insetOpacity,
   });
 
-  final double height;
-  final double radius;
-  final double alpha;
+  final Transaction prompt;
+  final double insetOpacity;
 
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: colors.surface.withValues(alpha: 0.92),
-        borderRadius: BorderRadius.circular(radius),
-        border: Border.all(
-          color: colors.outlineVariant.withValues(alpha: alpha),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: colors.shadow.withValues(alpha: alpha * 0.18),
-            blurRadius: 24,
-            offset: const Offset(0, 14),
+    final textTheme = Theme.of(context).textTheme;
+    final displayCounterparty =
+        prompt.description.isNotEmpty ? prompt.description : 'Unknown';
+    final formatter = NumberFormat.currency(
+      symbol: prompt.currencyCode,
+      decimalDigits: 2,
+    );
+
+    return IgnorePointer(
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: colors.surface.withValues(alpha: insetOpacity),
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(
+            color: colors.outlineVariant.withValues(alpha: 0.4),
           ),
-        ],
+          boxShadow: [
+            BoxShadow(
+              color: colors.shadow.withValues(alpha: 0.08),
+              blurRadius: 22,
+              offset: const Offset(0, 10),
+            ),
+          ],
+        ),
+        child: SizedBox(
+          height: 184,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(18, 18, 18, 16),
+            child: Align(
+              alignment: Alignment.topLeft,
+              child: Row(
+                children: [
+                  Opacity(
+                    opacity: 0.74,
+                    child: TransactionTile.badgeFor(
+                      prompt.category,
+                      size: 24,
+                      filled: false,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      displayCounterparty,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: textTheme.titleSmall?.copyWith(
+                        color: colors.onSurface.withValues(alpha: 0.76),
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    formatter.format(prompt.amount.abs()),
+                    style: textTheme.labelLarge?.copyWith(
+                      color: colors.onSurface.withValues(alpha: 0.62),
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
       ),
-      child: SizedBox(height: height),
     );
   }
 }
