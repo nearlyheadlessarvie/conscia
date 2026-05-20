@@ -105,6 +105,14 @@ class AppAvailabilityNotifier extends StateNotifier<AppAvailabilityState> {
 
     try {
       await _apiAvailabilityService.checkLiveness();
+    } on ApiUpgradeRequiredException catch (error) {
+      state = state.copyWith(
+        issue: AvailabilityIssue.updateRequired,
+        isLoading: false,
+        lastChecked: checkedAt,
+        errorMessage: error.message,
+      );
+      return;
     } on ApiUnavailableException catch (error) {
       state = state.copyWith(
         issue: AvailabilityIssue.apiUnavailable,

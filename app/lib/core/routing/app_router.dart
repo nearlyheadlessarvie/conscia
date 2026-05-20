@@ -9,7 +9,6 @@ import '../../services/user_service.dart';
 import '../../screens/assistant/pre_purchase_screen.dart';
 import '../../screens/budgets/budgets_screen.dart';
 import '../../screens/dashboard/dashboard_screen.dart';
-import '../../screens/onboarding/onboarding_screen.dart';
 import '../../screens/onboarding/about_you_screen.dart';
 import '../../screens/onboarding/spending_profile_screen.dart';
 import '../../screens/onboarding/suggested_budgets_screen.dart';
@@ -188,7 +187,9 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       // ── Onboarding ─────────────────────────────────────────────────
       GoRoute(
         path: AppRoutes.onboarding,
-        builder: (context, state) => const OnboardingScreen(),
+        redirect: (context, state) => state.uri.path == AppRoutes.onboarding
+            ? AppRoutes.signIn
+            : null,
         routes: [
           GoRoute(
             path: 'sign-in',

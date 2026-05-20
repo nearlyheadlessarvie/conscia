@@ -38,7 +38,7 @@ public class CategoryEndpointTests
             ]);
 
         var client = CreateAuthorizedClient(factory);
-        var response = await client.GetAsync("/api/v1/categories");
+        var response = await client.GetAsync("/api/categories");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var json = await response.Content.ReadFromJsonAsync<JsonElement>();
@@ -77,7 +77,7 @@ public class CategoryEndpointTests
                 DateTime.UtcNow));
 
         var client = CreateAuthorizedClient(factory);
-        var response = await client.PostAsJsonAsync("/api/v1/categories", new
+        var response = await client.PostAsJsonAsync("/api/categories", new
         {
             name = "Home Repair",
             type = "Expense",
@@ -87,7 +87,7 @@ public class CategoryEndpointTests
         });
 
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
-        Assert.Equal($"/api/v1/categories/{categoryId}", response.Headers.Location?.ToString());
+        Assert.Equal($"/api/categories/{categoryId}", response.Headers.Location?.ToString());
     }
 
     [Fact]
@@ -105,7 +105,7 @@ public class CategoryEndpointTests
             .ThrowsAsync(new InvalidOperationException("A category with that name already exists."));
 
         var client = CreateAuthorizedClient(factory);
-        var response = await client.PostAsJsonAsync("/api/v1/categories", new
+        var response = await client.PostAsJsonAsync("/api/categories", new
         {
             name = "Dining",
             type = "Expense",
@@ -126,7 +126,7 @@ public class CategoryEndpointTests
             .ReturnsAsync(false);
 
         var client = CreateAuthorizedClient(factory);
-        var response = await client.PostAsJsonAsync("/api/v1/categories", new
+        var response = await client.PostAsJsonAsync("/api/categories", new
         {
             name = "Pet care",
             type = "Expense",
@@ -156,7 +156,7 @@ public class CategoryEndpointTests
             .Returns(Task.CompletedTask);
 
         var client = CreateAuthorizedClient(factory);
-        var response = await client.DeleteAsync($"/api/v1/categories/{categoryId}");
+        var response = await client.DeleteAsync($"/api/categories/{categoryId}");
 
         Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
     }

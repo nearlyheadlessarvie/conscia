@@ -1,9 +1,29 @@
+import 'dart:convert';
+import 'dart:typed_data';
+
 import 'package:conscia_app/providers/auth_provider.dart';
 import 'package:conscia_app/services/auth_service.dart';
 import 'package:dio/dio.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+String _fakeJwt({
+  required DateTime expiresAt,
+}) {
+  final header = base64Url.encode(utf8.encode('{"alg":"none","typ":"JWT"}'));
+  final payload = base64Url.encode(
+    utf8.encode(
+      jsonEncode({
+        'sub': 'user-1',
+        'exp': expiresAt.millisecondsSinceEpoch ~/ 1000,
+      }),
+    ),
+  );
+  return '$header.$payload.signature';
+}
 
 class _FakeAuthService extends AuthService {
   _FakeAuthService(this._tokens) : super(Dio());
@@ -129,11 +149,41 @@ class _FakeSecureStorage extends FlutterSecureStorage {
   }
 }
 
+class _CapturingOkAdapter implements HttpClientAdapter {
+  RequestOptions? lastRequestOptions;
+
+  @override
+  Future<ResponseBody> fetch(
+    RequestOptions options,
+    Stream<Uint8List>? requestStream,
+    Future<void>? cancelFuture,
+  ) async {
+    lastRequestOptions = options;
+    return ResponseBody.fromString(
+      '{"accessToken":"header.payload.signature","refreshToken":"refresh-token","userId":"user-1"}',
+      200,
+      headers: {
+        Headers.contentTypeHeader: [Headers.jsonContentType],
+      },
+    );
+  }
+
+  @override
+  void close({bool force = false}) {}
+}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   setUp(() {
     SharedPreferences.setMockInitialValues({});
+    PackageInfo.setMockInitialValues(
+      appName: 'Conscia',
+      packageName: 'com.getconscia.app',
+      version: '1.0.0',
+      buildNumber: '1',
+      buildSignature: '',
+    );
   });
 
   test('register requiring confirmation stores pending email without tokens',
@@ -313,6 +363,58 @@ void main() {
     expect(await storage.read(key: 'refresh_token'), 'new-refresh-token');
   });
 
+  test('loginWithStoredToken refreshes an expired access token', () async {
+    final service = _FakeAuthService(
+      const AuthTokens(
+        accessToken: 'new.access.token',
+        refreshToken: 'new-refresh-token',
+        userId: 'user-1',
+      ),
+    );
+    final storage = _FakeSecureStorage({
+      'access_token': _fakeJwt(
+        expiresAt: DateTime.now().toUtc().subtract(const Duration(minutes: 5)),
+      ),
+      'refresh_token': 'old-refresh-token',
+      'user_id': 'user-1',
+    });
+    final notifier = AuthNotifier(service, storage);
+
+    await notifier.loginWithStoredToken();
+
+    expect(service.lastRefreshToken, 'old-refresh-token');
+    expect(notifier.state.status, AuthStatus.authenticated);
+    expect(notifier.state.accessToken, 'new.access.token');
+    expect(notifier.state.refreshToken, 'new-refresh-token');
+  });
+
+  test('startup restore marks session expired when expired token cannot refresh',
+      () async {
+    final service = _FakeAuthService(
+      const AuthTokens(
+        accessToken: 'new.access.token',
+        refreshToken: 'new-refresh-token',
+        userId: 'user-1',
+      ),
+    )..shouldFailRefresh = true;
+    final storage = _FakeSecureStorage({
+      'access_token': _fakeJwt(
+        expiresAt: DateTime.now().toUtc().subtract(const Duration(minutes: 5)),
+      ),
+      'refresh_token': 'old-refresh-token',
+      'user_id': 'user-1',
+    });
+
+    final notifier = AuthNotifier(service, storage);
+    await Future<void>.delayed(Duration.zero);
+    await Future<void>.delayed(Duration.zero);
+
+    expect(service.lastRefreshToken, 'old-refresh-token');
+    expect(notifier.state.status, AuthStatus.sessionExpired);
+    expect(await storage.read(key: 'access_token'), isNull);
+    expect(await storage.read(key: 'refresh_token'), isNull);
+  });
+
   test('markSessionExpired clears tokens and exposes sessionExpired state',
       () async {
     final notifier = AuthNotifier(
@@ -337,5 +439,22 @@ void main() {
     expect(notifier.state.accessToken, isNull);
     expect(notifier.state.refreshToken, isNull);
     expect(notifier.state.userId, isNull);
+  });
+
+  test('authDioProvider adds API version metadata to auth requests', () async {
+    final container = ProviderContainer();
+    addTearDown(container.dispose);
+
+    final adapter = _CapturingOkAdapter();
+    final dio = container.read(authDioProvider)..httpClientAdapter = adapter;
+    final service = AuthService(dio);
+
+    await service.login('story-demo@example.com', 'Secure123');
+
+    expect(adapter.lastRequestOptions?.queryParameters['v'], '1');
+    expect(
+      adapter.lastRequestOptions?.headers['X-Conscia-App-Version'],
+      isNotNull,
+    );
   });
 }

@@ -12,7 +12,7 @@ public class AuthEndpointTests
         await using var factory = new TestWebAppFactory();
         using var client = factory.CreateClient();
 
-        var response = await client.PostAsJsonAsync("/api/v1/auth/register", new
+        var response = await client.PostAsJsonAsync("/api/auth/register", new
         {
             email = $"test-{Guid.NewGuid()}@example.com",
             password = "SecureP@ss123"
@@ -33,13 +33,13 @@ public class AuthEndpointTests
         using var client = factory.CreateClient();
         var email = $"confirm-{Guid.NewGuid()}@example.com";
 
-        await client.PostAsJsonAsync("/api/v1/auth/register", new
+        await client.PostAsJsonAsync("/api/auth/register", new
         {
             email,
             password = "SecureP@ss123"
         });
 
-        var response = await client.PostAsJsonAsync("/api/v1/auth/confirm", new
+        var response = await client.PostAsJsonAsync("/api/auth/confirm", new
         {
             email,
             confirmationCode = "123456"
@@ -58,13 +58,13 @@ public class AuthEndpointTests
         using var client = factory.CreateClient();
         var email = $"resend-{Guid.NewGuid()}@example.com";
 
-        await client.PostAsJsonAsync("/api/v1/auth/register", new
+        await client.PostAsJsonAsync("/api/auth/register", new
         {
             email,
             password = "SecureP@ss123"
         });
 
-        var response = await client.PostAsJsonAsync("/api/v1/auth/resend-confirmation", new
+        var response = await client.PostAsJsonAsync("/api/auth/resend-confirmation", new
         {
             email
         });
@@ -87,7 +87,7 @@ public class AuthEndpointTests
 
         using var client = factory.CreateClient();
 
-        var response = await client.PostAsJsonAsync("/api/v1/auth/login", new
+        var response = await client.PostAsJsonAsync("/api/auth/login", new
         {
             email,
             password = "password123"
@@ -103,13 +103,13 @@ public class AuthEndpointTests
         using var client = factory.CreateClient();
         var email = $"pending-login-{Guid.NewGuid()}@example.com";
 
-        await client.PostAsJsonAsync("/api/v1/auth/register", new
+        await client.PostAsJsonAsync("/api/auth/register", new
         {
             email,
             password = "password123"
         });
 
-        var response = await client.PostAsJsonAsync("/api/v1/auth/login", new
+        var response = await client.PostAsJsonAsync("/api/auth/login", new
         {
             email,
             password = "password123"
@@ -127,7 +127,7 @@ public class AuthEndpointTests
         await using var factory = new TestWebAppFactory();
         using var client = factory.CreateClient();
 
-        var response = await client.PostAsJsonAsync("/api/v1/auth/login", new
+        var response = await client.PostAsJsonAsync("/api/auth/login", new
         {
             email = "nonexistent@example.com",
             password = "wrong"
@@ -142,7 +142,7 @@ public class AuthEndpointTests
         await using var factory = new TestWebAppFactory();
         using var client = factory.CreateClient();
 
-        var response = await client.PostAsJsonAsync("/api/v1/auth/register", new
+        var response = await client.PostAsJsonAsync("/api/auth/register", new
         {
             email = "",
             password = "password123"
@@ -157,7 +157,7 @@ public class AuthEndpointTests
         await using var factory = new TestWebAppFactory();
         using var client = factory.CreateClient();
 
-        var response = await client.PostAsJsonAsync("/api/v1/auth/google", new
+        var response = await client.PostAsJsonAsync("/api/auth/google", new
         {
             idToken = "mock-google-id-token"
         });
@@ -176,7 +176,7 @@ public class AuthEndpointTests
         await using var factory = new TestWebAppFactory();
         using var client = factory.CreateClient();
 
-        var response = await client.PostAsJsonAsync("/api/v1/auth/google", new
+        var response = await client.PostAsJsonAsync("/api/auth/google", new
         {
             idToken = ""
         });
@@ -190,7 +190,7 @@ public class AuthEndpointTests
         await using var factory = new TestWebAppFactory();
         using var client = factory.CreateClient();
 
-        var response = await client.PostAsJsonAsync("/api/v1/auth/apple", new
+        var response = await client.PostAsJsonAsync("/api/auth/apple", new
         {
             identityToken = "mock-apple-identity-token",
             authorizationCode = "mock-auth-code"
@@ -208,7 +208,7 @@ public class AuthEndpointTests
         await using var factory = new TestWebAppFactory();
         using var client = factory.CreateClient();
 
-        var response = await client.PostAsJsonAsync("/api/v1/auth/apple", new
+        var response = await client.PostAsJsonAsync("/api/auth/apple", new
         {
             identityToken = "",
             authorizationCode = (string?)null
@@ -224,18 +224,18 @@ public class AuthEndpointTests
         using var client = factory.CreateClient();
         var email = $"refresh-{Guid.NewGuid()}@example.com";
 
-        await client.PostAsJsonAsync("/api/v1/auth/register", new
+        await client.PostAsJsonAsync("/api/auth/register", new
         {
             email,
             password = "password123"
         });
-        await client.PostAsJsonAsync("/api/v1/auth/confirm", new
+        await client.PostAsJsonAsync("/api/auth/confirm", new
         {
             email,
             confirmationCode = "123456"
         });
 
-        var login = await client.PostAsJsonAsync("/api/v1/auth/login", new
+        var login = await client.PostAsJsonAsync("/api/auth/login", new
         {
             email,
             password = "password123"
@@ -244,7 +244,7 @@ public class AuthEndpointTests
         var loginBody = await login.Content.ReadFromJsonAsync<Dictionary<string, object>>();
         Assert.NotNull(loginBody);
 
-        var response = await client.PostAsJsonAsync("/api/v1/auth/refresh", new
+        var response = await client.PostAsJsonAsync("/api/auth/refresh", new
         {
             refreshToken = loginBody!["refreshToken"]?.ToString()
         });
@@ -263,7 +263,7 @@ public class AuthEndpointTests
         await using var factory = new TestWebAppFactory();
         using var client = factory.CreateClient();
 
-        var response = await client.PostAsJsonAsync("/api/v1/auth/refresh", new
+        var response = await client.PostAsJsonAsync("/api/auth/refresh", new
         {
             refreshToken = "not-a-valid-refresh-token"
         });
@@ -277,7 +277,7 @@ public class AuthEndpointTests
         await using var factory = new TestWebAppFactory();
         using var client = factory.CreateClient();
 
-        var response = await client.PostAsJsonAsync("/api/v1/auth/refresh", new
+        var response = await client.PostAsJsonAsync("/api/auth/refresh", new
         {
             refreshToken = ""
         });

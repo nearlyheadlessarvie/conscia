@@ -1,3 +1,4 @@
+using Asp.Versioning.Builder;
 using Conscia.Api.Extensions;
 using Conscia.Application.Interfaces;
 
@@ -5,9 +6,11 @@ namespace Conscia.Api.Endpoints;
 
 public static class AlertEndpoints
 {
-    public static RouteGroupBuilder MapAlertEndpoints(this IEndpointRouteBuilder routes)
+    public static RouteGroupBuilder MapAlertEndpoints(this IEndpointRouteBuilder routes, ApiVersionSet apiVersionSet)
     {
-        var group = routes.MapGroup("/api/v1/alerts")
+        var group = routes.MapGroup("/api/alerts")
+            .WithApiVersionSet(apiVersionSet)
+            .MapToApiVersion(1.0)
             .RequireAuthorization()
             .WithTags("Alerts");
 

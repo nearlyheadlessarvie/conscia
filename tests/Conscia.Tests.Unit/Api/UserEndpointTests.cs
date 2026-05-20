@@ -46,7 +46,7 @@ public class UserEndpointTests : IClassFixture<TestWebAppFactory>
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync("https://cdn.example.com/alice-avatar.jpg");
 
-        var response = await _client.GetAsync("/api/v1/users/me");
+        var response = await _client.GetAsync("/api/users/me");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var body = await response.Content.ReadAsStringAsync();
@@ -59,7 +59,7 @@ public class UserEndpointTests : IClassFixture<TestWebAppFactory>
     public async Task GetMe_Unauthenticated_Returns401()
     {
         var client = _factory.CreateClient();
-        var response = await client.GetAsync("/api/v1/users/me");
+        var response = await client.GetAsync("/api/users/me");
 
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
@@ -72,7 +72,7 @@ public class UserEndpointTests : IClassFixture<TestWebAppFactory>
             .Setup(s => s.UpdateProfileAsync(userId, It.Is<UserProfileUpdateDto>(d => d.PreferredCurrency == "EUR"), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new User { Id = userId, Email = "alice@example.com", PreferredCurrency = "EUR", Locale = "en-US" });
 
-        var response = await _client.PutAsJsonAsync("/api/v1/users/me", new
+        var response = await _client.PutAsJsonAsync("/api/users/me", new
         {
             preferredCurrency = "EUR"
         });
@@ -100,7 +100,7 @@ public class UserEndpointTests : IClassFixture<TestWebAppFactory>
                 LocationSuggestionsEnabled = true
             });
 
-        var response = await _client.PutAsJsonAsync("/api/v1/users/me", new
+        var response = await _client.PutAsJsonAsync("/api/users/me", new
         {
             locationSuggestionsEnabled = true
         });
@@ -128,7 +128,7 @@ public class UserEndpointTests : IClassFixture<TestWebAppFactory>
                 AiPersonalityIntensity = "intense"
             });
 
-        var response = await _client.PutAsJsonAsync("/api/v1/users/me", new
+        var response = await _client.PutAsJsonAsync("/api/users/me", new
         {
             aiPersonalityIntensity = "intense"
         });
@@ -166,7 +166,7 @@ public class UserEndpointTests : IClassFixture<TestWebAppFactory>
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync("https://cdn.example.com/story-demo.jpg");
 
-        var response = await _client.PutAsJsonAsync("/api/v1/users/me", new
+        var response = await _client.PutAsJsonAsync("/api/users/me", new
         {
             displayName = "Story Demo",
             profilePictureKey = key
@@ -193,7 +193,7 @@ public class UserEndpointTests : IClassFixture<TestWebAppFactory>
             .ReturnsAsync("https://s3.example.com/upload");
 
         var response = await _client.PostAsJsonAsync(
-            "/api/v1/users/me/profile-picture-upload-url",
+            "/api/users/me/profile-picture-upload-url",
             new { contentType = "image/jpeg" });
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -220,7 +220,7 @@ public class UserEndpointTests : IClassFixture<TestWebAppFactory>
         content.Headers.ContentType = new MediaTypeHeaderValue("image/png");
 
         var response = await _client.PutAsync(
-            $"/api/v1/users/me/profile-picture-upload?key={Uri.EscapeDataString(key)}",
+            $"/api/users/me/profile-picture-upload?key={Uri.EscapeDataString(key)}",
             content);
 
         Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
@@ -239,7 +239,7 @@ public class UserEndpointTests : IClassFixture<TestWebAppFactory>
         content.Headers.ContentType = new MediaTypeHeaderValue("image/png");
 
         var response = await _client.PutAsync(
-            $"/api/v1/users/me/profile-picture-upload?key={Uri.EscapeDataString(otherUserKey)}",
+            $"/api/users/me/profile-picture-upload?key={Uri.EscapeDataString(otherUserKey)}",
             content);
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
@@ -267,7 +267,7 @@ public class UserEndpointTests : IClassFixture<TestWebAppFactory>
         content.Headers.ContentType = new MediaTypeHeaderValue("image/png");
 
         var response = await _client.PutAsync(
-            $"/api/v1/users/me/profile-picture-upload?key={Uri.EscapeDataString(key)}",
+            $"/api/users/me/profile-picture-upload?key={Uri.EscapeDataString(key)}",
             content);
 
         Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);

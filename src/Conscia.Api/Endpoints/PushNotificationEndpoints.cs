@@ -1,3 +1,4 @@
+using Asp.Versioning.Builder;
 using Conscia.Api.Extensions;
 using Conscia.Application.Interfaces;
 using Conscia.Application.Models;
@@ -6,9 +7,11 @@ namespace Conscia.Api.Endpoints;
 
 public static class PushNotificationEndpoints
 {
-    public static RouteGroupBuilder MapPushNotificationEndpoints(this IEndpointRouteBuilder routes)
+    public static RouteGroupBuilder MapPushNotificationEndpoints(this IEndpointRouteBuilder routes, ApiVersionSet apiVersionSet)
     {
-        var group = routes.MapGroup("/api/v1/push")
+        var group = routes.MapGroup("/api/push")
+            .WithApiVersionSet(apiVersionSet)
+            .MapToApiVersion(1.0)
             .RequireAuthorization()
             .WithTags("Push Notifications");
 

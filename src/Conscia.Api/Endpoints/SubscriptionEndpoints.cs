@@ -1,3 +1,4 @@
+using Asp.Versioning.Builder;
 using Conscia.Api.Extensions;
 using Conscia.Application.Interfaces;
 using Microsoft.AspNetCore.RateLimiting;
@@ -6,9 +7,11 @@ namespace Conscia.Api.Endpoints;
 
 public static class SubscriptionEndpoints
 {
-    public static RouteGroupBuilder MapSubscriptionEndpoints(this IEndpointRouteBuilder routes)
+    public static RouteGroupBuilder MapSubscriptionEndpoints(this IEndpointRouteBuilder routes, ApiVersionSet apiVersionSet)
     {
-        var group = routes.MapGroup("/api/v1/subscriptions")
+        var group = routes.MapGroup("/api/subscriptions")
+            .WithApiVersionSet(apiVersionSet)
+            .MapToApiVersion(1.0)
             .RequireAuthorization()
             .WithTags("Subscriptions");
 

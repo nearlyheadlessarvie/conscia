@@ -8,9 +8,25 @@ on:
 permissions:
   contents: read
 
+env:
+  APP_DIR: app
+  API_BASE_URL: ${{ vars.API_BASE_URL }}
+  MOCK_AUTH: ${{ vars.MOCK_AUTH || 'false' }}
+  PUSH_NOTIFICATIONS_ENABLED: ${{ vars.PUSH_NOTIFICATIONS_ENABLED || 'false' }}
+  GOOGLE_SERVER_CLIENT_ID: ${{ secrets.GOOGLE_SERVER_CLIENT_ID }}
+  FIREBASE_OPTIONS_DART_BASE64: ${{ secrets.FIREBASE_OPTIONS_DART_BASE64 }}
+
 jobs:
   build-android:
     runs-on: ubuntu-latest
+    env:
+      ANDROID_GOOGLE_SERVICES_JSON_BASE64: ${{ secrets.ANDROID_GOOGLE_SERVICES_JSON_BASE64 }}
+      ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+      ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+      ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+      ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+      GOOGLE_PLAY_DEPLOY_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_PLAY_DEPLOY_SERVICE_ACCOUNT_JSON }}
+      GOOGLE_PLAY_PACKAGE_NAME: ${{ vars.GOOGLE_PLAY_PACKAGE_NAME }}
     steps:
       - uses: actions/checkout@v4
 
@@ -18,6 +34,19 @@ jobs:
         with:
           flutter-version: '3.x'
           channel: stable
+
+      - name: Validate Android release secrets
+        shell: bash
+        run: |
+          test -n "${API_BASE_URL}" || (echo "Missing API_BASE_URL variable" && exit 1)
+          test -n "${GOOGLE_SERVER_CLIENT_ID}" || (echo "Missing GOOGLE_SERVER_CLIENT_ID secret" && exit 1)
+          test -n "${ANDROID_GOOGLE_SERVICES_JSON_BASE64}" || (echo "Missing ANDROID_GOOGLE_SERVICES_JSON_BASE64 secret" && exit 1)
+          test -n "${ANDROID_KEYSTORE_BASE64}" || (echo "Missing ANDROID_KEYSTORE_BASE64 secret" && exit 1)
+          test -n "${ANDROID_KEYSTORE_PASSWORD}" || (echo "Missing ANDROID_KEYSTORE_PASSWORD secret" && exit 1)
+          test -n "${ANDROID_KEY_ALIAS}" || (echo "Missing ANDROID_KEY_ALIAS secret" && exit 1)
+          test -n "${ANDROID_KEY_PASSWORD}" || (echo "Missing ANDROID_KEY_PASSWORD secret" && exit 1)
+          test -n "${GOOGLE_PLAY_DEPLOY_SERVICE_ACCOUNT_JSON}" || (echo "Missing GOOGLE_PLAY_DEPLOY_SERVICE_ACCOUNT_JSON secret" && exit 1)
+          test -n "${GOOGLE_PLAY_PACKAGE_NAME}" || (echo "Missing GOOGLE_PLAY_PACKAGE_NAME variable" && exit 1)
 
       - name: Install dependencies
         working-directory: app
@@ -27,13 +56,64 @@ jobs:
         working-directory: app
         run: dart run build_runner build --delete-conflicting-outputs
 
+      - name: Materialize Android Firebase config
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import base64
+          from pathlib import Path
+          import os
+
+          Path("app/android/app/google-services.json").write_bytes(
+              base64.b64decode(os.environ["ANDROID_GOOGLE_SERVICES_JSON_BASE64"])
+          )
+          PY
+
+      - name: Materialize optional firebase_options.dart override
+        if: env.FIREBASE_OPTIONS_DART_BASE64 != ''
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import base64
+          from pathlib import Path
+          import os
+
+          Path("app/lib/firebase_options.dart").write_bytes(
+              base64.b64decode(os.environ["FIREBASE_OPTIONS_DART_BASE64"])
+          )
+          PY
+
+      - name: Materialize Android signing assets
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import base64
+          from pathlib import Path
+          import os
+
+          Path("app/android/conscia-release.jks").write_bytes(
+              base64.b64decode(os.environ["ANDROID_KEYSTORE_BASE64"])
+          )
+          PY
+          cat > app/android/key.properties <<EOF
+          storeFile=conscia-release.jks
+          storePassword=${ANDROID_KEYSTORE_PASSWORD}
+          keyAlias=${ANDROID_KEY_ALIAS}
+          keyPassword=${ANDROID_KEY_PASSWORD}
+          EOF
+
       - name: Run tests
         working-directory: app
         run: flutter test
 
-      - name: Build Android App Bundle
+      - name: Build signed Android App Bundle
         working-directory: app
-        run: flutter build appbundle --release
+        run: |
+          flutter build appbundle --release \
+            --dart-define=API_BASE_URL="${API_BASE_URL}" \
+            --dart-define=MOCK_AUTH="${MOCK_AUTH}" \
+            --dart-define=PUSH_NOTIFICATIONS_ENABLED="${PUSH_NOTIFICATIONS_ENABLED}" \
+            --dart-define=GOOGLE_SERVER_CLIENT_ID="${GOOGLE_SERVER_CLIENT_ID}"
 
       - name: Upload Android artifact
         uses: actions/upload-artifact@v4
@@ -41,8 +121,27 @@ jobs:
           name: android-release
           path: app/build/app/outputs/bundle/release/app-release.aab
 
+      - name: Upload to Google Play internal track
+        uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.GOOGLE_PLAY_DEPLOY_SERVICE_ACCOUNT_JSON }}
+          packageName: ${{ vars.GOOGLE_PLAY_PACKAGE_NAME }}
+          releaseFiles: app/build/app/outputs/bundle/release/app-release.aab
+          track: internal
+          status: completed
+
   build-ios:
     runs-on: macos-latest
+    env:
+      IOS_GOOGLE_SERVICE_INFO_PLIST_BASE64: ${{ secrets.IOS_GOOGLE_SERVICE_INFO_PLIST_BASE64 }}
+      APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+      APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+      APP_STORE_CONNECT_API_PRIVATE_KEY: ${{ secrets.APP_STORE_CONNECT_API_PRIVATE_KEY }}
+      IOS_CERTIFICATE_P12_BASE64: ${{ secrets.IOS_CERTIFICATE_P12_BASE64 }}
+      IOS_CERTIFICATE_PASSWORD: ${{ secrets.IOS_CERTIFICATE_PASSWORD }}
+      IOS_PROVISIONING_PROFILE_BASE64: ${{ secrets.IOS_PROVISIONING_PROFILE_BASE64 }}
+      IOS_BUNDLE_ID: ${{ vars.IOS_BUNDLE_ID }}
+      KEYCHAIN_PASSWORD: ${{ github.run_id }}-${{ github.run_attempt }}-ios
     steps:
       - uses: actions/checkout@v4
 
@@ -50,6 +149,20 @@ jobs:
         with:
           flutter-version: '3.x'
           channel: stable
+
+      - name: Validate iOS release secrets
+        shell: bash
+        run: |
+          test -n "${API_BASE_URL}" || (echo "Missing API_BASE_URL variable" && exit 1)
+          test -n "${GOOGLE_SERVER_CLIENT_ID}" || (echo "Missing GOOGLE_SERVER_CLIENT_ID secret" && exit 1)
+          test -n "${IOS_GOOGLE_SERVICE_INFO_PLIST_BASE64}" || (echo "Missing IOS_GOOGLE_SERVICE_INFO_PLIST_BASE64 secret" && exit 1)
+          test -n "${APP_STORE_CONNECT_API_KEY_ID}" || (echo "Missing APP_STORE_CONNECT_API_KEY_ID secret" && exit 1)
+          test -n "${APP_STORE_CONNECT_ISSUER_ID}" || (echo "Missing APP_STORE_CONNECT_ISSUER_ID secret" && exit 1)
+          test -n "${APP_STORE_CONNECT_API_PRIVATE_KEY}" || (echo "Missing APP_STORE_CONNECT_API_PRIVATE_KEY secret" && exit 1)
+          test -n "${IOS_CERTIFICATE_P12_BASE64}" || (echo "Missing IOS_CERTIFICATE_P12_BASE64 secret" && exit 1)
+          test -n "${IOS_CERTIFICATE_PASSWORD}" || (echo "Missing IOS_CERTIFICATE_PASSWORD secret" && exit 1)
+          test -n "${IOS_PROVISIONING_PROFILE_BASE64}" || (echo "Missing IOS_PROVISIONING_PROFILE_BASE64 secret" && exit 1)
+          test -n "${IOS_BUNDLE_ID}" || (echo "Missing IOS_BUNDLE_ID variable" && exit 1)
 
       - name: Install dependencies
         working-directory: app
@@ -59,9 +172,183 @@ jobs:
         working-directory: app
         run: dart run build_runner build --delete-conflicting-outputs
 
-      - name: Build iOS (no codesign for CI)
+      - name: Materialize iOS Firebase config
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import base64
+          from pathlib import Path
+          import os
+
+          Path("app/ios/Runner/GoogleService-Info.plist").write_bytes(
+              base64.b64decode(os.environ["IOS_GOOGLE_SERVICE_INFO_PLIST_BASE64"])
+          )
+          PY
+
+      - name: Materialize optional firebase_options.dart override
+        if: env.FIREBASE_OPTIONS_DART_BASE64 != ''
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import base64
+          from pathlib import Path
+          import os
+
+          Path("app/lib/firebase_options.dart").write_bytes(
+              base64.b64decode(os.environ["FIREBASE_OPTIONS_DART_BASE64"])
+          )
+          PY
+
+      - name: Install Apple certificate and provisioning profile
+        shell: bash
+        run: |
+          CERTIFICATE_PATH="$RUNNER_TEMP/build_certificate.p12"
+          PROFILE_PATH="$RUNNER_TEMP/build_pp.mobileprovision"
+          KEYCHAIN_PATH="$RUNNER_TEMP/app-signing.keychain-db"
+
+          python3 - <<'PY'
+          import base64
+          from pathlib import Path
+          import os
+
+          Path(os.environ["RUNNER_TEMP"], "build_certificate.p12").write_bytes(
+              base64.b64decode(os.environ["IOS_CERTIFICATE_P12_BASE64"])
+          )
+          Path(os.environ["RUNNER_TEMP"], "build_pp.mobileprovision").write_bytes(
+              base64.b64decode(os.environ["IOS_PROVISIONING_PROFILE_BASE64"])
+          )
+          PY
+
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security import "$CERTIFICATE_PATH" -P "$IOS_CERTIFICATE_PASSWORD" -A -t cert -f pkcs12 -k "$KEYCHAIN_PATH"
+          security set-key-partition-list -S apple-tool:,apple: -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security list-keychain -d user -s "$KEYCHAIN_PATH"
+
+          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+          cp "$PROFILE_PATH" ~/Library/MobileDevice/Provisioning\ Profiles/build_pp.mobileprovision
+
+      - name: Install App Store Connect API key
+        shell: bash
+        run: |
+          mkdir -p ~/.appstoreconnect/private_keys
+          cat > ~/.appstoreconnect/private_keys/AuthKey_${APP_STORE_CONNECT_API_KEY_ID}.p8 <<EOF
+          ${APP_STORE_CONNECT_API_PRIVATE_KEY}
+          EOF
+          chmod 600 ~/.appstoreconnect/private_keys/AuthKey_${APP_STORE_CONNECT_API_KEY_ID}.p8
+
+      - name: Derive provisioning profile metadata
+        id: profile
+        shell: bash
+        run: |
+          PROFILE_PATH="$RUNNER_TEMP/build_pp.mobileprovision"
+          PROFILE_PLIST="$RUNNER_TEMP/profile.plist"
+          security cms -D -i "$PROFILE_PATH" > "$PROFILE_PLIST"
+          PROFILE_NAME=$(/usr/libexec/PlistBuddy -c 'Print :Name' "$PROFILE_PLIST")
+          TEAM_ID=$(/usr/libexec/PlistBuddy -c 'Print :TeamIdentifier:0' "$PROFILE_PLIST")
+          PROFILE_UUID=$(/usr/libexec/PlistBuddy -c 'Print :UUID' "$PROFILE_PLIST")
+          echo "name=$PROFILE_NAME" >> "$GITHUB_OUTPUT"
+          echo "team_id=$TEAM_ID" >> "$GITHUB_OUTPUT"
+          echo "uuid=$PROFILE_UUID" >> "$GITHUB_OUTPUT"
+
+      - name: Generate export options
+        shell: bash
+        run: |
+          cat > "$RUNNER_TEMP/ExportOptions.plist" <<EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key>
+            <string>app-store</string>
+            <key>signingStyle</key>
+            <string>manual</string>
+            <key>teamID</key>
+            <string>${{ steps.profile.outputs.team_id }}</string>
+            <key>provisioningProfiles</key>
+            <dict>
+              <key>${IOS_BUNDLE_ID}</key>
+              <string>${{ steps.profile.outputs.name }}</string>
+            </dict>
+            <key>stripSwiftSymbols</key>
+            <true/>
+            <key>compileBitcode</key>
+            <false/>
+          </dict>
+          </plist>
+          EOF
+
+      - name: Run tests
         working-directory: app
-        run: flutter build ios --release --no-codesign
+        run: flutter test
+
+      - name: Prepare Flutter iOS configuration
+        working-directory: app
+        run: |
+          flutter build ios --release --config-only \
+            --dart-define=API_BASE_URL="${API_BASE_URL}" \
+            --dart-define=MOCK_AUTH="${MOCK_AUTH}" \
+            --dart-define=PUSH_NOTIFICATIONS_ENABLED="${PUSH_NOTIFICATIONS_ENABLED}" \
+            --dart-define=GOOGLE_SERVER_CLIENT_ID="${GOOGLE_SERVER_CLIENT_ID}"
+
+      - name: Archive signed iOS app
+        working-directory: app
+        shell: bash
+        run: |
+          xcodebuild \
+            -workspace ios/Runner.xcworkspace \
+            -scheme Runner \
+            -configuration Release \
+            -archivePath build/ios/archive/Runner.xcarchive \
+            -destination generic/platform=iOS \
+            DEVELOPMENT_TEAM="${{ steps.profile.outputs.team_id }}" \
+            CODE_SIGN_STYLE=Manual \
+            PROVISIONING_PROFILE_SPECIFIER="${{ steps.profile.outputs.name }}" \
+            PRODUCT_BUNDLE_IDENTIFIER="${IOS_BUNDLE_ID}" \
+            CODE_SIGN_IDENTITY="Apple Distribution" \
+            archive
+
+      - name: Export signed IPA
+        working-directory: app
+        shell: bash
+        run: |
+          xcodebuild -exportArchive \
+            -archivePath build/ios/archive/Runner.xcarchive \
+            -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist" \
+            -exportPath build/ios/ipa
+
+      - name: Upload iOS artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-release
+          path: app/build/ios/ipa/*.ipa
+
+      - name: Resolve IPA path
+        id: ipa
+        shell: bash
+        run: |
+          IPA_PATH=$(find app/build/ios/ipa -maxdepth 1 -name "*.ipa" | head -n 1)
+          test -n "$IPA_PATH" || (echo "No IPA was exported" && exit 1)
+          echo "path=$IPA_PATH" >> "$GITHUB_OUTPUT"
+
+      - name: Upload to TestFlight
+        uses: apple-actions/upload-testflight-build@v4
+        with:
+          app-path: ${{ steps.ipa.outputs.path }}
+          issuer-id: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+          api-key-id: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+          api-private-key: ${{ secrets.APP_STORE_CONNECT_API_PRIVATE_KEY }}
+          backend: AppStoreAPI
+          wait-for-processing: true
+
+      - name: Clean up iOS signing assets
+        if: ${{ always() }}
+        shell: bash
+        run: |
+          security delete-keychain "$RUNNER_TEMP/app-signing.keychain-db" || true
+          rm -f ~/Library/MobileDevice/Provisioning\ Profiles/build_pp.mobileprovision || true
+          rm -f ~/.appstoreconnect/private_keys/AuthKey_${APP_STORE_CONNECT_API_KEY_ID}.p8 || true
 
       - name: Extract version
         id: version

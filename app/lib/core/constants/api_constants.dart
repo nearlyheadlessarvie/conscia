@@ -38,7 +38,7 @@ class ApiConstants {
 
   static const String baseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'http://localhost:5248/api/v1/',
+    defaultValue: 'http://localhost:5248/api/',
   );
 
   // Auth
@@ -130,7 +130,7 @@ class ApiConstants {
   static const String subscriptionStatus = 'subscriptions/status';
   static const String verifyReceipt = 'subscriptions/verify';
 
-  // Health (root-level, not under /api/v1)
+  // Health (root-level, not under /api)
   static String get health => '$_hostUrl/health';
   static String get healthLive => '$_hostUrl/health/live';
   static String get healthReady => '$_hostUrl/health/ready';

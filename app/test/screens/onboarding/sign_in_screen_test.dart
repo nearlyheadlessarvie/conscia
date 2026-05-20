@@ -15,9 +15,9 @@ class _FailingAuthService extends AuthService {
   @override
   Future<AuthTokens> login(String email, String password) {
     throw DioException(
-      requestOptions: RequestOptions(path: '/api/v1/auth/login'),
+      requestOptions: RequestOptions(path: '/api/auth/login'),
       response: Response(
-        requestOptions: RequestOptions(path: '/api/v1/auth/login'),
+        requestOptions: RequestOptions(path: '/api/auth/login'),
         statusCode: 401,
         data: {'error': 'Invalid email or password'},
       ),
@@ -57,9 +57,9 @@ void main() {
     );
 
     final error = DioException(
-      requestOptions: RequestOptions(path: '/api/v1/auth/login'),
+      requestOptions: RequestOptions(path: '/api/auth/login'),
       response: Response(
-        requestOptions: RequestOptions(path: '/api/v1/auth/login'),
+        requestOptions: RequestOptions(path: '/api/auth/login'),
         statusCode: 401,
         data: {'error': 'Invalid email or password'},
       ),
@@ -79,9 +79,9 @@ void main() {
     );
 
     final error = DioException(
-      requestOptions: RequestOptions(path: '/api/v1/auth/google'),
+      requestOptions: RequestOptions(path: '/api/auth/google'),
       response: Response(
-        requestOptions: RequestOptions(path: '/api/v1/auth/google'),
+        requestOptions: RequestOptions(path: '/api/auth/google'),
         statusCode: 500,
         data: {'message': 'Provider unavailable'},
       ),
@@ -102,9 +102,9 @@ void main() {
 
     final appError = AppError.from(
       DioException(
-        requestOptions: RequestOptions(path: '/api/v1/auth/login'),
+        requestOptions: RequestOptions(path: '/api/auth/login'),
         response: Response(
-          requestOptions: RequestOptions(path: '/api/v1/auth/login'),
+          requestOptions: RequestOptions(path: '/api/auth/login'),
           statusCode: 401,
           data: {'error': 'Invalid email or password'},
         ),

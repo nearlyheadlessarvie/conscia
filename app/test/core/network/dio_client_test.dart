@@ -8,6 +8,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
 class _FakeAuthService extends AuthService {
   _FakeAuthService() : super(Dio());
@@ -148,6 +149,7 @@ class _UnauthorizedAdapter implements HttpClientAdapter {
 
 class _OkAdapter implements HttpClientAdapter {
   int fetchCount = 0;
+  RequestOptions? lastRequestOptions;
 
   @override
   Future<ResponseBody> fetch(
@@ -156,6 +158,7 @@ class _OkAdapter implements HttpClientAdapter {
     Future<void>? cancelFuture,
   ) async {
     fetchCount += 1;
+    lastRequestOptions = options;
     return ResponseBody.fromString(
       '{"status":"Healthy","checks":[]}',
       200,
@@ -170,6 +173,15 @@ class _OkAdapter implements HttpClientAdapter {
 }
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+  PackageInfo.setMockInitialValues(
+    appName: 'Conscia',
+    packageName: 'com.getconscia.app',
+    version: '1.0.0',
+    buildNumber: '1',
+    buildSignature: '',
+  );
+
   test('dioProvider stays stable when auth state changes', () {
     final authNotifier = _TestAuthNotifier(
       const AuthState(
@@ -303,6 +315,81 @@ void main() {
 
     expect(response.statusCode, 200);
     expect(adapter.fetchCount, 1);
+  });
+
+  test('injects canonical v=1 query parameter for relative api requests',
+      () async {
+    final authNotifier = _TestAuthNotifier(
+      const AuthState(
+        status: AuthStatus.authenticated,
+        accessToken: 'token',
+        userId: 'user-1',
+      ),
+    );
+    final container = ProviderContainer(
+      overrides: [
+        authProvider.overrideWith((ref) => authNotifier),
+        secureStorageProvider.overrideWithValue(
+          _FakeSecureStorage({'access_token': 'token'}),
+        ),
+        appVersionProvider.overrideWith((ref) async => '1.0.0+1'),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    final adapter = _OkAdapter();
+    final dio = container.read(dioProvider)..httpClientAdapter = adapter;
+
+    await dio.get<dynamic>('/transactions');
+
+    expect(adapter.lastRequestOptions?.queryParameters['v'], '1');
+  });
+
+  test('adds X-Conscia-App-Version header to relative api requests',
+      () async {
+    final authNotifier = _TestAuthNotifier(
+      const AuthState(
+        status: AuthStatus.authenticated,
+        accessToken: 'token',
+        userId: 'user-1',
+      ),
+    );
+    final container = ProviderContainer(
+      overrides: [
+        authProvider.overrideWith((ref) => authNotifier),
+        secureStorageProvider.overrideWithValue(
+          _FakeSecureStorage({'access_token': 'token'}),
+        ),
+        appVersionProvider.overrideWith((ref) async => '1.0.0+1'),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    final adapter = _OkAdapter();
+    final dio = container.read(dioProvider)..httpClientAdapter = adapter;
+
+    await dio.get<dynamic>('/transactions');
+
+    expect(
+      adapter.lastRequestOptions?.headers['X-Conscia-App-Version'],
+      '1.0.0+1',
+    );
+  });
+
+  test('does not inject v=1 for absolute health urls', () async {
+    final container = ProviderContainer(
+      overrides: [
+        appVersionProvider.overrideWith((ref) async => '1.0.0+1'),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    final adapter = _OkAdapter();
+    final dio = container.read(dioProvider)..httpClientAdapter = adapter;
+
+    await dio.get<dynamic>('http://localhost:5248/health/live');
+
+    expect(adapter.lastRequestOptions?.queryParameters.containsKey('v'), isFalse);
   });
 
   test('marks session expired when a retried protected request is still 401',

@@ -1,3 +1,4 @@
+using Asp.Versioning.Builder;
 using Conscia.Api.Extensions;
 using Conscia.Application.DTOs;
 using Conscia.Application.Interfaces;
@@ -7,9 +8,11 @@ namespace Conscia.Api.Endpoints;
 
 public static class RecurringEndpoints
 {
-    public static RouteGroupBuilder MapRecurringEndpoints(this IEndpointRouteBuilder routes)
+    public static RouteGroupBuilder MapRecurringEndpoints(this IEndpointRouteBuilder routes, ApiVersionSet apiVersionSet)
     {
-        var group = routes.MapGroup("/api/v1/recurring")
+        var group = routes.MapGroup("/api/recurring")
+            .WithApiVersionSet(apiVersionSet)
+            .MapToApiVersion(1.0)
             .RequireAuthorization()
             .WithTags("Recurring");
 
@@ -25,7 +28,7 @@ public static class RecurringEndpoints
 
             var userId = ctx.User.GetUserId();
             var schedule = await svc.CreateAsync(userId, dto, ctx.RequestAborted);
-            return Results.Created($"/api/v1/recurring/{schedule.Id}", RecurringScheduleResponseDto.From(schedule));
+            return Results.Created($"/api/recurring/{schedule.Id}", RecurringScheduleResponseDto.From(schedule));
         }).WithName("CreateRecurring");
 
         group.MapGet("/", async (HttpContext ctx, IRecurringScheduleService svc) =>

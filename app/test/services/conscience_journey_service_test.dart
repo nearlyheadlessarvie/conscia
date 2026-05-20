@@ -11,7 +11,7 @@ void main() {
   tearDown(AppError.resetForTests);
 
   test('fetchJourney decodes the journey summary', () async {
-    final dio = Dio(BaseOptions(baseUrl: 'https://example.test/api/v1/'))
+    final dio = Dio(BaseOptions(baseUrl: 'https://example.test/api/'))
       ..httpClientAdapter = _JsonAdapter((options) {
         expect(options.method, 'GET');
         expect(options.path, ApiConstants.conscienceJourney);
@@ -29,7 +29,7 @@ void main() {
   test('recordEvent posts idempotent event data and decodes the update',
       () async {
     Map<String, dynamic>? capturedBody;
-    final dio = Dio(BaseOptions(baseUrl: 'https://example.test/api/v1/'))
+    final dio = Dio(BaseOptions(baseUrl: 'https://example.test/api/'))
       ..httpClientAdapter = _JsonAdapter((options) {
         expect(options.method, 'POST');
         expect(options.path, ApiConstants.conscienceJourneyEvents);
@@ -65,7 +65,7 @@ void main() {
       referenceIdFactory: () => 'REF12345',
       logger: (_) {},
     );
-    final dio = Dio(BaseOptions(baseUrl: 'https://example.test/api/v1/'))
+    final dio = Dio(BaseOptions(baseUrl: 'https://example.test/api/'))
       ..httpClientAdapter = _JsonAdapter((_) {
         return ResponseBody.fromString('server sad', 500);
       });

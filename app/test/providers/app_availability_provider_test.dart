@@ -14,14 +14,21 @@ class _FakeConnectivityService implements ConnectivityService {
 }
 
 class _FakeApiAvailabilityService implements ApiAvailabilityService {
-  _FakeApiAvailabilityService({this.shouldThrow = false});
+  _FakeApiAvailabilityService({
+    this.shouldThrow = false,
+    this.shouldRequireUpgrade = false,
+  });
 
   final bool shouldThrow;
+  final bool shouldRequireUpgrade;
   int callCount = 0;
 
   @override
   Future<void> checkLiveness() async {
     callCount += 1;
+    if (shouldRequireUpgrade) {
+      throw const ApiUpgradeRequiredException('A newer version is required.');
+    }
     if (shouldThrow) {
       throw const ApiUnavailableException('API unavailable');
     }
@@ -102,6 +109,24 @@ void main() {
     expect(notifier.state.issue, AvailabilityIssue.updateRequired);
     expect(notifier.state.updateUrl, 'https://example.com/store');
     expect(notifier.state.availableVersion, '1.1.0');
+  });
+
+  test('refresh reports required update when backend rejects old app version',
+      () async {
+    final notifier = AppAvailabilityNotifier(
+      connectivityService: _FakeConnectivityService(true),
+      apiAvailabilityService: _FakeApiAvailabilityService(
+        shouldRequireUpgrade: true,
+      ),
+      appUpdateService: _FakeAppUpdateService(const AppUpdateCheckResult()),
+      autoRefresh: false,
+      refreshOnInit: false,
+    );
+
+    await notifier.refresh();
+
+    expect(notifier.state.issue, AvailabilityIssue.updateRequired);
+    expect(notifier.state.errorMessage, contains('required'));
   });
 
   test('refresh clears blockers when device, api, and store checks pass',

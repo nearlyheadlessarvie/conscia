@@ -1,6 +1,7 @@
 import 'package:conscia_app/widgets/recurring_schedule_section.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 void main() {
   testWidgets('shows cadence controls when recurring is enabled', (
@@ -26,7 +27,16 @@ void main() {
     expect(find.text('Weekly'), findsOneWidget);
     expect(find.text('Monthly'), findsOneWidget);
     expect(find.text('Yearly'), findsOneWidget);
+    expect(find.text('Recurring'), findsOneWidget);
+    expect(find.text('RECURRING'), findsNothing);
     expect(find.text('END DATE'), findsOneWidget);
     expect(find.text('Never ends'), findsWidgets);
+
+    final title = tester.widget<Text>(find.text('Recurring'));
+    final expected = GoogleFonts.libreBaskerville(
+      textStyle: ThemeData().textTheme.titleLarge,
+      fontWeight: FontWeight.w700,
+    );
+    expect(title.style?.fontFamily, expected.fontFamily);
   });
 }

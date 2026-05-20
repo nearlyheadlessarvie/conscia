@@ -49,7 +49,7 @@ public class TransactionEndpointTests : IClassFixture<TestWebAppFactory>
                 CreatedAt = DateTime.UtcNow
             });
 
-        var response = await _client.PostAsJsonAsync("/api/v1/transactions", new
+        var response = await _client.PostAsJsonAsync("/api/transactions", new
         {
             type = 0,
             amount = 42.50,
@@ -93,7 +93,7 @@ public class TransactionEndpointTests : IClassFixture<TestWebAppFactory>
                 TotalCount = 1
             });
 
-        var response = await _client.GetAsync("/api/v1/transactions");
+        var response = await _client.GetAsync("/api/transactions");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
@@ -130,7 +130,7 @@ public class TransactionEndpointTests : IClassFixture<TestWebAppFactory>
                 TotalCount = 1
             });
 
-        var response = await _client.GetAsync("/api/v1/transactions?scope=family");
+        var response = await _client.GetAsync("/api/transactions?scope=family");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         _factory.TransactionServiceMock.Verify(s => s.ListFamilyAsync(
@@ -154,7 +154,7 @@ public class TransactionEndpointTests : IClassFixture<TestWebAppFactory>
             .Setup(s => s.GetByIdAsync(UserId, It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((Transaction?)null);
 
-        var response = await _client.GetAsync($"/api/v1/transactions/{Guid.NewGuid()}");
+        var response = await _client.GetAsync($"/api/transactions/{Guid.NewGuid()}");
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
@@ -187,7 +187,7 @@ public class TransactionEndpointTests : IClassFixture<TestWebAppFactory>
                 }
             });
 
-        var response = await _client.GetAsync($"/api/v1/transactions/{transactionId}");
+        var response = await _client.GetAsync($"/api/transactions/{transactionId}");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
@@ -221,7 +221,7 @@ public class TransactionEndpointTests : IClassFixture<TestWebAppFactory>
                 Date = DateTime.UtcNow
             });
 
-        var response = await _client.PutAsJsonAsync($"/api/v1/transactions/{transactionId}", new
+        var response = await _client.PutAsJsonAsync($"/api/transactions/{transactionId}", new
         {
             counterparty = "Updated Cafe"
         });
@@ -242,7 +242,7 @@ public class TransactionEndpointTests : IClassFixture<TestWebAppFactory>
             .Setup(s => s.DeleteAsync(UserId, It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 
-        var response = await _client.DeleteAsync($"/api/v1/transactions/{Guid.NewGuid()}");
+        var response = await _client.DeleteAsync($"/api/transactions/{Guid.NewGuid()}");
 
         Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
     }
@@ -250,7 +250,7 @@ public class TransactionEndpointTests : IClassFixture<TestWebAppFactory>
     [Fact]
     public async Task CreateTransaction_InvalidAmount_Returns400()
     {
-        var response = await _client.PostAsJsonAsync("/api/v1/transactions", new
+        var response = await _client.PostAsJsonAsync("/api/transactions", new
         {
             type = 0,
             amount = 0,
@@ -269,7 +269,7 @@ public class TransactionEndpointTests : IClassFixture<TestWebAppFactory>
             .Setup(s => s.IsPremiumAsync(UserId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(false);
 
-        var response = await _client.PostAsJsonAsync("/api/v1/transactions", new
+        var response = await _client.PostAsJsonAsync("/api/transactions", new
         {
             type = 0,
             amount = 42.50,
@@ -307,7 +307,7 @@ public class TransactionEndpointTests : IClassFixture<TestWebAppFactory>
                 Date = DateTime.UtcNow
             });
 
-        var response = await _client.PutAsJsonAsync($"/api/v1/transactions/{transactionId}", new
+        var response = await _client.PutAsJsonAsync($"/api/transactions/{transactionId}", new
         {
             category = "Travel"
         });

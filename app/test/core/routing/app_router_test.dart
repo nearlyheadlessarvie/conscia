@@ -184,6 +184,41 @@ void main() {
     expect(find.text('Build a calmer money rhythm'), findsNothing);
   });
 
+  testWidgets('onboarding landing route redirects to sign in', (tester) async {
+    SharedPreferences.setMockInitialValues({
+      'has_completed_onboarding': false,
+    });
+    final fakeAuthNotifier = _TestAuthNotifier(const AuthState());
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          authProvider.overrideWith((ref) => fakeAuthNotifier),
+        ],
+        child: Consumer(
+          builder: (context, ref, _) {
+            final router = ref.watch(appRouterProvider);
+            return MaterialApp.router(routerConfig: router);
+          },
+        ),
+      ),
+    );
+
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+
+    final router = tester
+        .widget<MaterialApp>(find.byType(MaterialApp))
+        .routerConfig! as dynamic;
+    router.go(AppRoutes.onboarding);
+
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+
+    expect(find.text('Welcome back'), findsOneWidget);
+    expect(find.text('Build a calmer money rhythm'), findsNothing);
+  });
+
   testWidgets(
     'onboarding profile route accepts generic map extras',
     (tester) async {

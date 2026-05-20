@@ -50,7 +50,7 @@ void main() {
         },
       );
     });
-    final dio = Dio(BaseOptions(baseUrl: 'https://api.example.com/api/v1/'))
+    final dio = Dio(BaseOptions(baseUrl: 'https://api.example.com/api/'))
       ..httpClientAdapter = adapter;
 
     final profile = await UserService(dio).updateProfile(
@@ -81,7 +81,7 @@ void main() {
         },
       );
     });
-    final dio = Dio(BaseOptions(baseUrl: 'https://api.example.com/api/v1/'))
+    final dio = Dio(BaseOptions(baseUrl: 'https://api.example.com/api/'))
       ..httpClientAdapter = adapter;
 
     final upload = await UserService(dio).createProfilePictureUpload(
@@ -108,7 +108,7 @@ void main() {
     final uploadDio = Dio()..httpClientAdapter = uploadAdapter;
 
     await UserService(
-      Dio(BaseOptions(baseUrl: 'https://api.example.com/api/v1/')),
+      Dio(BaseOptions(baseUrl: 'https://api.example.com/api/')),
       uploadDio: uploadDio,
     ).uploadProfilePicture(
       uploadUrl: 'https://s3.example.com/upload',
@@ -135,7 +135,7 @@ void main() {
     final uploadAdapter = _RecordingAdapter((_, __) {
       fail('Direct S3 upload should not be used when proxyUploadUrl is present');
     });
-    final dio = Dio(BaseOptions(baseUrl: 'https://api.example.com/api/v1/'))
+    final dio = Dio(BaseOptions(baseUrl: 'https://api.example.com/api/'))
       ..httpClientAdapter = apiAdapter;
     final uploadDio = Dio()..httpClientAdapter = uploadAdapter;
 

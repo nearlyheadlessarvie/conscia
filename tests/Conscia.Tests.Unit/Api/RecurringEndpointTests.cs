@@ -46,7 +46,7 @@ public class RecurringEndpointTests : IClassFixture<TestWebAppFactory>
                 IsActive = true,
             });
 
-        var response = await _client.PostAsJsonAsync("/api/v1/recurring", new
+        var response = await _client.PostAsJsonAsync("/api/recurring", new
         {
             type = 0,
             amount = 1500,

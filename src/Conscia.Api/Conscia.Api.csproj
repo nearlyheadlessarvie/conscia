@@ -9,6 +9,8 @@
 
   <ItemGroup>
     <PackageReference Include="Amazon.Lambda.AspNetCoreServer.Hosting" Version="1.10.0" />
+    <PackageReference Include="Asp.Versioning.Http" Version="8.1.0" />
+    <PackageReference Include="Asp.Versioning.Mvc.ApiExplorer" Version="8.1.0" />
     <PackageReference Include="AWSSDK.Extensions.NETCore.Setup" Version="4.0.3.35" />
     <PackageReference Include="AWSSDK.Lambda" Version="4.*" />
     <PackageReference Include="FluentValidation.DependencyInjectionExtensions" Version="12.1.1" />

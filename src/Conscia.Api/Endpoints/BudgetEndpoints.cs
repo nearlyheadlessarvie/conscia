@@ -1,3 +1,4 @@
+using Asp.Versioning.Builder;
 using Conscia.Api.Extensions;
 using Conscia.Application.DTOs;
 using Conscia.Application.Interfaces;
@@ -7,9 +8,11 @@ namespace Conscia.Api.Endpoints;
 
 public static class BudgetEndpoints
 {
-    public static RouteGroupBuilder MapBudgetEndpoints(this IEndpointRouteBuilder routes)
+    public static RouteGroupBuilder MapBudgetEndpoints(this IEndpointRouteBuilder routes, ApiVersionSet apiVersionSet)
     {
-        var group = routes.MapGroup("/api/v1/budgets")
+        var group = routes.MapGroup("/api/budgets")
+            .WithApiVersionSet(apiVersionSet)
+            .MapToApiVersion(1.0)
             .RequireAuthorization()
             .WithTags("Budgets");
 
@@ -28,7 +31,7 @@ public static class BudgetEndpoints
             var userId = ctx.User.GetUserId();
             var budget = await svc.CreateAsync(userId, dto, ctx.RequestAborted);
             var status = await svc.GetStatusByIdAsync(userId, budget.Id, ct: ctx.RequestAborted);
-            return Results.Created($"/api/v1/budgets/{budget.Id}", new
+            return Results.Created($"/api/budgets/{budget.Id}", new
             {
                 budget.Id,
                 budget.UserId,

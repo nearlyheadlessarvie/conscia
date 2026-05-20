@@ -259,7 +259,7 @@ public class UserExportEndpointTests : IClassFixture<TestWebAppFactory>
                 IsActive = true
             }]);
 
-        var response = await _client.GetAsync("/api/v1/users/me/export");
+        var response = await _client.GetAsync("/api/users/me/export");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         await using var stream = await response.Content.ReadAsStreamAsync();
@@ -288,7 +288,7 @@ public class UserExportEndpointTests : IClassFixture<TestWebAppFactory>
     {
         var client = _factory.CreateClient();
 
-        var response = await client.GetAsync("/api/v1/users/me/export");
+        var response = await client.GetAsync("/api/users/me/export");
 
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
