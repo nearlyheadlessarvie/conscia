@@ -31,10 +31,10 @@ CDK now creates and validates certificates when `CONSCIA_DOMAIN_NAME` and `ROUTE
 
 | Name | Type | Used By | Notes |
 |---|---|---|---|
-| `API_BASE_URL` | Variable | Future `release-app.yml` / Flutter web app build | `https://api.getconscia.com/api/`. Keep the trailing slash. The app injects `?v=1` automatically. |
-| `MOCK_AUTH` | Variable | Future `release-app.yml` | `false` for production. |
-| `GOOGLE_SERVER_CLIENT_ID` | Secret | Future `release-app.yml` | Google web/server OAuth client ID used by native Google sign-in. |
-| `PUSH_NOTIFICATIONS_ENABLED` | Variable | Future `release-app.yml` | `true` only after Firebase is fully configured. |
+| `API_BASE_URL` | Variable | `release-app.yml` / Flutter web app build | `https://api.getconscia.com/api/`. Keep the trailing slash. The app injects `?v=1` automatically. |
+| `MOCK_AUTH` | Variable | `release-app.yml` | `false` for production. |
+| `GOOGLE_SERVER_CLIENT_ID` | Secret | `release-app.yml` | Google web/server OAuth client ID used by native Google sign-in. |
+| `PUSH_NOTIFICATIONS_ENABLED` | Variable | `release-app.yml` | `true` only after Firebase is fully configured. |
 
 ## API Runtime Secrets
 
@@ -64,9 +64,9 @@ Only needed when mobile Firebase is enabled in CI.
 
 | Name | Type | Used By | Notes |
 |---|---|---|---|
-| `ANDROID_GOOGLE_SERVICES_JSON_BASE64` | Secret | Future `release-app.yml` | Writes to `app/android/app/google-services.json`. |
-| `IOS_GOOGLE_SERVICE_INFO_PLIST_BASE64` | Secret | Future `release-app.yml` | Writes to `app/ios/Runner/GoogleService-Info.plist`. |
-| `FIREBASE_OPTIONS_DART_BASE64` | Secret | Future `release-app.yml` | Optional if generated `app/lib/firebase_options.dart` is environment-specific and not committed. |
+| `ANDROID_GOOGLE_SERVICES_JSON_BASE64` | Secret | `release-app.yml` | Writes to `app/android/app/google-services.json`. |
+| `IOS_GOOGLE_SERVICE_INFO_PLIST_BASE64` | Secret | `release-app.yml` | Writes to `app/ios/Runner/GoogleService-Info.plist`. |
+| `FIREBASE_OPTIONS_DART_BASE64` | Secret | `release-app.yml` | Optional if generated `app/lib/firebase_options.dart` is environment-specific and not committed. |
 
 ## Android Signing And Distribution
 
@@ -74,11 +74,11 @@ Only needed when CI starts producing store-ready Android releases.
 
 | Name | Type | Used By | Notes |
 |---|---|---|---|
-| `ANDROID_KEYSTORE_BASE64` | Secret | Future `release-app.yml` | Release keystore encoded as base64. |
-| `ANDROID_KEYSTORE_PASSWORD` | Secret | Future `release-app.yml` | Keystore password. |
-| `ANDROID_KEY_ALIAS` | Secret | Future `release-app.yml` | Release key alias. |
-| `ANDROID_KEY_PASSWORD` | Secret | Future `release-app.yml` | Release key password. |
-| `GOOGLE_PLAY_DEPLOY_SERVICE_ACCOUNT_JSON` | Secret | Future Play upload | Service account with Play Console release permissions. Can be same project as subscription validation, but keep permissions scoped. |
+| `ANDROID_KEYSTORE_BASE64` | Secret | `release-app.yml` | Release keystore encoded as base64. |
+| `ANDROID_KEYSTORE_PASSWORD` | Secret | `release-app.yml` | Keystore password. |
+| `ANDROID_KEY_ALIAS` | Secret | `release-app.yml` | Release key alias. |
+| `ANDROID_KEY_PASSWORD` | Secret | `release-app.yml` | Release key password. |
+| `GOOGLE_PLAY_DEPLOY_SERVICE_ACCOUNT_JSON` | Secret | `release-app.yml` Play internal upload | Service account with Play Console release permissions. Can be same project as subscription validation, but keep permissions scoped. |
 
 ## iOS Signing And Distribution
 
@@ -86,13 +86,13 @@ Only needed when CI starts producing signed iOS releases.
 
 | Name | Type | Used By | Notes |
 |---|---|---|---|
-| `APP_STORE_CONNECT_API_KEY_ID` | Secret | Future `release-app.yml` | App Store Connect API key ID. |
-| `APP_STORE_CONNECT_ISSUER_ID` | Secret | Future `release-app.yml` | App Store Connect issuer ID. |
-| `APP_STORE_CONNECT_API_PRIVATE_KEY` | Secret | Future `release-app.yml` | Private key contents. Preserve line breaks or store as base64. |
-| `IOS_CERTIFICATE_P12_BASE64` | Secret | Future `release-app.yml` | Signing certificate. |
-| `IOS_CERTIFICATE_PASSWORD` | Secret | Future `release-app.yml` | Certificate password. |
-| `IOS_PROVISIONING_PROFILE_BASE64` | Secret | Future `release-app.yml` | Provisioning profile. |
-| `IOS_BUNDLE_ID` | Variable | Future `release-app.yml` | Example: `com.conscia.app`. |
+| `APP_STORE_CONNECT_API_KEY_ID` | Secret | `release-app.yml` TestFlight upload | App Store Connect API key ID. |
+| `APP_STORE_CONNECT_ISSUER_ID` | Secret | `release-app.yml` TestFlight upload | App Store Connect issuer ID. |
+| `APP_STORE_CONNECT_API_PRIVATE_KEY` | Secret | `release-app.yml` TestFlight upload | Private key contents. Preserve line breaks or store as base64. |
+| `IOS_CERTIFICATE_P12_BASE64` | Secret | `release-app.yml` | Signing certificate. |
+| `IOS_CERTIFICATE_PASSWORD` | Secret | `release-app.yml` | Certificate password. |
+| `IOS_PROVISIONING_PROFILE_BASE64` | Secret | `release-app.yml` | Provisioning profile. |
+| `IOS_BUNDLE_ID` | Variable | `release-app.yml` | Example: `com.conscia.app`. |
 
 ## SES Email
 

@@ -232,6 +232,14 @@ aws cloudformation describe-stacks \
 
 This phase is only needed when CI should produce store-ready Android and iOS builds.
 
+The current `release-app.yml` now targets low-risk distribution channels by default:
+
+- Android uploads signed `.aab` releases to the Google Play `internal` track
+- iOS uploads signed `.ipa` releases to TestFlight
+- both artifacts are also preserved in GitHub Actions for debugging and manual recovery
+
+Production rollout and store promotion are still manual after these uploads succeed.
+
 ### Firebase Client Files
 
 #### `ANDROID_GOOGLE_SERVICES_JSON_BASE64`
@@ -275,6 +283,8 @@ base64 -i conscia-release.jks | tr -d '\n' | gh secret set ANDROID_KEYSTORE_BASE
 
 Service account JSON with Play Console release permissions.
 
+The app workflow uses this to upload the signed bundle directly to the Play `internal` track.
+
 ### iOS Signing And Deployment
 
 #### `APP_STORE_CONNECT_API_KEY_ID`
@@ -292,6 +302,8 @@ Service account JSON with Play Console release permissions.
 #### `IOS_BUNDLE_ID`
 
 Usually `com.conscia.app`.
+
+The app workflow uses these iOS secrets to sign the archive on a macOS runner and upload the resulting IPA to TestFlight.
 
 ---
 

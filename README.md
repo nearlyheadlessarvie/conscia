@@ -501,6 +501,14 @@ Component releases are prepared with release PRs rather than cut directly from e
 
 When an app release PR is prepared, the repo also syncs the API compatibility window so the backend continues to support the current app build and the previous one. See [release-matrix.md](./release-matrix.md) for the live contract and support window.
 
+The app release workflow now builds signed mobile artifacts and targets non-production store channels by default:
+
+- Android uploads to Google Play `internal`
+- iOS uploads to TestFlight
+- both artifacts are also uploaded to GitHub Actions as release artifacts
+
+Promotion to production tracks remains manual.
+
 All endpoints (except Auth and health) require a Bearer JWT in the `Authorization` header.
 
 ### System
