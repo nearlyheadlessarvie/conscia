@@ -523,7 +523,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.widgetWithText(FilledButton, 'Worth It').first);
     await tester.pump();
-    await tester.pump(const Duration(milliseconds: 460));
+    await tester.pump(const Duration(milliseconds: 620));
 
     expect(transactionService.updatedRegretTransactionId, 'tx-reflect');
     expect(transactionService.updatedRegretLevel, 0);
@@ -684,7 +684,7 @@ void main() {
 
     await tester.tap(find.widgetWithText(FilledButton, 'Worth It').first);
     await tester.pump();
-    await tester.pump(const Duration(milliseconds: 460));
+    await tester.pump(const Duration(milliseconds: 620));
 
     expect(
       find.descendant(

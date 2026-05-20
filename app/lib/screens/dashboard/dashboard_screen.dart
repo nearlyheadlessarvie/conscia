@@ -765,10 +765,19 @@ class _DashboardReflectQueue extends StatefulWidget {
   State<_DashboardReflectQueue> createState() => _DashboardReflectQueueState();
 }
 
+enum _ReflectDeckMotion {
+  worthIt,
+  notSure,
+  regret,
+}
+
 class _DashboardReflectQueueState extends State<_DashboardReflectQueue> {
-  static const _advanceDuration = Duration(milliseconds: 420);
+  static const _advanceDuration = Duration(milliseconds: 560);
 
   late List<Transaction> _visiblePrompts;
+  List<Transaction>? _bufferedExternalPrompts;
+  Transaction? _exitingPrompt;
+  _ReflectDeckMotion? _motion;
   bool _isAdvancing = false;
 
   @override
@@ -782,17 +791,18 @@ class _DashboardReflectQueueState extends State<_DashboardReflectQueue> {
     super.didUpdateWidget(oldWidget);
     final oldIds = oldWidget.prompts.map((tx) => tx.id).toList(growable: false);
     final newIds = widget.prompts.map((tx) => tx.id).toList(growable: false);
-    if (oldIds.join('|') != newIds.join('|')) {
-      final currentIds =
-          _visiblePrompts.map((tx) => tx.id).toSet();
-      _visiblePrompts = widget.prompts
-          .where((tx) => currentIds.contains(tx.id) || !_isAdvancing)
-          .toList(growable: true);
-      if (_visiblePrompts.isEmpty) {
-        _visiblePrompts = List<Transaction>.from(widget.prompts);
-      }
-      setState(() {});
+    if (oldIds.join('|') == newIds.join('|')) {
+      return;
     }
+
+    if (_isAdvancing) {
+      _bufferedExternalPrompts = List<Transaction>.from(widget.prompts);
+      return;
+    }
+
+    setState(() {
+      _syncVisiblePrompts(widget.prompts);
+    });
   }
 
   @override
@@ -801,114 +811,181 @@ class _DashboardReflectQueueState extends State<_DashboardReflectQueue> {
       return const SizedBox.shrink();
     }
 
-    final activePrompt = _visiblePrompts.first;
-    final remainingPromptCount = (_visiblePrompts.length - 1).clamp(0, 99);
-    final displayCounterparty = activePrompt.description.isNotEmpty
-        ? activePrompt.description
-        : 'Unknown';
+    final activePrompt = _visiblePrompts.firstOrNull;
+    final remainingPromptCount =
+        ((activePrompt == null ? 0 : _visiblePrompts.length) - 1).clamp(0, 99);
 
     return Stack(
       key: const ValueKey('dashboard-reflect-stack-preview'),
       clipBehavior: Clip.none,
       children: [
-        if (remainingPromptCount > 0)
+        if (remainingPromptCount > 0 || (_isAdvancing && activePrompt != null))
           const Positioned(
             key: ValueKey('dashboard-reflect-ghost-back'),
-            left: 14,
-            right: 14,
-            top: 16,
+            left: 18,
+            right: 18,
+            top: 24,
             child: _ReflectQueueGhostLayer(
-              height: 148,
+              height: 154,
               radius: 24,
-              alpha: 0.42,
+              alpha: 0.48,
             ),
           ),
-        if (remainingPromptCount > 0)
+        if (remainingPromptCount > 0 || (_isAdvancing && activePrompt != null))
           const Positioned(
             key: ValueKey('dashboard-reflect-ghost-front'),
-            left: 8,
-            right: 8,
-            top: 8,
+            left: 10,
+            right: 10,
+            top: 12,
             child: _ReflectQueueGhostLayer(
-              height: 152,
+              height: 158,
               radius: 24,
-              alpha: 0.28,
+              alpha: 0.34,
             ),
           ),
-        AnimatedSwitcher(
-          duration: _advanceDuration,
-          switchInCurve: Curves.easeOutCubic,
-          switchOutCurve: Curves.easeInCubic,
-          layoutBuilder: (currentChild, previousChildren) {
-            return Stack(
-              alignment: Alignment.topCenter,
-              children: <Widget>[
-                ...previousChildren,
-                if (currentChild != null) currentChild,
-              ],
-            );
-          },
-          transitionBuilder: (child, animation) {
-            final fade = CurvedAnimation(
-              parent: animation,
-              curve: Curves.easeOutCubic,
-            );
-            final scale = Tween<double>(begin: 0.94, end: 1).animate(fade);
-            final slide =
-                Tween<Offset>(begin: const Offset(0, 0.065), end: Offset.zero)
-                    .animate(fade);
-            return FadeTransition(
-              opacity: fade,
-              child: SlideTransition(
-                position: slide,
-                child: ScaleTransition(
-                  scale: scale,
-                  child: child,
-                ),
-              ),
-            );
-          },
-          child: KeyedSubtree(
-            key: ValueKey(activePrompt.id),
-            child: RegretPromptCard(
-              categoryBadge: TransactionTile.badgeFor(
-                activePrompt.category,
-                size: 30,
-                filled: false,
-              ),
-              counterparty: displayCounterparty,
-              amount: activePrompt.amount.abs(),
-              currencyCode: activePrompt.currencyCode,
-              date: activePrompt.date,
-              queueHint: remainingPromptCount > 0
-                  ? '$remainingPromptCount more moments waiting'
-                  : null,
-              onWorthIt: _isAdvancing
-                  ? null
-                  : () => _advanceQueue(activePrompt, 'worth_it'),
-              onNotSure: _isAdvancing
-                  ? null
-                  : () => _advanceQueue(activePrompt, 'not_sure'),
-              onRegret: _isAdvancing
-                  ? null
-                  : () => _advanceQueue(activePrompt, 'regret'),
-              onDismiss: _isAdvancing ? null : () => _dismiss(activePrompt),
-            ),
-          ),
-        ),
+        if (activePrompt != null) _buildIncomingCard(activePrompt, remainingPromptCount),
+        if (_exitingPrompt != null) _buildOutgoingCard(_exitingPrompt!),
       ],
+    );
+  }
+
+  Widget _buildIncomingCard(Transaction prompt, int remainingPromptCount) {
+    final animationValue = _isAdvancing ? 1.0 : 0.0;
+    return TweenAnimationBuilder<double>(
+      key: ValueKey('dashboard-reflect-incoming-${prompt.id}'),
+      tween: Tween<double>(begin: 0, end: animationValue),
+      duration: _advanceDuration,
+      curve: Curves.easeOutCubic,
+      child: _buildPromptCard(
+        prompt,
+        queueHint: remainingPromptCount > 0
+            ? '$remainingPromptCount more moments waiting'
+            : null,
+        onWorthIt: _isAdvancing ? null : () => _advanceQueue(prompt, 'worth_it'),
+        onNotSure: _isAdvancing ? null : () => _advanceQueue(prompt, 'not_sure'),
+        onRegret: _isAdvancing ? null : () => _advanceQueue(prompt, 'regret'),
+        onDismiss: _isAdvancing ? null : () => _dismiss(prompt),
+      ),
+      builder: (context, value, child) {
+        final translateY = _isAdvancing ? (18 * (1 - value)) : 0.0;
+        final scale = _isAdvancing ? (0.955 + (0.045 * value)) : 1.0;
+        final opacity = _isAdvancing ? (0.72 + (0.28 * value)) : 1.0;
+        return Opacity(
+          opacity: opacity.clamp(0, 1),
+          child: Transform.translate(
+            offset: Offset(0, translateY),
+            child: Transform.scale(
+              scale: scale,
+              alignment: Alignment.topCenter,
+              child: child,
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildOutgoingCard(Transaction prompt) {
+    final motion = _motion ?? _ReflectDeckMotion.notSure;
+    return TweenAnimationBuilder<double>(
+      key: ValueKey('dashboard-reflect-outgoing-${prompt.id}-${motion.name}'),
+      tween: Tween<double>(begin: 0, end: 1),
+      duration: _advanceDuration,
+      curve: Curves.easeInOutCubic,
+      child: IgnorePointer(
+        child: _buildPromptCard(
+          prompt,
+          queueHint: (_visiblePrompts.length - 1).clamp(0, 99) > 0
+              ? '${(_visiblePrompts.length - 1).clamp(0, 99)} more moments waiting'
+              : null,
+          onWorthIt: null,
+          onNotSure: null,
+          onRegret: null,
+          onDismiss: null,
+        ),
+      ),
+      builder: (context, value, child) {
+        final dx = switch (motion) {
+          _ReflectDeckMotion.worthIt => -92 * value,
+          _ReflectDeckMotion.regret => 92 * value,
+          _ReflectDeckMotion.notSure => 0.0,
+        };
+        final dy = switch (motion) {
+          _ReflectDeckMotion.notSure => -12 * value,
+          _ => -4 * value,
+        };
+        final scale = switch (motion) {
+          _ReflectDeckMotion.notSure => 1 - (0.08 * value),
+          _ => 1 - (0.03 * value),
+        };
+        final opacity = 1 - (0.82 * value);
+        return Opacity(
+          opacity: opacity.clamp(0, 1),
+          child: Transform.translate(
+            offset: Offset(dx, dy),
+            child: Transform.scale(
+              scale: scale,
+              alignment: Alignment.topCenter,
+              child: child,
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildPromptCard(
+    Transaction prompt, {
+    required String? queueHint,
+    required VoidCallback? onWorthIt,
+    required VoidCallback? onNotSure,
+    required VoidCallback? onRegret,
+    required VoidCallback? onDismiss,
+  }) {
+    final displayCounterparty =
+        prompt.description.isNotEmpty ? prompt.description : 'Unknown';
+    return RegretPromptCard(
+      categoryBadge: TransactionTile.badgeFor(
+        prompt.category,
+        size: 30,
+        filled: false,
+      ),
+      counterparty: displayCounterparty,
+      amount: prompt.amount.abs(),
+      currencyCode: prompt.currencyCode,
+      date: prompt.date,
+      queueHint: queueHint,
+      onWorthIt: onWorthIt,
+      onNotSure: onNotSure,
+      onRegret: onRegret,
+      onDismiss: onDismiss,
     );
   }
 
   Future<void> _advanceQueue(Transaction tx, String feeling) async {
     if (_isAdvancing || _visiblePrompts.isEmpty) return;
+    final nextVisiblePrompts = List<Transaction>.from(_visiblePrompts)..removeAt(0);
     setState(() {
       _isAdvancing = true;
-      _visiblePrompts = List<Transaction>.from(_visiblePrompts)..removeAt(0);
+      _motion = switch (feeling) {
+        'worth_it' => _ReflectDeckMotion.worthIt,
+        'regret' => _ReflectDeckMotion.regret,
+        _ => _ReflectDeckMotion.notSure,
+      };
+      _exitingPrompt = tx;
+      _visiblePrompts = nextVisiblePrompts;
     });
     await Future<void>.delayed(_advanceDuration);
     if (mounted) {
-      setState(() => _isAdvancing = false);
+      setState(() {
+        _isAdvancing = false;
+        _exitingPrompt = null;
+        _motion = null;
+        if (_bufferedExternalPrompts != null) {
+          _syncVisiblePrompts(_bufferedExternalPrompts!);
+          _bufferedExternalPrompts = null;
+        }
+      });
     }
     unawaited(widget.onReflect(tx, feeling));
   }
@@ -919,6 +996,22 @@ class _DashboardReflectQueueState extends State<_DashboardReflectQueue> {
       _visiblePrompts = List<Transaction>.from(_visiblePrompts)..removeAt(0);
     });
     widget.onDismiss(tx);
+  }
+
+  void _syncVisiblePrompts(List<Transaction> externalPrompts) {
+    final currentIds = _visiblePrompts.map((tx) => tx.id).toSet();
+    final retained = externalPrompts
+        .where((tx) => currentIds.contains(tx.id))
+        .toList(growable: true);
+    if (retained.isEmpty) {
+      _visiblePrompts = List<Transaction>.from(externalPrompts);
+    } else {
+      final retainedIds = retained.map((tx) => tx.id).toSet();
+      retained.addAll(
+        externalPrompts.where((tx) => !retainedIds.contains(tx.id)),
+      );
+      _visiblePrompts = retained;
+    }
   }
 }
 
