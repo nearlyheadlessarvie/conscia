@@ -187,6 +187,29 @@ class CategoryIcons {
     CategoryIconOption(key: 'other', label: 'Other'),
   ];
 
+  static const List<CategoryIconOption> trialFontIconOptions = [
+    CategoryIconOption(key: 'groceries', label: 'Groceries'),
+    CategoryIconOption(key: 'dining', label: 'Dining'),
+    CategoryIconOption(key: 'transport', label: 'Transport'),
+    CategoryIconOption(key: 'shopping', label: 'Shopping'),
+    CategoryIconOption(key: 'health', label: 'Health'),
+    CategoryIconOption(key: 'bills', label: 'Bills'),
+    CategoryIconOption(key: 'education', label: 'Education'),
+    CategoryIconOption(key: 'travel', label: 'Travel'),
+    CategoryIconOption(key: 'coffee', label: 'Coffee'),
+    CategoryIconOption(key: 'subscriptions', label: 'Subscriptions'),
+    CategoryIconOption(key: 'salary', label: 'Salary'),
+    CategoryIconOption(key: 'freelance', label: 'Freelance'),
+    CategoryIconOption(key: 'business', label: 'Business'),
+    CategoryIconOption(key: 'investment', label: 'Investment'),
+    CategoryIconOption(key: 'gift', label: 'Gift'),
+    CategoryIconOption(key: 'home', label: 'Home'),
+    CategoryIconOption(key: 'utilities', label: 'Utilities'),
+    CategoryIconOption(key: 'phone', label: 'Phone'),
+    CategoryIconOption(key: 'pets', label: 'Pets'),
+    CategoryIconOption(key: 'other', label: 'Other'),
+  ];
+
   static final Map<String, _CategorySpec> _specs = {
     'Groceries': const _CategorySpec(
       iconKey: 'groceries',
@@ -502,6 +525,9 @@ class CategoryIcons {
             RegExp(r'^-+|-+$'),
             '',
           );
+
+  static String trialFontAssetPath(String iconKey) =>
+      'assets/icons/conscia-font-src/${_clean(iconKey)}.svg';
 
   static String _clean(String? value) => value?.trim().toLowerCase() ?? '';
 
