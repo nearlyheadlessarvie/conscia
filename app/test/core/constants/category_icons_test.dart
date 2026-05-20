@@ -48,8 +48,38 @@ void main() {
     expect(CategoryIcons.colorOptions.length, greaterThanOrEqualTo(20));
   });
 
-  test('offers a broad curated category icon set', () {
-    expect(CategoryIcons.iconOptions.length, greaterThanOrEqualTo(32));
+  test('iconOptions is reduced to the curated font-trial set', () {
+    final keys = CategoryIcons.iconOptions.map((option) => option.key).toList();
+
+    expect(keys.length, 20);
+    expect(
+      keys,
+      containsAll(<String>[
+        'groceries',
+        'dining',
+        'transport',
+        'shopping',
+        'health',
+        'bills',
+        'education',
+        'travel',
+        'coffee',
+        'subscriptions',
+        'salary',
+        'freelance',
+        'business',
+        'investment',
+        'gift',
+        'home',
+        'utilities',
+        'phone',
+        'pets',
+        'other',
+      ]),
+    );
+    expect(keys, isNot(contains('gaming')));
+    expect(keys, isNot(contains('beauty')));
+    expect(keys, isNot(contains('parking')));
   });
 
   test('every curated icon option resolves to its own visual key', () {

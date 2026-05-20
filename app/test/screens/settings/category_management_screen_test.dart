@@ -199,7 +199,30 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Choose icon'), findsOneWidget);
-    expect(find.byTooltip('Icon: Rental'), findsOneWidget);
+    expect(find.byTooltip('Icon: Rental'), findsNothing);
+    expect(find.byTooltip('Icon: Gaming'), findsNothing);
+    expect(find.byTooltip('Icon: Groceries'), findsWidgets);
+    expect(find.byTooltip('Icon: Dining'), findsWidgets);
+  });
+
+  testWidgets('category icon picker chips use the Conscia font icon widgets',
+      (tester) async {
+    final actions = _RecordingCategoryActions();
+    await _pumpScreen(tester, actions: actions, isPremium: true);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Add category'));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey('category-icon-chip-font-groceries')), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Icon: More'));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const ValueKey('category-icon-chip-font-dining')).hitTestable(),
+      findsOneWidget,
+    );
   });
 
   testWidgets('shows create errors inline inside the category sheet',
