@@ -585,37 +585,15 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 SliverPadding(
                   padding: const EdgeInsets.symmetric(horizontal: 20),
                   sliver: SliverToBoxAdapter(
-                    child: () {
-                      final tx = regretPrompts.first;
-                      final remainingPromptCount =
-                          (regretPrompts.length - 1).clamp(0, 99);
-                      final displayCounterparty = tx.description.isNotEmpty
-                          ? tx.description
-                          : 'Unknown';
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 8),
-                        child: RegretPromptCard(
-                          categoryBadge: TransactionTile.badgeFor(
-                            tx.category,
-                            size: 30,
-                            filled: false,
-                          ),
-                          counterparty: displayCounterparty,
-                          amount: tx.amount.abs(),
-                          currencyCode: tx.currencyCode,
-                          date: tx.date,
-                          queueHint: remainingPromptCount > 0
-                              ? '$remainingPromptCount more moments waiting'
-                              : null,
-                          showStackedPreview: remainingPromptCount > 0,
-                          onWorthIt: () => _recordReflection(tx, 'worth_it'),
-                          onNotSure: () => _recordReflection(tx, 'not_sure'),
-                          onRegret: () => _recordReflection(tx, 'regret'),
-                          onDismiss: () =>
-                              setState(() => _dismissedPrompts.add(tx.id)),
-                        ),
-                      );
-                    }(),
+                    child: Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: _DashboardReflectQueue(
+                        prompts: regretPrompts,
+                        onReflect: _recordReflection,
+                        onDismiss: (tx) =>
+                            setState(() => _dismissedPrompts.add(tx.id)),
+                      ),
+                    ),
                   ),
                 ),
               ],
@@ -768,6 +746,200 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           ],
         ],
       ),
+    );
+  }
+}
+
+class _DashboardReflectQueue extends StatefulWidget {
+  const _DashboardReflectQueue({
+    required this.prompts,
+    required this.onReflect,
+    required this.onDismiss,
+  });
+
+  final List<Transaction> prompts;
+  final Future<void> Function(Transaction tx, String feeling) onReflect;
+  final ValueChanged<Transaction> onDismiss;
+
+  @override
+  State<_DashboardReflectQueue> createState() => _DashboardReflectQueueState();
+}
+
+class _DashboardReflectQueueState extends State<_DashboardReflectQueue> {
+  static const _advanceDuration = Duration(milliseconds: 280);
+
+  late List<Transaction> _visiblePrompts;
+  bool _isAdvancing = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _visiblePrompts = List<Transaction>.from(widget.prompts);
+  }
+
+  @override
+  void didUpdateWidget(covariant _DashboardReflectQueue oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final oldIds = oldWidget.prompts.map((tx) => tx.id).toList(growable: false);
+    final newIds = widget.prompts.map((tx) => tx.id).toList(growable: false);
+    if (oldIds.join('|') != newIds.join('|')) {
+      final currentIds =
+          _visiblePrompts.map((tx) => tx.id).toSet();
+      _visiblePrompts = widget.prompts
+          .where((tx) => currentIds.contains(tx.id) || !_isAdvancing)
+          .toList(growable: true);
+      if (_visiblePrompts.isEmpty) {
+        _visiblePrompts = List<Transaction>.from(widget.prompts);
+      }
+      setState(() {});
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_visiblePrompts.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    final activePrompt = _visiblePrompts.first;
+    final remainingPromptCount = (_visiblePrompts.length - 1).clamp(0, 99);
+    final displayCounterparty = activePrompt.description.isNotEmpty
+        ? activePrompt.description
+        : 'Unknown';
+
+    return Stack(
+      key: const ValueKey('dashboard-reflect-stack-preview'),
+      clipBehavior: Clip.none,
+      children: [
+        if (remainingPromptCount > 0)
+          const Positioned(
+            left: 12,
+            right: 12,
+            top: 12,
+            child: _ReflectQueueGhostLayer(
+              height: 130,
+              radius: 22,
+              alpha: 0.32,
+            ),
+          ),
+        if (remainingPromptCount > 0)
+          const Positioned(
+            left: 6,
+            right: 6,
+            top: 6,
+            child: _ReflectQueueGhostLayer(
+              height: 136,
+              radius: 24,
+              alpha: 0.18,
+            ),
+          ),
+        AnimatedSwitcher(
+          duration: _advanceDuration,
+          switchInCurve: Curves.easeOutCubic,
+          switchOutCurve: Curves.easeInCubic,
+          layoutBuilder: (currentChild, previousChildren) {
+            return Stack(
+              alignment: Alignment.topCenter,
+              children: <Widget>[
+                ...previousChildren,
+                if (currentChild != null) currentChild,
+              ],
+            );
+          },
+          transitionBuilder: (child, animation) {
+            final fade = CurvedAnimation(
+              parent: animation,
+              curve: Curves.easeOutCubic,
+            );
+            final scale = Tween<double>(begin: 0.96, end: 1).animate(fade);
+            final slide =
+                Tween<Offset>(begin: const Offset(0, 0.035), end: Offset.zero)
+                    .animate(fade);
+            return FadeTransition(
+              opacity: fade,
+              child: SlideTransition(
+                position: slide,
+                child: ScaleTransition(
+                  scale: scale,
+                  child: child,
+                ),
+              ),
+            );
+          },
+          child: KeyedSubtree(
+            key: ValueKey(activePrompt.id),
+            child: RegretPromptCard(
+              categoryBadge: TransactionTile.badgeFor(
+                activePrompt.category,
+                size: 30,
+                filled: false,
+              ),
+              counterparty: displayCounterparty,
+              amount: activePrompt.amount.abs(),
+              currencyCode: activePrompt.currencyCode,
+              date: activePrompt.date,
+              queueHint: remainingPromptCount > 0
+                  ? '$remainingPromptCount more moments waiting'
+                  : null,
+              onWorthIt: _isAdvancing
+                  ? null
+                  : () => _advanceQueue(activePrompt, 'worth_it'),
+              onNotSure: _isAdvancing
+                  ? null
+                  : () => _advanceQueue(activePrompt, 'not_sure'),
+              onRegret: _isAdvancing
+                  ? null
+                  : () => _advanceQueue(activePrompt, 'regret'),
+              onDismiss: _isAdvancing ? null : () => _dismiss(activePrompt),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _advanceQueue(Transaction tx, String feeling) async {
+    if (_isAdvancing || _visiblePrompts.isEmpty) return;
+    setState(() {
+      _isAdvancing = true;
+      _visiblePrompts = List<Transaction>.from(_visiblePrompts)..removeAt(0);
+    });
+    await Future<void>.delayed(_advanceDuration);
+    if (mounted) {
+      setState(() => _isAdvancing = false);
+    }
+    unawaited(widget.onReflect(tx, feeling));
+  }
+
+  void _dismiss(Transaction tx) {
+    if (_isAdvancing || _visiblePrompts.isEmpty) return;
+    setState(() {
+      _visiblePrompts = List<Transaction>.from(_visiblePrompts)..removeAt(0);
+    });
+    widget.onDismiss(tx);
+  }
+}
+
+class _ReflectQueueGhostLayer extends StatelessWidget {
+  const _ReflectQueueGhostLayer({
+    required this.height,
+    required this.radius,
+    required this.alpha,
+  });
+
+  final double height;
+  final double radius;
+  final double alpha;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: colors.surfaceContainerHighest.withValues(alpha: alpha),
+        borderRadius: BorderRadius.circular(radius),
+      ),
+      child: SizedBox(height: height),
     );
   }
 }

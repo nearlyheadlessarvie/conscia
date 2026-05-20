@@ -77,7 +77,6 @@ void main() {
             currencyCode: 'PHP',
             date: DateTime.now(),
             queueHint: '2 more moments waiting',
-            showStackedPreview: true,
           ),
         ),
       ),

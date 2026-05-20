@@ -521,8 +521,9 @@ void main() {
       const Offset(0, -500),
     );
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Worth It'));
-    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, 'Worth It').first);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 320));
 
     expect(transactionService.updatedRegretTransactionId, 'tx-reflect');
     expect(transactionService.updatedRegretLevel, 0);
@@ -610,6 +611,91 @@ void main() {
       findsOneWidget,
     );
     expect(find.text('2 more moments waiting'), findsOneWidget);
+  });
+
+  testWidgets('dashboard reflect queue advances locally after a reflection tap',
+      (tester) async {
+    _useTallDashboardViewport(tester);
+
+    final transactions = [
+      Transaction(
+        id: 'tx-1',
+        amount: 600,
+        currencyCode: 'PHP',
+        category: 'Dining',
+        description: 'Manam',
+        type: 'expense',
+        date: DateTime(2026, 5, 18),
+      ),
+      Transaction(
+        id: 'tx-2',
+        amount: 250,
+        currencyCode: 'PHP',
+        category: 'Coffee',
+        description: 'Daily Grind',
+        type: 'expense',
+        date: DateTime(2026, 5, 17),
+      ),
+    ];
+
+    final transactionService = _RecordingTransactionService(transactions);
+    final journeyNotifier =
+        _RecordingConscienceJourneyNotifier(_testJourneySummary);
+    final container = ProviderContainer(
+      overrides: [
+        sharedPreferencesProvider.overrideWithValue(prefs),
+        budgetServiceProvider.overrideWithValue(_StaticBudgetService(const [])),
+        transactionServiceProvider.overrideWithValue(transactionService),
+        transactionListProvider.overrideWith(
+          (ref) => TransactionListNotifier.fromList(transactions),
+        ),
+        currentUserProvider.overrideWith((ref) async => _testUser),
+        subscriptionProvider.overrideWith((ref) async => _testSubscription),
+        behavioralInsightsProvider.overrideWith((ref) async => null),
+        insightsSummaryProvider.overrideWith((ref) async => null),
+        insightsCategoriesProvider.overrideWith((ref) async => const []),
+        insightsMerchantsProvider.overrideWith((ref) async => const []),
+        localAlertsProvider.overrideWith(
+          (ref) => _LocalAlertsTestNotifier(const []),
+        ),
+        conscienceJourneyProvider.overrideWith(() => journeyNotifier),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    await tester.pumpWidget(_buildApp(container));
+    await tester.pumpAndSettle();
+
+    await tester.drag(
+      find.byKey(const PageStorageKey('dashboard-shell-scroll')),
+      const Offset(0, -500),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('dashboard-reflect-feature-card')),
+        matching: find.text('Manam'),
+      ),
+      findsOneWidget,
+    );
+
+    await tester.tap(find.widgetWithText(FilledButton, 'Worth It').first);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 320));
+
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('dashboard-reflect-feature-card')),
+        matching: find.text('Daily Grind'),
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('1 more moments waiting'), findsNothing);
+    expect(transactionService.updatedRegretTransactionId, 'tx-1');
+    expect(transactionService.updatedRegretLevel, 0);
+    expect(journeyNotifier.recordedEventType, 'reflection_completed');
+    expect(journeyNotifier.recordedSourceId, 'tx-1');
   });
 
   testWidgets(
