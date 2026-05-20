@@ -18,6 +18,7 @@ import 'package:conscia_app/screens/dashboard/dashboard_screen.dart';
 import 'package:conscia_app/screens/dashboard/widgets/insight_feed_card.dart';
 import 'package:conscia_app/screens/dashboard/widgets/recent_transaction_tile.dart';
 import 'package:conscia_app/screens/dashboard/widgets/regret_prompt_card.dart';
+import 'package:conscia_app/screens/journey/level_up_screen.dart';
 import 'package:conscia_app/services/auth_service.dart';
 import 'package:conscia_app/services/budget_service.dart';
 import 'package:conscia_app/services/conscience_journey_service.dart';
@@ -228,6 +229,13 @@ Widget _buildApp(
         path: '/insights',
         builder: (context, state) => const Scaffold(
           body: Center(child: Text('Insights placeholder')),
+        ),
+      ),
+      GoRoute(
+        path: AppRoutes.levelUp,
+        builder: (context, state) => LevelUpScreen(
+          summary: container.read(conscienceJourneyProvider).valueOrNull ??
+              _testJourneySummary,
         ),
       ),
       GoRoute(
@@ -2142,6 +2150,96 @@ void main() {
 
     expect(find.text('Notifications'), findsOneWidget);
     expect(find.text('Shell nav').hitTestable(), findsNothing);
+  });
+
+  testWidgets(
+      'notification sheet contains long notification copy within the sheet',
+      (tester) async {
+    final container = ProviderContainer(
+      overrides: [
+        sharedPreferencesProvider.overrideWithValue(prefs),
+        budgetServiceProvider.overrideWithValue(_StaticBudgetService(const [])),
+        transactionServiceProvider
+            .overrideWithValue(_StaticTransactionService()),
+        behavioralInsightsProvider.overrideWith((ref) async => null),
+        insightsSummaryProvider.overrideWith((ref) async => null),
+        insightsCategoriesProvider.overrideWith((ref) async => const []),
+        insightsMerchantsProvider.overrideWith((ref) async => const []),
+        localAlertsProvider.overrideWith(
+          (ref) => _LocalAlertsTestNotifier(
+            [
+              AppAlert(
+                id: 'long-alert',
+                type: 'journey_badge',
+                title:
+                    'This is a very long notification title that should stay inside the notification sheet bounds',
+                message:
+                    'This notification message is intentionally long so we can make sure the content stays visually contained inside the notification window instead of feeling like it bleeds past the sheet surface.',
+                isDismissed: false,
+                createdAt: DateTime(2026, 5, 7),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    await tester.pumpWidget(_buildApp(container));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('Notifications').hitTestable().first);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Notifications'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('journey level-up alert opens the level up screen',
+      (tester) async {
+    final container = ProviderContainer(
+      overrides: [
+        sharedPreferencesProvider.overrideWithValue(prefs),
+        budgetServiceProvider.overrideWithValue(_StaticBudgetService(const [])),
+        transactionServiceProvider
+            .overrideWithValue(_StaticTransactionService()),
+        behavioralInsightsProvider.overrideWith((ref) async => null),
+        insightsSummaryProvider.overrideWith((ref) async => null),
+        insightsCategoriesProvider.overrideWith((ref) async => const []),
+        insightsMerchantsProvider.overrideWith((ref) async => const []),
+        conscienceJourneyProvider.overrideWith(
+          () => _StaticConscienceJourneyNotifier(_testJourneySummary),
+        ),
+        localAlertsProvider.overrideWith(
+          (ref) => _LocalAlertsTestNotifier(
+            [
+              AppAlert(
+                id: 'journey-level-budget-guardian',
+                type: 'journey_level_up',
+                title: 'Level up',
+                message: 'Your conscience journey reached a new level.',
+                actionLabel: 'View level',
+                actionRoute: AppRoutes.levelUp,
+                isDismissed: false,
+                createdAt: DateTime(2026, 5, 7),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    await tester.pumpWidget(_buildApp(container));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('Notifications').hitTestable().first);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('View level'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Continue your journey'), findsOneWidget);
   });
 
   testWidgets(
