@@ -21,6 +21,7 @@ public class ReceiptServiceTests
     public async Task ScanAsync_StoresParsedReceiptDataInsteadOfSampleFallback()
     {
         var userId = Guid.NewGuid();
+        _ocr.SetupGet(o => o.IsConfigured).Returns(true);
         _ocr.Setup(o => o.ExtractTextAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync("Merchant: Real Cafe\nTotal: 42.50");
         _ocr.Setup(o => o.ParseReceiptTextAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
@@ -62,6 +63,7 @@ public class ReceiptServiceTests
     public async Task ScanAsync_DoesNotInventUsdWhenOcrCannotInferCurrency()
     {
         var userId = Guid.NewGuid();
+        _ocr.SetupGet(o => o.IsConfigured).Returns(true);
         _ocr.Setup(o => o.ExtractTextAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync("Total: 0");
         _ocr.Setup(o => o.ParseReceiptTextAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
@@ -172,6 +174,22 @@ public class ReceiptServiceTests
                     "USD",
                     "Dining",
                     DateTime.UtcNow)));
+    }
+
+    [Fact]
+    public async Task ScanAsync_Throws_WhenOcrIsNotConfigured()
+    {
+        _ocr.SetupGet(o => o.IsConfigured).Returns(false);
+
+        var service = CreateService();
+
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            service.ScanAsync(Guid.NewGuid(), new MemoryStream([1, 2, 3]), "image/jpeg"));
+
+        Assert.Equal("Receipt scanning is not configured.", ex.Message);
+        _storage.Verify(
+            s => s.UploadAsync(It.IsAny<string>(), It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never);
     }
 
     private ReceiptService CreateService() =>

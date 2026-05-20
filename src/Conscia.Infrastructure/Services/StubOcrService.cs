@@ -8,6 +8,8 @@ public class StubOcrService : IOcrService
 {
     private readonly ILogger<StubOcrService> _logger;
 
+    public bool IsConfigured => false;
+
     public StubOcrService(ILogger<StubOcrService> logger)
     {
         _logger = logger;

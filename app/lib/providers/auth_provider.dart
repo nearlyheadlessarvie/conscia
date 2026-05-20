@@ -28,6 +28,7 @@ class AuthState {
   final String? pendingEmail;
   final bool isLoading;
   final String? error;
+  final bool wasExplicitLogout;
 
   const AuthState({
     this.status = AuthStatus.unauthenticated,
@@ -37,6 +38,7 @@ class AuthState {
     this.pendingEmail,
     this.isLoading = false,
     this.error,
+    this.wasExplicitLogout = false,
   });
 
   bool get isAuthenticated => status == AuthStatus.authenticated;
@@ -50,6 +52,7 @@ class AuthState {
     Object? pendingEmail = _unset,
     bool? isLoading,
     Object? error = _unset,
+    bool? wasExplicitLogout,
   }) {
     return AuthState(
       status: status ?? this.status,
@@ -65,6 +68,7 @@ class AuthState {
           : pendingEmail as String?,
       isLoading: isLoading ?? this.isLoading,
       error: identical(error, _unset) ? this.error : error as String?,
+      wasExplicitLogout: wasExplicitLogout ?? this.wasExplicitLogout,
     );
   }
 }
@@ -142,6 +146,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
         userId: tokens.userId,
         pendingEmail: null,
         isLoading: false,
+        wasExplicitLogout: false,
       );
     } on AuthConfirmationRequiredException catch (e) {
       saveLastEmail(email);
@@ -199,6 +204,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
           pendingEmail: null,
           userId: null,
           isLoading: false,
+          wasExplicitLogout: false,
         );
         return;
       }
@@ -264,6 +270,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
           refreshToken: tokens.refreshToken,
           userId: tokens.userId,
           isLoading: false,
+          wasExplicitLogout: false,
         );
         return;
       }
@@ -275,6 +282,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
         refreshToken: tokens.refreshToken,
         userId: tokens.userId,
         isLoading: false,
+        wasExplicitLogout: false,
       );
     } catch (e, s) {
       final error = AppError.from(e, stackTrace: s);
@@ -315,9 +323,19 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
   }
 
+  Future<void> completeExternalSignIn(
+    AuthTokens tokens, {
+    String? email,
+  }) async {
+    if (email != null && email.trim().isNotEmpty) {
+      saveLastEmail(email.trim());
+    }
+    await _setAuthenticated(tokens);
+  }
+
   Future<void> logout() async {
     _pendingPassword = null;
-    state = const AuthState();
+    state = const AuthState(wasExplicitLogout: true);
     await _storage.delete(key: _accessTokenKey);
     await _storage.delete(key: _refreshTokenKey);
     await _storage.delete(key: _userIdKey);
@@ -355,6 +373,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
     state = const AuthState(
       status: AuthStatus.sessionExpired,
       error: 'Session expired',
+      wasExplicitLogout: false,
     );
     await _storage.delete(key: _accessTokenKey);
     await _storage.delete(key: _refreshTokenKey);
@@ -397,6 +416,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
           pendingEmail: null,
           isLoading: false,
           error: null,
+          wasExplicitLogout: false,
         );
         return true;
       } catch (_) {
@@ -411,6 +431,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       refreshToken: refreshToken,
       userId: userId,
       error: null,
+      wasExplicitLogout: false,
     );
     return true;
   }
@@ -465,6 +486,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       pendingEmail: null,
       isLoading: false,
       error: null,
+      wasExplicitLogout: false,
     );
   }
 
@@ -489,6 +511,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       userId: null,
       isLoading: false,
       error: null,
+      wasExplicitLogout: false,
     );
     return true;
   }
@@ -514,6 +537,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       userId: userId,
       isLoading: false,
       error: null,
+      wasExplicitLogout: false,
     );
   }
 

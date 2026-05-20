@@ -29,6 +29,7 @@ public class ComputeStackProps : StackProps
     public required ITable PushDeviceTokensTable { get; set; }
     public required ITable ConscienceJourneyTable { get; set; }
     public required IQueue AiQueue { get; set; }
+    public required ProductionRuntimeSettings RuntimeSettings { get; set; }
     public string ApiAssetPath { get; set; } =
         AssetPathResolver.ResolvePublishedAsset("../publish/api", "api");
     public DomainSettings? DomainSettings { get; set; }
@@ -56,6 +57,20 @@ public class ComputeStack : Stack
                 ["ASPNETCORE_ENVIRONMENT"] = "Production",
                 ["Auth__Cognito__UserPoolId"] = props.UserPool.UserPoolId,
                 ["Auth__Cognito__ClientId"] = props.UserPoolClient.UserPoolClientId,
+                ["Auth__AppJwtSigningKey"] = props.RuntimeSettings.AuthAppJwtSigningKey ?? string.Empty,
+                ["Auth__Google__ClientId"] = props.RuntimeSettings.AuthGoogleClientId ?? string.Empty,
+                ["Auth__Apple__ClientId"] = props.RuntimeSettings.AuthAppleClientId ?? string.Empty,
+                ["Apple__KeyId"] = props.RuntimeSettings.AppleKeyId ?? string.Empty,
+                ["Apple__IssuerId"] = props.RuntimeSettings.AppleIssuerId ?? string.Empty,
+                ["Apple__BundleId"] = props.RuntimeSettings.AppleBundleId ?? string.Empty,
+                ["Apple__PrivateKey"] = props.RuntimeSettings.ApplePrivateKey ?? string.Empty,
+                ["GooglePlay__PackageName"] = props.RuntimeSettings.GooglePlayPackageName ?? string.Empty,
+                ["GooglePlay__ServiceAccountJson"] = props.RuntimeSettings.GooglePlayServiceAccountJson ?? string.Empty,
+                ["Firebase__AdminServiceAccountJson"] = props.RuntimeSettings.FirebaseAdminServiceAccountJson ?? string.Empty,
+                ["Firebase__ProjectId"] = props.RuntimeSettings.FirebaseProjectId ?? string.Empty,
+                ["InviteEmail__FromEmail"] = props.RuntimeSettings.InviteEmailFromEmail ?? string.Empty,
+                ["InviteEmail__ConfigurationSetName"] = props.RuntimeSettings.InviteEmailConfigurationSetName ?? string.Empty,
+                ["InviteEmail__DeepLinkBaseUri"] = props.RuntimeSettings.InviteEmailDeepLinkBaseUri,
                 ["AWS__S3__BucketName"] = props.ReceiptBucket.BucketName,
                 ["AWS__SQS__AiQueueUrl"] = props.AiQueue.QueueUrl,
                 ["AWS__DynamoDB__ControlPlaneTable"] = props.ControlPlaneTable.TableName,
@@ -86,17 +101,17 @@ public class ComputeStack : Stack
                 ThrottlingBurstLimit = 200,
                 MethodOptions = new Dictionary<string, IMethodDeploymentOptions>
                 {
-                    ["/api/v1/ai/pre-purchase/POST"] = new MethodDeploymentOptions
+                    ["/api/ai/pre-purchase/POST"] = new MethodDeploymentOptions
                     {
                         ThrottlingRateLimit = 10,
                         ThrottlingBurstLimit = 20
                     },
-                    ["/api/v1/ai/reflection/POST"] = new MethodDeploymentOptions
+                    ["/api/ai/reflection/POST"] = new MethodDeploymentOptions
                     {
                         ThrottlingRateLimit = 10,
                         ThrottlingBurstLimit = 20
                     },
-                    ["/api/v1/receipts/scan/POST"] = new MethodDeploymentOptions
+                    ["/api/receipts/scan/POST"] = new MethodDeploymentOptions
                     {
                         ThrottlingRateLimit = 5,
                         ThrottlingBurstLimit = 10

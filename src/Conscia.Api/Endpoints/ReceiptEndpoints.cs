@@ -27,13 +27,22 @@ public static class ReceiptEndpoints
 
             var userId = ctx.User.GetUserId();
             await using var stream = image.OpenReadStream();
-            var result = await receiptService.ScanAsync(
-                userId,
-                stream,
-                string.IsNullOrWhiteSpace(image.ContentType) ? "image/jpeg" : image.ContentType,
-                ctx.RequestAborted);
+            try
+            {
+                var result = await receiptService.ScanAsync(
+                    userId,
+                    stream,
+                    string.IsNullOrWhiteSpace(image.ContentType) ? "image/jpeg" : image.ContentType,
+                    ctx.RequestAborted);
 
-            return Results.Ok(result);
+                return Results.Ok(result);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return Results.Json(
+                    new { error = ex.Message },
+                    statusCode: StatusCodes.Status503ServiceUnavailable);
+            }
         })
         .WithName("ScanReceipt")
         .WithMetadata(new RequirePremiumAttribute());

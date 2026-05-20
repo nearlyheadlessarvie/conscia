@@ -35,30 +35,25 @@ public class SubscriptionService : ISubscriptionService
             return existing;
         }
 
-        DateTime expiresAt;
-
-        if (_appleValidator.IsConfigured)
+        if (!_appleValidator.IsConfigured)
         {
-            var txnInfo = await _appleValidator.ValidateAsync(receiptData, ct);
-            if (txnInfo is null)
-                throw new InvalidOperationException("Apple receipt validation failed — receipt rejected.");
-
-            if (txnInfo.IsRevoked)
-                throw new InvalidOperationException("This subscription has been revoked.");
-
-            expiresAt = txnInfo.ExpiresDate;
-            _logger.LogInformation(
-                "iOS receipt validated via App Store Server API for user {UserId}, product {ProductId}, expires {ExpiresAt}",
-                userId, txnInfo.ProductId, expiresAt);
-        }
-        else
-        {
-            _logger.LogWarning(
-                "iOS receipt accepted without server-to-server validation for user {UserId}. " +
-                "Configure Apple:KeyId, Apple:IssuerId, Apple:BundleId, Apple:PrivateKey to enable validation.",
+            _logger.LogError(
+                "Apple receipt verification attempted without Apple validator configuration for user {UserId}",
                 userId);
-            expiresAt = DateTime.UtcNow.AddMonths(1);
+            throw new InvalidOperationException("Apple subscription verification is not configured.");
         }
+
+        var txnInfo = await _appleValidator.ValidateAsync(receiptData, ct);
+        if (txnInfo is null)
+            throw new InvalidOperationException("Apple receipt validation failed — receipt rejected.");
+
+        if (txnInfo.IsRevoked)
+            throw new InvalidOperationException("This subscription has been revoked.");
+
+        var expiresAt = txnInfo.ExpiresDate;
+        _logger.LogInformation(
+            "iOS receipt validated via App Store Server API for user {UserId}, product {ProductId}, expires {ExpiresAt}",
+            userId, txnInfo.ProductId, expiresAt);
 
         var sub = new UserSubscription
         {
@@ -83,30 +78,25 @@ public class SubscriptionService : ISubscriptionService
             return existing;
         }
 
-        DateTime expiresAt;
-
-        if (_googleValidator.IsConfigured)
+        if (!_googleValidator.IsConfigured)
         {
-            var subInfo = await _googleValidator.ValidateAsync(purchaseToken, DefaultSubscriptionId, ct);
-            if (subInfo is null)
-                throw new InvalidOperationException("Google Play purchase validation failed — token rejected.");
-
-            if (subInfo.IsCanceled)
-                throw new InvalidOperationException("This subscription has been canceled.");
-
-            expiresAt = subInfo.ExpiryTime;
-            _logger.LogInformation(
-                "Android token validated via Google Play Developer API for user {UserId}, order {OrderId}, expires {ExpiresAt}",
-                userId, subInfo.OrderId, expiresAt);
-        }
-        else
-        {
-            _logger.LogWarning(
-                "Android purchase token accepted without server-to-server validation for user {UserId}. " +
-                "Configure GooglePlay:PackageName and GooglePlay:ServiceAccountJson to enable validation.",
+            _logger.LogError(
+                "Google Play verification attempted without Google validator configuration for user {UserId}",
                 userId);
-            expiresAt = DateTime.UtcNow.AddMonths(1);
+            throw new InvalidOperationException("Google Play subscription verification is not configured.");
         }
+
+        var subInfo = await _googleValidator.ValidateAsync(purchaseToken, DefaultSubscriptionId, ct);
+        if (subInfo is null)
+            throw new InvalidOperationException("Google Play purchase validation failed — token rejected.");
+
+        if (subInfo.IsCanceled)
+            throw new InvalidOperationException("This subscription has been canceled.");
+
+        var expiresAt = subInfo.ExpiryTime;
+        _logger.LogInformation(
+            "Android token validated via Google Play Developer API for user {UserId}, order {OrderId}, expires {ExpiresAt}",
+            userId, subInfo.OrderId, expiresAt);
 
         var sub = new UserSubscription
         {

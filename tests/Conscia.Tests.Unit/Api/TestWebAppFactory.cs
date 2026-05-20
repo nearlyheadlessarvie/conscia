@@ -41,6 +41,7 @@ public class TestWebAppFactory : WebApplicationFactory<Program>
     public Mock<IPurchasePatternRepository> PurchasePatternRepoMock { get; } = new();
     public Mock<IMonthlyCategorySpendRepository> MonthlyCategorySpendRepoMock { get; } = new();
     public Mock<IS3StorageService> S3StorageServiceMock { get; } = new();
+    public Mock<IPasskeyAuthService> PasskeyAuthServiceMock { get; } = new();
     public InMemoryUserRepository UserRepo { get; } = new();
 
     private const string SigningKey = "this-is-a-test-signing-key-at-least-32-chars!!";
@@ -86,6 +87,7 @@ public class TestWebAppFactory : WebApplicationFactory<Program>
             ReplaceService<IPurchasePatternRepository>(services, PurchasePatternRepoMock.Object);
             ReplaceService<IMonthlyCategorySpendRepository>(services, MonthlyCategorySpendRepoMock.Object);
             ReplaceService<IS3StorageService>(services, S3StorageServiceMock.Object);
+            ReplaceService<IPasskeyAuthService>(services, PasskeyAuthServiceMock.Object);
         });
 
         builder.UseSetting("Auth:UseMock", "true");

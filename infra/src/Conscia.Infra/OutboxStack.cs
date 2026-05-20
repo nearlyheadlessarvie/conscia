@@ -14,6 +14,8 @@ public class OutboxStackProps : StackProps
     public required ITable OutboxEventsTable { get; set; }
     public required ITable InAppAlertsTable { get; set; }
     public required ITable MonthlyCategorySpendsTable { get; set; }
+    public required ITable PushDeviceTokensTable { get; set; }
+    public required ProductionRuntimeSettings RuntimeSettings { get; set; }
     public string AssetPath { get; set; } =
         AssetPathResolver.ResolvePublishedAsset("../publish/outbox", "outbox");
     public DomainSettings? DomainSettings { get; set; }
@@ -42,12 +44,18 @@ public class OutboxStack : Stack
                 ["AWS__DynamoDB__OutboxEventsTable"] = props.OutboxEventsTable.TableName,
                 ["AWS__DynamoDB__InAppAlertsTable"] = props.InAppAlertsTable.TableName,
                 ["AWS__DynamoDB__MonthlyCategorySpendsTable"] = props.MonthlyCategorySpendsTable.TableName,
-                ["SES_FROM_EMAIL"] = props.DomainSettings is null
-                    ? string.Empty
-                    : $"invites@{props.DomainSettings.RootDomainName}",
-                ["SES_CONFIGURATION_SET"] = props.DomainSettings is null
-                    ? string.Empty
-                    : "conscia-production"
+                ["AWS__DynamoDB__PushDeviceTokensTable"] = props.PushDeviceTokensTable.TableName,
+                ["Firebase__AdminServiceAccountJson"] = props.RuntimeSettings.FirebaseAdminServiceAccountJson ?? string.Empty,
+                ["Firebase__ProjectId"] = props.RuntimeSettings.FirebaseProjectId ?? string.Empty,
+                ["InviteEmail__FromEmail"] = props.RuntimeSettings.InviteEmailFromEmail
+                    ?? (props.DomainSettings is null ? string.Empty : $"invites@{props.DomainSettings.RootDomainName}"),
+                ["InviteEmail__ConfigurationSetName"] = props.RuntimeSettings.InviteEmailConfigurationSetName
+                    ?? (props.DomainSettings is null ? string.Empty : "conscia-production"),
+                ["InviteEmail__DeepLinkBaseUri"] = props.RuntimeSettings.InviteEmailDeepLinkBaseUri,
+                ["SES_FROM_EMAIL"] = props.RuntimeSettings.InviteEmailFromEmail
+                    ?? (props.DomainSettings is null ? string.Empty : $"invites@{props.DomainSettings.RootDomainName}"),
+                ["SES_CONFIGURATION_SET"] = props.RuntimeSettings.InviteEmailConfigurationSetName
+                    ?? (props.DomainSettings is null ? string.Empty : "conscia-production")
             },
             Tracing = Tracing.ACTIVE
         });
@@ -66,6 +74,7 @@ public class OutboxStack : Stack
         props.OutboxEventsTable.GrantReadWriteData(OutboxLambda);
         props.InAppAlertsTable.GrantReadWriteData(OutboxLambda);
         props.MonthlyCategorySpendsTable.GrantReadWriteData(OutboxLambda);
+        props.PushDeviceTokensTable.GrantReadData(OutboxLambda);
 
         if (props.DomainSettings is not null)
         {

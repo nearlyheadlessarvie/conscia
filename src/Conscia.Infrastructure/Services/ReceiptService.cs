@@ -35,6 +35,12 @@ public class ReceiptService : IReceiptService
         string contentType = "image/jpeg",
         CancellationToken ct = default)
     {
+        if (!_ocr.IsConfigured)
+        {
+            _logger.LogError("Receipt scanning attempted without OCR configuration");
+            throw new InvalidOperationException("Receipt scanning is not configured.");
+        }
+
         var receiptId = Guid.NewGuid();
         var s3Key = $"receipts/{userId}/{receiptId}{ExtensionFor(contentType)}";
 

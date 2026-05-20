@@ -6,6 +6,8 @@ using Conscia.Domain.Enums;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using Conscia.Application.Configuration;
 
 namespace Conscia.Infrastructure.Services;
 
@@ -67,6 +69,8 @@ public class OutboxProcessor : BackgroundService
         var userRepo = scope.ServiceProvider.GetRequiredService<IUserRepository>();
         var alertRepo = scope.ServiceProvider.GetRequiredService<IInAppAlertRepository>();
         var pushSender = scope.ServiceProvider.GetRequiredService<IPushNotificationSender>();
+        var inviteEmailSender = scope.ServiceProvider.GetRequiredService<IInviteEmailSender>();
+        var inviteOptions = scope.ServiceProvider.GetRequiredService<IOptions<InviteEmailOptions>>().Value;
 
         var pending = await outboxRepo.GetPendingAsync(50, ct);
         if (pending.Count == 0) return;
@@ -86,7 +90,15 @@ public class OutboxProcessor : BackgroundService
                 }
 
                 _logger.LogInformation("Processing outbox event {EventId}: {EventType}", evt.Id, evt.EventType);
-                await DispatchEventAsync(evt, projectionRepo, userRepo, alertRepo, pushSender, ct);
+                await DispatchEventAsync(
+                    evt,
+                    projectionRepo,
+                    userRepo,
+                    alertRepo,
+                    pushSender,
+                    inviteEmailSender,
+                    inviteOptions,
+                    ct);
                 await outboxRepo.MarkProcessedAsync(evt, ct);
             }
             catch (Exception ex)
@@ -115,6 +127,8 @@ public class OutboxProcessor : BackgroundService
         IUserRepository users,
         IInAppAlertRepository alerts,
         IPushNotificationSender pushSender,
+        IInviteEmailSender inviteEmailSender,
+        InviteEmailOptions inviteOptions,
         CancellationToken ct)
     {
         switch (evt.EventType)
@@ -129,7 +143,7 @@ public class OutboxProcessor : BackgroundService
                 await ApplyUpdatedAsync(evt, projections, ct);
                 break;
             case OutboxEventType.FamilyInviteCreated:
-                await ApplyFamilyInviteCreatedAsync(evt, users, alerts, pushSender, ct);
+                await ApplyFamilyInviteCreatedAsync(evt, users, alerts, pushSender, inviteEmailSender, inviteOptions, ct);
                 break;
             default:
                 _logger.LogWarning("Unknown outbox event type: {EventType}", evt.EventType);
@@ -142,6 +156,8 @@ public class OutboxProcessor : BackgroundService
         IUserRepository users,
         IInAppAlertRepository alerts,
         IPushNotificationSender pushSender,
+        IInviteEmailSender inviteEmailSender,
+        InviteEmailOptions inviteOptions,
         CancellationToken ct)
     {
         var invite = ParseFamilyInvite(evt.Payload);
@@ -151,19 +167,28 @@ public class OutboxProcessor : BackgroundService
             return;
         }
 
+        const string title = "Family invite";
+        var body = $"You were invited to {invite.FamilySpaceName}.";
+        var route = $"/settings/family-space/invites?inviteId={invite.InviteId}";
+
+        await inviteEmailSender.SendFamilyInviteAsync(
+            new FamilyInviteEmailMessage(
+                invite.InviteId,
+                invite.Email,
+                invite.FamilySpaceName,
+                inviteOptions.BuildInviteLink(invite.InviteId),
+                invite.ExpiresAt),
+            ct);
+
         var user = await users.GetByEmailAsync(invite.Email, ct);
         if (user is null)
         {
             _logger.LogInformation(
-                "Family invite {InviteId} targets unregistered email {Email}; skipping in-app and device notification",
+                "Family invite {InviteId} targets unregistered email {Email}; email sent with deep link only",
                 invite.InviteId,
                 invite.Email);
             return;
         }
-
-        const string title = "Family invite";
-        var body = $"You were invited to {invite.FamilySpaceName}.";
-        const string route = "/settings/family-space/invites";
 
         await alerts.AddAsync(new InAppAlert
         {
@@ -343,10 +368,15 @@ public class OutboxProcessor : BackgroundService
                 ? nameElement.GetString()!
                 : "your Family Space";
 
+        var expiresAt = root.TryGetProperty("ExpiresAt", out var expiresAtElement)
+            ? expiresAtElement.GetDateTime()
+            : DateTime.UtcNow.AddDays(14);
+
         return new FamilyInviteNotificationSnapshot(
             inviteId,
             emailElement.GetString()!.Trim().ToLowerInvariant(),
-            familySpaceName);
+            familySpaceName,
+            expiresAt);
     }
 
     private async Task RepairMonthAsync(
@@ -392,5 +422,6 @@ public class OutboxProcessor : BackgroundService
     private sealed record FamilyInviteNotificationSnapshot(
         Guid InviteId,
         string Email,
-        string FamilySpaceName);
+        string FamilySpaceName,
+        DateTime ExpiresAt);
 }

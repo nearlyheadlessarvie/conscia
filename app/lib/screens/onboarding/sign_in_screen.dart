@@ -4,14 +4,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
-import 'package:local_auth/local_auth.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/errors/app_error.dart';
 import '../../core/network/api_exception.dart';
 import '../../core/routing/app_router.dart';
 import '../../core/utils/email_validator.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/passkey_provider.dart';
+import '../../services/passkey_service.dart';
 import '../../widgets/floating_label_text_field.dart';
 import '../../widgets/conscia_app_bar.dart';
 import '../../widgets/inline_notice.dart';
@@ -50,76 +50,23 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  final _localAuth = LocalAuthentication();
 
   bool _obscurePassword = true;
   bool _isLoading = false;
   String? _errorMessage;
   String? _emailFieldError;
   String? _passwordFieldError;
-  bool _biometricsAvailable = false;
-  String? _lastEmail;
 
   @override
   void initState() {
     super.initState();
-    _initBiometrics();
+    _loadLastEmail();
   }
 
-  Future<void> _initBiometrics() async {
+  Future<void> _loadLastEmail() async {
     final email = await getLastEmail();
-    if (email != null && email.isNotEmpty) {
-      _lastEmail = email;
-      if (mounted) setState(() => _emailController.text = email);
-    }
-    try {
-      final canCheck = await _localAuth.canCheckBiometrics;
-      final isSupported = await _localAuth.isDeviceSupported();
-      final prefs = await SharedPreferences.getInstance();
-      final biometricEnabled = prefs.getBool('biometric_enabled') ?? false;
-      if (mounted) {
-        setState(() => _biometricsAvailable =
-            canCheck && isSupported && _lastEmail != null && biometricEnabled);
-      }
-      if (_biometricsAvailable) {
-        _authenticateWithBiometrics();
-      }
-    } catch (_) {}
-  }
-
-  Future<void> _authenticateWithBiometrics() async {
-    if (_lastEmail == null) return;
-    try {
-      final authenticated = await _localAuth.authenticate(
-        localizedReason: 'Sign in to Conscia',
-        options: const AuthenticationOptions(
-          stickyAuth: true,
-          biometricOnly: true,
-        ),
-      );
-      if (!authenticated || !mounted) return;
-
-      setState(() {
-        _isLoading = true;
-        _errorMessage = null;
-      });
-
-      final token =
-          await ref.read(secureStorageProvider).read(key: 'access_token');
-      if (token != null && token.split('.').length == 3) {
-        await ref.read(authProvider.notifier).loginWithStoredToken();
-      } else {
-        setState(() {
-          _isLoading = false;
-          _errorMessage = 'Session expired. Please sign in with your password.';
-        });
-      }
-    } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _isLoading = false;
-        _errorMessage = null;
-      });
+    if (email != null && email.isNotEmpty && mounted) {
+      setState(() => _emailController.text = email);
     }
   }
 
@@ -193,9 +140,54 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
     setState(() => _isLoading = false);
   }
 
+  Future<void> _submitPasskey() async {
+    final email = _emailController.text.trim();
+    final emailError = _validateEmail(email);
+    if (emailError != null) {
+      setState(() {
+        _emailFieldError = emailError;
+        _passwordFieldError = null;
+        _errorMessage = null;
+      });
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+      _emailFieldError = null;
+      _passwordFieldError = null;
+    });
+
+    try {
+      final tokens = await ref.read(passkeyServiceProvider).signIn(email);
+      await ref.read(authProvider.notifier).completeExternalSignIn(
+            tokens,
+            email: email,
+          );
+    } catch (e) {
+      if (!mounted) return;
+      if (isPasskeyCancellation(e)) {
+        setState(() => _isLoading = false);
+        return;
+      }
+
+      setState(() {
+        _isLoading = false;
+        _errorMessage = friendlyPasskeyErrorMessage(e);
+      });
+      return;
+    }
+
+    if (!mounted) return;
+    setState(() => _isLoading = false);
+  }
+
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
+    final passkeysAvailable =
+        ref.watch(passkeyAvailabilityProvider).valueOrNull ?? false;
 
     return Scaffold(
       extendBodyBehindAppBar: true,
@@ -220,7 +212,8 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
             children: [
               const AuthIntroPanel(
                 title: 'Welcome back',
-                subtitle: 'Return to your money rhythm with a little more calm.',
+                subtitle:
+                    'Return to your money rhythm with a little more calm.',
                 icon: Icons.spa_outlined,
               ),
               Padding(
@@ -306,15 +299,14 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                             : const Text('Sign In'),
                       ),
                     ),
-                    if (_biometricsAvailable) ...[
+                    if (passkeysAvailable) ...[
                       const SizedBox(height: 12),
                       SizedBox(
                         height: 48,
                         child: OutlinedButton.icon(
                           icon: const Icon(Icons.fingerprint, size: 24),
-                          label: const Text('Sign in with Biometrics'),
-                          onPressed:
-                              _isLoading ? null : _authenticateWithBiometrics,
+                          label: const Text('Sign in with Passkey'),
+                          onPressed: _isLoading ? null : _submitPasskey,
                         ),
                       ),
                     ],

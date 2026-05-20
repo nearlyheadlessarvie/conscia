@@ -266,9 +266,11 @@ flutter run
 flutter run --dart-define=MOCK_AUTH=false --dart-define=API_BASE_URL=https://api.getconscia.com/api/ --dart-define=GOOGLE_SERVER_CLIENT_ID=<web-client-id>.apps.googleusercontent.com
 ```
 
+The Flutter client automatically appends `?v=1` to API requests, so `API_BASE_URL` should stay on the stable `/api/` base path and should not include the version.
+
 ### Device Push Notification Setup
 
-Device push is scaffolded but intentionally disabled until Firebase credentials are ready. Today the app can request notification permission, read the Firebase Cloud Messaging token, and register it with `POST /api/push/device-tokens?v=1`. The API stores tokens in DynamoDB table `PushDeviceTokens`; actual push delivery can be wired to Firebase Admin/FCM after credentials are available.
+The app can request notification permission, read the Firebase Cloud Messaging token, and register it with `POST /api/push/device-tokens?v=1`. In production, the API and outbox worker now use Firebase Admin/FCM for real device delivery when the backend Firebase credentials are configured.
 
 Keep `PUSH_NOTIFICATIONS_ENABLED=false` for normal local web/dev runs. Browser/web push is not wired yet; the current scaffold is for Android/iOS device token registration.
 
@@ -303,7 +305,12 @@ When Firebase is ready:
    flutter run --dart-define=PUSH_NOTIFICATIONS_ENABLED=true
    ```
 8. For CI/builds, provide the Firebase config files as GitHub secrets and write them into the paths above during the mobile build job. Do not store them in source.
-9. For actual push delivery, add Firebase Admin credentials on the backend side. Store the service account JSON in AWS Secrets Manager or GitHub Actions secrets for deployment, then wire a server-side FCM sender that reads active `PushDeviceTokens` and sends the digest/alert payload.
+9. For actual push delivery, add Firebase Admin credentials on the backend side and set:
+   ```text
+   Firebase__AdminServiceAccountJson
+   Firebase__ProjectId
+   ```
+   The deployed API/outbox processes will read active `PushDeviceTokens` and send the alert payload through FCM.
 
 Cost note: Firebase Cloud Messaging itself has no per-message charge. This scaffold only adds tiny DynamoDB reads/writes for device-token registration. When we add server-side delivery, we can use the existing API/background jobs with Firebase Admin credentials, so there should be no new always-on infrastructure unless we later choose a dedicated worker.
 
@@ -314,8 +321,8 @@ Shared Conscia uses relational Family Space tables for membership/invites and th
 Production requirements:
 - Run the Family Space EF migrations before enabling the feature.
 - Keep Family Space creation Premium-only; invited contributors/viewers can participate without separate subscriptions.
-- Deploy the existing Outbox Lambda stack so family invite events can create in-app alerts and future device notifications.
-- Enable server-side FCM credentials only when real device push delivery is ready; until then the no-op push sender keeps invite notifications in-app only.
+- Deploy the existing Outbox Lambda stack so family invite events can create in-app alerts, email invites, and device notifications.
+- Configure SES and Firebase Admin credentials before production so invite emails and push delivery do not fail closed.
 - Set DynamoDB read/write budget alerts after release because family import and family AI context add extra record lookups.
 
 Privacy model:
@@ -323,6 +330,7 @@ Privacy model:
 - Users explicitly import/share selected records.
 - Hidden salary is represented as contribution records or recurring contribution schedules, not exact salary disclosure.
 - No settlement or who-owes-whom workflow is part of MVP.
+- Invite emails now deep-link into the app through `https://getconscia.com/open/family-invite?inviteId=<guid>`, which the mobile app resolves to the Family Invite screen.
 
 ## Social Authentication Setup
 
@@ -456,6 +464,32 @@ Set `Auth__Apple__ClientId` to the audience Apple places in the identity token. 
 
 ---
 
+## Passkeys For Conscia Accounts
+
+Conscia-native email/password accounts can now register and use passkeys through Cognito WebAuthn. This replaces the old faux local-biometric toggle.
+
+How it fits with the rest of auth:
+
+- Cognito-native lane: email/password plus passkeys
+- Native social lane: Google and Apple stay native and continue to use the current backend token-verification flow
+
+Important rollout notes:
+
+- Passkeys require real-device testing. Emulators and simulators are not enough for release confidence.
+- iOS and Android rely on associated-domain metadata served from `https://getconscia.com/.well-known/...`.
+- The web release generates those association files from CI variables:
+  - `APPLE_TEAM_ID`
+  - `IOS_BUNDLE_ID`
+  - `GOOGLE_PLAY_PACKAGE_NAME`
+  - `ANDROID_PASSKEY_SHA256_CERT_FINGERPRINTS`
+
+Once those are configured and `release-web.yml` has published the association files, the app can:
+
+- show `Sign in with Passkey` on the sign-in screen when the device supports it
+- show `Set Up Passkey` in Settings for Cognito-authenticated users
+
+---
+
 ### Disabling Mock Auth
 
 `MOCK_AUTH=true` is the compile-time default (see `ApiConstants`). It lets you run the app locally without real credentials. To switch to real OAuth, pass the flag at run time:
@@ -508,6 +542,12 @@ The app release workflow now builds signed mobile artifacts and targets non-prod
 - both artifacts are also uploaded to GitHub Actions as release artifacts
 
 Promotion to production tracks remains manual.
+
+Production runtime hardening now also fails closed in these cases:
+
+- subscription verification is rejected if Apple/Google validation settings are missing
+- receipt OCR returns `503` if no real OCR provider is configured
+- production startup fails if required auth, invite email, push, or app-compatibility settings are missing
 
 All endpoints (except Auth and health) require a Bearer JWT in the `Authorization` header.
 
@@ -599,8 +639,9 @@ All endpoints (except Auth and health) require a Bearer JWT in the `Authorizatio
 
 ```bash
 # Build Lambda packages
-dotnet publish src/Conscia.Api -c Release -o publish/api
-dotnet publish src/Conscia.Infrastructure.Db -c Release -o publish/db-access
+dotnet publish src/Conscia.Api -c Release -r linux-arm64 --self-contained -o publish/api
+dotnet publish src/Conscia.OutboxProcessor -c Release -r linux-arm64 --self-contained -o publish/outbox
+dotnet publish src/Conscia.PatternAggregator -c Release -r linux-arm64 --self-contained -o publish/pattern-aggregator
 
 # Deploy all CDK stacks
 cd infra && cdk deploy --all
@@ -612,10 +653,10 @@ cd infra && cdk deploy --all
 
 | Decision | Rationale |
 |----------|-----------|
-| **Split-Lambda pattern** | API Lambda runs non-VPC for fast cold starts and low cost. DB-access Lambda runs in VPC for RDS/PostgreSQL connectivity. |
-| **No NAT Gateway** | Saves ~$32+/mo. DB credentials are passed via environment variables; non-VPC Lambda accesses DynamoDB/S3/SQS directly. |
+| **Split-Lambda pattern** | API Lambda runs non-VPC for fast cold starts and low cost. Background/event work is handled by dedicated Lambdas such as the outbox processor. |
+| **No NAT Gateway** | Saves ~$32+/mo. Non-VPC Lambdas access DynamoDB/S3/SQS/SES/Cognito directly. |
 | **No WAF** | Application-layer rate limiting (fixed-window, 60 req/min standard, 10 req/min AI) saves ~$6+/mo. |
-| **DynamoDB for hot data** | PAY_PER_REQUEST billing, TTL-based caching replaces ElastiCache for session/interaction data. |
+| **DynamoDB for hot data** | PAY_PER_REQUEST billing, DynamoDB streams for outbox processing, and no always-on relational standby costs. |
 | **Outbox pattern** | DynamoDB `TransactWriteItems` for atomic writes. DynamoDB Streams trigger eventual consistency processing. |
 | **Dual-AI personality** | "Impulse" (high temperature) and "Reason" (low temperature) run in parallel. A neutral summary reconciles both perspectives. |
 | **Ollama locally, Bedrock in prod** | Free local development with open-source models. Claude 3 Haiku in production for quality and speed. |

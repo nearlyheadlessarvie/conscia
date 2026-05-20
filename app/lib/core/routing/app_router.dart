@@ -97,6 +97,42 @@ Future<String?> getLastEmail() async {
   return prefs.getString(_lastEmailKey);
 }
 
+String familyInviteRoute({String? inviteId}) {
+  if (inviteId == null || inviteId.isEmpty) {
+    return AppRoutes.familyInvites;
+  }
+
+  return Uri(
+    path: AppRoutes.familyInvites,
+    queryParameters: {
+      'inviteId': inviteId,
+    },
+  ).toString();
+}
+
+String? resolveIncomingAppLink(Uri uri) {
+  if (uri.scheme == 'conscia' && uri.host == 'invite') {
+    return familyInviteRoute(inviteId: uri.queryParameters['inviteId']);
+  }
+
+  if ((uri.scheme == 'https' || uri.scheme == 'http') &&
+      (uri.host == 'getconscia.com' || uri.host == 'www.getconscia.com')) {
+    if (uri.path == '/invite' || uri.path == '/open/family-invite') {
+      return familyInviteRoute(inviteId: uri.queryParameters['inviteId']);
+    }
+
+    if (uri.path == AppRoutes.familyInvites) {
+      return uri.replace(
+        scheme: '',
+        host: '',
+        port: 0,
+      ).toString();
+    }
+  }
+
+  return null;
+}
+
 Map<String, String?>? _routeStringExtras(Object? extra) {
   if (extra is! Map) return null;
 
@@ -142,8 +178,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       final isOnboarding = state.uri.path.startsWith('/onboarding');
       final isOnboardingLanding = state.uri.path == AppRoutes.onboarding;
       final isVerifyEmailRoute = state.uri.path == AppRoutes.verifyEmail;
+      final isSignInRoute = state.uri.path == AppRoutes.signIn;
       final isSessionExpiredRoute = state.uri.path == AppRoutes.sessionExpired;
       final isHealthCheck = state.uri.path.startsWith('/health');
+      final redirectTarget = state.uri.queryParameters['redirect'];
 
       if (isHealthCheck) return null;
 
@@ -156,7 +194,20 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       }
 
       if (!isAuthenticated && (!isOnboarding || isOnboardingLanding)) {
-        return AppRoutes.signIn;
+        if (isSignInRoute) {
+          return null;
+        }
+
+        if (authState.wasExplicitLogout) {
+          return AppRoutes.signIn;
+        }
+
+        return Uri(
+          path: AppRoutes.signIn,
+          queryParameters: {
+            'redirect': state.uri.toString(),
+          },
+        ).toString();
       }
 
       if (isAuthenticated && (currentUserAsync?.isLoading ?? false)) {
@@ -171,7 +222,13 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           AppRoutes.aboutYou,
         };
 
-        if (hasOnboarded) return AppRoutes.home;
+        if (hasOnboarded) {
+          if (isSignInRoute && redirectTarget != null && redirectTarget.isNotEmpty) {
+            return redirectTarget;
+          }
+
+          return AppRoutes.home;
+        }
         if (!allowedOnboardingRoutes.contains(state.uri.path)) {
           return AppRoutes.setup;
         }

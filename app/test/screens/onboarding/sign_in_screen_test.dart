@@ -1,7 +1,9 @@
 import 'package:conscia_app/core/errors/app_error.dart';
 import 'package:conscia_app/providers/auth_provider.dart';
+import 'package:conscia_app/providers/passkey_provider.dart';
 import 'package:conscia_app/screens/onboarding/sign_in_screen.dart';
 import 'package:conscia_app/services/auth_service.dart';
+import 'package:conscia_app/services/passkey_service.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -41,6 +43,29 @@ class _FakeSecureStorage extends FlutterSecureStorage {
   }) async {
     return null;
   }
+
+  @override
+  Future<void> write({
+    required String key,
+    String? value,
+    AppleOptions? iOptions,
+    AndroidOptions? aOptions,
+    LinuxOptions? lOptions,
+    WebOptions? webOptions,
+    WindowsOptions? wOptions,
+    AppleOptions? mOptions,
+  }) async {}
+
+  @override
+  Future<void> delete({
+    required String key,
+    AppleOptions? iOptions,
+    AndroidOptions? aOptions,
+    LinuxOptions? lOptions,
+    WebOptions? webOptions,
+    WindowsOptions? wOptions,
+    AppleOptions? mOptions,
+  }) async {}
 }
 
 void main() {
@@ -185,6 +210,77 @@ void main() {
 
     expect(loginCallCount, 1);
   });
+
+  testWidgets('sign in screen replaces legacy biometrics with passkey action',
+      (tester) async {
+    final authNotifier = AuthNotifier(
+      _RecordingAuthService(
+        onLogin: (_, __) => const AuthTokens(
+          accessToken: 'header.payload.signature',
+          refreshToken: 'refresh-token',
+          userId: 'user-1',
+        ),
+      ),
+      const _FakeSecureStorage(),
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          authProvider.overrideWith((ref) => authNotifier),
+          passkeyAvailabilityProvider.overrideWith((ref) async => true),
+          passkeyServiceProvider.overrideWithValue(_RecordingPasskeyService()),
+        ],
+        child: const MaterialApp(
+          home: SignInScreen(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Sign in with Biometrics'), findsNothing);
+    expect(find.text('Sign in with Passkey'), findsOneWidget);
+  });
+
+  testWidgets('passkey sign in authenticates with typed email', (tester) async {
+    final authNotifier = AuthNotifier(
+      _RecordingAuthService(
+        onLogin: (_, __) => const AuthTokens(
+          accessToken: 'header.payload.signature',
+          refreshToken: 'refresh-token',
+          userId: 'user-1',
+        ),
+      ),
+      const _FakeSecureStorage(),
+    );
+    final passkeys = _RecordingPasskeyService();
+    final container = ProviderContainer(
+      overrides: [
+        authProvider.overrideWith((ref) => authNotifier),
+        passkeyAvailabilityProvider.overrideWith((ref) async => true),
+        passkeyServiceProvider.overrideWithValue(passkeys),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: const MaterialApp(home: SignInScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final fields = find.byType(TextField);
+    await tester.enterText(fields.at(0), 'story-demo@example.com');
+    await tester
+        .tap(find.widgetWithText(OutlinedButton, 'Sign in with Passkey'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(passkeys.lastEmail, 'story-demo@example.com');
+    expect(container.read(authProvider).isAuthenticated, isTrue);
+  });
 }
 
 class _RecordingAuthService extends AuthService {
@@ -195,5 +291,28 @@ class _RecordingAuthService extends AuthService {
   @override
   Future<AuthTokens> login(String email, String password) async {
     return onLogin(email, password);
+  }
+}
+
+class _RecordingPasskeyService extends PasskeyService {
+  _RecordingPasskeyService()
+      : super(
+          publicDio: Dio(),
+          authenticatedDio: Dio(),
+        );
+
+  String? lastEmail;
+
+  @override
+  Future<bool> isSupported() async => true;
+
+  @override
+  Future<AuthTokens> signIn(String email) async {
+    lastEmail = email;
+    return const AuthTokens(
+      accessToken: 'header.payload.signature',
+      refreshToken: 'refresh-token',
+      userId: 'user-1',
+    );
   }
 }
