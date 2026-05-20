@@ -71,11 +71,20 @@ void main() {
         .toList();
 
     expect(journeyAlerts, hasLength(3));
-    expect(journeyAlerts.map((alert) => alert.actionRoute), everyElement('/'));
-    expect(
-      journeyAlerts.map((alert) => alert.actionLabel),
-      everyElement('Open Journey Home'),
-    );
+
+    final levelAlert =
+        journeyAlerts.singleWhere((alert) => alert.type == 'journey_level_up');
+    final badgeAlert =
+        journeyAlerts.singleWhere((alert) => alert.type == 'journey_badge');
+    final questAlert =
+        journeyAlerts.singleWhere((alert) => alert.type == 'journey_quest');
+
+    expect(levelAlert.actionLabel, 'View level');
+    expect(levelAlert.actionRoute, '/journey/level-up');
+    expect(badgeAlert.actionLabel, 'See progress');
+    expect(badgeAlert.actionRoute, '/');
+    expect(questAlert.actionLabel, 'Continue journey');
+    expect(questAlert.actionRoute, '/');
   });
 
   test('conscienceJourneyProvider refreshes when authenticated user changes',
