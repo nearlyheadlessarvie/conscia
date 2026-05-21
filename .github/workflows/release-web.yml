@@ -75,7 +75,10 @@ jobs:
             DOMAIN=$(aws cloudformation describe-stacks --stack-name Conscia-Web --query "Stacks[0].Outputs[?ExportName=='ConsciaWebDomain'].OutputValue" --output text)
           fi
           curl -sf "https://$DOMAIN" || exit 1
+          curl -sf "https://$DOMAIN/.well-known/apple-app-site-association" | grep -q '"webcredentials"' || exit 1
+          curl -sf "https://$DOMAIN/.well-known/assetlinks.json" | grep -q '"delegate_permission/common.get_login_creds"' || exit 1
           echo "Site is live"
+          echo "Passkey and deep-link association files are live"
 
       - name: Extract version
         id: version

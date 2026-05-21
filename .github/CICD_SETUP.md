@@ -192,6 +192,14 @@ Private `.p8` contents for Apple server API access.
 
 Usually your Android package name, for example `com.conscia.app`.
 
+How to confirm:
+
+```bash
+rg "applicationId" app/android
+```
+
+It should match the package registered in Google Play Console.
+
 #### `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON`
 
 Service account JSON for Play purchase validation.
@@ -219,6 +227,19 @@ gh variable set INVITE_EMAIL_DEEP_LINK_BASE_URI \
 ```
 
 The outbox processor appends `?inviteId=<guid>` automatically. The app resolves this universal/app link to `/settings/family-space/invites`.
+
+Use the HTTPS universal/app-link URL here, not the custom `conscia://` scheme. The production default should stay:
+
+```text
+https://getconscia.com/open/family-invite
+```
+
+Before relying on invite links in store builds, run a web release so these association files are published:
+
+```text
+https://getconscia.com/.well-known/apple-app-site-association
+https://getconscia.com/.well-known/assetlinks.json
+```
 
 ### SES Email
 
@@ -327,13 +348,34 @@ Usually `com.conscia.app`.
 
 The app workflow uses these iOS secrets to sign the archive on a macOS runner and upload the resulting IPA to TestFlight.
 
+How to confirm:
+
+- Xcode -> Runner target -> Signing & Capabilities -> Bundle Identifier
+- Apple Developer Portal -> Certificates, Identifiers & Profiles -> Identifiers -> App ID
+
+The value must match the App ID used by the provisioning profile and the associated domains capability.
+
 ### Passkey Association Files
 
 Passkeys now replace the old faux biometric toggle for Cognito-native Conscia accounts. Real devices need associated-domain metadata generated during the web release.
 
+The web release uses these values to generate:
+
+- `/.well-known/apple-app-site-association` for iOS universal links and passkeys
+- `/.well-known/assetlinks.json` for Android app links and passkeys
+
+`release-web.yml` has `REQUIRE_PASSKEY_ASSOCIATIONS=true`, so missing values fail the web release before deploy.
+
 #### `APPLE_TEAM_ID`
 
 Your Apple Developer Team ID. This is used to generate the `apple-app-site-association` file for iOS passkeys and universal links.
+
+How to get it:
+
+- Apple Developer Portal -> Membership details -> Team ID
+- Or Xcode -> Settings -> Accounts -> select team -> Team ID
+
+This is usually a 10-character alphanumeric value. It is not the App Store Connect issuer ID.
 
 ```bash
 gh variable set APPLE_TEAM_ID --body "YOURTEAMID" --repo nearlyheadlessarvie/conscia
@@ -355,7 +397,25 @@ You can get fingerprints with:
 keytool -list -v -keystore conscia-release.jks -alias conscia
 ```
 
-If you use Play App Signing, also copy the App Signing SHA-256 fingerprint from Play Console and include it in the comma-separated list.
+For Play-distributed builds, copy the production fingerprint from:
+
+```text
+Play Console -> your app -> Setup -> App integrity -> App signing -> App signing key certificate -> SHA-256 certificate fingerprint
+```
+
+If you use an upload key or local/internal builds, also include those fingerprints. For local Android app-link testing:
+
+```bash
+cd app/android
+./gradlew signingReport
+```
+
+On Windows PowerShell:
+
+```powershell
+cd app/android
+.\gradlew signingReport
+```
 
 ---
 

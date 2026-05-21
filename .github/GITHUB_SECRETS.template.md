@@ -91,6 +91,8 @@ The app now supports Cognito-native passkeys for Conscia accounts. The web relea
 | `APPLE_TEAM_ID` | Variable | `release-web.yml` | Apple Developer Team ID used in `apple-app-site-association`. |
 | `ANDROID_PASSKEY_SHA256_CERT_FINGERPRINTS` | Variable | `release-web.yml` | Comma-separated Android SHA-256 certificate fingerprints for `assetlinks.json`. Include release and Play App Signing fingerprints when applicable. |
 
+See `.github/CICD_SETUP.md` for the exact portal paths to retrieve `APPLE_TEAM_ID`, `ANDROID_PASSKEY_SHA256_CERT_FINGERPRINTS`, `INVITE_EMAIL_DEEP_LINK_BASE_URI`, `IOS_BUNDLE_ID`, and `GOOGLE_PLAY_PACKAGE_NAME`.
+
 ## iOS Signing And Distribution
 
 Only needed when CI starts producing signed iOS releases.
