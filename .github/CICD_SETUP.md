@@ -240,10 +240,13 @@ Service account JSON for Play purchase validation.
 
 How to get it:
 
-- Play Console -> Setup -> API access
-- Link the app to a Google Cloud project if it is not linked yet
+- Play Console -> Developer account -> Settings -> API access, if that page is available on your account
+- If `API access` is not shown, use Play Console -> Users and permissions instead
+- Link the Play developer account/app to a Google Cloud project if it is not linked yet
 - In Google Cloud Console -> IAM & Admin -> Service Accounts, create a service account
-- Back in Play Console -> API access, grant the service account the minimum app permission needed for purchase/subscription validation
+- Copy the service account email address, for example `name@project.iam.gserviceaccount.com`
+- Back in Play Console -> Users and permissions -> Invite new users
+- Invite the service account email, grant access to the Conscia app, and give it the minimum permission needed for purchase/subscription validation: `View financial data, orders, and cancellation survey responses`
 - Create a JSON key for that service account and download it
 
 ```bash
