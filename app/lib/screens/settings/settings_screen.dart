@@ -29,6 +29,7 @@ import '../../widgets/conscia_app_bar.dart';
 import '../../widgets/conscia_bottom_sheet.dart';
 import '../../widgets/conscia_confirm_sheet.dart';
 import '../../widgets/currency_picker_sheet.dart';
+import '../../widgets/editorial_section_header.dart';
 import '../../widgets/editorial_hero_chip.dart';
 import '../../widgets/locale_picker_sheet.dart';
 import '../../widgets/single_select_list.dart';
@@ -222,7 +223,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   sliver: SliverList.list(
                     children: [
                       _SettingsGroup(
-                        title: 'Money Setup',
+                        title: 'Money setup',
+                        subtitle:
+                            'Shape how Conscia tracks categories, limits, and planning defaults.',
                         children: [
                           _SettingsActionRow(
                             leading: _SettingsIconBox(
@@ -246,6 +249,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       ),
                       _SettingsGroup(
                         title: 'Preferences',
+                        subtitle:
+                            'Tune guidance, formatting, and device-level behavior.',
                         children: [
                           _SettingsActionRow(
                             leading: _SettingsIconBox(
@@ -327,6 +332,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       ),
                       _SettingsGroup(
                         title: 'Subscription',
+                        subtitle:
+                            'See your plan status and manage premium access.',
                         children: [
                           subAsync.when(
                             data: (status) => _PremiumRow(
@@ -352,6 +359,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       if (adminEntitlementAccess)
                         _SettingsGroup(
                           title: 'Operator',
+                          subtitle:
+                              'Internal tools for account access, provisioning, and entitlements.',
                           children: [
                             _SettingsActionRow(
                               leading: _SettingsIconBox(
@@ -368,7 +377,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                           ],
                         ),
                       _SettingsGroup(
-                        title: 'Data & Privacy',
+                        title: 'Data & privacy',
+                        subtitle:
+                            'Control exports, account ownership, and permanent deletion.',
                         children: [
                           _SettingsActionRow(
                             leading: _SettingsIconBox(
@@ -725,32 +736,26 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 class _SettingsGroup extends StatelessWidget {
   const _SettingsGroup({
     required this.title,
+    required this.subtitle,
     required this.children,
   });
 
   final String title;
+  final String subtitle;
   final List<Widget> children;
 
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).appColors;
-
     return Padding(
-      padding: const EdgeInsets.only(bottom: 18),
+      padding: const EdgeInsets.only(bottom: 26),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Padding(
-            padding: const EdgeInsets.only(left: 2, bottom: 8),
-            child: Text(
-              title.toUpperCase(),
-              style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: colors.mutedInk,
-                    letterSpacing: 0.8,
-                    fontWeight: FontWeight.w700,
-                  ),
-            ),
+          EditorialSectionHeader(
+            title: title,
+            subtitle: subtitle,
           ),
+          const SizedBox(height: 10),
           Material(
             key: ValueKey('settings-group-$title'),
             color: Colors.transparent,

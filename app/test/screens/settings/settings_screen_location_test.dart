@@ -650,6 +650,68 @@ void main() {
         findsOneWidget);
   });
 
+  testWidgets('settings uses editorial section headers with meaningful subtitles',
+      (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+    final locationService =
+        _RecordingLocationAssistanceService(permissionGranted: true);
+
+    await _pumpSettingsScreen(
+      tester,
+      prefs: prefs,
+      locationService: locationService,
+      overrides: [
+        adminEntitlementAccessProvider.overrideWith((ref) async => true),
+      ],
+    );
+
+    await tester.pumpAndSettle();
+
+    expect(find.text('Money setup'), findsOneWidget);
+    expect(
+      find.text(
+        'Shape how Conscia tracks categories, limits, and planning defaults.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('Preferences'), findsOneWidget);
+    expect(
+      find.text('Tune guidance, formatting, and device-level behavior.'),
+      findsOneWidget,
+    );
+
+    await tester.scrollUntilVisible(find.text('Conscia Premium'), 200);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Subscription'), findsOneWidget);
+    expect(
+      find.text('See your plan status and manage premium access.'),
+      findsOneWidget,
+    );
+    expect(find.text('Operator'), findsOneWidget);
+    expect(
+      find.text(
+        'Internal tools for account access, provisioning, and entitlements.',
+      ),
+      findsOneWidget,
+    );
+
+    await tester.scrollUntilVisible(find.text('Download my data'), 200);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Data & privacy'), findsOneWidget);
+    expect(
+      find.text('Control exports, account ownership, and permanent deletion.'),
+      findsOneWidget,
+    );
+
+    expect(find.text('MONEY SETUP'), findsNothing);
+    expect(find.text('PREFERENCES'), findsNothing);
+    expect(find.text('SUBSCRIPTION'), findsNothing);
+    expect(find.text('DATA & PRIVACY'), findsNothing);
+  });
+
   testWidgets('settings hero shortcut subtitles truncate instead of wrapping', (
     tester,
   ) async {
@@ -735,8 +797,8 @@ void main() {
     await tester.scrollUntilVisible(find.text('Budgets'), 200);
     await tester.pumpAndSettle();
 
-    expect(find.text('MONEY SETUP'), findsOneWidget);
-    final planningTop = tester.getTopLeft(find.text('MONEY SETUP')).dy;
+    expect(find.text('Money setup'), findsOneWidget);
+    final planningTop = tester.getTopLeft(find.text('Money setup')).dy;
     final categoriesTop = tester.getTopLeft(find.text('Categories')).dy;
     final budgetsTop = tester.getTopLeft(find.text('Budgets')).dy;
 
@@ -824,10 +886,10 @@ void main() {
 
     expect(find.text('Data & About'), findsNothing);
     expect(find.text('Service Status'), findsNothing);
-    await tester.scrollUntilVisible(find.text('DATA & PRIVACY'), 280);
+    await tester.scrollUntilVisible(find.text('Download my data'), 280);
     await tester.pumpAndSettle();
 
-    expect(find.text('DATA & PRIVACY'), findsOneWidget);
+    expect(find.text('Data & privacy'), findsOneWidget);
     expect(find.text('Download my data'), findsOneWidget);
     expect(find.text('Delete account'), findsOneWidget);
   });
@@ -851,7 +913,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Admin entitlements'), findsNothing);
-    expect(find.text('OPERATOR'), findsNothing);
+    expect(find.text('Operator'), findsNothing);
   });
 
   testWidgets('settings shows admin entitlements for admin sessions',
@@ -874,7 +936,7 @@ void main() {
     await tester.scrollUntilVisible(find.text('Admin entitlements'), 280);
     await tester.pumpAndSettle();
 
-    expect(find.text('OPERATOR'), findsOneWidget);
+    expect(find.text('Operator'), findsOneWidget);
     expect(find.text('Admin entitlements'), findsOneWidget);
   });
 
@@ -920,7 +982,7 @@ void main() {
 
     await tester.pumpAndSettle();
 
-    await tester.ensureVisible(find.text('PREFERENCES'));
+    await tester.scrollUntilVisible(find.text('AI Personality'), 200);
     await tester.pumpAndSettle();
 
     final groupMaterial = tester.widget<Material>(
