@@ -23,7 +23,12 @@ final familySpaceProvider = FutureProvider<FamilySpace?>((ref) async {
   if (!authState.isAuthenticated) return null;
   final dio = ref.watch(dioProvider);
   final response = await dio.get(ApiConstants.familySpace);
-  if (response.statusCode == 204 || response.data == null) return null;
+  final data = response.data;
+  if (response.statusCode == 204 ||
+      data == null ||
+      (data is String && data.trim().isEmpty)) {
+    return null;
+  }
   return FamilySpace.fromJson(Map<String, dynamic>.from(response.data as Map));
 });
 

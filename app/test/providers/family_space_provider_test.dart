@@ -13,6 +13,30 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 void main() {
+  test('family space provider treats empty 204 responses as no household', () async {
+    final dio = Dio(BaseOptions(baseUrl: 'http://test.local/api/'))
+      ..httpClientAdapter = _NoFamilySpaceAdapter();
+
+    final container = ProviderContainer(
+      overrides: [
+        dioProvider.overrideWithValue(dio),
+        authProvider.overrideWith(
+          (ref) => _TestAuthNotifier(
+            const AuthState(
+              status: AuthStatus.authenticated,
+              userId: 'user-1',
+            ),
+          ),
+        ),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    final familySpace = await container.read(familySpaceProvider.future);
+
+    expect(familySpace, isNull);
+  });
+
   test('family membership changes refresh family-scoped money data', () async {
     final adapter = _FamilyCacheAdapter();
     final dio = Dio(BaseOptions(baseUrl: 'http://test.local/api/'))
@@ -191,6 +215,36 @@ class _FamilyCacheAdapter implements HttpClientAdapter {
   }
 
   String _jsonEncode(Object body) => jsonEncode(body);
+
+  @override
+  void close({bool force = false}) {}
+}
+
+class _NoFamilySpaceAdapter implements HttpClientAdapter {
+  @override
+  Future<ResponseBody> fetch(
+    RequestOptions options,
+    Stream<List<int>>? requestStream,
+    Future<void>? cancelFuture,
+  ) async {
+    if (options.method == 'GET' && options.path.endsWith('family-space')) {
+      return ResponseBody.fromString(
+        '',
+        204,
+        headers: {
+          Headers.contentTypeHeader: [Headers.jsonContentType],
+        },
+      );
+    }
+
+    return ResponseBody.fromString(
+      jsonEncode({'error': 'Unhandled ${options.method} ${options.path}'}),
+      404,
+      headers: {
+        Headers.contentTypeHeader: [Headers.jsonContentType],
+      },
+    );
+  }
 
   @override
   void close({bool force = false}) {}

@@ -10,6 +10,7 @@ import '../../models/family_invite.dart';
 import '../../providers/family_space_provider.dart';
 import '../../widgets/conscia_button_row.dart';
 import '../../widgets/editorial_hero_chip.dart';
+import '../../widgets/editorial_section_header.dart';
 import '../../widgets/floating_label_text_field.dart';
 import '../../widgets/hero_screen_scaffold.dart';
 import '../../widgets/inline_notice.dart';
@@ -214,29 +215,9 @@ class _SectionHeading extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).appColors;
-    final theme = Theme.of(context);
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          title.toUpperCase(),
-          style: theme.textTheme.labelSmall?.copyWith(
-            color: colors.mutedInk,
-            letterSpacing: 1.2,
-            fontWeight: FontWeight.w800,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          subtitle,
-          style: theme.textTheme.bodySmall?.copyWith(
-            color: colors.mutedInk,
-            height: 1.3,
-          ),
-        ),
-      ],
+    return EditorialSectionHeader(
+      title: title,
+      subtitle: subtitle,
     );
   }
 }
@@ -305,11 +286,10 @@ class _InviteComposerState extends ConsumerState<_InviteComposer> {
         ),
         const SizedBox(height: 14),
         Text(
-          'ROLE',
+          'Role',
           style: Theme.of(context).textTheme.labelSmall?.copyWith(
                 color: colors.mutedInk,
                 fontWeight: FontWeight.w700,
-                letterSpacing: 1.2,
               ),
         ),
         const SizedBox(height: 6),
