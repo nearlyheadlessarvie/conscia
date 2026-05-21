@@ -21,6 +21,7 @@ import '../../providers/subscription_provider.dart';
 import '../../providers/transaction_providers.dart';
 import '../../providers/user_provider.dart';
 import '../../models/recurring_schedule.dart';
+import '../../services/location_assistance_service.dart';
 import '../../services/transaction_service.dart';
 import '../../widgets/conscia_bottom_sheet.dart';
 import '../../widgets/location_assistance_prompt_sheet.dart';
@@ -369,6 +370,7 @@ class _TransactionFormSheetState extends ConsumerState<TransactionFormSheet> {
           sourceId: savedTransaction.id,
         );
       }
+      _recordSmartLocationContext();
 
       if (!mounted) return;
       _originalTransaction = savedTransaction;
@@ -419,6 +421,25 @@ class _TransactionFormSheetState extends ConsumerState<TransactionFormSheet> {
           // Transaction saves should not be blocked by Journey progress sync.
         }
       }(),
+    );
+  }
+
+  void _recordSmartLocationContext() {
+    final merchant = _counterpartyController.text.trim();
+    final category = _selectedCategory?.trim();
+    if (!ref.read(locationAssistanceProvider).isEnabled ||
+        !_isExpense ||
+        merchant.isEmpty ||
+        category == null ||
+        category.isEmpty) {
+      return;
+    }
+
+    unawaited(
+      ref.read(locationAssistanceServiceProvider).recordTransactionContext(
+            merchant: merchant,
+            category: category,
+          ),
     );
   }
 
