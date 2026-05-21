@@ -112,6 +112,8 @@ if (builder.Environment.IsDevelopment())
         ServiceURL = builder.Configuration["AWS:SQS:ServiceURL"]
     };
     builder.Services.AddSingleton<IAmazonSQS>(new AmazonSQSClient(credentials, sqsConfig));
+    builder.Services.AddAWSService<IAmazonCognitoIdentityProvider>();
+    builder.Services.AddAWSService<IAmazonTextract>();
 }
 else
 {
