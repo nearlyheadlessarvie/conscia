@@ -12,6 +12,7 @@ This design covers:
 - effective subscription status resolution that merges normal subscription state with overrides
 - a protected admin API to grant and revoke lifetime premium by user ID
 - a bootstrap admin flow that does not require manual Dynamo editing or pre-seeded Cognito subject IDs
+- a minimal internal admin page for repeated entitlement operations and reviewer/demo account support
 - a seed path that writes the same backend-owned override data for local or controlled environments
 - tests for the service layer, API behavior, and seed behavior
 - release-safe documentation for operators and developers
@@ -20,6 +21,7 @@ This design does not cover:
 
 - a general-purpose RBAC or full admin console
 - app-side admin UI
+- broad user lifecycle management beyond narrow reviewer/demo provisioning
 - additional entitlement types beyond lifetime premium
 - changing store verification behavior for iOS or Android purchases
 
@@ -154,6 +156,33 @@ Acceptable implementation shapes include:
 
 The important constraint is that admin entitlement writes are backend-protected and not available to ordinary authenticated users.
 
+### Internal Admin Page
+
+Add a very small internal admin page backed by the protected admin API.
+
+Primary use cases:
+
+- repeated lifetime premium grant and revoke actions by trusted operators
+- quick lookup and verification of effective subscription status
+- controlled provisioning for reviewer, demo, or test accounts used in App Store and Play review flows
+
+Suggested capabilities:
+
+- search or fetch a user by email and show the resolved user ID
+- view effective subscription status for a user
+- grant lifetime premium
+- revoke lifetime premium
+- create a narrow reviewer or demo account through a controlled provisioning action
+
+Non-goals for this page:
+
+- editing arbitrary user profile data
+- password reset management
+- full support tooling for all account operations
+- broad role management
+
+The admin page should remain a thin operator surface over backend-owned APIs. It must not become a second source of truth for entitlement state.
+
 ## Admin Bootstrap
 
 Bootstrap admin authority should be separate from premium recipient storage.
@@ -181,6 +210,30 @@ Operational flow:
 5. The backend writes the lifetime premium entitlement override in Dynamo.
 
 This bootstrap email allowlist is only for admin authority establishment. It is not the premium entitlement mechanism and must not be reused as a premium-recipient allowlist.
+
+## Reviewer And Demo Accounts
+
+App review and demo flows benefit from predictable, pre-created accounts rather than relying only on ad hoc signup and post-hoc granting.
+
+Recommended model:
+
+- allow narrow backend provisioning of reviewer or demo accounts for controlled use cases
+- provision those users through Cognito-aware backend code rather than through infrastructure deployment templates
+- grant lifetime premium to those provisioned accounts through the same entitlement override mechanism used for normal users
+
+Why not infra-seed real reviewer users:
+
+- human account data does not belong in infrastructure deployment definitions
+- Cognito subjects are created as part of user provisioning, not static infra shape
+- reviewer credentials and refresh cycles are better handled through operational tooling than release infrastructure
+
+Provisioning scope should stay intentionally small:
+
+- create a reviewer/demo account with email and initial delivery behavior
+- ensure the local user record exists
+- optionally grant lifetime premium immediately
+
+The provisioning path should not attempt to become a general account-admin system.
 
 ## Seeder Path
 
@@ -223,6 +276,16 @@ Add endpoint tests for:
 - admin grant endpoint creates effective lifetime premium status
 - admin revoke endpoint removes lifetime premium status
 - admin endpoints reject unauthorized callers
+- narrow provisioning endpoint creates reviewer/demo users without broad account-management behavior
+
+### Admin Page Tests
+
+Add focused tests for the internal admin page covering:
+
+- authorized admin can look up a user and see the resolved user ID
+- authorized admin can grant and revoke lifetime premium
+- reviewer/demo provisioning path is visible and calls the backend correctly
+- unauthorized users cannot access the page
 
 ### Seeder Tests
 
@@ -240,6 +303,8 @@ Add short release-safe documentation covering:
 - that they are backend-owned and keyed by user ID
 - how bootstrap admin authority works and why it is separate from premium recipient storage
 - how to grant and revoke them through the protected admin path
+- how the minimal internal admin page is intended to be used
+- how reviewer/demo provisioning works and where its scope stops
 - how to seed them locally or in controlled environments
 - how they appear in `/api/subscriptions/status`
 
@@ -268,6 +333,13 @@ Expected real-world flow:
 5. The admin calls the protected entitlement API to grant or revoke lifetime premium for that user ID.
 6. The recipient's effective subscription status immediately resolves as premium with `source = lifetime`.
 
+Reviewer/demo flow:
+
+1. An authorized admin opens the internal admin page.
+2. The admin provisions a narrow reviewer or demo account if needed.
+3. The admin grants lifetime premium through the same backend entitlement API.
+4. The reviewer or demo account can then be used in App Store or Play review instructions without manual Dynamo edits.
+
 ## Acceptance Criteria
 
 - A backend record keyed by user ID can grant lifetime premium access.
@@ -276,6 +348,8 @@ Expected real-world flow:
 - Premium-gated endpoints honor lifetime overrides without app changes.
 - A bootstrap admin can establish subject-based admin authority without knowing a Cognito subject ID before registration.
 - A protected admin API can grant and revoke lifetime premium for a user ID.
+- A minimal internal admin page can perform lookup plus grant/revoke actions without becoming a general admin console.
+- Reviewer or demo accounts can be provisioned through a narrow backend path and granted lifetime premium through the same override mechanism.
 - The seed path can create the same entitlement override safely and idempotently.
 - Tests cover the merged status logic, protected admin flow, and seed behavior.
 - Documentation explains the mechanism without relying on hardcoded emails or unsafe manual steps.
