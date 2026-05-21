@@ -16,6 +16,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_layout.dart';
 import '../../models/family_space.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/admin_entitlement_provider.dart';
 import '../../providers/family_space_provider.dart';
 import '../../providers/location_assistance_provider.dart';
 import '../../providers/passkey_provider.dart';
@@ -163,6 +164,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final locationAssistance = ref.watch(locationAssistanceProvider);
     final passkeysAvailable =
         ref.watch(passkeyAvailabilityProvider).valueOrNull ?? false;
+    final adminEntitlementAccess =
+        ref.watch(adminEntitlementAccessProvider).valueOrNull ?? false;
     final sessionSupportsPasskeys =
         ref.watch(currentSessionSupportsPasskeysProvider);
     final userPreferences = ref.watch(userPreferencesProvider);
@@ -346,23 +349,24 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                           ),
                         ],
                       ),
-                      _SettingsGroup(
-                        title: 'Operator',
-                        children: [
-                          _SettingsActionRow(
-                            leading: _SettingsIconBox(
-                              icon: Icons.admin_panel_settings_outlined,
-                              backgroundColor: theme.appColors.navySoft,
+                      if (adminEntitlementAccess)
+                        _SettingsGroup(
+                          title: 'Operator',
+                          children: [
+                            _SettingsActionRow(
+                              leading: _SettingsIconBox(
+                                icon: Icons.admin_panel_settings_outlined,
+                                backgroundColor: theme.appColors.navySoft,
+                              ),
+                              title: 'Admin entitlements',
+                              subtitle:
+                                  'Lookup users, grant lifetime premium, and provision reviewer access',
+                              onTap: () => context.push(
+                                AppRoutes.settingsAdminEntitlements,
+                              ),
                             ),
-                            title: 'Admin entitlements',
-                            subtitle:
-                                'Lookup users, grant lifetime premium, and provision reviewer access',
-                            onTap: () => context.push(
-                              AppRoutes.settingsAdminEntitlements,
-                            ),
-                          ),
-                        ],
-                      ),
+                          ],
+                        ),
                       if (ApiConstants.useMockAuth)
                         _SettingsGroup(
                           title: 'Developer',

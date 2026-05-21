@@ -1,10 +1,11 @@
 import 'package:conscia_app/providers/auth_provider.dart';
-import 'package:conscia_app/providers/user_provider.dart';
-import 'package:conscia_app/services/user_service.dart';
-import 'package:conscia_app/screens/settings/admin_entitlements_screen.dart';
 import 'package:conscia_app/providers/admin_entitlement_provider.dart';
+import 'package:conscia_app/providers/user_provider.dart';
+import 'package:conscia_app/screens/settings/admin_entitlements_screen.dart';
 import 'package:conscia_app/services/admin_entitlement_service.dart';
 import 'package:conscia_app/services/auth_service.dart';
+import 'package:conscia_app/services/user_service.dart';
+import 'package:conscia_app/widgets/floating_label_text_field.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -100,6 +101,7 @@ Future<void> _pumpScreen(
             hasCompletedOnboarding: true,
           ),
         ),
+        adminEntitlementAccessProvider.overrideWith((ref) async => true),
         adminEntitlementServiceProvider.overrideWithValue(service),
       ],
       child: const MaterialApp(
@@ -126,6 +128,7 @@ void main() {
 
     expect(service.lookupCalls, 1);
     expect(service.lastLookupEmail, 'story-demo@example.com');
+    expect(find.byType(FloatingLabelTextField), findsWidgets);
     expect(
       find.text(
           'story-demo@example.com\n10000000-0000-4000-8000-000000000001\nlifetime\nactive=true'),

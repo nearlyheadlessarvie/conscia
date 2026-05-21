@@ -7,6 +7,7 @@ import '../../providers/admin_entitlement_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../widgets/conscia_app_bar.dart';
 import '../../widgets/feed_card.dart';
+import '../../widgets/floating_label_text_field.dart';
 import '../../widgets/hero_screen_scaffold.dart';
 import '../../widgets/screen_section.dart';
 
@@ -69,6 +70,8 @@ class _AdminEntitlementsScreenState
   Widget build(BuildContext context) {
     final authState = ref.watch(authProvider);
     final service = ref.watch(adminEntitlementServiceProvider);
+    final hasAdminAccess =
+        ref.watch(adminEntitlementAccessProvider).valueOrNull ?? false;
 
     return HeroScreenScaffold(
       appBar: const ConsciaAppBar(title: Text('Admin Entitlements')),
@@ -82,167 +85,163 @@ class _AdminEntitlementsScreenState
             compact: true,
             child: FeedCard(
               child: Text(
-                authState.isAuthenticated
-                    ? 'Signed in. If this account is not an admin, the backend will return a permission error.'
-                    : 'Sign in first to use admin entitlement tools.',
+                authState.isAuthenticated && hasAdminAccess
+                    ? 'Signed in with operator access. Backend authorization still validates every action.'
+                    : authState.isAuthenticated
+                        ? 'This signed-in account does not currently have operator access.'
+                        : 'Sign in first to use admin entitlement tools.',
               ),
             ),
           ),
-          ScreenSection(
-            title: 'Lookup and Access',
-            subtitle:
-                'Resolve a target user by email, then grant or revoke the lifetime premium override by user ID.',
-            compact: true,
-            child: FeedCard(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  TextField(
-                    key: const ValueKey('admin-entitlements-lookup-email'),
-                    controller: _lookupEmailController,
-                    keyboardType: TextInputType.emailAddress,
-                    decoration: const InputDecoration(
-                      labelText: 'Lookup by email',
+          if (hasAdminAccess) ...[
+            ScreenSection(
+              title: 'Lookup and Access',
+              subtitle:
+                  'Resolve a target user by email, then grant or revoke the lifetime premium override by user ID.',
+              compact: true,
+              child: FeedCard(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    FloatingLabelTextField(
+                      key: const ValueKey('admin-entitlements-lookup-email'),
+                      controller: _lookupEmailController,
+                      label: 'Lookup by email',
+                      keyboardType: TextInputType.emailAddress,
                     ),
-                  ),
-                  const SizedBox(height: 12),
-                  SizedBox(
-                    width: double.infinity,
-                    child: FilledButton(
-                      onPressed: _busy || !authState.isAuthenticated
-                          ? null
-                          : () => _run(() async {
-                                final lookup = await service.lookupByEmail(
-                                  _lookupEmailController.text.trim(),
-                                );
-                                _targetUserIdController.text = lookup.userId;
-                                setState(() {
-                                  _result =
-                                      '${lookup.email}\n${lookup.userId}\n${lookup.source}\nactive=${lookup.isActive}';
-                                });
-                              }),
-                      child: const Text('Lookup user'),
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      width: double.infinity,
+                      child: FilledButton(
+                        onPressed: _busy || !authState.isAuthenticated
+                            ? null
+                            : () => _run(() async {
+                                  final lookup = await service.lookupByEmail(
+                                    _lookupEmailController.text.trim(),
+                                  );
+                                  _targetUserIdController.text = lookup.userId;
+                                  setState(() {
+                                    _result =
+                                        '${lookup.email}\n${lookup.userId}\n${lookup.source}\nactive=${lookup.isActive}';
+                                  });
+                                }),
+                        child: const Text('Lookup user'),
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 16),
-                  TextField(
-                    key: const ValueKey('admin-entitlements-target-user-id'),
-                    controller: _targetUserIdController,
-                    decoration: const InputDecoration(
-                      labelText: 'Target user ID',
+                    const SizedBox(height: 16),
+                    FloatingLabelTextField(
+                      key: const ValueKey('admin-entitlements-target-user-id'),
+                      controller: _targetUserIdController,
+                      label: 'Target user ID',
                     ),
-                  ),
-                  const SizedBox(height: 12),
-                  TextField(
-                    key: const ValueKey('admin-entitlements-note'),
-                    controller: _noteController,
-                    decoration: const InputDecoration(
-                      labelText: 'Grant note',
+                    const SizedBox(height: 12),
+                    FloatingLabelTextField(
+                      key: const ValueKey('admin-entitlements-note'),
+                      controller: _noteController,
+                      label: 'Grant note',
                     ),
-                  ),
-                  const SizedBox(height: 12),
-                  SizedBox(
-                    width: double.infinity,
-                    child: FilledButton(
-                      onPressed: _busy || !authState.isAuthenticated
-                          ? null
-                          : () => _run(() async {
-                                final result =
-                                    await service.grantLifetimePremium(
-                                  _targetUserIdController.text.trim(),
-                                  _noteController.text.trim(),
-                                );
-                                setState(() {
-                                  _result =
-                                      'Granted ${result.email} (${result.userId}) source=${result.source}';
-                                });
-                              }),
-                      child: const Text('Grant lifetime premium'),
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      width: double.infinity,
+                      child: FilledButton(
+                        onPressed: _busy || !authState.isAuthenticated
+                            ? null
+                            : () => _run(() async {
+                                  final result =
+                                      await service.grantLifetimePremium(
+                                    _targetUserIdController.text.trim(),
+                                    _noteController.text.trim(),
+                                  );
+                                  setState(() {
+                                    _result =
+                                        'Granted ${result.email} (${result.userId}) source=${result.source}';
+                                  });
+                                }),
+                        child: const Text('Grant lifetime premium'),
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 8),
-                  SizedBox(
-                    width: double.infinity,
-                    child: OutlinedButton(
-                      onPressed: _busy || !authState.isAuthenticated
-                          ? null
-                          : () => _run(() async {
-                                final result =
-                                    await service.revokeLifetimePremium(
-                                  _targetUserIdController.text.trim(),
-                                );
-                                setState(() {
-                                  _result =
-                                      'Revoked ${result.email} (${result.userId}) source=${result.source}';
-                                });
-                              }),
-                      child: const Text('Revoke lifetime premium'),
+                    const SizedBox(height: 8),
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton(
+                        onPressed: _busy || !authState.isAuthenticated
+                            ? null
+                            : () => _run(() async {
+                                  final result =
+                                      await service.revokeLifetimePremium(
+                                    _targetUserIdController.text.trim(),
+                                  );
+                                  setState(() {
+                                    _result =
+                                        'Revoked ${result.email} (${result.userId}) source=${result.source}';
+                                  });
+                                }),
+                        child: const Text('Revoke lifetime premium'),
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
-          ),
-          ScreenSection(
-            title: 'Reviewer Provisioning',
-            subtitle:
-                'Create a narrow reviewer or demo account, with optional lifetime premium at provisioning time.',
-            compact: true,
-            child: FeedCard(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  TextField(
-                    controller: _reviewerEmailController,
-                    keyboardType: TextInputType.emailAddress,
-                    decoration: const InputDecoration(
-                      labelText: 'Reviewer or demo email',
+            ScreenSection(
+              title: 'Reviewer Provisioning',
+              subtitle:
+                  'Create a narrow reviewer or demo account, with optional lifetime premium at provisioning time.',
+              compact: true,
+              child: FeedCard(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    FloatingLabelTextField(
+                      controller: _reviewerEmailController,
+                      label: 'Reviewer or demo email',
+                      keyboardType: TextInputType.emailAddress,
                     ),
-                  ),
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: _reviewerPasswordController,
-                    decoration: const InputDecoration(
-                      labelText: 'Temporary password',
+                    const SizedBox(height: 12),
+                    FloatingLabelTextField(
+                      controller: _reviewerPasswordController,
+                      label: 'Temporary password',
                     ),
-                  ),
-                  const SizedBox(height: 4),
-                  SwitchListTile(
-                    contentPadding: EdgeInsets.zero,
-                    value: _grantReviewerLifetime,
-                    onChanged: _busy || !authState.isAuthenticated
-                        ? null
-                        : (value) {
-                            setState(() => _grantReviewerLifetime = value);
-                          },
-                    title: const Text('Grant lifetime premium'),
-                  ),
-                  SizedBox(
-                    width: double.infinity,
-                    child: FilledButton(
-                      onPressed: _busy || !authState.isAuthenticated
+                    const SizedBox(height: 4),
+                    SwitchListTile(
+                      contentPadding: EdgeInsets.zero,
+                      value: _grantReviewerLifetime,
+                      onChanged: _busy || !authState.isAuthenticated
                           ? null
-                          : () => _run(() async {
-                                final result = await service.provisionReviewer(
-                                  email: _reviewerEmailController.text.trim(),
-                                  temporaryPassword:
-                                      _reviewerPasswordController.text,
-                                  grantLifetimePremium: _grantReviewerLifetime,
-                                  note: 'reviewer/demo provision',
-                                );
-                                _targetUserIdController.text = result.userId;
-                                setState(() {
-                                  _result =
-                                      'Provisioned ${result.email} (${result.userId}) source=${result.source}';
-                                });
-                              }),
-                      child: const Text('Provision reviewer/demo account'),
+                          : (value) {
+                              setState(() => _grantReviewerLifetime = value);
+                            },
+                      title: const Text('Grant lifetime premium'),
                     ),
-                  ),
-                ],
+                    SizedBox(
+                      width: double.infinity,
+                      child: FilledButton(
+                        onPressed: _busy || !authState.isAuthenticated
+                            ? null
+                            : () => _run(() async {
+                                  final result =
+                                      await service.provisionReviewer(
+                                    email: _reviewerEmailController.text.trim(),
+                                    temporaryPassword:
+                                        _reviewerPasswordController.text,
+                                    grantLifetimePremium:
+                                        _grantReviewerLifetime,
+                                    note: 'reviewer/demo provision',
+                                  );
+                                  _targetUserIdController.text = result.userId;
+                                  setState(() {
+                                    _result =
+                                        'Provisioned ${result.email} (${result.userId}) source=${result.source}';
+                                  });
+                                }),
+                        child: const Text('Provision reviewer/demo account'),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
+          ],
           if (_result.isNotEmpty)
             ScreenSection(
               title: 'Result',

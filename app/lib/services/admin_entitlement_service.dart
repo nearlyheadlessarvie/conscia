@@ -1,5 +1,17 @@
 import 'package:dio/dio.dart';
 
+class AdminAccessStatus {
+  const AdminAccessStatus({required this.isAdmin});
+
+  final bool isAdmin;
+
+  factory AdminAccessStatus.fromJson(Map<String, dynamic> json) {
+    return AdminAccessStatus(
+      isAdmin: json['isAdmin'] as bool? ?? false,
+    );
+  }
+}
+
 class AdminUserLookup {
   const AdminUserLookup({
     required this.userId,
@@ -30,6 +42,12 @@ class AdminEntitlementService {
   AdminEntitlementService(this._dio);
 
   final Dio _dio;
+
+  Future<bool> getAccess() async {
+    final response = await _dio.get('admin/access');
+    return AdminAccessStatus.fromJson(response.data as Map<String, dynamic>)
+        .isAdmin;
+  }
 
   Future<AdminUserLookup> lookupByEmail(String email) async {
     final response = await _dio.get(

@@ -1,4 +1,5 @@
 import 'package:conscia_app/models/family_space.dart';
+import 'package:conscia_app/providers/admin_entitlement_provider.dart';
 import 'package:conscia_app/providers/family_space_provider.dart';
 import 'package:conscia_app/providers/location_assistance_provider.dart';
 import 'package:conscia_app/providers/passkey_provider.dart';
@@ -829,6 +830,52 @@ void main() {
     expect(find.text('DATA & PRIVACY'), findsOneWidget);
     expect(find.text('Download my data'), findsOneWidget);
     expect(find.text('Delete account'), findsOneWidget);
+  });
+
+  testWidgets('settings hides admin entitlements for non-admin sessions',
+      (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+    final locationService =
+        _RecordingLocationAssistanceService(permissionGranted: true);
+
+    await _pumpSettingsScreen(
+      tester,
+      prefs: prefs,
+      locationService: locationService,
+      overrides: [
+        adminEntitlementAccessProvider.overrideWith((ref) async => false),
+      ],
+    );
+
+    await tester.pumpAndSettle();
+
+    expect(find.text('Admin entitlements'), findsNothing);
+    expect(find.text('OPERATOR'), findsNothing);
+  });
+
+  testWidgets('settings shows admin entitlements for admin sessions',
+      (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+    final locationService =
+        _RecordingLocationAssistanceService(permissionGranted: true);
+
+    await _pumpSettingsScreen(
+      tester,
+      prefs: prefs,
+      locationService: locationService,
+      overrides: [
+        adminEntitlementAccessProvider.overrideWith((ref) async => true),
+      ],
+    );
+
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(find.text('Admin entitlements'), 280);
+    await tester.pumpAndSettle();
+
+    expect(find.text('OPERATOR'), findsOneWidget);
+    expect(find.text('Admin entitlements'), findsOneWidget);
   });
 
   testWidgets('delete account confirmation uses a pull-up sheet',
