@@ -346,6 +346,23 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                           ),
                         ],
                       ),
+                      _SettingsGroup(
+                        title: 'Operator',
+                        children: [
+                          _SettingsActionRow(
+                            leading: _SettingsIconBox(
+                              icon: Icons.admin_panel_settings_outlined,
+                              backgroundColor: theme.appColors.navySoft,
+                            ),
+                            title: 'Admin entitlements',
+                            subtitle:
+                                'Lookup users, grant lifetime premium, and provision reviewer access',
+                            onTap: () => context.push(
+                              AppRoutes.settingsAdminEntitlements,
+                            ),
+                          ),
+                        ],
+                      ),
                       if (ApiConstants.useMockAuth)
                         _SettingsGroup(
                           title: 'Developer',

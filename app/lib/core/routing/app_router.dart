@@ -23,6 +23,7 @@ import '../../screens/receipts/receipt_review_screen.dart';
 import '../../screens/receipts/receipt_scanner_screen.dart';
 import '../../screens/settings/service_status_screen.dart';
 import '../../screens/settings/category_management_screen.dart';
+import '../../screens/settings/admin_entitlements_screen.dart';
 import '../../screens/settings/profile_screen.dart';
 import '../../screens/settings/settings_screen.dart';
 import '../../screens/family/family_invites_screen.dart';
@@ -66,6 +67,7 @@ abstract class AppRoutes {
 
   static const settings = '/settings';
   static const settingsProfile = '/settings/profile';
+  static const settingsAdminEntitlements = '/settings/admin-entitlements';
   static const categories = '/settings/categories';
   static const serviceStatus = '/settings/status';
   static const budgets = '/settings/budgets';
@@ -126,11 +128,13 @@ String? resolveIncomingAppLink(Uri uri) {
     }
 
     if (uri.path == AppRoutes.familyInvites) {
-      return uri.replace(
-        scheme: '',
-        host: '',
-        port: 0,
-      ).toString();
+      return uri
+          .replace(
+            scheme: '',
+            host: '',
+            port: 0,
+          )
+          .toString();
     }
   }
 
@@ -227,7 +231,9 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         };
 
         if (hasOnboarded) {
-          if (isSignInRoute && redirectTarget != null && redirectTarget.isNotEmpty) {
+          if (isSignInRoute &&
+              redirectTarget != null &&
+              redirectTarget.isNotEmpty) {
             return redirectTarget;
           }
 
@@ -248,9 +254,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       // ── Onboarding ─────────────────────────────────────────────────
       GoRoute(
         path: AppRoutes.onboarding,
-        redirect: (context, state) => state.uri.path == AppRoutes.onboarding
-            ? AppRoutes.signIn
-            : null,
+        redirect: (context, state) =>
+            state.uri.path == AppRoutes.onboarding ? AppRoutes.signIn : null,
         routes: [
           GoRoute(
             path: 'sign-in',
@@ -370,6 +375,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const ProfileScreen(),
       ),
       GoRoute(
+        path: AppRoutes.settingsAdminEntitlements,
+        builder: (context, state) => const AdminEntitlementsScreen(),
+      ),
+      GoRoute(
         path: AppRoutes.categories,
         builder: (context, state) => const CategoryManagementScreen(),
       ),
@@ -417,8 +426,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) {
           return Consumer(
             builder: (context, ref, _) {
-              final summary =
-                  ref.watch(conscienceJourneyProvider).valueOrNull;
+              final summary = ref.watch(conscienceJourneyProvider).valueOrNull;
               if (summary == null) {
                 return const Scaffold(
                   body: Center(child: CircularProgressIndicator()),
