@@ -27,6 +27,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Conscia.OutboxProcessor", "
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Conscia.PatternAggregator", "src\Conscia.PatternAggregator\Conscia.PatternAggregator.csproj", "{11858E1F-BD5A-4039-A78C-11161D90E008}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Conscia.RecurringProcessor", "src\Conscia.RecurringProcessor\Conscia.RecurringProcessor.csproj", "{35A359F0-890A-49C5-9F55-39A4FBE8C989}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -169,6 +171,18 @@ Global
 		{11858E1F-BD5A-4039-A78C-11161D90E008}.Release|x64.Build.0 = Release|Any CPU
 		{11858E1F-BD5A-4039-A78C-11161D90E008}.Release|x86.ActiveCfg = Release|Any CPU
 		{11858E1F-BD5A-4039-A78C-11161D90E008}.Release|x86.Build.0 = Release|Any CPU
+		{35A359F0-890A-49C5-9F55-39A4FBE8C989}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{35A359F0-890A-49C5-9F55-39A4FBE8C989}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{35A359F0-890A-49C5-9F55-39A4FBE8C989}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{35A359F0-890A-49C5-9F55-39A4FBE8C989}.Debug|x64.Build.0 = Debug|Any CPU
+		{35A359F0-890A-49C5-9F55-39A4FBE8C989}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{35A359F0-890A-49C5-9F55-39A4FBE8C989}.Debug|x86.Build.0 = Debug|Any CPU
+		{35A359F0-890A-49C5-9F55-39A4FBE8C989}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{35A359F0-890A-49C5-9F55-39A4FBE8C989}.Release|Any CPU.Build.0 = Release|Any CPU
+		{35A359F0-890A-49C5-9F55-39A4FBE8C989}.Release|x64.ActiveCfg = Release|Any CPU
+		{35A359F0-890A-49C5-9F55-39A4FBE8C989}.Release|x64.Build.0 = Release|Any CPU
+		{35A359F0-890A-49C5-9F55-39A4FBE8C989}.Release|x86.ActiveCfg = Release|Any CPU
+		{35A359F0-890A-49C5-9F55-39A4FBE8C989}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -185,5 +199,6 @@ Global
 		{6A720F46-6EB1-4BA3-8AF5-01D4E07A0220} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
 		{30E5D1A6-40FE-4C6D-A34E-B454F54E9A55} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
 		{11858E1F-BD5A-4039-A78C-11161D90E008} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
+		{35A359F0-890A-49C5-9F55-39A4FBE8C989} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
 	EndGlobalSection
 EndGlobal

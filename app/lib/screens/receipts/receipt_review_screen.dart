@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/errors/app_error.dart';
+import '../../core/constants/api_constants.dart';
 import '../../core/network/dio_client.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_layout.dart';
@@ -64,7 +65,7 @@ class _ReceiptReviewScreenState extends ConsumerState<ReceiptReviewScreen> {
   Future<void> _loadReceiptData() async {
     try {
       final dio = ref.read(dioProvider);
-      final response = await dio.get('/receipts/${widget.receiptId}');
+      final response = await dio.get(ApiConstants.receipt(widget.receiptId));
       final data = response.data as Map<String, dynamic>;
 
       if (!mounted) return;
@@ -135,7 +136,7 @@ class _ReceiptReviewScreenState extends ConsumerState<ReceiptReviewScreen> {
       )!;
       final dio = ref.read(dioProvider);
       await dio.post(
-        '/receipts/${widget.receiptId}/confirm',
+        ApiConstants.receiptConfirm(widget.receiptId),
         data: {
           'merchant': _merchantController.text,
           'amount': amount,

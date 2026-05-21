@@ -18,7 +18,8 @@ GoRouter _makeRouter() => GoRouter(routes: [
     ]);
 
 void main() {
-  testWidgets('SpeedDialFab renders closed state with add icon', (tester) async {
+  testWidgets('SpeedDialFab renders closed state with add icon',
+      (tester) async {
     await tester.pumpWidget(ProviderScope(
       child: MaterialApp.router(routerConfig: _makeRouter()),
     ));

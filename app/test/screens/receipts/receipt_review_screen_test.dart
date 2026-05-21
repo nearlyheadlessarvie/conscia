@@ -1,4 +1,5 @@
 import 'package:conscia_app/core/network/dio_client.dart';
+import 'package:conscia_app/core/constants/api_constants.dart';
 import 'package:conscia_app/providers/usage_provider.dart';
 import 'package:conscia_app/providers/subscription_provider.dart';
 import 'package:conscia_app/providers/user_provider.dart';
@@ -28,7 +29,7 @@ Future<void> _pumpReceiptReviewScreen(
     ..interceptors.add(
       InterceptorsWrapper(
         onRequest: (options, handler) {
-          if (options.path == '/receipts/receipt-1') {
+          if (options.path == ApiConstants.receipt('receipt-1')) {
             handler.resolve(
               Response(
                 requestOptions: options,
@@ -133,5 +134,23 @@ void main() {
 
     expect(find.text('PHP'), findsOneWidget);
     expect(find.text('USD'), findsNothing);
+  });
+
+  testWidgets('receipt review confirm dock stays close to keyboard',
+      (tester) async {
+    tester.view.physicalSize = const Size(450, 1000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    tester.view.viewInsets = const FakeViewPadding(bottom: 300);
+    addTearDown(tester.view.resetViewInsets);
+
+    await _pumpReceiptReviewScreen(tester);
+
+    final dock = tester.getRect(
+      find.byKey(const ValueKey('receipt-review-confirm-dock')),
+    );
+
+    expect(dock.bottom, greaterThan(660));
   });
 }

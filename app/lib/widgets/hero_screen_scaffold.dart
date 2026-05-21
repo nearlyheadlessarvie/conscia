@@ -113,7 +113,6 @@ class _HeroScreenScaffoldState extends State<HeroScreenScaffold> {
                         16,
                         20 +
                             widget.extraBottomPadding +
-                            keyboardInset +
                             mediaQueryPaddingBottom,
                       ),
                       child: widget.bottom!,

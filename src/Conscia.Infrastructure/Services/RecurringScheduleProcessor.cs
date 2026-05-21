@@ -1,6 +1,8 @@
+using System.Text.Json;
 using Conscia.Application.Interfaces;
 using Conscia.Application.Models;
 using Conscia.Domain.Entities;
+using Conscia.Domain.Enums;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -80,7 +82,10 @@ public class RecurringScheduleProcessor : BackgroundService
                     CreatedAt = nowUtc,
                 };
 
-                await transactionRepository.AddAsync(transaction, ct);
+                await transactionRepository.AddWithOutboxAsync(
+                    transaction,
+                    CreateTransactionCreatedEvent(transaction, nowUtc),
+                    ct);
                 await alertRepository.AddAsync(BuildReminderAlert(schedule, transaction, nowUtc), ct);
                 schedule.LastGeneratedAt = occurrence.OccurrenceDate;
             }
@@ -148,4 +153,27 @@ public class RecurringScheduleProcessor : BackgroundService
             TTL = new DateTimeOffset(nowUtc.AddDays(7)).ToUnixTimeSeconds()
         };
     }
+
+    private static OutboxEvent CreateTransactionCreatedEvent(Transaction transaction, DateTime nowUtc) =>
+        new()
+        {
+            Id = Guid.NewGuid(),
+            AggregateId = transaction.Id,
+            EventType = OutboxEventType.TransactionCreated,
+            Payload = JsonSerializer.Serialize(new
+            {
+                TransactionId = transaction.Id,
+                transaction.UserId,
+                Type = transaction.Type.ToString(),
+                transaction.Category,
+                Amount = transaction.Amount.Amount,
+                CurrencyCode = transaction.Amount.CurrencyCode,
+                TransactionDate = transaction.Date,
+                Scope = transaction.Scope.ToString(),
+                transaction.FamilySpaceId,
+                transaction.SharedByUserId,
+                transaction.SharedAt
+            }),
+            CreatedAt = nowUtc
+        };
 }

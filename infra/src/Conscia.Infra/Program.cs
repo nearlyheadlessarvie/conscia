@@ -66,11 +66,21 @@ sealed class Program
             DomainSettings = domainSettings
         });
 
+        var recurring = new RecurringProcessorStack(app, "Conscia-RecurringProcessor", new RecurringProcessorStackProps
+        {
+            Env = env,
+            TransactionsTable = database.TransactionsTable,
+            RecurringSchedulesTable = database.RecurringSchedulesTable,
+            OutboxEventsTable = database.OutboxEventsTable,
+            InAppAlertsTable = database.InAppAlertsTable
+        });
+
         _ = new ObservabilityStack(app, "Conscia-Observability", new ObservabilityStackProps
         {
             Env = env,
             ApiLambda = compute.ApiLambda,
-            OutboxLambda = outbox.OutboxLambda
+            OutboxLambda = outbox.OutboxLambda,
+            RecurringProcessorLambda = recurring.RecurringProcessorLambda
         });
 
         _ = new PatternAggregatorStack(app, "Conscia-PatternAggregator", new PatternAggregatorStackProps

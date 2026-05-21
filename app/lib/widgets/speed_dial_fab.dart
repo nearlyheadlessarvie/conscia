@@ -20,22 +20,12 @@ class SpeedDialFab extends StatelessWidget {
         SpeedDialChild(
           child: const Icon(Icons.photo_camera_outlined),
           label: 'Scan Receipt',
-          onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Coming in a future update')),
-          ),
+          onTap: () => context.push(AppRoutes.scan),
         ),
         SpeedDialChild(
           child: const Icon(Icons.auto_awesome_outlined),
           label: 'Ask Conscia',
-          onTap: () {
-            try {
-              context.push(AppRoutes.assistant);
-            } catch (_) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Coming soon')),
-              );
-            }
-          },
+          onTap: () => context.push(AppRoutes.assistant),
         ),
         SpeedDialChild(
           child: const Icon(Icons.payments_outlined),

@@ -51,7 +51,8 @@ class ApiConstants {
   static const String appleSignIn = 'auth/apple';
   static const String googleSignIn = 'auth/google';
   static const String passkeyRegisterStart = 'auth/passkeys/register/start';
-  static const String passkeyRegisterComplete = 'auth/passkeys/register/complete';
+  static const String passkeyRegisterComplete =
+      'auth/passkeys/register/complete';
   static const String passkeyLoginStart = 'auth/passkeys/login/start';
   static const String passkeyLoginComplete = 'auth/passkeys/login/complete';
 
@@ -66,7 +67,9 @@ class ApiConstants {
   static const String transactions = 'transactions';
   static String transaction(String id) => 'transactions/$id';
   static const String transactionsSummary = 'transactions/summary';
-  static const String scanReceipt = 'transactions/scan';
+  static const String scanReceipt = 'receipts/scan';
+  static String receipt(String id) => 'receipts/$id';
+  static String receiptConfirm(String id) => 'receipts/$id/confirm';
   static const String recurring = 'recurring';
 
   // Insights

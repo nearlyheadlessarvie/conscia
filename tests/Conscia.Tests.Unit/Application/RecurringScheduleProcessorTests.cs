@@ -54,8 +54,11 @@ public class RecurringScheduleProcessorTests
             .Setup(r => r.ExistsRecurringOccurrenceAsync(userId, scheduleId, It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(false);
         _transactionRepoMock
-            .Setup(r => r.AddAsync(It.IsAny<Transaction>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((Transaction transaction, CancellationToken _) => transaction);
+            .Setup(r => r.AddWithOutboxAsync(
+                It.IsAny<Transaction>(),
+                It.IsAny<OutboxEvent>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Transaction transaction, OutboxEvent _, CancellationToken _) => transaction);
         _alertRepoMock
             .Setup(r => r.AddAsync(It.IsAny<InAppAlert>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
@@ -67,7 +70,13 @@ public class RecurringScheduleProcessorTests
 
         await processor.ProcessOnceAsync(CancellationToken.None);
 
-        _transactionRepoMock.Verify(r => r.AddAsync(It.IsAny<Transaction>(), It.IsAny<CancellationToken>()), Times.Exactly(3));
+        _transactionRepoMock.Verify(r => r.AddWithOutboxAsync(
+            It.IsAny<Transaction>(),
+            It.Is<OutboxEvent>(e =>
+                e.EventType == OutboxEventType.TransactionCreated &&
+                e.Payload.Contains("\"Category\":\"Subscriptions\"")),
+            It.IsAny<CancellationToken>()), Times.Exactly(3));
+        _transactionRepoMock.Verify(r => r.AddAsync(It.IsAny<Transaction>(), It.IsAny<CancellationToken>()), Times.Never);
         _alertRepoMock.Verify(r => r.AddAsync(
             It.Is<InAppAlert>(a => a.TriggerName == "recurring_transaction_created" && a.Counterparty == "Netflix"),
             It.IsAny<CancellationToken>()), Times.Exactly(3));
@@ -114,7 +123,10 @@ public class RecurringScheduleProcessorTests
 
         await processor.ProcessOnceAsync(CancellationToken.None);
 
-        _transactionRepoMock.Verify(r => r.AddAsync(It.IsAny<Transaction>(), It.IsAny<CancellationToken>()), Times.Never);
+        _transactionRepoMock.Verify(r => r.AddWithOutboxAsync(
+            It.IsAny<Transaction>(),
+            It.IsAny<OutboxEvent>(),
+            It.IsAny<CancellationToken>()), Times.Never);
         _alertRepoMock.Verify(r => r.AddAsync(It.IsAny<InAppAlert>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
