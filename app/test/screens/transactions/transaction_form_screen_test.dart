@@ -46,6 +46,8 @@ class _FakeLocationAssistanceService extends LocationAssistanceService {
     List<String> likelyCategories
   }) suggestions;
   final Map<String, String> merchantCategories;
+  String? recordedMerchant;
+  String? recordedCategory;
 
   @override
   Future<bool> requestPermission() async => permissionGranted;
@@ -56,6 +58,15 @@ class _FakeLocationAssistanceService extends LocationAssistanceService {
 
   @override
   String? categoryForMerchant(String merchant) => merchantCategories[merchant];
+
+  @override
+  Future<void> recordTransactionContext({
+    required String merchant,
+    required String category,
+  }) async {
+    recordedMerchant = merchant;
+    recordedCategory = category;
+  }
 }
 
 class _FakeAuthService extends AuthService {
@@ -203,6 +214,7 @@ Future<ProviderContainer> _pumpTransactionForm(
   LocationAssistanceService? locationService,
   TransactionService? transactionService,
   String? transactionId,
+  String? initialCategory,
   List<Budget> budgets = const [],
   FamilySpace? familySpace,
   String locale = 'en_US',
@@ -211,7 +223,7 @@ Future<ProviderContainer> _pumpTransactionForm(
   final resolvedPrefs = prefs ??
       await () async {
         SharedPreferences.setMockInitialValues({
-          'location_suggestions_enabled': false,
+          'location_suggestions_enabled': locationSuggestionsEnabled,
           'location_suggestions_prompted': true,
         });
         return SharedPreferences.getInstance();
@@ -260,7 +272,11 @@ Future<ProviderContainer> _pumpTransactionForm(
   addTearDown(container.dispose);
 
   await tester.pumpWidget(
-    _buildTransactionFormApp(container, transactionId: transactionId),
+    _buildTransactionFormApp(
+      container,
+      transactionId: transactionId,
+      initialCategory: initialCategory,
+    ),
   );
 
   return container;
@@ -269,11 +285,15 @@ Future<ProviderContainer> _pumpTransactionForm(
 Widget _buildTransactionFormApp(
   ProviderContainer container, {
   String? transactionId,
+  String? initialCategory,
 }) {
   return UncontrolledProviderScope(
     container: container,
     child: MaterialApp(
-      home: TransactionFormScreen(transactionId: transactionId),
+      home: TransactionFormScreen(
+        transactionId: transactionId,
+        initialCategory: initialCategory,
+      ),
     ),
   );
 }
@@ -1039,7 +1059,12 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.enterText(_amountInput(), '12.50');
-    await tester.tap(find.text('Dining'));
+    await tester.tap(
+      find.ancestor(
+        of: find.text('Dining'),
+        matching: find.byType(GestureDetector),
+      ),
+    );
     await tester.pumpAndSettle();
     await tester.tap(find.text('Save Transaction'));
     await tester.pumpAndSettle();
@@ -1076,7 +1101,12 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.enterText(_amountInput(), '1.234,56');
-    await tester.tap(find.text('Dining'));
+    await tester.tap(
+      find.ancestor(
+        of: find.text('Dining'),
+        matching: find.byType(GestureDetector),
+      ),
+    );
     await tester.pumpAndSettle();
     await tester.tap(find.text('Save Transaction'));
     await tester.pumpAndSettle();
@@ -1217,6 +1247,58 @@ void main() {
     expect(updatedBudget.spent, 32.5);
     expect(updatedBudget.percentage, 0.325);
     expect(container.read(localAlertsProvider), isEmpty);
+  });
+
+  testWidgets('saving a new expense records smart nearby suggestion history', (
+    tester,
+  ) async {
+    final locationService =
+        _FakeLocationAssistanceService(permissionGranted: true);
+    await _pumpTransactionForm(
+      tester,
+      locationService: locationService,
+      initialCategory: 'Dining',
+      locationSuggestionsEnabled: true,
+    );
+
+    await tester.pumpAndSettle();
+
+    await tester.enterText(_amountInput(), '12.50');
+    await tester.enterText(
+      _floatingLabelInput('Merchant (optional)'),
+      'Wildflour',
+    );
+    await tester.tap(find.text('Save Transaction'));
+    await tester.pumpAndSettle();
+
+    expect(locationService.recordedMerchant, 'Wildflour');
+    expect(locationService.recordedCategory, 'Dining');
+  });
+
+  testWidgets('saving an expense skips smart nearby history when disabled', (
+    tester,
+  ) async {
+    final locationService =
+        _FakeLocationAssistanceService(permissionGranted: true);
+    await _pumpTransactionForm(
+      tester,
+      locationService: locationService,
+      initialCategory: 'Dining',
+      locationSuggestionsEnabled: false,
+    );
+
+    await tester.pumpAndSettle();
+
+    await tester.enterText(_amountInput(), '12.50');
+    await tester.enterText(
+      _floatingLabelInput('Merchant (optional)'),
+      'Wildflour',
+    );
+    await tester.tap(find.text('Save Transaction'));
+    await tester.pumpAndSettle();
+
+    expect(locationService.recordedMerchant, isNull);
+    expect(locationService.recordedCategory, isNull);
   });
 
   testWidgets('budget nudges are deduplicated per category', (tester) async {

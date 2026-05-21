@@ -266,8 +266,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                               icon: Icons.location_on_outlined,
                               backgroundColor: theme.appColors.angelSoft,
                             ),
-                            title: 'Location Assistance',
-                            subtitle: 'Smart merchant suggestions',
+                            title: 'Smart Nearby Suggestions',
+                            subtitle:
+                                'Uses approximate location on this device only',
                             value: locationAssistance.isEnabled,
                             onChanged: (value) async {
                               final notifier =

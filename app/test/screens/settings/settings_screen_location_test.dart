@@ -321,10 +321,13 @@ void main() {
 
     await tester.pumpAndSettle();
 
-    expect(find.text('Location Assistance'), findsOneWidget);
-    expect(find.text('Smart merchant suggestions'), findsOneWidget);
+    expect(find.text('Smart Nearby Suggestions'), findsOneWidget);
+    expect(
+      find.text('Uses approximate location on this device only'),
+      findsOneWidget,
+    );
 
-    await tester.ensureVisible(find.text('Location Assistance'));
+    await tester.ensureVisible(find.text('Smart Nearby Suggestions'));
     await tester.drag(find.byType(CustomScrollView), const Offset(0, 120));
     await tester.pumpAndSettle();
 
@@ -338,7 +341,7 @@ void main() {
       isTrue,
     );
 
-    await tester.ensureVisible(find.text('Location Assistance'));
+    await tester.ensureVisible(find.text('Smart Nearby Suggestions'));
     await tester.drag(find.byType(CustomScrollView), const Offset(0, 120));
     await tester.pumpAndSettle();
 
@@ -748,7 +751,7 @@ void main() {
 
     final aiTop = tester.getTopLeft(find.text('AI Personality')).dy;
     final smartLocationTop =
-        tester.getTopLeft(find.text('Location Assistance')).dy;
+        tester.getTopLeft(find.text('Smart Nearby Suggestions')).dy;
     expect(aiTop, lessThan(smartLocationTop));
   });
 

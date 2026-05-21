@@ -37,6 +37,7 @@ dependencies:
   connectivity_plus: ^7.1.1
   new_version_plus: ^0.1.1
   passkeys: ^2.17.4
+  geolocator: ^14.0.2
 
 dev_dependencies:
   flutter_test:
