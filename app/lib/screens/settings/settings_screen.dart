@@ -367,11 +367,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                             ),
                           ],
                         ),
-                      if (ApiConstants.useMockAuth)
-                        _SettingsGroup(
-                          title: 'Developer',
-                          children: [_DevUpgradeTile()],
-                        ),
                       _SettingsGroup(
                         title: 'Data & Privacy',
                         children: [
@@ -1163,48 +1158,6 @@ class _SettingsSwitchRow extends StatelessWidget {
         ],
       ),
     );
-  }
-}
-
-class _DevUpgradeTile extends ConsumerWidget {
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final isPremium =
-        ref.watch(subscriptionProvider).valueOrNull?.isPremium ?? false;
-
-    if (isPremium) {
-      return const ListTile(
-        leading: Icon(Icons.check_circle, color: Colors.green),
-        title: Text('[DEV] Already Premium'),
-      );
-    }
-
-    return ListTile(
-      leading: const Icon(Icons.rocket_launch, color: Colors.orange),
-      title: const Text('[DEV] Simulate Upgrade'),
-      subtitle: const Text('Calls verify endpoint with trust-client fallback'),
-      onTap: () => _upgrade(context, ref),
-    );
-  }
-
-  Future<void> _upgrade(BuildContext context, WidgetRef ref) async {
-    final messenger = ScaffoldMessenger.of(context);
-    try {
-      final dio = ref.read(dioProvider);
-      await dio.post(
-        '${ApiConstants.verifyReceipt}/ios',
-        data: {'token': 'dev-simulate-upgrade'},
-      );
-      ref.invalidate(subscriptionProvider);
-      messenger.showSnackBar(
-        const SnackBar(content: Text('Upgraded to Premium!')),
-      );
-    } catch (e, s) {
-      final error = AppError.from(e, stackTrace: s);
-      messenger.showSnackBar(
-        SnackBar(content: Text(error.userMessage)),
-      );
-    }
   }
 }
 
