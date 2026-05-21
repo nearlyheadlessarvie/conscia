@@ -270,6 +270,46 @@ public class StackTests
     }
 
     [Fact]
+    public void RecurringProcessorStack_CreatesScheduledLambda()
+    {
+        var app = new App();
+        var database = new DatabaseStack(app, "D", new StackProps { Env = TestEnv });
+        var stack = new RecurringProcessorStack(app, "R", new RecurringProcessorStackProps
+        {
+            Env = TestEnv,
+            TransactionsTable = database.TransactionsTable,
+            RecurringSchedulesTable = database.RecurringSchedulesTable,
+            OutboxEventsTable = database.OutboxEventsTable,
+            InAppAlertsTable = database.InAppAlertsTable,
+            AssetPath = CreateAssetStub("recurring-processor")
+        });
+
+        Assert.NotNull(stack.RecurringProcessorLambda);
+
+        var template = Template.FromStack(stack);
+        template.ResourceCountIs("AWS::Lambda::Function", 1);
+        template.ResourceCountIs("AWS::Events::Rule", 1);
+        template.HasResourceProperties("AWS::Lambda::Function", new Dictionary<string, object>
+        {
+            ["FunctionName"] = "conscia-recurring-processor",
+            ["Environment"] = new Dictionary<string, object>
+            {
+                ["Variables"] = Match.ObjectLike(new Dictionary<string, object>
+                {
+                    ["AWS__DynamoDB__TransactionsTable"] = Match.AnyValue(),
+                    ["AWS__DynamoDB__RecurringSchedulesTable"] = Match.AnyValue(),
+                    ["AWS__DynamoDB__OutboxEventsTable"] = Match.AnyValue(),
+                    ["AWS__DynamoDB__InAppAlertsTable"] = Match.AnyValue()
+                })
+            }
+        });
+        template.HasResourceProperties("AWS::Events::Rule", new Dictionary<string, object>
+        {
+            ["ScheduleExpression"] = "rate(5 minutes)"
+        });
+    }
+
+    [Fact]
     public void AssetPathResolver_FallsBackToPlaceholder_WhenPublishAssetIsMissing()
     {
         var originalDirectory = Directory.GetCurrentDirectory();
@@ -349,15 +389,17 @@ public class StackTests
 
         var api = CreateStubLambda(helperStack, "ApiStub", "conscia-api");
         var outbox = CreateStubLambda(helperStack, "OutboxStub", "conscia-outbox-processor");
+        var recurring = CreateStubLambda(helperStack, "RecurringStub", "conscia-recurring-processor");
         var stack = new ObservabilityStack(app, "TestObs", new ObservabilityStackProps
         {
             Env = TestEnv,
             ApiLambda = api,
-            OutboxLambda = outbox
+            OutboxLambda = outbox,
+            RecurringProcessorLambda = recurring
         });
 
         var template = Template.FromStack(stack);
-        template.ResourceCountIs("AWS::Logs::LogGroup", 2);
+        template.ResourceCountIs("AWS::Logs::LogGroup", 3);
     }
 
     private static Template CreateDatabaseTemplate()

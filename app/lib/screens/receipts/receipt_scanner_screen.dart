@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../core/errors/app_error.dart';
+import '../../core/constants/api_constants.dart';
 import '../../core/network/dio_client.dart';
 import '../../core/routing/app_router.dart';
 import '../../core/theme/app_colors.dart';
@@ -70,7 +71,7 @@ class _ReceiptScannerScreenState extends ConsumerState<ReceiptScannerScreen> {
         ),
       });
 
-      final response = await dio.post('/receipts/scan', data: formData);
+      final response = await dio.post(ApiConstants.scanReceipt, data: formData);
       final data = response.data as Map<String, dynamic>;
       final receiptId = data['id'] as String;
 

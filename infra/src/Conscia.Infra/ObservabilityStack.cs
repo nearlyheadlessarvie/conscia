@@ -9,6 +9,7 @@ public class ObservabilityStackProps : StackProps
 {
     public required IFunction ApiLambda { get; set; }
     public required IFunction OutboxLambda { get; set; }
+    public required IFunction RecurringProcessorLambda { get; set; }
 }
 
 public class ObservabilityStack : Stack
@@ -18,6 +19,7 @@ public class ObservabilityStack : Stack
     {
         CreateLogGroup("ApiLogGroup", props.ApiLambda);
         CreateLogGroup("OutboxLogGroup", props.OutboxLambda);
+        CreateLogGroup("RecurringProcessorLogGroup", props.RecurringProcessorLambda);
     }
 
     private void CreateLogGroup(string id, IFunction lambda)

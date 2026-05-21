@@ -10,6 +10,7 @@ using Amazon.Runtime;
 using Amazon.S3;
 using Amazon.SimpleEmailV2;
 using Amazon.SQS;
+using Amazon.Textract;
 using Asp.Versioning;
 using Conscia.AI.Services;
 using Conscia.Api.Configuration;
@@ -118,6 +119,7 @@ else
     builder.Services.AddAWSService<IAmazonS3>();
     builder.Services.AddAWSService<IAmazonSQS>();
     builder.Services.AddAWSService<IAmazonCognitoIdentityProvider>();
+    builder.Services.AddAWSService<IAmazonTextract>();
 }
 
 // --- DynamoDB Repositories ---
@@ -180,17 +182,18 @@ builder.Services.AddHttpClient<IExchangeRateService, ExchangeRateService>(client
     client.BaseAddress = new Uri("https://open.er-api.com");
     client.Timeout = TimeSpan.FromSeconds(10);
 });
-builder.Services.AddScoped<IOcrService, StubOcrService>();
 
 if (builder.Environment.IsDevelopment())
 {
     builder.Services.AddScoped<IPushNotificationSender, NoopPushNotificationSender>();
+    builder.Services.AddScoped<IOcrService, StubOcrService>();
 }
 else
 {
     builder.Services.AddAWSService<IAmazonSimpleEmailServiceV2>();
     builder.Services.AddHttpClient<IPushNotificationSender, FirebasePushNotificationSender>();
     builder.Services.AddScoped<IInviteEmailSender, SesInviteEmailSender>();
+    builder.Services.AddScoped<IOcrService, AwsReceiptOcrService>();
 }
 
 // --- AI Service ---
@@ -225,8 +228,10 @@ builder.Services.AddCors(options =>
 });
 
 // --- Background Services ---
-builder.Services.AddHostedService<RecurringScheduleProcessor>();
-builder.Services.AddHostedService<OutboxProcessor>();
+if (builder.Environment.IsDevelopment())
+{
+    builder.Services.AddDevelopmentBackgroundProcessors();
+}
 
 // --- Auth ---
 var useMockAuth = builder.Configuration.GetValue<bool>("Auth:UseMock");

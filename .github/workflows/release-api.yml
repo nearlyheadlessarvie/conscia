@@ -47,6 +47,7 @@ jobs:
         run: |
           dotnet publish src/Conscia.Api -c Release -r linux-arm64 --self-contained -o publish/api
           dotnet publish src/Conscia.OutboxProcessor -c Release -r linux-arm64 --self-contained -o publish/outbox
+          dotnet publish src/Conscia.RecurringProcessor -c Release -r linux-arm64 --self-contained -o publish/recurring-processor
           dotnet publish src/Conscia.PatternAggregator -c Release -r linux-arm64 --self-contained -o publish/pattern-aggregator
 
       - name: Configure AWS credentials
@@ -58,11 +59,11 @@ jobs:
       - name: Install CDK
         run: npm install -g aws-cdk
 
-      - name: Deploy ComputeStack
+      - name: Deploy API Lambda stacks
         working-directory: infra
         run: |
           dotnet restore
-          cdk deploy Conscia-Compute --require-approval never
+          cdk deploy Conscia-Compute Conscia-Outbox Conscia-RecurringProcessor Conscia-PatternAggregator --require-approval never
 
       - name: Smoke test
         run: |
