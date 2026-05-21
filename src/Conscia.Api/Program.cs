@@ -125,6 +125,7 @@ else
 // --- DynamoDB Repositories ---
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IUserSubscriptionRepository, UserSubscriptionRepository>();
+builder.Services.AddScoped<IUserEntitlementOverrideRepository, UserEntitlementOverrideRepository>();
 builder.Services.AddScoped<IBudgetRepository, BudgetRepository>();
 builder.Services.AddScoped<IReceiptRepository, ReceiptRepository>();
 builder.Services.AddScoped<IFamilySpaceRepository, FamilySpaceRepository>();

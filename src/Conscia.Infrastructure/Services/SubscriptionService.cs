@@ -1,3 +1,4 @@
+using Conscia.Application.Models;
 using Conscia.Application.Interfaces;
 using Conscia.Domain.Entities;
 using Conscia.Domain.Enums;
@@ -8,6 +9,7 @@ namespace Conscia.Infrastructure.Services;
 public class SubscriptionService : ISubscriptionService
 {
     private readonly IUserSubscriptionRepository _subscriptions;
+    private readonly IUserEntitlementOverrideRepository _entitlements;
     private readonly ILogger<SubscriptionService> _logger;
     private readonly IAppleReceiptValidator _appleValidator;
     private readonly IGooglePlayValidator _googleValidator;
@@ -16,11 +18,13 @@ public class SubscriptionService : ISubscriptionService
 
     public SubscriptionService(
         IUserSubscriptionRepository subscriptions,
+        IUserEntitlementOverrideRepository entitlements,
         ILogger<SubscriptionService> logger,
         IAppleReceiptValidator appleValidator,
         IGooglePlayValidator googleValidator)
     {
         _subscriptions = subscriptions;
+        _entitlements = entitlements;
         _logger = logger;
         _appleValidator = appleValidator;
         _googleValidator = googleValidator;
@@ -115,10 +119,47 @@ public class SubscriptionService : ISubscriptionService
     public async Task<UserSubscription?> GetStatusAsync(Guid userId, CancellationToken ct = default) =>
         await _subscriptions.GetLatestByUserAsync(userId, ct);
 
+    public async Task<EffectiveSubscriptionStatus> GetEffectiveStatusAsync(Guid userId, CancellationToken ct = default)
+    {
+        var entitlement = await _entitlements.GetPremiumLifetimeAsync(userId, ct);
+        if (entitlement is not null)
+        {
+            return new EffectiveSubscriptionStatus
+            {
+                Tier = SubscriptionTier.Premium,
+                IsActive = true,
+                IsLifetime = true,
+                Source = "lifetime"
+            };
+        }
+
+        var sub = await GetStatusAsync(userId, ct);
+        if (sub?.IsActive == true)
+        {
+            return new EffectiveSubscriptionStatus
+            {
+                Tier = SubscriptionTier.Premium,
+                IsActive = true,
+                IsLifetime = false,
+                Source = "store",
+                Platform = sub.Platform,
+                ExpiresAt = sub.ExpiresAt
+            };
+        }
+
+        return new EffectiveSubscriptionStatus
+        {
+            Tier = SubscriptionTier.Free,
+            IsActive = false,
+            IsLifetime = false,
+            Source = "none"
+        };
+    }
+
     public async Task<bool> IsPremiumAsync(Guid userId, CancellationToken ct = default)
     {
-        var sub = await GetStatusAsync(userId, ct);
-        return sub?.IsActive ?? false;
+        var status = await GetEffectiveStatusAsync(userId, ct);
+        return status.IsActive;
     }
 
     private async Task TryRefreshAppleExpiry(UserSubscription existing, string transactionId, CancellationToken ct)

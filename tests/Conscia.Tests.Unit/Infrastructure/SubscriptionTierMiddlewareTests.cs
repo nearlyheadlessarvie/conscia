@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using Conscia.Api.Middleware;
 using Conscia.Application.Interfaces;
+using Conscia.Application.Models;
 using Conscia.Domain.Entities;
 using Conscia.Domain.Enums;
 using Microsoft.AspNetCore.Http;
@@ -142,6 +143,17 @@ public class SubscriptionTierMiddlewareTests
             Guid userId,
             CancellationToken ct = default) =>
             Task.FromResult<UserSubscription?>(null);
+
+        public Task<EffectiveSubscriptionStatus> GetEffectiveStatusAsync(
+            Guid userId,
+            CancellationToken ct = default) =>
+            Task.FromResult(new EffectiveSubscriptionStatus
+            {
+                Tier = isPremium ? SubscriptionTier.Premium : SubscriptionTier.Free,
+                IsActive = isPremium,
+                IsLifetime = false,
+                Source = isPremium ? "store" : "none"
+            });
 
         public Task<bool> IsPremiumAsync(Guid userId, CancellationToken ct = default) =>
             Task.FromResult(isPremium);
