@@ -15,6 +15,18 @@ public static class AdminEntitlementEndpoints
             .RequireAuthorization()
             .WithTags("Admin");
 
+        group.MapGet("/access", async (
+            HttpContext ctx,
+            IAdminAuthorizationService authz) =>
+        {
+            if (!await authz.IsAuthorizedAsync(ctx.User.GetUserId(), ctx.User.GetEmail(), ctx.RequestAborted))
+            {
+                return Results.Forbid();
+            }
+
+            return Results.Ok(new { isAdmin = true });
+        });
+
         group.MapGet("/users/by-email", async (
             HttpContext ctx,
             string email,

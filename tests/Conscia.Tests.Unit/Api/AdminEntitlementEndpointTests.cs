@@ -65,4 +65,25 @@ public class AdminEntitlementEndpointTests : IClassFixture<TestWebAppFactory>
         Assert.Contains("founder@example.com", body);
         Assert.Contains("lifetime", body);
     }
+
+    [Fact]
+    public async Task Access_Returns200_ForAuthorizedCaller()
+    {
+        _factory.AdminAuthorizationServiceMock
+            .Setup(s => s.IsAuthorizedAsync(
+                It.IsAny<Guid>(),
+                It.IsAny<string>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
+        var client = _factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue("Bearer", _factory.GenerateTestToken(email: "admin@example.com"));
+
+        var response = await client.GetAsync("/api/admin/access");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var body = await response.Content.ReadAsStringAsync();
+        Assert.Contains("\"isAdmin\":true", body);
+    }
 }
