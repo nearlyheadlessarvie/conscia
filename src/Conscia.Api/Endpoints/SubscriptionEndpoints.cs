@@ -18,16 +18,16 @@ public static class SubscriptionEndpoints
         group.MapGet("/status", async (HttpContext ctx, ISubscriptionService svc) =>
         {
             var userId = ctx.User.GetUserId();
-            var sub = await svc.GetStatusAsync(userId, ctx.RequestAborted);
-            return sub is null
-                ? Results.Ok(new { tier = "Free", isActive = false })
-                : Results.Ok(new
-                {
-                    tier = sub.Tier.ToString(),
-                    platform = sub.Platform.ToString(),
-                    isActive = sub.IsActive,
-                    expiresAt = sub.ExpiresAt
-                });
+            var status = await svc.GetEffectiveStatusAsync(userId, ctx.RequestAborted);
+            return Results.Ok(new
+            {
+                tier = status.Tier.ToString(),
+                platform = status.Platform?.ToString(),
+                isActive = status.IsActive,
+                isLifetime = status.IsLifetime,
+                source = status.Source,
+                expiresAt = status.ExpiresAt
+            });
         }).WithName("GetSubscriptionStatus");
 
         group.MapPost("/verify/ios", async (HttpContext ctx, VerifyReceiptRequest req, ISubscriptionService svc) =>

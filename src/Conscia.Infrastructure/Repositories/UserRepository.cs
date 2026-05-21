@@ -62,6 +62,24 @@ public class UserRepository : DynamoRepository, IUserRepository
             : null;
     }
 
+    public async Task<IReadOnlyList<UserIdentity>> GetIdentitiesByUserAsync(Guid userId, CancellationToken ct = default)
+    {
+        var response = await Dynamo.QueryAsync(new QueryRequest
+        {
+            TableName = TableName,
+            KeyConditionExpression = "PK = :pk AND begins_with(SK, :prefix)",
+            ExpressionAttributeValues = new Dictionary<string, AttributeValue>
+            {
+                [":pk"] = new(UserPk(userId)),
+                [":prefix"] = new("IDENTITY#")
+            }
+        }, ct);
+
+        return Items(response)
+            .Select(FromIdentityItem)
+            .ToList();
+    }
+
     public async Task<User> AddAsync(User user, CancellationToken ct = default)
     {
         user.Email = NormalizeEmail(user.Email);
@@ -225,6 +243,17 @@ public class UserRepository : DynamoRepository, IUserRepository
         return identity;
     }
 
+    public async Task<UserIdentity> UpdateIdentityAsync(UserIdentity identity, CancellationToken ct = default)
+    {
+        await Dynamo.PutItemAsync(new PutItemRequest
+        {
+            TableName = TableName,
+            Item = ToIdentityItem(identity)
+        }, ct);
+
+        return identity;
+    }
+
     public static string UserPk(Guid userId) => $"USER#{userId}";
     public static string EmailPk(string email) => $"EMAIL#{NormalizeEmail(email)}";
     public static string IdentityPk(AuthProvider provider, string providerSub) =>
@@ -300,7 +329,20 @@ public class UserRepository : DynamoRepository, IUserRepository
         ["UserId"] = new(identity.UserId.ToString()),
         ["Provider"] = new(identity.Provider.ToString()),
         ["ProviderSub"] = new(identity.ProviderSub),
+        ["Role"] = new(identity.Role.ToString()),
         ["CreatedAt"] = new(identity.CreatedAt.ToString("O", CultureInfo.InvariantCulture))
+    };
+
+    private static UserIdentity FromIdentityItem(Dictionary<string, AttributeValue> item) => new()
+    {
+        Id = Guid.Parse(item["Id"].S),
+        UserId = Guid.Parse(item["UserId"].S),
+        Provider = Enum.Parse<AuthProvider>(item["Provider"].S),
+        ProviderSub = item["ProviderSub"].S,
+        Role = item.TryGetValue("Role", out var role)
+            ? Enum.Parse<UserIdentityRole>(role.S)
+            : UserIdentityRole.Member,
+        CreatedAt = DateTime.Parse(item["CreatedAt"].S, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind)
     };
 
     private static Dictionary<string, AttributeValue> IdentitySentinel(UserIdentity identity) => new()

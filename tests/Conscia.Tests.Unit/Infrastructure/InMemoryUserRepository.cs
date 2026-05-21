@@ -31,6 +31,10 @@ public sealed class InMemoryUserRepository : IUserRepository
             string.Equals(u.Email, normalized, StringComparison.OrdinalIgnoreCase)));
     }
 
+    public Task<IReadOnlyList<UserIdentity>> GetIdentitiesByUserAsync(Guid userId, CancellationToken ct = default) =>
+        Task.FromResult<IReadOnlyList<UserIdentity>>(
+            _identities.Where(i => i.UserId == userId).ToList());
+
     public Task<User> AddAsync(User user, CancellationToken ct = default)
     {
         _users[user.Id] = user;
@@ -55,6 +59,13 @@ public sealed class InMemoryUserRepository : IUserRepository
         _identities.RemoveAll(i =>
             i.Provider == identity.Provider &&
             string.Equals(i.ProviderSub, identity.ProviderSub, StringComparison.OrdinalIgnoreCase));
+        _identities.Add(identity);
+        return Task.FromResult(identity);
+    }
+
+    public Task<UserIdentity> UpdateIdentityAsync(UserIdentity identity, CancellationToken ct = default)
+    {
+        _identities.RemoveAll(i => i.Id == identity.Id);
         _identities.Add(identity);
         return Task.FromResult(identity);
     }

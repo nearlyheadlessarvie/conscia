@@ -37,6 +37,9 @@ public class TestWebAppFactory : WebApplicationFactory<Program>
     public Mock<IExchangeRateService> ExchangeRateServiceMock { get; } = new();
     public Mock<IConscienceJourneyService> ConscienceJourneyServiceMock { get; } = new();
     public Mock<IConscienceJourneyRepository> ConscienceJourneyRepoMock { get; } = new();
+    public Mock<IAdminAuthorizationService> AdminAuthorizationServiceMock { get; } = new();
+    public Mock<ISubscriptionAdminService> SubscriptionAdminServiceMock { get; } = new();
+    public Mock<IUserProvisioningService> UserProvisioningServiceMock { get; } = new();
     public Mock<IWeeklyInsightsRepository> WeeklyInsightsRepoMock { get; } = new();
     public Mock<IPurchasePatternRepository> PurchasePatternRepoMock { get; } = new();
     public Mock<IMonthlyCategorySpendRepository> MonthlyCategorySpendRepoMock { get; } = new();
@@ -83,6 +86,9 @@ public class TestWebAppFactory : WebApplicationFactory<Program>
             ReplaceService<IExchangeRateService>(services, ExchangeRateServiceMock.Object);
             ReplaceService<IConscienceJourneyService>(services, ConscienceJourneyServiceMock.Object);
             ReplaceService<IConscienceJourneyRepository>(services, ConscienceJourneyRepoMock.Object);
+            ReplaceService<IAdminAuthorizationService>(services, AdminAuthorizationServiceMock.Object);
+            ReplaceService<ISubscriptionAdminService>(services, SubscriptionAdminServiceMock.Object);
+            ReplaceService<IUserProvisioningService>(services, UserProvisioningServiceMock.Object);
             ReplaceService<IWeeklyInsightsRepository>(services, WeeklyInsightsRepoMock.Object);
             ReplaceService<IPurchasePatternRepository>(services, PurchasePatternRepoMock.Object);
             ReplaceService<IMonthlyCategorySpendRepository>(services, MonthlyCategorySpendRepoMock.Object);
