@@ -481,45 +481,51 @@ How to get it:
 gh secret set APP_STORE_CONNECT_API_PRIVATE_KEY < AuthKey_XXXXXXXXXX.p8 --repo nearlyheadlessarvie/conscia
 ```
 
-#### `IOS_CERTIFICATE_P12_BASE64`
+#### `MATCH_GIT_URL`
 
-How to get it:
+Fastlane Match signing repository URL. Use the private encrypted signing repo, not the app source repo.
 
-- Xcode -> Settings -> Accounts -> Manage Certificates
-- Create or select an Apple Distribution certificate
-- Open Keychain Access, find the certificate with its private key
-- Export as `.p12` and set an export password
+Recommended value:
 
 ```bash
-base64 -i distribution.p12 | tr -d '\n' | gh secret set IOS_CERTIFICATE_P12_BASE64 --repo nearlyheadlessarvie/conscia
+gh variable set MATCH_GIT_URL \
+  --body "https://github.com/nearlyheadlessarvie/conscia-ios-signing.git" \
+  --repo nearlyheadlessarvie/conscia
 ```
 
-#### `IOS_CERTIFICATE_PASSWORD`
+#### `MATCH_PASSWORD`
 
-The password used when exporting `distribution.p12`.
+The encryption password you chose when running `fastlane match appstore`. Keep it in your password manager; CI uses it to decrypt the signing certificate and provisioning profile from the private Match repo.
 
 ```bash
-gh secret set IOS_CERTIFICATE_PASSWORD --body "YOUR_P12_PASSWORD" --repo nearlyheadlessarvie/conscia
+gh secret set MATCH_PASSWORD --repo nearlyheadlessarvie/conscia
 ```
 
-#### `IOS_PROVISIONING_PROFILE_BASE64`
+#### `MATCH_GIT_BASIC_AUTHORIZATION`
 
-How to get it:
+Base64-encoded GitHub basic auth value used by Fastlane Match to clone the private signing repo in CI.
 
-- Apple Developer Portal -> Certificates, Identifiers & Profiles -> Profiles
-- Create an App Store distribution profile for `IOS_BUNDLE_ID`
-- Make sure the App ID has required capabilities, including Associated Domains and Push Notifications when enabled
-- Download the `.mobileprovision` file
+Create a fine-grained GitHub token that can read only `nearlyheadlessarvie/conscia-ios-signing`, then encode `username:token`:
 
 ```bash
-base64 -i ConsciaDist.mobileprovision | tr -d '\n' | gh secret set IOS_PROVISIONING_PROFILE_BASE64 --repo nearlyheadlessarvie/conscia
+printf "nearlyheadlessarvie:YOUR_GITHUB_TOKEN" | base64 | tr -d '\n' | \
+  gh secret set MATCH_GIT_BASIC_AUTHORIZATION --repo nearlyheadlessarvie/conscia
 ```
+
+On Windows PowerShell:
+
+```powershell
+$encoded = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes("nearlyheadlessarvie:YOUR_GITHUB_TOKEN"))
+gh secret set MATCH_GIT_BASIC_AUTHORIZATION --body $encoded --repo nearlyheadlessarvie/conscia
+```
+
+The release workflow runs `fastlane match appstore --readonly`, so CI can read signing assets but will not create or mutate certificates/profiles.
 
 #### `IOS_BUNDLE_ID`
 
 Usually `com.getconscia.app.ai`.
 
-The app workflow uses these iOS secrets to sign the archive on a macOS runner and upload the resulting IPA to TestFlight.
+The app workflow uses App Store Connect plus Fastlane Match to sign the archive on a macOS runner and upload the resulting IPA to TestFlight.
 
 How to confirm:
 
