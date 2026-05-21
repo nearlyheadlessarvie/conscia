@@ -105,7 +105,7 @@ Only needed when CI starts producing signed iOS releases.
 | `IOS_CERTIFICATE_P12_BASE64` | Secret | `release-app.yml` | Signing certificate. |
 | `IOS_CERTIFICATE_PASSWORD` | Secret | `release-app.yml` | Certificate password. |
 | `IOS_PROVISIONING_PROFILE_BASE64` | Secret | `release-app.yml` | Provisioning profile. |
-| `IOS_BUNDLE_ID` | Variable | `release-app.yml` | Example: `com.conscia.app`. |
+| `IOS_BUNDLE_ID` | Variable | `release-app.yml` | Example: `com.getconscia.app.ai`. |
 
 ## SES Email
 

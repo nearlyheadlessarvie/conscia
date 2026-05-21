@@ -1,4 +1,4 @@
-package com.getconscia.app
+package com.getconscia.app.ai
 
 import io.flutter.embedding.android.FlutterActivity
 

@@ -26,7 +26,7 @@ public class GooglePlayOptions
     public const string SectionName = "GooglePlay";
 
     /// <summary>
-    /// Android package name (e.g. "com.conscia.app").
+    /// Android package name (e.g. "com.getconscia.app.ai").
     /// </summary>
     public string? PackageName { get; set; }
 

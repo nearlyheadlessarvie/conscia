@@ -350,7 +350,7 @@ Auth__AppJwtSigningKey=<random 32+ char secret>
 Auth__AppJwtIssuer=conscia-app
 Auth__AppJwtAudience=conscia-api
 Auth__Google__ClientId=<Google web/server OAuth client id>
-Auth__Apple__ClientId=<iOS bundle id, for example com.conscia.app>
+Auth__Apple__ClientId=<iOS bundle id, for example com.getconscia.app.ai>
 ```
 
 If you need multiple Google audiences, use array-style environment variables:
@@ -383,7 +383,7 @@ You need one client ID per platform. Go to **APIs & Services → Credentials →
 
 **iOS client ID**
 1. Application type: **iOS**
-2. Bundle ID: `com.conscia.app` (must match your `ios/Runner.xcodeproj` bundle ID)
+2. Bundle ID: `com.getconscia.app.ai` (must match your `ios/Runner.xcodeproj` bundle ID)
 3. Download `GoogleService-Info.plist` → place it at `app/ios/Runner/GoogleService-Info.plist`
 4. Open `app/ios/Runner/Info.plist` and add a URL scheme so the app can receive the OAuth redirect:
    ```xml
@@ -401,7 +401,7 @@ You need one client ID per platform. Go to **APIs & Services → Credentials →
 
 **Android client ID**
 1. Application type: **Android**
-2. Package name: `com.conscia.app`
+2. Package name: `com.getconscia.app.ai`
 3. SHA-1 fingerprint — run this to get your debug key fingerprint:
    ```bash
    keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey -storepass android
@@ -448,7 +448,7 @@ Set the Google web/server client ID as `Auth__Google__ClientId` (or include it i
 #### Step 1 — Enable the Capability in Apple Developer Portal
 
 1. Log in to [Apple Developer Portal](https://developer.apple.com/) → **Certificates, Identifiers & Profiles → Identifiers**.
-2. Select your App ID (`com.conscia.app`) → enable **Sign in with Apple** → save.
+2. Select your App ID (`com.getconscia.app.ai`) -> enable **Sign in with Apple** -> save.
 
 #### Step 2 — Add the Capability in Xcode
 
@@ -458,7 +458,7 @@ Set the Google web/server client ID as `Auth__Google__ClientId` (or include it i
 
 #### Step 3 — Configure Backend Audience
 
-Set `Auth__Apple__ClientId` to the audience Apple places in the identity token. For the native iOS app this is usually the bundle id, such as `com.conscia.app`. The API validates Apple identity tokens against Apple's JWKS, issuer, and this configured audience before creating/linking the user.
+Set `Auth__Apple__ClientId` to the audience Apple places in the identity token. For the native iOS app this is usually the bundle id, such as `com.getconscia.app.ai`. The API validates Apple identity tokens against Apple's JWKS, issuer, and this configured audience before creating/linking the user.
 
 > **Important:** Apple only sends the user's name and email during the **first** sign-in. Store them immediately when you create the account — subsequent sign-ins will not include them.
 

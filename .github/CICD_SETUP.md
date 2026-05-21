@@ -180,7 +180,7 @@ This is the server/web OAuth client ID used as the expected Google ID-token audi
 
 #### `AUTH_APPLE_CLIENT_ID`
 
-Usually the iOS bundle id, for example `com.conscia.app`.
+Usually the iOS bundle id, for example `com.getconscia.app.ai`.
 
 How to confirm:
 
@@ -224,7 +224,7 @@ gh secret set APPLE_PRIVATE_KEY < AuthKey_XXXXXXXXXX.p8 --repo nearlyheadlessarv
 
 #### `GOOGLE_PLAY_PACKAGE_NAME`
 
-Usually your Android package name, for example `com.conscia.app`.
+Usually your Android package name, for example `com.getconscia.app.ai`.
 
 How to confirm:
 
@@ -517,7 +517,7 @@ base64 -i ConsciaDist.mobileprovision | tr -d '\n' | gh secret set IOS_PROVISION
 
 #### `IOS_BUNDLE_ID`
 
-Usually `com.conscia.app`.
+Usually `com.getconscia.app.ai`.
 
 The app workflow uses these iOS secrets to sign the archive on a macOS runner and upload the resulting IPA to TestFlight.
 
@@ -612,8 +612,8 @@ ROUTE53_HOSTED_ZONE_ID=ZXXXXXXXXXXXXX
 API_BASE_URL=https://api.getconscia.com/api/
 MOCK_AUTH=false
 PUSH_NOTIFICATIONS_ENABLED=false
-GOOGLE_PLAY_PACKAGE_NAME=com.getconscia.app
-IOS_BUNDLE_ID=com.getconscia.app
+GOOGLE_PLAY_PACKAGE_NAME=com.getconscia.app.ai
+IOS_BUNDLE_ID=com.getconscia.app.ai
 SES_FROM_EMAIL=invites@getconscia.com
 SES_CONFIGURATION_SET=conscia-production
 FIREBASE_PROJECT_ID=conscia-production
