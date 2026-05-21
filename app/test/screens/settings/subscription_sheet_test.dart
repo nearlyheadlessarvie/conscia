@@ -62,6 +62,28 @@ Future<void> _pumpSheetHost(
 }
 
 void main() {
+  testWidgets('subscription sheet shows lifetime access for comped premium users',
+      (
+    tester,
+  ) async {
+    final iapService = _FakeIAPService();
+
+    await _pumpSheetHost(
+      tester,
+      status: const SubscriptionStatus(
+        tier: 'premium',
+        isPremium: true,
+        isLifetime: true,
+        source: 'lifetime',
+      ),
+      iapService: iapService,
+    );
+
+    expect(find.text('Conscia Premium'), findsOneWidget);
+    expect(find.text('Lifetime access'), findsOneWidget);
+    expect(find.textContaining('renews'), findsNothing);
+  });
+
   testWidgets('subscription sheet shows manage state for premium users', (
     tester,
   ) async {
@@ -174,5 +196,22 @@ void main() {
       ),
       findsOneWidget,
     );
+  });
+
+  testWidgets('subscription sheet uses rounded top corners', (tester) async {
+    final iapService = _FakeIAPService();
+
+    await _pumpSheetHost(
+      tester,
+      status: const SubscriptionStatus(
+        tier: 'free',
+        isPremium: false,
+      ),
+      iapService: iapService,
+    );
+
+    final bottomSheet = tester.widget<BottomSheet>(find.byType(BottomSheet));
+    final shape = bottomSheet.shape as RoundedRectangleBorder;
+    expect(shape.borderRadius, const BorderRadius.vertical(top: Radius.circular(32)));
   });
 }
