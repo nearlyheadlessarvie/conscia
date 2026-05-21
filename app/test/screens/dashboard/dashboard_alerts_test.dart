@@ -18,6 +18,7 @@ import 'package:conscia_app/screens/dashboard/dashboard_screen.dart';
 import 'package:conscia_app/screens/dashboard/widgets/insight_feed_card.dart';
 import 'package:conscia_app/screens/dashboard/widgets/recent_transaction_tile.dart';
 import 'package:conscia_app/screens/dashboard/widgets/regret_prompt_card.dart';
+import 'package:conscia_app/screens/journey/level_up_screen.dart';
 import 'package:conscia_app/services/auth_service.dart';
 import 'package:conscia_app/services/budget_service.dart';
 import 'package:conscia_app/services/conscience_journey_service.dart';
@@ -228,6 +229,13 @@ Widget _buildApp(
         path: '/insights',
         builder: (context, state) => const Scaffold(
           body: Center(child: Text('Insights placeholder')),
+        ),
+      ),
+      GoRoute(
+        path: AppRoutes.levelUp,
+        builder: (context, state) => LevelUpScreen(
+          summary: container.read(conscienceJourneyProvider).valueOrNull ??
+              _testJourneySummary,
         ),
       ),
       GoRoute(
@@ -521,13 +529,271 @@ void main() {
       const Offset(0, -500),
     );
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Worth It'));
-    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, 'Worth It').first);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 620));
 
     expect(transactionService.updatedRegretTransactionId, 'tx-reflect');
     expect(transactionService.updatedRegretLevel, 0);
     expect(journeyNotifier.recordedEventType, 'reflection_completed');
     expect(journeyNotifier.recordedSourceId, 'tx-reflect');
+  });
+
+  testWidgets(
+      'dashboard reflect section shows one featured prompt and visible deck previews',
+      (tester) async {
+    _useTallDashboardViewport(tester);
+
+    final transactions = [
+      Transaction(
+        id: 'tx-1',
+        amount: 600,
+        currencyCode: 'PHP',
+        category: 'Dining',
+        description: 'Starbucks',
+        type: 'expense',
+        date: DateTime(2026, 5, 18),
+      ),
+      Transaction(
+        id: 'tx-2',
+        amount: 250,
+        currencyCode: 'PHP',
+        category: 'Coffee',
+        description: 'Daily Grind',
+        type: 'expense',
+        date: DateTime(2026, 5, 17),
+      ),
+      Transaction(
+        id: 'tx-3',
+        amount: 1200,
+        currencyCode: 'PHP',
+        category: 'Shopping',
+        description: 'Uniqlo',
+        type: 'expense',
+        date: DateTime(2026, 5, 16),
+      ),
+    ];
+
+    final container = ProviderContainer(
+      overrides: [
+        sharedPreferencesProvider.overrideWithValue(prefs),
+        budgetServiceProvider.overrideWithValue(_StaticBudgetService(const [])),
+        transactionServiceProvider
+            .overrideWithValue(_StaticTransactionService(transactions)),
+        transactionListProvider.overrideWith(
+          (ref) => TransactionListNotifier.fromList(transactions),
+        ),
+        currentUserProvider.overrideWith((ref) async => _testUser),
+        subscriptionProvider.overrideWith((ref) async => _testSubscription),
+        behavioralInsightsProvider.overrideWith((ref) async => null),
+        insightsSummaryProvider.overrideWith((ref) async => null),
+        insightsCategoriesProvider.overrideWith((ref) async => const []),
+        insightsMerchantsProvider.overrideWith((ref) async => const []),
+        localAlertsProvider.overrideWith(
+          (ref) => _LocalAlertsTestNotifier(const []),
+        ),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    await tester.pumpWidget(_buildApp(container));
+    await tester.pumpAndSettle();
+
+    await tester.drag(
+      find.byKey(const PageStorageKey('dashboard-shell-scroll')),
+      const Offset(0, -500),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Reflect'), findsOneWidget);
+    expect(
+      find.text('A small pause can show whether this moment fit your rhythm.'),
+      findsOneWidget,
+    );
+    expect(find.byKey(const ValueKey('dashboard-reflect-feature-card')), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('dashboard-reflect-feature-card')),
+        matching: find.text('Starbucks'),
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('2 more moments waiting'), findsNothing);
+    expect(
+      find.byKey(const ValueKey('dashboard-reflect-preview-card-0')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('dashboard-reflect-preview-card-1')),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('dashboard reflect queue advances locally after a reflection tap',
+      (tester) async {
+    _useTallDashboardViewport(tester);
+
+    final transactions = [
+      Transaction(
+        id: 'tx-1',
+        amount: 600,
+        currencyCode: 'PHP',
+        category: 'Dining',
+        description: 'Manam',
+        type: 'expense',
+        date: DateTime(2026, 5, 18),
+      ),
+      Transaction(
+        id: 'tx-2',
+        amount: 250,
+        currencyCode: 'PHP',
+        category: 'Coffee',
+        description: 'Daily Grind',
+        type: 'expense',
+        date: DateTime(2026, 5, 17),
+      ),
+    ];
+
+    final transactionService = _RecordingTransactionService(transactions);
+    final journeyNotifier =
+        _RecordingConscienceJourneyNotifier(_testJourneySummary);
+    final container = ProviderContainer(
+      overrides: [
+        sharedPreferencesProvider.overrideWithValue(prefs),
+        budgetServiceProvider.overrideWithValue(_StaticBudgetService(const [])),
+        transactionServiceProvider.overrideWithValue(transactionService),
+        transactionListProvider.overrideWith(
+          (ref) => TransactionListNotifier.fromList(transactions),
+        ),
+        currentUserProvider.overrideWith((ref) async => _testUser),
+        subscriptionProvider.overrideWith((ref) async => _testSubscription),
+        behavioralInsightsProvider.overrideWith((ref) async => null),
+        insightsSummaryProvider.overrideWith((ref) async => null),
+        insightsCategoriesProvider.overrideWith((ref) async => const []),
+        insightsMerchantsProvider.overrideWith((ref) async => const []),
+        localAlertsProvider.overrideWith(
+          (ref) => _LocalAlertsTestNotifier(const []),
+        ),
+        conscienceJourneyProvider.overrideWith(() => journeyNotifier),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    await tester.pumpWidget(_buildApp(container));
+    await tester.pumpAndSettle();
+
+    await tester.drag(
+      find.byKey(const PageStorageKey('dashboard-shell-scroll')),
+      const Offset(0, -500),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('dashboard-reflect-feature-card')),
+        matching: find.text('Manam'),
+      ),
+      findsOneWidget,
+    );
+
+    await tester.tap(find.widgetWithText(FilledButton, 'Worth It').first);
+    await tester.pump();
+    expect(
+      find.byKey(const ValueKey('dashboard-reflect-deck-frame')),
+      findsOneWidget,
+    );
+    await tester.pump(const Duration(milliseconds: 620));
+
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('dashboard-reflect-feature-card')),
+        matching: find.text('Daily Grind'),
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('1 more moments waiting'), findsNothing);
+    expect(transactionService.updatedRegretTransactionId, 'tx-1');
+    expect(transactionService.updatedRegretLevel, 0);
+    expect(journeyNotifier.recordedEventType, 'reflection_completed');
+    expect(journeyNotifier.recordedSourceId, 'tx-1');
+  });
+
+  testWidgets(
+      'dashboard reflect deck keeps its height through the final card handoff',
+      (tester) async {
+    _useTallDashboardViewport(tester);
+
+    final transactions = [
+      Transaction(
+        id: 'tx-last',
+        amount: 5000,
+        currencyCode: 'PHP',
+        category: 'Shopping',
+        description: 'SM Department store',
+        type: 'expense',
+        date: DateTime(2026, 5, 18),
+      ),
+    ];
+
+    final transactionService = _RecordingTransactionService(transactions);
+    final journeyNotifier =
+        _RecordingConscienceJourneyNotifier(_testJourneySummary);
+    final container = ProviderContainer(
+      overrides: [
+        sharedPreferencesProvider.overrideWithValue(prefs),
+        budgetServiceProvider.overrideWithValue(_StaticBudgetService(const [])),
+        transactionServiceProvider.overrideWithValue(transactionService),
+        transactionListProvider.overrideWith(
+          (ref) => TransactionListNotifier.fromList(transactions),
+        ),
+        currentUserProvider.overrideWith((ref) async => _testUser),
+        subscriptionProvider.overrideWith((ref) async => _testSubscription),
+        behavioralInsightsProvider.overrideWith((ref) async => null),
+        insightsSummaryProvider.overrideWith((ref) async => null),
+        insightsCategoriesProvider.overrideWith((ref) async => const []),
+        insightsMerchantsProvider.overrideWith((ref) async => const []),
+        localAlertsProvider.overrideWith(
+          (ref) => _LocalAlertsTestNotifier(const []),
+        ),
+        conscienceJourneyProvider.overrideWith(() => journeyNotifier),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    await tester.pumpWidget(_buildApp(container));
+    await tester.pumpAndSettle();
+
+    await tester.drag(
+      find.byKey(const PageStorageKey('dashboard-shell-scroll')),
+      const Offset(0, -500),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const ValueKey('dashboard-reflect-feature-card')),
+      findsOneWidget,
+    );
+
+    await tester.tap(find.widgetWithText(FilledButton, 'Worth It').first);
+    await tester.pump();
+
+    expect(
+      find.byKey(const ValueKey('dashboard-reflect-deck-frame')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('dashboard-reflect-feature-card')),
+      findsOneWidget,
+    );
+
+    await tester.pump(const Duration(milliseconds: 620));
+
+    expect(
+      find.byKey(const ValueKey('dashboard-reflect-deck-frame')),
+      findsNothing,
+    );
+    expect(transactionService.updatedRegretTransactionId, 'tx-last');
+    expect(journeyNotifier.recordedEventType, 'reflection_completed');
   });
 
   testWidgets(
@@ -1884,6 +2150,96 @@ void main() {
 
     expect(find.text('Notifications'), findsOneWidget);
     expect(find.text('Shell nav').hitTestable(), findsNothing);
+  });
+
+  testWidgets(
+      'notification sheet contains long notification copy within the sheet',
+      (tester) async {
+    final container = ProviderContainer(
+      overrides: [
+        sharedPreferencesProvider.overrideWithValue(prefs),
+        budgetServiceProvider.overrideWithValue(_StaticBudgetService(const [])),
+        transactionServiceProvider
+            .overrideWithValue(_StaticTransactionService()),
+        behavioralInsightsProvider.overrideWith((ref) async => null),
+        insightsSummaryProvider.overrideWith((ref) async => null),
+        insightsCategoriesProvider.overrideWith((ref) async => const []),
+        insightsMerchantsProvider.overrideWith((ref) async => const []),
+        localAlertsProvider.overrideWith(
+          (ref) => _LocalAlertsTestNotifier(
+            [
+              AppAlert(
+                id: 'long-alert',
+                type: 'journey_badge',
+                title:
+                    'This is a very long notification title that should stay inside the notification sheet bounds',
+                message:
+                    'This notification message is intentionally long so we can make sure the content stays visually contained inside the notification window instead of feeling like it bleeds past the sheet surface.',
+                isDismissed: false,
+                createdAt: DateTime(2026, 5, 7),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    await tester.pumpWidget(_buildApp(container));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('Notifications').hitTestable().first);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Notifications'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('journey level-up alert opens the level up screen',
+      (tester) async {
+    final container = ProviderContainer(
+      overrides: [
+        sharedPreferencesProvider.overrideWithValue(prefs),
+        budgetServiceProvider.overrideWithValue(_StaticBudgetService(const [])),
+        transactionServiceProvider
+            .overrideWithValue(_StaticTransactionService()),
+        behavioralInsightsProvider.overrideWith((ref) async => null),
+        insightsSummaryProvider.overrideWith((ref) async => null),
+        insightsCategoriesProvider.overrideWith((ref) async => const []),
+        insightsMerchantsProvider.overrideWith((ref) async => const []),
+        conscienceJourneyProvider.overrideWith(
+          () => _StaticConscienceJourneyNotifier(_testJourneySummary),
+        ),
+        localAlertsProvider.overrideWith(
+          (ref) => _LocalAlertsTestNotifier(
+            [
+              AppAlert(
+                id: 'journey-level-budget-guardian',
+                type: 'journey_level_up',
+                title: 'Level up',
+                message: 'Your conscience journey reached a new level.',
+                actionLabel: 'View level',
+                actionRoute: AppRoutes.levelUp,
+                isDismissed: false,
+                createdAt: DateTime(2026, 5, 7),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    await tester.pumpWidget(_buildApp(container));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('Notifications').hitTestable().first);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('View level'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Continue your journey'), findsOneWidget);
   });
 
   testWidgets(

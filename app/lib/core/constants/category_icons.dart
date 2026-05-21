@@ -2,6 +2,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
+import '../icons/conscia_trial_icons.dart';
 import '../../widgets/conscia_glyph.dart';
 
 class CategoryIcons {
@@ -146,12 +147,12 @@ class CategoryIcons {
     ),
   ];
 
-  static const List<CategoryIconOption> iconOptions = [
+  static const List<CategoryIconOption> iconOptions = trialFontIconOptions;
+
+  static const List<CategoryIconOption> trialFontIconOptions = [
     CategoryIconOption(key: 'groceries', label: 'Groceries'),
     CategoryIconOption(key: 'dining', label: 'Dining'),
     CategoryIconOption(key: 'transport', label: 'Transport'),
-    CategoryIconOption(key: 'entertainment', label: 'Entertainment'),
-    CategoryIconOption(key: 'gaming', label: 'Gaming'),
     CategoryIconOption(key: 'shopping', label: 'Shopping'),
     CategoryIconOption(key: 'health', label: 'Health'),
     CategoryIconOption(key: 'bills', label: 'Bills'),
@@ -163,27 +164,11 @@ class CategoryIcons {
     CategoryIconOption(key: 'freelance', label: 'Freelance'),
     CategoryIconOption(key: 'business', label: 'Business'),
     CategoryIconOption(key: 'investment', label: 'Investment'),
-    CategoryIconOption(key: 'rental-income', label: 'Rental'),
-    CategoryIconOption(key: 'bonus', label: 'Bonus'),
     CategoryIconOption(key: 'gift', label: 'Gift'),
-    CategoryIconOption(key: 'pets', label: 'Pets'),
     CategoryIconOption(key: 'home', label: 'Home'),
     CategoryIconOption(key: 'utilities', label: 'Utilities'),
     CategoryIconOption(key: 'phone', label: 'Phone'),
-    CategoryIconOption(key: 'internet', label: 'Internet'),
-    CategoryIconOption(key: 'insurance', label: 'Insurance'),
-    CategoryIconOption(key: 'fuel', label: 'Fuel'),
-    CategoryIconOption(key: 'parking', label: 'Parking'),
-    CategoryIconOption(key: 'repairs', label: 'Repairs'),
-    CategoryIconOption(key: 'beauty', label: 'Beauty'),
-    CategoryIconOption(key: 'fitness', label: 'Fitness'),
-    CategoryIconOption(key: 'charity', label: 'Charity'),
-    CategoryIconOption(key: 'books', label: 'Books'),
-    CategoryIconOption(key: 'clothing', label: 'Clothing'),
-    CategoryIconOption(key: 'taxes', label: 'Taxes'),
-    CategoryIconOption(key: 'childcare', label: 'Childcare'),
-    CategoryIconOption(key: 'pharmacy', label: 'Pharmacy'),
-    CategoryIconOption(key: 'events', label: 'Events'),
+    CategoryIconOption(key: 'pets', label: 'Pets'),
     CategoryIconOption(key: 'other', label: 'Other'),
   ];
 
@@ -502,6 +487,60 @@ class CategoryIcons {
             RegExp(r'^-+|-+$'),
             '',
           );
+
+  static IconData? trialFontIconData(String iconKey) {
+    return switch (_clean(iconKey)) {
+      'groceries' => ConsciaTrialIcons.groceries,
+      'dining' => ConsciaTrialIcons.dining,
+      'transport' => ConsciaTrialIcons.transport,
+      'shopping' => ConsciaTrialIcons.shopping,
+      'health' => ConsciaTrialIcons.health,
+      'bills' => ConsciaTrialIcons.bills,
+      'education' => ConsciaTrialIcons.education,
+      'travel' => ConsciaTrialIcons.travel,
+      'coffee' => ConsciaTrialIcons.coffee,
+      'subscriptions' => ConsciaTrialIcons.subscription,
+      'salary' => ConsciaTrialIcons.salary,
+      'freelance' => ConsciaTrialIcons.freelance,
+      'business' => ConsciaTrialIcons.business,
+      'investment' => ConsciaTrialIcons.investment,
+      'gift' => ConsciaTrialIcons.gift,
+      'home' => ConsciaTrialIcons.home,
+      'other' => ConsciaTrialIcons.more,
+      _ => null,
+    };
+  }
+
+  static Widget trialFontPickerIcon(
+    String category, {
+    required String iconKey,
+    required String colorKey,
+    required double size,
+    Key? key,
+  }) {
+    final visual = visualFor(
+      category,
+      iconKey: iconKey,
+      colorKey: colorKey,
+    );
+    final iconData = trialFontIconData(iconKey);
+    if (iconData == null) {
+      return ConsciaGlyph.category(
+        visual.iconKey,
+        key: key,
+        size: size,
+        color: visual.accent,
+        strokeWidth: size * 0.11,
+      );
+    }
+
+    return Icon(
+      key: key,
+      iconData,
+      size: size,
+      color: visual.accent,
+    );
+  }
 
   static String _clean(String? value) => value?.trim().toLowerCase() ?? '';
 

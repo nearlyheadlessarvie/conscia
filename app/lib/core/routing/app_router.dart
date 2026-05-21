@@ -1,9 +1,11 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../providers/auth_provider.dart';
+import '../../providers/conscience_journey_provider.dart';
 import '../../providers/user_provider.dart';
 import '../../services/user_service.dart';
 import '../../screens/assistant/pre_purchase_screen.dart';
@@ -31,6 +33,7 @@ import '../../screens/insights/category_detail_screen.dart';
 import '../../screens/insights/category_list_screen.dart';
 import '../../screens/insights/insights_screen.dart';
 import '../../screens/journey/conscience_journey_screen.dart';
+import '../../screens/journey/level_up_screen.dart';
 import '../../screens/insights/merchant_detail_screen.dart';
 import '../../screens/insights/merchant_list_screen.dart';
 import '../../screens/transactions/transaction_detail_screen.dart';
@@ -59,6 +62,7 @@ abstract class AppRoutes {
   static const assistant = '/assistant';
   static const insights = '/insights';
   static const journey = '/journey';
+  static const levelUp = '/journey/level-up';
 
   static const settings = '/settings';
   static const settingsProfile = '/settings/profile';
@@ -409,7 +413,25 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const InsightsScreen(),
       ),
       GoRoute(
-        path: '/journey',
+        path: AppRoutes.levelUp,
+        builder: (context, state) {
+          return Consumer(
+            builder: (context, ref, _) {
+              final summary =
+                  ref.watch(conscienceJourneyProvider).valueOrNull;
+              if (summary == null) {
+                return const Scaffold(
+                  body: Center(child: CircularProgressIndicator()),
+                );
+              }
+
+              return LevelUpScreen(summary: summary);
+            },
+          );
+        },
+      ),
+      GoRoute(
+        path: AppRoutes.journey,
         builder: (context, state) => const ConscienceJourneyScreen(),
       ),
       GoRoute(

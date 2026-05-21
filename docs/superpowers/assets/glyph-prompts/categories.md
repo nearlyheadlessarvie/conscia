@@ -1,0 +1,22 @@
+# Category Glyph Prompts
+
+- groceries - A soft grocery bag or basket. Stable, practical, friendly.
+- dining - A fork and spoon with generous spacing. Calm, welcoming meal symbol.
+- coffee - A cozy cup with a single gentle steam line. Warm and small ritual energy.
+- transport - A compact, simplified transport symbol. Clear and dependable.
+- shopping - A shopping bag that feels a little lighter and more playful than groceries.
+- health - A softened heart or medical symbol that feels caring, not clinical.
+- bills - A tidy bill or receipt document. Structured, clear, and calm.
+- education - An open book with soft balance and simple lines.
+- travel - A suitcase or passport symbol. Avoid abstract airplane shapes.
+- subscription - A restrained loop or recurring band symbol.
+- salary - A payslip, envelope, or income card. Dependable and steady.
+- freelance - A briefcase or independent work symbol. Clean and self-directed.
+- business - A storefront or ledger-like business symbol. Grounded and clear.
+- investment - A calm upward growth symbol, bars or line with gentle optimism.
+- gift - A rounded wrapped gift. Warm, generous, and simple.
+- home - A soft house silhouette with stable base.
+- utilities - A practical utilities symbol, like a plug or simple energy/flow mark.
+- phone - A minimal phone or handset symbol with softened edges.
+- pets - A simple, friendly paw symbol.
+- other - A soft ellipsis or catch-all symbol that still feels deliberate.

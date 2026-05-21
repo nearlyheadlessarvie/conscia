@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
 
 import 'package:conscia_app/core/constants/generated/app_constants.g.dart';
 import 'package:conscia_app/core/constants/conscience_journey.dart';
@@ -288,126 +289,137 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             return StatefulBuilder(
               builder: (context, setSheetState) {
                 final colors = Theme.of(context).colorScheme;
+                final appColors = Theme.of(context).appColors;
                 final textTheme = Theme.of(context).textTheme;
                 final grouped = _groupAlerts(sheetAlerts);
 
-                return CustomScrollView(
-                  controller: scrollController,
-                  slivers: [
-                    SliverPadding(
-                      padding: const EdgeInsets.fromLTRB(20, 8, 20, 4),
-                      sliver: SliverToBoxAdapter(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const ConsciaSheetHandle(),
-                            const SizedBox(height: 18),
-                            ConsciaSheetHeader(
-                              title: 'Notifications',
-                              subtitle: sheetAlerts.isEmpty
-                                  ? 'Nothing needs your attention right now.'
-                                  : 'The latest nudges and reminders from Conscia.',
-                            ),
-                            const SizedBox(height: 16),
-                          ],
+                return Material(
+                  color: appColors.paper,
+                  clipBehavior: Clip.antiAlias,
+                  shape: const RoundedRectangleBorder(
+                    borderRadius:
+                        BorderRadius.vertical(top: Radius.circular(28)),
+                  ),
+                  child: CustomScrollView(
+                    controller: scrollController,
+                    slivers: [
+                      SliverPadding(
+                        padding: const EdgeInsets.fromLTRB(20, 8, 20, 4),
+                        sliver: SliverToBoxAdapter(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const ConsciaSheetHandle(),
+                              const SizedBox(height: 18),
+                              ConsciaSheetHeader(
+                                title: 'Notifications',
+                                subtitle: sheetAlerts.isEmpty
+                                    ? 'Nothing needs your attention right now.'
+                                    : 'The latest nudges and reminders from Conscia.',
+                              ),
+                              const SizedBox(height: 16),
+                            ],
+                          ),
                         ),
                       ),
-                    ),
-                    if (sheetAlerts.isEmpty)
-                      const SliverPadding(
-                        padding: EdgeInsets.symmetric(horizontal: 20),
-                        sliver: SliverToBoxAdapter(
-                          child: EmptyState(
-                            icon: Icons.notifications_none_rounded,
-                            title: 'All clear',
-                            subtitle: 'New reminders will show up here.',
-                          ),
-                        ),
-                      )
-                    else
-                      for (final entry in grouped.entries) ...[
-                        SliverPadding(
-                          padding: const EdgeInsets.fromLTRB(20, 4, 20, 6),
+                      if (sheetAlerts.isEmpty)
+                        const SliverPadding(
+                          padding: EdgeInsets.symmetric(horizontal: 20),
                           sliver: SliverToBoxAdapter(
-                            child: Text(
-                              entry.key,
-                              style: textTheme.labelSmall?.copyWith(
-                                color: colors.onSurfaceVariant,
-                                fontWeight: FontWeight.w700,
-                                letterSpacing: 0.6,
+                            child: EmptyState(
+                              icon: Icons.notifications_none_rounded,
+                              title: 'All clear',
+                              subtitle: 'New reminders will show up here.',
+                            ),
+                          ),
+                        )
+                      else
+                        for (final entry in grouped.entries) ...[
+                          SliverPadding(
+                            padding: const EdgeInsets.fromLTRB(20, 4, 20, 6),
+                            sliver: SliverToBoxAdapter(
+                              child: Text(
+                                entry.key,
+                                style: textTheme.labelSmall?.copyWith(
+                                  color: colors.onSurfaceVariant,
+                                  fontWeight: FontWeight.w700,
+                                  letterSpacing: 0.6,
+                                ),
                               ),
                             ),
                           ),
-                        ),
-                        SliverToBoxAdapter(
-                          child: Divider(
-                            height: 1,
-                            indent: 20,
-                            endIndent: 20,
-                            color: colors.outlineVariant,
+                          SliverToBoxAdapter(
+                            child: Divider(
+                              height: 1,
+                              indent: 20,
+                              endIndent: 20,
+                              color: colors.outlineVariant,
+                            ),
                           ),
-                        ),
-                        SliverList.separated(
-                          itemCount: entry.value.length,
-                          separatorBuilder: (_, __) => Divider(
-                            height: 1,
-                            indent: 76,
-                            endIndent: 20,
-                            color: colors.outlineVariant.withValues(alpha: 0.6),
-                          ),
-                          itemBuilder: (context, i) {
-                            final alert = entry.value[i];
-                            void dismiss() {
-                              ref
-                                  .read(dismissedAlertIdsProvider.notifier)
-                                  .dismiss(alert.id);
-                              setSheetState(() {
-                                sheetAlerts = sheetAlerts
-                                    .where((item) => item.id != alert.id)
-                                    .toList(growable: false);
-                              });
-                            }
+                          SliverList.separated(
+                            itemCount: entry.value.length,
+                            separatorBuilder: (_, __) => Divider(
+                              height: 1,
+                              indent: 76,
+                              endIndent: 20,
+                              color:
+                                  colors.outlineVariant.withValues(alpha: 0.6),
+                            ),
+                            itemBuilder: (context, i) {
+                              final alert = entry.value[i];
+                              void dismiss() {
+                                ref
+                                    .read(dismissedAlertIdsProvider.notifier)
+                                    .dismiss(alert.id);
+                                setSheetState(() {
+                                  sheetAlerts = sheetAlerts
+                                      .where((item) => item.id != alert.id)
+                                      .toList(growable: false);
+                                });
+                              }
 
-                            return Dismissible(
-                              key: ValueKey(alert.id),
-                              direction: DismissDirection.endToStart,
-                              onDismissed: (_) => dismiss(),
-                              secondaryBackground: SwipeActionBackground(
-                                alignment: Alignment.centerRight,
-                                padding: const EdgeInsets.only(right: 12),
-                                children: [
-                                  SwipeActionTile(
-                                    icon: Icons.delete_sweep_rounded,
-                                    label: 'Dismiss',
-                                    foregroundColor:
-                                        Theme.of(context).appColors.expense,
-                                    backgroundColor:
-                                        Theme.of(context).appColors.expenseSoft,
-                                    onTap: () {},
-                                  ),
-                                ],
-                              ),
-                              background: const SizedBox.shrink(),
-                              child: ColoredBox(
-                                color: Theme.of(context).appColors.paper,
-                                child: _NotificationListTile(
-                                  alert: alert,
-                                  onAction: alert.actionLabel == null &&
-                                          alert.type != 'budget_nudge'
-                                      ? null
-                                      : () {
-                                          Navigator.of(sheetContext).pop();
-                                          _handleAlertAction(alert);
-                                        },
+                              return Dismissible(
+                                key: ValueKey(alert.id),
+                                direction: DismissDirection.endToStart,
+                                onDismissed: (_) => dismiss(),
+                                secondaryBackground: SwipeActionBackground(
+                                  alignment: Alignment.centerRight,
+                                  padding: const EdgeInsets.only(right: 12),
+                                  children: [
+                                    SwipeActionTile(
+                                      icon: Icons.delete_sweep_rounded,
+                                      label: 'Dismiss',
+                                      foregroundColor:
+                                          Theme.of(context).appColors.expense,
+                                      backgroundColor: Theme.of(context)
+                                          .appColors
+                                          .expenseSoft,
+                                      onTap: () {},
+                                    ),
+                                  ],
                                 ),
-                              ),
-                            );
-                          },
-                        ),
-                        const SliverToBoxAdapter(child: SizedBox(height: 12)),
-                      ],
-                    const SliverToBoxAdapter(child: SizedBox(height: 16)),
-                  ],
+                                background: const SizedBox.shrink(),
+                                child: ColoredBox(
+                                  color: Theme.of(context).appColors.paper,
+                                  child: _NotificationListTile(
+                                    alert: alert,
+                                    onAction: alert.actionLabel == null &&
+                                            alert.type != 'budget_nudge'
+                                        ? null
+                                        : () {
+                                            Navigator.of(sheetContext).pop();
+                                            _handleAlertAction(alert);
+                                          },
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                          const SliverToBoxAdapter(child: SizedBox(height: 12)),
+                        ],
+                      const SliverToBoxAdapter(child: SizedBox(height: 16)),
+                    ],
+                  ),
                 );
               },
             );
@@ -575,37 +587,25 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 ),
               if (regretPrompts.isNotEmpty) ...[
                 SliverToBoxAdapter(
-                  child: _buildSectionHeader(context, 'REFLECT'),
+                  child: _buildSectionHeader(
+                    context,
+                    'Reflect',
+                    subtitle:
+                        'A small pause can show whether this moment fit your rhythm.',
+                  ),
                 ),
                 SliverPadding(
                   padding: const EdgeInsets.symmetric(horizontal: 20),
-                  sliver: SliverList.builder(
-                    itemCount: regretPrompts.length,
-                    itemBuilder: (context, index) {
-                      final tx = regretPrompts[index];
-                      final displayCounterparty = tx.description.isNotEmpty
-                          ? tx.description
-                          : 'Unknown';
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 8),
-                        child: RegretPromptCard(
-                          categoryBadge: TransactionTile.badgeFor(
-                            tx.category,
-                            size: 30,
-                            filled: false,
-                          ),
-                          counterparty: displayCounterparty,
-                          amount: tx.amount,
-                          currencyCode: tx.currencyCode,
-                          date: tx.date,
-                          onWorthIt: () => _recordReflection(tx, 'worth_it'),
-                          onNotSure: () => _recordReflection(tx, 'not_sure'),
-                          onRegret: () => _recordReflection(tx, 'regret'),
-                          onDismiss: () =>
-                              setState(() => _dismissedPrompts.add(tx.id)),
-                        ),
-                      );
-                    },
+                  sliver: SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: _DashboardReflectQueue(
+                        prompts: regretPrompts,
+                        onReflect: _recordReflection,
+                        onDismiss: (tx) =>
+                            setState(() => _dismissedPrompts.add(tx.id)),
+                      ),
+                    ),
                   ),
                 ),
               ],
@@ -757,6 +757,358 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             ),
           ],
         ],
+      ),
+    );
+  }
+}
+
+class _DashboardReflectQueue extends StatefulWidget {
+  const _DashboardReflectQueue({
+    required this.prompts,
+    required this.onReflect,
+    required this.onDismiss,
+  });
+
+  final List<Transaction> prompts;
+  final Future<void> Function(Transaction tx, String feeling) onReflect;
+  final ValueChanged<Transaction> onDismiss;
+
+  @override
+  State<_DashboardReflectQueue> createState() => _DashboardReflectQueueState();
+}
+
+enum _ReflectDeckMotion {
+  worthIt,
+  notSure,
+  regret,
+}
+
+class _DashboardReflectQueueState extends State<_DashboardReflectQueue> {
+  static const _advanceDuration = Duration(milliseconds: 560);
+  static const _deckHeight = 248.0;
+
+  late List<Transaction> _visiblePrompts;
+  List<Transaction>? _bufferedExternalPrompts;
+  Transaction? _exitingPrompt;
+  _ReflectDeckMotion? _motion;
+  bool _isAdvancing = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _visiblePrompts = List<Transaction>.from(widget.prompts);
+  }
+
+  @override
+  void didUpdateWidget(covariant _DashboardReflectQueue oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final oldIds = oldWidget.prompts.map((tx) => tx.id).toList(growable: false);
+    final newIds = widget.prompts.map((tx) => tx.id).toList(growable: false);
+    if (oldIds.join('|') == newIds.join('|')) {
+      return;
+    }
+
+    if (_isAdvancing) {
+      _bufferedExternalPrompts = List<Transaction>.from(widget.prompts);
+      return;
+    }
+
+    setState(() {
+      _syncVisiblePrompts(widget.prompts);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final hasMountedDeck =
+        _visiblePrompts.isNotEmpty || _exitingPrompt != null || _isAdvancing;
+    if (!hasMountedDeck) {
+      return const SizedBox.shrink();
+    }
+
+    final activePrompt = _visiblePrompts.firstOrNull;
+    final previewPrompts = _visiblePrompts.skip(1).take(2).toList(growable: false);
+
+    return SizedBox(
+      height: _deckHeight,
+      child: Stack(
+        key: const ValueKey('dashboard-reflect-deck-frame'),
+        clipBehavior: Clip.none,
+        children: [
+          if (previewPrompts.length > 1)
+            Positioned(
+              key: const ValueKey('dashboard-reflect-preview-card-1'),
+              left: 26,
+              right: 26,
+              top: 24,
+              child: _ReflectDeckPreviewCard(
+                prompt: previewPrompts[1],
+                insetOpacity: 0.62,
+              ),
+            ),
+          if (previewPrompts.isNotEmpty)
+            Positioned(
+              key: const ValueKey('dashboard-reflect-preview-card-0'),
+              left: 13,
+              right: 13,
+              top: 12,
+              child: _ReflectDeckPreviewCard(
+                prompt: previewPrompts.first,
+                insetOpacity: 0.82,
+              ),
+            ),
+          if (activePrompt != null) _buildIncomingCard(activePrompt),
+          if (_exitingPrompt != null) _buildOutgoingCard(_exitingPrompt!),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildIncomingCard(Transaction prompt) {
+    final animationValue = _isAdvancing ? 1.0 : 0.0;
+    return TweenAnimationBuilder<double>(
+      key: ValueKey('dashboard-reflect-incoming-${prompt.id}'),
+      tween: Tween<double>(begin: 0, end: animationValue),
+      duration: _advanceDuration,
+      curve: Curves.easeOutCubic,
+      child: _buildPromptCard(
+        prompt,
+        onWorthIt: _isAdvancing ? null : () => _advanceQueue(prompt, 'worth_it'),
+        onNotSure: _isAdvancing ? null : () => _advanceQueue(prompt, 'not_sure'),
+        onRegret: _isAdvancing ? null : () => _advanceQueue(prompt, 'regret'),
+        onDismiss: _isAdvancing ? null : () => _dismiss(prompt),
+      ),
+      builder: (context, value, child) {
+        final translateY = _isAdvancing ? (26 * (1 - value)) : 0.0;
+        final scale = _isAdvancing ? (0.95 + (0.05 * value)) : 1.0;
+        final opacity = _isAdvancing ? (0.72 + (0.28 * value)) : 1.0;
+        return Positioned(
+          left: 0,
+          right: 0,
+          top: 0,
+          child: Opacity(
+            opacity: opacity.clamp(0, 1),
+            child: Transform.translate(
+              offset: Offset(0, translateY),
+              child: Transform.scale(
+                scale: scale,
+                alignment: Alignment.topCenter,
+                child: child,
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildOutgoingCard(Transaction prompt) {
+    final motion = _motion ?? _ReflectDeckMotion.notSure;
+    return TweenAnimationBuilder<double>(
+      key: ValueKey('dashboard-reflect-outgoing-${prompt.id}-${motion.name}'),
+      tween: Tween<double>(begin: 0, end: 1),
+      duration: _advanceDuration,
+      curve: Curves.easeInOutCubic,
+      child: IgnorePointer(
+        child: _buildPromptCard(
+          prompt,
+          onWorthIt: null,
+          onNotSure: null,
+          onRegret: null,
+          onDismiss: null,
+        ),
+      ),
+      builder: (context, value, child) {
+        final dx = switch (motion) {
+          _ReflectDeckMotion.worthIt => -116 * value,
+          _ReflectDeckMotion.regret => 116 * value,
+          _ReflectDeckMotion.notSure => 0.0,
+        };
+        final dy = switch (motion) {
+          _ReflectDeckMotion.notSure => -18 * value,
+          _ => -8 * value,
+        };
+        final scale = switch (motion) {
+          _ReflectDeckMotion.notSure => 1 - (0.1 * value),
+          _ => 1 - (0.035 * value),
+        };
+        final opacity = 1 - (0.88 * value);
+        return Positioned(
+          left: 0,
+          right: 0,
+          top: 0,
+          child: Opacity(
+            opacity: opacity.clamp(0, 1),
+            child: Transform.translate(
+              offset: Offset(dx, dy),
+              child: Transform.scale(
+                scale: scale,
+                alignment: Alignment.topCenter,
+                child: child,
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildPromptCard(
+    Transaction prompt, {
+    required VoidCallback? onWorthIt,
+    required VoidCallback? onNotSure,
+    required VoidCallback? onRegret,
+    required VoidCallback? onDismiss,
+  }) {
+    final displayCounterparty =
+        prompt.description.isNotEmpty ? prompt.description : 'Unknown';
+    return RegretPromptCard(
+      categoryBadge: TransactionTile.badgeFor(
+        prompt.category,
+        size: 30,
+        filled: false,
+      ),
+      counterparty: displayCounterparty,
+      amount: prompt.amount.abs(),
+      currencyCode: prompt.currencyCode,
+      date: prompt.date,
+      onWorthIt: onWorthIt,
+      onNotSure: onNotSure,
+      onRegret: onRegret,
+      onDismiss: onDismiss,
+    );
+  }
+
+  Future<void> _advanceQueue(Transaction tx, String feeling) async {
+    if (_isAdvancing || _visiblePrompts.isEmpty) return;
+    final nextVisiblePrompts = List<Transaction>.from(_visiblePrompts)..removeAt(0);
+    setState(() {
+      _isAdvancing = true;
+      _motion = switch (feeling) {
+        'worth_it' => _ReflectDeckMotion.worthIt,
+        'regret' => _ReflectDeckMotion.regret,
+        _ => _ReflectDeckMotion.notSure,
+      };
+      _exitingPrompt = tx;
+      _visiblePrompts = nextVisiblePrompts;
+    });
+    await Future<void>.delayed(_advanceDuration);
+    if (mounted) {
+      setState(() {
+        _isAdvancing = false;
+        _exitingPrompt = null;
+        _motion = null;
+        if (_bufferedExternalPrompts != null) {
+          _syncVisiblePrompts(_bufferedExternalPrompts!);
+          _bufferedExternalPrompts = null;
+        }
+      });
+    }
+    unawaited(widget.onReflect(tx, feeling));
+  }
+
+  void _dismiss(Transaction tx) {
+    if (_isAdvancing || _visiblePrompts.isEmpty) return;
+    setState(() {
+      _visiblePrompts = List<Transaction>.from(_visiblePrompts)..removeAt(0);
+    });
+    widget.onDismiss(tx);
+  }
+
+  void _syncVisiblePrompts(List<Transaction> externalPrompts) {
+    final currentIds = _visiblePrompts.map((tx) => tx.id).toSet();
+    final retained = externalPrompts
+        .where((tx) => currentIds.contains(tx.id))
+        .toList(growable: true);
+    if (retained.isEmpty) {
+      _visiblePrompts = List<Transaction>.from(externalPrompts);
+    } else {
+      final retainedIds = retained.map((tx) => tx.id).toSet();
+      retained.addAll(
+        externalPrompts.where((tx) => !retainedIds.contains(tx.id)),
+      );
+      _visiblePrompts = retained;
+    }
+  }
+}
+
+class _ReflectDeckPreviewCard extends StatelessWidget {
+  const _ReflectDeckPreviewCard({
+    required this.prompt,
+    required this.insetOpacity,
+  });
+
+  final Transaction prompt;
+  final double insetOpacity;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+    final displayCounterparty =
+        prompt.description.isNotEmpty ? prompt.description : 'Unknown';
+    final formatter = NumberFormat.currency(
+      symbol: prompt.currencyCode,
+      decimalDigits: 2,
+    );
+
+    return IgnorePointer(
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: colors.surface.withValues(alpha: insetOpacity),
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(
+            color: colors.outlineVariant.withValues(alpha: 0.4),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: colors.shadow.withValues(alpha: 0.08),
+              blurRadius: 22,
+              offset: const Offset(0, 10),
+            ),
+          ],
+        ),
+        child: SizedBox(
+          height: 226,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(18, 18, 18, 16),
+            child: Align(
+              alignment: Alignment.topLeft,
+              child: Row(
+                children: [
+                  Opacity(
+                    opacity: 0.74,
+                    child: TransactionTile.badgeFor(
+                      prompt.category,
+                      size: 24,
+                      filled: false,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      displayCounterparty,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: textTheme.titleSmall?.copyWith(
+                        color: colors.onSurface.withValues(alpha: 0.76),
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    formatter.format(prompt.amount.abs()),
+                    style: textTheme.labelLarge?.copyWith(
+                      color: colors.onSurface.withValues(alpha: 0.62),
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -1923,6 +2275,8 @@ class _NotificationListTile extends StatelessWidget {
                   style: textTheme.titleSmall?.copyWith(
                     fontWeight: FontWeight.w800,
                   ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 3),
                 Text(
@@ -1931,6 +2285,8 @@ class _NotificationListTile extends StatelessWidget {
                     color: colors.onSurfaceVariant,
                     height: 1.4,
                   ),
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 8),
                 Row(

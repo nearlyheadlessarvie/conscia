@@ -909,8 +909,9 @@ class _IconOptionChip extends StatelessWidget {
             ),
           ),
           child: Center(
-            child: CategoryIcons.rawIcon(
+            child: CategoryIcons.trialFontPickerIcon(
               option.label,
+              key: ValueKey('category-icon-chip-font-${option.key}'),
               iconKey: option.key,
               colorKey: colorKey,
               size: 18,
@@ -957,8 +958,9 @@ class _MoreIconChip extends StatelessWidget {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              CategoryIcons.rawIcon(
+              CategoryIcons.trialFontPickerIcon(
                 'Other',
+                key: const ValueKey('category-icon-chip-font-other'),
                 iconKey: 'other',
                 colorKey: colorKey,
                 size: 16,
