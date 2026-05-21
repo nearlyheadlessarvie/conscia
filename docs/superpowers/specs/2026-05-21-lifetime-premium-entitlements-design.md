@@ -11,6 +11,7 @@ This design covers:
 - a durable backend entitlement override record for lifetime premium grants
 - effective subscription status resolution that merges normal subscription state with overrides
 - a protected admin API to grant and revoke lifetime premium by user ID
+- a bootstrap admin flow that does not require manual Dynamo editing or pre-seeded Cognito subject IDs
 - a seed path that writes the same backend-owned override data for local or controlled environments
 - tests for the service layer, API behavior, and seed behavior
 - release-safe documentation for operators and developers
@@ -29,6 +30,7 @@ This design does not cover:
 - `/api/subscriptions/status` must return effective status, not only raw store subscription data.
 - Lifetime premium must remain distinct from paid subscriptions in the status payload.
 - Admin grant and revoke behavior must use the same backend code path as seeded grants.
+- Bootstrap admin authority must not depend on unknown pre-registration Cognito subject IDs.
 - The implementation must avoid app-side hardcoded emails and avoid release-dangerous manual config edits as the primary workflow.
 
 ## Recommended Approach
@@ -152,6 +154,34 @@ Acceptable implementation shapes include:
 
 The important constraint is that admin entitlement writes are backend-protected and not available to ordinary authenticated users.
 
+## Admin Bootstrap
+
+Bootstrap admin authority should be separate from premium recipient storage.
+
+Recommended model:
+
+- keep premium recipients persisted in Dynamo entitlement override records keyed by user ID
+- bootstrap a very small admin allowlist by trusted email in backend configuration
+- on the admin's first successful Cognito-backed login, resolve the Cognito `sub` and persist admin authority by subject ID
+- after bootstrap resolution, enforce admin access by persisted subject ID rather than email matching
+
+Why this model:
+
+- Cognito subject IDs are not known until the user exists
+- it avoids pre-seeding real human accounts through infrastructure deployment
+- it keeps the bootstrap surface narrow and separate from premium recipient logic
+- it avoids weak shared secrets and avoids app-side hardcoded premium recipients
+
+Operational flow:
+
+1. A trusted team member is listed in the bootstrap admin email allowlist.
+2. That user signs up normally.
+3. On successful login, the backend sees the trusted email, records the user's Cognito `sub` as an authorized admin identity, and from then on uses subject-based admin checks.
+4. That admin calls the protected entitlement endpoint for a target user ID.
+5. The backend writes the lifetime premium entitlement override in Dynamo.
+
+This bootstrap email allowlist is only for admin authority establishment. It is not the premium entitlement mechanism and must not be reused as a premium-recipient allowlist.
+
 ## Seeder Path
 
 Extend the existing seeding flow with a lifetime premium entitlement path that writes the same override record used by the admin API.
@@ -208,6 +238,7 @@ Add short release-safe documentation covering:
 
 - what lifetime premium entitlement overrides are
 - that they are backend-owned and keyed by user ID
+- how bootstrap admin authority works and why it is separate from premium recipient storage
 - how to grant and revoke them through the protected admin path
 - how to seed them locally or in controlled environments
 - how they appear in `/api/subscriptions/status`
@@ -223,7 +254,19 @@ Documentation should avoid:
 - This feature should be represented as a backend capability, not an app feature flag.
 - It should not require a mobile app release to change which users are comped.
 - The status payload should make it obvious whether premium access comes from billing or a lifetime override.
+- Admin bootstrap should remain intentionally small and explicit. Do not generalize it into full RBAC in this change.
 - The implementation should remain small and specific to lifetime premium. Do not generalize into a broad entitlement platform unless the code naturally needs one small shared abstraction.
+
+## Operator Workflow
+
+Expected real-world flow:
+
+1. A future admin is listed in the bootstrap admin email allowlist.
+2. That admin signs up and logs in normally, allowing the backend to persist admin authority by Cognito `sub`.
+3. A premium recipient signs up and receives a normal user ID from Cognito.
+4. The admin looks up the target user ID.
+5. The admin calls the protected entitlement API to grant or revoke lifetime premium for that user ID.
+6. The recipient's effective subscription status immediately resolves as premium with `source = lifetime`.
 
 ## Acceptance Criteria
 
@@ -231,6 +274,7 @@ Documentation should avoid:
 - `ISubscriptionService.IsPremiumAsync` returns `true` for granted users.
 - `/api/subscriptions/status` returns explicit lifetime metadata for granted users.
 - Premium-gated endpoints honor lifetime overrides without app changes.
+- A bootstrap admin can establish subject-based admin authority without knowing a Cognito subject ID before registration.
 - A protected admin API can grant and revoke lifetime premium for a user ID.
 - The seed path can create the same entitlement override safely and idempotently.
 - Tests cover the merged status logic, protected admin flow, and seed behavior.
