@@ -303,23 +303,13 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   child: CustomScrollView(
                     controller: scrollController,
                     slivers: [
-                      SliverPadding(
-                        padding: const EdgeInsets.fromLTRB(20, 8, 20, 4),
-                        sliver: SliverToBoxAdapter(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const ConsciaSheetHandle(),
-                              const SizedBox(height: 18),
-                              ConsciaSheetHeader(
-                                title: 'Notifications',
-                                subtitle: sheetAlerts.isEmpty
-                                    ? 'Nothing needs your attention right now.'
-                                    : 'The latest nudges and reminders from Conscia.',
-                              ),
-                              const SizedBox(height: 16),
-                            ],
-                          ),
+                      SliverPersistentHeader(
+                        pinned: true,
+                        delegate: _NotificationsSheetHeaderDelegate(
+                          subtitle: sheetAlerts.isEmpty
+                              ? 'Nothing needs your attention right now.'
+                              : 'The latest nudges and reminders from Conscia.',
+                          backgroundColor: appColors.paper,
                         ),
                       ),
                       if (sheetAlerts.isEmpty)
@@ -2233,6 +2223,57 @@ class _NotificationBell extends StatelessWidget {
           ),
       ],
     );
+  }
+}
+
+class _NotificationsSheetHeaderDelegate extends SliverPersistentHeaderDelegate {
+  _NotificationsSheetHeaderDelegate({
+    required this.subtitle,
+    required this.backgroundColor,
+  });
+
+  final String subtitle;
+  final Color backgroundColor;
+
+  static const double _extent = 110;
+
+  @override
+  double get minExtent => _extent;
+
+  @override
+  double get maxExtent => _extent;
+
+  @override
+  Widget build(
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) {
+    return ColoredBox(
+      color: backgroundColor,
+      child: Padding(
+        key: const ValueKey('notifications-sheet-sticky-header'),
+        padding: const EdgeInsets.fromLTRB(20, 8, 20, 4),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const ConsciaSheetHandle(),
+            const SizedBox(height: 18),
+            ConsciaSheetHeader(
+              title: 'Notifications',
+              subtitle: subtitle,
+            ),
+            const SizedBox(height: 16),
+          ],
+        ),
+      ),
+    );
+  }
+
+  @override
+  bool shouldRebuild(covariant _NotificationsSheetHeaderDelegate oldDelegate) {
+    return subtitle != oldDelegate.subtitle ||
+        backgroundColor != oldDelegate.backgroundColor;
   }
 }
 
