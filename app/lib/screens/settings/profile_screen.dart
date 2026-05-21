@@ -10,6 +10,7 @@ import '../../providers/user_provider.dart';
 import '../../services/user_service.dart';
 import '../../widgets/conscia_app_bar.dart';
 import '../../widgets/conscia_bottom_sheet.dart';
+import '../../widgets/editorial_section_header.dart';
 import '../../widgets/floating_label_text_field.dart';
 import '../../widgets/single_select_list.dart';
 
@@ -238,7 +239,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                           padding: const EdgeInsets.fromLTRB(20, 22, 20, 112),
                           sliver: SliverList.list(
                             children: [
-                              const _ProfileSectionLabel(
+                              const EditorialSectionHeader(
                                 title: 'Personal details',
                                 subtitle:
                                     'The name and account identity Conscia uses.',
@@ -261,7 +262,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                                 onSubmitted: (_) => _save(),
                               ),
                               const SizedBox(height: 24),
-                              const _ProfileSectionLabel(
+                              const EditorialSectionHeader(
                                 title: 'Money profile',
                                 subtitle:
                                     'Keep guidance tuned to your real-world context.',
@@ -605,44 +606,6 @@ class _ProfilePhotoBlock extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-}
-
-class _ProfileSectionLabel extends StatelessWidget {
-  const _ProfileSectionLabel({
-    required this.title,
-    required this.subtitle,
-  });
-
-  final String title;
-  final String subtitle;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).appColors;
-    final textTheme = Theme.of(context).textTheme;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          title.toUpperCase(),
-          style: textTheme.labelSmall?.copyWith(
-            color: colors.mutedInk,
-            fontWeight: FontWeight.w800,
-            letterSpacing: 0.9,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          subtitle,
-          style: textTheme.bodySmall?.copyWith(
-            color: colors.mutedInk,
-            height: 1.25,
-          ),
-        ),
-      ],
     );
   }
 }

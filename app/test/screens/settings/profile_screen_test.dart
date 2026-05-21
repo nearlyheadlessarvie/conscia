@@ -177,7 +177,6 @@ void main() {
       find.byKey(const ValueKey('conscia-app-bar-capsule')),
       findsOneWidget,
     );
-    expect(find.text('PROFILE HUB'), findsOneWidget);
     expect(find.text('Keep your money profile personal'), findsOneWidget);
     expect(
       find.byKey(const ValueKey('profile-hero-display-name-pill')),
@@ -187,8 +186,10 @@ void main() {
       find.byKey(const ValueKey('profile-hero-email-pill')),
       findsOneWidget,
     );
-    expect(find.text('PERSONAL DETAILS'), findsOneWidget);
-    expect(find.text('MONEY PROFILE'), findsOneWidget);
+    expect(find.text('Personal details'), findsOneWidget);
+    expect(find.text('Money profile'), findsOneWidget);
+    expect(find.text('PERSONAL DETAILS'), findsNothing);
+    expect(find.text('MONEY PROFILE'), findsNothing);
     expect(find.byKey(const ValueKey('profile-photo-action')), findsOneWidget);
     expect(find.text('profile@example.com'), findsOneWidget);
     expect(find.text('Display name'), findsOneWidget);
