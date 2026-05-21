@@ -170,31 +170,90 @@ openssl rand -base64 32
 
 Same value as `GOOGLE_SERVER_CLIENT_ID`.
 
+How to get it:
+
+- Google Cloud Console -> APIs & Services -> Credentials
+- Create or reuse an OAuth 2.0 Client ID with application type `Web application`
+- Copy the client ID that ends in `.apps.googleusercontent.com`
+
+This is the server/web OAuth client ID used as the expected Google ID-token audience. You do not need the OAuth client secret for the current app flow.
+
 #### `AUTH_APPLE_CLIENT_ID`
 
-Usually the iOS bundle id, for example `com.conscia.app`.
+Usually the iOS bundle id, for example `com.getconscia.app.ai`.
+
+How to confirm:
+
+- Apple Developer Portal -> Certificates, Identifiers & Profiles -> Identifiers
+- Open the App ID for the iOS app
+- Use the Bundle ID value
+
+This must match the Apple ID-token audience emitted by native Sign in with Apple.
 
 ### Store Validation
 
 #### `APPLE_KEY_ID`
 
-Only needed if server-side Apple validation is enabled.
+Only needed if server-side Apple purchase validation is enabled.
+
+How to get it:
+
+- App Store Connect -> Users and Access -> Integrations -> App Store Connect API
+- Generate a team API key with the minimum role needed for purchase/subscription validation
+- Copy the Key ID shown after creation
 
 #### `APPLE_ISSUER_ID`
 
-From App Store Connect API access.
+How to get it:
+
+- App Store Connect -> Users and Access -> Integrations -> App Store Connect API
+- Copy the Issuer ID shown for the team
 
 #### `APPLE_PRIVATE_KEY`
 
 Private `.p8` contents for Apple server API access.
 
+How to get it:
+
+- Download the `.p8` file once when the App Store Connect API key is created
+- Store the full file contents, including `-----BEGIN PRIVATE KEY-----` and `-----END PRIVATE KEY-----`
+
+```bash
+gh secret set APPLE_PRIVATE_KEY < AuthKey_XXXXXXXXXX.p8 --repo nearlyheadlessarvie/conscia
+```
+
 #### `GOOGLE_PLAY_PACKAGE_NAME`
 
-Usually your Android package name, for example `com.conscia.app`.
+Usually your Android package name, for example `com.getconscia.app.ai`.
+
+How to confirm:
+
+```bash
+rg "applicationId" app/android
+```
+
+It should match the package registered in Google Play Console.
 
 #### `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON`
 
 Service account JSON for Play purchase validation.
+
+How to get it:
+
+- Play Console -> Developer account -> Settings -> API access, if that page is available on your account
+- If `API access` is not shown, use Play Console -> Users and permissions instead
+- Link the Play developer account/app to a Google Cloud project if it is not linked yet
+- In Google Cloud Console -> IAM & Admin -> Service Accounts, create a service account
+- Copy the service account email address, for example `name@project.iam.gserviceaccount.com`
+- Back in Play Console -> Users and permissions -> Invite new users
+- Invite the service account email, grant access to the Conscia app, and give it the minimum permission needed for purchase/subscription validation: `View financial data, orders, and cancellation survey responses`
+- Create a JSON key for that service account and download it
+
+```bash
+gh secret set GOOGLE_PLAY_SERVICE_ACCOUNT_JSON < service-account.json --repo nearlyheadlessarvie/conscia
+```
+
+Keep this separate from the deploy/upload service account if you want tighter permissions.
 
 ### Push Delivery
 
@@ -202,9 +261,28 @@ Service account JSON for Play purchase validation.
 
 Firebase Admin SDK JSON used by the real server-side FCM sender.
 
+How to get it:
+
+- Firebase Console -> Project settings -> Service accounts
+- Select Firebase Admin SDK
+- Click `Generate new private key`
+- Download the JSON file
+
+```bash
+gh secret set FIREBASE_ADMIN_SERVICE_ACCOUNT_JSON < firebase-adminsdk.json --repo nearlyheadlessarvie/conscia
+```
+
 #### `FIREBASE_PROJECT_ID`
 
 Firebase project id used when the push sender calls FCM. This should usually match the project used by the mobile Firebase config.
+
+How to get it:
+
+- Firebase Console -> Project settings -> General -> Project ID
+
+```bash
+gh variable set FIREBASE_PROJECT_ID --body "your-firebase-project-id" --repo nearlyheadlessarvie/conscia
+```
 
 ### Family Invite Email
 
@@ -219,6 +297,19 @@ gh variable set INVITE_EMAIL_DEEP_LINK_BASE_URI \
 ```
 
 The outbox processor appends `?inviteId=<guid>` automatically. The app resolves this universal/app link to `/settings/family-space/invites`.
+
+Use the HTTPS universal/app-link URL here, not the custom `conscia://` scheme. The production default should stay:
+
+```text
+https://getconscia.com/open/family-invite
+```
+
+Before relying on invite links in store builds, run a web release so these association files are published:
+
+```text
+https://getconscia.com/.well-known/apple-app-site-association
+https://getconscia.com/.well-known/assetlinks.json
+```
 
 ### SES Email
 
@@ -266,11 +357,25 @@ Production rollout and store promotion are still manual after these uploads succ
 
 #### `ANDROID_GOOGLE_SERVICES_JSON_BASE64`
 
+How to get it:
+
+- Firebase Console -> Project settings -> General -> Your apps
+- Select or create the Android app
+- Android package name must match `GOOGLE_PLAY_PACKAGE_NAME`
+- Download `google-services.json`
+
 ```bash
 base64 -i google-services.json | tr -d '\n' | gh secret set ANDROID_GOOGLE_SERVICES_JSON_BASE64 --repo nearlyheadlessarvie/conscia
 ```
 
 #### `IOS_GOOGLE_SERVICE_INFO_PLIST_BASE64`
+
+How to get it:
+
+- Firebase Console -> Project settings -> General -> Your apps
+- Select or create the iOS app
+- iOS bundle ID must match `IOS_BUNDLE_ID`
+- Download `GoogleService-Info.plist`
 
 ```bash
 base64 -i GoogleService-Info.plist | tr -d '\n' | gh secret set IOS_GOOGLE_SERVICE_INFO_PLIST_BASE64 --repo nearlyheadlessarvie/conscia
@@ -279,6 +384,15 @@ base64 -i GoogleService-Info.plist | tr -d '\n' | gh secret set IOS_GOOGLE_SERVI
 #### `FIREBASE_OPTIONS_DART_BASE64`
 
 Only needed if `app/lib/firebase_options.dart` is environment-specific and not committed.
+
+How to regenerate it if needed:
+
+```bash
+cd app
+dart pub global activate flutterfire_cli
+flutterfire configure
+base64 -i lib/firebase_options.dart | tr -d '\n' | gh secret set FIREBASE_OPTIONS_DART_BASE64 --repo nearlyheadlessarvie/conscia
+```
 
 ### Android Signing And Deployment
 
@@ -295,15 +409,47 @@ keytool -genkey -v \
 base64 -i conscia-release.jks | tr -d '\n' | gh secret set ANDROID_KEYSTORE_BASE64 --repo nearlyheadlessarvie/conscia
 ```
 
+Back up the `.jks` file and passwords somewhere secure. If the upload key is lost after Play App Signing is enabled, recovery goes through Google Play support and should not be part of normal release flow.
+
 #### `ANDROID_KEYSTORE_PASSWORD`
+
+The store password entered during `keytool -genkey`.
+
+```bash
+gh secret set ANDROID_KEYSTORE_PASSWORD --body "YOUR_KEYSTORE_PASSWORD" --repo nearlyheadlessarvie/conscia
+```
 
 #### `ANDROID_KEY_ALIAS`
 
+The alias passed to `keytool -alias`, usually `conscia`.
+
+```bash
+gh secret set ANDROID_KEY_ALIAS --body "conscia" --repo nearlyheadlessarvie/conscia
+```
+
 #### `ANDROID_KEY_PASSWORD`
+
+The key password entered during `keytool -genkey`. It may be the same as the keystore password.
+
+```bash
+gh secret set ANDROID_KEY_PASSWORD --body "YOUR_KEY_PASSWORD" --repo nearlyheadlessarvie/conscia
+```
 
 #### `GOOGLE_PLAY_DEPLOY_SERVICE_ACCOUNT_JSON`
 
 Service account JSON with Play Console release permissions.
+
+How to get it:
+
+- Play Console -> Setup -> API access
+- Link the app to a Google Cloud project if needed
+- Create or reuse a deploy service account
+- Grant app-level release permissions sufficient to upload to the `internal` track
+- In Google Cloud Console -> IAM & Admin -> Service Accounts -> Keys, create a JSON key
+
+```bash
+gh secret set GOOGLE_PLAY_DEPLOY_SERVICE_ACCOUNT_JSON < play-deploy-sa.json --repo nearlyheadlessarvie/conscia
+```
 
 The app workflow uses this to upload the signed bundle directly to the Play `internal` track.
 
@@ -311,29 +457,104 @@ The app workflow uses this to upload the signed bundle directly to the Play `int
 
 #### `APP_STORE_CONNECT_API_KEY_ID`
 
+How to get it:
+
+- App Store Connect -> Users and Access -> Integrations -> App Store Connect API
+- Generate a team API key with access to upload/manage TestFlight builds
+- Copy the Key ID
+
 #### `APP_STORE_CONNECT_ISSUER_ID`
+
+How to get it:
+
+- App Store Connect -> Users and Access -> Integrations -> App Store Connect API
+- Copy the Issuer ID for the team
 
 #### `APP_STORE_CONNECT_API_PRIVATE_KEY`
 
-#### `IOS_CERTIFICATE_P12_BASE64`
+How to get it:
 
-#### `IOS_CERTIFICATE_PASSWORD`
+- Download the `.p8` file once when the App Store Connect API key is created
+- Store the full private key contents
 
-#### `IOS_PROVISIONING_PROFILE_BASE64`
+```bash
+gh secret set APP_STORE_CONNECT_API_PRIVATE_KEY < AuthKey_XXXXXXXXXX.p8 --repo nearlyheadlessarvie/conscia
+```
+
+#### `MATCH_GIT_URL`
+
+Fastlane Match signing repository URL. Use the private encrypted signing repo, not the app source repo.
+
+Recommended value:
+
+```bash
+gh variable set MATCH_GIT_URL \
+  --body "https://github.com/nearlyheadlessarvie/conscia-ios-signing.git" \
+  --repo nearlyheadlessarvie/conscia
+```
+
+#### `MATCH_PASSWORD`
+
+The encryption password you chose when running `fastlane match appstore`. Keep it in your password manager; CI uses it to decrypt the signing certificate and provisioning profile from the private Match repo.
+
+```bash
+gh secret set MATCH_PASSWORD --repo nearlyheadlessarvie/conscia
+```
+
+#### `MATCH_GIT_BASIC_AUTHORIZATION`
+
+Base64-encoded GitHub basic auth value used by Fastlane Match to clone the private signing repo in CI.
+
+Create a fine-grained GitHub token that can read only `nearlyheadlessarvie/conscia-ios-signing`, then encode `username:token`:
+
+```bash
+printf "nearlyheadlessarvie:YOUR_GITHUB_TOKEN" | base64 | tr -d '\n' | \
+  gh secret set MATCH_GIT_BASIC_AUTHORIZATION --repo nearlyheadlessarvie/conscia
+```
+
+On Windows PowerShell:
+
+```powershell
+$encoded = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes("nearlyheadlessarvie:YOUR_GITHUB_TOKEN"))
+gh secret set MATCH_GIT_BASIC_AUTHORIZATION --body $encoded --repo nearlyheadlessarvie/conscia
+```
+
+The release workflow runs `fastlane match appstore --readonly`, so CI can read signing assets but will not create or mutate certificates/profiles.
 
 #### `IOS_BUNDLE_ID`
 
-Usually `com.conscia.app`.
+Usually `com.getconscia.app.ai`.
 
-The app workflow uses these iOS secrets to sign the archive on a macOS runner and upload the resulting IPA to TestFlight.
+The app workflow uses App Store Connect plus Fastlane Match to sign the archive on a macOS runner and upload the resulting IPA to TestFlight.
+
+How to confirm:
+
+- Xcode -> Runner target -> Signing & Capabilities -> Bundle Identifier
+- Apple Developer Portal -> Certificates, Identifiers & Profiles -> Identifiers -> App ID
+
+The value must match the App ID used by the provisioning profile and the associated domains capability.
 
 ### Passkey Association Files
 
 Passkeys now replace the old faux biometric toggle for Cognito-native Conscia accounts. Real devices need associated-domain metadata generated during the web release.
 
+The web release uses these values to generate:
+
+- `/.well-known/apple-app-site-association` for iOS universal links and passkeys
+- `/.well-known/assetlinks.json` for Android app links and passkeys
+
+`release-web.yml` has `REQUIRE_PASSKEY_ASSOCIATIONS=true`, so missing values fail the web release before deploy.
+
 #### `APPLE_TEAM_ID`
 
 Your Apple Developer Team ID. This is used to generate the `apple-app-site-association` file for iOS passkeys and universal links.
+
+How to get it:
+
+- Apple Developer Portal -> Membership details -> Team ID
+- Or Xcode -> Settings -> Accounts -> select team -> Team ID
+
+This is usually a 10-character alphanumeric value. It is not the App Store Connect issuer ID.
 
 ```bash
 gh variable set APPLE_TEAM_ID --body "YOURTEAMID" --repo nearlyheadlessarvie/conscia
@@ -355,7 +576,25 @@ You can get fingerprints with:
 keytool -list -v -keystore conscia-release.jks -alias conscia
 ```
 
-If you use Play App Signing, also copy the App Signing SHA-256 fingerprint from Play Console and include it in the comma-separated list.
+For Play-distributed builds, copy the production fingerprint from:
+
+```text
+Play Console -> your app -> Setup -> App integrity -> App signing -> App signing key certificate -> SHA-256 certificate fingerprint
+```
+
+If you use an upload key or local/internal builds, also include those fingerprints. For local Android app-link testing:
+
+```bash
+cd app/android
+./gradlew signingReport
+```
+
+On Windows PowerShell:
+
+```powershell
+cd app/android
+.\gradlew signingReport
+```
 
 ---
 
@@ -379,8 +618,8 @@ ROUTE53_HOSTED_ZONE_ID=ZXXXXXXXXXXXXX
 API_BASE_URL=https://api.getconscia.com/api/
 MOCK_AUTH=false
 PUSH_NOTIFICATIONS_ENABLED=false
-GOOGLE_PLAY_PACKAGE_NAME=com.getconscia.app
-IOS_BUNDLE_ID=com.getconscia.app
+GOOGLE_PLAY_PACKAGE_NAME=com.getconscia.app.ai
+IOS_BUNDLE_ID=com.getconscia.app.ai
 SES_FROM_EMAIL=invites@getconscia.com
 SES_CONFIGURATION_SET=conscia-production
 FIREBASE_PROJECT_ID=conscia-production

@@ -91,6 +91,8 @@ The app now supports Cognito-native passkeys for Conscia accounts. The web relea
 | `APPLE_TEAM_ID` | Variable | `release-web.yml` | Apple Developer Team ID used in `apple-app-site-association`. |
 | `ANDROID_PASSKEY_SHA256_CERT_FINGERPRINTS` | Variable | `release-web.yml` | Comma-separated Android SHA-256 certificate fingerprints for `assetlinks.json`. Include release and Play App Signing fingerprints when applicable. |
 
+See `.github/CICD_SETUP.md` for the exact portal paths and commands to retrieve Firebase, Apple/iOS, Google Play/Android, passkey, and invite deep-link values.
+
 ## iOS Signing And Distribution
 
 Only needed when CI starts producing signed iOS releases.
@@ -100,10 +102,10 @@ Only needed when CI starts producing signed iOS releases.
 | `APP_STORE_CONNECT_API_KEY_ID` | Secret | `release-app.yml` TestFlight upload | App Store Connect API key ID. |
 | `APP_STORE_CONNECT_ISSUER_ID` | Secret | `release-app.yml` TestFlight upload | App Store Connect issuer ID. |
 | `APP_STORE_CONNECT_API_PRIVATE_KEY` | Secret | `release-app.yml` TestFlight upload | Private key contents. Preserve line breaks or store as base64. |
-| `IOS_CERTIFICATE_P12_BASE64` | Secret | `release-app.yml` | Signing certificate. |
-| `IOS_CERTIFICATE_PASSWORD` | Secret | `release-app.yml` | Certificate password. |
-| `IOS_PROVISIONING_PROFILE_BASE64` | Secret | `release-app.yml` | Provisioning profile. |
-| `IOS_BUNDLE_ID` | Variable | `release-app.yml` | Example: `com.conscia.app`. |
+| `IOS_BUNDLE_ID` | Variable | `release-app.yml` | Example: `com.getconscia.app.ai`. |
+| `MATCH_GIT_URL` | Variable | `release-app.yml` | Private Fastlane Match signing repo URL. |
+| `MATCH_PASSWORD` | Secret | `release-app.yml` | Fastlane Match encryption password. |
+| `MATCH_GIT_BASIC_AUTHORIZATION` | Secret | `release-app.yml` | Base64 `username:token` with read access to the private Match repo. |
 
 ## SES Email
 

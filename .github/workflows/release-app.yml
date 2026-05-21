@@ -137,10 +137,10 @@ jobs:
       APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
       APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
       APP_STORE_CONNECT_API_PRIVATE_KEY: ${{ secrets.APP_STORE_CONNECT_API_PRIVATE_KEY }}
-      IOS_CERTIFICATE_P12_BASE64: ${{ secrets.IOS_CERTIFICATE_P12_BASE64 }}
-      IOS_CERTIFICATE_PASSWORD: ${{ secrets.IOS_CERTIFICATE_PASSWORD }}
-      IOS_PROVISIONING_PROFILE_BASE64: ${{ secrets.IOS_PROVISIONING_PROFILE_BASE64 }}
       IOS_BUNDLE_ID: ${{ vars.IOS_BUNDLE_ID }}
+      MATCH_GIT_URL: ${{ vars.MATCH_GIT_URL }}
+      MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
+      MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
       KEYCHAIN_PASSWORD: ${{ github.run_id }}-${{ github.run_attempt }}-ios
     steps:
       - uses: actions/checkout@v4
@@ -159,10 +159,10 @@ jobs:
           test -n "${APP_STORE_CONNECT_API_KEY_ID}" || (echo "Missing APP_STORE_CONNECT_API_KEY_ID secret" && exit 1)
           test -n "${APP_STORE_CONNECT_ISSUER_ID}" || (echo "Missing APP_STORE_CONNECT_ISSUER_ID secret" && exit 1)
           test -n "${APP_STORE_CONNECT_API_PRIVATE_KEY}" || (echo "Missing APP_STORE_CONNECT_API_PRIVATE_KEY secret" && exit 1)
-          test -n "${IOS_CERTIFICATE_P12_BASE64}" || (echo "Missing IOS_CERTIFICATE_P12_BASE64 secret" && exit 1)
-          test -n "${IOS_CERTIFICATE_PASSWORD}" || (echo "Missing IOS_CERTIFICATE_PASSWORD secret" && exit 1)
-          test -n "${IOS_PROVISIONING_PROFILE_BASE64}" || (echo "Missing IOS_PROVISIONING_PROFILE_BASE64 secret" && exit 1)
           test -n "${IOS_BUNDLE_ID}" || (echo "Missing IOS_BUNDLE_ID variable" && exit 1)
+          test -n "${MATCH_GIT_URL}" || (echo "Missing MATCH_GIT_URL variable" && exit 1)
+          test -n "${MATCH_PASSWORD}" || (echo "Missing MATCH_PASSWORD secret" && exit 1)
+          test -n "${MATCH_GIT_BASIC_AUTHORIZATION}" || (echo "Missing MATCH_GIT_BASIC_AUTHORIZATION secret" && exit 1)
 
       - name: Install dependencies
         working-directory: app
@@ -199,51 +199,72 @@ jobs:
           )
           PY
 
-      - name: Install Apple certificate and provisioning profile
+      - name: Install Fastlane
         shell: bash
         run: |
-          CERTIFICATE_PATH="$RUNNER_TEMP/build_certificate.p12"
-          PROFILE_PATH="$RUNNER_TEMP/build_pp.mobileprovision"
-          KEYCHAIN_PATH="$RUNNER_TEMP/app-signing.keychain-db"
-
-          python3 - <<'PY'
-          import base64
-          from pathlib import Path
-          import os
-
-          Path(os.environ["RUNNER_TEMP"], "build_certificate.p12").write_bytes(
-              base64.b64decode(os.environ["IOS_CERTIFICATE_P12_BASE64"])
-          )
-          Path(os.environ["RUNNER_TEMP"], "build_pp.mobileprovision").write_bytes(
-              base64.b64decode(os.environ["IOS_PROVISIONING_PROFILE_BASE64"])
-          )
-          PY
-
-          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
-          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
-          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
-          security import "$CERTIFICATE_PATH" -P "$IOS_CERTIFICATE_PASSWORD" -A -t cert -f pkcs12 -k "$KEYCHAIN_PATH"
-          security set-key-partition-list -S apple-tool:,apple: -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
-          security list-keychain -d user -s "$KEYCHAIN_PATH"
-
-          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
-          cp "$PROFILE_PATH" ~/Library/MobileDevice/Provisioning\ Profiles/build_pp.mobileprovision
+          gem install fastlane --no-document
 
       - name: Install App Store Connect API key
         shell: bash
         run: |
-          mkdir -p ~/.appstoreconnect/private_keys
-          cat > ~/.appstoreconnect/private_keys/AuthKey_${APP_STORE_CONNECT_API_KEY_ID}.p8 <<EOF
-          ${APP_STORE_CONNECT_API_PRIVATE_KEY}
-          EOF
-          chmod 600 ~/.appstoreconnect/private_keys/AuthKey_${APP_STORE_CONNECT_API_KEY_ID}.p8
+          python3 - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          api_key = {
+              "key_id": os.environ["APP_STORE_CONNECT_API_KEY_ID"],
+              "issuer_id": os.environ["APP_STORE_CONNECT_ISSUER_ID"],
+              "key": os.environ["APP_STORE_CONNECT_API_PRIVATE_KEY"],
+              "duration": 1200,
+              "in_house": False,
+          }
+          Path(os.environ["RUNNER_TEMP"], "appstore_api_key.json").write_text(
+              json.dumps(api_key),
+              encoding="utf-8",
+          )
+          PY
+
+      - name: Install iOS signing assets with Match
+        shell: bash
+        run: |
+          KEYCHAIN_NAME="app-signing.keychain-db"
+
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_NAME"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_NAME"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_NAME"
+          security list-keychains -d user -s "$KEYCHAIN_NAME" login.keychain-db
+
+          fastlane match appstore \
+            --readonly \
+            --git_url "$MATCH_GIT_URL" \
+            --git_basic_authorization "$MATCH_GIT_BASIC_AUTHORIZATION" \
+            --app_identifier "$IOS_BUNDLE_ID" \
+            --api_key_path "$RUNNER_TEMP/appstore_api_key.json" \
+            --keychain_name "$KEYCHAIN_NAME" \
+            --keychain_password "$KEYCHAIN_PASSWORD"
+
+          security set-key-partition-list -S apple-tool:,apple: -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_NAME"
 
       - name: Derive provisioning profile metadata
         id: profile
         shell: bash
         run: |
-          PROFILE_PATH="$RUNNER_TEMP/build_pp.mobileprovision"
+          PROFILE_DIR="$HOME/Library/MobileDevice/Provisioning Profiles"
           PROFILE_PLIST="$RUNNER_TEMP/profile.plist"
+          PROFILE_PATH=""
+
+          for candidate in "$PROFILE_DIR"/*.mobileprovision; do
+            test -f "$candidate" || continue
+            security cms -D -i "$candidate" > "$PROFILE_PLIST"
+            APP_IDENTIFIER=$(/usr/libexec/PlistBuddy -c 'Print :Entitlements:application-identifier' "$PROFILE_PLIST" 2>/dev/null || true)
+            if [[ "$APP_IDENTIFIER" == *".${IOS_BUNDLE_ID}" ]]; then
+              PROFILE_PATH="$candidate"
+              break
+            fi
+          done
+
+          test -n "$PROFILE_PATH" || (echo "No provisioning profile found for ${IOS_BUNDLE_ID}" && exit 1)
           security cms -D -i "$PROFILE_PATH" > "$PROFILE_PLIST"
           PROFILE_NAME=$(/usr/libexec/PlistBuddy -c 'Print :Name' "$PROFILE_PLIST")
           TEAM_ID=$(/usr/libexec/PlistBuddy -c 'Print :TeamIdentifier:0' "$PROFILE_PLIST")
@@ -346,9 +367,8 @@ jobs:
         if: ${{ always() }}
         shell: bash
         run: |
-          security delete-keychain "$RUNNER_TEMP/app-signing.keychain-db" || true
-          rm -f ~/Library/MobileDevice/Provisioning\ Profiles/build_pp.mobileprovision || true
-          rm -f ~/.appstoreconnect/private_keys/AuthKey_${APP_STORE_CONNECT_API_KEY_ID}.p8 || true
+          security delete-keychain app-signing.keychain-db || true
+          rm -f "$RUNNER_TEMP/appstore_api_key.json" || true
 
       - name: Extract version
         id: version

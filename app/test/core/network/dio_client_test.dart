@@ -176,7 +176,7 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   PackageInfo.setMockInitialValues(
     appName: 'Conscia',
-    packageName: 'com.getconscia.app',
+    packageName: 'com.getconscia.app.ai',
     version: '1.0.0',
     buildNumber: '1',
     buildSignature: '',
@@ -345,8 +345,7 @@ void main() {
     expect(adapter.lastRequestOptions?.queryParameters['v'], '1');
   });
 
-  test('adds X-Conscia-App-Version header to relative api requests',
-      () async {
+  test('adds X-Conscia-App-Version header to relative api requests', () async {
     final authNotifier = _TestAuthNotifier(
       const AuthState(
         status: AuthStatus.authenticated,
@@ -389,7 +388,8 @@ void main() {
 
     await dio.get<dynamic>('http://localhost:5248/health/live');
 
-    expect(adapter.lastRequestOptions?.queryParameters.containsKey('v'), isFalse);
+    expect(
+        adapter.lastRequestOptions?.queryParameters.containsKey('v'), isFalse);
   });
 
   test('marks session expired when a retried protected request is still 401',

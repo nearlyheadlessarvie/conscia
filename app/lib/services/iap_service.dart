@@ -144,7 +144,7 @@ class IAPService {
       return Uri.parse('https://apps.apple.com/account/subscriptions');
     }
     return Uri.parse(
-      'https://play.google.com/store/account/subscriptions?product_id=$kPremiumMonthlyId&package=com.getconscia.app',
+      'https://play.google.com/store/account/subscriptions?product_id=$kPremiumMonthlyId&package=com.getconscia.app.ai',
     );
   }
 

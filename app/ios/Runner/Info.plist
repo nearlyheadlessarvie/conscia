@@ -7,7 +7,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>Conscia App</string>
+	<string>Conscia</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleURLTypes</key>
@@ -16,7 +16,7 @@
 			<key>CFBundleTypeRole</key>
 			<string>Editor</string>
 			<key>CFBundleURLName</key>
-			<string>com.conscia.app</string>
+			<string>com.getconscia.app.ai</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
 				<string>conscia</string>
@@ -28,7 +28,7 @@
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>conscia_app</string>
+	<string>Conscia</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
@@ -39,8 +39,16 @@
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>Conscia uses the camera to scan receipts you choose to capture.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Conscia uses the microphone when you choose voice input for transactions.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>Conscia uses your selected photo as your profile picture.</string>
+	<string>Conscia uses selected photos for receipt imports and profile pictures.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Conscia uses your approximate location, when you allow it, to suggest nearby merchants more easily.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>Conscia uses speech recognition to turn your voice input into transaction details.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

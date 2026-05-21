@@ -179,7 +179,7 @@ void main() {
     SharedPreferences.setMockInitialValues({});
     PackageInfo.setMockInitialValues(
       appName: 'Conscia',
-      packageName: 'com.getconscia.app',
+      packageName: 'com.getconscia.app.ai',
       version: '1.0.0',
       buildNumber: '1',
       buildSignature: '',
@@ -388,7 +388,8 @@ void main() {
     expect(notifier.state.refreshToken, 'new-refresh-token');
   });
 
-  test('startup restore marks session expired when expired token cannot refresh',
+  test(
+      'startup restore marks session expired when expired token cannot refresh',
       () async {
     final service = _FakeAuthService(
       const AuthTokens(
