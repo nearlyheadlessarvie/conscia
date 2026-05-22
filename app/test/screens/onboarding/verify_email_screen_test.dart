@@ -29,7 +29,12 @@ class _FakeSecureStorage extends FlutterSecureStorage {
 }
 
 class _TestAuthNotifier extends AuthNotifier {
-  _TestAuthNotifier() : super(_FakeAuthService(), _FakeSecureStorage()) {
+  _TestAuthNotifier()
+      : super(
+          _FakeAuthService(),
+          _FakeSecureStorage(),
+          autoRestoreSession: false,
+        ) {
     state = const AuthState(
       status: AuthStatus.pendingConfirmation,
       pendingEmail: 'nearlyheadlessarvie@live.com.ph',

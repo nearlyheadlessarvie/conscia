@@ -1157,7 +1157,11 @@ void main() {
 
 class _TestAuthNotifier extends AuthNotifier {
   _TestAuthNotifier(AuthState initialState)
-      : super(AuthService(Dio()), _FakeSecureStorage()) {
+      : super(
+          AuthService(Dio()),
+          _FakeSecureStorage(),
+          autoRestoreSession: false,
+        ) {
     state = initialState;
   }
 }

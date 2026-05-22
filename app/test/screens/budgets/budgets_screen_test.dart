@@ -42,13 +42,22 @@ class _FakeSecureStorage extends FlutterSecureStorage {
 
 class _TestAuthNotifier extends AuthNotifier {
   _TestAuthNotifier(AuthState initialState)
-      : super(_FakeAuthService(), _FakeSecureStorage()) {
+      : super(
+          _FakeAuthService(),
+          _FakeSecureStorage(),
+          autoRestoreSession: false,
+        ) {
     state = initialState;
   }
 }
 
 class _MutableAuthNotifier extends AuthNotifier {
-  _MutableAuthNotifier() : super(_FakeAuthService(), _FakeSecureStorage());
+  _MutableAuthNotifier()
+      : super(
+          _FakeAuthService(),
+          _FakeSecureStorage(),
+          autoRestoreSession: false,
+        );
 
   void authenticate() {
     state = const AuthState(
