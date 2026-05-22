@@ -6,26 +6,6 @@ class ApiConstants {
     defaultValue: true,
   );
 
-  static const bool mockLocationSuggestions = bool.fromEnvironment(
-    'MOCK_LOCATION_SUGGESTIONS',
-    defaultValue: useMockAuth,
-  );
-
-  static final double mockLocationLatitude = double.tryParse(
-        const String.fromEnvironment('MOCK_LOCATION_LAT'),
-      ) ??
-      14.5539;
-
-  static final double mockLocationLongitude = double.tryParse(
-        const String.fromEnvironment('MOCK_LOCATION_LNG'),
-      ) ??
-      121.0192;
-
-  static final double mockLocationRadiusMeters = double.tryParse(
-        const String.fromEnvironment('MOCK_LOCATION_RADIUS_METERS'),
-      ) ??
-      1200;
-
   static const bool pushNotificationsEnabled = bool.fromEnvironment(
     'PUSH_NOTIFICATIONS_ENABLED',
     defaultValue: false,
