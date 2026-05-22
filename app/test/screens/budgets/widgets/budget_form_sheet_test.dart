@@ -110,7 +110,7 @@ void main() {
     );
 
     expect(find.text('Subscriptions'), findsOneWidget);
-    expect(find.byIcon(Icons.close_rounded), findsOneWidget);
+    expect(find.text('Category'), findsOneWidget);
   });
 
   testWidgets('budget form shows all expense categories for free users',

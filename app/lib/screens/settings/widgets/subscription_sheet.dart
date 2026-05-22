@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/constants/api_constants.dart';
+import '../../../core/constants/app_icons.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../providers/iap_provider.dart';
 import '../../../providers/subscription_provider.dart';
@@ -414,8 +415,11 @@ class _SubscriptionHero extends StatelessWidget {
               color: colors.amber.withValues(alpha: 0.18),
               shape: BoxShape.circle,
             ),
-            child: Icon(Icons.workspace_premium_rounded,
-                color: colors.amber, size: 28),
+            child: AppIcons.icon(
+              AppIconKey.premium,
+              color: colors.amber,
+              size: 28,
+            ),
           ),
           const SizedBox(height: 14),
           Text(

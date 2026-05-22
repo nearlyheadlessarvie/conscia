@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/constants/app_icons.dart';
 import '../../../services/subscription_service.dart';
 import '../../../widgets/feed_card.dart';
 
@@ -57,7 +58,11 @@ class SubscriptionCard extends StatelessWidget {
       children: [
         Row(
           children: [
-            Icon(Icons.star, color: theme.colorScheme.secondary, size: 20),
+            AppIcons.icon(
+              AppIconKey.premium,
+              color: theme.colorScheme.secondary,
+              size: 20,
+            ),
             const SizedBox(width: 8),
             Text('Premium', style: textTheme.titleMedium),
           ],

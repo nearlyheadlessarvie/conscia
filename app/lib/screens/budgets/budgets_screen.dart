@@ -96,7 +96,11 @@ class _BudgetsScreenState extends ConsumerState<BudgetsScreen> {
           actions: [
             IconButton(
               tooltip: 'Add budget',
-              icon: Icon(Icons.add_rounded, color: colors.deepNavy),
+              icon: AppIcons.icon(
+                AppIconKey.add,
+                color: colors.deepNavy,
+                size: 22,
+              ),
               onPressed: () => _onAddBudget(context, ref),
             ),
           ],

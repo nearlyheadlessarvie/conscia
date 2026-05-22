@@ -110,7 +110,7 @@ class _InsightsScreenState extends ConsumerState<InsightsScreen> {
                       padding: EdgeInsets.fromLTRB(20, 96, 20, 28),
                       sliver: SliverToBoxAdapter(
                         child: _InsightMessageCard(
-                          icon: Icons.auto_graph_rounded,
+                          icon: AppIconKey.insightTrend,
                           title: 'Insights are taking a minute',
                           body: 'We could not load your patterns just now.',
                         ),
@@ -704,7 +704,7 @@ class _InsightMessageCard extends StatelessWidget {
     required this.body,
   });
 
-  final IconData icon;
+  final AppIconKey icon;
   final String title;
   final String body;
 
@@ -717,7 +717,7 @@ class _InsightMessageCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, size: 28, color: colors.primary),
+          AppIcons.icon(icon, size: 28, color: colors.primary),
           const SizedBox(height: 14),
           Text(
             title,

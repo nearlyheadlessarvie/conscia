@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../../../core/constants/app_icons.dart';
 import '../../../core/utils/currency_formatter.dart';
 
 String formatInsightCurrency(
@@ -93,7 +94,7 @@ Color insightRateColor(BuildContext context, double rate) {
   return colors.primary;
 }
 
-({IconData icon, Color color, String label}) insightRegretPresentation(
+({AppIconKey icon, Color color, String label}) insightRegretPresentation(
   BuildContext context,
   String? regretLevel,
 ) {
@@ -101,22 +102,22 @@ Color insightRateColor(BuildContext context, double rate) {
 
   return switch (regretLevel?.toLowerCase()) {
     'worthit' => (
-        icon: Icons.check_circle_rounded,
+        icon: AppIconKey.check,
         color: const Color(0xFF2E7D5B),
         label: 'Worth it',
       ),
     'regret' => (
-        icon: Icons.do_not_disturb_on_rounded,
+        icon: AppIconKey.error,
         color: colors.error,
         label: 'Regret',
       ),
     'notsure' => (
-        icon: Icons.help_rounded,
+        icon: AppIconKey.help,
         color: colors.tertiary,
         label: 'Not sure',
       ),
     _ => (
-        icon: Icons.schedule_rounded,
+        icon: AppIconKey.timer,
         color: colors.onSurfaceVariant,
         label: 'Unrated',
       ),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/constants/app_icons.dart';
 import '../../core/constants/category_icons.dart';
 import '../../core/theme/app_layout.dart';
 import '../../models/insights_models.dart';
@@ -194,9 +195,10 @@ class _CategoryCard extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 12),
-          Icon(
-            Icons.chevron_right_rounded,
+          AppIcons.icon(
+            AppIconKey.chevronRight,
             color: colors.onSurfaceVariant,
+            size: 20,
           ),
         ],
       ),

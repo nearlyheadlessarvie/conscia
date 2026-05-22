@@ -41,9 +41,6 @@ class TransactionTile extends StatelessWidget {
     this.sharedByInitials,
   });
 
-  static IconData iconFor(String category) =>
-      CategoryIcons.forCategory(category);
-
   static Widget badgeFor(
     String category, {
     double size = 20,
