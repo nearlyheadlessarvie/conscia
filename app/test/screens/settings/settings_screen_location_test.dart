@@ -44,8 +44,12 @@ class _RecordingLocationAssistanceService extends LocationAssistanceService {
   }
 
   @override
-  Future<LocationPermissionStatus> checkPermissionStatus() async =>
-      permissionStatus;
+  Future<LocationPermissionStatus> checkPermissionStatus() async {
+    if (permissionRequests > 0 && permissionGranted) {
+      return LocationPermissionStatus.granted;
+    }
+    return permissionStatus;
+  }
 
   @override
   Future<bool> openAppSettings() async {

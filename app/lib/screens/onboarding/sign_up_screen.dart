@@ -194,7 +194,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                             controller: _passwordController,
                             label: 'Password',
                             prefix: AppIcons.icon(
-                              AppIconKey.lock,
+                              AppIconKey.password,
                               color: Theme.of(context)
                                   .colorScheme
                                   .onSurfaceVariant,
@@ -227,7 +227,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                             controller: _confirmPasswordController,
                             label: 'Confirm Password',
                             prefix: AppIcons.icon(
-                              AppIconKey.lock,
+                              AppIconKey.password,
                               color: Theme.of(context)
                                   .colorScheme
                                   .onSurfaceVariant,

@@ -264,7 +264,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                             controller: _passwordController,
                             label: 'Password',
                             prefix: AppIcons.icon(
-                              AppIconKey.lock,
+                              AppIconKey.password,
                               color: Theme.of(context)
                                   .colorScheme
                                   .onSurfaceVariant,
