@@ -32,6 +32,7 @@ class JourneyLedHomeSections extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final hasRealInsights = insightSummary != null || insightTrend != null;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Column(
@@ -41,7 +42,10 @@ class JourneyLedHomeSections extends StatelessWidget {
             title: 'This Week',
             subtitle: 'A gentle arc for building consistency.',
             child: _WeeklyArc(
-              quests: summary?.weeklyQuests ?? const [],
+              quests: _visibleWeeklyQuests(
+                summary?.weeklyQuests ?? const [],
+                hasRealInsights: hasRealInsights,
+              ),
               onQuestSelected: onQuestSelected,
             ),
           ),
@@ -64,6 +68,21 @@ class JourneyLedHomeSections extends StatelessWidget {
       ),
     );
   }
+}
+
+const _insightDependentQuestKeys = {
+  'review_regret_pattern',
+  'read_two_insights',
+};
+
+List<ConscienceQuest> _visibleWeeklyQuests(
+  List<ConscienceQuest> quests, {
+  required bool hasRealInsights,
+}) {
+  if (hasRealInsights) return quests;
+  return quests
+      .where((quest) => !_insightDependentQuestKeys.contains(quest.key))
+      .toList(growable: false);
 }
 
 class _JourneyHomeSection extends StatelessWidget {

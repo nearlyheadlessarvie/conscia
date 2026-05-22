@@ -204,7 +204,10 @@ void main() {
 
     await tester.pumpWidget(_buildSubject(
       summary: summary,
-      insightSummary: null,
+      insightSummary: const DashboardInsightSummary(
+        text: 'Dining is above your recent 3-month pace.',
+        tone: InsightFeedTone.caution,
+      ),
       insightTrend: null,
       onQuestSelected: (quest) => selectedQuest = quest,
     ));
@@ -213,6 +216,70 @@ void main() {
     await tester.pump();
 
     expect(selectedQuest?.key, 'review_regret_pattern');
+  });
+
+  testWidgets(
+      'Weekly arc hides insight-dependent quests until insights exist',
+      (tester) async {
+    final summary = _summary(
+      weeklyQuests: const [
+        ConscienceQuest(
+          key: 'review_regret_pattern',
+          title: 'Review insights',
+          description: 'Open signals that explain your recent patterns.',
+          progress: 0,
+          target: 1,
+          xpReward: 10,
+          isCompleted: false,
+        ),
+        ConscienceQuest(
+          key: 'create_budget_guardrail',
+          title: 'Create 1 budget guardrail',
+          description: 'Turn one nudge into a monthly cap.',
+          progress: 0,
+          target: 1,
+          xpReward: 10,
+          isCompleted: false,
+        ),
+      ],
+    );
+
+    await tester.pumpWidget(_buildSubject(
+      summary: summary,
+      insightSummary: null,
+      insightTrend: null,
+    ));
+
+    expect(find.text('Review insights'), findsNothing);
+    expect(find.text('Create 1 budget guardrail'), findsOneWidget);
+  });
+
+  testWidgets('Weekly arc keeps insight-dependent quests once insights exist',
+      (tester) async {
+    final summary = _summary(
+      weeklyQuests: const [
+        ConscienceQuest(
+          key: 'review_regret_pattern',
+          title: 'Review insights',
+          description: 'Open signals that explain your recent patterns.',
+          progress: 0,
+          target: 1,
+          xpReward: 10,
+          isCompleted: false,
+        ),
+      ],
+    );
+
+    await tester.pumpWidget(_buildSubject(
+      summary: summary,
+      insightSummary: const DashboardInsightSummary(
+        text: 'Dining is above your recent 3-month pace.',
+        tone: InsightFeedTone.caution,
+      ),
+      insightTrend: null,
+    ));
+
+    expect(find.text('Review insights'), findsOneWidget);
   });
 
   testWidgets('Weekly quest cards distinguish complete and outstanding states',
