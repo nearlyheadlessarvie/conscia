@@ -2346,7 +2346,7 @@ class _NotificationListTile extends StatelessWidget {
               child: AppIcons.icon(
                 _iconFor(alert.type),
                 color: iconFg,
-                size: 18,
+                size: 24,
               ),
             ),
           ),

@@ -1033,7 +1033,7 @@ class _SettingsIconBox extends StatelessWidget {
           child: AppIcons.icon(
             icon,
             color: foregroundColor ?? colors.deepNavy,
-            size: 20,
+            size: 24,
           ),
         ),
       ),

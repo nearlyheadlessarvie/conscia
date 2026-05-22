@@ -273,7 +273,7 @@ class _IconTag extends StatelessWidget {
         child: AppIcons.icon(
           icon,
           color: color,
-          size: 10.5,
+          size: 12,
         ),
       ),
     );
