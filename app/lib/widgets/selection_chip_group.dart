@@ -12,7 +12,7 @@ class SelectionChipGroup extends StatelessWidget {
     this.labelBuilder,
     this.avatarBuilder,
     this.scrollable = false,
-    this.showTrailingCheck = false,
+    this.trailingBuilder,
   });
 
   final List<String> options;
@@ -20,8 +20,8 @@ class SelectionChipGroup extends StatelessWidget {
   final ValueChanged<String> onSelected;
   final String Function(String option)? labelBuilder;
   final Widget? Function(String option, bool selected)? avatarBuilder;
+  final Widget? Function(String option, bool selected)? trailingBuilder;
   final bool scrollable;
-  final bool showTrailingCheck;
 
   @override
   Widget build(BuildContext context) {
@@ -38,14 +38,7 @@ class SelectionChipGroup extends StatelessWidget {
           selected: selected,
           avatar: avatarBuilder?.call(option, selected),
           onTap: () => onSelected(option),
-          trailing: showTrailingCheck && selected
-              ? AppIcons.icon(
-                  AppIconKey.check,
-                  keyId: ValueKey('selection-chip-check-$option'),
-                  size: 16,
-                  color: Theme.of(context).appColors.deepNavy,
-                )
-              : null,
+          trailing: trailingBuilder?.call(option, selected),
         ),
       );
     }).toList();

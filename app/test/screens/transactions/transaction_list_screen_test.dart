@@ -262,7 +262,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byTooltip('Add transaction'), findsOneWidget);
-    expect(find.text('Filter dates'), findsOneWidget);
+    expect(find.byTooltip('Filter dates'), findsOneWidget);
     expect(find.byType(FloatingActionButton), findsNothing);
 
     await tester.tap(find.byTooltip('Add transaction'));
@@ -314,8 +314,9 @@ void main() {
     expect(find.text('SPENDING TRAIL'), findsOneWidget);
     expect(find.textContaining('Shopping is showing up'), findsOneWidget);
     expect(find.text('Fri · May 8'), findsOneWidget);
+    expect(find.byTooltip('Filter dates'), findsOneWidget);
     expect(find.byKey(const ValueKey('selection-chip-button-All')),
-        findsOneWidget);
+        findsNothing);
     expect(find.byType(GroupedListCard), findsNothing);
   });
 
@@ -555,12 +556,11 @@ void main() {
       ],
     );
 
-    await tester.tap(find.byKey(const ValueKey('selection-chip-button-All')));
+    await tester.tap(find.byKey(const ValueKey('selection-chip-button-Bills')));
     await tester.pump();
 
     expect(tester.takeException(), isNull);
-    expect(
-        find.byKey(const ValueKey('selection-chip-check-All')), findsNothing);
+    expect(find.byKey(const ValueKey('selection-chip-clear-Bills')), findsOneWidget);
   });
 
   testWidgets('transaction filters stay visible while filtered list refreshes',
@@ -630,9 +630,7 @@ void main() {
       ],
     );
 
-    final allY = tester
-        .getCenter(find.byKey(const ValueKey('selection-chip-button-All')))
-        .dy;
+    final filterY = tester.getCenter(find.byTooltip('Filter dates')).dy;
     final giftY = tester
         .getCenter(find.byKey(const ValueKey('selection-chip-button-Gift')))
         .dy;
@@ -645,9 +643,9 @@ void main() {
             find.byKey(const ValueKey('selection-chip-button-Subscriptions')))
         .dy;
 
-    expect((allY - giftY).abs(), lessThan(8));
-    expect((allY - groceriesY).abs(), lessThan(8));
-    expect((allY - subscriptionsY).abs(), lessThan(8));
+    expect((filterY - giftY).abs(), lessThan(12));
+    expect((giftY - groceriesY).abs(), lessThan(8));
+    expect((giftY - subscriptionsY).abs(), lessThan(8));
   });
 
   testWidgets(
@@ -671,11 +669,9 @@ void main() {
           find.byKey(const ValueKey('editorial-sticky-header-Transactions')),
         )
         .dy;
-    final filterTop = tester
-        .getTopLeft(find.byKey(const ValueKey('selection-chip-button-All')))
-        .dy;
+    final filterTop = tester.getTopLeft(find.byTooltip('Filter dates')).dy;
     final filterBottom = tester
-        .getBottomLeft(find.byKey(const ValueKey('selection-chip-button-All')))
+        .getBottomLeft(find.byTooltip('Filter dates'))
         .dy;
     final railTop = tester
         .getTopLeft(
@@ -692,7 +688,7 @@ void main() {
     expect(railTop, lessThanOrEqualTo(headerBottom + 1));
     expect(filterTop, greaterThanOrEqualTo(headerBottom + 6));
     expect(filterTop, lessThanOrEqualTo(headerBottom + 10));
-    expect(railBottom, lessThanOrEqualTo(filterBottom + 6));
+    expect(railBottom, lessThanOrEqualTo(filterBottom + 24));
   });
 
   testWidgets('docked transaction filters remain tappable', (
@@ -727,6 +723,35 @@ void main() {
     expect(service.lastCategory, 'Dining');
   });
 
+  testWidgets('selected category chip shows clear affordance and clears on re-tap', (
+    tester,
+  ) async {
+    final service = _StaticTransactionService(_manyTransactions());
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          _authenticatedOverride,
+          transactionServiceProvider.overrideWithValue(service),
+        ],
+        child: const MaterialApp(home: TransactionListScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('selection-chip-button-Dining')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey('selection-chip-clear-Dining')), findsOneWidget);
+    expect(service.lastCategory, 'Dining');
+
+    await tester.tap(find.byKey(const ValueKey('selection-chip-button-Dining')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey('selection-chip-clear-Dining')), findsNothing);
+    expect(service.lastCategory, isNull);
+  });
+
   testWidgets('date filter action sends server-side range parameters', (
     tester,
   ) async {
@@ -743,13 +768,16 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Filter dates'));
+    expect(find.byKey(const ValueKey('transaction-date-filter-label')), findsNothing);
+
+    await tester.tap(find.byTooltip('Filter dates'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('This month'));
     await tester.pumpAndSettle();
 
     expect(service.lastFrom, isNotNull);
     expect(service.lastTo, isNotNull);
+    expect(find.byKey(const ValueKey('transaction-date-filter-label')), findsOneWidget);
   });
 
   testWidgets(
