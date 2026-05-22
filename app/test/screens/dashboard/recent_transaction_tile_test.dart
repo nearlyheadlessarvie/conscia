@@ -67,7 +67,7 @@ void main() {
     );
 
     expect(regretTag.icon, isNotNull);
-    expect(regretTag.size, 12);
+    expect(regretTag.size, 10.5);
     expect(
       find.descendant(
         of: find.byKey(const ValueKey('regret-transaction-badge')),

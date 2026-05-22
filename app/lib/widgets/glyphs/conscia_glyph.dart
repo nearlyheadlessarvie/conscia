@@ -134,7 +134,7 @@ List<List<dynamic>> _hugeIconFor(ConsciaGlyphKind kind) {
     ConsciaGlyphKind.sprout => HugeIconsStrokeRounded.plant01,
     ConsciaGlyphKind.compass => HugeIconsStrokeRounded.compass,
     ConsciaGlyphKind.crown => HugeIconsStrokeRounded.crown,
-    ConsciaGlyphKind.monk => HugeIconsStrokeRounded.leaf01,
+    ConsciaGlyphKind.monk => HugeIconsStrokeRounded.userDollar,
     ConsciaGlyphKind.work => HugeIconsStrokeRounded.briefcase02,
   };
 }

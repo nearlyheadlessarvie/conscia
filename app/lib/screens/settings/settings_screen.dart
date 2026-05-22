@@ -1027,12 +1027,12 @@ class _SettingsIconBox extends StatelessWidget {
         borderRadius: BorderRadius.circular(14),
       ),
       child: SizedBox(
-        width: 42,
-        height: 42,
+        width: 46,
+        height: 46,
         child: AppIcons.icon(
           icon,
           color: foregroundColor ?? colors.deepNavy,
-          size: 22,
+          size: 20,
         ),
       ),
     );

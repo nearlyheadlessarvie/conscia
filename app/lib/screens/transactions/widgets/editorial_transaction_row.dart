@@ -263,8 +263,8 @@ class _IconTag extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       margin: const EdgeInsets.only(left: 4),
-      width: 20,
-      height: 20,
+      width: 22,
+      height: 22,
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.13),
         borderRadius: BorderRadius.circular(999),
@@ -272,7 +272,7 @@ class _IconTag extends StatelessWidget {
       child: AppIcons.icon(
         icon,
         color: color,
-        size: 12,
+        size: 10.5,
       ),
     );
   }
@@ -295,8 +295,8 @@ class _RegretIconTag extends StatelessWidget {
 
     return Container(
       margin: const EdgeInsets.only(left: 4),
-      width: 20,
-      height: 20,
+      width: 22,
+      height: 22,
       decoration: BoxDecoration(
         color: presentation.backgroundColor,
         borderRadius: BorderRadius.circular(999),
@@ -304,7 +304,7 @@ class _RegretIconTag extends StatelessWidget {
       child: AppIcons.icon(
         presentation.iconKey,
         color: presentation.color,
-        size: 12,
+        size: 10.5,
       ),
     );
   }

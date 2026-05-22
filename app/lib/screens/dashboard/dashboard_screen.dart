@@ -2339,13 +2339,13 @@ class _NotificationListTile extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            width: 44,
-            height: 44,
+            width: 48,
+            height: 48,
             decoration: BoxDecoration(color: iconBg, shape: BoxShape.circle),
             child: AppIcons.icon(
               _iconFor(alert.type),
               color: iconFg,
-              size: 20,
+              size: 18,
             ),
           ),
           const SizedBox(width: 14),
