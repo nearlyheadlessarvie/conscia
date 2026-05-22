@@ -235,24 +235,12 @@ void main() {
     );
   });
 
-  test('determineInitialLocation keeps direct web preview routes', () {
-    expect(
-      determineInitialLocation(
-        isWebOverride: true,
-        baseUri: Uri.parse(
-          'http://localhost:59929/debug/journey/level-up/awakening',
-        ),
-      ),
-      AppRoutes.levelUpPreview('awakening'),
-    );
-  });
-
   test('determineInitialLocation falls back to home off web', () {
     expect(
       determineInitialLocation(
         isWebOverride: false,
         baseUri: Uri.parse(
-          'http://localhost:59929/debug/journey/level-up/awakening',
+          'http://localhost:59929/settings/family-space',
         ),
       ),
       AppRoutes.home,
@@ -296,47 +284,6 @@ void main() {
     expect(
       router.routeInformationProvider.value.uri.toString(),
       '/onboarding/sign-in?redirect=%2Fsettings%2Ffamily-space%2Finvites%3FinviteId%3Dinvite-123',
-    );
-  });
-
-  testWidgets('debug level preview route stays public in debug builds', (
-    tester,
-  ) async {
-    SharedPreferences.setMockInitialValues({
-      'has_completed_onboarding': false,
-    });
-    final fakeAuthNotifier = _TestAuthNotifier(const AuthState());
-
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          authProvider.overrideWith((ref) => fakeAuthNotifier),
-        ],
-        child: Consumer(
-          builder: (context, ref, _) {
-            final router = ref.watch(appRouterProvider);
-            return MaterialApp.router(routerConfig: router);
-          },
-        ),
-      ),
-    );
-
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 100));
-
-    final router = tester
-        .widget<MaterialApp>(find.byType(MaterialApp))
-        .routerConfig! as dynamic;
-
-    router.go(AppRoutes.levelUpPreview('impulse-spotter'));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 100));
-
-    expect(find.text('Impulse Spotter'), findsOneWidget);
-    expect(find.text('Level up'), findsOneWidget);
-    expect(
-      router.routeInformationProvider.value.uri.toString(),
-      AppRoutes.levelUpPreview('impulse-spotter'),
     );
   });
 
