@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/constants/app_icons.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_layout.dart';
 import '../../settings/widgets/subscription_sheet.dart';
 
 class PremiumGate extends StatelessWidget {
-  final IconData icon;
+  final AppIconKey icon;
   final String headline;
   final String description;
   final VoidCallback? onMaybeLater;
@@ -116,7 +117,13 @@ class PremiumGate extends StatelessWidget {
                       color: colors.navySoft,
                       borderRadius: BorderRadius.circular(10),
                     ),
-                    child: Icon(icon, color: colors.deepNavy, size: 18),
+                    child: Center(
+                      child: AppIcons.icon(
+                        icon,
+                        color: colors.deepNavy,
+                        size: 18,
+                      ),
+                    ),
                   ),
                   const SizedBox(width: 14),
                   Expanded(

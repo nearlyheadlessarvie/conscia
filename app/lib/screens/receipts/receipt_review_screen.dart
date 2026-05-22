@@ -198,7 +198,11 @@ class _ReceiptReviewScreenState extends ConsumerState<ReceiptReviewScreen> {
       appBar: ConsciaAppBar(
         title: const Text('Review Receipt'),
         leading: IconButton(
-          icon: const Icon(Icons.chevron_left_rounded),
+          icon: AppIcons.icon(
+            AppIconKey.chevronLeft,
+            color: Theme.of(context).colorScheme.onSurface,
+            size: 20,
+          ),
           onPressed: () => Navigator.of(context).maybePop(),
         ),
       ),
@@ -217,7 +221,11 @@ class _ReceiptReviewScreenState extends ConsumerState<ReceiptReviewScreen> {
       width: double.infinity,
       child: FilledButton.icon(
         onPressed: _isValid && !_submitting ? _confirm : null,
-        icon: const Icon(Icons.check_rounded),
+        icon: AppIcons.icon(
+          AppIconKey.check,
+          color: Theme.of(context).colorScheme.onPrimary,
+          size: 18,
+        ),
         label: Text(_submitting ? 'Saving...' : 'Confirm and save'),
       ),
     );
@@ -250,7 +258,11 @@ class _ReceiptReviewScreenState extends ConsumerState<ReceiptReviewScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.error_outline, size: 44, color: colors.expense),
+              AppIcons.icon(
+                AppIconKey.error,
+                size: 44,
+                color: colors.expense,
+              ),
               const SizedBox(height: 16),
               Text('Could not load receipt', style: textTheme.titleMedium),
               const SizedBox(height: 8),
@@ -270,7 +282,11 @@ class _ReceiptReviewScreenState extends ConsumerState<ReceiptReviewScreen> {
                   });
                   _loadReceiptData();
                 },
-                icon: const Icon(Icons.refresh),
+                icon: AppIcons.icon(
+                  AppIconKey.refresh,
+                  color: Theme.of(context).colorScheme.onPrimary,
+                  size: 18,
+                ),
                 label: const Text('Retry'),
               ),
             ],
@@ -327,8 +343,8 @@ class _ReceiptReviewScreenState extends ConsumerState<ReceiptReviewScreen> {
                         size: 18,
                       ),
                       trailing: _needsReview
-                          ? Icon(
-                              Icons.auto_fix_high_rounded,
+                          ? AppIcons.icon(
+                              AppIconKey.sparkleGuidance,
                               color: colors.amber,
                               size: 18,
                             )
@@ -393,23 +409,23 @@ class _ReceiptReviewScreenState extends ConsumerState<ReceiptReviewScreen> {
 
     final Color bannerColor;
     final Color textColor;
-    final IconData icon;
+    final AppIconKey icon;
     final String label;
 
     if (isHigh) {
       bannerColor = colors.incomeSoft;
       textColor = colors.income;
-      icon = Icons.verified;
+      icon = AppIconKey.verified;
       label = 'High confidence ($percentage%)';
     } else if (isMedium) {
       bannerColor = colors.amberSoft;
       textColor = colors.devilAccent;
-      icon = Icons.info_outline;
+      icon = AppIconKey.info;
       label = 'Medium confidence ($percentage%) - please review';
     } else {
       bannerColor = colors.expenseSoft;
       textColor = colors.expense;
-      icon = Icons.warning_amber;
+      icon = AppIconKey.warning;
       label = 'Low confidence ($percentage%) - manual review needed';
     }
 
@@ -419,9 +435,13 @@ class _ReceiptReviewScreenState extends ConsumerState<ReceiptReviewScreen> {
         color: bannerColor,
         borderRadius: BorderRadius.circular(16),
       ),
-      child: Row(
-        children: [
-          Icon(icon, size: 20, color: textColor),
+        child: Row(
+          children: [
+          AppIcons.icon(
+            icon,
+            size: 20,
+            color: textColor,
+          ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -650,7 +670,11 @@ class _InlineErrorNote extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Icon(Icons.error_outline_rounded, size: 17, color: colors.expense),
+          AppIcons.icon(
+            AppIconKey.error,
+            size: 17,
+            color: colors.expense,
+          ),
           const SizedBox(width: 10),
           Expanded(
             child: Text(
@@ -694,8 +718,8 @@ class _ReceiptDateButton extends StatelessWidget {
           ),
           child: Row(
             children: [
-              Icon(
-                Icons.calendar_today_rounded,
+              AppIcons.icon(
+                AppIconKey.calendar,
                 size: 20,
                 color: colors.deepNavy,
               ),
@@ -709,7 +733,10 @@ class _ReceiptDateButton extends StatelessWidget {
                       ),
                 ),
               ),
-              Icon(Icons.chevron_right_rounded, color: colors.softInk),
+              AppIcons.icon(
+                AppIconKey.chevronRight,
+                color: colors.softInk,
+              ),
             ],
           ),
         ),

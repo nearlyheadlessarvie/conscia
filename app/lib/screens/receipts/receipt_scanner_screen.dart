@@ -6,6 +6,7 @@ import 'package:image_picker/image_picker.dart';
 
 import '../../core/errors/app_error.dart';
 import '../../core/constants/api_constants.dart';
+import '../../core/constants/app_icons.dart';
 import '../../core/network/dio_client.dart';
 import '../../core/routing/app_router.dart';
 import '../../core/theme/app_colors.dart';
@@ -109,7 +110,7 @@ class _ReceiptScannerScreenState extends ConsumerState<ReceiptScannerScreen> {
           padding: EdgeInsets.zero,
           bleedBehindAppBar: true,
           child: PremiumGate(
-            icon: Icons.document_scanner_rounded,
+            icon: AppIconKey.receiptScan,
             headline: 'Receipt Scanner',
             description:
                 'Automatically extract transaction details from receipts '
@@ -175,7 +176,7 @@ class _ReceiptScannerScreenState extends ConsumerState<ReceiptScannerScreen> {
                                 key: const ValueKey(
                                   'receipt-scan-camera-action',
                                 ),
-                                icon: Icons.camera_alt_rounded,
+                                icon: AppIconKey.camera,
                                 title: 'Take photo',
                                 subtitle: 'Open the camera and scan now.',
                                 onTap: () => _pickAndScan(ImageSource.camera),
@@ -185,7 +186,7 @@ class _ReceiptScannerScreenState extends ConsumerState<ReceiptScannerScreen> {
                                 key: const ValueKey(
                                   'receipt-scan-gallery-action',
                                 ),
-                                icon: Icons.photo_library_rounded,
+                                icon: AppIconKey.photoLibrary,
                                 title: 'Choose from gallery',
                                 subtitle: 'Use a receipt image from photos.',
                                 onTap: () => _pickAndScan(ImageSource.gallery),
@@ -292,7 +293,7 @@ class _ReceiptSourceAction extends StatelessWidget {
     required this.onTap,
   });
 
-  final IconData icon;
+  final AppIconKey icon;
   final String title;
   final String subtitle;
   final VoidCallback onTap;
@@ -322,7 +323,13 @@ class _ReceiptSourceAction extends StatelessWidget {
                   color: colors.navySoft,
                   borderRadius: BorderRadius.circular(14),
                 ),
-                child: Icon(icon, color: colors.deepNavy, size: 22),
+                child: Center(
+                  child: AppIcons.icon(
+                    icon,
+                    color: colors.deepNavy,
+                    size: 22,
+                  ),
+                ),
               ),
               const SizedBox(width: 14),
               Expanded(
@@ -350,8 +357,8 @@ class _ReceiptSourceAction extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 8),
-              Icon(
-                Icons.chevron_right_rounded,
+              AppIcons.icon(
+                AppIconKey.chevronRight,
                 color: colors.deepNavy.withValues(alpha: 0.55),
               ),
             ],
@@ -419,7 +426,11 @@ class _ReceiptInlineError extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         child: Row(
           children: [
-            Icon(Icons.error_outline_rounded, size: 16, color: colors.expense),
+            AppIcons.icon(
+              AppIconKey.error,
+              size: 16,
+              color: colors.expense,
+            ),
             const SizedBox(width: 8),
             Expanded(
               child: Text(
