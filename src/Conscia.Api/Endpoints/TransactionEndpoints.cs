@@ -79,12 +79,24 @@ public static class TransactionEndpoints
             int page = 1,
             int pageSize = 20,
             string? category = null,
-            string? scope = null) =>
+            string? scope = null,
+            DateTime? from = null,
+            DateTime? to = null) =>
         {
+            if (from.HasValue ^ to.HasValue)
+            {
+                return Results.BadRequest(new { error = "Both from and to are required when filtering by date range." });
+            }
+
+            if (from.HasValue && to.HasValue && from > to)
+            {
+                return Results.BadRequest(new { error = "from must be less than or equal to to." });
+            }
+
             var userId = ctx.User.GetUserId();
             var result = string.Equals(scope, "family", StringComparison.OrdinalIgnoreCase)
-                ? await svc.ListFamilyAsync(userId, page, pageSize, category, ctx.RequestAborted)
-                : await svc.ListAsync(userId, page, pageSize, category, ctx.RequestAborted);
+                ? await svc.ListFamilyAsync(userId, page, pageSize, category, from, to, ctx.RequestAborted)
+                : await svc.ListAsync(userId, page, pageSize, category, from, to, ctx.RequestAborted);
             return Results.Ok(new
             {
                 result.Page,

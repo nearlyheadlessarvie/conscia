@@ -89,7 +89,12 @@ public static class AIEndpoints
                 budgetPercent = matchedBudget.PercentUsed;
 
             var weekAgo = DateTime.UtcNow.AddDays(-7);
-            var recentTxns = await transactionService.ListAsync(userId, 1, 100, null, ctx.RequestAborted);
+            var recentTxns = await transactionService.ListAsync(
+                userId,
+                1,
+                100,
+                null,
+                ct: ctx.RequestAborted);
             var recentRegrets = recentTxns.Items.Count(t => t.RegretLevel == RegretLevel.Regret);
             var spendingThisWeek = recentTxns.Items.Count(t => t.Date >= weekAgo);
 
@@ -180,7 +185,12 @@ public static class AIEndpoints
             if (matchedBudget is not null)
                 budgetPercent = matchedBudget.PercentUsed;
 
-            var recentTxns = await transactionService.ListAsync(userId, 1, 100, null, ctx.RequestAborted);
+            var recentTxns = await transactionService.ListAsync(
+                userId,
+                1,
+                100,
+                null,
+                ct: ctx.RequestAborted);
             var recentRegrets = recentTxns.Items.Count(t => t.RegretLevel == RegretLevel.Regret);
 
             var context = new AIContext

@@ -97,10 +97,16 @@ public class TransactionService : ITransactionService
         _repo.GetByIdAsync(userId, id, ct);
 
     public async Task<PagedResult<Transaction>> ListAsync(
-        Guid userId, int page, int pageSize, string? category = null, CancellationToken ct = default)
+        Guid userId,
+        int page,
+        int pageSize,
+        string? category = null,
+        DateTime? from = null,
+        DateTime? to = null,
+        CancellationToken ct = default)
     {
         var (items, nextToken) = await _repo.QueryByUserAsync(
-            userId, null, null, category, pageSize, null, ct);
+            userId, from, to, category, pageSize, null, ct);
 
         return new PagedResult<Transaction>
         {
@@ -112,7 +118,13 @@ public class TransactionService : ITransactionService
     }
 
     public async Task<PagedResult<Transaction>> ListFamilyAsync(
-        Guid userId, int page, int pageSize, string? category = null, CancellationToken ct = default)
+        Guid userId,
+        int page,
+        int pageSize,
+        string? category = null,
+        DateTime? from = null,
+        DateTime? to = null,
+        CancellationToken ct = default)
     {
         var member = await _familySpaces.GetMembershipByUserIdAsync(userId, ct);
         if (member is null)
@@ -127,10 +139,12 @@ public class TransactionService : ITransactionService
         }
 
         var now = DateTime.UtcNow;
+        var rangeStart = from ?? now.AddYears(-2);
+        var rangeEnd = to ?? now.AddYears(1);
         var items = await _repo.GetByFamilySpaceAndDateRangeAsync(
             member.FamilySpaceId,
-            now.AddYears(-2),
-            now.AddYears(1),
+            rangeStart,
+            rangeEnd,
             ct);
 
         var filtered = items
