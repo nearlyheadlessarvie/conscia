@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:conscia_app/providers/budget_providers.dart';
 import 'package:conscia_app/providers/category_frequency_provider.dart';
 import 'package:conscia_app/providers/usage_provider.dart';
@@ -14,6 +16,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class _StaticBudgetService extends BudgetService {
@@ -214,6 +217,70 @@ void main() {
         findsOneWidget);
     expect(find.byKey(const ValueKey('receipt-scan-gallery-action')),
         findsOneWidget);
+  });
+
+  testWidgets('receipt scanner ignores repeated taps while picker is active',
+      (tester) async {
+    SharedPreferences.setMockInitialValues({
+      'location_suggestions_enabled': false,
+      'location_suggestions_prompted': true,
+    });
+    final prefs = await SharedPreferences.getInstance();
+    final pickerCompleter = Completer<XFile?>();
+    var pickerCalls = 0;
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          subscriptionProvider.overrideWith(
+            (ref) async => const SubscriptionStatus(
+              tier: 'premium',
+              isPremium: true,
+            ),
+          ),
+          currentUserProvider.overrideWith(
+            (ref) async => UserProfile(
+              id: 'user-1',
+              email: 'receipt@example.com',
+              currencyCode: 'USD',
+              locale: 'en_US',
+              createdAt: DateTime(2026),
+              hasCompletedOnboarding: true,
+            ),
+          ),
+          sharedPreferencesProvider.overrideWithValue(prefs),
+          categoryFrequencyProvider.overrideWithValue(
+            ['Coffee', 'Dining', 'Shopping', 'Gaming', 'Travel'],
+          ),
+          locationAssistanceServiceProvider.overrideWithValue(
+            _FakeLocationAssistanceService(),
+          ),
+          budgetServiceProvider.overrideWithValue(_StaticBudgetService()),
+          budgetReconciliationEnabledProvider.overrideWithValue(false),
+          receiptImagePickerProvider.overrideWithValue((source) {
+            pickerCalls += 1;
+            return pickerCompleter.future;
+          }),
+        ],
+        child: const MaterialApp(
+          home: ReceiptScannerScreen(),
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    final cameraAction =
+        find.byKey(const ValueKey('receipt-scan-camera-action'));
+    await tester.tap(cameraAction);
+    await tester.pump();
+    await tester.tap(cameraAction, warnIfMissed: false);
+    await tester.pump();
+
+    expect(pickerCalls, 1);
+
+    pickerCompleter.complete(null);
+    await tester.pumpAndSettle();
   });
 
   testWidgets('receipt maybe later opens add expense form for free users',
