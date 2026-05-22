@@ -208,6 +208,16 @@ Swagger UI is available at `http://localhost:5000/swagger` in development mode.
 - Reviewer or demo accounts can be provisioned with `POST /api/admin/reviewer-accounts?v=1` or through the in-app `Settings -> Admin entitlements` screen.
 - The `story-demo` seed now includes `story-admin@example.com` as an admin-capable operator account and `story-demo@example.com` with a backend-owned lifetime premium override so the app screen can be exercised locally.
 
+## App Store Server Notifications
+
+- Apple App Store Server Notifications V2 post to `POST /api/subscriptions/apple/notifications?v=1`.
+- Configure both App Store Connect server URLs:
+  - Production Server URL: `https://<your-api-host>/api/subscriptions/apple/notifications?v=1`
+  - Sandbox Server URL: `https://<your-api-host>/api/subscriptions/apple/notifications?v=1`
+- Initial user linking still happens through the existing client receipt verification flow. The Apple notification handler only updates subscriptions whose `originalTransactionId` is already linked to a user.
+- The backend stores lifecycle state for renewal, cancellation, expiration, refund, billing retry, grace period, and revocation so subscription status stays current when the app is closed.
+- Google Play RTDN is intentionally deferred for now because Pub/Sub infrastructure is not provisioned in this repo yet.
+
 ---
 
 ## Docker Compose Services

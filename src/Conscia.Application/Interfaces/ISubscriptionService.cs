@@ -11,4 +11,5 @@ public interface ISubscriptionService
     Task<UserSubscription?> GetStatusAsync(Guid userId, CancellationToken ct = default);
     Task<EffectiveSubscriptionStatus> GetEffectiveStatusAsync(Guid userId, CancellationToken ct = default);
     Task<bool> IsPremiumAsync(Guid userId, CancellationToken ct = default);
+    Task ProcessAppleServerNotificationAsync(AppleServerNotification notification, CancellationToken ct = default);
 }

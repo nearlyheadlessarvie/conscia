@@ -4,6 +4,7 @@ import '../core/constants/api_constants.dart';
 
 class SubscriptionStatus {
   final String tier;
+  final String status;
   final bool isPremium;
   final DateTime? expiresAt;
   final bool isLifetime;
@@ -11,6 +12,7 @@ class SubscriptionStatus {
 
   const SubscriptionStatus({
     required this.tier,
+    this.status = 'unknown',
     required this.isPremium,
     this.expiresAt,
     this.isLifetime = false,
@@ -20,6 +22,7 @@ class SubscriptionStatus {
   factory SubscriptionStatus.fromJson(Map<String, dynamic> json) {
     return SubscriptionStatus(
       tier: json['tier'] as String? ?? 'free',
+      status: json['status'] as String? ?? 'unknown',
       isPremium: json['isActive'] as bool? ?? json['isPremium'] as bool? ?? false,
       expiresAt: json['expiresAt'] != null
           ? DateTime.parse(json['expiresAt'] as String)

@@ -152,6 +152,7 @@ builder.Services.Configure<AdminBootstrapOptions>(builder.Configuration.GetSecti
 builder.Services.AddHttpClient<IAppleReceiptValidator, AppleReceiptValidator>();
 builder.Services.AddHttpClient<IGooglePlayValidator, GooglePlayValidator>();
 builder.Services.AddHttpClient<IExternalSocialTokenVerifier, ExternalSocialTokenVerifier>();
+builder.Services.AddScoped<IAppleServerNotificationVerifier, AppleServerNotificationVerifier>();
 
 // --- Services ---
 builder.Services.AddSingleton<IS3StorageService, S3StorageService>();

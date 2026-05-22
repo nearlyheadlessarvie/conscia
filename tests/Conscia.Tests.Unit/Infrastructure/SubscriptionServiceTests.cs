@@ -54,6 +54,7 @@ public class SubscriptionServiceTests
                 Id = Guid.NewGuid(),
                 UserId = userId,
                 Tier = SubscriptionTier.Premium,
+                Status = SubscriptionStatus.Active,
                 Platform = Platform.iOS,
                 ExpiresAt = DateTime.UtcNow.AddDays(30)
             });
@@ -71,6 +72,7 @@ public class SubscriptionServiceTests
         Assert.False(status.IsLifetime);
         Assert.Equal("store", status.Source);
         Assert.Equal(Platform.iOS, status.Platform);
+        Assert.Equal(SubscriptionStatus.Active, status.Status);
     }
 
     [Fact]
@@ -84,6 +86,7 @@ public class SubscriptionServiceTests
                 Id = Guid.NewGuid(),
                 UserId = userId,
                 Tier = SubscriptionTier.Premium,
+                Status = SubscriptionStatus.Expired,
                 Platform = Platform.Android,
                 ExpiresAt = DateTime.UtcNow.AddDays(-1)
             });
@@ -144,6 +147,154 @@ public class SubscriptionServiceTests
         subscriptions.Verify(
             r => r.AddAsync(It.IsAny<UserSubscription>(), It.IsAny<CancellationToken>()),
             Times.Never);
+    }
+
+    [Fact]
+    public async Task ProcessAppleServerNotificationAsync_RenewalUpdatesExpiry()
+    {
+        var userId = Guid.Parse("10000000-0000-4000-8000-000000000010");
+        var subscription = new UserSubscription
+        {
+            Id = Guid.NewGuid(),
+            UserId = userId,
+            Platform = Platform.iOS,
+            Tier = SubscriptionTier.Premium,
+            Status = SubscriptionStatus.Active,
+            OriginalTransactionId = "orig-123",
+            ExpiresAt = new DateTime(2026, 05, 20, 0, 0, 0, DateTimeKind.Utc)
+        };
+
+        var subscriptions = new Mock<IUserSubscriptionRepository>();
+        subscriptions.Setup(r => r.GetByOriginalTransactionIdAsync("orig-123", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(subscription);
+
+        var service = new SubscriptionService(
+            subscriptions.Object,
+            Mock.Of<IUserEntitlementOverrideRepository>(),
+            NullLogger<SubscriptionService>.Instance,
+            new FakeAppleReceiptValidator(isConfigured: true),
+            new FakeGooglePlayValidator(isConfigured: true));
+
+        await service.ProcessAppleServerNotificationAsync(new AppleServerNotification(
+            "DID_RENEW",
+            null,
+            new DateTime(2026, 05, 21, 0, 0, 0, DateTimeKind.Utc),
+            new AppleServerNotificationData(
+                "PROD",
+                "orig-123",
+                new DateTime(2026, 06, 20, 0, 0, 0, DateTimeKind.Utc),
+                null)),
+            CancellationToken.None);
+
+        Assert.Equal(new DateTime(2026, 06, 20, 0, 0, 0, DateTimeKind.Utc), subscription.ExpiresAt);
+        Assert.Equal(SubscriptionTier.Premium, subscription.Tier);
+        Assert.Equal(SubscriptionStatus.Active, subscription.Status);
+        subscriptions.Verify(r => r.UpdateAsync(subscription, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task ProcessAppleServerNotificationAsync_ExpirationDowngradesToFree()
+    {
+        var subscription = new UserSubscription
+        {
+            Id = Guid.NewGuid(),
+            UserId = Guid.NewGuid(),
+            Platform = Platform.iOS,
+            Tier = SubscriptionTier.Premium,
+            Status = SubscriptionStatus.Active,
+            OriginalTransactionId = "orig-expired",
+            ExpiresAt = new DateTime(2026, 06, 20, 0, 0, 0, DateTimeKind.Utc)
+        };
+        var subscriptions = new Mock<IUserSubscriptionRepository>();
+        subscriptions.Setup(r => r.GetByOriginalTransactionIdAsync("orig-expired", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(subscription);
+
+        var service = new SubscriptionService(
+            subscriptions.Object,
+            Mock.Of<IUserEntitlementOverrideRepository>(),
+            NullLogger<SubscriptionService>.Instance,
+            new FakeAppleReceiptValidator(isConfigured: true),
+            new FakeGooglePlayValidator(isConfigured: true));
+
+        await service.ProcessAppleServerNotificationAsync(new AppleServerNotification(
+            "EXPIRED",
+            null,
+            new DateTime(2026, 06, 21, 0, 0, 0, DateTimeKind.Utc),
+            new AppleServerNotificationData(
+                "PROD",
+                "orig-expired",
+                new DateTime(2026, 06, 20, 0, 0, 0, DateTimeKind.Utc),
+                null)),
+            CancellationToken.None);
+
+        Assert.Equal(SubscriptionTier.Free, subscription.Tier);
+        Assert.Equal(SubscriptionStatus.Expired, subscription.Status);
+    }
+
+    [Fact]
+    public async Task ProcessAppleServerNotificationAsync_GracePeriodPreservesAccess()
+    {
+        var subscription = new UserSubscription
+        {
+            Id = Guid.NewGuid(),
+            UserId = Guid.NewGuid(),
+            Platform = Platform.iOS,
+            Tier = SubscriptionTier.Premium,
+            Status = SubscriptionStatus.Active,
+            OriginalTransactionId = "orig-grace",
+            ExpiresAt = new DateTime(2026, 06, 20, 0, 0, 0, DateTimeKind.Utc)
+        };
+        var subscriptions = new Mock<IUserSubscriptionRepository>();
+        subscriptions.Setup(r => r.GetByOriginalTransactionIdAsync("orig-grace", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(subscription);
+
+        var service = new SubscriptionService(
+            subscriptions.Object,
+            Mock.Of<IUserEntitlementOverrideRepository>(),
+            NullLogger<SubscriptionService>.Instance,
+            new FakeAppleReceiptValidator(isConfigured: true),
+            new FakeGooglePlayValidator(isConfigured: true));
+
+        await service.ProcessAppleServerNotificationAsync(new AppleServerNotification(
+            "DID_FAIL_TO_RENEW",
+            "GRACE_PERIOD",
+            DateTime.UtcNow,
+            new AppleServerNotificationData(
+                "Sandbox",
+                "orig-grace",
+                subscription.ExpiresAt,
+                null,
+                true,
+                new DateTime(2026, 06, 27, 0, 0, 0, DateTimeKind.Utc))),
+            CancellationToken.None);
+
+        Assert.Equal(SubscriptionStatus.GracePeriod, subscription.Status);
+        Assert.True(subscription.IsActive);
+        Assert.Equal(new DateTime(2026, 06, 27, 0, 0, 0, DateTimeKind.Utc), subscription.ExpiresAt);
+    }
+
+    [Fact]
+    public async Task ProcessAppleServerNotificationAsync_UnlinkedOriginalTransactionId_IsIgnored()
+    {
+        var subscriptions = new Mock<IUserSubscriptionRepository>();
+        subscriptions.Setup(r => r.GetByOriginalTransactionIdAsync("missing-orig", It.IsAny<CancellationToken>()))
+            .ReturnsAsync((UserSubscription?)null);
+
+        var service = new SubscriptionService(
+            subscriptions.Object,
+            Mock.Of<IUserEntitlementOverrideRepository>(),
+            NullLogger<SubscriptionService>.Instance,
+            new FakeAppleReceiptValidator(isConfigured: true),
+            new FakeGooglePlayValidator(isConfigured: true));
+
+        await service.ProcessAppleServerNotificationAsync(new AppleServerNotification(
+            "DID_FAIL_TO_RENEW",
+            "GRACE_PERIOD",
+            DateTime.UtcNow,
+            new AppleServerNotificationData("Sandbox", "missing-orig", DateTime.UtcNow.AddDays(3), null)),
+            CancellationToken.None);
+
+        subscriptions.Verify(r => r.UpdateAsync(It.IsAny<UserSubscription>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     private sealed class FakeAppleReceiptValidator(bool isConfigured) : IAppleReceiptValidator

@@ -157,5 +157,10 @@ public class SubscriptionTierMiddlewareTests
 
         public Task<bool> IsPremiumAsync(Guid userId, CancellationToken ct = default) =>
             Task.FromResult(isPremium);
+
+        public Task ProcessAppleServerNotificationAsync(
+            AppleServerNotification notification,
+            CancellationToken ct = default) =>
+            throw new NotSupportedException();
     }
 }
