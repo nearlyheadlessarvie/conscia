@@ -203,15 +203,18 @@ class _AdminEntitlementsScreenState
                       label: 'Temporary password',
                     ),
                     const SizedBox(height: 4),
-                    SwitchListTile(
-                      contentPadding: EdgeInsets.zero,
-                      value: _grantReviewerLifetime,
-                      onChanged: _busy || !authState.isAuthenticated
-                          ? null
-                          : (value) {
-                              setState(() => _grantReviewerLifetime = value);
-                            },
-                      title: const Text('Grant lifetime premium'),
+                    Material(
+                      color: Colors.transparent,
+                      child: SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        value: _grantReviewerLifetime,
+                        onChanged: _busy || !authState.isAuthenticated
+                            ? null
+                            : (value) {
+                                setState(() => _grantReviewerLifetime = value);
+                              },
+                        title: const Text('Grant lifetime premium'),
+                      ),
                     ),
                     SizedBox(
                       width: double.infinity,
