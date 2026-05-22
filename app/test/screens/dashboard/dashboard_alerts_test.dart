@@ -1690,6 +1690,12 @@ void main() {
         insightsSummaryProvider.overrideWith((ref) async => null),
         insightsCategoriesProvider.overrideWith((ref) async => const []),
         insightsMerchantsProvider.overrideWith((ref) async => const []),
+        dashboardInsightSummaryProvider.overrideWith(
+          (ref) async => const DashboardInsightSummary(
+            text: 'Your week is taking shape.',
+            tone: InsightFeedTone.caution,
+          ),
+        ),
         conscienceJourneyProvider.overrideWith(
           () => _StaticConscienceJourneyNotifier(journey),
         ),
@@ -1781,10 +1787,24 @@ void main() {
         budgetServiceProvider.overrideWithValue(_StaticBudgetService(const [])),
         transactionServiceProvider
             .overrideWithValue(_StaticTransactionService()),
-        behavioralInsightsProvider.overrideWith((ref) async => null),
+        behavioralInsightsProvider
+            .overrideWith((ref) async => const BehavioralInsights(
+                  mood: FinancialMood.balanced,
+                  worthItPercentage: 68,
+                  worthItCount: 8,
+                  previousMonthWorthItCount: 7,
+                  impulseeTrends: [],
+                  budgetTrends: [],
+                )),
         insightsSummaryProvider.overrideWith((ref) async => null),
         insightsCategoriesProvider.overrideWith((ref) async => const []),
         insightsMerchantsProvider.overrideWith((ref) async => const []),
+        dashboardInsightSummaryProvider.overrideWith(
+          (ref) async => const DashboardInsightSummary(
+            text: 'Your week is taking shape.',
+            tone: InsightFeedTone.caution,
+          ),
+        ),
         conscienceJourneyProvider.overrideWith(
           () => _StaticConscienceJourneyNotifier(journey),
         ),
@@ -2172,7 +2192,15 @@ void main() {
         budgetServiceProvider.overrideWithValue(_StaticBudgetService(const [])),
         transactionServiceProvider
             .overrideWithValue(_StaticTransactionService()),
-        behavioralInsightsProvider.overrideWith((ref) async => null),
+        behavioralInsightsProvider
+            .overrideWith((ref) async => const BehavioralInsights(
+                  mood: FinancialMood.balanced,
+                  worthItPercentage: 68,
+                  worthItCount: 8,
+                  previousMonthWorthItCount: 7,
+                  impulseeTrends: [],
+                  budgetTrends: [],
+                )),
         insightsSummaryProvider.overrideWith((ref) async => null),
         insightsCategoriesProvider.overrideWith((ref) async => const []),
         insightsMerchantsProvider.overrideWith((ref) async => const []),
