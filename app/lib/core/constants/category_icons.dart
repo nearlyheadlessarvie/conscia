@@ -545,6 +545,7 @@ class CategoryIcons {
   static Widget badge(
     String category, {
     double size = 20,
+    double? strokeWidth,
     bool filled = true,
     bool selected = false,
     String? type,
@@ -559,6 +560,7 @@ class CategoryIcons {
         colorKey: colorKey,
       ),
       size: size,
+      strokeWidth: strokeWidth,
       filled: filled,
       selected: selected,
     );
@@ -569,12 +571,14 @@ class _CategoryBadge extends StatelessWidget {
   const _CategoryBadge({
     required this.visual,
     required this.size,
+    required this.strokeWidth,
     required this.filled,
     required this.selected,
   });
 
   final CategoryVisual visual;
   final double size;
+  final double? strokeWidth;
   final bool filled;
   final bool selected;
 
@@ -604,7 +608,7 @@ class _CategoryBadge extends StatelessWidget {
           visual.iconKey,
           color: fg,
           size: size,
-          strokeWidth: size * 0.085,
+          strokeWidth: strokeWidth ?? (size * 0.085),
         ),
       ),
     );

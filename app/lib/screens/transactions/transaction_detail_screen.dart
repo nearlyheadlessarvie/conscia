@@ -457,6 +457,7 @@ class _TransactionDetailScreenState
                       leading: CategoryIcons.badge(
                         displayCategory,
                         size: 30,
+                        strokeWidth: 2.0,
                         type: isIncome ? 'Income' : 'Expense',
                       ),
                     ),
@@ -696,6 +697,7 @@ class _TransactionDetailHero extends StatelessWidget {
                 CategoryIcons.badge(
                   category,
                   size: 44,
+                  strokeWidth: 2.4,
                   type: isIncome ? 'Income' : 'Expense',
                 ),
                 const SizedBox(width: 14),
