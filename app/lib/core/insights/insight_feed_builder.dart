@@ -111,8 +111,7 @@ List<InsightFeedItem> _budgetTrendItems(
         caption: 'No budget yet',
         section: InsightFeedSection.budgetTrends,
         tone: InsightFeedTone.caution,
-        mascot: InsightFeedMascot.both,
-        mascotFrame: 'angel:8_shield.png|devil:9_coin.png',
+        mascot: InsightFeedMascot.none,
         budgetCategory: trend.category,
         interaction: InsightFeedInteraction.action,
         interactionLabel: 'Add budget',
@@ -131,8 +130,7 @@ List<InsightFeedItem> _budgetTrendItems(
       caption: 'Current monthly usage',
       section: InsightFeedSection.budgetTrends,
       tone: percent >= 95 ? InsightFeedTone.urgent : InsightFeedTone.caution,
-      mascot: InsightFeedMascot.devil,
-      mascotFrame: 'devil:8_whisper.png',
+      mascot: InsightFeedMascot.none,
       interaction: InsightFeedInteraction.drillDown,
       interactionLabel: 'View trend',
     );
@@ -154,8 +152,7 @@ List<InsightFeedItem> _impulseTrendItems(List<CategoryTrend> trends) {
           caption: '${trend.transactionCount} recent decisions',
           section: InsightFeedSection.recentSignals,
           tone: InsightFeedTone.caution,
-          mascot: InsightFeedMascot.devil,
-          mascotFrame: 'devil:8_whisper.png',
+          mascot: InsightFeedMascot.none,
           interaction: InsightFeedInteraction.drillDown,
           interactionLabel: 'View pattern',
         ),
@@ -178,10 +175,7 @@ InsightFeedItem _weeklyMoodItem(BehavioralInsights insights) {
     caption: 'This week',
     section: InsightFeedSection.thisWeek,
     tone: isPositive ? InsightFeedTone.positive : InsightFeedTone.caution,
-    mascot: isPositive ? InsightFeedMascot.angel : InsightFeedMascot.both,
-    mascotFrame: isPositive
-        ? 'angel:4_win.png'
-        : 'angel:11_focuspray.png|devil:8_whisper.png',
+    mascot: InsightFeedMascot.none,
   );
 }
 
@@ -197,8 +191,7 @@ InsightFeedItem _worthItItem(BehavioralInsights insights) {
     caption: 'vs last month',
     section: InsightFeedSection.thisWeek,
     tone: InsightFeedTone.positive,
-    mascot: InsightFeedMascot.angel,
-    mascotFrame: 'angel:15_numberone.png',
+    mascot: InsightFeedMascot.none,
   );
 }
 
@@ -223,8 +216,7 @@ InsightFeedItem _regretSummaryItem(
         '/insights/categories/${Uri.encodeComponent(summary.regrettedCategory)}',
     section: InsightFeedSection.regretPatterns,
     tone: InsightFeedTone.urgent,
-    mascot: InsightFeedMascot.devil,
-    mascotFrame: 'devil:14_frustrated.png',
+    mascot: InsightFeedMascot.none,
     interaction: InsightFeedInteraction.drillDown,
     interactionLabel: 'View pattern',
   );
@@ -250,8 +242,7 @@ InsightFeedItem _categoryRegretItem(
     route: '/insights/categories/${Uri.encodeComponent(category.category)}',
     section: InsightFeedSection.regretPatterns,
     tone: InsightFeedTone.urgent,
-    mascot: InsightFeedMascot.devil,
-    mascotFrame: 'devil:14_frustrated.png',
+    mascot: InsightFeedMascot.none,
     interaction: InsightFeedInteraction.drillDown,
     interactionLabel: 'View pattern',
   );
@@ -270,8 +261,7 @@ InsightFeedItem _merchantPatternItem(MerchantStat merchant) {
     route: '/insights/merchants/${Uri.encodeComponent(merchant.merchant)}',
     section: InsightFeedSection.regretPatterns,
     tone: InsightFeedTone.caution,
-    mascot: InsightFeedMascot.devil,
-    mascotFrame: 'devil:9_coin.png',
+    mascot: InsightFeedMascot.none,
     interaction: InsightFeedInteraction.drillDown,
     interactionLabel: 'View merchant',
   );

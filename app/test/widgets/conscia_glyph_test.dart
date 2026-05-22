@@ -1,6 +1,7 @@
 import 'package:conscia_app/widgets/conscia_glyph.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hugeicons/hugeicons.dart';
 
 void main() {
   testWidgets(
@@ -36,7 +37,7 @@ void main() {
     expect(
       find.descendant(
         of: find.byType(ConsciaGlyph),
-        matching: find.byType(CustomPaint),
+        matching: find.byType(HugeIcon),
       ),
       findsNWidgets(4),
     );

@@ -2,7 +2,6 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
-import '../icons/conscia_trial_icons.dart';
 import '../../widgets/conscia_glyph.dart';
 
 class CategoryIcons {
@@ -488,29 +487,6 @@ class CategoryIcons {
             '',
           );
 
-  static IconData? trialFontIconData(String iconKey) {
-    return switch (_clean(iconKey)) {
-      'groceries' => ConsciaTrialIcons.groceries,
-      'dining' => ConsciaTrialIcons.dining,
-      'transport' => ConsciaTrialIcons.transport,
-      'shopping' => ConsciaTrialIcons.shopping,
-      'health' => ConsciaTrialIcons.health,
-      'bills' => ConsciaTrialIcons.bills,
-      'education' => ConsciaTrialIcons.education,
-      'travel' => ConsciaTrialIcons.travel,
-      'coffee' => ConsciaTrialIcons.coffee,
-      'subscriptions' => ConsciaTrialIcons.subscription,
-      'salary' => ConsciaTrialIcons.salary,
-      'freelance' => ConsciaTrialIcons.freelance,
-      'business' => ConsciaTrialIcons.business,
-      'investment' => ConsciaTrialIcons.investment,
-      'gift' => ConsciaTrialIcons.gift,
-      'home' => ConsciaTrialIcons.home,
-      'other' => ConsciaTrialIcons.more,
-      _ => null,
-    };
-  }
-
   static Widget trialFontPickerIcon(
     String category, {
     required String iconKey,
@@ -523,22 +499,12 @@ class CategoryIcons {
       iconKey: iconKey,
       colorKey: colorKey,
     );
-    final iconData = trialFontIconData(iconKey);
-    if (iconData == null) {
-      return ConsciaGlyph.category(
-        visual.iconKey,
-        key: key,
-        size: size,
-        color: visual.accent,
-        strokeWidth: size * 0.11,
-      );
-    }
-
-    return Icon(
+    return ConsciaGlyph.category(
+      visual.iconKey,
       key: key,
-      iconData,
       size: size,
       color: visual.accent,
+      strokeWidth: size * 0.11,
     );
   }
 
