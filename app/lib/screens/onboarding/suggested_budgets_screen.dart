@@ -298,15 +298,15 @@ class _SuggestedBudgetsScreenState
       heroChips: [
         OnboardingHeroChip(
           label: ratesAvailable ? formatter.format(total) : 'Preparing totals',
-          icon: Icons.account_balance_wallet_outlined,
+          icon: AppIconKey.walletOutline,
         ),
         OnboardingHeroChip(
           label: '${_drafts.length} categories',
-          icon: Icons.category_outlined,
+          icon: AppIconKey.label,
         ),
         const OnboardingHeroChip(
           label: 'Editable',
-          icon: Icons.tune_rounded,
+          icon: AppIconKey.tune,
         ),
       ],
       actions: [

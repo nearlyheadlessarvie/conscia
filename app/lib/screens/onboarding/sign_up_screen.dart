@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/constants/app_icons.dart';
 import '../../core/errors/app_error.dart';
 import '../../core/utils/email_validator.dart';
 import '../../providers/auth_provider.dart';
@@ -144,7 +145,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                 title: 'Start with clarity',
                 subtitle:
                     'Build a calmer relationship with spending, one small check-in at a time.',
-                icon: Icons.local_florist_outlined,
+                icon: AppIconKey.sprout,
               ),
               Padding(
                 padding: EdgeInsets.fromLTRB(
@@ -160,7 +161,11 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                       InlineNotice(
                         message: _errorMessage!,
                         tone: InlineNoticeTone.error,
-                        icon: const Icon(Icons.lock_outline_rounded),
+                        icon: AppIcons.icon(
+                          AppIconKey.lock,
+                          color: colors.error,
+                          size: 16,
+                        ),
                       ),
                       const SizedBox(height: 16),
                     ],
@@ -171,7 +176,13 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                           FloatingLabelTextField(
                             controller: _emailController,
                             label: 'Email',
-                            prefix: const Icon(Icons.email_outlined),
+                            prefix: AppIcons.icon(
+                              AppIconKey.email,
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurfaceVariant,
+                              size: 20,
+                            ),
                             keyboardType: TextInputType.emailAddress,
                             textInputAction: TextInputAction.next,
                             onChanged: (_) => _clearInlineErrors(),
@@ -182,7 +193,13 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                           FloatingLabelTextField(
                             controller: _passwordController,
                             label: 'Password',
-                            prefix: const Icon(Icons.lock_outline),
+                            prefix: AppIcons.icon(
+                              AppIconKey.lock,
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurfaceVariant,
+                              size: 20,
+                            ),
                             obscureText: _obscurePassword,
                             textInputAction: TextInputAction.next,
                             onChanged: (_) => _clearInlineErrors(),
@@ -190,10 +207,10 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                             enableSuggestions: false,
                             autocorrect: false,
                             trailing: IconButton(
-                              icon: Icon(
+                              icon: AppIcons.icon(
                                 _obscurePassword
-                                    ? Icons.visibility_outlined
-                                    : Icons.visibility_off_outlined,
+                                    ? AppIconKey.visibility
+                                    : AppIconKey.visibilityOff,
                                 color: _obscurePassword
                                     ? Theme.of(context)
                                         .colorScheme
@@ -209,7 +226,13 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                           FloatingLabelTextField(
                             controller: _confirmPasswordController,
                             label: 'Confirm Password',
-                            prefix: const Icon(Icons.lock_outline),
+                            prefix: AppIcons.icon(
+                              AppIconKey.lock,
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurfaceVariant,
+                              size: 20,
+                            ),
                             obscureText: _obscureConfirm,
                             textInputAction: TextInputAction.done,
                             onChanged: (_) => _clearInlineErrors(),
@@ -217,10 +240,10 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                             enableSuggestions: false,
                             autocorrect: false,
                             trailing: IconButton(
-                              icon: Icon(
+                              icon: AppIcons.icon(
                                 _obscureConfirm
-                                    ? Icons.visibility_outlined
-                                    : Icons.visibility_off_outlined,
+                                    ? AppIconKey.visibility
+                                    : AppIconKey.visibilityOff,
                                 color: _obscureConfirm
                                     ? Theme.of(context)
                                         .colorScheme

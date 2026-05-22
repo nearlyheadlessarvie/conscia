@@ -4,6 +4,7 @@ import 'package:conscia_app/screens/onboarding/onboarding_screen.dart';
 import 'package:conscia_app/screens/onboarding/setup_screen.dart';
 import 'package:conscia_app/screens/onboarding/spending_profile_screen.dart';
 import 'package:conscia_app/services/user_service.dart';
+import 'package:conscia_app/widgets/conscia_glyph.dart';
 import 'package:conscia_app/widgets/single_select_list.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
@@ -497,6 +498,6 @@ void main() {
     await tester.tap(find.text('Employed'));
     await tester.pumpAndSettle();
 
-    expect(find.byIcon(Icons.check_rounded), findsOneWidget);
+    expect(find.byType(ConsciaGlyph), findsAtLeastNWidgets(3));
   });
 }

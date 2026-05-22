@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/constants/app_icons.dart';
 import '../../core/routing/app_router.dart';
 import '../../providers/auth_provider.dart';
 
@@ -20,8 +21,8 @@ class SessionExpiredScreen extends ConsumerWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(
-                  Icons.lock_clock_outlined,
+                AppIcons.icon(
+                  AppIconKey.lockClock,
                   size: 56,
                   color: colors.primary,
                 ),

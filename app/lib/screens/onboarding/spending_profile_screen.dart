@@ -95,8 +95,8 @@ class _SpendingProfileScreenState extends ConsumerState<SpendingProfileScreen> {
       heroSubtitle:
           'A quick read on your default rhythm helps Conscia suggest budgets that feel realistic.',
       heroChips: const [
-        OnboardingHeroChip(label: '2 minute setup', icon: Icons.timer_outlined),
-        OnboardingHeroChip(label: 'Editable later', icon: Icons.tune_rounded),
+        OnboardingHeroChip(label: '2 minute setup', icon: AppIconKey.timer),
+        OnboardingHeroChip(label: 'Editable later', icon: AppIconKey.tune),
       ],
       actions: [
         IconButton(

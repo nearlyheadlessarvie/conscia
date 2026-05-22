@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/constants/app_icons.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_layout.dart';
 import '../../../widgets/conscia_app_bar.dart';
@@ -154,7 +155,7 @@ class OnboardingHeroChip extends StatelessWidget {
   });
 
   final String label;
-  final IconData? icon;
+  final AppIconKey? icon;
 
   @override
   Widget build(BuildContext context) {
@@ -172,7 +173,11 @@ class OnboardingHeroChip extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           if (icon != null) ...[
-            Icon(icon, size: 15, color: colors.deepNavy),
+            AppIcons.icon(
+              icon!,
+              size: 15,
+              color: colors.deepNavy,
+            ),
             const SizedBox(width: 6),
           ],
           Text(
@@ -263,9 +268,13 @@ class OnboardingInlineNote extends StatelessWidget {
         color: colors.expenseSoft,
         borderRadius: BorderRadius.circular(12),
       ),
-      child: Row(
-        children: [
-          Icon(Icons.lock_outline_rounded, size: 15, color: colors.expense),
+        child: Row(
+          children: [
+          AppIcons.icon(
+            AppIconKey.lock,
+            size: 15,
+            color: colors.expense,
+          ),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
