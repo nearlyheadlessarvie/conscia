@@ -1,4 +1,3 @@
-import 'package:conscia_app/core/constants/app_icons.dart';
 import 'package:conscia_app/widgets/conscia_glyph.dart';
 import 'package:conscia_app/widgets/scope_selector.dart';
 import 'package:flutter/material.dart';

@@ -13,11 +13,6 @@ class SpeedDialFab extends StatelessWidget {
     final colors = Theme.of(context).colorScheme;
 
     return SpeedDial(
-      child: AppIcons.icon(
-        AppIconKey.add,
-        color: colors.onSecondary,
-        size: 24,
-      ),
       activeChild: AppIcons.icon(
         AppIconKey.close,
         color: colors.onSecondary,
@@ -54,6 +49,11 @@ class SpeedDialFab extends StatelessWidget {
           onTap: () => context.push(AppRoutes.addTransaction),
         ),
       ],
+      child: AppIcons.icon(
+        AppIconKey.add,
+        color: colors.onSecondary,
+        size: 24,
+      ),
     );
   }
 }
