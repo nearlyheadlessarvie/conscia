@@ -29,6 +29,26 @@ void main() {
     );
     expect(find.text('Continue your journey'), findsOneWidget);
   });
+
+  testWidgets('level up screen keeps confetti and core copy on compact height',
+      (tester) async {
+    tester.view.physicalSize = const Size(390, 700);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LevelUpScreen(summary: _summary()),
+      ),
+    );
+
+    expect(
+      find.byKey(const ValueKey('journey-level-up-confetti')),
+      findsOneWidget,
+    );
+    expect(find.text('Budget Guardian'), findsOneWidget);
+    expect(find.text('Continue your journey'), findsOneWidget);
+  });
 }
 
 ConscienceJourneySummary _summary() => const ConscienceJourneySummary(
