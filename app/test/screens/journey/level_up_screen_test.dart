@@ -18,6 +18,10 @@ void main() {
     expect(find.textContaining('steadier money boundaries'), findsOneWidget);
     expect(find.byTooltip('Back'), findsNothing);
     expect(
+      find.byKey(const ValueKey('journey-level-up-confetti')),
+      findsOneWidget,
+    );
+    expect(
       find.byKey(
         const ValueKey('journey-level-illustration-budget_guardian'),
       ),

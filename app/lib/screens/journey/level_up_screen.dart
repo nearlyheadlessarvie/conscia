@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/theme/app_colors.dart';
 import '../../models/conscience_journey.dart';
 import 'journey_artwork.dart';
+import 'level_up_confetti.dart';
 import 'level_up_content.dart';
 
 class LevelUpScreen extends StatelessWidget {
@@ -63,6 +64,9 @@ class LevelUpScreen extends StatelessWidget {
                             child: CustomPaint(
                               painter: _LevelUpAtmospherePainter(appColors),
                             ),
+                          ),
+                          Positioned.fill(
+                            child: LevelUpConfetti(compact: compact),
                           ),
                           ConstrainedBox(
                             constraints: const BoxConstraints(maxWidth: 360),
