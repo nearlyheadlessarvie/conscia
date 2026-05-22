@@ -1,5 +1,4 @@
-import 'package:flutter/material.dart';
-
+import '../../core/constants/app_icons.dart';
 import '../../models/conscience_journey.dart';
 
 class JourneyHomePresentation {
@@ -28,7 +27,7 @@ class JourneyHomeAction {
     required this.ctaLabel,
   });
 
-  final IconData icon;
+  final AppIconKey icon;
   final String title;
   final String description;
   final String ctaLabel;
@@ -42,7 +41,7 @@ class JourneyHomePatternSignal {
     required this.tone,
   });
 
-  final IconData icon;
+  final AppIconKey icon;
   final String title;
   final String description;
   final JourneyHomePatternTone tone;
@@ -97,7 +96,7 @@ JourneyHomeAction _todayAction(ConscienceJourneySummary? summary) {
   }
 
   return const JourneyHomeAction(
-    icon: Icons.auto_stories_rounded,
+    icon: AppIconKey.aiReflect,
     title: 'Check in with a recent purchase',
     description:
         'Pick one transaction and mark whether it still feels worth it.',
@@ -114,7 +113,7 @@ List<JourneyHomePatternSignal> _patterns(ConscienceJourneySummary? summary) {
 
   return [
     JourneyHomePatternSignal(
-      icon: Icons.local_fire_department_rounded,
+      icon: AppIconKey.fire,
       title: momentumDays > 0 ? 'Momentum is forming' : 'Start the streak',
       description: momentumDays > 0
           ? '$momentumDays mindful days in a row. Keep the next action small.'
@@ -122,7 +121,7 @@ List<JourneyHomePatternSignal> _patterns(ConscienceJourneySummary? summary) {
       tone: JourneyHomePatternTone.positive,
     ),
     JourneyHomePatternSignal(
-      icon: Icons.flag_rounded,
+      icon: AppIconKey.flag,
       title: total == 0 ? 'Weekly rhythm is open' : 'Weekly rhythm',
       description: total == 0
           ? 'Conscia will surface commitments as your activity builds.'
@@ -141,15 +140,15 @@ double _levelProgress(ConscienceJourneySummary? summary) {
   return (summary.xpIntoLevel / span).clamp(0, 1).toDouble();
 }
 
-IconData _questIcon(String key) {
+AppIconKey _questIcon(String key) {
   return switch (key) {
-    'reflect_three_purchases' => Icons.auto_stories_rounded,
-    'check_before_purchase' => Icons.psychology_rounded,
-    'review_regret_pattern' => Icons.loop_rounded,
-    'read_two_insights' => Icons.query_stats_rounded,
-    'create_budget_guardrail' => Icons.account_balance_wallet_rounded,
-    'send_family_invite' => Icons.group_add_rounded,
-    'add_family_expense' => Icons.receipt_long_rounded,
-    _ => Icons.flag_rounded,
+    'reflect_three_purchases' => AppIconKey.aiReflect,
+    'check_before_purchase' => AppIconKey.ai,
+    'review_regret_pattern' => AppIconKey.recurring,
+    'read_two_insights' => AppIconKey.insightTrend,
+    'create_budget_guardrail' => AppIconKey.wallet,
+    'send_family_invite' => AppIconKey.familyInvite,
+    'add_family_expense' => AppIconKey.receipt,
+    _ => AppIconKey.flag,
   };
 }

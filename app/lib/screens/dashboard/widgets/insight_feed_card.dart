@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:hugeicons/hugeicons.dart';
-import 'package:hugeicons/styles/stroke_rounded.dart';
 
+import 'package:conscia_app/core/constants/app_icons.dart';
 import 'package:conscia_app/models/insight_feed_item.dart';
 
 class InsightFeedCard extends StatelessWidget {
@@ -78,8 +77,8 @@ class InsightFeedCard extends StatelessWidget {
                 ],
                 if (isDrillDown) ...[
                   const SizedBox(width: 6),
-                  Icon(
-                    Icons.chevron_right_rounded,
+                  AppIcons.icon(
+                    AppIconKey.chevronRight,
                     color: colors.onSurfaceVariant,
                     size: 20,
                   ),
@@ -152,28 +151,28 @@ class _KindIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return HugeIcon(
-      icon: _icon,
+    return AppIcons.icon(
+      _icon,
       color: color,
       size: 18,
       strokeWidth: 1.9,
     );
   }
 
-  List<List<dynamic>> get _icon {
+  AppIconKey get _icon {
     switch (item.kind) {
       case InsightFeedKind.budgetTrend:
-        return HugeIconsStrokeRounded.wallet01;
+        return AppIconKey.wallet;
       case InsightFeedKind.regretSummary:
-        return HugeIconsStrokeRounded.alertCircle;
+        return AppIconKey.warning;
       case InsightFeedKind.impulseTrend:
-        return HugeIconsStrokeRounded.chartUp;
+        return AppIconKey.arrowUp;
       case InsightFeedKind.weeklyMood:
-        return HugeIconsStrokeRounded.brain02;
+        return AppIconKey.brain;
       case InsightFeedKind.worthIt:
-        return HugeIconsStrokeRounded.checkmarkBadge02;
+        return AppIconKey.verified;
       case InsightFeedKind.merchantPattern:
-        return HugeIconsStrokeRounded.store01;
+        return AppIconKey.merchant;
     }
   }
 }
@@ -197,8 +196,8 @@ class _DetailIcon extends StatelessWidget {
         borderRadius: BorderRadius.circular(18),
       ),
       child: Center(
-        child: HugeIcon(
-          icon: _icon,
+        child: AppIcons.icon(
+          _icon,
           color: color,
           size: 28,
           strokeWidth: 1.9,
@@ -207,20 +206,20 @@ class _DetailIcon extends StatelessWidget {
     );
   }
 
-  List<List<dynamic>> get _icon {
+  AppIconKey get _icon {
     switch (item.kind) {
       case InsightFeedKind.budgetTrend:
-        return HugeIconsStrokeRounded.targetDollar;
+        return AppIconKey.walletOutline;
       case InsightFeedKind.regretSummary:
-        return HugeIconsStrokeRounded.alert02;
+        return AppIconKey.error;
       case InsightFeedKind.impulseTrend:
-        return HugeIconsStrokeRounded.chartBarLine;
+        return AppIconKey.insightTrend;
       case InsightFeedKind.weeklyMood:
-        return HugeIconsStrokeRounded.sparkles;
+        return AppIconKey.sparkleGuidance;
       case InsightFeedKind.worthIt:
-        return HugeIconsStrokeRounded.award01;
+        return AppIconKey.achievement;
       case InsightFeedKind.merchantPattern:
-        return HugeIconsStrokeRounded.storeLocation01;
+        return AppIconKey.merchantSuggestion;
     }
   }
 }

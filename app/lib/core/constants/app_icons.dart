@@ -60,6 +60,8 @@ enum AppIconKey {
   notifications,
   achievement,
   fire,
+  questPending,
+  insightTrend,
   pieChart,
   brain,
   mic,
@@ -285,6 +287,8 @@ List<List<dynamic>> _hugeIconFor(AppIconKey key) {
     AppIconKey.notifications => HugeIconsStrokeRounded.notification01,
     AppIconKey.achievement => HugeIconsStrokeRounded.award01,
     AppIconKey.fire => HugeIconsStrokeRounded.fire02,
+    AppIconKey.questPending => HugeIconsStrokeRounded.radio01,
+    AppIconKey.insightTrend => HugeIconsStrokeRounded.chartBarLine,
     AppIconKey.pieChart => HugeIconsStrokeRounded.pieChart,
     AppIconKey.brain =>
       HugeIconsStrokeRounded.artificialIntelligence04,

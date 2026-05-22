@@ -1,4 +1,5 @@
 import 'package:conscia_app/core/theme/app_theme.dart';
+import 'package:conscia_app/core/constants/app_icons.dart';
 import 'package:conscia_app/models/behavioral_insights.dart';
 import 'package:conscia_app/models/conscience_journey.dart';
 import 'package:conscia_app/models/insight_feed_item.dart';
@@ -32,14 +33,14 @@ void main() {
       (tester) async {
     const presentation = JourneyHomePresentation(
       todayAction: JourneyHomeAction(
-        icon: Icons.auto_stories_rounded,
+        icon: AppIconKey.aiReflect,
         title: 'Separate today action',
         description: 'Today copy stays outside the pattern assertions.',
         ctaLabel: 'Continue journey',
       ),
       patterns: [
         JourneyHomePatternSignal(
-          icon: Icons.local_fire_department_rounded,
+          icon: AppIconKey.fire,
           title: 'Momentum is forming',
           description: 'Three mindful days are starting to look like a rhythm.',
           tone: JourneyHomePatternTone.positive,
@@ -115,7 +116,7 @@ void main() {
       summary: summary,
       presentation: const JourneyHomePresentation(
         todayAction: JourneyHomeAction(
-          icon: Icons.auto_stories_rounded,
+          icon: AppIconKey.aiReflect,
           title: 'Separate today action',
           description: 'Today action copy stays outside the weekly assertions.',
           ctaLabel: 'Continue journey',
@@ -255,14 +256,14 @@ void main() {
       (tester) async {
     const presentation = JourneyHomePresentation(
       todayAction: JourneyHomeAction(
-        icon: Icons.auto_stories_rounded,
+        icon: AppIconKey.aiReflect,
         title: 'Separate today action',
         description: 'Today copy stays outside typography assertions.',
         ctaLabel: 'Continue journey',
       ),
       patterns: [
         JourneyHomePatternSignal(
-          icon: Icons.local_fire_department_rounded,
+          icon: AppIconKey.fire,
           title: 'Momentum is forming',
           description: 'Three mindful days are starting to look like a rhythm.',
           tone: JourneyHomePatternTone.positive,
