@@ -325,10 +325,12 @@ class _InsightSummaryCard extends StatelessWidget {
                     color: color.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(15),
                   ),
-                  child: AppIcons.icon(
-                    _insightToneIcon(tone),
-                    color: color,
-                    size: 24,
+                  child: Center(
+                    child: AppIcons.icon(
+                      _insightToneIcon(tone),
+                      color: color,
+                      size: 20,
+                    ),
                   ),
                 ),
                 const SizedBox(width: 12),

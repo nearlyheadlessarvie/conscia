@@ -2342,10 +2342,12 @@ class _NotificationListTile extends StatelessWidget {
             width: 48,
             height: 48,
             decoration: BoxDecoration(color: iconBg, shape: BoxShape.circle),
-            child: AppIcons.icon(
-              _iconFor(alert.type),
-              color: iconFg,
-              size: 18,
+            child: Center(
+              child: AppIcons.icon(
+                _iconFor(alert.type),
+                color: iconFg,
+                size: 18,
+              ),
             ),
           ),
           const SizedBox(width: 14),

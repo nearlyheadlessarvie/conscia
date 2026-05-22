@@ -1029,10 +1029,12 @@ class _SettingsIconBox extends StatelessWidget {
       child: SizedBox(
         width: 46,
         height: 46,
-        child: AppIcons.icon(
-          icon,
-          color: foregroundColor ?? colors.deepNavy,
-          size: 20,
+        child: Center(
+          child: AppIcons.icon(
+            icon,
+            color: foregroundColor ?? colors.deepNavy,
+            size: 20,
+          ),
         ),
       ),
     );

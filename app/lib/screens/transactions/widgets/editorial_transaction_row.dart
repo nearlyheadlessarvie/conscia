@@ -269,10 +269,12 @@ class _IconTag extends StatelessWidget {
         color: color.withValues(alpha: 0.13),
         borderRadius: BorderRadius.circular(999),
       ),
-      child: AppIcons.icon(
-        icon,
-        color: color,
-        size: 10.5,
+      child: Center(
+        child: AppIcons.icon(
+          icon,
+          color: color,
+          size: 10.5,
+        ),
       ),
     );
   }
@@ -301,10 +303,12 @@ class _RegretIconTag extends StatelessWidget {
         color: presentation.backgroundColor,
         borderRadius: BorderRadius.circular(999),
       ),
-      child: AppIcons.icon(
-        presentation.iconKey,
-        color: presentation.color,
-        size: 10.5,
+      child: Center(
+        child: AppIcons.icon(
+          presentation.iconKey,
+          color: presentation.color,
+          size: 10.5,
+        ),
       ),
     );
   }
