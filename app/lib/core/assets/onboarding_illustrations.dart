@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../constants/app_icons.dart';
+
 class OnboardingIllustration1 extends StatelessWidget {
   final double size;
 
@@ -9,7 +11,7 @@ class OnboardingIllustration1 extends StatelessWidget {
   Widget build(BuildContext context) {
     return _CalmOnboardingScene(
       size: size,
-      icon: Icons.spa_outlined,
+      icon: AppIconKey.sprout,
       title: 'A calmer start',
       lineWidths: const [0.78, 0.58],
       accent: const Color(0xFF7BAF9E),
@@ -27,7 +29,7 @@ class OnboardingIllustration2 extends StatelessWidget {
   Widget build(BuildContext context) {
     return _CalmOnboardingScene(
       size: size,
-      icon: Icons.auto_graph_rounded,
+      icon: AppIconKey.insightTrend,
       title: 'Patterns, softly',
       lineWidths: const [0.9, 0.64, 0.46],
       accent: const Color(0xFF8DA2E8),
@@ -46,7 +48,7 @@ class OnboardingIllustration3 extends StatelessWidget {
   Widget build(BuildContext context) {
     return _CalmOnboardingScene(
       size: size,
-      icon: Icons.shield_outlined,
+      icon: AppIconKey.ownerAccess,
       title: 'Gentle guardrails',
       lineWidths: const [0.72, 0.86],
       accent: const Color(0xFFE8A15F),
@@ -69,7 +71,7 @@ class _CalmOnboardingScene extends StatelessWidget {
   });
 
   final double size;
-  final IconData icon;
+  final AppIconKey icon;
   final String title;
   final List<double> lineWidths;
   final Color accent;
@@ -169,7 +171,7 @@ class _SoftNoteCard extends StatelessWidget {
 
   final double size;
   final String title;
-  final IconData icon;
+  final AppIconKey icon;
   final Color accent;
   final List<double> lineWidths;
 
@@ -207,7 +209,11 @@ class _SoftNoteCard extends StatelessWidget {
                       color: accent.withValues(alpha: 0.16),
                       borderRadius: BorderRadius.circular(size * 0.05),
                     ),
-                    child: Icon(icon, size: size * 0.07, color: accent),
+                    child: AppIcons.icon(
+                      icon,
+                      size: size * 0.07,
+                      color: accent,
+                    ),
                   ),
                   SizedBox(width: size * 0.035),
                   Expanded(
@@ -329,8 +335,8 @@ class _ProgressRing extends StatelessWidget {
       child: CustomPaint(
         painter: _ProgressRingPainter(accent),
         child: Center(
-          child: Icon(
-            Icons.check_rounded,
+          child: AppIcons.icon(
+            AppIconKey.check,
             color: accent,
             size: size * 0.12,
           ),

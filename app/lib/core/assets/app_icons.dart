@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:hugeicons/hugeicons.dart';
-import 'package:hugeicons/styles/stroke_rounded.dart';
+
+import '../constants/app_icons.dart';
 
 const _brandIconAsset = 'assets/images/app_icon.svg';
 
@@ -67,8 +67,8 @@ class ImpulseFaceIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return HugeIcon(
-      icon: HugeIconsStrokeRounded.alert02,
+    return AppIcons.icon(
+      AppIconKey.error,
       color: const Color(0xFFE65100),
       size: size,
       strokeWidth: 1.9,
@@ -83,8 +83,8 @@ class ReasonFaceIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return HugeIcon(
-      icon: HugeIconsStrokeRounded.shield01,
+    return AppIcons.icon(
+      AppIconKey.ownerAccess,
       color: const Color(0xFF00838F),
       size: size,
       strokeWidth: 1.9,
