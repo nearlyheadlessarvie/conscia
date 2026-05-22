@@ -2,11 +2,49 @@ import 'package:conscia_app/models/family_member.dart';
 import 'package:conscia_app/models/family_space.dart';
 import 'package:conscia_app/providers/family_space_provider.dart';
 import 'package:conscia_app/screens/family/family_members_screen.dart';
+import 'package:conscia_app/widgets/conscia_glyph.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  testWidgets('family members screen uses app-owned icon glyphs', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          familySpaceProvider.overrideWith(
+            (ref) async => const FamilySpace(
+              id: 'family-1',
+              name: 'Santos Household',
+              currencyCode: 'PHP',
+              isReadOnly: false,
+              role: 'Owner',
+            ),
+          ),
+          familyMembersProvider.overrideWith(
+            (ref) async => [
+              FamilyMember(
+                id: 'member-owner',
+                userId: 'user-owner',
+                email: 'owner@example.com',
+                role: 'Owner',
+                joinedAt: DateTime(2026, 5),
+                isCurrentUser: true,
+              ),
+            ],
+          ),
+        ],
+        child: const MaterialApp(home: FamilyMembersScreen()),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    expect(find.byType(ConsciaGlyph), findsAtLeastNWidgets(2));
+  });
+
   testWidgets('owner can manage non-owner family members', (tester) async {
     final actions = _RecordingFamilySpaceActions();
 

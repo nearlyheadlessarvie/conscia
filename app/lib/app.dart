@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import 'core/constants/app_icons.dart';
 import 'core/routing/app_router.dart';
 import 'core/theme/app_theme.dart';
 import 'providers/app_availability_provider.dart';
@@ -107,7 +108,7 @@ class _OfflineBlockerState extends ConsumerState<_OfflineBlocker> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(
+                    AppIcons.icon(
                       blocker.icon,
                       size: 64,
                       color: theme.colorScheme.onSurfaceVariant,
@@ -151,10 +152,11 @@ class _OfflineBlockerState extends ConsumerState<_OfflineBlocker> {
                             .read(appAvailabilityProvider.notifier)
                             .refresh();
                       },
-                      icon: Icon(
+                      icon: AppIcons.icon(
                         state.isUpdateRequired
-                            ? Icons.system_update
-                            : Icons.refresh,
+                            ? AppIconKey.serviceHealth
+                            : AppIconKey.refresh,
+                        color: theme.colorScheme.onPrimary,
                       ),
                       label: Text(
                         state.isUpdateRequired ? 'Update Now' : 'Retry Now',
@@ -187,7 +189,7 @@ class _BlockerContent {
     required this.message,
   });
 
-  final IconData icon;
+  final AppIconKey icon;
   final String title;
   final String message;
 
@@ -195,28 +197,28 @@ class _BlockerContent {
     switch (state.issue) {
       case AvailabilityIssue.deviceOffline:
         return const _BlockerContent(
-          icon: Icons.cloud_off,
+          icon: AppIconKey.offlineDevice,
           title: 'Device Offline',
           message:
               'Conscia cannot reach the internet right now. We will retry automatically.',
         );
       case AvailabilityIssue.apiUnavailable:
         return const _BlockerContent(
-          icon: Icons.cloud_off_outlined,
+          icon: AppIconKey.offlineCloud,
           title: 'Conscia Unavailable',
           message:
               'Your device is online, but the Conscia is temporarily unavailable.',
         );
       case AvailabilityIssue.updateRequired:
         return const _BlockerContent(
-          icon: Icons.system_update,
+          icon: AppIconKey.serviceHealth,
           title: 'Update Required',
           message:
               'A newer version of Conscia is available in the store and is required before you can continue.',
         );
       case AvailabilityIssue.none:
         return const _BlockerContent(
-          icon: Icons.check_circle,
+          icon: AppIconKey.verified,
           title: '',
           message: '',
         );

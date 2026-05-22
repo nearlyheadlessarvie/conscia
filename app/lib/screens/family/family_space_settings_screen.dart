@@ -161,11 +161,7 @@ class _NoFamilySpaceSettingsView extends StatelessWidget {
           pills: const ['Private by default', 'Family only'],
           shortcuts: [
             _HeroShortcutData(
-              icon: AppIcons.icon(
-                AppIconKey.family,
-                color: Theme.of(context).appColors.deepNavy,
-                size: 18,
-              ),
+              icon: AppIconKey.family,
               title: 'Create space',
               subtitle: 'Start sharing safely',
               onTap: () => context.push(AppRoutes.familySetup),
@@ -180,12 +176,12 @@ class _NoFamilySpaceSettingsView extends StatelessWidget {
             child: _SettingsGroup(
               rows: [
                 _SettingsRowData(
-                  icon: Icon(Icons.lock_outline_rounded),
+                  icon: AppIconKey.privacyBoundary,
                   title: 'Personal stays personal',
                   subtitle: 'Only Family-marked records enter the household.',
                 ),
                 _SettingsRowData(
-                  icon: Icon(Icons.account_balance_wallet_outlined),
+                  icon: AppIconKey.wallet,
                   title: 'Shared planning',
                   subtitle: 'Family budgets and household activity live here.',
                 ),
@@ -228,22 +224,14 @@ class _FamilySpaceSettingsView extends ConsumerWidget {
           ],
           shortcuts: [
             _HeroShortcutData(
-              icon: AppIcons.icon(
-                AppIconKey.family,
-                color: Theme.of(context).appColors.deepNavy,
-                size: 18,
-              ),
+              icon: AppIconKey.family,
               title: 'Members',
               subtitle: 'Roles & access',
               onTap: () => context.push(AppRoutes.familyMembers),
             ),
             if (role == 'owner')
               _HeroShortcutData(
-                icon: Icon(
-                  Icons.person_add_alt_1_outlined,
-                  size: 18,
-                  color: Theme.of(context).appColors.deepNavy,
-                ),
+                icon: AppIconKey.familyInvite,
                 title: 'Invite family',
                 subtitle: space.isReadOnly ? 'Premium inactive' : 'Owner tool',
                 onTap: canInvite
@@ -263,7 +251,7 @@ class _FamilySpaceSettingsView extends ConsumerWidget {
                 child: _SettingsGroup(
                   rows: [
                     _SettingsRowData(
-                      icon: const Icon(Icons.home_outlined),
+                      icon: AppIconKey.household,
                       title: 'Household name',
                       subtitle: space.name,
                       onTap: canManage
@@ -274,18 +262,18 @@ class _FamilySpaceSettingsView extends ConsumerWidget {
                           : null,
                     ),
                     _SettingsRowData(
-                      icon: const Icon(Icons.verified_user_outlined),
+                      icon: AppIconKey.ownerAccess,
                       title: 'Your access',
                       subtitle: '${space.role} · ${space.currencyCode}',
                     ),
                     const _SettingsRowData(
-                      icon: Icon(Icons.lock_outline_rounded),
+                      icon: AppIconKey.privacyBoundary,
                       title: 'Privacy boundary',
                       subtitle: 'Only records marked Family are shared here.',
                     ),
                     if (space.isReadOnly)
                       const _SettingsRowData(
-                        icon: Icon(Icons.lock_outline_rounded),
+                        icon: AppIconKey.lock,
                         title: 'Premium lock',
                         subtitle:
                             'Shared Conscia is view-only while Premium is inactive.',
@@ -299,21 +287,13 @@ class _FamilySpaceSettingsView extends ConsumerWidget {
                 child: _SettingsGroup(
                   rows: [
                     _SettingsRowData(
-                      icon: AppIcons.icon(
-                        AppIconKey.family,
-                        color: Theme.of(context).appColors.family,
-                        size: 20,
-                      ),
+                      icon: AppIconKey.family,
                       title: 'Members',
                       subtitle: 'View access, roles, and leaving rules.',
                       onTap: () => context.push(AppRoutes.familyMembers),
                     ),
                     _SettingsRowData(
-                      icon: Icon(
-                        Icons.person_add_alt_1_outlined,
-                        color: Theme.of(context).appColors.family,
-                        size: 20,
-                      ),
+                      icon: AppIconKey.familyInvite,
                       title: 'Invites',
                       subtitle: canInvite
                           ? 'Invite registered family members by email.'
@@ -461,7 +441,7 @@ class _HeroShortcutData {
     this.onTap,
   });
 
-  final Widget icon;
+  final AppIconKey icon;
   final String title;
   final String subtitle;
   final VoidCallback? onTap;
@@ -600,12 +580,10 @@ class _HeroShortcutCard extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
           child: Row(
             children: [
-              IconTheme(
-                data: IconThemeData(
-                  size: 18,
-                  color: enabled ? colors.deepNavy : colors.softInk,
-                ),
-                child: shortcut.icon,
+              AppIcons.icon(
+                shortcut.icon,
+                size: 18,
+                color: enabled ? colors.deepNavy : colors.softInk,
               ),
               const SizedBox(width: 9),
               Expanded(
@@ -634,8 +612,8 @@ class _HeroShortcutCard extends StatelessWidget {
                   ],
                 ),
               ),
-              Icon(
-                Icons.chevron_right_rounded,
+              AppIcons.icon(
+                AppIconKey.chevronRight,
                 size: 18,
                 color: enabled ? colors.softInk : Colors.transparent,
               ),
@@ -680,7 +658,7 @@ class _SettingsRowData {
     this.onTap,
   });
 
-  final Widget icon;
+  final AppIconKey icon;
   final String title;
   final String subtitle;
   final String? status;
@@ -713,9 +691,10 @@ class _SettingsRow extends StatelessWidget {
                 borderRadius: BorderRadius.circular(13),
               ),
               child: Center(
-                child: IconTheme(
-                  data: IconThemeData(color: colors.family, size: 20),
-                  child: data.icon,
+                child: AppIcons.icon(
+                  data.icon,
+                  color: colors.family,
+                  size: 20,
                 ),
               ),
             ),
@@ -747,13 +726,13 @@ class _SettingsRow extends StatelessWidget {
             if (data.status != null) ...[
               const SizedBox(width: 8),
               _RowStatusPill(label: data.status!),
-              Icon(
-                Icons.chevron_right_rounded,
+              AppIcons.icon(
+                AppIconKey.chevronRight,
                 color: colors.softInk,
-              ),
+              )
             ] else if (enabled)
-              Icon(
-                Icons.chevron_right_rounded,
+              AppIcons.icon(
+                AppIconKey.chevronRight,
                 color: colors.softInk,
               ),
           ],
