@@ -7,6 +7,7 @@ enum ConsciaGlyphKind {
   signal,
   shield,
   family,
+  approval,
   recurring,
   income,
   salary,

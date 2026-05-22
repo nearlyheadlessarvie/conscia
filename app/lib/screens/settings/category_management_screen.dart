@@ -571,7 +571,7 @@ class _CategoryFormSheet extends StatefulWidget {
 }
 
 class _CategoryFormSheetState extends State<_CategoryFormSheet> {
-  static const _collapsedIconCount = 8;
+  static const _collapsedIconCount = 12;
 
   late final TextEditingController _nameController;
   late String _type;

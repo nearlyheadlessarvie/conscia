@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/constants/app_icons.dart';
 import '../../../models/insights_models.dart';
 import '../../../widgets/feed_card.dart';
 import 'insights_formatting.dart';
@@ -24,7 +25,11 @@ class MerchantSpotlightCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(Icons.storefront_rounded, color: colors.primary),
+              AppIcons.icon(
+                AppIconKey.merchant,
+                color: colors.primary,
+                size: 18,
+              ),
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
@@ -35,8 +40,8 @@ class MerchantSpotlightCard extends StatelessWidget {
                   ),
                 ),
               ),
-              Icon(
-                Icons.chevron_right_rounded,
+              AppIcons.icon(
+                AppIconKey.chevronRight,
                 color: colors.onSurfaceVariant,
                 size: 20,
               ),

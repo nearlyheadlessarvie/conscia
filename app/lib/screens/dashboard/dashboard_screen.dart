@@ -2455,11 +2455,11 @@ class _NotificationListTile extends StatelessWidget {
       case 'journey_level_up':
         return AppIconKey.arrowUp;
       case 'journey_badge':
-        return AppIconKey.premium;
+        return AppIconKey.achievement;
       case 'journey_quest':
         return AppIconKey.flag;
       case 'ReflectionFollowUp':
-        return AppIconKey.brain;
+        return AppIconKey.aiReflect;
       case 'recurring_transaction_created':
         return AppIconKey.recurring;
       default:

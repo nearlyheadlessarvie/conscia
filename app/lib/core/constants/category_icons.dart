@@ -169,6 +169,26 @@ class CategoryIcons {
     CategoryIconOption(key: 'phone', label: 'Phone'),
     CategoryIconOption(key: 'pets', label: 'Pets'),
     CategoryIconOption(key: 'other', label: 'Other'),
+    CategoryIconOption(key: 'gaming', label: 'Gaming'),
+    CategoryIconOption(key: 'entertainment', label: 'Entertainment'),
+    CategoryIconOption(key: 'rental-income', label: 'Rental income'),
+    CategoryIconOption(key: 'bonus', label: 'Bonus'),
+    CategoryIconOption(key: 'internet', label: 'Internet'),
+    CategoryIconOption(key: 'insurance', label: 'Insurance'),
+    CategoryIconOption(key: 'fuel', label: 'Fuel'),
+    CategoryIconOption(key: 'parking', label: 'Parking'),
+    CategoryIconOption(key: 'repairs', label: 'Repairs'),
+    CategoryIconOption(key: 'beauty', label: 'Beauty'),
+    CategoryIconOption(key: 'fitness', label: 'Fitness'),
+    CategoryIconOption(key: 'charity', label: 'Charity'),
+    CategoryIconOption(key: 'books', label: 'Books'),
+    CategoryIconOption(key: 'clothing', label: 'Clothing'),
+    CategoryIconOption(key: 'taxes', label: 'Taxes'),
+    CategoryIconOption(key: 'childcare', label: 'Childcare'),
+    CategoryIconOption(key: 'pharmacy', label: 'Pharmacy'),
+    CategoryIconOption(key: 'events', label: 'Events'),
+    CategoryIconOption(key: 'savings', label: 'Savings'),
+    CategoryIconOption(key: 'bank', label: 'Bank'),
   ];
 
   static final Map<String, _CategorySpec> _specs = {
@@ -357,6 +377,16 @@ class CategoryIcons {
       material: Icons.event_rounded,
       cupertino: CupertinoIcons.calendar,
     ),
+    'Savings': const _CategorySpec(
+      iconKey: 'savings',
+      material: Icons.savings_rounded,
+      cupertino: CupertinoIcons.money_dollar_circle_fill,
+    ),
+    'Bank': const _CategorySpec(
+      iconKey: 'bank',
+      material: Icons.account_balance_rounded,
+      cupertino: CupertinoIcons.building_2_fill,
+    ),
     'Other': const _CategorySpec(
       iconKey: 'other',
       material: Icons.more_horiz_rounded,
@@ -465,6 +495,8 @@ class CategoryIcons {
       'investment' => 'green',
       'rental-income' => 'cyan',
       'bonus' => 'amber',
+      'savings' => 'emerald',
+      'bank' => 'slate',
       'other' => isIncome ? 'teal' : 'cyan',
       _ => _deterministicColorKey(normalized, isIncome: isIncome),
     };

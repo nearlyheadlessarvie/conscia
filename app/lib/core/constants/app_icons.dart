@@ -39,6 +39,7 @@ enum AppIconKey {
   label,
   camera,
   ai,
+  aiReflect,
   payments,
   logout,
   language,
@@ -56,8 +57,10 @@ enum AppIconKey {
   arrowDown,
   arrowUp,
   wallet,
+  merchant,
   flag,
   notifications,
+  achievement,
   fire,
   pieChart,
   brain,
@@ -76,13 +79,23 @@ abstract class AppIcons {
     double? strokeWidth,
     Key? keyId,
   }) {
+    final resolvedSize = size * _visualScaleFor(key);
     return ConsciaGlyph.raw(
       key: keyId,
       icon: _hugeIconFor(key),
       color: color,
-      size: size,
+      size: resolvedSize,
       strokeWidth: strokeWidth,
     );
+  }
+
+  static double _visualScaleFor(AppIconKey key) {
+    return switch (key) {
+      AppIconKey.settings ||
+      AppIconKey.settingsActive ||
+      AppIconKey.notifications => 0.86,
+      _ => 1,
+    };
   }
 
   static IconData adaptive({
@@ -288,18 +301,18 @@ abstract class AppIcons {
 
 List<List<dynamic>> _hugeIconFor(AppIconKey key) {
   return switch (key) {
-    AppIconKey.home || AppIconKey.homeActive => HugeIconsStrokeRounded.house03,
+    AppIconKey.home || AppIconKey.homeActive => HugeIconsStrokeRounded.home07,
     AppIconKey.transactions ||
     AppIconKey.transactionsActive =>
-      HugeIconsStrokeRounded.receiptText,
-    AppIconKey.receipt => HugeIconsStrokeRounded.receiptText,
+      HugeIconsStrokeRounded.invoice01,
+    AppIconKey.receipt => HugeIconsStrokeRounded.invoice01,
     AppIconKey.scan => HugeIconsStrokeRounded.scan,
     AppIconKey.assistant ||
     AppIconKey.assistantActive =>
-      HugeIconsStrokeRounded.sparkles,
+      HugeIconsStrokeRounded.artificialIntelligence08,
     AppIconKey.settings ||
     AppIconKey.settingsActive =>
-      HugeIconsStrokeRounded.settings02,
+      HugeIconsStrokeRounded.settings03,
     AppIconKey.add => HugeIconsStrokeRounded.plusSign,
     AppIconKey.close => HugeIconsStrokeRounded.cancel01,
     AppIconKey.check => HugeIconsStrokeRounded.checkmarkCircle02,
@@ -313,7 +326,7 @@ List<List<dynamic>> _hugeIconFor(AppIconKey key) {
     AppIconKey.premium => HugeIconsStrokeRounded.star,
     AppIconKey.lock => HugeIconsStrokeRounded.lock,
     AppIconKey.refresh => HugeIconsStrokeRounded.refresh,
-    AppIconKey.recurring => HugeIconsStrokeRounded.refresh,
+    AppIconKey.recurring => HugeIconsStrokeRounded.repeat,
     AppIconKey.warning => HugeIconsStrokeRounded.alertCircle,
     AppIconKey.error => HugeIconsStrokeRounded.alert02,
     AppIconKey.help => HugeIconsStrokeRounded.helpCircle,
@@ -322,11 +335,13 @@ List<List<dynamic>> _hugeIconFor(AppIconKey key) {
     AppIconKey.archive => HugeIconsStrokeRounded.archive,
     AppIconKey.label => HugeIconsStrokeRounded.label,
     AppIconKey.camera => HugeIconsStrokeRounded.camera01,
-    AppIconKey.ai => HugeIconsStrokeRounded.sparkles,
+    AppIconKey.ai => HugeIconsStrokeRounded.artificialIntelligence08,
+    AppIconKey.aiReflect =>
+      HugeIconsStrokeRounded.aiContentGenerator01,
     AppIconKey.payments => HugeIconsStrokeRounded.payment02,
-    AppIconKey.logout => HugeIconsStrokeRounded.logout03,
+    AppIconKey.logout => HugeIconsStrokeRounded.logout01,
     AppIconKey.language => HugeIconsStrokeRounded.languageCircle,
-    AppIconKey.currency => HugeIconsStrokeRounded.currency,
+    AppIconKey.currency => HugeIconsStrokeRounded.exchangeDollar,
     AppIconKey.location => HugeIconsStrokeRounded.location02,
     AppIconKey.download => HugeIconsStrokeRounded.download02,
     AppIconKey.fingerprint => HugeIconsStrokeRounded.fingerprintScan,
@@ -340,11 +355,14 @@ List<List<dynamic>> _hugeIconFor(AppIconKey key) {
     AppIconKey.arrowDown => HugeIconsStrokeRounded.arrowDown01,
     AppIconKey.arrowUp => HugeIconsStrokeRounded.arrowUp01,
     AppIconKey.wallet => HugeIconsStrokeRounded.wallet01,
+    AppIconKey.merchant => HugeIconsStrokeRounded.store01,
     AppIconKey.flag => HugeIconsStrokeRounded.flag02,
     AppIconKey.notifications => HugeIconsStrokeRounded.notification01,
+    AppIconKey.achievement => HugeIconsStrokeRounded.award01,
     AppIconKey.fire => HugeIconsStrokeRounded.fire02,
     AppIconKey.pieChart => HugeIconsStrokeRounded.pieChart,
-    AppIconKey.brain => HugeIconsStrokeRounded.brain,
+    AppIconKey.brain =>
+      HugeIconsStrokeRounded.artificialIntelligence04,
     AppIconKey.mic => HugeIconsStrokeRounded.mic01,
     AppIconKey.micOff => HugeIconsStrokeRounded.stopCircle,
     AppIconKey.more => HugeIconsStrokeRounded.moreHorizontalCircle01,

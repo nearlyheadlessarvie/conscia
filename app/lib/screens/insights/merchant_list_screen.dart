@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/constants/app_icons.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_layout.dart';
 import '../../models/insights_models.dart';
@@ -99,9 +100,10 @@ class _MerchantEditorialHero extends StatelessWidget {
           color: Theme.of(context).appColors.navySoft,
           borderRadius: BorderRadius.circular(14),
         ),
-        child: Icon(
-          Icons.storefront_rounded,
+        child: AppIcons.icon(
+          AppIconKey.merchant,
           color: Theme.of(context).appColors.deepNavy,
+          size: 20,
         ),
       ),
       label: 'MERCHANT SIGNAL',
@@ -151,9 +153,10 @@ class _MerchantCard extends StatelessWidget {
               color: colors.primaryContainer,
               borderRadius: BorderRadius.circular(14),
             ),
-            child: Icon(
-              Icons.storefront_rounded,
+            child: AppIcons.icon(
+              AppIconKey.merchant,
               color: colors.onPrimaryContainer,
+              size: 18,
             ),
           ),
           const SizedBox(width: 12),
@@ -191,9 +194,10 @@ class _MerchantCard extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 12),
-          Icon(
-            Icons.chevron_right_rounded,
+          AppIcons.icon(
+            AppIconKey.chevronRight,
             color: colors.onSurfaceVariant,
+            size: 20,
           ),
         ],
       ),

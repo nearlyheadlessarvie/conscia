@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/errors/app_error.dart';
+import '../../core/constants/app_icons.dart';
 import '../../core/constants/api_constants.dart';
 import '../../core/network/dio_client.dart';
 import '../../core/theme/app_colors.dart';
@@ -320,10 +321,10 @@ class _ReceiptReviewScreenState extends ConsumerState<ReceiptReviewScreen> {
                       controller: _merchantController,
                       label: 'Merchant',
                       textCapitalization: TextCapitalization.words,
-                      prefix: Icon(
-                        Icons.storefront_rounded,
+                      prefix: AppIcons.icon(
+                        AppIconKey.merchant,
                         color: colors.deepNavy,
-                        size: 20,
+                        size: 18,
                       ),
                       trailing: _needsReview
                           ? Icon(

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/constants/app_icons.dart';
 import '../../core/constants/category_icons.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_layout.dart';
@@ -144,9 +145,10 @@ class _MerchantHeroBadge extends StatelessWidget {
         color: colors.navySoft,
         borderRadius: BorderRadius.circular(14),
       ),
-      child: Icon(
-        Icons.storefront_rounded,
+      child: AppIcons.icon(
+        AppIconKey.merchant,
         color: colors.deepNavy,
+        size: 20,
       ),
     );
   }

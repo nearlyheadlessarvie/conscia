@@ -83,7 +83,7 @@ class ConsciaGlyph extends StatelessWidget {
 
 List<List<dynamic>> _hugeIconFor(ConsciaGlyphKind kind) {
   return switch (kind) {
-    ConsciaGlyphKind.dining => HugeIconsStrokeRounded.restaurant,
+    ConsciaGlyphKind.dining => HugeIconsStrokeRounded.dish02,
     ConsciaGlyphKind.groceries => HugeIconsStrokeRounded.shoppingCart01,
     ConsciaGlyphKind.transport => HugeIconsStrokeRounded.car01,
     ConsciaGlyphKind.entertainment => HugeIconsStrokeRounded.playCircle,
@@ -126,7 +126,9 @@ List<List<dynamic>> _hugeIconFor(ConsciaGlyphKind kind) {
     ConsciaGlyphKind.signal => HugeIconsStrokeRounded.alert02,
     ConsciaGlyphKind.shield => HugeIconsStrokeRounded.shield01,
     ConsciaGlyphKind.family => HugeIconsStrokeRounded.userGroup,
-    ConsciaGlyphKind.recurring => HugeIconsStrokeRounded.refresh,
+    ConsciaGlyphKind.approval =>
+      HugeIconsStrokeRounded.validationApproval,
+    ConsciaGlyphKind.recurring => HugeIconsStrokeRounded.repeat,
     ConsciaGlyphKind.trophy => HugeIconsStrokeRounded.award01,
     ConsciaGlyphKind.lock => HugeIconsStrokeRounded.lock,
     ConsciaGlyphKind.sprout => HugeIconsStrokeRounded.plant01,

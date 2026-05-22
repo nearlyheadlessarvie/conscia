@@ -193,14 +193,14 @@ void main() {
     await tester.tap(find.text('Add category'));
     await tester.pumpAndSettle();
 
-    expect(find.byTooltip('Icon: Rental'), findsNothing);
+    expect(find.byTooltip('Icon: Repairs'), findsNothing);
 
     await tester.tap(find.byTooltip('Icon: More'));
     await tester.pumpAndSettle();
 
     expect(find.text('Choose icon'), findsOneWidget);
-    expect(find.byTooltip('Icon: Rental'), findsNothing);
-    expect(find.byTooltip('Icon: Gaming'), findsNothing);
+    expect(find.byTooltip('Icon: Repairs'), findsOneWidget);
+    expect(find.byTooltip('Icon: Gaming'), findsOneWidget);
     expect(find.byTooltip('Icon: Groceries'), findsWidgets);
     expect(find.byTooltip('Icon: Dining'), findsWidgets);
   });
