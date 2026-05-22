@@ -235,6 +235,30 @@ void main() {
     );
   });
 
+  test('determineInitialLocation keeps direct web preview routes', () {
+    expect(
+      determineInitialLocation(
+        isWebOverride: true,
+        baseUri: Uri.parse(
+          'http://localhost:59929/debug/journey/level-up/awakening',
+        ),
+      ),
+      AppRoutes.levelUpPreview('awakening'),
+    );
+  });
+
+  test('determineInitialLocation falls back to home off web', () {
+    expect(
+      determineInitialLocation(
+        isWebOverride: false,
+        baseUri: Uri.parse(
+          'http://localhost:59929/debug/journey/level-up/awakening',
+        ),
+      ),
+      AppRoutes.home,
+    );
+  });
+
   testWidgets('unauthenticated deep links preserve redirect through sign in', (
     tester,
   ) async {

@@ -163,6 +163,21 @@ class _RouterRefreshListenable extends ChangeNotifier {
 final hasOnboardedProvider =
     FutureProvider<bool>((ref) => hasCompletedOnboarding());
 
+@visibleForTesting
+String determineInitialLocation({Uri? baseUri, bool? isWebOverride}) {
+  final isWeb = isWebOverride ?? kIsWeb;
+  if (!isWeb) {
+    return AppRoutes.home;
+  }
+
+  final uri = baseUri ?? Uri.base;
+  final path = uri.path.isEmpty ? AppRoutes.home : uri.path;
+  final query = uri.hasQuery ? '?${uri.query}' : '';
+  final fragment = uri.hasFragment ? '#${uri.fragment}' : '';
+
+  return '$path$query$fragment';
+}
+
 final appRouterProvider = Provider<GoRouter>((ref) {
   final listenable = _RouterRefreshListenable();
   ref.onDispose(listenable.dispose);
@@ -173,7 +188,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       currentUserProvider, (_, __) => listenable.refresh());
 
   return GoRouter(
-    initialLocation: AppRoutes.home,
+    initialLocation: determineInitialLocation(),
     debugLogDiagnostics: kDebugMode,
     refreshListenable: listenable,
     redirect: (context, state) {
