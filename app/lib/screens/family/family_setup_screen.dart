@@ -74,7 +74,11 @@ class _FamilySetupScreenState extends ConsumerState<FamilySetupScreen> {
                       FloatingLabelTextField(
                         controller: _nameController,
                         label: 'Family Space name',
-                        prefix: Icon(AppIcons.family),
+                        prefix: AppIcons.icon(
+                          AppIconKey.family,
+                          color: Theme.of(context).appColors.deepNavy,
+                          size: 20,
+                        ),
                         textInputAction: TextInputAction.next,
                         textCapitalization: TextCapitalization.words,
                         errorText: _nameError,

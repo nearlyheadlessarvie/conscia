@@ -102,9 +102,10 @@ class _SpendingProfileScreenState extends ConsumerState<SpendingProfileScreen> {
         IconButton(
           tooltip: 'Skip',
           onPressed: _saving ? null : _skip,
-          icon: Icon(
-            AppIcons.chevronRight,
+          icon: AppIcons.icon(
+            AppIconKey.chevronRight,
             color: Theme.of(context).appColors.deepNavy,
+            size: 20,
           ),
         ),
       ],

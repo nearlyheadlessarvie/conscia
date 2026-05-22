@@ -313,9 +313,10 @@ class _SuggestedBudgetsScreenState
         IconButton(
           tooltip: 'Skip',
           onPressed: _saving ? null : _skip,
-          icon: Icon(
-            AppIcons.chevronRight,
+          icon: AppIcons.icon(
+            AppIconKey.chevronRight,
             color: Theme.of(context).appColors.deepNavy,
+            size: 20,
           ),
         ),
       ],
@@ -531,8 +532,8 @@ class _BudgetCategoryOptionRow extends StatelessWidget {
                 ),
               )
             else
-              Icon(
-                AppIcons.add,
+              AppIcons.icon(
+                AppIconKey.add,
                 size: 20,
                 color: colors.deepNavy,
               ),
@@ -594,8 +595,8 @@ class _SuggestedBudgetRow extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 8),
-            Icon(
-              AppIcons.chevronRight,
+            AppIcons.icon(
+              AppIconKey.chevronRight,
               size: 18,
               color: enabled
                   ? colors.deepNavy.withValues(alpha: 0.54)
@@ -631,7 +632,13 @@ class _AddBudgetCategoryRow extends StatelessWidget {
                 color: colors.navySoft.withValues(alpha: 0.58),
                 borderRadius: BorderRadius.circular(14),
               ),
-              child: Icon(AppIcons.add, size: 19, color: colors.deepNavy),
+              child: Center(
+                child: AppIcons.icon(
+                  AppIconKey.add,
+                  size: 19,
+                  color: colors.deepNavy,
+                ),
+              ),
             ),
             const SizedBox(width: 14),
             Expanded(
@@ -643,8 +650,8 @@ class _AddBudgetCategoryRow extends StatelessWidget {
                 ),
               ),
             ),
-            Icon(
-              AppIcons.chevronRight,
+            AppIcons.icon(
+              AppIconKey.chevronRight,
               size: 18,
               color: colors.deepNavy.withValues(alpha: 0.54),
             ),

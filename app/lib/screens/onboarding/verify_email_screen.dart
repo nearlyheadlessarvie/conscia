@@ -160,7 +160,11 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
       appBar: ConsciaAppBar(
         leading: IconButton(
           tooltip: 'Back',
-          icon: Icon(AppIcons.chevronLeft),
+          icon: AppIcons.icon(
+            AppIconKey.chevronLeft,
+            color: Theme.of(context).colorScheme.onSurface,
+            size: 20,
+          ),
           onPressed: _returnToSignIn,
         ),
         backgroundColor: Colors.transparent,
