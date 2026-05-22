@@ -21,15 +21,42 @@ import 'package:hugeicons/hugeicons.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class _RecordingLocationAssistanceService extends LocationAssistanceService {
-  _RecordingLocationAssistanceService({required this.permissionGranted});
+  _RecordingLocationAssistanceService({
+    required this.permissionGranted,
+    this.locationServiceEnabled = true,
+    this.permissionStatus = LocationPermissionStatus.denied,
+  });
 
   final bool permissionGranted;
+  final bool locationServiceEnabled;
+  final LocationPermissionStatus permissionStatus;
   int permissionRequests = 0;
+  int openAppSettingsCalls = 0;
+  int openLocationSettingsCalls = 0;
+
+  @override
+  Future<bool> isLocationServiceEnabled() async => locationServiceEnabled;
 
   @override
   Future<bool> requestPermission() async {
     permissionRequests += 1;
     return permissionGranted;
+  }
+
+  @override
+  Future<LocationPermissionStatus> checkPermissionStatus() async =>
+      permissionStatus;
+
+  @override
+  Future<bool> openAppSettings() async {
+    openAppSettingsCalls += 1;
+    return true;
+  }
+
+  @override
+  Future<bool> openLocationSettings() async {
+    openLocationSettingsCalls += 1;
+    return true;
   }
 
   @override
@@ -355,6 +382,84 @@ void main() {
     expect(
       container.read(locationAssistanceProvider).isEnabled,
       isFalse,
+    );
+  });
+
+  testWidgets(
+      'settings routes denied-forever location toggle attempts to system settings',
+      (tester) async {
+    SharedPreferences.setMockInitialValues({
+      'location_suggestions_enabled': false,
+      'location_suggestions_prompted': true,
+      'location_suggestions_permission_denied': true,
+    });
+    final prefs = await SharedPreferences.getInstance();
+    final locationService = _RecordingLocationAssistanceService(
+      permissionGranted: false,
+      permissionStatus: LocationPermissionStatus.deniedForever,
+    );
+
+    await _pumpSettingsScreen(
+      tester,
+      prefs: prefs,
+      locationService: locationService,
+      userService: _RecordingUserService(),
+    );
+
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Smart Nearby Suggestions'));
+    await tester.drag(find.byType(CustomScrollView), const Offset(0, 120));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byType(Switch).last);
+    await tester.pumpAndSettle();
+
+    expect(locationService.permissionRequests, 0);
+    expect(locationService.openAppSettingsCalls, 1);
+    expect(
+      find.text(
+        'Allow location access in your device settings to turn this on.',
+      ),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets(
+      'settings routes location toggle attempts to device location settings when location is off',
+      (tester) async {
+    SharedPreferences.setMockInitialValues({
+      'location_suggestions_enabled': false,
+      'location_suggestions_prompted': true,
+    });
+    final prefs = await SharedPreferences.getInstance();
+    final locationService = _RecordingLocationAssistanceService(
+      permissionGranted: false,
+      locationServiceEnabled: false,
+    );
+
+    await _pumpSettingsScreen(
+      tester,
+      prefs: prefs,
+      locationService: locationService,
+      userService: _RecordingUserService(),
+    );
+
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Smart Nearby Suggestions'));
+    await tester.drag(find.byType(CustomScrollView), const Offset(0, 120));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byType(Switch).last);
+    await tester.pumpAndSettle();
+
+    expect(locationService.permissionRequests, 0);
+    expect(locationService.openLocationSettingsCalls, 1);
+    expect(locationService.openAppSettingsCalls, 0);
+    expect(
+      find.text(
+        'Turn on device location first, then try Smart Nearby Suggestions again.',
+      ),
+      findsOneWidget,
     );
   });
 

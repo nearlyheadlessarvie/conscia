@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
@@ -89,6 +90,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       if (!mounted) return;
       _syncAppBarProgressFromController();
       ref.invalidate(subscriptionProvider);
+      unawaited(
+        ref.read(locationAssistanceProvider.notifier).reconcileWithSystemState(),
+      );
     });
   }
 
@@ -97,6 +101,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     onResume: () {
       if (!mounted) return;
       ref.invalidate(subscriptionProvider);
+      unawaited(
+        ref
+            .read(locationAssistanceProvider.notifier)
+            .reconcileWithSystemState(),
+      );
     },
   );
 
@@ -286,7 +295,34 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                               final notifier =
                                   ref.read(locationAssistanceProvider.notifier);
                               if (value) {
-                                await notifier.enableFromSettings();
+                                final outcome =
+                                    await notifier.enableFromSettings();
+                                if (!context.mounted) return;
+                                if (outcome ==
+                                    LocationSettingsEnableOutcome
+                                        .redirectedToLocationSettings) {
+                                  ScaffoldMessenger.of(context)
+                                    ..clearSnackBars()
+                                    ..showSnackBar(
+                                      const SnackBar(
+                                        content: Text(
+                                          'Turn on device location first, then try Smart Nearby Suggestions again.',
+                                        ),
+                                      ),
+                                    );
+                                } else if (outcome ==
+                                    LocationSettingsEnableOutcome
+                                        .redirectedToSystemSettings) {
+                                  ScaffoldMessenger.of(context)
+                                    ..clearSnackBars()
+                                    ..showSnackBar(
+                                      const SnackBar(
+                                        content: Text(
+                                          'Allow location access in your device settings to turn this on.',
+                                        ),
+                                      ),
+                                    );
+                                }
                               } else {
                                 await notifier.disableFromSettings();
                               }

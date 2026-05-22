@@ -409,16 +409,18 @@ class _SubscriptionHero extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Container(
-            width: 56,
-            height: 56,
+            width: 60,
+            height: 60,
             decoration: BoxDecoration(
               color: colors.amber.withValues(alpha: 0.18),
               shape: BoxShape.circle,
             ),
-            child: AppIcons.icon(
-              AppIconKey.premium,
-              color: colors.amber,
-              size: 28,
+            child: Center(
+              child: AppIcons.icon(
+                AppIconKey.premiumMedal,
+                color: colors.amber,
+                size: 24,
+              ),
             ),
           ),
           const SizedBox(height: 14),
