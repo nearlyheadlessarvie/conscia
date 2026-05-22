@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../core/constants/app_icons.dart';
 import '../core/theme/app_colors.dart';
 
 class HeroShortcutCard extends StatelessWidget {
@@ -12,7 +13,7 @@ class HeroShortcutCard extends StatelessWidget {
     this.minHeight = 64,
   });
 
-  final IconData icon;
+  final AppIconKey icon;
   final String label;
   final String? subtitle;
   final VoidCallback? onPressed;
@@ -61,7 +62,7 @@ class _HeroShortcutCompactContent extends StatelessWidget {
     required this.label,
   });
 
-  final IconData icon;
+  final AppIconKey icon;
   final String label;
 
   @override
@@ -71,7 +72,11 @@ class _HeroShortcutCompactContent extends StatelessWidget {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Icon(icon, size: 18, color: colors.deepNavy),
+        AppIcons.icon(
+          icon,
+          size: 18,
+          color: colors.deepNavy,
+        ),
         const SizedBox(height: 6),
         Text(
           label,
@@ -94,7 +99,7 @@ class _HeroShortcutActionContent extends StatelessWidget {
     required this.subtitle,
   });
 
-  final IconData icon;
+  final AppIconKey icon;
   final String label;
   final String subtitle;
 
@@ -105,7 +110,11 @@ class _HeroShortcutActionContent extends StatelessWidget {
 
     return Row(
       children: [
-        Icon(icon, size: 16, color: colors.deepNavy),
+        AppIcons.icon(
+          icon,
+          size: 16,
+          color: colors.deepNavy,
+        ),
         const SizedBox(width: 8),
         Expanded(
           child: Column(
@@ -136,8 +145,8 @@ class _HeroShortcutActionContent extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 6),
-        Icon(
-          Icons.chevron_right_rounded,
+        AppIcons.icon(
+          AppIconKey.chevronRight,
           size: 18,
           color: colors.deepNavy.withValues(alpha: 0.55),
         ),

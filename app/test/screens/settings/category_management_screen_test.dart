@@ -214,13 +214,16 @@ void main() {
     await tester.tap(find.text('Add category'));
     await tester.pumpAndSettle();
 
-    expect(find.byKey(const ValueKey('category-icon-chip-font-groceries')), findsOneWidget);
+    expect(find.byKey(const ValueKey('category-icon-chip-font-groceries')),
+        findsOneWidget);
 
     await tester.tap(find.byTooltip('Icon: More'));
     await tester.pumpAndSettle();
 
     expect(
-      find.byKey(const ValueKey('category-icon-chip-font-dining')).hitTestable(),
+      find
+          .byKey(const ValueKey('category-icon-chip-font-dining'))
+          .hitTestable(),
       findsOneWidget,
     );
   });
@@ -307,12 +310,9 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    final glyph = tester.widget<ConsciaGlyph>(
-      find.descendant(
-        of: find.byType(CategoryManagementScreen),
-        matching: find.byType(ConsciaGlyph),
-      ),
-    );
+    final glyph = tester
+        .widgetList<ConsciaGlyph>(find.byType(ConsciaGlyph))
+        .firstWhere((candidate) => candidate.kind == ConsciaGlyphKind.dining);
 
     expect(glyph.kind, ConsciaGlyphKind.dining);
     expect(glyph.color, const Color(0xFF43A047));

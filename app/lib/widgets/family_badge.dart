@@ -21,8 +21,8 @@ class FamilyBadge extends StatelessWidget {
         color: colors.primaryContainer.withValues(alpha: 0.72),
         borderRadius: BorderRadius.circular(999),
       ),
-      child: Icon(
-        AppIcons.family,
+      child: AppIcons.icon(
+        AppIconKey.family,
         size: compact ? 13 : 16,
         color: colors.onPrimaryContainer,
       ),

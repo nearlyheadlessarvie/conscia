@@ -343,7 +343,7 @@ class _TransactionListScreenState extends ConsumerState<TransactionListScreen> {
           child: Padding(
             padding: EdgeInsets.fromLTRB(20, 0, 20, 32),
             child: EmptyState(
-              icon: Icons.circle_outlined,
+              icon: AppIconKey.receipt,
               illustration: _TransactionEmptyStateIcon(),
               title: 'No transactions yet',
               subtitle: 'Tap + to add your first',

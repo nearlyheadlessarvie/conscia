@@ -40,7 +40,11 @@ class CategoryManagementScreen extends ConsumerWidget {
           IconButton(
             tooltip: 'Add category',
             onPressed: () => _showCategorySheet(context, ref),
-            icon: Icon(AppIcons.add),
+            icon: AppIcons.icon(
+              AppIconKey.add,
+              color: Theme.of(context).appColors.deepNavy,
+              size: 22,
+            ),
           ),
         ],
       ),
@@ -82,7 +86,11 @@ class CategoryManagementScreen extends ConsumerWidget {
               const SizedBox(height: 8),
               OutlinedButton.icon(
                 onPressed: () => ref.invalidate(managedCategoriesProvider),
-                icon: const Icon(Icons.refresh),
+                icon: AppIcons.icon(
+                  AppIconKey.refresh,
+                  color: Theme.of(context).appColors.deepNavy,
+                  size: 18,
+                ),
                 label: const Text('Retry'),
               ),
             ],
@@ -332,7 +340,7 @@ class _CategoriesHero extends StatelessWidget {
             SizedBox(
               width: double.infinity,
               child: HeroShortcutCard(
-                icon: AppIcons.add,
+                icon: AppIconKey.add,
                 label: 'Add category',
                 subtitle: 'Create a custom label',
                 onPressed: onAdd,
@@ -618,7 +626,11 @@ class _CategoryFormSheetState extends State<_CategoryFormSheet> {
                 controller: _nameController,
                 label: 'Category name',
                 autofocus: true,
-                prefix: const Icon(Icons.label_outline),
+                prefix: AppIcons.icon(
+                  AppIconKey.label,
+                  color: colors.deepNavy,
+                  size: 18,
+                ),
                 textInputAction: TextInputAction.done,
                 onChanged: (_) {
                   _clearError();
@@ -775,7 +787,11 @@ class _CategoryFormError extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(Icons.error_outline_rounded, size: 16, color: colors.expense),
+            AppIcons.icon(
+              AppIconKey.error,
+              size: 16,
+              color: colors.expense,
+            ),
             const SizedBox(width: 8),
             Expanded(
               child: Text(

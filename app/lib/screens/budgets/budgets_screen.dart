@@ -173,7 +173,7 @@ class _BudgetsScreenState extends ConsumerState<BudgetsScreen> {
           child: Padding(
             padding: const EdgeInsets.fromLTRB(20, 28, 20, 0),
             child: EmptyState(
-              icon: Icons.pie_chart_outline_rounded,
+              icon: AppIconKey.pieChart,
               title: 'Budgets that match how you actually spend',
               subtitle:
                   'Create flexible monthly limits for the categories you care about most.',

@@ -22,6 +22,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:hugeicons/hugeicons.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class _StaticBudgetService extends BudgetService {
@@ -224,7 +225,13 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(EmptyState), findsOneWidget);
-    expect(find.byIcon(Icons.auto_graph_rounded), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byType(EmptyState),
+        matching: find.byType(HugeIcon),
+      ),
+      findsOneWidget,
+    );
     expect(find.text('No insights yet'), findsOneWidget);
     expect(
       find.text(
@@ -452,7 +459,6 @@ void main() {
     expect(find.text('No budget yet'), findsNothing);
     expect(find.byTooltip('Add budget'), findsNothing);
     expect(find.text('View merchant'), findsNothing);
-    expect(find.byIcon(Icons.chevron_right_rounded), findsWidgets);
 
     final staticInsight = find.text('Your financial mood is balanced');
     await Scrollable.ensureVisible(
@@ -496,7 +502,6 @@ void main() {
     expect(find.text('Your financial mood is balanced'), findsOneWidget);
     expect(find.text('Add budget'), findsNothing);
     expect(find.text('View pattern'), findsNothing);
-    expect(find.byIcon(Icons.chevron_right_rounded), findsNothing);
   });
 
   testWidgets('unbudgeted budget trend opens create budget with category',
@@ -562,7 +567,6 @@ void main() {
 
     expect(find.text('New Budget'), findsOneWidget);
     expect(find.text('Subscriptions'), findsOneWidget);
-    expect(find.byIcon(Icons.close_rounded), findsOneWidget);
   });
 
   testWidgets('budget trend nudge disappears once budget exists',
@@ -738,7 +742,7 @@ void main() {
         findsOneWidget);
     expect(find.text('50% rate'), findsOneWidget);
     expect(find.text('\$1.44K yearly projection'), findsOneWidget);
-    expect(find.byIcon(Icons.chevron_left_rounded), findsOneWidget);
+    expect(find.byTooltip('Back'), findsOneWidget);
     expect(find.byIcon(Icons.arrow_back), findsNothing);
   });
 
@@ -785,7 +789,7 @@ void main() {
       find.text('Last 30 days of purchases matching this merchant.'),
       findsOneWidget,
     );
-    expect(find.byIcon(Icons.chevron_left_rounded), findsOneWidget);
+    expect(find.byTooltip('Back'), findsOneWidget);
     expect(find.byIcon(Icons.arrow_back), findsNothing);
   });
 

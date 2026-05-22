@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../../core/constants/app_icons.dart';
 import '../../core/errors/app_error.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_layout.dart';
@@ -517,12 +518,12 @@ class _ProfileEditorialHero extends StatelessWidget {
             children: [
               _ProfileHeroIdentityPill(
                 key: const ValueKey('profile-hero-display-name-pill'),
-                icon: Icons.person_rounded,
+                icon: AppIconKey.person,
                 label: displayName,
               ),
               _ProfileHeroIdentityPill(
                 key: const ValueKey('profile-hero-email-pill'),
-                icon: Icons.alternate_email_rounded,
+                icon: AppIconKey.email,
                 label: email,
               ),
             ],
@@ -540,7 +541,7 @@ class _ProfileHeroIdentityPill extends StatelessWidget {
     required this.label,
   });
 
-  final IconData icon;
+  final AppIconKey icon;
   final String label;
 
   @override
@@ -561,7 +562,11 @@ class _ProfileHeroIdentityPill extends StatelessWidget {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(icon, size: 15, color: colors.deepNavy),
+              AppIcons.icon(
+                icon,
+                size: 15,
+                color: colors.deepNavy,
+              ),
               const SizedBox(width: 7),
               Flexible(
                 child: Text(
@@ -661,8 +666,8 @@ class _ProfilePhoto extends StatelessWidget {
                   ),
                   child: Padding(
                     padding: const EdgeInsets.all(6),
-                    child: Icon(
-                      Icons.camera_alt_rounded,
+                    child: AppIcons.icon(
+                      AppIconKey.camera,
                       size: 15,
                       color: colors.deepNavy,
                     ),
@@ -733,8 +738,8 @@ class _ProfileSelectField extends StatelessWidget {
                   ],
                 ),
               ),
-              Icon(
-                Icons.chevron_right_rounded,
+              AppIcons.icon(
+                AppIconKey.chevronRight,
                 size: 22,
                 color: colors.deepNavy.withValues(alpha: 0.55),
               ),

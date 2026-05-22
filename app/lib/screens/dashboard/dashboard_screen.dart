@@ -318,7 +318,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                           padding: EdgeInsets.symmetric(horizontal: 20),
                           sliver: SliverToBoxAdapter(
                             child: EmptyState(
-                              icon: Icons.circle_outlined,
+                              icon: AppIconKey.notifications,
                               illustration: _DashboardEmptyStateIcon(
                                 iconKey: AppIconKey.notifications,
                               ),
@@ -557,7 +557,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               else if (budgets.isEmpty)
                 SliverToBoxAdapter(
                   child: EmptyState(
-                    icon: Icons.circle_outlined,
+                    icon: AppIconKey.wallet,
                     illustration: const _DashboardEmptyStateIcon(
                       iconKey: AppIconKey.wallet,
                     ),
@@ -631,7 +631,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               else if (transactions.isEmpty)
                 SliverToBoxAdapter(
                   child: EmptyState(
-                    icon: Icons.circle_outlined,
+                    icon: AppIconKey.receipt,
                     illustration: const _DashboardEmptyStateIcon(
                       iconKey: AppIconKey.receipt,
                     ),

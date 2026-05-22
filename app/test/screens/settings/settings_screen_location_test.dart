@@ -13,10 +13,12 @@ import 'package:conscia_app/services/passkey_service.dart';
 import 'package:conscia_app/services/subscription_service.dart';
 import 'package:conscia_app/services/transaction_service.dart';
 import 'package:conscia_app/services/user_service.dart';
+import 'package:conscia_app/widgets/single_select_list.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hugeicons/hugeicons.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class _RecordingLocationAssistanceService extends LocationAssistanceService {
@@ -456,7 +458,18 @@ void main() {
     expect(find.text('Region Format'), findsOneWidget);
     expect(find.text('Default'), findsOneWidget);
     expect(find.text('Philippines / US'), findsNothing);
-    expect(find.byIcon(Icons.check_rounded), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find
+            .ancestor(
+              of: find.text('Default'),
+              matching: find.byType(InkWell),
+            )
+            .last,
+        matching: find.byType(HugeIcon),
+      ),
+      findsOneWidget,
+    );
     expect(find.byType(Radio<String>), findsNothing);
   });
 
@@ -587,7 +600,18 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(Radio<String>), findsNothing);
-    expect(find.byIcon(Icons.check_rounded), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find
+            .ancestor(
+              of: find.text('Balanced').last,
+              matching: find.byType(InkWell),
+            )
+            .last,
+        matching: find.byType(HugeIcon),
+      ),
+      findsOneWidget,
+    );
     expect(find.byType(Divider), findsWidgets);
   });
 
@@ -650,7 +674,8 @@ void main() {
         findsOneWidget);
   });
 
-  testWidgets('settings uses editorial section headers with meaningful subtitles',
+  testWidgets(
+      'settings uses editorial section headers with meaningful subtitles',
       (tester) async {
     SharedPreferences.setMockInitialValues({});
     final prefs = await SharedPreferences.getInstance();

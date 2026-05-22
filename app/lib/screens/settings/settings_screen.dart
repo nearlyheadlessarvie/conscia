@@ -183,7 +183,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           actions: [
             IconButton(
               tooltip: 'Sign out',
-              icon: Icon(Icons.logout_rounded, color: theme.appColors.deepNavy),
+              icon: AppIcons.icon(
+                AppIconKey.logout,
+                color: theme.appColors.deepNavy,
+                size: 22,
+              ),
               onPressed: () => _confirmSignOut(context, ref),
             ),
           ],
@@ -229,7 +233,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         children: [
                           _SettingsActionRow(
                             leading: _SettingsIconBox(
-                              icon: Icons.bar_chart_rounded,
+                              icon: AppIconKey.pieChart,
                               backgroundColor: theme.appColors.navySoft,
                             ),
                             title: 'Budgets',
@@ -238,7 +242,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                           ),
                           _SettingsActionRow(
                             leading: _SettingsIconBox(
-                              icon: Icons.sell_outlined,
+                              icon: AppIconKey.label,
                               backgroundColor: theme.appColors.amberSoft,
                             ),
                             title: 'Categories',
@@ -254,7 +258,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         children: [
                           _SettingsActionRow(
                             leading: _SettingsIconBox(
-                              icon: Icons.psychology_alt_outlined,
+                              icon: AppIconKey.brain,
                               backgroundColor: theme.appColors.amberSoft,
                             ),
                             title: 'AI Personality',
@@ -271,7 +275,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                           ),
                           _SettingsSwitchRow(
                             leading: _SettingsIconBox(
-                              icon: Icons.location_on_outlined,
+                              icon: AppIconKey.location,
                               backgroundColor: theme.appColors.angelSoft,
                             ),
                             title: 'Smart Nearby Suggestions',
@@ -290,7 +294,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                           ),
                           _SettingsActionRow(
                             leading: _SettingsIconBox(
-                              icon: Icons.language,
+                              icon: AppIconKey.language,
                               backgroundColor: theme.appColors.navySoft,
                             ),
                             title: 'Locale & Number Format',
@@ -300,7 +304,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                           ),
                           _SettingsActionRow(
                             leading: _SettingsIconBox(
-                              icon: Icons.currency_exchange,
+                              icon: AppIconKey.currency,
                               backgroundColor: theme.appColors.navySoft,
                             ),
                             title: 'Default Currency',
@@ -315,7 +319,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                           if (passkeysAvailable && sessionSupportsPasskeys)
                             _SettingsActionRow(
                               leading: _SettingsIconBox(
-                                icon: Icons.fingerprint,
+                                icon: AppIconKey.fingerprint,
                                 backgroundColor: theme.appColors.navySoft,
                               ),
                               title: _isRegisteringPasskey
@@ -346,7 +350,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                             ),
                             error: (_, __) => _SettingsActionRow(
                               leading: _SettingsIconBox(
-                                icon: Icons.star_rounded,
+                                icon: AppIconKey.premium,
                                 backgroundColor: theme.appColors.amberSoft,
                               ),
                               title: 'Conscia Premium',
@@ -364,7 +368,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                           children: [
                             _SettingsActionRow(
                               leading: _SettingsIconBox(
-                                icon: Icons.admin_panel_settings_outlined,
+                                icon: AppIconKey.admin,
                                 backgroundColor: theme.appColors.navySoft,
                               ),
                               title: 'Admin entitlements',
@@ -383,7 +387,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         children: [
                           _SettingsActionRow(
                             leading: _SettingsIconBox(
-                              icon: Icons.download_rounded,
+                              icon: AppIconKey.download,
                               backgroundColor: theme.appColors.incomeSoft,
                               foregroundColor: theme.appColors.income,
                             ),
@@ -393,7 +397,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                           ),
                           _SettingsActionRow(
                             leading: _SettingsIconBox(
-                              icon: Icons.delete_forever,
+                              icon: AppIconKey.delete,
                               backgroundColor: theme.appColors.expenseSoft,
                               foregroundColor: theme.appColors.expense,
                             ),
@@ -854,7 +858,7 @@ class _SettingsEditorialHero extends StatelessWidget {
               Expanded(
                 child: _HeroShortcutPill(
                   key: const ValueKey('settings-hero-profile-shortcut'),
-                  icon: AppIcons.person,
+                  icon: AppIconKey.person,
                   title: 'Profile',
                   subtitle: 'Personal workspace',
                   onTap: onProfileTap,
@@ -864,7 +868,7 @@ class _SettingsEditorialHero extends StatelessWidget {
               Expanded(
                 child: _HeroShortcutPill(
                   key: const ValueKey('settings-hero-family-shortcut'),
-                  icon: AppIcons.family,
+                  icon: AppIconKey.family,
                   title: 'Shared Conscia',
                   subtitle: workspaceLabel,
                   onTap: onFamilyTap,
@@ -933,7 +937,7 @@ class _HeroShortcutPill extends StatelessWidget {
     required this.onTap,
   });
 
-  final IconData icon;
+  final AppIconKey icon;
   final String title;
   final String subtitle;
   final VoidCallback onTap;
@@ -953,7 +957,11 @@ class _HeroShortcutPill extends StatelessWidget {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(icon, size: 17, color: colors.deepNavy),
+              AppIcons.icon(
+                icon,
+                size: 17,
+                color: colors.deepNavy,
+              ),
               const SizedBox(width: 8),
               Flexible(
                 child: ConstrainedBox(
@@ -986,7 +994,11 @@ class _HeroShortcutPill extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 8),
-              Icon(AppIcons.chevronRight, size: 15, color: colors.softInk),
+              AppIcons.icon(
+                AppIconKey.chevronRight,
+                size: 15,
+                color: colors.softInk,
+              ),
             ],
           ),
         ),
@@ -1002,7 +1014,7 @@ class _SettingsIconBox extends StatelessWidget {
     this.foregroundColor,
   });
 
-  final IconData icon;
+  final AppIconKey icon;
   final Color backgroundColor;
   final Color? foregroundColor;
 
@@ -1017,7 +1029,11 @@ class _SettingsIconBox extends StatelessWidget {
       child: SizedBox(
         width: 42,
         height: 42,
-        child: Icon(icon, color: foregroundColor ?? colors.deepNavy, size: 22),
+        child: AppIcons.icon(
+          icon,
+          color: foregroundColor ?? colors.deepNavy,
+          size: 22,
+        ),
       ),
     );
   }
@@ -1037,7 +1053,7 @@ class _PremiumRow extends StatelessWidget {
     final colors = Theme.of(context).appColors;
     return _SettingsActionRow(
       leading: _SettingsIconBox(
-        icon: Icons.star_rounded,
+        icon: AppIconKey.premium,
         backgroundColor: colors.amberSoft,
         foregroundColor: colors.amber,
       ),
@@ -1104,8 +1120,11 @@ class _SettingsActionRow extends StatelessWidget {
               ),
               const SizedBox(width: 8),
               if (showChevron)
-                Icon(AppIcons.chevronRight,
-                    color: Theme.of(context).appColors.border),
+                AppIcons.icon(
+                  AppIconKey.chevronRight,
+                  color: Theme.of(context).appColors.border,
+                  size: 20,
+                ),
             ],
           ),
         ),
