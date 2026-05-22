@@ -58,8 +58,11 @@ class _AboutYouScreenState extends ConsumerState<AboutYouScreen> {
       heroSubtitle:
           'Tell us what to call you, then add a little context so guidance lands closer to real life.',
       heroChips: const [
-        OnboardingHeroChip(label: 'Name required', icon: Icons.person_outline),
-        OnboardingHeroChip(label: 'Context optional', icon: Icons.tune_rounded),
+        OnboardingHeroChip(label: 'Name required', icon: AppIconKey.person),
+        OnboardingHeroChip(
+          label: 'Context optional',
+          icon: AppIconKey.tune,
+        ),
       ],
       bottom: FilledButton(
         onPressed: _canFinish ? _finish : null,

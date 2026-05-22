@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/constants/app_icons.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_layout.dart';
 import '../../core/utils/currency_formatter.dart';
@@ -95,7 +96,11 @@ class _BudgetsScreenState extends ConsumerState<BudgetsScreen> {
           actions: [
             IconButton(
               tooltip: 'Add budget',
-              icon: Icon(Icons.add_rounded, color: colors.deepNavy),
+              icon: AppIcons.icon(
+                AppIconKey.add,
+                color: colors.deepNavy,
+                size: 22,
+              ),
               onPressed: () => _onAddBudget(context, ref),
             ),
           ],
@@ -172,7 +177,7 @@ class _BudgetsScreenState extends ConsumerState<BudgetsScreen> {
           child: Padding(
             padding: const EdgeInsets.fromLTRB(20, 28, 20, 0),
             child: EmptyState(
-              icon: Icons.pie_chart_outline_rounded,
+              icon: AppIconKey.pieChart,
               title: 'Budgets that match how you actually spend',
               subtitle:
                   'Create flexible monthly limits for the categories you care about most.',
@@ -742,7 +747,7 @@ class _SwipeDeleteBackground extends StatelessWidget {
       padding: const EdgeInsets.only(right: 10),
       children: [
         SwipeActionTile(
-          icon: Icons.delete_outline_rounded,
+          icon: AppIconKey.delete,
           label: label,
           foregroundColor: color,
           backgroundColor: colors.expenseSoft,

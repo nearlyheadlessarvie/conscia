@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/constants/app_icons.dart';
 import '../../core/routing/app_router.dart';
 import '../../core/errors/app_error.dart';
 import '../../core/theme/app_colors.dart';
@@ -10,6 +11,7 @@ import '../../models/family_invite.dart';
 import '../../providers/family_space_provider.dart';
 import '../../widgets/conscia_button_row.dart';
 import '../../widgets/editorial_hero_chip.dart';
+import '../../widgets/editorial_section_header.dart';
 import '../../widgets/floating_label_text_field.dart';
 import '../../widgets/hero_screen_scaffold.dart';
 import '../../widgets/inline_notice.dart';
@@ -214,29 +216,9 @@ class _SectionHeading extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).appColors;
-    final theme = Theme.of(context);
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          title.toUpperCase(),
-          style: theme.textTheme.labelSmall?.copyWith(
-            color: colors.mutedInk,
-            letterSpacing: 1.2,
-            fontWeight: FontWeight.w800,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          subtitle,
-          style: theme.textTheme.bodySmall?.copyWith(
-            color: colors.mutedInk,
-            height: 1.3,
-          ),
-        ),
-      ],
+    return EditorialSectionHeader(
+      title: title,
+      subtitle: subtitle,
     );
   }
 }
@@ -305,11 +287,10 @@ class _InviteComposerState extends ConsumerState<_InviteComposer> {
         ),
         const SizedBox(height: 14),
         Text(
-          'ROLE',
+          'Role',
           style: Theme.of(context).textTheme.labelSmall?.copyWith(
                 color: colors.mutedInk,
                 fontWeight: FontWeight.w700,
-                letterSpacing: 1.2,
               ),
         ),
         const SizedBox(height: 6),
@@ -375,7 +356,7 @@ class _OutgoingInvitesSection extends StatelessWidget {
         const SizedBox(height: 12),
         if (invites.isEmpty)
           const _CompactInviteEmptyState(
-            icon: Icons.outgoing_mail,
+            icon: AppIconKey.email,
             message: 'No sent invites right now.',
           )
         else
@@ -424,7 +405,11 @@ class _OutgoingInviteCardState extends ConsumerState<_OutgoingInviteCard> {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.close_rounded, color: colors.expense, size: 18),
+              AppIcons.icon(
+                AppIconKey.close,
+                color: colors.expense,
+                size: 18,
+              ),
               const SizedBox(width: 6),
               Text(
                 _isSubmitting ? 'Cancelling' : 'Cancel',
@@ -543,7 +528,7 @@ class _CompactInviteEmptyState extends StatelessWidget {
     required this.message,
   });
 
-  final IconData icon;
+  final AppIconKey icon;
   final String message;
 
   @override
@@ -553,9 +538,13 @@ class _CompactInviteEmptyState extends StatelessWidget {
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-      child: Row(
-        children: [
-          Icon(icon, size: 18, color: colors.onSurfaceVariant),
+        child: Row(
+          children: [
+          AppIcons.icon(
+            icon,
+            size: 18,
+            color: colors.onSurfaceVariant,
+          ),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
@@ -576,7 +565,7 @@ class _EmptyInvites extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => const _CompactInviteEmptyState(
-        icon: Icons.mark_email_read_outlined,
+        icon: AppIconKey.verified,
         message: 'No pending invites right now.',
       );
 }
@@ -598,12 +587,20 @@ class _InviteErrorCard extends StatelessWidget {
         InlineNotice(
           message: message,
           tone: InlineNoticeTone.error,
-          icon: const Icon(Icons.error_outline_rounded),
+          icon: AppIcons.icon(
+            AppIconKey.error,
+            color: Theme.of(context).appColors.expense,
+            size: 16,
+          ),
         ),
         const SizedBox(height: 8),
         TextButton.icon(
           onPressed: onRetry,
-          icon: const Icon(Icons.refresh_rounded),
+          icon: AppIcons.icon(
+            AppIconKey.refresh,
+            color: Theme.of(context).appColors.deepNavy,
+            size: 18,
+          ),
           label: const Text('Retry'),
         ),
       ],

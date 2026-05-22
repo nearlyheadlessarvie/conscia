@@ -22,12 +22,20 @@ class ScopeSelector extends StatelessWidget {
         ButtonSegment(
           value: 'personal',
           label: const Text('Personal'),
-          icon: Icon(AppIcons.person),
+          icon: AppIcons.icon(
+            AppIconKey.person,
+            color: Theme.of(context).colorScheme.onSurface,
+            size: 18,
+          ),
         ),
         ButtonSegment(
           value: 'family',
           label: const Text('Family'),
-          icon: Icon(AppIcons.family),
+          icon: AppIcons.icon(
+            AppIconKey.family,
+            color: Theme.of(context).colorScheme.onSurface,
+            size: 18,
+          ),
         ),
       ],
       selected: {familyEnabled ? value : 'personal'},

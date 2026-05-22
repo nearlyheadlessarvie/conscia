@@ -65,7 +65,11 @@ class _FakeSecureStorage extends FlutterSecureStorage {
 
 class _TestAuthNotifier extends AuthNotifier {
   _TestAuthNotifier(AuthState initialState)
-      : super(_FakeAuthService(), _FakeSecureStorage()) {
+      : super(
+          _FakeAuthService(),
+          _FakeSecureStorage(),
+          autoRestoreSession: false,
+        ) {
     state = initialState;
   }
 }
@@ -1690,6 +1694,12 @@ void main() {
         insightsSummaryProvider.overrideWith((ref) async => null),
         insightsCategoriesProvider.overrideWith((ref) async => const []),
         insightsMerchantsProvider.overrideWith((ref) async => const []),
+        dashboardInsightSummaryProvider.overrideWith(
+          (ref) async => const DashboardInsightSummary(
+            text: 'Your week is taking shape.',
+            tone: InsightFeedTone.caution,
+          ),
+        ),
         conscienceJourneyProvider.overrideWith(
           () => _StaticConscienceJourneyNotifier(journey),
         ),
@@ -1781,10 +1791,24 @@ void main() {
         budgetServiceProvider.overrideWithValue(_StaticBudgetService(const [])),
         transactionServiceProvider
             .overrideWithValue(_StaticTransactionService()),
-        behavioralInsightsProvider.overrideWith((ref) async => null),
+        behavioralInsightsProvider
+            .overrideWith((ref) async => const BehavioralInsights(
+                  mood: FinancialMood.balanced,
+                  worthItPercentage: 68,
+                  worthItCount: 8,
+                  previousMonthWorthItCount: 7,
+                  impulseeTrends: [],
+                  budgetTrends: [],
+                )),
         insightsSummaryProvider.overrideWith((ref) async => null),
         insightsCategoriesProvider.overrideWith((ref) async => const []),
         insightsMerchantsProvider.overrideWith((ref) async => const []),
+        dashboardInsightSummaryProvider.overrideWith(
+          (ref) async => const DashboardInsightSummary(
+            text: 'Your week is taking shape.',
+            tone: InsightFeedTone.caution,
+          ),
+        ),
         conscienceJourneyProvider.overrideWith(
           () => _StaticConscienceJourneyNotifier(journey),
         ),
@@ -2152,6 +2176,72 @@ void main() {
     expect(find.text('Shell nav').hitTestable(), findsNothing);
   });
 
+  testWidgets('notification sheet keeps its header sticky while scrolling',
+      (tester) async {
+    final alerts = List.generate(
+      12,
+      (index) => AppAlert(
+        id: 'scroll-alert-$index',
+        type: 'journey_badge',
+        title: 'Alert $index',
+        message: 'Sticky header scroll regression coverage',
+        isDismissed: false,
+        createdAt: DateTime(2026, 5, 7).add(Duration(minutes: index)),
+      ),
+    );
+
+    final container = ProviderContainer(
+      overrides: [
+        sharedPreferencesProvider.overrideWithValue(prefs),
+        budgetServiceProvider.overrideWithValue(_StaticBudgetService(const [])),
+        transactionServiceProvider
+            .overrideWithValue(_StaticTransactionService()),
+        behavioralInsightsProvider
+            .overrideWith((ref) async => const BehavioralInsights(
+                  mood: FinancialMood.balanced,
+                  worthItPercentage: 68,
+                  worthItCount: 8,
+                  previousMonthWorthItCount: 7,
+                  impulseeTrends: [],
+                  budgetTrends: [],
+                )),
+        insightsSummaryProvider.overrideWith((ref) async => null),
+        insightsCategoriesProvider.overrideWith((ref) async => const []),
+        insightsMerchantsProvider.overrideWith((ref) async => const []),
+        alertsProvider.overrideWith((ref) async => alerts),
+        localAlertsProvider.overrideWith(
+          (ref) => _LocalAlertsTestNotifier(const []),
+        ),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    await tester.pumpWidget(_buildApp(container));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('Notifications').hitTestable().first);
+    await tester.pumpAndSettle();
+
+    final headerFinder =
+        find.byKey(const ValueKey('notifications-sheet-sticky-header'));
+    expect(headerFinder, findsOneWidget);
+    final sheetFinder = find.byType(BottomSheet);
+    expect(sheetFinder, findsOneWidget);
+    final initialHeaderOffset =
+        tester.getTopLeft(headerFinder).dy - tester.getTopLeft(sheetFinder).dy;
+
+    await tester.fling(
+      find.byType(CustomScrollView).last,
+      const Offset(0, -900),
+      1800,
+    );
+    await tester.pumpAndSettle();
+
+    final scrolledHeaderOffset =
+        tester.getTopLeft(headerFinder).dy - tester.getTopLeft(sheetFinder).dy;
+    expect((scrolledHeaderOffset - initialHeaderOffset).abs(), lessThan(4));
+  });
+
   testWidgets(
       'notification sheet contains long notification copy within the sheet',
       (tester) async {
@@ -2237,7 +2327,8 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('View level'));
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 700));
 
     expect(find.text('Continue your journey'), findsOneWidget);
   });

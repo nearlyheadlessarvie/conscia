@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/constants/app_icons.dart';
 import '../../../core/constants/category_icons.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
@@ -211,13 +212,13 @@ class EditorialTransactionRow extends StatelessWidget {
                       if (data.isFamily)
                         _IconTag(
                           key: const ValueKey('family-transaction-badge'),
-                          icon: Icons.people_rounded,
+                          icon: AppIconKey.people,
                           color: colors.family,
                         ),
                       if (data.isRecurring)
                         _IconTag(
                           key: const ValueKey('recurring-transaction-badge'),
-                          icon: Icons.repeat_rounded,
+                          icon: AppIconKey.recurring,
                           color: colors.deepNavy,
                         ),
                       if (data.regretLevel != null)
@@ -255,20 +256,26 @@ class EditorialTransactionRow extends StatelessWidget {
 class _IconTag extends StatelessWidget {
   const _IconTag({super.key, required this.icon, required this.color});
 
-  final IconData icon;
+  final AppIconKey icon;
   final Color color;
 
   @override
   Widget build(BuildContext context) {
     return Container(
       margin: const EdgeInsets.only(left: 4),
-      width: 20,
-      height: 20,
+      width: 22,
+      height: 22,
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.13),
         borderRadius: BorderRadius.circular(999),
       ),
-      child: Icon(icon, size: 12, color: color),
+      child: Center(
+        child: AppIcons.icon(
+          icon,
+          color: color,
+          size: 12,
+        ),
+      ),
     );
   }
 }
@@ -290,16 +297,18 @@ class _RegretIconTag extends StatelessWidget {
 
     return Container(
       margin: const EdgeInsets.only(left: 4),
-      width: 20,
-      height: 20,
+      width: 22,
+      height: 22,
       decoration: BoxDecoration(
         color: presentation.backgroundColor,
         borderRadius: BorderRadius.circular(999),
       ),
-      child: Icon(
-        presentation.icon,
-        size: 12,
-        color: presentation.color,
+      child: Center(
+        child: AppIcons.icon(
+          presentation.iconKey,
+          color: presentation.color,
+          size: 10.5,
+        ),
       ),
     );
   }

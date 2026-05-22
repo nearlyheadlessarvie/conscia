@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '../../../core/constants/app_icons.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../models/behavioral_insights.dart';
 import '../../../models/conscience_journey.dart';
@@ -31,6 +32,7 @@ class JourneyLedHomeSections extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final hasRealInsights = insightSummary != null || insightTrend != null;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Column(
@@ -40,7 +42,10 @@ class JourneyLedHomeSections extends StatelessWidget {
             title: 'This Week',
             subtitle: 'A gentle arc for building consistency.',
             child: _WeeklyArc(
-              quests: summary?.weeklyQuests ?? const [],
+              quests: _visibleWeeklyQuests(
+                summary?.weeklyQuests ?? const [],
+                hasRealInsights: hasRealInsights,
+              ),
               onQuestSelected: onQuestSelected,
             ),
           ),
@@ -63,6 +68,21 @@ class JourneyLedHomeSections extends StatelessWidget {
       ),
     );
   }
+}
+
+const _insightDependentQuestKeys = {
+  'review_regret_pattern',
+  'read_two_insights',
+};
+
+List<ConscienceQuest> _visibleWeeklyQuests(
+  List<ConscienceQuest> quests, {
+  required bool hasRealInsights,
+}) {
+  if (hasRealInsights) return quests;
+  return quests
+      .where((quest) => !_insightDependentQuestKeys.contains(quest.key))
+      .toList(growable: false);
 }
 
 class _JourneyHomeSection extends StatelessWidget {
@@ -247,15 +267,15 @@ class _QuestTile extends StatelessWidget {
             const SizedBox(height: 10),
             Row(
               children: [
-                Icon(
-                  key: ValueKey(
+                AppIcons.icon(
+                  quest.isCompleted
+                      ? AppIconKey.check
+                      : AppIconKey.questPending,
+                  keyId: ValueKey(
                     quest.isCompleted
                         ? 'journey-home-quest-complete-icon'
                         : 'journey-home-quest-pending-icon',
                   ),
-                  quest.isCompleted
-                      ? Icons.check_circle_rounded
-                      : Icons.radio_button_unchecked_rounded,
                   color: quest.isCompleted ? colors.income : colors.mutedInk,
                   size: 18,
                 ),
@@ -324,7 +344,13 @@ class _InsightSummaryCard extends StatelessWidget {
                     color: color.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(15),
                   ),
-                  child: Icon(_insightToneIcon(tone), color: color, size: 24),
+                  child: Center(
+                    child: AppIcons.icon(
+                      _insightToneIcon(tone),
+                      color: color,
+                      size: 20,
+                    ),
+                  ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -361,9 +387,9 @@ class _InsightSummaryCard extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 8),
-                Icon(
-                  key: const ValueKey('journey-home-insight-chevron'),
-                  Icons.chevron_right_rounded,
+                AppIcons.icon(
+                  AppIconKey.chevronRight,
+                  keyId: const ValueKey('journey-home-insight-chevron'),
                   color: colors.mutedInk,
                   size: 22,
                 ),
@@ -582,12 +608,12 @@ Color _insightToneBackground(AppColors colors, InsightFeedTone tone) {
   };
 }
 
-IconData _insightToneIcon(InsightFeedTone tone) {
+AppIconKey _insightToneIcon(InsightFeedTone tone) {
   return switch (tone) {
-    InsightFeedTone.positive => Icons.arrow_upward_rounded,
-    InsightFeedTone.caution => Icons.flag_rounded,
-    InsightFeedTone.urgent => Icons.priority_high_rounded,
-    InsightFeedTone.neutral => Icons.auto_graph_rounded,
+    InsightFeedTone.positive => AppIconKey.arrowUp,
+    InsightFeedTone.caution => AppIconKey.flag,
+    InsightFeedTone.urgent => AppIconKey.error,
+    InsightFeedTone.neutral => AppIconKey.insightTrend,
   };
 }
 

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../../core/constants/app_icons.dart';
 import '../../core/errors/app_error.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_layout.dart';
@@ -10,6 +11,7 @@ import '../../providers/user_provider.dart';
 import '../../services/user_service.dart';
 import '../../widgets/conscia_app_bar.dart';
 import '../../widgets/conscia_bottom_sheet.dart';
+import '../../widgets/editorial_section_header.dart';
 import '../../widgets/floating_label_text_field.dart';
 import '../../widgets/single_select_list.dart';
 
@@ -238,7 +240,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                           padding: const EdgeInsets.fromLTRB(20, 22, 20, 112),
                           sliver: SliverList.list(
                             children: [
-                              const _ProfileSectionLabel(
+                              const EditorialSectionHeader(
                                 title: 'Personal details',
                                 subtitle:
                                     'The name and account identity Conscia uses.',
@@ -261,7 +263,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                                 onSubmitted: (_) => _save(),
                               ),
                               const SizedBox(height: 24),
-                              const _ProfileSectionLabel(
+                              const EditorialSectionHeader(
                                 title: 'Money profile',
                                 subtitle:
                                     'Keep guidance tuned to your real-world context.',
@@ -516,12 +518,12 @@ class _ProfileEditorialHero extends StatelessWidget {
             children: [
               _ProfileHeroIdentityPill(
                 key: const ValueKey('profile-hero-display-name-pill'),
-                icon: Icons.person_rounded,
+                icon: AppIconKey.person,
                 label: displayName,
               ),
               _ProfileHeroIdentityPill(
                 key: const ValueKey('profile-hero-email-pill'),
-                icon: Icons.alternate_email_rounded,
+                icon: AppIconKey.email,
                 label: email,
               ),
             ],
@@ -539,7 +541,7 @@ class _ProfileHeroIdentityPill extends StatelessWidget {
     required this.label,
   });
 
-  final IconData icon;
+  final AppIconKey icon;
   final String label;
 
   @override
@@ -560,7 +562,11 @@ class _ProfileHeroIdentityPill extends StatelessWidget {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(icon, size: 15, color: colors.deepNavy),
+              AppIcons.icon(
+                icon,
+                size: 15,
+                color: colors.deepNavy,
+              ),
               const SizedBox(width: 7),
               Flexible(
                 child: Text(
@@ -605,44 +611,6 @@ class _ProfilePhotoBlock extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-}
-
-class _ProfileSectionLabel extends StatelessWidget {
-  const _ProfileSectionLabel({
-    required this.title,
-    required this.subtitle,
-  });
-
-  final String title;
-  final String subtitle;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).appColors;
-    final textTheme = Theme.of(context).textTheme;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          title.toUpperCase(),
-          style: textTheme.labelSmall?.copyWith(
-            color: colors.mutedInk,
-            fontWeight: FontWeight.w800,
-            letterSpacing: 0.9,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          subtitle,
-          style: textTheme.bodySmall?.copyWith(
-            color: colors.mutedInk,
-            height: 1.25,
-          ),
-        ),
-      ],
     );
   }
 }
@@ -698,8 +666,8 @@ class _ProfilePhoto extends StatelessWidget {
                   ),
                   child: Padding(
                     padding: const EdgeInsets.all(6),
-                    child: Icon(
-                      Icons.camera_alt_rounded,
+                    child: AppIcons.icon(
+                      AppIconKey.camera,
                       size: 15,
                       color: colors.deepNavy,
                     ),
@@ -770,8 +738,8 @@ class _ProfileSelectField extends StatelessWidget {
                   ],
                 ),
               ),
-              Icon(
-                Icons.chevron_right_rounded,
+              AppIcons.icon(
+                AppIconKey.chevronRight,
                 size: 22,
                 color: colors.deepNavy.withValues(alpha: 0.55),
               ),

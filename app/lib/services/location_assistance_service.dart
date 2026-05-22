@@ -9,7 +9,12 @@ import '../core/constants/api_constants.dart';
 import '../providers/usage_provider.dart';
 
 abstract class LocationAssistanceService {
-  Future<bool> requestPermission();
+  Future<bool> isLocationServiceEnabled() async => true;
+  Future<bool> requestPermission() async => false;
+  Future<LocationPermissionStatus> checkPermissionStatus() async =>
+      LocationPermissionStatus.denied;
+  Future<bool> openAppSettings() async => false;
+  Future<bool> openLocationSettings() async => false;
 
   Future<void> refreshLocationHint() async {}
 
@@ -68,6 +73,11 @@ class GeolocatorLocationGateway implements LocationGateway {
     );
     return LocationCoordinate(position.latitude, position.longitude);
   }
+
+  Future<bool> openAppSettings() => geolocator.Geolocator.openAppSettings();
+
+  Future<bool> openLocationSettings() =>
+      geolocator.Geolocator.openLocationSettings();
 
   LocationPermissionStatus _mapPermission(
     geolocator.LocationPermission permission,
@@ -171,6 +181,22 @@ class LocalLocationAssistanceService implements LocationAssistanceService {
   final List<LocalMerchantLocation> merchantLocations;
   final SharedPreferences? prefs;
   final LocationGateway locationGateway;
+
+  @override
+  Future<bool> isLocationServiceEnabled() =>
+      locationGateway.isLocationServiceEnabled();
+
+  @override
+  Future<LocationPermissionStatus> checkPermissionStatus() async {
+    return locationGateway.checkPermission();
+  }
+
+  @override
+  Future<bool> openAppSettings() => geolocator.Geolocator.openAppSettings();
+
+  @override
+  Future<bool> openLocationSettings() =>
+      geolocator.Geolocator.openLocationSettings();
 
   @override
   Future<bool> requestPermission() async {

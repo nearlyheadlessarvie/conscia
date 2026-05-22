@@ -6,11 +6,15 @@ class SubscriptionStatus {
   final String tier;
   final bool isPremium;
   final DateTime? expiresAt;
+  final bool isLifetime;
+  final String source;
 
   const SubscriptionStatus({
     required this.tier,
     required this.isPremium,
     this.expiresAt,
+    this.isLifetime = false,
+    this.source = 'none',
   });
 
   factory SubscriptionStatus.fromJson(Map<String, dynamic> json) {
@@ -20,6 +24,8 @@ class SubscriptionStatus {
       expiresAt: json['expiresAt'] != null
           ? DateTime.parse(json['expiresAt'] as String)
           : null,
+      isLifetime: json['isLifetime'] as bool? ?? false,
+      source: json['source'] as String? ?? 'none',
     );
   }
 }

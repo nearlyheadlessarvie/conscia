@@ -1,4 +1,5 @@
 import 'package:conscia_app/core/theme/app_theme.dart';
+import 'package:conscia_app/core/constants/app_icons.dart';
 import 'package:conscia_app/models/behavioral_insights.dart';
 import 'package:conscia_app/models/conscience_journey.dart';
 import 'package:conscia_app/models/insight_feed_item.dart';
@@ -32,14 +33,14 @@ void main() {
       (tester) async {
     const presentation = JourneyHomePresentation(
       todayAction: JourneyHomeAction(
-        icon: Icons.auto_stories_rounded,
+        icon: AppIconKey.aiReflect,
         title: 'Separate today action',
         description: 'Today copy stays outside the pattern assertions.',
         ctaLabel: 'Continue journey',
       ),
       patterns: [
         JourneyHomePatternSignal(
-          icon: Icons.local_fire_department_rounded,
+          icon: AppIconKey.fire,
           title: 'Momentum is forming',
           description: 'Three mindful days are starting to look like a rhythm.',
           tone: JourneyHomePatternTone.positive,
@@ -115,7 +116,7 @@ void main() {
       summary: summary,
       presentation: const JourneyHomePresentation(
         todayAction: JourneyHomeAction(
-          icon: Icons.auto_stories_rounded,
+          icon: AppIconKey.aiReflect,
           title: 'Separate today action',
           description: 'Today action copy stays outside the weekly assertions.',
           ctaLabel: 'Continue journey',
@@ -203,7 +204,10 @@ void main() {
 
     await tester.pumpWidget(_buildSubject(
       summary: summary,
-      insightSummary: null,
+      insightSummary: const DashboardInsightSummary(
+        text: 'Dining is above your recent 3-month pace.',
+        tone: InsightFeedTone.caution,
+      ),
       insightTrend: null,
       onQuestSelected: (quest) => selectedQuest = quest,
     ));
@@ -212,6 +216,70 @@ void main() {
     await tester.pump();
 
     expect(selectedQuest?.key, 'review_regret_pattern');
+  });
+
+  testWidgets(
+      'Weekly arc hides insight-dependent quests until insights exist',
+      (tester) async {
+    final summary = _summary(
+      weeklyQuests: const [
+        ConscienceQuest(
+          key: 'review_regret_pattern',
+          title: 'Review insights',
+          description: 'Open signals that explain your recent patterns.',
+          progress: 0,
+          target: 1,
+          xpReward: 10,
+          isCompleted: false,
+        ),
+        ConscienceQuest(
+          key: 'create_budget_guardrail',
+          title: 'Create 1 budget guardrail',
+          description: 'Turn one nudge into a monthly cap.',
+          progress: 0,
+          target: 1,
+          xpReward: 10,
+          isCompleted: false,
+        ),
+      ],
+    );
+
+    await tester.pumpWidget(_buildSubject(
+      summary: summary,
+      insightSummary: null,
+      insightTrend: null,
+    ));
+
+    expect(find.text('Review insights'), findsNothing);
+    expect(find.text('Create 1 budget guardrail'), findsOneWidget);
+  });
+
+  testWidgets('Weekly arc keeps insight-dependent quests once insights exist',
+      (tester) async {
+    final summary = _summary(
+      weeklyQuests: const [
+        ConscienceQuest(
+          key: 'review_regret_pattern',
+          title: 'Review insights',
+          description: 'Open signals that explain your recent patterns.',
+          progress: 0,
+          target: 1,
+          xpReward: 10,
+          isCompleted: false,
+        ),
+      ],
+    );
+
+    await tester.pumpWidget(_buildSubject(
+      summary: summary,
+      insightSummary: const DashboardInsightSummary(
+        text: 'Dining is above your recent 3-month pace.',
+        tone: InsightFeedTone.caution,
+      ),
+      insightTrend: null,
+    ));
+
+    expect(find.text('Review insights'), findsOneWidget);
   });
 
   testWidgets('Weekly quest cards distinguish complete and outstanding states',
@@ -255,14 +323,14 @@ void main() {
       (tester) async {
     const presentation = JourneyHomePresentation(
       todayAction: JourneyHomeAction(
-        icon: Icons.auto_stories_rounded,
+        icon: AppIconKey.aiReflect,
         title: 'Separate today action',
         description: 'Today copy stays outside typography assertions.',
         ctaLabel: 'Continue journey',
       ),
       patterns: [
         JourneyHomePatternSignal(
-          icon: Icons.local_fire_department_rounded,
+          icon: AppIconKey.fire,
           title: 'Momentum is forming',
           description: 'Three mindful days are starting to look like a rhythm.',
           tone: JourneyHomePatternTone.positive,

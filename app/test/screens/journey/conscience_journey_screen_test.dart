@@ -40,6 +40,14 @@ void main() {
     expect(find.text('???'), findsOneWidget);
     expect(find.text('6-day streak'), findsOneWidget);
     expect(find.text('MASCOT MOMENT'), findsNothing);
+    expect(
+      find.byKey(const ValueKey('journey-level-art-budget_guardian')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('journey-badge-art-first_reflection')),
+      findsOneWidget,
+    );
   });
 
   testWidgets('renders the iOS-forward sticky journey header', (tester) async {
@@ -98,7 +106,11 @@ class _FakeSecureStorage extends FlutterSecureStorage {
 
 class _TestAuthNotifier extends AuthNotifier {
   _TestAuthNotifier(AuthState initialState)
-      : super(_FakeAuthService(), _FakeSecureStorage()) {
+      : super(
+          _FakeAuthService(),
+          _FakeSecureStorage(),
+          autoRestoreSession: false,
+        ) {
     state = initialState;
   }
 }

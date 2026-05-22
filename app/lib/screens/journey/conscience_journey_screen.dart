@@ -1,14 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/constants/app_icons.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_layout.dart';
 import '../../models/conscience_journey.dart';
 import '../../providers/conscience_journey_provider.dart';
-import '../../widgets/conscia_glyph.dart';
 import '../../widgets/editorial_sticky_header.dart';
 import '../../widgets/screen_section.dart';
 import '../../widgets/feed_card.dart';
+import 'journey_artwork.dart';
 
 class ConscienceJourneyScreen extends ConsumerStatefulWidget {
   const ConscienceJourneyScreen({super.key});
@@ -101,7 +102,7 @@ class _ConscienceJourneyScreenState
       physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.fromLTRB(20, 96, 20, 28),
       child: const _JourneyMessageCard(
-        icon: Icons.auto_awesome_rounded,
+        icon: AppIconKey.sparkleGuidance,
         title: 'Journey is taking a breather',
         body: 'We could not load your achievements just now.',
       ),
@@ -208,8 +209,11 @@ class _AchievementsSection extends StatelessWidget {
                 fontWeight: FontWeight.w700,
               ),
             ),
-            Icon(Icons.chevron_right_rounded,
-                size: 16, color: appColors.mutedInk),
+            AppIcons.icon(
+              AppIconKey.chevronRight,
+              color: appColors.mutedInk,
+              size: 16,
+            ),
           ],
         ),
       ),
@@ -271,11 +275,13 @@ class _JourneyHeroBleed extends StatelessWidget {
               ],
             ),
             child: Center(
-              child: ConsciaGlyph.level(
-                summary.currentLevel.key,
-                color: colors.deepNavy,
-                size: 42,
-                strokeWidth: 3,
+              child: JourneyLevelArt(
+                levelKey: summary.currentLevel.key,
+                width: 42,
+                height: 42,
+                fallbackColor: colors.deepNavy,
+                tintColor: colors.deepNavy.withValues(alpha: 0.9),
+                borderRadius: BorderRadius.circular(16),
               ),
             ),
           ),
@@ -318,10 +324,10 @@ class _JourneyHeroBleed extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(
-                Icons.local_fire_department_rounded,
-                size: 15,
+              AppIcons.icon(
+                AppIconKey.fire,
                 color: colors.deepNavy.withValues(alpha: 0.7),
+                size: 15,
               ),
               const SizedBox(width: 5),
               Text(
@@ -382,11 +388,16 @@ class _QuestCard extends StatelessWidget {
           children: [
             _IconBadge(
               glyph: quest.isCompleted
-                  ? Icon(Icons.check_rounded, color: iconColor, size: 22)
-                  : ConsciaGlyph.quest(
-                      quest.key,
+                  ? AppIcons.icon(
+                      AppIconKey.check,
                       color: iconColor,
                       size: 22,
+                    )
+                  : JourneyQuestArt(
+                      questKey: quest.key,
+                      size: 22,
+                      fallbackColor: iconColor,
+                      tintColor: appColors.deepNavy.withValues(alpha: 0.88),
                     ),
               color: iconColor,
             ),
@@ -459,7 +470,7 @@ class _BadgeRow extends StatelessWidget {
   Widget build(BuildContext context) {
     if (badges.isEmpty) {
       return const _JourneyMessageCard(
-        icon: Icons.workspace_premium_rounded,
+        icon: AppIconKey.premium,
         title: 'No badges yet',
         body: 'A first reflection or pre-purchase check will start the shelf.',
       );
@@ -507,13 +518,15 @@ class _BadgeTile extends StatelessWidget {
                   : null,
             ),
             child: Center(
-              child: ConsciaGlyph.milestone(
-                badge.key,
-                unlocked: badge.isUnlocked,
-                color: badge.isUnlocked
-                    ? Theme.of(context).appColors.family
-                    : colors.outline,
+              child: JourneyBadgeArt(
+                badgeKey: badge.key,
                 size: 26,
+                unlocked: badge.isUnlocked,
+                fallbackColor:
+                    badge.isUnlocked ? Theme.of(context).appColors.family : colors.outline,
+                tintColor: badge.isUnlocked
+                    ? Theme.of(context).appColors.family.withValues(alpha: 0.92)
+                    : colors.outline.withValues(alpha: 0.8),
               ),
             ),
           ),
@@ -657,11 +670,14 @@ class _AchievementSheetRow extends StatelessWidget {
                   : null,
             ),
             child: Center(
-              child: ConsciaGlyph.milestone(
-                badge.key,
-                unlocked: badge.isUnlocked,
-                color: iconColor,
+              child: JourneyBadgeArt(
+                badgeKey: badge.key,
                 size: 20,
+                unlocked: badge.isUnlocked,
+                fallbackColor: iconColor,
+                tintColor: badge.isUnlocked
+                    ? appColors.family.withValues(alpha: 0.92)
+                    : colors.outline.withValues(alpha: 0.8),
               ),
             ),
           ),
@@ -754,7 +770,7 @@ class _JourneyMessageCard extends StatelessWidget {
     required this.body,
   });
 
-  final IconData icon;
+  final AppIconKey icon;
   final String title;
   final String body;
 
@@ -767,7 +783,7 @@ class _JourneyMessageCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, color: colors.primary),
+          AppIcons.icon(icon, color: colors.primary, size: 24),
           const SizedBox(height: 12),
           Text(
             title,

@@ -5,6 +5,7 @@ import 'package:conscia_app/widgets/conscia_glyph.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hugeicons/hugeicons.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:conscia_app/providers/usage_provider.dart';
@@ -121,7 +122,18 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.byIcon(Icons.close_rounded), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find
+            .ancestor(
+              of: find.text('Gift'),
+              matching: find.byType(AnimatedContainer),
+            )
+            .first,
+        matching: find.byType(HugeIcon),
+      ),
+      findsNWidgets(2),
+    );
     expect(
       tester.getTopLeft(find.text('Gift')).dy,
       lessThanOrEqualTo(tester.getTopLeft(find.text('Dining')).dy),

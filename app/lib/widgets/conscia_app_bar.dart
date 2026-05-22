@@ -76,8 +76,8 @@ class ConsciaAppBar extends StatelessWidget implements PreferredSizeWidget {
                 tooltip: 'Back',
                 visualDensity: VisualDensity.compact,
                 onPressed: onBack ?? () => Navigator.of(context).maybePop(),
-                icon: Icon(
-                  AppIcons.chevronLeft,
+                icon: AppIcons.icon(
+                  AppIconKey.chevronLeft,
                   size: 28,
                   color: colors.deepNavy,
                 ),

@@ -4,10 +4,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/constants/api_constants.dart';
+import '../../../core/constants/app_icons.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../providers/iap_provider.dart';
 import '../../../providers/subscription_provider.dart';
 import '../../../services/iap_service.dart';
+import '../../../services/subscription_service.dart';
 
 class SubscriptionSheet {
   SubscriptionSheet._();
@@ -18,6 +20,10 @@ class SubscriptionSheet {
       useRootNavigator: true,
       isScrollControlled: true,
       useSafeArea: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
+      ),
+      clipBehavior: Clip.antiAlias,
       builder: (_) => DraggableScrollableSheet(
         initialChildSize: 0.85,
         minChildSize: 0.5,
@@ -114,13 +120,12 @@ class _SubscriptionSheetBodyState
     );
     final subscription = ref.watch(subscriptionProvider).valueOrNull;
     final isCurrentPremium = subscription?.isPremium ?? false;
-    final expiresAt = subscription?.expiresAt;
 
     return ListView(
       controller: widget.scrollController,
       padding: EdgeInsets.zero,
       children: [
-        _SubscriptionHero(isPremium: isCurrentPremium, expiresAt: expiresAt),
+        _SubscriptionHero(status: subscription, isPremium: isCurrentPremium),
         Padding(
           padding: const EdgeInsets.fromLTRB(20, 24, 20, 28),
           child: Column(
@@ -376,10 +381,10 @@ class _SubscriptionSheetBodyState
 }
 
 class _SubscriptionHero extends StatelessWidget {
-  const _SubscriptionHero({required this.isPremium, required this.expiresAt});
+  const _SubscriptionHero({required this.status, required this.isPremium});
 
   final bool isPremium;
-  final DateTime? expiresAt;
+  final SubscriptionStatus? status;
 
   @override
   Widget build(BuildContext context) {
@@ -404,14 +409,19 @@ class _SubscriptionHero extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Container(
-            width: 56,
-            height: 56,
+            width: 60,
+            height: 60,
             decoration: BoxDecoration(
               color: colors.amber.withValues(alpha: 0.18),
               shape: BoxShape.circle,
             ),
-            child: Icon(Icons.workspace_premium_rounded,
-                color: colors.amber, size: 28),
+            child: Center(
+              child: AppIcons.icon(
+                AppIconKey.premiumMedal,
+                color: colors.amber,
+                size: 24,
+              ),
+            ),
           ),
           const SizedBox(height: 14),
           Text(
@@ -433,9 +443,7 @@ class _SubscriptionHero extends StatelessWidget {
                 border: Border.all(color: colors.amber.withValues(alpha: 0.4)),
               ),
               child: Text(
-                expiresAt != null
-                    ? 'Active · renews ${_fmt(expiresAt!)}'
-                    : 'Active',
+                _statusLabel(),
                 style: textTheme.labelSmall?.copyWith(
                   color: colors.amber,
                   fontWeight: FontWeight.w700,
@@ -455,6 +463,18 @@ class _SubscriptionHero extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  String _statusLabel() {
+    if (status?.isLifetime == true || status?.source == 'lifetime') {
+      return 'Lifetime access';
+    }
+
+    if (status?.expiresAt != null) {
+      return 'Active · renews ${_fmt(status!.expiresAt!)}';
+    }
+
+    return 'Active';
   }
 
   String _fmt(DateTime d) {

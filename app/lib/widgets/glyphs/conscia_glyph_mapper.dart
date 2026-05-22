@@ -73,7 +73,8 @@ class ConsciaGlyphMapper {
       'budget-rescuer' => ConsciaGlyphKind.shield,
       'regret-pattern-spotted' || 'reflection-streak' => ConsciaGlyphKind.signal,
       'worth-it-week' => ConsciaGlyphKind.trophy,
-      'family-founder' || 'family-planner' => ConsciaGlyphKind.family,
+      'family-founder' => ConsciaGlyphKind.family,
+      'family-planner' => ConsciaGlyphKind.approval,
       'insight-reader' || 'deep-thinker' => ConsciaGlyphKind.insight,
       _ => ConsciaGlyphKind.trophy,
     };

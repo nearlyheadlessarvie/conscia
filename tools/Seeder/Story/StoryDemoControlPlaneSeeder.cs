@@ -18,6 +18,7 @@ public static class StoryDemoControlPlaneSeeder
 
         var users = new UserRepository(dynamo);
         var subscriptions = new UserSubscriptionRepository(dynamo);
+        var entitlements = new UserEntitlementOverrideRepository(dynamo);
         var familySpaces = new FamilySpaceRepository(dynamo);
         var budgets = new BudgetRepository(dynamo);
 
@@ -30,6 +31,8 @@ public static class StoryDemoControlPlaneSeeder
             await users.AddIdentityAsync(identity, ct);
 
         await subscriptions.AddAsync(scenario.Subscription, ct);
+        foreach (var entitlement in scenario.EntitlementOverrides)
+            await entitlements.UpsertPremiumLifetimeAsync(entitlement, ct);
 
         var owner = scenario.FamilyMembers.First(member => member.UserId == scenario.User.Id);
         await familySpaces.CreateWithOwnerAsync(scenario.FamilySpace, owner, ct);
@@ -72,6 +75,8 @@ public static class StoryDemoControlPlaneSeeder
 
         if (!string.IsNullOrWhiteSpace(scenario.Subscription.OriginalTransactionId))
             keys.Add(Key(UserRepository.SubscriptionOriginalPk(scenario.Subscription.OriginalTransactionId), "SUBSCRIPTION"));
+        foreach (var entitlement in scenario.EntitlementOverrides)
+            keys.Add(Key(UserRepository.UserPk(entitlement.UserId), $"ENTITLEMENT#{entitlement.EntitlementKey}"));
 
         keys.AddRange(await QueryKeysAsync(dynamo, FamilySpaceRepository.FamilyPk(scenario.FamilySpace.Id), ct));
 

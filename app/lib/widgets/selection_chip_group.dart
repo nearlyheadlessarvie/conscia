@@ -39,10 +39,11 @@ class SelectionChipGroup extends StatelessWidget {
           avatar: avatarBuilder?.call(option, selected),
           onTap: () => onSelected(option),
           trailing: showTrailingCheck && selected
-              ? Icon(
-                  AppIcons.check,
-                  key: ValueKey('selection-chip-check-$option'),
+              ? AppIcons.icon(
+                  AppIconKey.check,
+                  keyId: ValueKey('selection-chip-check-$option'),
                   size: 16,
+                  color: Theme.of(context).appColors.deepNavy,
                 )
               : null,
         ),

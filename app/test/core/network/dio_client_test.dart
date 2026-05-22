@@ -100,7 +100,11 @@ class _TestAuthNotifier extends AuthNotifier {
   _TestAuthNotifier(
     AuthState initialState, {
     FlutterSecureStorage? storage,
-  }) : super(_FakeAuthService(), storage ?? _FakeSecureStorage()) {
+  }) : super(
+          _FakeAuthService(),
+          storage ?? _FakeSecureStorage(),
+          autoRestoreSession: false,
+        ) {
     state = initialState;
   }
 

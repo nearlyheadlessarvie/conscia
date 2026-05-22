@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/constants/app_icons.dart';
 import '../../../core/constants/conscience_journey.dart';
 import '../../../core/errors/app_error.dart';
 import '../../../core/utils/localized_number_input.dart';
@@ -281,7 +282,11 @@ class _BudgetFormSheetState extends ConsumerState<BudgetFormSheet> {
                 InlineNotice(
                   message: _errorText!,
                   tone: InlineNoticeTone.error,
-                  icon: const Icon(Icons.error_outline_rounded),
+                  icon: AppIcons.icon(
+                    AppIconKey.error,
+                    color: Theme.of(context).colorScheme.error,
+                    size: 20,
+                  ),
                 ),
                 const SizedBox(height: 12),
               ],

@@ -122,7 +122,7 @@ class LocalAlertsNotifier extends StateNotifier<List<AppAlert>> {
           type: 'journey_level_up',
           title: 'Level up: ${update.summary.currentLevel.title}',
           message:
-              'Your conscience journey reached a new level. The mascots noticed.',
+              'Your conscience journey reached a new level. A new milestone is ready.',
           priority: 75,
           actionLabel: 'View level',
           actionRoute: '/journey/level-up',

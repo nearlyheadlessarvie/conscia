@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
+import '../core/constants/app_icons.dart';
+
 class EmptyState extends StatelessWidget {
-  final IconData icon;
+  final AppIconKey icon;
   final String title;
   final String subtitle;
   final String? actionLabel;
@@ -32,7 +34,12 @@ class EmptyState extends StatelessWidget {
             if (illustration != null)
               illustration!
             else
-              Icon(icon, size: 64, color: colors.outlineVariant),
+              AppIcons.icon(
+                icon,
+                color: colors.outlineVariant,
+                size: 64,
+                strokeWidth: 1.7,
+              ),
             const SizedBox(height: 16),
             Text(
               title,

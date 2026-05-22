@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import 'package:conscia_app/core/constants/app_icons.dart';
 import 'package:conscia_app/core/theme/app_colors.dart';
 import 'package:conscia_app/providers/user_provider.dart';
 import 'package:conscia_app/widgets/currency_picker_sheet.dart';
@@ -123,13 +124,13 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
           child: OnboardingActionList(
             children: [
               _SetupActionRow(
-                icon: Icons.monetization_on_outlined,
+                icon: AppIconKey.currency,
                 label: 'Currency',
                 value: _currencyCode,
                 onTap: _openCurrencyPicker,
               ),
               _SetupActionRow(
-                icon: Icons.language,
+                icon: AppIconKey.language,
                 label: 'Region Format',
                 value: _localeName(),
                 onTap: _openLocalePicker,
@@ -141,7 +142,7 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
           message:
               'Changes how numbers and dates are shown. App language stays in English.',
           tone: InlineNoticeTone.info,
-          icon: Icon(Icons.info_outline_rounded),
+          icon: _SetupInfoIcon(),
         ),
         const SizedBox(height: 22),
         ScreenSection(
@@ -171,7 +172,7 @@ class _SetupActionRow extends StatelessWidget {
     required this.onTap,
   });
 
-  final IconData icon;
+  final AppIconKey icon;
   final String label;
   final String value;
   final VoidCallback onTap;
@@ -195,7 +196,13 @@ class _SetupActionRow extends StatelessWidget {
                 color: colors.navySoft.withValues(alpha: 0.68),
                 borderRadius: BorderRadius.circular(16),
               ),
-              child: Icon(icon, size: 20, color: colors.deepNavy),
+              child: Center(
+                child: AppIcons.icon(
+                  icon,
+                  size: 20,
+                  color: colors.deepNavy,
+                ),
+              ),
             ),
             const SizedBox(width: 14),
             Expanded(
@@ -222,14 +229,27 @@ class _SetupActionRow extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 12),
-            Icon(
-              Icons.chevron_right_rounded,
+            AppIcons.icon(
+              AppIconKey.chevronRight,
               size: 20,
               color: colors.deepNavy.withValues(alpha: 0.5),
             ),
           ],
         ),
       ),
+    );
+  }
+}
+
+class _SetupInfoIcon extends StatelessWidget {
+  const _SetupInfoIcon();
+
+  @override
+  Widget build(BuildContext context) {
+    return AppIcons.icon(
+      AppIconKey.info,
+      color: Theme.of(context).appColors.angelAccent,
+      size: 16,
     );
   }
 }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/constants/app_icons.dart';
 import '../../../core/theme/app_layout.dart';
 import '../../../core/theme/app_colors.dart';
 
@@ -13,7 +14,7 @@ class AuthIntroPanel extends StatelessWidget {
 
   final String title;
   final String subtitle;
-  final IconData icon;
+  final AppIconKey icon;
 
   @override
   Widget build(BuildContext context) {
@@ -70,7 +71,13 @@ class AuthIntroPanel extends StatelessWidget {
                     color: colors.border.withValues(alpha: 0.58),
                   ),
                 ),
-                child: Icon(icon, color: colors.deepNavy, size: 23),
+                child: Center(
+                  child: AppIcons.icon(
+                    icon,
+                    color: colors.deepNavy,
+                    size: 23,
+                  ),
+                ),
               ),
               const SizedBox(width: 16),
               Expanded(

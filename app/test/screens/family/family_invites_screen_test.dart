@@ -37,7 +37,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Invites'), findsWidgets);
-    expect(find.text('INVITES YOU RECEIVED'), findsOneWidget);
+    expect(find.text('Invites you received'), findsOneWidget);
     expect(find.text('Santos Household'), findsOneWidget);
     expect(find.text('Contributor'), findsOneWidget);
     expect(find.widgetWithText(FilledButton, 'Accept'), findsOneWidget);
@@ -68,7 +68,7 @@ void main() {
 
     await tester.pumpAndSettle();
 
-    expect(find.text('INVITE A FAMILY MEMBER'), findsOneWidget);
+    expect(find.text('Invite a family member'), findsOneWidget);
     expect(find.text('Email address'), findsOneWidget);
     expect(find.text('Contributor'), findsOneWidget);
     expect(find.text('Viewer'), findsOneWidget);
@@ -144,7 +144,7 @@ void main() {
 
     await tester.pumpAndSettle();
 
-    expect(find.text('SENT'), findsOneWidget);
+    expect(find.text('Sent'), findsOneWidget);
     expect(find.text('wife@example.com'), findsOneWidget);
     expect(find.text('Contributor · Expires May 15'), findsOneWidget);
     expect(find.widgetWithText(TextButton, 'Cancel'), findsNothing);

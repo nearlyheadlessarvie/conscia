@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../core/constants/app_icons.dart';
+
 class AppleButton extends StatelessWidget {
   final bool isLoading;
   final VoidCallback? onPressed;
@@ -24,7 +26,11 @@ class AppleButton extends StatelessWidget {
             borderRadius: BorderRadius.circular(24),
           ),
         ),
-        icon: const Icon(Icons.apple, size: 24),
+        icon: AppIcons.icon(
+          AppIconKey.appleBrand,
+          color: Colors.white,
+          size: 24,
+        ),
         label: Text(buttonText),
         onPressed: isLoading ? null : onPressed,
       ),

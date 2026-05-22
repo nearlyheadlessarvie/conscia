@@ -11,6 +11,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 class _FakeLocationAssistanceService extends LocationAssistanceService {
   _FakeLocationAssistanceService({
     required this.permissionGranted,
+    this.locationServiceEnabled = true,
+    this.permissionStatus = LocationPermissionStatus.denied,
     this.suggestions = const (
       nearbyMerchants: ['Blue Bottle Coffee'],
       likelyCategories: ['Coffee'],
@@ -19,14 +21,37 @@ class _FakeLocationAssistanceService extends LocationAssistanceService {
   });
 
   final bool permissionGranted;
+  final bool locationServiceEnabled;
+  final LocationPermissionStatus permissionStatus;
   final ({
     List<String> nearbyMerchants,
     List<String> likelyCategories
   }) suggestions;
   final Map<String, String> merchantCategories;
+  int openAppSettingsCalls = 0;
+  int openLocationSettingsCalls = 0;
+
+  @override
+  Future<bool> isLocationServiceEnabled() async => locationServiceEnabled;
 
   @override
   Future<bool> requestPermission() async => permissionGranted;
+
+  @override
+  Future<LocationPermissionStatus> checkPermissionStatus() async =>
+      permissionStatus;
+
+  @override
+  Future<bool> openAppSettings() async {
+    openAppSettingsCalls += 1;
+    return true;
+  }
+
+  @override
+  Future<bool> openLocationSettings() async {
+    openLocationSettingsCalls += 1;
+    return true;
+  }
 
   @override
   ({List<String> nearbyMerchants, List<String> likelyCategories})
@@ -66,6 +91,32 @@ class _FakeUserService extends UserService {
       hasCompletedOnboarding: true,
       locationSuggestionsEnabled: locationSuggestionsEnabled ?? false,
       aiPersonalityIntensity: aiPersonalityIntensity ?? 'balanced',
+    );
+  }
+}
+
+class _ThrowingUserService extends UserService {
+  _ThrowingUserService() : super(Dio());
+
+  @override
+  Future<UserProfile> updateProfile({
+    String? preferredCurrency,
+    String? locale,
+    String? displayName,
+    String? profilePictureKey,
+    String? photoUrl,
+    String? spendingPersonality,
+    String? incomeRange,
+    String? occupationType,
+    String? householdSize,
+    bool? hasCompletedOnboarding,
+    bool? locationSuggestionsEnabled,
+    String? aiPersonalityIntensity,
+  }) async {
+    throw DioException(
+      requestOptions: RequestOptions(path: '/profile'),
+      type: DioExceptionType.connectionError,
+      error: 'network down',
     );
   }
 }
@@ -217,6 +268,157 @@ void main() {
     expect(state.isEnabled, isFalse);
     expect(state.permissionDenied, isFalse);
     expect(state.shouldPromptOnFeatureOpen, isFalse);
+  });
+
+  test('settings enable redirects to app settings after denied forever',
+      () async {
+    SharedPreferences.setMockInitialValues({
+      'location_suggestions_enabled': false,
+      'location_suggestions_prompted': true,
+      'location_suggestions_permission_denied': true,
+    });
+    final prefs = await SharedPreferences.getInstance();
+    final service = _FakeLocationAssistanceService(
+      permissionGranted: false,
+      permissionStatus: LocationPermissionStatus.deniedForever,
+    );
+
+    final container = buildContainer(
+      prefs,
+      service: service,
+      userService: _FakeUserService(),
+    );
+    addTearDown(container.dispose);
+
+    final outcome = await container
+        .read(locationAssistanceProvider.notifier)
+        .enableFromSettings();
+
+    expect(outcome, LocationSettingsEnableOutcome.redirectedToSystemSettings);
+    expect(service.openAppSettingsCalls, 1);
+    expect(container.read(locationAssistanceProvider).isEnabled, isFalse);
+  });
+
+  test('settings enable redirects to location settings when device location is off',
+      () async {
+    SharedPreferences.setMockInitialValues({
+      'location_suggestions_enabled': false,
+      'location_suggestions_prompted': true,
+    });
+    final prefs = await SharedPreferences.getInstance();
+    final service = _FakeLocationAssistanceService(
+      permissionGranted: false,
+      locationServiceEnabled: false,
+    );
+
+    final container = buildContainer(
+      prefs,
+      service: service,
+      userService: _FakeUserService(),
+    );
+    addTearDown(container.dispose);
+
+    final outcome = await container
+        .read(locationAssistanceProvider.notifier)
+        .enableFromSettings();
+
+    expect(outcome, LocationSettingsEnableOutcome.redirectedToLocationSettings);
+    expect(service.openLocationSettingsCalls, 1);
+    expect(service.openAppSettingsCalls, 0);
+    expect(container.read(locationAssistanceProvider).isEnabled, isFalse);
+  });
+
+  test('pending settings enable completes after returning with location ready',
+      () async {
+    SharedPreferences.setMockInitialValues({
+      'location_suggestions_enabled': false,
+      'location_suggestions_prompted': true,
+    });
+    final prefs = await SharedPreferences.getInstance();
+
+    final firstContainer = buildContainer(
+      prefs,
+      service: _FakeLocationAssistanceService(
+        permissionGranted: false,
+        locationServiceEnabled: false,
+      ),
+      userService: _FakeUserService(),
+    );
+    addTearDown(firstContainer.dispose);
+
+    final firstOutcome = await firstContainer
+        .read(locationAssistanceProvider.notifier)
+        .enableFromSettings();
+    expect(firstOutcome,
+        LocationSettingsEnableOutcome.redirectedToLocationSettings);
+
+    final secondContainer = buildContainer(
+      prefs,
+      service: _FakeLocationAssistanceService(
+        permissionGranted: true,
+        locationServiceEnabled: true,
+        permissionStatus: LocationPermissionStatus.granted,
+      ),
+      userService: _FakeUserService(),
+    );
+    addTearDown(secondContainer.dispose);
+
+    await secondContainer
+        .read(locationAssistanceProvider.notifier)
+        .completePendingSettingsEnableIfPossible();
+
+    final state = secondContainer.read(locationAssistanceProvider);
+    expect(state.isEnabled, isTrue);
+    expect(state.permissionDenied, isFalse);
+  });
+
+  test('reconcile turns the feature off when OS permission is later revoked',
+      () async {
+    SharedPreferences.setMockInitialValues({
+      'location_suggestions_enabled': true,
+      'location_suggestions_prompted': true,
+    });
+    final prefs = await SharedPreferences.getInstance();
+
+    final container = buildContainer(
+      prefs,
+      service: _FakeLocationAssistanceService(
+        permissionGranted: false,
+        locationServiceEnabled: true,
+        permissionStatus: LocationPermissionStatus.deniedForever,
+      ),
+      userService: _FakeUserService(),
+    );
+    addTearDown(container.dispose);
+
+    await container
+        .read(locationAssistanceProvider.notifier)
+        .reconcileWithSystemState();
+
+    final state = container.read(locationAssistanceProvider);
+    expect(state.isEnabled, isFalse);
+    expect(state.permissionDenied, isTrue);
+  });
+
+  test('decline still marks prompt handled when profile sync fails', () async {
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+
+    final container = buildContainer(
+      prefs,
+      userService: _ThrowingUserService(),
+    );
+    addTearDown(container.dispose);
+
+    await container.read(locationAssistanceProvider.notifier).declinePrompt();
+
+    final rehydratedContainer = buildContainer(prefs);
+    addTearDown(rehydratedContainer.dispose);
+    final state = rehydratedContainer.read(locationAssistanceProvider);
+
+    expect(state.hasPrompted, isTrue);
+    expect(state.shouldPromptOnFeatureOpen, isFalse);
+    expect(state.isEnabled, isFalse);
   });
 
   test('shared suggestion provider exposes service suggestions', () async {

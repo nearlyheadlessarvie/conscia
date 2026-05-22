@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../core/constants/app_icons.dart';
 import 'floating_dock_nav.dart';
 
 class MainShell extends ConsumerStatefulWidget {
@@ -28,32 +27,22 @@ class _MainShellState extends ConsumerState<MainShell> {
     (
       path: '/',
       label: 'Home',
-      icon: AppIcons.home,
-      activeIcon: AppIcons.homeActive,
     ),
     (
       path: '/transactions',
       label: 'Transactions',
-      icon: AppIcons.transactions,
-      activeIcon: AppIcons.transactionsActive,
     ),
     (
       path: '/scan',
       label: 'Scan',
-      icon: AppIcons.scan,
-      activeIcon: AppIcons.scan,
     ),
     (
       path: '/assistant',
       label: 'Assistant',
-      icon: AppIcons.assistant,
-      activeIcon: AppIcons.assistantActive,
     ),
     (
       path: '/settings',
       label: 'Settings',
-      icon: AppIcons.settings,
-      activeIcon: AppIcons.settingsActive,
     ),
   ];
 

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/constants/app_icons.dart';
+
 enum BubbleType { devil, angel, neutral }
 
 class AiMessageBubble extends StatelessWidget {
@@ -57,14 +59,14 @@ class AiMessageBubble extends StatelessWidget {
     }
   }
 
-  IconData _icon() {
+  AppIconKey _icon() {
     switch (type) {
       case BubbleType.devil:
-        return Icons.local_fire_department;
+        return AppIconKey.fire;
       case BubbleType.angel:
-        return Icons.shield;
+        return AppIconKey.ownerAccess;
       case BubbleType.neutral:
-        return Icons.balance;
+        return AppIconKey.sparkleGuidance;
     }
   }
 
@@ -99,7 +101,7 @@ class AiMessageBubble extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(_icon(), size: 20, color: accent),
+              AppIcons.icon(_icon(), size: 20, color: accent),
               const SizedBox(width: 8),
               Text(
                 _label(),

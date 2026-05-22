@@ -199,6 +199,15 @@ Swagger UI is available at `http://localhost:5000/swagger` in development mode.
 | `bob@example.com` | `password123` | Free |
 | `carol@example.com` | `password123` | Premium |
 
+## Lifetime Premium Entitlements
+
+- Lifetime premium is granted by backend entitlement override records keyed by user ID, not by app-side allowlists.
+- `/api/subscriptions/status?v=1` reports `source = lifetime` and `isLifetime = true` when a lifetime override is active.
+- Admin authority stays server-side on `UserIdentity.Role`; the mobile app uses the normal signed-in session and the backend returns `403` for non-admin callers.
+- Admin operators can resolve a target user with `GET /api/admin/users/by-email?v=1`, then grant or revoke the override with `/api/admin/entitlements/premium-lifetime/{userId}?v=1`.
+- Reviewer or demo accounts can be provisioned with `POST /api/admin/reviewer-accounts?v=1` or through the in-app `Settings -> Admin entitlements` screen.
+- The `story-demo` seed now includes `story-admin@example.com` as an admin-capable operator account and `story-demo@example.com` with a backend-owned lifetime premium override so the app screen can be exercised locally.
+
 ---
 
 ## Docker Compose Services

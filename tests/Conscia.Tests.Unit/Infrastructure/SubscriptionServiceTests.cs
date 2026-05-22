@@ -1,5 +1,7 @@
 using Conscia.Application.Interfaces;
+using Conscia.Application.Models;
 using Conscia.Domain.Entities;
+using Conscia.Domain.Enums;
 using Conscia.Infrastructure.Services;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
@@ -8,6 +10,94 @@ namespace Conscia.Tests.Unit.Infrastructure;
 
 public class SubscriptionServiceTests
 {
+    [Fact]
+    public async Task GetEffectiveStatusAsync_ReturnsLifetimePremium_WhenOverrideExists()
+    {
+        var userId = Guid.Parse("10000000-0000-4000-8000-000000000001");
+        var subscriptions = new Mock<IUserSubscriptionRepository>();
+        subscriptions.Setup(r => r.GetLatestByUserAsync(userId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((UserSubscription?)null);
+
+        var overrides = new Mock<IUserEntitlementOverrideRepository>();
+        overrides.Setup(r => r.GetPremiumLifetimeAsync(userId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new UserEntitlementOverride
+            {
+                UserId = userId,
+                EntitlementKey = UserEntitlementOverride.PremiumLifetimeKey,
+                GrantedAt = DateTime.UtcNow
+            });
+
+        var service = new SubscriptionService(
+            subscriptions.Object,
+            overrides.Object,
+            NullLogger<SubscriptionService>.Instance,
+            new FakeAppleReceiptValidator(isConfigured: true),
+            new FakeGooglePlayValidator(isConfigured: true));
+
+        var status = await service.GetEffectiveStatusAsync(userId);
+
+        Assert.True(status.IsActive);
+        Assert.True(status.IsLifetime);
+        Assert.Equal("lifetime", status.Source);
+        Assert.Equal(SubscriptionTier.Premium, status.Tier);
+        Assert.Null(status.ExpiresAt);
+    }
+
+    [Fact]
+    public async Task GetEffectiveStatusAsync_ReturnsStorePremium_WhenActiveSubscriptionExists()
+    {
+        var userId = Guid.Parse("10000000-0000-4000-8000-000000000002");
+        var subscriptions = new Mock<IUserSubscriptionRepository>();
+        subscriptions.Setup(r => r.GetLatestByUserAsync(userId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new UserSubscription
+            {
+                Id = Guid.NewGuid(),
+                UserId = userId,
+                Tier = SubscriptionTier.Premium,
+                Platform = Platform.iOS,
+                ExpiresAt = DateTime.UtcNow.AddDays(30)
+            });
+
+        var service = new SubscriptionService(
+            subscriptions.Object,
+            Mock.Of<IUserEntitlementOverrideRepository>(),
+            NullLogger<SubscriptionService>.Instance,
+            new FakeAppleReceiptValidator(isConfigured: true),
+            new FakeGooglePlayValidator(isConfigured: true));
+
+        var status = await service.GetEffectiveStatusAsync(userId);
+
+        Assert.True(status.IsActive);
+        Assert.False(status.IsLifetime);
+        Assert.Equal("store", status.Source);
+        Assert.Equal(Platform.iOS, status.Platform);
+    }
+
+    [Fact]
+    public async Task IsPremiumAsync_ReturnsFalse_WhenNoOverrideAndSubscriptionIsInactive()
+    {
+        var userId = Guid.Parse("10000000-0000-4000-8000-000000000003");
+        var subscriptions = new Mock<IUserSubscriptionRepository>();
+        subscriptions.Setup(r => r.GetLatestByUserAsync(userId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new UserSubscription
+            {
+                Id = Guid.NewGuid(),
+                UserId = userId,
+                Tier = SubscriptionTier.Premium,
+                Platform = Platform.Android,
+                ExpiresAt = DateTime.UtcNow.AddDays(-1)
+            });
+
+        var service = new SubscriptionService(
+            subscriptions.Object,
+            Mock.Of<IUserEntitlementOverrideRepository>(),
+            NullLogger<SubscriptionService>.Instance,
+            new FakeAppleReceiptValidator(isConfigured: true),
+            new FakeGooglePlayValidator(isConfigured: true));
+
+        Assert.False(await service.IsPremiumAsync(userId));
+    }
+
     [Fact]
     public async Task VerifyiOSReceiptAsync_Throws_WhenAppleValidationIsNotConfigured()
     {
@@ -18,6 +108,7 @@ public class SubscriptionServiceTests
 
         var service = new SubscriptionService(
             subscriptions.Object,
+            Mock.Of<IUserEntitlementOverrideRepository>(),
             NullLogger<SubscriptionService>.Instance,
             new FakeAppleReceiptValidator(isConfigured: false),
             new FakeGooglePlayValidator(isConfigured: true));
@@ -41,6 +132,7 @@ public class SubscriptionServiceTests
 
         var service = new SubscriptionService(
             subscriptions.Object,
+            Mock.Of<IUserEntitlementOverrideRepository>(),
             NullLogger<SubscriptionService>.Instance,
             new FakeAppleReceiptValidator(isConfigured: true),
             new FakeGooglePlayValidator(isConfigured: false));

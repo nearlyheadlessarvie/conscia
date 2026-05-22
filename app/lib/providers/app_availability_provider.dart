@@ -79,6 +79,7 @@ class AppAvailabilityNotifier extends StateNotifier<AppAvailabilityState> {
   }
 
   static const autoRetryInterval = Duration(seconds: 10);
+  static const offlineConfirmationDelay = Duration(milliseconds: 350);
 
   final ConnectivityService _connectivityService;
   final ApiAvailabilityService _apiAvailabilityService;
@@ -87,12 +88,14 @@ class AppAvailabilityNotifier extends StateNotifier<AppAvailabilityState> {
   final bool refreshOnInit;
 
   Timer? _timer;
+  bool _foregrounded = true;
 
   Future<void> refresh() async {
+    if (!_foregrounded) return;
     state = state.copyWith(isLoading: true, errorMessage: null);
 
     final checkedAt = DateTime.now();
-    final hasConnection = await _connectivityService.hasNetworkConnection();
+    final hasConnection = await _confirmNetworkConnection();
     if (!hasConnection) {
       state = state.copyWith(
         issue: AvailabilityIssue.deviceOffline,
@@ -152,6 +155,31 @@ class AppAvailabilityNotifier extends StateNotifier<AppAvailabilityState> {
         errorMessage: null,
       );
     }
+  }
+
+  Future<bool> _confirmNetworkConnection() async {
+    final hasConnection = await _connectivityService.hasNetworkConnection();
+    if (hasConnection) {
+      return true;
+    }
+
+    await Future<void>.delayed(offlineConfirmationDelay);
+    return _connectivityService.hasNetworkConnection();
+  }
+
+  Future<void> setForegrounded(bool value) async {
+    if (_foregrounded == value) return;
+    _foregrounded = value;
+    if (!_foregrounded) {
+      _timer?.cancel();
+      _timer = null;
+      return;
+    }
+
+    if (autoRefresh && _timer == null) {
+      _timer = Timer.periodic(autoRetryInterval, (_) => refresh());
+    }
+    await refresh();
   }
 
   @override

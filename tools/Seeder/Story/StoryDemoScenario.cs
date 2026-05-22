@@ -13,6 +13,7 @@ public sealed class StoryDemoScenario
     public required IReadOnlyList<User> AdditionalUsers { get; init; }
     public required IReadOnlyList<UserIdentity> AdditionalIdentities { get; init; }
     public required UserSubscription Subscription { get; init; }
+    public required IReadOnlyList<UserEntitlementOverride> EntitlementOverrides { get; init; }
     public required FamilySpace FamilySpace { get; init; }
     public required IReadOnlyList<FamilyMember> FamilyMembers { get; init; }
     public required IReadOnlyList<FamilyInvite> FamilyInvites { get; init; }
@@ -38,6 +39,7 @@ public sealed class StoryDemoScenario
         var userId = Guid.Parse("7aa7aa7a-1111-4444-8888-111111111111");
         var spouseId = Guid.Parse("7aa7aa7a-1111-4444-8888-111111111112");
         var viewerId = Guid.Parse("7aa7aa7a-1111-4444-8888-111111111113");
+        var adminId = Guid.Parse("7aa7aa7a-1111-4444-8888-111111111114");
         var familySpaceId = Guid.Parse("7aa7aa7a-1111-4444-8888-700000000001");
         var monthStart = new DateTime(nowUtc.Year, nowUtc.Month, 1, 0, 0, 0, DateTimeKind.Utc);
         var currentWeekStart = GetStartOfWeek(nowUtc);
@@ -93,6 +95,19 @@ public sealed class StoryDemoScenario
             CreatedAt = nowUtc.AddMonths(-2)
         };
 
+        var adminUser = new User
+        {
+            Id = adminId,
+            Email = "story-admin@example.com",
+            PreferredCurrency = "PHP",
+            Locale = "en_US",
+            EmailConfirmed = true,
+            HasCompletedOnboarding = true,
+            AiPersonalityIntensity = "balanced",
+            HouseholdSize = "solo",
+            CreatedAt = nowUtc.AddMonths(-1)
+        };
+
         var additionalIdentities = new List<UserIdentity>
         {
             new()
@@ -110,6 +125,15 @@ public sealed class StoryDemoScenario
                 Provider = AuthProvider.Email,
                 ProviderSub = "story-viewer@example.com",
                 CreatedAt = nowUtc.AddMonths(-2)
+            },
+            new()
+            {
+                Id = Guid.Parse("7aa7aa7a-1111-4444-8888-222222222225"),
+                UserId = adminId,
+                Provider = AuthProvider.Email,
+                ProviderSub = "story-admin@example.com",
+                Role = UserIdentityRole.Admin,
+                CreatedAt = nowUtc.AddMonths(-1)
             }
         };
 
@@ -120,6 +144,17 @@ public sealed class StoryDemoScenario
             Tier = SubscriptionTier.Premium,
             Platform = Platform.iOS,
             OriginalTransactionId = "story-demo-premium"
+        };
+
+        var entitlementOverrides = new List<UserEntitlementOverride>
+        {
+            new()
+            {
+                UserId = userId,
+                GrantedAt = nowUtc.AddDays(-20),
+                GrantedBy = "story-demo-seed",
+                Note = "demo lifetime premium override"
+            }
         };
 
         var familySpace = new FamilySpace
@@ -425,9 +460,10 @@ public sealed class StoryDemoScenario
         {
             User = user,
             Identity = identity,
-            AdditionalUsers = [spouse, viewer],
+            AdditionalUsers = [spouse, viewer, adminUser],
             AdditionalIdentities = additionalIdentities,
             Subscription = subscription,
+            EntitlementOverrides = entitlementOverrides,
             FamilySpace = familySpace,
             FamilyMembers = familyMembers,
             FamilyInvites = familyInvites,

@@ -1,11 +1,13 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../core/errors/app_error.dart';
 import '../../core/constants/api_constants.dart';
+import '../../core/constants/app_icons.dart';
 import '../../core/network/dio_client.dart';
 import '../../core/routing/app_router.dart';
 import '../../core/theme/app_colors.dart';
@@ -17,6 +19,18 @@ import '../../widgets/hero_screen_scaffold.dart';
 import '../../widgets/screen_section.dart';
 import 'widgets/premium_gate.dart';
 
+typedef ReceiptImagePicker = Future<XFile?> Function(ImageSource source);
+
+final receiptImagePickerProvider = Provider<ReceiptImagePicker>((ref) {
+  final picker = ImagePicker();
+  return (source) => picker.pickImage(
+        source: source,
+        maxWidth: 2048,
+        maxHeight: 2048,
+        imageQuality: 85,
+      );
+});
+
 class ReceiptScannerScreen extends ConsumerStatefulWidget {
   const ReceiptScannerScreen({super.key});
 
@@ -27,6 +41,7 @@ class ReceiptScannerScreen extends ConsumerStatefulWidget {
 
 class _ReceiptScannerScreenState extends ConsumerState<ReceiptScannerScreen> {
   final _appBarScrollProgress = ValueNotifier<double>(0);
+  bool _pickingImage = false;
   bool _uploading = false;
   String? _error;
 
@@ -47,13 +62,36 @@ class _ReceiptScannerScreenState extends ConsumerState<ReceiptScannerScreen> {
   }
 
   Future<void> _pickAndScan(ImageSource source) async {
-    final picker = ImagePicker();
-    final image = await picker.pickImage(
-      source: source,
-      maxWidth: 2048,
-      maxHeight: 2048,
-      imageQuality: 85,
-    );
+    if (_pickingImage || _uploading) return;
+
+    setState(() {
+      _pickingImage = true;
+      _error = null;
+    });
+
+    XFile? image;
+    try {
+      image = await ref.read(receiptImagePickerProvider)(source);
+    } on PlatformException catch (e, s) {
+      if (!mounted) return;
+      final error = AppError.from(e, stackTrace: s);
+      setState(() {
+        _error = error.userMessage;
+        _pickingImage = false;
+      });
+      return;
+    } catch (e, s) {
+      if (!mounted) return;
+      final error = AppError.from(e, stackTrace: s);
+      setState(() {
+        _error = error.userMessage;
+        _pickingImage = false;
+      });
+      return;
+    }
+
+    if (!mounted) return;
+    setState(() => _pickingImage = false);
     if (image == null) return;
 
     setState(() {
@@ -109,7 +147,7 @@ class _ReceiptScannerScreenState extends ConsumerState<ReceiptScannerScreen> {
           padding: EdgeInsets.zero,
           bleedBehindAppBar: true,
           child: PremiumGate(
-            icon: Icons.document_scanner_rounded,
+            icon: AppIconKey.receiptScan,
             headline: 'Receipt Scanner',
             description:
                 'Automatically extract transaction details from receipts '
@@ -135,6 +173,7 @@ class _ReceiptScannerScreenState extends ConsumerState<ReceiptScannerScreen> {
   Widget _buildPremiumContent(BuildContext context) {
     final theme = Theme.of(context);
     final colors = theme.appColors;
+    final actionsDisabled = _pickingImage || _uploading;
 
     return ConsciaAppBarScrollScope(
       scrollProgress: _appBarScrollProgress,
@@ -175,9 +214,10 @@ class _ReceiptScannerScreenState extends ConsumerState<ReceiptScannerScreen> {
                                 key: const ValueKey(
                                   'receipt-scan-camera-action',
                                 ),
-                                icon: Icons.camera_alt_rounded,
+                                icon: AppIconKey.camera,
                                 title: 'Take photo',
                                 subtitle: 'Open the camera and scan now.',
+                                enabled: !actionsDisabled,
                                 onTap: () => _pickAndScan(ImageSource.camera),
                               ),
                               const SizedBox(height: 12),
@@ -185,9 +225,10 @@ class _ReceiptScannerScreenState extends ConsumerState<ReceiptScannerScreen> {
                                 key: const ValueKey(
                                   'receipt-scan-gallery-action',
                                 ),
-                                icon: Icons.photo_library_rounded,
+                                icon: AppIconKey.photoLibrary,
                                 title: 'Choose from gallery',
                                 subtitle: 'Use a receipt image from photos.',
+                                enabled: !actionsDisabled,
                                 onTap: () => _pickAndScan(ImageSource.gallery),
                               ),
                             ],
@@ -289,12 +330,14 @@ class _ReceiptSourceAction extends StatelessWidget {
     required this.icon,
     required this.title,
     required this.subtitle,
+    required this.enabled,
     required this.onTap,
   });
 
-  final IconData icon;
+  final AppIconKey icon;
   final String title;
   final String subtitle;
+  final bool enabled;
   final VoidCallback onTap;
 
   @override
@@ -303,14 +346,16 @@ class _ReceiptSourceAction extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
 
     return Material(
-      color: colors.surfaceRaised,
+      color: enabled
+          ? colors.surfaceRaised
+          : colors.surfaceRaised.withValues(alpha: 0.7),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(20),
         side: BorderSide(color: colors.border),
       ),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
-        onTap: onTap,
+        onTap: enabled ? onTap : null,
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Row(
@@ -319,10 +364,20 @@ class _ReceiptSourceAction extends StatelessWidget {
                 width: 42,
                 height: 42,
                 decoration: BoxDecoration(
-                  color: colors.navySoft,
+                  color: enabled
+                      ? colors.navySoft
+                      : colors.navySoft.withValues(alpha: 0.72),
                   borderRadius: BorderRadius.circular(14),
                 ),
-                child: Icon(icon, color: colors.deepNavy, size: 22),
+                child: Center(
+                  child: AppIcons.icon(
+                    icon,
+                    color: enabled
+                        ? colors.deepNavy
+                        : colors.deepNavy.withValues(alpha: 0.55),
+                    size: 22,
+                  ),
+                ),
               ),
               const SizedBox(width: 14),
               Expanded(
@@ -332,7 +387,9 @@ class _ReceiptSourceAction extends StatelessWidget {
                     Text(
                       title,
                       style: textTheme.titleSmall?.copyWith(
-                        color: colors.ink,
+                        color: enabled
+                            ? colors.ink
+                            : colors.ink.withValues(alpha: 0.7),
                         fontWeight: FontWeight.w800,
                       ),
                     ),
@@ -342,7 +399,9 @@ class _ReceiptSourceAction extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: textTheme.bodySmall?.copyWith(
-                        color: colors.mutedInk,
+                        color: enabled
+                            ? colors.mutedInk
+                            : colors.mutedInk.withValues(alpha: 0.75),
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -350,9 +409,11 @@ class _ReceiptSourceAction extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 8),
-              Icon(
-                Icons.chevron_right_rounded,
-                color: colors.deepNavy.withValues(alpha: 0.55),
+              AppIcons.icon(
+                AppIconKey.chevronRight,
+                color: enabled
+                    ? colors.deepNavy.withValues(alpha: 0.55)
+                    : colors.deepNavy.withValues(alpha: 0.28),
               ),
             ],
           ),
@@ -419,7 +480,11 @@ class _ReceiptInlineError extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         child: Row(
           children: [
-            Icon(Icons.error_outline_rounded, size: 16, color: colors.expense),
+            AppIcons.icon(
+              AppIconKey.error,
+              size: 16,
+              color: colors.expense,
+            ),
             const SizedBox(width: 8),
             Expanded(
               child: Text(

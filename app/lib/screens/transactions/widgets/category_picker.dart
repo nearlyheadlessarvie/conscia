@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/constants/app_icons.dart';
 import '../../../core/constants/category_icons.dart';
 import '../../../core/constants/category_visibility.dart';
 import '../../../core/constants/generated/app_constants.g.dart';
@@ -256,7 +257,12 @@ class CategoryChoicePill extends StatelessWidget {
             ),
             if (selected) ...[
               const SizedBox(width: 4),
-              Icon(Icons.close_rounded, size: 12, color: accent),
+              AppIcons.icon(
+                AppIconKey.close,
+                color: accent,
+                size: 12,
+                strokeWidth: 1.8,
+              ),
             ],
           ],
         ),

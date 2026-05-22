@@ -3,7 +3,6 @@ import java.util.Properties
 
 plugins {
     id("com.android.application")
-    id("com.google.gms.google-services")
     id("kotlin-android")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
@@ -61,4 +60,15 @@ android {
 
 flutter {
     source = "../.."
+}
+
+val googleServicesCandidates = listOf(
+    "src/debug/google-services.json",
+    "src/release/google-services.json",
+    "src/google-services.json",
+    "google-services.json",
+)
+
+if (googleServicesCandidates.any { file(it).exists() }) {
+    apply(plugin = "com.google.gms.google-services")
 }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../core/constants/app_icons.dart';
 import '../core/theme/app_colors.dart';
 
 enum FeelingChoiceButtonSize { large, compact }
@@ -7,13 +8,13 @@ enum FeelingChoiceButtonSize { large, compact }
 class FeelingPresentation {
   const FeelingPresentation({
     required this.label,
-    required this.icon,
+    required this.iconKey,
     required this.color,
     required this.backgroundColor,
   });
 
   final String label;
-  final IconData icon;
+  final AppIconKey iconKey;
   final Color color;
   final Color backgroundColor;
 }
@@ -48,7 +49,7 @@ class FeelingChoiceButton extends StatelessWidget {
     if (level == 0) {
       return FeelingPresentation(
         label: 'Worth It',
-        icon: Icons.thumb_up_alt_outlined,
+        iconKey: AppIconKey.thumbsUp,
         color: colors.income,
         backgroundColor: colors.incomeSoft,
       );
@@ -56,14 +57,14 @@ class FeelingChoiceButton extends StatelessWidget {
     if (level == 1) {
       return FeelingPresentation(
         label: 'Not Sure',
-        icon: Icons.help_outline_rounded,
+        iconKey: AppIconKey.help,
         color: colors.amber,
         backgroundColor: colors.amberSoft,
       );
     }
     return FeelingPresentation(
       label: 'Regret',
-      icon: Icons.thumb_down_alt_outlined,
+      iconKey: AppIconKey.thumbsDown,
       color: colors.expense,
       backgroundColor: colors.expenseSoft,
     );
@@ -101,7 +102,11 @@ class FeelingChoiceButton extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.center,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(presentation.icon, size: 24),
+                AppIcons.icon(
+                  presentation.iconKey,
+                  color: presentation.color,
+                  size: 24,
+                ),
                 const SizedBox(height: 5),
                 Flexible(
                   child: Text(
@@ -116,7 +121,11 @@ class FeelingChoiceButton extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.center,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(presentation.icon, size: 16),
+                AppIcons.icon(
+                  presentation.iconKey,
+                  color: presentation.color,
+                  size: 16,
+                ),
                 const SizedBox(width: 6),
                 Flexible(
                   child: Text(

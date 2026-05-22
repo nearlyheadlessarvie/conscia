@@ -1,7 +1,8 @@
-import 'package:conscia_app/core/assets/mascot_sprite_sheet.dart';
-import 'package:conscia_app/models/insight_feed_item.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+
+import 'package:conscia_app/core/constants/app_icons.dart';
+import 'package:conscia_app/models/insight_feed_item.dart';
 
 class InsightFeedCard extends StatelessWidget {
   const InsightFeedCard({
@@ -76,8 +77,8 @@ class InsightFeedCard extends StatelessWidget {
                 ],
                 if (isDrillDown) ...[
                   const SizedBox(width: 6),
-                  Icon(
-                    Icons.chevron_right_rounded,
+                  AppIcons.icon(
+                    AppIconKey.chevronRight,
                     color: colors.onSurfaceVariant,
                     size: 20,
                   ),
@@ -88,7 +89,7 @@ class InsightFeedCard extends StatelessWidget {
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _DetailVisual(item: item, color: toneColor),
+                _DetailIcon(item: item, color: toneColor),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
@@ -150,100 +151,34 @@ class _KindIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Icon(_icon, color: color, size: 18);
-  }
-
-  IconData get _icon {
-    switch (item.kind) {
-      case InsightFeedKind.budgetTrend:
-        return Icons.account_balance_wallet_rounded;
-      case InsightFeedKind.regretSummary:
-        return Icons.warning_amber_rounded;
-      case InsightFeedKind.impulseTrend:
-        return Icons.trending_up_rounded;
-      case InsightFeedKind.weeklyMood:
-        return Icons.psychology_rounded;
-      case InsightFeedKind.worthIt:
-        return Icons.thumb_up_alt_rounded;
-      case InsightFeedKind.merchantPattern:
-        return Icons.storefront_rounded;
-    }
-  }
-}
-
-class _DetailVisual extends StatelessWidget {
-  const _DetailVisual({
-    required this.item,
-    required this.color,
-  });
-
-  final InsightFeedItem item;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    if (item.mascot == InsightFeedMascot.none) {
-      return _FallbackIcon(item: item, color: color);
-    }
-
-    return _MascotCameo(item: item);
-  }
-}
-
-class _MascotCameo extends StatelessWidget {
-  const _MascotCameo({
-    required this.item,
-  });
-
-  final InsightFeedItem item;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: 68,
-      height: 72,
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          if (item.mascot == InsightFeedMascot.angel ||
-              item.mascot == InsightFeedMascot.both)
-            MascotSpriteFrame(
-              atlas: angelMascotAtlas,
-              frameName:
-                  _frameFor('angel', item.mascotFrame) ?? '1_neutral.png',
-              width: item.mascot == InsightFeedMascot.both ? 48 : 64,
-            ),
-          if (item.mascot == InsightFeedMascot.devil ||
-              item.mascot == InsightFeedMascot.both)
-            Positioned(
-              left: item.mascot == InsightFeedMascot.both ? 22 : 0,
-              top: item.mascot == InsightFeedMascot.both ? 12 : 0,
-              child: MascotSpriteFrame(
-                atlas: devilMascotAtlas,
-                frameName:
-                    _frameFor('devil', item.mascotFrame) ?? '1_neutral.png',
-                width: item.mascot == InsightFeedMascot.both ? 48 : 64,
-              ),
-            ),
-        ],
-      ),
+    return AppIcons.icon(
+      _icon,
+      color: color,
+      size: 18,
+      strokeWidth: 1.9,
     );
   }
 
-  static String? _frameFor(String family, String? descriptor) {
-    if (descriptor == null) return null;
-    for (final part in descriptor.split('|')) {
-      final pieces = part.split(':');
-      if (pieces.length == 2 && pieces.first == family) {
-        return pieces.last;
-      }
+  AppIconKey get _icon {
+    switch (item.kind) {
+      case InsightFeedKind.budgetTrend:
+        return AppIconKey.wallet;
+      case InsightFeedKind.regretSummary:
+        return AppIconKey.warning;
+      case InsightFeedKind.impulseTrend:
+        return AppIconKey.arrowUp;
+      case InsightFeedKind.weeklyMood:
+        return AppIconKey.brain;
+      case InsightFeedKind.worthIt:
+        return AppIconKey.verified;
+      case InsightFeedKind.merchantPattern:
+        return AppIconKey.merchant;
     }
-    return null;
   }
 }
 
-class _FallbackIcon extends StatelessWidget {
-  const _FallbackIcon({
+class _DetailIcon extends StatelessWidget {
+  const _DetailIcon({
     required this.item,
     required this.color,
   });
@@ -260,24 +195,31 @@ class _FallbackIcon extends StatelessWidget {
         color: color.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(18),
       ),
-      child: Icon(_icon, color: color, size: 28),
+      child: Center(
+        child: AppIcons.icon(
+          _icon,
+          color: color,
+          size: 28,
+          strokeWidth: 1.9,
+        ),
+      ),
     );
   }
 
-  IconData get _icon {
+  AppIconKey get _icon {
     switch (item.kind) {
       case InsightFeedKind.budgetTrend:
-        return Icons.account_balance_wallet_rounded;
+        return AppIconKey.walletOutline;
       case InsightFeedKind.regretSummary:
-        return Icons.warning_amber_rounded;
+        return AppIconKey.error;
       case InsightFeedKind.impulseTrend:
-        return Icons.trending_up_rounded;
+        return AppIconKey.insightTrend;
       case InsightFeedKind.weeklyMood:
-        return Icons.psychology_rounded;
+        return AppIconKey.sparkleGuidance;
       case InsightFeedKind.worthIt:
-        return Icons.thumb_up_alt_rounded;
+        return AppIconKey.achievement;
       case InsightFeedKind.merchantPattern:
-        return Icons.storefront_rounded;
+        return AppIconKey.merchantSuggestion;
     }
   }
 }

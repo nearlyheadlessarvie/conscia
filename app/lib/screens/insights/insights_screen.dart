@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/constants/app_icons.dart';
 import '../../models/insight_feed_item.dart';
 import '../../models/insights_models.dart';
 import '../../providers/budget_providers.dart';
@@ -109,7 +110,7 @@ class _InsightsScreenState extends ConsumerState<InsightsScreen> {
                       padding: EdgeInsets.fromLTRB(20, 96, 20, 28),
                       sliver: SliverToBoxAdapter(
                         child: _InsightMessageCard(
-                          icon: Icons.auto_graph_rounded,
+                          icon: AppIconKey.insightTrend,
                           title: 'Insights are taking a minute',
                           body: 'We could not load your patterns just now.',
                         ),
@@ -164,7 +165,7 @@ class _InsightsScreenState extends ConsumerState<InsightsScreen> {
             padding: EdgeInsets.fromLTRB(20, 96, 20, 28),
             sliver: SliverToBoxAdapter(
               child: EmptyState(
-                icon: Icons.auto_graph_rounded,
+                icon: AppIconKey.pieChart,
                 title: 'No insights yet',
                 subtitle:
                     'Keep tracking for a week and Conscia will surface your spending patterns.',
@@ -453,11 +454,11 @@ class _InsightEditorialHighlight extends StatelessWidget {
             runSpacing: 10,
             children: [
               _InsightHeroMetricPill(
-                icon: Icons.category_rounded,
+                icon: AppIconKey.label,
                 label: summary.regrettedCategory,
               ),
               _InsightHeroMetricPill(
-                icon: Icons.auto_graph_rounded,
+                icon: AppIconKey.pieChart,
                 label: '${summary.patternCount} patterns',
               ),
             ],
@@ -468,7 +469,7 @@ class _InsightEditorialHighlight extends StatelessWidget {
               Expanded(
                 child: HeroShortcutCard(
                   key: const ValueKey('insights-categories-link'),
-                  icon: Icons.category_rounded,
+                  icon: AppIconKey.label,
                   label: 'Categories',
                   subtitle: 'Regret by category',
                   minHeight: 54,
@@ -479,7 +480,7 @@ class _InsightEditorialHighlight extends StatelessWidget {
               Expanded(
                 child: HeroShortcutCard(
                   key: const ValueKey('insights-merchants-link'),
-                  icon: Icons.storefront_rounded,
+                  icon: AppIconKey.wallet,
                   label: 'Merchants',
                   subtitle: 'Places to watch',
                   minHeight: 54,
@@ -500,7 +501,7 @@ class _InsightHeroMetricPill extends StatelessWidget {
     required this.label,
   });
 
-  final IconData icon;
+  final AppIconKey icon;
   final String label;
 
   @override
@@ -515,7 +516,11 @@ class _InsightHeroMetricPill extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 15, color: colors.deepNavy),
+          AppIcons.icon(
+            icon,
+            size: 15,
+            color: colors.deepNavy,
+          ),
           const SizedBox(width: 6),
           Flexible(
             child: Text(
@@ -699,7 +704,7 @@ class _InsightMessageCard extends StatelessWidget {
     required this.body,
   });
 
-  final IconData icon;
+  final AppIconKey icon;
   final String title;
   final String body;
 
@@ -712,7 +717,7 @@ class _InsightMessageCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, size: 28, color: colors.primary),
+          AppIcons.icon(icon, size: 28, color: colors.primary),
           const SizedBox(height: 14),
           Text(
             title,

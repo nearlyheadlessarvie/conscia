@@ -211,6 +211,27 @@ void main() {
     expect(await storage.read(key: 'access_token'), isNull);
   });
 
+  test('startup with no stored session clears restoring flag', () async {
+    final notifier = AuthNotifier(
+      _FakeAuthService(
+        const AuthTokens(
+          accessToken: 'verified.access.token',
+          refreshToken: 'verified-refresh-token',
+          userId: 'user-1',
+        ),
+      ),
+      _FakeSecureStorage(),
+    );
+
+    expect(notifier.state.isRestoringSession, isTrue);
+
+    await Future<void>.delayed(Duration.zero);
+    await Future<void>.delayed(Duration.zero);
+
+    expect(notifier.state.isRestoringSession, isFalse);
+    expect(notifier.state.status, AuthStatus.unauthenticated);
+  });
+
   test(
       'confirmRegistration verifies code then logs in with pending credentials',
       () async {
@@ -386,6 +407,36 @@ void main() {
     expect(notifier.state.status, AuthStatus.authenticated);
     expect(notifier.state.accessToken, 'new.access.token');
     expect(notifier.state.refreshToken, 'new-refresh-token');
+  });
+
+  test('startup with valid stored session restores auth without sign-out state',
+      () async {
+    final storage = _FakeSecureStorage({
+      'access_token': _fakeJwt(
+        expiresAt: DateTime.now().toUtc().add(const Duration(minutes: 10)),
+      ),
+      'refresh_token': 'stored-refresh-token',
+      'user_id': 'user-1',
+    });
+    final notifier = AuthNotifier(
+      _FakeAuthService(
+        const AuthTokens(
+          accessToken: 'unused.access.token',
+          refreshToken: 'unused-refresh-token',
+          userId: 'user-1',
+        ),
+      ),
+      storage,
+    );
+
+    expect(notifier.state.isRestoringSession, isTrue);
+
+    await Future<void>.delayed(Duration.zero);
+    await Future<void>.delayed(Duration.zero);
+
+    expect(notifier.state.isRestoringSession, isFalse);
+    expect(notifier.state.status, AuthStatus.authenticated);
+    expect(notifier.state.userId, 'user-1');
   });
 
   test(

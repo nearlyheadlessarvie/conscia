@@ -2,7 +2,6 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
-import '../icons/conscia_trial_icons.dart';
 import '../../widgets/conscia_glyph.dart';
 
 class CategoryIcons {
@@ -153,23 +152,28 @@ class CategoryIcons {
     CategoryIconOption(key: 'groceries', label: 'Groceries'),
     CategoryIconOption(key: 'dining', label: 'Dining'),
     CategoryIconOption(key: 'transport', label: 'Transport'),
-    CategoryIconOption(key: 'shopping', label: 'Shopping'),
-    CategoryIconOption(key: 'health', label: 'Health'),
     CategoryIconOption(key: 'bills', label: 'Bills'),
-    CategoryIconOption(key: 'education', label: 'Education'),
+    CategoryIconOption(key: 'health', label: 'Health'),
+    CategoryIconOption(key: 'shopping', label: 'Shopping'),
+    CategoryIconOption(key: 'gift', label: 'Gift'),
     CategoryIconOption(key: 'travel', label: 'Travel'),
+    CategoryIconOption(key: 'education', label: 'Education'),
     CategoryIconOption(key: 'coffee', label: 'Coffee'),
     CategoryIconOption(key: 'subscriptions', label: 'Subscriptions'),
     CategoryIconOption(key: 'salary', label: 'Salary'),
     CategoryIconOption(key: 'freelance', label: 'Freelance'),
     CategoryIconOption(key: 'business', label: 'Business'),
     CategoryIconOption(key: 'investment', label: 'Investment'),
-    CategoryIconOption(key: 'gift', label: 'Gift'),
     CategoryIconOption(key: 'home', label: 'Home'),
     CategoryIconOption(key: 'utilities', label: 'Utilities'),
     CategoryIconOption(key: 'phone', label: 'Phone'),
     CategoryIconOption(key: 'pets', label: 'Pets'),
     CategoryIconOption(key: 'other', label: 'Other'),
+    CategoryIconOption(key: 'gaming', label: 'Gaming'),
+    CategoryIconOption(key: 'entertainment', label: 'Entertainment'),
+    CategoryIconOption(key: 'bank', label: 'Bank'),
+    CategoryIconOption(key: 'savings', label: 'Savings'),
+    CategoryIconOption(key: 'fitness', label: 'Fitness'),
   ];
 
   static final Map<String, _CategorySpec> _specs = {
@@ -358,6 +362,16 @@ class CategoryIcons {
       material: Icons.event_rounded,
       cupertino: CupertinoIcons.calendar,
     ),
+    'Savings': const _CategorySpec(
+      iconKey: 'savings',
+      material: Icons.savings_rounded,
+      cupertino: CupertinoIcons.money_dollar_circle_fill,
+    ),
+    'Bank': const _CategorySpec(
+      iconKey: 'bank',
+      material: Icons.account_balance_rounded,
+      cupertino: CupertinoIcons.building_2_fill,
+    ),
     'Other': const _CategorySpec(
       iconKey: 'other',
       material: Icons.more_horiz_rounded,
@@ -403,7 +417,7 @@ class CategoryIcons {
       visual.iconKey,
       size: size,
       color: visual.accent,
-      strokeWidth: size * 0.11,
+      strokeWidth: size * 0.085,
     );
   }
 
@@ -466,6 +480,8 @@ class CategoryIcons {
       'investment' => 'green',
       'rental-income' => 'cyan',
       'bonus' => 'amber',
+      'savings' => 'emerald',
+      'bank' => 'slate',
       'other' => isIncome ? 'teal' : 'cyan',
       _ => _deterministicColorKey(normalized, isIncome: isIncome),
     };
@@ -488,29 +504,6 @@ class CategoryIcons {
             '',
           );
 
-  static IconData? trialFontIconData(String iconKey) {
-    return switch (_clean(iconKey)) {
-      'groceries' => ConsciaTrialIcons.groceries,
-      'dining' => ConsciaTrialIcons.dining,
-      'transport' => ConsciaTrialIcons.transport,
-      'shopping' => ConsciaTrialIcons.shopping,
-      'health' => ConsciaTrialIcons.health,
-      'bills' => ConsciaTrialIcons.bills,
-      'education' => ConsciaTrialIcons.education,
-      'travel' => ConsciaTrialIcons.travel,
-      'coffee' => ConsciaTrialIcons.coffee,
-      'subscriptions' => ConsciaTrialIcons.subscription,
-      'salary' => ConsciaTrialIcons.salary,
-      'freelance' => ConsciaTrialIcons.freelance,
-      'business' => ConsciaTrialIcons.business,
-      'investment' => ConsciaTrialIcons.investment,
-      'gift' => ConsciaTrialIcons.gift,
-      'home' => ConsciaTrialIcons.home,
-      'other' => ConsciaTrialIcons.more,
-      _ => null,
-    };
-  }
-
   static Widget trialFontPickerIcon(
     String category, {
     required String iconKey,
@@ -523,22 +516,12 @@ class CategoryIcons {
       iconKey: iconKey,
       colorKey: colorKey,
     );
-    final iconData = trialFontIconData(iconKey);
-    if (iconData == null) {
-      return ConsciaGlyph.category(
-        visual.iconKey,
-        key: key,
-        size: size,
-        color: visual.accent,
-        strokeWidth: size * 0.11,
-      );
-    }
-
-    return Icon(
+    return ConsciaGlyph.category(
+      visual.iconKey,
       key: key,
-      iconData,
       size: size,
       color: visual.accent,
+      strokeWidth: size * 0.085,
     );
   }
 
@@ -547,6 +530,7 @@ class CategoryIcons {
   static Widget badge(
     String category, {
     double size = 20,
+    double? strokeWidth,
     bool filled = true,
     bool selected = false,
     String? type,
@@ -561,6 +545,7 @@ class CategoryIcons {
         colorKey: colorKey,
       ),
       size: size,
+      strokeWidth: strokeWidth,
       filled: filled,
       selected: selected,
     );
@@ -571,12 +556,14 @@ class _CategoryBadge extends StatelessWidget {
   const _CategoryBadge({
     required this.visual,
     required this.size,
+    required this.strokeWidth,
     required this.filled,
     required this.selected,
   });
 
   final CategoryVisual visual;
   final double size;
+  final double? strokeWidth;
   final bool filled;
   final bool selected;
 
@@ -606,7 +593,7 @@ class _CategoryBadge extends StatelessWidget {
           visual.iconKey,
           color: fg,
           size: size,
-          strokeWidth: size * 0.11,
+          strokeWidth: strokeWidth ?? (size * 0.085),
         ),
       ),
     );

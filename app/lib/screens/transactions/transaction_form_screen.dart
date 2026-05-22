@@ -699,7 +699,7 @@ class _TransactionFormSheetState extends ConsumerState<TransactionFormSheet> {
               labelStyle: textTheme.titleSmall?.copyWith(
                 color: colors.onSurfaceVariant,
               ),
-              moreCategoriesIcon: AppIcons.add,
+              moreCategoriesIcon: AppIconKey.add,
               onCategorySelected: (category) {
                 setState(() => _selectedCategory = category);
                 if (category != null) {
@@ -736,7 +736,11 @@ class _TransactionFormSheetState extends ConsumerState<TransactionFormSheet> {
                       dateLabel,
                       style: textTheme.bodyMedium,
                     )),
-                    const Icon(Icons.calendar_today_outlined, size: 18),
+                    AppIcons.icon(
+                      AppIconKey.calendar,
+                      color: colors.onSurfaceVariant,
+                      size: 18,
+                    ),
                   ],
                 ),
               ),

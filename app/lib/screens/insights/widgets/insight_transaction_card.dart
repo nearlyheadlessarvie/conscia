@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/constants/app_icons.dart';
 import '../../../core/constants/category_icons.dart';
 import '../../../models/insights_models.dart';
 import '../../../widgets/feed_card.dart';
@@ -75,7 +76,11 @@ class InsightTransactionCard extends StatelessWidget {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(regret.icon, size: 14, color: regret.color),
+                        AppIcons.icon(
+                          regret.icon,
+                          size: 14,
+                          color: regret.color,
+                        ),
                         const SizedBox(width: 6),
                         Text(
                           regret.label,

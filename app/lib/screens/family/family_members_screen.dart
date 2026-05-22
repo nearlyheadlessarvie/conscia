@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/constants/app_icons.dart';
 import '../../core/routing/app_router.dart';
 import '../../core/errors/app_error.dart';
 import '../../core/theme/app_colors.dart';
@@ -111,11 +112,7 @@ class FamilyMembersScreen extends ConsumerWidget {
             ),
             const Padding(
               padding: EdgeInsets.fromLTRB(20, 24, 20, 28),
-              child: InlineNotice(
-                message: 'Unable to load family members.',
-                tone: InlineNoticeTone.error,
-                icon: Icon(Icons.error_outline_rounded),
-              ),
+              child: _FamilyMembersLoadErrorNotice(),
             ),
           ],
         ),
@@ -230,10 +227,14 @@ class _MembersLedger extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (members.isEmpty) {
-      return const InlineNotice(
+      return InlineNotice(
         message: 'No members are attached to this Family Space yet.',
         tone: InlineNoticeTone.neutral,
-        icon: Icon(Icons.group_outlined),
+        icon: AppIcons.icon(
+          AppIconKey.people,
+          color: Theme.of(context).appColors.deepNavy,
+          size: 16,
+        ),
       );
     }
 
@@ -327,7 +328,11 @@ class _MemberRowState extends ConsumerState<_MemberRow> {
           InlineNotice(
             message: _errorText!,
             tone: InlineNoticeTone.error,
-            icon: const Icon(Icons.error_outline_rounded),
+            icon: AppIcons.icon(
+              AppIconKey.error,
+              color: colors.expense,
+              size: 16,
+            ),
           ),
         ],
       ],
@@ -452,7 +457,7 @@ class _MemberActionsSheet extends StatelessWidget {
           ),
           const SizedBox(height: 18),
           _SheetActionRow(
-            icon: Icons.admin_panel_settings_outlined,
+            icon: AppIconKey.ownerAccess,
             title: 'Make ${alternateRole.toLowerCase()}',
             subtitle: alternateRole.toLowerCase() == 'viewer'
                 ? 'Can view shared household history.'
@@ -460,14 +465,14 @@ class _MemberActionsSheet extends StatelessWidget {
             onTap: () => Navigator.of(context).pop(_MemberAction.changeRole),
           ),
           _SheetActionRow(
-            icon: Icons.workspace_premium_outlined,
+            icon: AppIconKey.premium,
             title: 'Transfer ownership',
             subtitle: 'Make this person the household owner.',
             onTap: () =>
                 Navigator.of(context).pop(_MemberAction.transferOwnership),
           ),
           _SheetActionRow(
-            icon: Icons.person_remove_outlined,
+            icon: AppIconKey.delete,
             title: 'Remove from household',
             subtitle: 'Existing shared records stay in Family history.',
             destructive: true,
@@ -488,7 +493,7 @@ class _SheetActionRow extends StatelessWidget {
     this.destructive = false,
   });
 
-  final IconData icon;
+  final AppIconKey icon;
   final String title;
   final String subtitle;
   final VoidCallback onTap;
@@ -531,7 +536,11 @@ class _SheetActionRow extends StatelessWidget {
                 ],
               ),
             ),
-            Icon(Icons.chevron_right_rounded, color: colors.softInk),
+            AppIcons.icon(
+              AppIconKey.chevronRight,
+              color: colors.softInk,
+              size: 18,
+            ),
           ],
         ),
       ),
@@ -581,8 +590,8 @@ class _LeaveFamilySectionState extends ConsumerState<_LeaveFamilySection> {
                 children: [
                   _IconBubble(
                     icon: widget.isOwner
-                        ? Icons.lock_outline_rounded
-                        : Icons.logout_rounded,
+                        ? AppIconKey.lock
+                        : AppIconKey.logout,
                     background:
                         widget.isOwner ? colors.navySoft : colors.expenseSoft,
                     foreground:
@@ -625,10 +634,11 @@ class _LeaveFamilySectionState extends ConsumerState<_LeaveFamilySection> {
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
                     else
-                      Icon(
-                        Icons.chevron_right_rounded,
+                      AppIcons.icon(
+                        AppIconKey.chevronRight,
                         color:
                             widget.isReadOnly ? colors.border : colors.softInk,
+                        size: 18,
                       ),
                   ],
                 ],
@@ -640,7 +650,11 @@ class _LeaveFamilySectionState extends ConsumerState<_LeaveFamilySection> {
             InlineNotice(
               message: _errorText!,
               tone: InlineNoticeTone.error,
-              icon: const Icon(Icons.error_outline_rounded),
+              icon: AppIcons.icon(
+                AppIconKey.error,
+                color: colors.expense,
+                size: 16,
+              ),
             ),
           ],
         ],
@@ -733,7 +747,11 @@ class _ManageMemberButton extends StatelessWidget {
               height: 14,
               child: CircularProgressIndicator(strokeWidth: 2),
             )
-          : const Icon(Icons.more_vert_rounded, size: 20),
+          : AppIcons.icon(
+              AppIconKey.more,
+              color: colors.deepNavy,
+              size: 20,
+            ),
       color: colors.deepNavy,
       tooltip: 'More member actions',
       visualDensity: VisualDensity.compact,
@@ -748,7 +766,7 @@ class _YouPill extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).appColors;
     return _MemberPill(
-      icon: Icons.person_outline_rounded,
+      icon: AppIconKey.person,
       label: 'You',
       background: colors.surfaceMuted,
       foreground: colors.mutedInk,
@@ -764,7 +782,7 @@ class _MemberPill extends StatelessWidget {
     required this.foreground,
   });
 
-  final IconData icon;
+  final AppIconKey icon;
   final String label;
   final Color background;
   final Color foreground;
@@ -781,7 +799,11 @@ class _MemberPill extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 13, color: foreground),
+            AppIcons.icon(
+              icon,
+              size: 13,
+              color: foreground,
+            ),
             const SizedBox(width: 5),
             Text(
               label,
@@ -804,7 +826,7 @@ class _IconBubble extends StatelessWidget {
     required this.foreground,
   });
 
-  final IconData icon;
+  final AppIconKey icon;
   final Color background;
   final Color foreground;
 
@@ -818,7 +840,30 @@ class _IconBubble extends StatelessWidget {
         color: background,
         borderRadius: BorderRadius.circular(10),
       ),
-      child: Icon(icon, size: 18, color: foreground),
+      child: Center(
+        child: AppIcons.icon(
+          icon,
+          size: 18,
+          color: foreground,
+        ),
+      ),
+    );
+  }
+}
+
+class _FamilyMembersLoadErrorNotice extends StatelessWidget {
+  const _FamilyMembersLoadErrorNotice();
+
+  @override
+  Widget build(BuildContext context) {
+    return InlineNotice(
+      message: 'Unable to load family members.',
+      tone: InlineNoticeTone.error,
+      icon: AppIcons.icon(
+        AppIconKey.error,
+        color: Theme.of(context).appColors.expense,
+        size: 16,
+      ),
     );
   }
 }

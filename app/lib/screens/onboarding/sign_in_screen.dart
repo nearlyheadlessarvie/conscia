@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/constants/app_icons.dart';
 import '../../core/errors/app_error.dart';
 import '../../core/network/api_exception.dart';
 import '../../core/routing/app_router.dart';
@@ -214,7 +215,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                 title: 'Welcome back',
                 subtitle:
                     'Return to your money rhythm with a little more calm.',
-                icon: Icons.spa_outlined,
+                icon: AppIconKey.sparkleGuidance,
               ),
               Padding(
                 padding: EdgeInsets.fromLTRB(
@@ -230,7 +231,11 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                       InlineNotice(
                         message: _errorMessage!,
                         tone: InlineNoticeTone.error,
-                        icon: const Icon(Icons.lock_outline_rounded),
+                        icon: AppIcons.icon(
+                          AppIconKey.lock,
+                          color: colors.error,
+                          size: 16,
+                        ),
                       ),
                       const SizedBox(height: 16),
                     ],
@@ -241,7 +246,13 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                           FloatingLabelTextField(
                             controller: _emailController,
                             label: 'Email',
-                            prefix: const Icon(Icons.email_outlined),
+                            prefix: AppIcons.icon(
+                              AppIconKey.email,
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurfaceVariant,
+                              size: 20,
+                            ),
                             keyboardType: TextInputType.emailAddress,
                             textInputAction: TextInputAction.next,
                             onChanged: (_) => _clearInlineErrors(),
@@ -252,7 +263,13 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                           FloatingLabelTextField(
                             controller: _passwordController,
                             label: 'Password',
-                            prefix: const Icon(Icons.lock_outline),
+                            prefix: AppIcons.icon(
+                              AppIconKey.lock,
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurfaceVariant,
+                              size: 20,
+                            ),
                             obscureText: _obscurePassword,
                             textInputAction: TextInputAction.done,
                             onChanged: (_) => _clearInlineErrors(),
@@ -266,10 +283,10 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                             autocorrect: false,
                             autofillHints: const [AutofillHints.password],
                             trailing: IconButton(
-                              icon: Icon(
+                              icon: AppIcons.icon(
                                 _obscurePassword
-                                    ? Icons.visibility_outlined
-                                    : Icons.visibility_off_outlined,
+                                    ? AppIconKey.visibility
+                                    : AppIconKey.visibilityOff,
                                 color: _obscurePassword
                                     ? Theme.of(context)
                                         .colorScheme
@@ -304,7 +321,11 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                       SizedBox(
                         height: 48,
                         child: OutlinedButton.icon(
-                          icon: const Icon(Icons.fingerprint, size: 24),
+                          icon: AppIcons.icon(
+                            AppIconKey.passkey,
+                            color: colors.primary,
+                            size: 24,
+                          ),
                           label: const Text('Sign in with Passkey'),
                           onPressed: _isLoading ? null : _submitPasskey,
                         ),
@@ -343,7 +364,11 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                               borderRadius: BorderRadius.circular(24),
                             ),
                           ),
-                          icon: const Icon(Icons.apple, size: 24),
+                          icon: AppIcons.icon(
+                            AppIconKey.appleBrand,
+                            color: Colors.white,
+                            size: 24,
+                          ),
                           label: const Text('Sign in with Apple'),
                           onPressed: _isLoading
                               ? null

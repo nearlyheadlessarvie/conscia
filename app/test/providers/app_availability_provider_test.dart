@@ -5,12 +5,26 @@ import 'package:conscia_app/services/connectivity_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 class _FakeConnectivityService implements ConnectivityService {
-  _FakeConnectivityService(this._isConnected);
+  _FakeConnectivityService(bool isConnected)
+      : _results = [isConnected];
 
-  final bool _isConnected;
+  _FakeConnectivityService.sequence(List<bool> results)
+      : _results = List<bool>.from(results);
+
+  final List<bool> _results;
+  int callCount = 0;
 
   @override
-  Future<bool> hasNetworkConnection() async => _isConnected;
+  Future<bool> hasNetworkConnection() async {
+    callCount += 1;
+    if (_results.isEmpty) {
+      return false;
+    }
+    if (_results.length == 1) {
+      return _results.first;
+    }
+    return _results.removeAt(0);
+  }
 }
 
 class _FakeApiAvailabilityService implements ApiAvailabilityService {
@@ -148,5 +162,49 @@ void main() {
 
     expect(notifier.state.issue, AvailabilityIssue.none);
     expect(notifier.state.isBlocked, isFalse);
+  });
+
+  test('backgrounding pauses availability refresh until resume', () async {
+    final api = _FakeApiAvailabilityService();
+    final updates = _FakeAppUpdateService(const AppUpdateCheckResult());
+    final notifier = AppAvailabilityNotifier(
+      connectivityService: _FakeConnectivityService(true),
+      apiAvailabilityService: api,
+      appUpdateService: updates,
+      autoRefresh: false,
+      refreshOnInit: false,
+    );
+
+    await notifier.setForegrounded(false);
+    await notifier.refresh();
+
+    expect(api.callCount, 0);
+    expect(updates.callCount, 0);
+
+    await notifier.setForegrounded(true);
+
+    expect(api.callCount, 1);
+    expect(updates.callCount, 1);
+  });
+
+  test('refresh ignores a transient offline read immediately after resume',
+      () async {
+    final api = _FakeApiAvailabilityService();
+    final updates = _FakeAppUpdateService(const AppUpdateCheckResult());
+    final connectivity = _FakeConnectivityService.sequence([false, true]);
+    final notifier = AppAvailabilityNotifier(
+      connectivityService: connectivity,
+      apiAvailabilityService: api,
+      appUpdateService: updates,
+      autoRefresh: false,
+      refreshOnInit: false,
+    );
+
+    await notifier.refresh();
+
+    expect(connectivity.callCount, 2);
+    expect(notifier.state.issue, AvailabilityIssue.none);
+    expect(api.callCount, 1);
+    expect(updates.callCount, 1);
   });
 }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../core/constants/app_icons.dart';
 import 'selection_chip_group.dart';
 import '../../../widgets/form_label.dart';
 import 'editorial_section_header.dart';
@@ -77,10 +78,18 @@ class RecurringScheduleSection extends StatelessWidget {
                     IconButton(
                       tooltip: 'Clear end date',
                       onPressed: () => onEndDateChanged(null),
-                      icon: const Icon(Icons.close, size: 18),
+                      icon: AppIcons.icon(
+                        AppIconKey.close,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        size: 18,
+                      ),
                     )
                   else
-                    const Icon(Icons.calendar_today_outlined, size: 18),
+                    AppIcons.icon(
+                      AppIconKey.calendar,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      size: 18,
+                    ),
                 ],
               ),
             ),

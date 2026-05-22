@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../core/constants/app_icons.dart';
 import '../core/theme/app_colors.dart';
 
 class SwipeActionTile extends StatelessWidget {
@@ -13,7 +14,7 @@ class SwipeActionTile extends StatelessWidget {
     this.width = 78,
   });
 
-  final IconData icon;
+  final AppIconKey icon;
   final String label;
   final Color foregroundColor;
   final Color backgroundColor;
@@ -38,7 +39,11 @@ class SwipeActionTile extends StatelessWidget {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(icon, color: foregroundColor, size: 19),
+                  AppIcons.icon(
+                    icon,
+                    color: foregroundColor,
+                    size: 19,
+                  ),
                   const SizedBox(height: 3),
                   Text(
                     label,

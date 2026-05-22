@@ -4,6 +4,7 @@ import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../core/constants/app_icons.dart';
 import '../../core/constants/category_icons.dart';
 import '../../core/errors/app_error.dart';
 import '../../core/routing/app_router.dart';
@@ -219,7 +220,11 @@ class _TransactionListScreenState extends ConsumerState<TransactionListScreen> {
                 trailing: IconButton(
                   tooltip: 'Add transaction',
                   visualDensity: VisualDensity.compact,
-                  icon: const Icon(Icons.add_rounded),
+                  icon: AppIcons.icon(
+                    AppIconKey.add,
+                    color: Theme.of(context).appColors.deepNavy,
+                    size: 20,
+                  ),
                   onPressed: () => TransactionFormSheet.show(context),
                 ),
               ),
@@ -257,10 +262,10 @@ class _TransactionListScreenState extends ConsumerState<TransactionListScreen> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(
-                      Icons.error_outline,
-                      size: 64,
+                    AppIcons.icon(
+                      AppIconKey.error,
                       color: Theme.of(context).colorScheme.error,
+                      size: 64,
                     ),
                     const SizedBox(height: 16),
                     Text(
@@ -271,7 +276,11 @@ class _TransactionListScreenState extends ConsumerState<TransactionListScreen> {
                     const SizedBox(height: 24),
                     FilledButton.icon(
                       onPressed: _onRefresh,
-                      icon: const Icon(Icons.refresh),
+                      icon: AppIcons.icon(
+                        AppIconKey.refresh,
+                        color: Theme.of(context).colorScheme.onPrimary,
+                        size: 18,
+                      ),
                       label: const Text('Retry'),
                     ),
                   ],
@@ -334,7 +343,8 @@ class _TransactionListScreenState extends ConsumerState<TransactionListScreen> {
           child: Padding(
             padding: EdgeInsets.fromLTRB(20, 0, 20, 32),
             child: EmptyState(
-              icon: Icons.receipt_long_outlined,
+              icon: AppIconKey.receipt,
+              illustration: _TransactionEmptyStateIcon(),
               title: 'No transactions yet',
               subtitle: 'Tap + to add your first',
             ),
@@ -588,7 +598,7 @@ class _SwipeableTransactionActionRowState
             dismissible: _actionCount == 1
                 ? _TransactionSlidablePreview(
                     label: 'Edit',
-                    icon: Icons.edit_rounded,
+                    icon: AppIconKey.edit,
                     foregroundColor: colors.deepNavy,
                     backgroundColor: colors.navySoft.withValues(alpha: 0.72),
                     alignment: Alignment.centerLeft,
@@ -597,7 +607,7 @@ class _SwipeableTransactionActionRowState
             children: [
               _TransactionSlidableAction(
                 label: 'Edit',
-                icon: Icons.edit_rounded,
+                icon: AppIconKey.edit,
                 foregroundColor: colors.deepNavy,
                 backgroundColor: colors.navySoft.withValues(alpha: 0.72),
                 onPressed: widget.onEdit,
@@ -605,7 +615,7 @@ class _SwipeableTransactionActionRowState
               if (widget.canReflect)
                 _TransactionSlidableAction(
                   label: 'Reflect',
-                  icon: Icons.auto_awesome_rounded,
+                  icon: AppIconKey.ai,
                   foregroundColor: colors.deepNavy,
                   backgroundColor: colors.navySoft.withValues(alpha: 0.72),
                   onPressed: widget.onReflect,
@@ -613,7 +623,7 @@ class _SwipeableTransactionActionRowState
               if (widget.canAddBudget)
                 _TransactionSlidableAction(
                   label: 'Add budget',
-                  icon: Icons.flag_rounded,
+                  icon: AppIconKey.flag,
                   foregroundColor: colors.deepNavy,
                   backgroundColor: colors.amberSoft,
                   onPressed: widget.onAddBudget,
@@ -625,7 +635,7 @@ class _SwipeableTransactionActionRowState
             extentRatio: _deleteExtent,
             dismissible: _TransactionSlidablePreview(
               label: 'Delete',
-              icon: Icons.delete_outline_rounded,
+              icon: AppIconKey.delete,
               foregroundColor: colors.expense,
               backgroundColor: colors.expenseSoft,
               alignment: Alignment.centerRight,
@@ -633,7 +643,7 @@ class _SwipeableTransactionActionRowState
             children: [
               _TransactionSlidableAction(
                 label: 'Delete',
-                icon: Icons.delete_outline_rounded,
+                icon: AppIconKey.delete,
                 foregroundColor: colors.expense,
                 backgroundColor: colors.expenseSoft,
                 onPressed: widget.onDelete,
@@ -668,7 +678,7 @@ class _TransactionSlidablePreview extends StatelessWidget {
   });
 
   final String label;
-  final IconData icon;
+  final AppIconKey icon;
   final Color foregroundColor;
   final Color backgroundColor;
   final Alignment alignment;
@@ -687,7 +697,11 @@ class _TransactionSlidablePreview extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(icon, color: foregroundColor, size: 20),
+              AppIcons.icon(
+                icon,
+                color: foregroundColor,
+                size: 20,
+              ),
               const SizedBox(height: 4),
               Text(
                 label,
@@ -706,6 +720,20 @@ class _TransactionSlidablePreview extends StatelessWidget {
   }
 }
 
+class _TransactionEmptyStateIcon extends StatelessWidget {
+  const _TransactionEmptyStateIcon();
+
+  @override
+  Widget build(BuildContext context) {
+    return AppIcons.icon(
+      AppIconKey.receipt,
+      color: Theme.of(context).colorScheme.outlineVariant,
+      size: 64,
+      strokeWidth: 1.7,
+    );
+  }
+}
+
 class _TransactionSlidableAction extends StatelessWidget {
   const _TransactionSlidableAction({
     required this.label,
@@ -716,7 +744,7 @@ class _TransactionSlidableAction extends StatelessWidget {
   });
 
   final String label;
-  final IconData icon;
+  final AppIconKey icon;
   final Color foregroundColor;
   final Color backgroundColor;
   final VoidCallback onPressed;
@@ -733,7 +761,11 @@ class _TransactionSlidableAction extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(icon, color: foregroundColor, size: 20),
+          AppIcons.icon(
+            icon,
+            color: foregroundColor,
+            size: 20,
+          ),
           const SizedBox(height: 4),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 4),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'package:conscia_app/core/constants/app_icons.dart';
 import 'package:conscia_app/widgets/feed_card.dart';
 
 class InAppAlertBanner extends StatelessWidget {
@@ -30,8 +31,8 @@ class InAppAlertBanner extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(
-              Icons.tips_and_updates_outlined,
+            AppIcons.icon(
+              AppIconKey.sparkleGuidance,
               color: colors.primary,
               size: 24,
             ),
@@ -66,7 +67,11 @@ class InAppAlertBanner extends StatelessWidget {
             ),
             if (onDismiss != null)
               IconButton(
-                icon: const Icon(Icons.close, size: 20),
+                icon: AppIcons.icon(
+                  AppIconKey.close,
+                  color: colors.onSurfaceVariant,
+                  size: 20,
+                ),
                 onPressed: onDismiss,
                 visualDensity: VisualDensity.compact,
               ),

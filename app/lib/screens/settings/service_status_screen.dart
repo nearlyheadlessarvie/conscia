@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/constants/app_icons.dart';
 import '../../core/theme/app_colors.dart';
 import '../../models/health_status.dart';
 import '../../providers/health_provider.dart';
@@ -13,29 +14,29 @@ import '../../widgets/screen_section.dart';
 
 const _serviceMetadata = <String, _ServiceMeta>{
   'api': _ServiceMeta(
-    icon: Icons.dns,
+    icon: AppIconKey.serviceApi,
     label: 'API Server',
     subtitle: 'Core API',
   ),
   'postgresql': _ServiceMeta(
-    icon: Icons.storage,
+    icon: AppIconKey.serviceDatabase,
     label: 'PostgreSQL',
     subtitle: 'Relational Database',
   ),
   'dynamodb': _ServiceMeta(
-    icon: Icons.table_chart,
+    icon: AppIconKey.serviceStorage,
     label: 'DynamoDB',
     subtitle: 'Document Store',
   ),
   'ai': _ServiceMeta(
-    icon: Icons.auto_awesome,
+    icon: AppIconKey.serviceAi,
     label: 'AI Service',
     subtitle: 'Ollama / Bedrock',
   ),
 };
 
 class _ServiceMeta {
-  final IconData icon;
+  final AppIconKey icon;
   final String label;
   final String subtitle;
 
@@ -167,12 +168,12 @@ class _ServiceStatusScreenState extends ConsumerState<ServiceStatusScreen> {
       child: Center(
         child: Padding(
           padding: const EdgeInsets.all(32),
-          child: FeedCard(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  Icons.cloud_off,
+                child: FeedCard(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                AppIcons.icon(
+                  AppIconKey.offlineCloud,
                   size: 64,
                   color: theme.colorScheme.onSurfaceVariant,
                 ),
@@ -305,7 +306,7 @@ class _ServiceCard extends StatelessWidget {
     final colors = theme.appColors;
     final meta = _serviceMetadata[check.name.toLowerCase()] ??
         _ServiceMeta(
-          icon: Icons.miscellaneous_services,
+          icon: AppIconKey.serviceHealth,
           label: check.name,
           subtitle: '',
         );
@@ -320,7 +321,11 @@ class _ServiceCard extends StatelessWidget {
           CircleAvatar(
             backgroundColor: statusColor.withValues(alpha: 0.15),
             foregroundColor: statusColor,
-            child: Icon(meta.icon, size: 20),
+            child: AppIcons.icon(
+              meta.icon,
+              color: statusColor,
+              size: 20,
+            ),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -363,8 +368,8 @@ class _ServiceCard extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 6),
-            Icon(
-              isUnhealthy ? Icons.arrow_downward : Icons.arrow_upward,
+            AppIcons.icon(
+              isUnhealthy ? AppIconKey.arrowDown : AppIconKey.arrowUp,
               size: 16,
               color: statusColor,
             ),

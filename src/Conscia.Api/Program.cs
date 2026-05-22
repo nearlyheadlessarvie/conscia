@@ -112,6 +112,8 @@ if (builder.Environment.IsDevelopment())
         ServiceURL = builder.Configuration["AWS:SQS:ServiceURL"]
     };
     builder.Services.AddSingleton<IAmazonSQS>(new AmazonSQSClient(credentials, sqsConfig));
+    builder.Services.AddAWSService<IAmazonCognitoIdentityProvider>();
+    builder.Services.AddAWSService<IAmazonTextract>();
 }
 else
 {
@@ -125,6 +127,7 @@ else
 // --- DynamoDB Repositories ---
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IUserSubscriptionRepository, UserSubscriptionRepository>();
+builder.Services.AddScoped<IUserEntitlementOverrideRepository, UserEntitlementOverrideRepository>();
 builder.Services.AddScoped<IBudgetRepository, BudgetRepository>();
 builder.Services.AddScoped<IReceiptRepository, ReceiptRepository>();
 builder.Services.AddScoped<IFamilySpaceRepository, FamilySpaceRepository>();
@@ -145,6 +148,7 @@ builder.Services.Configure<AppleStoreOptions>(builder.Configuration.GetSection(A
 builder.Services.Configure<GooglePlayOptions>(builder.Configuration.GetSection(GooglePlayOptions.SectionName));
 builder.Services.Configure<FirebaseAdminOptions>(builder.Configuration.GetSection(FirebaseAdminOptions.SectionName));
 builder.Services.Configure<InviteEmailOptions>(builder.Configuration.GetSection(InviteEmailOptions.SectionName));
+builder.Services.Configure<AdminBootstrapOptions>(builder.Configuration.GetSection(AdminBootstrapOptions.SectionName));
 builder.Services.AddHttpClient<IAppleReceiptValidator, AppleReceiptValidator>();
 builder.Services.AddHttpClient<IGooglePlayValidator, GooglePlayValidator>();
 builder.Services.AddHttpClient<IExternalSocialTokenVerifier, ExternalSocialTokenVerifier>();
@@ -166,6 +170,9 @@ builder.Services.AddScoped<IPurchasePatternService, PurchasePatternService>();
 builder.Services.AddScoped<IAlertService, AlertService>();
 builder.Services.AddSingleton<IConscienceJourneyRulesProvider, HardcodedJourneyRulesProvider>();
 builder.Services.AddScoped<IConscienceJourneyService, ConscienceJourneyService>();
+builder.Services.AddScoped<IAdminAuthorizationService, AdminAuthorizationService>();
+builder.Services.AddScoped<ISubscriptionAdminService, SubscriptionAdminService>();
+builder.Services.AddScoped<IUserProvisioningService, UserProvisioningService>();
 builder.Services.AddSingleton<IRecurringScheduleGenerator, RecurringScheduleGenerator>();
 builder.Services.AddScoped<IInviteEmailSender, NoopInviteEmailSender>();
 builder.Services.AddScoped<ITriggerEvaluator, BudgetWarningEvaluator>();
@@ -465,6 +472,7 @@ app.MapBudgetEndpoints(apiVersionSet).RequireRateLimiting("standard");
 app.MapFamilySpaceEndpoints(apiVersionSet).RequireRateLimiting("standard");
 app.MapCategoryEndpoints(apiVersionSet).RequireRateLimiting("standard");
 app.MapSubscriptionEndpoints(apiVersionSet).RequireRateLimiting("standard");
+app.MapAdminEntitlementEndpoints(apiVersionSet).RequireRateLimiting("standard");
 app.MapAlertEndpoints(apiVersionSet).RequireRateLimiting("standard");
 app.MapPushNotificationEndpoints(apiVersionSet).RequireRateLimiting("standard");
 app.MapReceiptEndpoints(apiVersionSet).RequireRateLimiting("standard");

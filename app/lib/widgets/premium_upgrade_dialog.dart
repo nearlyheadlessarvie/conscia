@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../core/constants/app_icons.dart';
 import '../core/theme/app_colors.dart';
 import 'conscia_bottom_sheet.dart';
 import '../screens/settings/widgets/subscription_sheet.dart';
@@ -63,8 +64,8 @@ class PremiumUpgradeDialog extends StatelessWidget {
                     color: Colors.white.withValues(alpha: 0.88),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Icon(
-                    Icons.workspace_premium_rounded,
+                  child: AppIcons.icon(
+                    AppIconKey.premium,
                     color: colors.deepNavy,
                     size: 20,
                   ),

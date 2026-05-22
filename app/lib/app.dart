@@ -4,10 +4,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import 'core/constants/app_icons.dart';
 import 'core/routing/app_router.dart';
 import 'core/theme/app_theme.dart';
+import 'providers/auth_provider.dart';
 import 'providers/app_availability_provider.dart';
 import 'providers/iap_provider.dart';
+import 'providers/user_provider.dart';
 import 'services/deep_link_service.dart';
 import 'services/push_notification_service.dart';
 
@@ -36,6 +39,7 @@ class ConsciaApp extends ConsumerWidget {
             return Stack(
               children: [
                 child ?? const SizedBox.shrink(),
+                const _AuthRestoreBlocker(),
                 const _OfflineBlocker(),
               ],
             );
@@ -60,6 +64,7 @@ class _OfflineBlockerState extends ConsumerState<_OfflineBlocker> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(_lifecycleObserver);
     _countdownTimer = Timer.periodic(const Duration(seconds: 1), (_) {
       if (!mounted) return;
       final next = _secondsUntilRetry <= 1
@@ -71,9 +76,28 @@ class _OfflineBlockerState extends ConsumerState<_OfflineBlocker> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(_lifecycleObserver);
     _countdownTimer?.cancel();
     super.dispose();
   }
+
+  late final WidgetsBindingObserver _lifecycleObserver =
+      _OfflineBlockerLifecycleObserver(
+    onLifecycleChanged: (state) async {
+      if (!mounted) return;
+      final notifier = ref.read(appAvailabilityProvider.notifier);
+      if (state == AppLifecycleState.resumed) {
+        await notifier.setForegrounded(true);
+        return;
+      }
+
+      if (state == AppLifecycleState.inactive ||
+          state == AppLifecycleState.paused ||
+          state == AppLifecycleState.hidden) {
+        await notifier.setForegrounded(false);
+      }
+    },
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -107,7 +131,7 @@ class _OfflineBlockerState extends ConsumerState<_OfflineBlocker> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(
+                    AppIcons.icon(
                       blocker.icon,
                       size: 64,
                       color: theme.colorScheme.onSurfaceVariant,
@@ -151,10 +175,11 @@ class _OfflineBlockerState extends ConsumerState<_OfflineBlocker> {
                             .read(appAvailabilityProvider.notifier)
                             .refresh();
                       },
-                      icon: Icon(
+                      icon: AppIcons.icon(
                         state.isUpdateRequired
-                            ? Icons.system_update
-                            : Icons.refresh,
+                            ? AppIconKey.serviceHealth
+                            : AppIconKey.refresh,
+                        color: theme.colorScheme.onPrimary,
                       ),
                       label: Text(
                         state.isUpdateRequired ? 'Update Now' : 'Retry Now',
@@ -180,6 +205,57 @@ class _OfflineBlockerState extends ConsumerState<_OfflineBlocker> {
   }
 }
 
+class _AuthRestoreBlocker extends ConsumerWidget {
+  const _AuthRestoreBlocker();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final authState = ref.watch(authProvider);
+    final userAsync = authState.isAuthenticated
+        ? ref.watch(currentUserProvider)
+        : null;
+    final shouldBlock =
+        authState.isRestoringSession || (authState.isAuthenticated && userAsync?.isLoading == true);
+    if (!shouldBlock) {
+      return const SizedBox.shrink();
+    }
+
+    final theme = Theme.of(context);
+    return Positioned.fill(
+      child: ColoredBox(
+        color: theme.scaffoldBackgroundColor,
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Conscia',
+                style: theme.textTheme.headlineMedium?.copyWith(
+                  color: theme.colorScheme.onSurface,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const SizedBox(height: 16),
+              const CircularProgressIndicator(),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _OfflineBlockerLifecycleObserver extends WidgetsBindingObserver {
+  _OfflineBlockerLifecycleObserver({required this.onLifecycleChanged});
+
+  final Future<void> Function(AppLifecycleState state) onLifecycleChanged;
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    unawaited(onLifecycleChanged(state));
+  }
+}
+
 class _BlockerContent {
   const _BlockerContent({
     required this.icon,
@@ -187,7 +263,7 @@ class _BlockerContent {
     required this.message,
   });
 
-  final IconData icon;
+  final AppIconKey icon;
   final String title;
   final String message;
 
@@ -195,28 +271,28 @@ class _BlockerContent {
     switch (state.issue) {
       case AvailabilityIssue.deviceOffline:
         return const _BlockerContent(
-          icon: Icons.cloud_off,
+          icon: AppIconKey.offlineDevice,
           title: 'Device Offline',
           message:
               'Conscia cannot reach the internet right now. We will retry automatically.',
         );
       case AvailabilityIssue.apiUnavailable:
         return const _BlockerContent(
-          icon: Icons.cloud_off_outlined,
+          icon: AppIconKey.offlineCloud,
           title: 'Conscia Unavailable',
           message:
               'Your device is online, but the Conscia is temporarily unavailable.',
         );
       case AvailabilityIssue.updateRequired:
         return const _BlockerContent(
-          icon: Icons.system_update,
+          icon: AppIconKey.serviceHealth,
           title: 'Update Required',
           message:
               'A newer version of Conscia is available in the store and is required before you can continue.',
         );
       case AvailabilityIssue.none:
         return const _BlockerContent(
-          icon: Icons.check_circle,
+          icon: AppIconKey.verified,
           title: '',
           message: '',
         );

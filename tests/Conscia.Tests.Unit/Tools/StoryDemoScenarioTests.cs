@@ -31,6 +31,7 @@ public class StoryDemoScenarioTests
         Assert.Contains(scenario.WeeklyInsights, insight => insight.WeekStartDate == new DateTime(2026, 05, 11, 0, 0, 0, DateTimeKind.Utc));
         Assert.Contains(scenario.WeeklyInsights, insight => insight.WorthItCount == 3);
         Assert.True(scenario.MonthlyCategorySpends.Count >= 6);
+        Assert.Contains(scenario.EntitlementOverrides, entitlement => entitlement.UserId == scenario.User.Id);
     }
 
     [Fact]
@@ -115,6 +116,20 @@ public class StoryDemoScenarioTests
         Assert.Contains(
             scenario.ConscienceEvents,
             evt => evt.EventType == "reflection_completed" && evt.SourceId == scenario.Transactions[0].Id.ToString());
+    }
+
+    [Fact]
+    public void Build_CreatesAdminIdentityForOperatorTesting()
+    {
+        var scenario = StoryDemoScenario.Build(DateTime.Parse("2026-05-11T00:00:00Z"));
+
+        Assert.Contains(
+            scenario.AdditionalUsers,
+            user => user.Email == "story-admin@example.com");
+        Assert.Contains(
+            scenario.AdditionalIdentities,
+            identity => identity.ProviderSub == "story-admin@example.com"
+                && identity.Role == UserIdentityRole.Admin);
     }
 
     // Dynamo-backed seeding is covered by local seeder smoke runs because it needs DynamoDB Local.

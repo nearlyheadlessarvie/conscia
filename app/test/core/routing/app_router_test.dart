@@ -51,7 +51,11 @@ class _FakeSecureStorage extends FlutterSecureStorage {
 
 class _TestAuthNotifier extends AuthNotifier {
   _TestAuthNotifier(AuthState initialState)
-      : super(_FakeAuthService(), _FakeSecureStorage()) {
+      : super(
+          _FakeAuthService(),
+          _FakeSecureStorage(),
+          autoRestoreSession: false,
+        ) {
     state = initialState;
   }
 
@@ -232,6 +236,18 @@ void main() {
         Uri.parse('https://getconscia.com/open/family-invite?inviteId=invite-123'),
       ),
       '/settings/family-space/invites?inviteId=invite-123',
+    );
+  });
+
+  test('determineInitialLocation falls back to home off web', () {
+    expect(
+      determineInitialLocation(
+        isWebOverride: false,
+        baseUri: Uri.parse(
+          'http://localhost:59929/settings/family-space',
+        ),
+      ),
+      AppRoutes.home,
     );
   });
 

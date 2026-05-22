@@ -74,7 +74,11 @@ class _FamilySetupScreenState extends ConsumerState<FamilySetupScreen> {
                       FloatingLabelTextField(
                         controller: _nameController,
                         label: 'Family Space name',
-                        prefix: Icon(AppIcons.family),
+                        prefix: AppIcons.icon(
+                          AppIconKey.family,
+                          color: Theme.of(context).appColors.deepNavy,
+                          size: 20,
+                        ),
                         textInputAction: TextInputAction.next,
                         textCapitalization: TextCapitalization.words,
                         errorText: _nameError,
@@ -89,19 +93,27 @@ class _FamilySetupScreenState extends ConsumerState<FamilySetupScreen> {
                         message:
                             'Shared currency follows $currencyCode from your default workspace. Records stay consistent for everyone in the household.',
                         tone: InlineNoticeTone.neutral,
-                        icon: const Icon(Icons.payments_outlined),
+                        icon: AppIcons.icon(
+                          AppIconKey.payments,
+                          color: Theme.of(context).appColors.deepNavy,
+                          size: 16,
+                        ),
                       ),
                     ],
                   ),
                 ),
-                const ScreenSection(
+                ScreenSection(
                   title: 'Premium',
                   subtitle: 'Host the Family Space with Premium.',
                   child: InlineNotice(
                     message:
                         'Requires Premium to create. Invited members can participate free.',
                     tone: InlineNoticeTone.neutral,
-                    icon: Icon(Icons.workspace_premium_outlined),
+                    icon: AppIcons.icon(
+                      AppIconKey.premium,
+                      color: Theme.of(context).appColors.deepNavy,
+                      size: 16,
+                    ),
                   ),
                 ),
               ],

@@ -160,7 +160,11 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
       appBar: ConsciaAppBar(
         leading: IconButton(
           tooltip: 'Back',
-          icon: Icon(AppIcons.chevronLeft),
+          icon: AppIcons.icon(
+            AppIconKey.chevronLeft,
+            color: Theme.of(context).colorScheme.onSurface,
+            size: 20,
+          ),
           onPressed: _returnToSignIn,
         ),
         backgroundColor: Colors.transparent,
@@ -185,7 +189,7 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
                 title: 'Confirm your email',
                 subtitle:
                     'A short code is waiting at $pendingEmail so we can keep your account safe.',
-                icon: Icons.mark_email_read_outlined,
+                icon: AppIconKey.email,
               ),
               Padding(
                 padding: EdgeInsets.fromLTRB(
@@ -211,8 +215,8 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
                           child: Row(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Icon(
-                                Icons.code,
+                              AppIcons.icon(
+                                AppIconKey.code,
                                 size: 18,
                                 color: colors.onSecondaryContainer,
                               ),
@@ -239,7 +243,11 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
                       InlineNotice(
                         message: _errorMessage!,
                         tone: InlineNoticeTone.error,
-                        icon: const Icon(Icons.lock_outline_rounded),
+                        icon: AppIcons.icon(
+                          AppIconKey.lock,
+                          color: colors.error,
+                          size: 16,
+                        ),
                       ),
                       const SizedBox(height: 16),
                     ],
@@ -247,14 +255,24 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
                       InlineNotice(
                         message: _message!,
                         tone: InlineNoticeTone.info,
-                        icon: const Icon(Icons.mark_email_read_outlined),
+                        icon: AppIcons.icon(
+                          AppIconKey.email,
+                          color: colors.primary,
+                          size: 16,
+                        ),
                       ),
                       const SizedBox(height: 16),
                     ],
                     FloatingLabelTextField(
                       controller: _codeController,
                       label: 'Verification code',
-                      prefix: const Icon(Icons.verified_user_outlined),
+                      prefix: AppIcons.icon(
+                        AppIconKey.verified,
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onSurfaceVariant,
+                        size: 20,
+                      ),
                       keyboardType: TextInputType.number,
                       textInputAction: TextInputAction.done,
                       autofillHints: const [AutofillHints.oneTimeCode],

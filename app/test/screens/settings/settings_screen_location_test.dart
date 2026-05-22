@@ -1,4 +1,5 @@
 import 'package:conscia_app/models/family_space.dart';
+import 'package:conscia_app/providers/admin_entitlement_provider.dart';
 import 'package:conscia_app/providers/family_space_provider.dart';
 import 'package:conscia_app/providers/location_assistance_provider.dart';
 import 'package:conscia_app/providers/passkey_provider.dart';
@@ -16,18 +17,46 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hugeicons/hugeicons.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class _RecordingLocationAssistanceService extends LocationAssistanceService {
-  _RecordingLocationAssistanceService({required this.permissionGranted});
+  _RecordingLocationAssistanceService({
+    required this.permissionGranted,
+    this.locationServiceEnabled = true,
+    this.permissionStatus = LocationPermissionStatus.denied,
+  });
 
   final bool permissionGranted;
+  final bool locationServiceEnabled;
+  final LocationPermissionStatus permissionStatus;
   int permissionRequests = 0;
+  int openAppSettingsCalls = 0;
+  int openLocationSettingsCalls = 0;
+
+  @override
+  Future<bool> isLocationServiceEnabled() async => locationServiceEnabled;
 
   @override
   Future<bool> requestPermission() async {
     permissionRequests += 1;
     return permissionGranted;
+  }
+
+  @override
+  Future<LocationPermissionStatus> checkPermissionStatus() async =>
+      permissionStatus;
+
+  @override
+  Future<bool> openAppSettings() async {
+    openAppSettingsCalls += 1;
+    return true;
+  }
+
+  @override
+  Future<bool> openLocationSettings() async {
+    openLocationSettingsCalls += 1;
+    return true;
   }
 
   @override
@@ -356,6 +385,84 @@ void main() {
     );
   });
 
+  testWidgets(
+      'settings routes denied-forever location toggle attempts to system settings',
+      (tester) async {
+    SharedPreferences.setMockInitialValues({
+      'location_suggestions_enabled': false,
+      'location_suggestions_prompted': true,
+      'location_suggestions_permission_denied': true,
+    });
+    final prefs = await SharedPreferences.getInstance();
+    final locationService = _RecordingLocationAssistanceService(
+      permissionGranted: false,
+      permissionStatus: LocationPermissionStatus.deniedForever,
+    );
+
+    await _pumpSettingsScreen(
+      tester,
+      prefs: prefs,
+      locationService: locationService,
+      userService: _RecordingUserService(),
+    );
+
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Smart Nearby Suggestions'));
+    await tester.drag(find.byType(CustomScrollView), const Offset(0, 120));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byType(Switch).last);
+    await tester.pumpAndSettle();
+
+    expect(locationService.permissionRequests, 0);
+    expect(locationService.openAppSettingsCalls, 1);
+    expect(
+      find.text(
+        'Allow location access in your device settings to turn this on.',
+      ),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets(
+      'settings routes location toggle attempts to device location settings when location is off',
+      (tester) async {
+    SharedPreferences.setMockInitialValues({
+      'location_suggestions_enabled': false,
+      'location_suggestions_prompted': true,
+    });
+    final prefs = await SharedPreferences.getInstance();
+    final locationService = _RecordingLocationAssistanceService(
+      permissionGranted: false,
+      locationServiceEnabled: false,
+    );
+
+    await _pumpSettingsScreen(
+      tester,
+      prefs: prefs,
+      locationService: locationService,
+      userService: _RecordingUserService(),
+    );
+
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Smart Nearby Suggestions'));
+    await tester.drag(find.byType(CustomScrollView), const Offset(0, 120));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byType(Switch).last);
+    await tester.pumpAndSettle();
+
+    expect(locationService.permissionRequests, 0);
+    expect(locationService.openLocationSettingsCalls, 1);
+    expect(locationService.openAppSettingsCalls, 0);
+    expect(
+      find.text(
+        'Turn on device location first, then try Smart Nearby Suggestions again.',
+      ),
+      findsOneWidget,
+    );
+  });
+
   testWidgets('settings removes the legacy biometric toggle', (tester) async {
     SharedPreferences.setMockInitialValues({});
     final prefs = await SharedPreferences.getInstance();
@@ -455,7 +562,18 @@ void main() {
     expect(find.text('Region Format'), findsOneWidget);
     expect(find.text('Default'), findsOneWidget);
     expect(find.text('Philippines / US'), findsNothing);
-    expect(find.byIcon(Icons.check_rounded), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find
+            .ancestor(
+              of: find.text('Default'),
+              matching: find.byType(InkWell),
+            )
+            .last,
+        matching: find.byType(HugeIcon),
+      ),
+      findsOneWidget,
+    );
     expect(find.byType(Radio<String>), findsNothing);
   });
 
@@ -586,7 +704,18 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(Radio<String>), findsNothing);
-    expect(find.byIcon(Icons.check_rounded), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find
+            .ancestor(
+              of: find.text('Balanced').last,
+              matching: find.byType(InkWell),
+            )
+            .last,
+        matching: find.byType(HugeIcon),
+      ),
+      findsOneWidget,
+    );
     expect(find.byType(Divider), findsWidgets);
   });
 
@@ -647,6 +776,69 @@ void main() {
         findsOneWidget);
     expect(find.byKey(const ValueKey('settings-hero-family-shortcut')),
         findsOneWidget);
+  });
+
+  testWidgets(
+      'settings uses editorial section headers with meaningful subtitles',
+      (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+    final locationService =
+        _RecordingLocationAssistanceService(permissionGranted: true);
+
+    await _pumpSettingsScreen(
+      tester,
+      prefs: prefs,
+      locationService: locationService,
+      overrides: [
+        adminEntitlementAccessProvider.overrideWith((ref) async => true),
+      ],
+    );
+
+    await tester.pumpAndSettle();
+
+    expect(find.text('Money setup'), findsOneWidget);
+    expect(
+      find.text(
+        'Shape how Conscia tracks categories, limits, and planning defaults.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('Preferences'), findsOneWidget);
+    expect(
+      find.text('Tune guidance, formatting, and device-level behavior.'),
+      findsOneWidget,
+    );
+
+    await tester.scrollUntilVisible(find.text('Conscia Premium'), 200);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Subscription'), findsOneWidget);
+    expect(
+      find.text('See your plan status and manage premium access.'),
+      findsOneWidget,
+    );
+    expect(find.text('Operator'), findsOneWidget);
+    expect(
+      find.text(
+        'Internal tools for account access, provisioning, and entitlements.',
+      ),
+      findsOneWidget,
+    );
+
+    await tester.scrollUntilVisible(find.text('Download my data'), 200);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Data & privacy'), findsOneWidget);
+    expect(
+      find.text('Control exports, account ownership, and permanent deletion.'),
+      findsOneWidget,
+    );
+
+    expect(find.text('MONEY SETUP'), findsNothing);
+    expect(find.text('PREFERENCES'), findsNothing);
+    expect(find.text('SUBSCRIPTION'), findsNothing);
+    expect(find.text('DATA & PRIVACY'), findsNothing);
   });
 
   testWidgets('settings hero shortcut subtitles truncate instead of wrapping', (
@@ -734,8 +926,8 @@ void main() {
     await tester.scrollUntilVisible(find.text('Budgets'), 200);
     await tester.pumpAndSettle();
 
-    expect(find.text('MONEY SETUP'), findsOneWidget);
-    final planningTop = tester.getTopLeft(find.text('MONEY SETUP')).dy;
+    expect(find.text('Money setup'), findsOneWidget);
+    final planningTop = tester.getTopLeft(find.text('Money setup')).dy;
     final categoriesTop = tester.getTopLeft(find.text('Categories')).dy;
     final budgetsTop = tester.getTopLeft(find.text('Budgets')).dy;
 
@@ -823,12 +1015,58 @@ void main() {
 
     expect(find.text('Data & About'), findsNothing);
     expect(find.text('Service Status'), findsNothing);
-    await tester.scrollUntilVisible(find.text('DATA & PRIVACY'), 280);
+    await tester.scrollUntilVisible(find.text('Download my data'), 280);
     await tester.pumpAndSettle();
 
-    expect(find.text('DATA & PRIVACY'), findsOneWidget);
+    expect(find.text('Data & privacy'), findsOneWidget);
     expect(find.text('Download my data'), findsOneWidget);
     expect(find.text('Delete account'), findsOneWidget);
+  });
+
+  testWidgets('settings hides admin entitlements for non-admin sessions',
+      (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+    final locationService =
+        _RecordingLocationAssistanceService(permissionGranted: true);
+
+    await _pumpSettingsScreen(
+      tester,
+      prefs: prefs,
+      locationService: locationService,
+      overrides: [
+        adminEntitlementAccessProvider.overrideWith((ref) async => false),
+      ],
+    );
+
+    await tester.pumpAndSettle();
+
+    expect(find.text('Admin entitlements'), findsNothing);
+    expect(find.text('Operator'), findsNothing);
+  });
+
+  testWidgets('settings shows admin entitlements for admin sessions',
+      (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+    final locationService =
+        _RecordingLocationAssistanceService(permissionGranted: true);
+
+    await _pumpSettingsScreen(
+      tester,
+      prefs: prefs,
+      locationService: locationService,
+      overrides: [
+        adminEntitlementAccessProvider.overrideWith((ref) async => true),
+      ],
+    );
+
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(find.text('Admin entitlements'), 280);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Operator'), findsOneWidget);
+    expect(find.text('Admin entitlements'), findsOneWidget);
   });
 
   testWidgets('delete account confirmation uses a pull-up sheet',
@@ -873,7 +1111,7 @@ void main() {
 
     await tester.pumpAndSettle();
 
-    await tester.ensureVisible(find.text('PREFERENCES'));
+    await tester.scrollUntilVisible(find.text('AI Personality'), 200);
     await tester.pumpAndSettle();
 
     final groupMaterial = tester.widget<Material>(

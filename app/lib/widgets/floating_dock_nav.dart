@@ -47,15 +47,15 @@ class FloatingDockNav extends StatelessWidget {
               _DockIconButton(
                 index: 0,
                 currentIndex: currentIndex,
-                icon: AppIcons.home,
-                activeIcon: AppIcons.homeActive,
+                icon: AppIconKey.home,
+                activeIcon: AppIconKey.homeActive,
                 onTap: onDestinationSelected,
               ),
               _DockIconButton(
                 index: 1,
                 currentIndex: currentIndex,
-                icon: AppIcons.transactions,
-                activeIcon: AppIcons.transactionsActive,
+                icon: AppIconKey.transactions,
+                activeIcon: AppIconKey.transactionsActive,
                 onTap: onDestinationSelected,
               ),
               _ScanDockButton(
@@ -65,15 +65,15 @@ class FloatingDockNav extends StatelessWidget {
               _DockIconButton(
                 index: 3,
                 currentIndex: currentIndex,
-                icon: AppIcons.assistant,
-                activeIcon: AppIcons.assistantActive,
+                icon: AppIconKey.assistant,
+                activeIcon: AppIconKey.assistantActive,
                 onTap: onDestinationSelected,
               ),
               _DockIconButton(
                 index: 4,
                 currentIndex: currentIndex,
-                icon: AppIcons.settings,
-                activeIcon: AppIcons.settingsActive,
+                icon: AppIconKey.settings,
+                activeIcon: AppIconKey.settingsActive,
                 onTap: onDestinationSelected,
               ),
             ],
@@ -95,8 +95,8 @@ class _DockIconButton extends StatelessWidget {
 
   final int index;
   final int currentIndex;
-  final IconData icon;
-  final IconData activeIcon;
+  final AppIconKey icon;
+  final AppIconKey activeIcon;
   final ValueChanged<int> onTap;
 
   @override
@@ -124,7 +124,7 @@ class _DockIconButton extends StatelessWidget {
                 shape: BoxShape.circle,
               ),
               alignment: Alignment.center,
-              child: Icon(
+              child: AppIcons.icon(
                 selected ? activeIcon : icon,
                 size: 20,
                 color: selected ? colors.deepNavy : colors.softInk,
@@ -174,8 +174,8 @@ class _ScanDockButton extends StatelessWidget {
             ],
           ),
           alignment: Alignment.center,
-          child: Icon(
-            AppIcons.scan,
+          child: AppIcons.icon(
+            AppIconKey.scan,
             size: 24,
             color: Colors.white,
           ),

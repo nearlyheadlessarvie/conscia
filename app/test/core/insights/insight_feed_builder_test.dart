@@ -65,7 +65,7 @@ void main() {
         items.map((item) => item.id), contains('impulse-shopping-worsening'));
     expect(items.first.id, 'budget-unbudgeted-subscriptions');
     expect(items.first.kind, InsightFeedKind.budgetTrend);
-    expect(items.first.mascot, InsightFeedMascot.both);
+    expect(items.first.mascot, InsightFeedMascot.none);
     expect(items.first.section, InsightFeedSection.budgetTrends);
     expect(items.first.dismissible, isTrue);
   });
@@ -138,7 +138,7 @@ void main() {
     expect(dashboardItems.every((item) => item.showOnDashboard), isTrue);
   });
 
-  test('positive mood and worth-it cards use angel mascot treatment', () {
+  test('positive mood and worth-it cards stay icon-based', () {
     final items = buildInsightFeedItems(
       behavioralInsights: const BehavioralInsights(
         mood: FinancialMood.confident,
@@ -156,10 +156,7 @@ void main() {
 
     expect(items.map((item) => item.id), contains('weekly-mood-confident'));
     expect(items.map((item) => item.id), contains('worth-it-monthly'));
-    expect(
-      items.where((item) => item.mascot == InsightFeedMascot.angel),
-      isNotEmpty,
-    );
+    expect(items.every((item) => item.mascot == InsightFeedMascot.none), isTrue);
   });
 
   test('budget trend detail explains the same 3-month pace as summary', () {

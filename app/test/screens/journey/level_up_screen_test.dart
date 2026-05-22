@@ -12,9 +12,41 @@ void main() {
       ),
     );
 
-    expect(find.text('You reached Budget Guardian'), findsOneWidget);
-    expect(find.text('Your money rhythm is getting steadier.'), findsOneWidget);
+    expect(find.text('Level up'), findsOneWidget);
+    expect(find.text('Budget Guardian'), findsOneWidget);
+    expect(find.text('Your boundaries are starting to hold.'), findsOneWidget);
     expect(find.textContaining('steadier money boundaries'), findsOneWidget);
+    expect(find.byTooltip('Back'), findsNothing);
+    expect(
+      find.byKey(const ValueKey('journey-level-up-confetti')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(
+        const ValueKey('journey-level-illustration-budget_guardian'),
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('Continue your journey'), findsOneWidget);
+  });
+
+  testWidgets('level up screen keeps confetti and core copy on compact height',
+      (tester) async {
+    tester.view.physicalSize = const Size(390, 700);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LevelUpScreen(summary: _summary()),
+      ),
+    );
+
+    expect(
+      find.byKey(const ValueKey('journey-level-up-confetti')),
+      findsOneWidget,
+    );
+    expect(find.text('Budget Guardian'), findsOneWidget);
     expect(find.text('Continue your journey'), findsOneWidget);
   });
 }

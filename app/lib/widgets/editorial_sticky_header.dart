@@ -2,6 +2,7 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 
+import '../core/constants/app_icons.dart';
 import '../core/theme/app_colors.dart';
 import '../core/theme/app_layout.dart';
 
@@ -83,10 +84,10 @@ class EditorialStickyHeader extends StatelessWidget {
                           tooltip: 'Back',
                           visualDensity: VisualDensity.compact,
                           onPressed: () => Navigator.of(context).maybePop(),
-                          icon: Icon(
-                            Icons.chevron_left_rounded,
-                            size: 28,
+                          icon: AppIcons.icon(
+                            AppIconKey.chevronLeft,
                             color: colors.deepNavy,
+                            size: 28,
                           ),
                         )
                       : const SizedBox.shrink(),

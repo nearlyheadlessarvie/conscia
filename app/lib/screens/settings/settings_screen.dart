@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
@@ -16,6 +17,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_layout.dart';
 import '../../models/family_space.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/admin_entitlement_provider.dart';
 import '../../providers/family_space_provider.dart';
 import '../../providers/location_assistance_provider.dart';
 import '../../providers/passkey_provider.dart';
@@ -28,6 +30,7 @@ import '../../widgets/conscia_app_bar.dart';
 import '../../widgets/conscia_bottom_sheet.dart';
 import '../../widgets/conscia_confirm_sheet.dart';
 import '../../widgets/currency_picker_sheet.dart';
+import '../../widgets/editorial_section_header.dart';
 import '../../widgets/editorial_hero_chip.dart';
 import '../../widgets/locale_picker_sheet.dart';
 import '../../widgets/single_select_list.dart';
@@ -87,6 +90,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       if (!mounted) return;
       _syncAppBarProgressFromController();
       ref.invalidate(subscriptionProvider);
+      unawaited(
+        ref.read(locationAssistanceProvider.notifier).reconcileWithSystemState(),
+      );
     });
   }
 
@@ -95,6 +101,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     onResume: () {
       if (!mounted) return;
       ref.invalidate(subscriptionProvider);
+      unawaited(
+        ref
+            .read(locationAssistanceProvider.notifier)
+            .reconcileWithSystemState(),
+      );
     },
   );
 
@@ -163,6 +174,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final locationAssistance = ref.watch(locationAssistanceProvider);
     final passkeysAvailable =
         ref.watch(passkeyAvailabilityProvider).valueOrNull ?? false;
+    final adminEntitlementAccess =
+        ref.watch(adminEntitlementAccessProvider).valueOrNull ?? false;
     final sessionSupportsPasskeys =
         ref.watch(currentSessionSupportsPasskeysProvider);
     final userPreferences = ref.watch(userPreferencesProvider);
@@ -179,7 +192,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           actions: [
             IconButton(
               tooltip: 'Sign out',
-              icon: Icon(Icons.logout_rounded, color: theme.appColors.deepNavy),
+              icon: AppIcons.icon(
+                AppIconKey.logout,
+                color: theme.appColors.deepNavy,
+                size: 22,
+              ),
               onPressed: () => _confirmSignOut(context, ref),
             ),
           ],
@@ -219,11 +236,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   sliver: SliverList.list(
                     children: [
                       _SettingsGroup(
-                        title: 'Money Setup',
+                        title: 'Money setup',
+                        subtitle:
+                            'Shape how Conscia tracks categories, limits, and planning defaults.',
                         children: [
                           _SettingsActionRow(
                             leading: _SettingsIconBox(
-                              icon: Icons.bar_chart_rounded,
+                              icon: AppIconKey.pieChart,
                               backgroundColor: theme.appColors.navySoft,
                             ),
                             title: 'Budgets',
@@ -232,7 +251,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                           ),
                           _SettingsActionRow(
                             leading: _SettingsIconBox(
-                              icon: Icons.sell_outlined,
+                              icon: AppIconKey.label,
                               backgroundColor: theme.appColors.amberSoft,
                             ),
                             title: 'Categories',
@@ -243,10 +262,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       ),
                       _SettingsGroup(
                         title: 'Preferences',
+                        subtitle:
+                            'Tune guidance, formatting, and device-level behavior.',
                         children: [
                           _SettingsActionRow(
                             leading: _SettingsIconBox(
-                              icon: Icons.psychology_alt_outlined,
+                              icon: AppIconKey.brain,
                               backgroundColor: theme.appColors.amberSoft,
                             ),
                             title: 'AI Personality',
@@ -263,7 +284,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                           ),
                           _SettingsSwitchRow(
                             leading: _SettingsIconBox(
-                              icon: Icons.location_on_outlined,
+                              icon: AppIconKey.location,
                               backgroundColor: theme.appColors.angelSoft,
                             ),
                             title: 'Smart Nearby Suggestions',
@@ -274,7 +295,34 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                               final notifier =
                                   ref.read(locationAssistanceProvider.notifier);
                               if (value) {
-                                await notifier.enableFromSettings();
+                                final outcome =
+                                    await notifier.enableFromSettings();
+                                if (!context.mounted) return;
+                                if (outcome ==
+                                    LocationSettingsEnableOutcome
+                                        .redirectedToLocationSettings) {
+                                  ScaffoldMessenger.of(context)
+                                    ..clearSnackBars()
+                                    ..showSnackBar(
+                                      const SnackBar(
+                                        content: Text(
+                                          'Turn on device location first, then try Smart Nearby Suggestions again.',
+                                        ),
+                                      ),
+                                    );
+                                } else if (outcome ==
+                                    LocationSettingsEnableOutcome
+                                        .redirectedToSystemSettings) {
+                                  ScaffoldMessenger.of(context)
+                                    ..clearSnackBars()
+                                    ..showSnackBar(
+                                      const SnackBar(
+                                        content: Text(
+                                          'Allow location access in your device settings to turn this on.',
+                                        ),
+                                      ),
+                                    );
+                                }
                               } else {
                                 await notifier.disableFromSettings();
                               }
@@ -282,7 +330,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                           ),
                           _SettingsActionRow(
                             leading: _SettingsIconBox(
-                              icon: Icons.language,
+                              icon: AppIconKey.language,
                               backgroundColor: theme.appColors.navySoft,
                             ),
                             title: 'Locale & Number Format',
@@ -292,7 +340,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                           ),
                           _SettingsActionRow(
                             leading: _SettingsIconBox(
-                              icon: Icons.currency_exchange,
+                              icon: AppIconKey.currency,
                               backgroundColor: theme.appColors.navySoft,
                             ),
                             title: 'Default Currency',
@@ -307,7 +355,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                           if (passkeysAvailable && sessionSupportsPasskeys)
                             _SettingsActionRow(
                               leading: _SettingsIconBox(
-                                icon: Icons.fingerprint,
+                                icon: AppIconKey.fingerprint,
                                 backgroundColor: theme.appColors.navySoft,
                               ),
                               title: _isRegisteringPasskey
@@ -324,6 +372,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       ),
                       _SettingsGroup(
                         title: 'Subscription',
+                        subtitle:
+                            'See your plan status and manage premium access.',
                         children: [
                           subAsync.when(
                             data: (status) => _PremiumRow(
@@ -336,7 +386,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                             ),
                             error: (_, __) => _SettingsActionRow(
                               leading: _SettingsIconBox(
-                                icon: Icons.star_rounded,
+                                icon: AppIconKey.premium,
                                 backgroundColor: theme.appColors.amberSoft,
                               ),
                               title: 'Conscia Premium',
@@ -346,17 +396,34 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                           ),
                         ],
                       ),
-                      if (ApiConstants.useMockAuth)
+                      if (adminEntitlementAccess)
                         _SettingsGroup(
-                          title: 'Developer',
-                          children: [_DevUpgradeTile()],
+                          title: 'Operator',
+                          subtitle:
+                              'Internal tools for account access, provisioning, and entitlements.',
+                          children: [
+                            _SettingsActionRow(
+                              leading: _SettingsIconBox(
+                                icon: AppIconKey.admin,
+                                backgroundColor: theme.appColors.navySoft,
+                              ),
+                              title: 'Admin entitlements',
+                              subtitle:
+                                  'Lookup users, grant lifetime premium, and provision reviewer access',
+                              onTap: () => context.push(
+                                AppRoutes.settingsAdminEntitlements,
+                              ),
+                            ),
+                          ],
                         ),
                       _SettingsGroup(
-                        title: 'Data & Privacy',
+                        title: 'Data & privacy',
+                        subtitle:
+                            'Control exports, account ownership, and permanent deletion.',
                         children: [
                           _SettingsActionRow(
                             leading: _SettingsIconBox(
-                              icon: Icons.download_rounded,
+                              icon: AppIconKey.download,
                               backgroundColor: theme.appColors.incomeSoft,
                               foregroundColor: theme.appColors.income,
                             ),
@@ -366,7 +433,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                           ),
                           _SettingsActionRow(
                             leading: _SettingsIconBox(
-                              icon: Icons.delete_forever,
+                              icon: AppIconKey.delete,
                               backgroundColor: theme.appColors.expenseSoft,
                               foregroundColor: theme.appColors.expense,
                             ),
@@ -709,32 +776,26 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 class _SettingsGroup extends StatelessWidget {
   const _SettingsGroup({
     required this.title,
+    required this.subtitle,
     required this.children,
   });
 
   final String title;
+  final String subtitle;
   final List<Widget> children;
 
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).appColors;
-
     return Padding(
-      padding: const EdgeInsets.only(bottom: 18),
+      padding: const EdgeInsets.only(bottom: 26),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Padding(
-            padding: const EdgeInsets.only(left: 2, bottom: 8),
-            child: Text(
-              title.toUpperCase(),
-              style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: colors.mutedInk,
-                    letterSpacing: 0.8,
-                    fontWeight: FontWeight.w700,
-                  ),
-            ),
+          EditorialSectionHeader(
+            title: title,
+            subtitle: subtitle,
           ),
+          const SizedBox(height: 10),
           Material(
             key: ValueKey('settings-group-$title'),
             color: Colors.transparent,
@@ -833,7 +894,7 @@ class _SettingsEditorialHero extends StatelessWidget {
               Expanded(
                 child: _HeroShortcutPill(
                   key: const ValueKey('settings-hero-profile-shortcut'),
-                  icon: AppIcons.person,
+                  icon: AppIconKey.person,
                   title: 'Profile',
                   subtitle: 'Personal workspace',
                   onTap: onProfileTap,
@@ -843,7 +904,7 @@ class _SettingsEditorialHero extends StatelessWidget {
               Expanded(
                 child: _HeroShortcutPill(
                   key: const ValueKey('settings-hero-family-shortcut'),
-                  icon: AppIcons.family,
+                  icon: AppIconKey.family,
                   title: 'Shared Conscia',
                   subtitle: workspaceLabel,
                   onTap: onFamilyTap,
@@ -912,7 +973,7 @@ class _HeroShortcutPill extends StatelessWidget {
     required this.onTap,
   });
 
-  final IconData icon;
+  final AppIconKey icon;
   final String title;
   final String subtitle;
   final VoidCallback onTap;
@@ -932,7 +993,11 @@ class _HeroShortcutPill extends StatelessWidget {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(icon, size: 17, color: colors.deepNavy),
+              AppIcons.icon(
+                icon,
+                size: 17,
+                color: colors.deepNavy,
+              ),
               const SizedBox(width: 8),
               Flexible(
                 child: ConstrainedBox(
@@ -965,7 +1030,11 @@ class _HeroShortcutPill extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 8),
-              Icon(AppIcons.chevronRight, size: 15, color: colors.softInk),
+              AppIcons.icon(
+                AppIconKey.chevronRight,
+                size: 15,
+                color: colors.softInk,
+              ),
             ],
           ),
         ),
@@ -981,7 +1050,7 @@ class _SettingsIconBox extends StatelessWidget {
     this.foregroundColor,
   });
 
-  final IconData icon;
+  final AppIconKey icon;
   final Color backgroundColor;
   final Color? foregroundColor;
 
@@ -994,9 +1063,15 @@ class _SettingsIconBox extends StatelessWidget {
         borderRadius: BorderRadius.circular(14),
       ),
       child: SizedBox(
-        width: 42,
-        height: 42,
-        child: Icon(icon, color: foregroundColor ?? colors.deepNavy, size: 22),
+        width: 46,
+        height: 46,
+        child: Center(
+          child: AppIcons.icon(
+            icon,
+            color: foregroundColor ?? colors.deepNavy,
+            size: 24,
+          ),
+        ),
       ),
     );
   }
@@ -1016,7 +1091,7 @@ class _PremiumRow extends StatelessWidget {
     final colors = Theme.of(context).appColors;
     return _SettingsActionRow(
       leading: _SettingsIconBox(
-        icon: Icons.star_rounded,
+        icon: AppIconKey.premium,
         backgroundColor: colors.amberSoft,
         foregroundColor: colors.amber,
       ),
@@ -1083,8 +1158,11 @@ class _SettingsActionRow extends StatelessWidget {
               ),
               const SizedBox(width: 8),
               if (showChevron)
-                Icon(AppIcons.chevronRight,
-                    color: Theme.of(context).appColors.border),
+                AppIcons.icon(
+                  AppIconKey.chevronRight,
+                  color: Theme.of(context).appColors.border,
+                  size: 20,
+                ),
             ],
           ),
         ),
@@ -1142,48 +1220,6 @@ class _SettingsSwitchRow extends StatelessWidget {
         ],
       ),
     );
-  }
-}
-
-class _DevUpgradeTile extends ConsumerWidget {
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final isPremium =
-        ref.watch(subscriptionProvider).valueOrNull?.isPremium ?? false;
-
-    if (isPremium) {
-      return const ListTile(
-        leading: Icon(Icons.check_circle, color: Colors.green),
-        title: Text('[DEV] Already Premium'),
-      );
-    }
-
-    return ListTile(
-      leading: const Icon(Icons.rocket_launch, color: Colors.orange),
-      title: const Text('[DEV] Simulate Upgrade'),
-      subtitle: const Text('Calls verify endpoint with trust-client fallback'),
-      onTap: () => _upgrade(context, ref),
-    );
-  }
-
-  Future<void> _upgrade(BuildContext context, WidgetRef ref) async {
-    final messenger = ScaffoldMessenger.of(context);
-    try {
-      final dio = ref.read(dioProvider);
-      await dio.post(
-        '${ApiConstants.verifyReceipt}/ios',
-        data: {'token': 'dev-simulate-upgrade'},
-      );
-      ref.invalidate(subscriptionProvider);
-      messenger.showSnackBar(
-        const SnackBar(content: Text('Upgraded to Premium!')),
-      );
-    } catch (e, s) {
-      final error = AppError.from(e, stackTrace: s);
-      messenger.showSnackBar(
-        SnackBar(content: Text(error.userMessage)),
-      );
-    }
   }
 }
 
