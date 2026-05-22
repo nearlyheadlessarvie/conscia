@@ -270,6 +270,7 @@ Interaction expectations:
 - tapping the date control opens the date preset picker or date range picker flow
 - the date control should receive a stronger active treatment when a date filter is applied
 - category filters should clear by tapping the currently selected category again instead of relying on a dedicated `All` chip
+- the currently selected category chip should show a small trailing clear affordance such as `X` so the deselect action is discoverable
 
 Why this presentation:
 
@@ -324,6 +325,7 @@ App tests should cover:
 - the pinned date filter control remains visible while category chips scroll
 - the date state label is hidden when inactive and shown when active
 - tapping the active category chip clears the category filter
+- the active category chip renders a trailing clear affordance
 
 ## Documentation
 
@@ -364,5 +366,6 @@ App Store Connect notes should be explicit enough for an operator to configure:
 - The transaction screen uses a pinned icon-only date filter control on the sticky rail, with category chips scrolling beside it.
 - The transaction screen hides the date state label until a date filter is active.
 - The transaction screen clears a category filter by tapping the selected category chip, without an `All` chip.
+- The selected category chip shows a visible trailing clear affordance.
 - Tests cover Apple notification verification and state transitions plus transaction filter API behavior.
 - Documentation includes Production and Sandbox server URLs and App Store Connect setup notes.
