@@ -35,6 +35,8 @@ This design does not cover:
 - Transaction date filtering must be performed on the server.
 - Transaction filters must support `This week`, `Last week`, `This month`, `Last month`, `This year`, `Specific date`, and `Custom range`.
 - The app should send concrete `from` and `to` values to the API rather than sending preset names.
+- The transaction screen should treat date filtering as part of the sticky filter rail rather than a separate hero action.
+- The category rail should not include an `All` chip; tapping the active category chip should clear that category filter.
 
 ## Recommended Approach
 
@@ -244,6 +246,37 @@ Why this set:
 - yearly view supports broader review without adding too many preset choices
 - specific/custom cover search-like and ad hoc analysis behavior
 
+### App Filter Rail Presentation
+
+The transaction screen should integrate date filtering into the same sticky filter zone as category browsing, but not as another horizontally scrolling category chip.
+
+Recommended layout:
+
+- pin a compact icon-only date filter control on the far left of the sticky filter rail
+- keep category chips in their own horizontally scrolling lane to the right
+- remove the standalone date filter button from the hero
+- hide the date state label when no date filter is active
+- when a date filter is active, show a small one-line label beneath the pinned date control
+
+Date state label examples:
+
+- `Last month`
+- `May 12`
+- `May 1-12`
+
+Interaction expectations:
+
+- the pinned date control always remains visible while category chips scroll independently
+- tapping the date control opens the date preset picker or date range picker flow
+- the date control should receive a stronger active treatment when a date filter is applied
+- category filters should clear by tapping the currently selected category again instead of relying on a dedicated `All` chip
+
+Why this presentation:
+
+- it keeps date filtering in the browsing workflow without pretending it is a category
+- it gives the user a permanently reachable date tool while preserving horizontal space for real categories
+- it removes the awkward detached button from the hero and makes the sticky rail feel like one cohesive control surface
+
 ### Timezone Semantics
 
 The app and API must agree on what a “day” means for specific-date and preset boundaries.
@@ -288,6 +321,9 @@ App tests should cover:
 - preset selection computes the expected request bounds
 - `Specific date` resolves to a single-day range
 - `Custom range` sends the chosen bounds
+- the pinned date filter control remains visible while category chips scroll
+- the date state label is hidden when inactive and shown when active
+- tapping the active category chip clears the category filter
 
 ## Documentation
 
@@ -325,5 +361,8 @@ App Store Connect notes should be explicit enough for an operator to configure:
 - Unlinked Apple notifications do not create guessed user subscriptions.
 - Transaction list APIs accept server-side `from` and `to` filtering.
 - The app offers `This week`, `Last week`, `This month`, `Last month`, `This year`, `Specific date`, and `Custom range` presets and resolves them to concrete ranges before calling the API.
+- The transaction screen uses a pinned icon-only date filter control on the sticky rail, with category chips scrolling beside it.
+- The transaction screen hides the date state label until a date filter is active.
+- The transaction screen clears a category filter by tapping the selected category chip, without an `All` chip.
 - Tests cover Apple notification verification and state transitions plus transaction filter API behavior.
 - Documentation includes Production and Sandbox server URLs and App Store Connect setup notes.
