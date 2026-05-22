@@ -165,7 +165,7 @@ class _InsightsScreenState extends ConsumerState<InsightsScreen> {
             padding: EdgeInsets.fromLTRB(20, 96, 20, 28),
             sliver: SliverToBoxAdapter(
               child: EmptyState(
-                icon: AppIconKey.pieChart,
+                icon: AppIconKey.insightTrend,
                 title: 'No insights yet',
                 subtitle:
                     'Keep tracking for a week and Conscia will surface your spending patterns.',
