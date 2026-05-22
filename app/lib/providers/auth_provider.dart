@@ -27,6 +27,7 @@ class AuthState {
   final String? userId;
   final String? pendingEmail;
   final bool isLoading;
+  final bool isRestoringSession;
   final String? error;
   final bool wasExplicitLogout;
 
@@ -37,6 +38,7 @@ class AuthState {
     this.userId,
     this.pendingEmail,
     this.isLoading = false,
+    this.isRestoringSession = false,
     this.error,
     this.wasExplicitLogout = false,
   });
@@ -51,6 +53,7 @@ class AuthState {
     Object? userId = _unset,
     Object? pendingEmail = _unset,
     bool? isLoading,
+    bool? isRestoringSession,
     Object? error = _unset,
     bool? wasExplicitLogout,
   }) {
@@ -67,6 +70,7 @@ class AuthState {
           ? this.pendingEmail
           : pendingEmail as String?,
       isLoading: isLoading ?? this.isLoading,
+      isRestoringSession: isRestoringSession ?? this.isRestoringSession,
       error: identical(error, _unset) ? this.error : error as String?,
       wasExplicitLogout: wasExplicitLogout ?? this.wasExplicitLogout,
     );
@@ -86,8 +90,16 @@ class AuthNotifier extends StateNotifier<AuthState> {
   static const _confirmationCooldownKeyPrefix =
       'confirmation_resend_allowed_at_ms';
 
-  AuthNotifier(this._authService, this._storage) : super(const AuthState()) {
-    _loadStoredTokens();
+  AuthNotifier(
+    this._authService,
+    this._storage, {
+    bool autoRestoreSession = true,
+  }) : super(
+          AuthState(isRestoringSession: autoRestoreSession),
+        ) {
+    if (autoRestoreSession) {
+      _loadStoredTokens();
+    }
   }
 
   Future<void> _loadStoredTokens() async {
@@ -101,9 +113,13 @@ class AuthNotifier extends StateNotifier<AuthState> {
         refreshToken: refreshToken,
         userId: userId,
       );
+      if (state.isRestoringSession) {
+        state = state.copyWith(isRestoringSession: false);
+      }
     } catch (_) {
       // Tests and rare platform startup races can make secure storage
       // unavailable. Stay signed out instead of surfacing an async crash.
+      state = state.copyWith(isRestoringSession: false);
       return;
     }
   }
@@ -134,7 +150,11 @@ class AuthNotifier extends StateNotifier<AuthState> {
       return;
     }
 
-    state = state.copyWith(isLoading: true, error: null);
+    state = state.copyWith(
+      isLoading: true,
+      isRestoringSession: false,
+      error: null,
+    );
     try {
       final tokens = await _authService.login(email, password);
       await _persistTokens(tokens);
@@ -146,6 +166,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
         userId: tokens.userId,
         pendingEmail: null,
         isLoading: false,
+        isRestoringSession: false,
         wasExplicitLogout: false,
       );
     } on AuthConfirmationRequiredException catch (e) {
@@ -163,7 +184,11 @@ class AuthNotifier extends StateNotifier<AuthState> {
       return;
     }
 
-    state = state.copyWith(isLoading: true, error: null);
+    state = state.copyWith(
+      isLoading: true,
+      isRestoringSession: false,
+      error: null,
+    );
     try {
       final result = await _authService.register(email, password);
       saveLastEmail(email);
@@ -193,7 +218,11 @@ class AuthNotifier extends StateNotifier<AuthState> {
       throw Exception('No pending email confirmation');
     }
 
-    state = state.copyWith(isLoading: true, error: null);
+    state = state.copyWith(
+      isLoading: true,
+      isRestoringSession: false,
+      error: null,
+    );
     try {
       await _authService.confirmRegistration(email, confirmationCode);
 
@@ -225,7 +254,11 @@ class AuthNotifier extends StateNotifier<AuthState> {
       throw Exception('No pending email confirmation');
     }
 
-    state = state.copyWith(isLoading: true, error: null);
+    state = state.copyWith(
+      isLoading: true,
+      isRestoringSession: false,
+      error: null,
+    );
     try {
       await _authService.resendConfirmation(email);
       await _startConfirmationCooldown(email);
@@ -258,7 +291,11 @@ class AuthNotifier extends StateNotifier<AuthState> {
   }
 
   Future<void> signInWithGoogle() async {
-    state = state.copyWith(isLoading: true, error: null);
+    state = state.copyWith(
+      isLoading: true,
+      isRestoringSession: false,
+      error: null,
+    );
     try {
       if (ApiConstants.useMockAuth) {
         final tokens =
@@ -270,6 +307,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
           refreshToken: tokens.refreshToken,
           userId: tokens.userId,
           isLoading: false,
+          isRestoringSession: false,
           wasExplicitLogout: false,
         );
         return;
@@ -282,6 +320,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
         refreshToken: tokens.refreshToken,
         userId: tokens.userId,
         isLoading: false,
+        isRestoringSession: false,
         wasExplicitLogout: false,
       );
     } catch (e, s) {
@@ -292,7 +331,11 @@ class AuthNotifier extends StateNotifier<AuthState> {
   }
 
   Future<void> signInWithApple() async {
-    state = state.copyWith(isLoading: true, error: null);
+    state = state.copyWith(
+      isLoading: true,
+      isRestoringSession: false,
+      error: null,
+    );
     try {
       if (ApiConstants.useMockAuth) {
         final tokens = await _authService.login(
@@ -304,6 +347,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
           refreshToken: tokens.refreshToken,
           userId: tokens.userId,
           isLoading: false,
+          isRestoringSession: false,
         );
         return;
       }
@@ -315,6 +359,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
         refreshToken: tokens.refreshToken,
         userId: tokens.userId,
         isLoading: false,
+        isRestoringSession: false,
       );
     } catch (e, s) {
       final error = AppError.from(e, stackTrace: s);
@@ -335,7 +380,10 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
   Future<void> logout() async {
     _pendingPassword = null;
-    state = const AuthState(wasExplicitLogout: true);
+    state = const AuthState(
+      wasExplicitLogout: true,
+      isRestoringSession: false,
+    );
     await _storage.delete(key: _accessTokenKey);
     await _storage.delete(key: _refreshTokenKey);
     await _storage.delete(key: _userIdKey);
@@ -359,6 +407,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
         userId: tokens.userId,
         pendingEmail: null,
         isLoading: false,
+        isRestoringSession: false,
         error: null,
       );
       return true;
@@ -372,6 +421,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
     _pendingPassword = null;
     state = const AuthState(
       status: AuthStatus.sessionExpired,
+      isRestoringSession: false,
       error: 'Session expired',
       wasExplicitLogout: false,
     );
@@ -415,6 +465,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
           userId: tokens.userId,
           pendingEmail: null,
           isLoading: false,
+          isRestoringSession: false,
           error: null,
           wasExplicitLogout: false,
         );
@@ -430,6 +481,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       accessToken: accessToken,
       refreshToken: refreshToken,
       userId: userId,
+      isRestoringSession: false,
       error: null,
       wasExplicitLogout: false,
     );
@@ -485,6 +537,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       userId: tokens.userId,
       pendingEmail: null,
       isLoading: false,
+      isRestoringSession: false,
       error: null,
       wasExplicitLogout: false,
     );
@@ -510,6 +563,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       refreshToken: null,
       userId: null,
       isLoading: false,
+      isRestoringSession: false,
       error: null,
       wasExplicitLogout: false,
     );
@@ -536,6 +590,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       refreshToken: null,
       userId: userId,
       isLoading: false,
+      isRestoringSession: false,
       error: null,
       wasExplicitLogout: false,
     );

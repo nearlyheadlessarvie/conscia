@@ -208,6 +208,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
 
       if (isHealthCheck) return null;
 
+      if (authState.isRestoringSession) {
+        return null;
+      }
+
       if (isSessionExpired) {
         return isSessionExpiredRoute ? null : AppRoutes.sessionExpired;
       }
