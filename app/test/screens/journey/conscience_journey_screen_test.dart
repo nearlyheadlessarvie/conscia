@@ -40,6 +40,14 @@ void main() {
     expect(find.text('???'), findsOneWidget);
     expect(find.text('6-day streak'), findsOneWidget);
     expect(find.text('MASCOT MOMENT'), findsNothing);
+    expect(
+      find.byKey(const ValueKey('journey-level-art-budget_guardian')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('journey-badge-art-first_reflection')),
+      findsOneWidget,
+    );
   });
 
   testWidgets('renders the iOS-forward sticky journey header', (tester) async {

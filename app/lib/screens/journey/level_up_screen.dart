@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../../core/theme/app_colors.dart';
 import '../../models/conscience_journey.dart';
-import '../../widgets/glyphs/conscia_glyph.dart';
+import 'journey_artwork.dart';
+import 'level_up_content.dart';
 
 class LevelUpScreen extends StatelessWidget {
   const LevelUpScreen({
@@ -16,76 +17,117 @@ class LevelUpScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final appColors = theme.appColors;
+    final content = resolveLevelUpContent(summary.currentLevel.key);
 
     return Scaffold(
       backgroundColor: appColors.paper,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        foregroundColor: appColors.ink,
-      ),
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Expanded(
-                child: Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    Positioned.fill(
-                      child: CustomPaint(
-                        painter: _LevelUpAtmospherePainter(appColors),
-                      ),
-                    ),
-                    Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        _LevelGlyph(summary: summary),
-                        const SizedBox(height: 30),
-                        Text(
-                          'You reached ${summary.currentLevel.title}',
-                          textAlign: TextAlign.center,
-                          style: theme.textTheme.headlineMedium?.copyWith(
-                            color: appColors.ink,
-                            fontWeight: FontWeight.w800,
-                            height: 1.08,
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        Text(
-                          'Your money rhythm is getting steadier.',
-                          textAlign: TextAlign.center,
-                          style: theme.textTheme.titleMedium?.copyWith(
-                            color: appColors.mutedInk,
-                            height: 1.35,
-                          ),
-                        ),
-                        const SizedBox(height: 22),
-                        ConstrainedBox(
-                          constraints: const BoxConstraints(maxWidth: 320),
-                          child: Text(
-                            _levelMeaning(summary.currentLevel.key),
-                            textAlign: TextAlign.center,
-                            style: theme.textTheme.bodyMedium?.copyWith(
-                              color: appColors.mutedInk,
-                              height: 1.5,
+      body: DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              appColors.paper,
+              appColors.pageTop.withValues(alpha: 0.55),
+              appColors.paper,
+            ],
+            stops: const [0.0, 0.48, 1.0],
+          ),
+        ),
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(24, 24, 24, 24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      final compact = constraints.maxHeight < 560;
+                      final illustrationSize = compact ? 148.0 : 188.0;
+                      final illustrationGap = compact ? 20.0 : 30.0;
+                      final titleStyle = compact
+                          ? theme.textTheme.headlineSmall
+                          : theme.textTheme.headlineMedium;
+                      final payoffStyle = compact
+                          ? theme.textTheme.titleSmall
+                          : theme.textTheme.titleMedium;
+                      final bodyStyle = compact
+                          ? theme.textTheme.bodyMedium
+                          : theme.textTheme.bodyLarge;
+
+                      return Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          Positioned.fill(
+                            child: CustomPaint(
+                              painter: _LevelUpAtmospherePainter(appColors),
                             ),
                           ),
-                        ),
-                        const SizedBox(height: 26),
-                        _LevelProgressLine(summary: summary),
-                      ],
-                    ),
-                  ],
+                          ConstrainedBox(
+                            constraints: const BoxConstraints(maxWidth: 360),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                _IllustrationMedallion(
+                                  summary: summary,
+                                  diameter: illustrationSize,
+                                ),
+                                SizedBox(height: illustrationGap),
+                                Text(
+                                  content.eyebrow,
+                                  textAlign: TextAlign.center,
+                                  style: theme.textTheme.labelLarge?.copyWith(
+                                    color: appColors.deepNavy.withValues(alpha: 0.72),
+                                    fontWeight: FontWeight.w800,
+                                    letterSpacing: 0.48,
+                                  ),
+                                ),
+                                const SizedBox(height: 10),
+                                Text(
+                                  summary.currentLevel.title,
+                                  textAlign: TextAlign.center,
+                                  style: titleStyle?.copyWith(
+                                    color: appColors.ink,
+                                    fontWeight: FontWeight.w900,
+                                    height: 1.06,
+                                  ),
+                                ),
+                                const SizedBox(height: 10),
+                                Text(
+                                  content.payoff,
+                                  textAlign: TextAlign.center,
+                                  style: payoffStyle?.copyWith(
+                                    color: appColors.deepNavy.withValues(alpha: 0.84),
+                                    fontWeight: FontWeight.w700,
+                                    height: 1.3,
+                                  ),
+                                ),
+                                SizedBox(height: compact ? 16 : 22),
+                                Text(
+                                  content.body,
+                                  textAlign: TextAlign.center,
+                                  style: bodyStyle?.copyWith(
+                                    color: appColors.mutedInk,
+                                    height: 1.55,
+                                  ),
+                                ),
+                                SizedBox(height: compact ? 18 : 24),
+                                _LevelProgressLine(summary: summary),
+                              ],
+                            ),
+                          ),
+                        ],
+                      );
+                    },
+                  ),
                 ),
-              ),
-              FilledButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: const Text('Continue your journey'),
-              ),
-            ],
+                FilledButton(
+                  onPressed: () => Navigator.of(context).maybePop(),
+                  child: const Text('Continue your journey'),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -93,35 +135,49 @@ class LevelUpScreen extends StatelessWidget {
   }
 }
 
-class _LevelGlyph extends StatelessWidget {
-  const _LevelGlyph({required this.summary});
+class _IllustrationMedallion extends StatelessWidget {
+  const _IllustrationMedallion({
+    required this.summary,
+    required this.diameter,
+  });
 
   final ConscienceJourneySummary summary;
+  final double diameter;
 
   @override
   Widget build(BuildContext context) {
     final appColors = Theme.of(context).appColors;
 
     return Container(
-      width: 140,
-      height: 140,
+      width: diameter,
+      height: diameter,
+      padding: EdgeInsets.all(diameter * 0.11),
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        color: appColors.angelSoft,
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            appColors.familySoft.withValues(alpha: 0.92),
+            appColors.angelSoft.withValues(alpha: 0.96),
+          ],
+        ),
+        border: Border.all(
+          color: appColors.surfaceRaised.withValues(alpha: 0.9),
+          width: 6,
+        ),
         boxShadow: [
           BoxShadow(
             color: appColors.deepNavy.withValues(alpha: 0.08),
             blurRadius: 36,
-            offset: const Offset(0, 18),
+            offset: const Offset(0, 20),
           ),
         ],
       ),
-      child: Center(
-        child: ConsciaGlyph.level(
-          summary.currentLevel.key,
-          color: appColors.deepNavy,
-          size: 68,
-        ),
+      child: JourneyLevelIllustration(
+        levelKey: summary.currentLevel.key,
+        size: diameter * 0.78,
+        fallbackColor: appColors.deepNavy,
       ),
     );
   }
@@ -140,13 +196,23 @@ class _LevelProgressLine extends StatelessWidget {
         ? '1 day rhythm'
         : '${summary.momentumDays} day rhythm';
 
-    return Text(
-      '${summary.xpTotal} XP | $rhythmLabel',
-      textAlign: TextAlign.center,
-      style: theme.textTheme.labelLarge?.copyWith(
-        color: appColors.mutedInk,
-        fontWeight: FontWeight.w800,
-        letterSpacing: 0.2,
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+      decoration: BoxDecoration(
+        color: appColors.surfaceRaised.withValues(alpha: 0.82),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(
+          color: appColors.deepNavy.withValues(alpha: 0.08),
+        ),
+      ),
+      child: Text(
+        '${summary.xpTotal} XP | $rhythmLabel',
+        textAlign: TextAlign.center,
+        style: theme.textTheme.labelLarge?.copyWith(
+          color: appColors.deepNavy.withValues(alpha: 0.78),
+          fontWeight: FontWeight.w800,
+          letterSpacing: 0.18,
+        ),
       ),
     );
   }
@@ -159,24 +225,42 @@ class _LevelUpAtmospherePainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final paint = Paint()
+    final primaryPaint = Paint()
       ..shader = RadialGradient(
         colors: [
-          colors.amberSoft.withValues(alpha: 0.72),
-          colors.familySoft.withValues(alpha: 0.34),
+          colors.amberSoft.withValues(alpha: 0.9),
+          colors.familySoft.withValues(alpha: 0.28),
           colors.paper.withValues(alpha: 0),
         ],
       ).createShader(
         Rect.fromCircle(
-          center: Offset(size.width * 0.58, size.height * 0.35),
-          radius: size.shortestSide * 0.72,
+          center: Offset(size.width * 0.5, size.height * 0.38),
+          radius: size.shortestSide * 0.78,
+        ),
+      );
+
+    final haloPaint = Paint()
+      ..shader = RadialGradient(
+        colors: [
+          colors.surfaceRaised.withValues(alpha: 0.55),
+          colors.paper.withValues(alpha: 0),
+        ],
+      ).createShader(
+        Rect.fromCircle(
+          center: Offset(size.width * 0.52, size.height * 0.34),
+          radius: size.shortestSide * 0.42,
         ),
       );
 
     canvas.drawCircle(
-      Offset(size.width * 0.58, size.height * 0.35),
-      size.shortestSide * 0.72,
-      paint,
+      Offset(size.width * 0.5, size.height * 0.38),
+      size.shortestSide * 0.78,
+      primaryPaint,
+    );
+    canvas.drawCircle(
+      Offset(size.width * 0.52, size.height * 0.34),
+      size.shortestSide * 0.42,
+      haloPaint,
     );
   }
 
@@ -184,21 +268,4 @@ class _LevelUpAtmospherePainter extends CustomPainter {
   bool shouldRepaint(covariant _LevelUpAtmospherePainter oldDelegate) {
     return oldDelegate.colors != colors;
   }
-}
-
-String _levelMeaning(String levelKey) {
-  return switch (levelKey) {
-    'awakening' =>
-      'You are beginning to notice the small money moments that shape your days.',
-    'impulse_spotter' || 'impulse-spotter' =>
-      'You are catching impulses earlier and giving yourself more room to choose.',
-    'budget_guardian' || 'budget-guardian' =>
-      'You are building steadier money boundaries without turning every choice into pressure.',
-    'conscience_captain' || 'conscience-captain' =>
-      'You are steering with more clarity, using signals from your own habits instead of noise.',
-    'money_monk' || 'money-monk' =>
-      'You are finding a calmer rhythm with money, one considered moment at a time.',
-    _ =>
-      'This level marks a quieter kind of progress: more awareness, more steadiness, and more trust in your rhythm.',
-  };
 }

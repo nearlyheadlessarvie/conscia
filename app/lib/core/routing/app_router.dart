@@ -35,6 +35,7 @@ import '../../screens/insights/category_list_screen.dart';
 import '../../screens/insights/insights_screen.dart';
 import '../../screens/journey/conscience_journey_screen.dart';
 import '../../screens/journey/level_up_screen.dart';
+import '../../screens/journey/level_up_content.dart';
 import '../../screens/insights/merchant_detail_screen.dart';
 import '../../screens/insights/merchant_list_screen.dart';
 import '../../screens/transactions/transaction_detail_screen.dart';
@@ -64,6 +65,9 @@ abstract class AppRoutes {
   static const insights = '/insights';
   static const journey = '/journey';
   static const levelUp = '/journey/level-up';
+  static const levelUpPreviewRoot = '/debug/journey/level-up';
+  static String levelUpPreview(String levelKey) =>
+      '$levelUpPreviewRoot/$levelKey';
 
   static const settings = '/settings';
   static const settingsProfile = '/settings/profile';
@@ -189,9 +193,12 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       final isSignInRoute = state.uri.path == AppRoutes.signIn;
       final isSessionExpiredRoute = state.uri.path == AppRoutes.sessionExpired;
       final isHealthCheck = state.uri.path.startsWith('/health');
+      final isDebugLevelPreview =
+          kDebugMode &&
+          state.uri.path.startsWith(AppRoutes.levelUpPreviewRoot);
       final redirectTarget = state.uri.queryParameters['redirect'];
 
-      if (isHealthCheck) return null;
+      if (isHealthCheck || isDebugLevelPreview) return null;
 
       if (isSessionExpired) {
         return isSessionExpiredRoute ? null : AppRoutes.sessionExpired;
@@ -435,6 +442,15 @@ final appRouterProvider = Provider<GoRouter>((ref) {
 
               return LevelUpScreen(summary: summary);
             },
+          );
+        },
+      ),
+      GoRoute(
+        path: '${AppRoutes.levelUpPreviewRoot}/:levelKey',
+        builder: (context, state) {
+          final levelKey = state.pathParameters['levelKey'] ?? 'awakening';
+          return LevelUpScreen(
+            summary: buildLevelUpPreviewSummary(levelKey),
           );
         },
       ),

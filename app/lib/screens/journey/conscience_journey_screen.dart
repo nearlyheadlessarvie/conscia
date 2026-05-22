@@ -5,10 +5,10 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_layout.dart';
 import '../../models/conscience_journey.dart';
 import '../../providers/conscience_journey_provider.dart';
-import '../../widgets/conscia_glyph.dart';
 import '../../widgets/editorial_sticky_header.dart';
 import '../../widgets/screen_section.dart';
 import '../../widgets/feed_card.dart';
+import 'journey_artwork.dart';
 
 class ConscienceJourneyScreen extends ConsumerStatefulWidget {
   const ConscienceJourneyScreen({super.key});
@@ -271,11 +271,13 @@ class _JourneyHeroBleed extends StatelessWidget {
               ],
             ),
             child: Center(
-              child: ConsciaGlyph.level(
-                summary.currentLevel.key,
-                color: colors.deepNavy,
-                size: 42,
-                strokeWidth: 3,
+              child: JourneyLevelArt(
+                levelKey: summary.currentLevel.key,
+                width: 42,
+                height: 42,
+                fallbackColor: colors.deepNavy,
+                tintColor: colors.deepNavy.withValues(alpha: 0.9),
+                borderRadius: BorderRadius.circular(16),
               ),
             ),
           ),
@@ -383,10 +385,11 @@ class _QuestCard extends StatelessWidget {
             _IconBadge(
               glyph: quest.isCompleted
                   ? Icon(Icons.check_rounded, color: iconColor, size: 22)
-                  : ConsciaGlyph.quest(
-                      quest.key,
-                      color: iconColor,
+                  : JourneyQuestArt(
+                      questKey: quest.key,
                       size: 22,
+                      fallbackColor: iconColor,
+                      tintColor: appColors.deepNavy.withValues(alpha: 0.88),
                     ),
               color: iconColor,
             ),
@@ -507,13 +510,15 @@ class _BadgeTile extends StatelessWidget {
                   : null,
             ),
             child: Center(
-              child: ConsciaGlyph.milestone(
-                badge.key,
-                unlocked: badge.isUnlocked,
-                color: badge.isUnlocked
-                    ? Theme.of(context).appColors.family
-                    : colors.outline,
+              child: JourneyBadgeArt(
+                badgeKey: badge.key,
                 size: 26,
+                unlocked: badge.isUnlocked,
+                fallbackColor:
+                    badge.isUnlocked ? Theme.of(context).appColors.family : colors.outline,
+                tintColor: badge.isUnlocked
+                    ? Theme.of(context).appColors.family.withValues(alpha: 0.92)
+                    : colors.outline.withValues(alpha: 0.8),
               ),
             ),
           ),
@@ -657,11 +662,14 @@ class _AchievementSheetRow extends StatelessWidget {
                   : null,
             ),
             child: Center(
-              child: ConsciaGlyph.milestone(
-                badge.key,
-                unlocked: badge.isUnlocked,
-                color: iconColor,
+              child: JourneyBadgeArt(
+                badgeKey: badge.key,
                 size: 20,
+                unlocked: badge.isUnlocked,
+                fallbackColor: iconColor,
+                tintColor: badge.isUnlocked
+                    ? appColors.family.withValues(alpha: 0.92)
+                    : colors.outline.withValues(alpha: 0.8),
               ),
             ),
           ),

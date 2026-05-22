@@ -12,9 +12,17 @@ void main() {
       ),
     );
 
-    expect(find.text('You reached Budget Guardian'), findsOneWidget);
-    expect(find.text('Your money rhythm is getting steadier.'), findsOneWidget);
+    expect(find.text('Level up'), findsOneWidget);
+    expect(find.text('Budget Guardian'), findsOneWidget);
+    expect(find.text('Your boundaries are starting to hold.'), findsOneWidget);
     expect(find.textContaining('steadier money boundaries'), findsOneWidget);
+    expect(find.byTooltip('Back'), findsNothing);
+    expect(
+      find.byKey(
+        const ValueKey('journey-level-illustration-budget_guardian'),
+      ),
+      findsOneWidget,
+    );
     expect(find.text('Continue your journey'), findsOneWidget);
   });
 }

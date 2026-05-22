@@ -275,6 +275,47 @@ void main() {
     );
   });
 
+  testWidgets('debug level preview route stays public in debug builds', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({
+      'has_completed_onboarding': false,
+    });
+    final fakeAuthNotifier = _TestAuthNotifier(const AuthState());
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          authProvider.overrideWith((ref) => fakeAuthNotifier),
+        ],
+        child: Consumer(
+          builder: (context, ref, _) {
+            final router = ref.watch(appRouterProvider);
+            return MaterialApp.router(routerConfig: router);
+          },
+        ),
+      ),
+    );
+
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+
+    final router = tester
+        .widget<MaterialApp>(find.byType(MaterialApp))
+        .routerConfig! as dynamic;
+
+    router.go(AppRoutes.levelUpPreview('impulse-spotter'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+
+    expect(find.text('Impulse Spotter'), findsOneWidget);
+    expect(find.text('Level up'), findsOneWidget);
+    expect(
+      router.routeInformationProvider.value.uri.toString(),
+      AppRoutes.levelUpPreview('impulse-spotter'),
+    );
+  });
+
   testWidgets(
     'onboarding profile route accepts generic map extras',
     (tester) async {
