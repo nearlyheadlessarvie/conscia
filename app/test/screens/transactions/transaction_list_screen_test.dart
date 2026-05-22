@@ -63,6 +63,8 @@ class _StaticTransactionService extends TransactionService {
   final List<Transaction> transactions;
   String? lastScope;
   String? lastCategory;
+  DateTime? lastFrom;
+  DateTime? lastTo;
   String? deletedId;
 
   @override
@@ -71,9 +73,13 @@ class _StaticTransactionService extends TransactionService {
     int pageSize = 20,
     String? category,
     String? scope,
+    DateTime? from,
+    DateTime? to,
   }) async {
     lastScope = scope;
     lastCategory = category;
+    lastFrom = from;
+    lastTo = to;
     final filtered = transactions.where((t) {
       final matchesScope = scope == null || t.scope == scope;
       final normalizedCategory = t.category.startsWith('Family ')
@@ -81,7 +87,9 @@ class _StaticTransactionService extends TransactionService {
           : t.category;
       final matchesCategory =
           category == null || normalizedCategory == category;
-      return matchesScope && matchesCategory;
+      final matchesDate = (from == null || !t.date.isBefore(from)) &&
+          (to == null || !t.date.isAfter(to));
+      return matchesScope && matchesCategory && matchesDate;
     }).toList();
 
     return PaginatedTransactions(
@@ -254,6 +262,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byTooltip('Add transaction'), findsOneWidget);
+    expect(find.text('Filter dates'), findsOneWidget);
     expect(find.byType(FloatingActionButton), findsNothing);
 
     await tester.tap(find.byTooltip('Add transaction'));
@@ -716,6 +725,31 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(service.lastCategory, 'Dining');
+  });
+
+  testWidgets('date filter action sends server-side range parameters', (
+    tester,
+  ) async {
+    final service = _StaticTransactionService(_manyTransactions());
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          _authenticatedOverride,
+          transactionServiceProvider.overrideWithValue(service),
+        ],
+        child: const MaterialApp(home: TransactionListScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Filter dates'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('This month'));
+    await tester.pumpAndSettle();
+
+    expect(service.lastFrom, isNotNull);
+    expect(service.lastTo, isNotNull);
   });
 
   testWidgets(

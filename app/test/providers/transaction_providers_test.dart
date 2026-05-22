@@ -49,8 +49,34 @@ class _DeferredTransactionService extends TransactionService {
     int pageSize = 20,
     String? category,
     String? scope,
+    DateTime? from,
+    DateTime? to,
   }) {
     return completer.future;
+  }
+}
+
+class _DuplicatePageTransactionService extends TransactionService {
+  _DuplicatePageTransactionService(this.transactions) : super(Dio());
+
+  final List<Transaction> transactions;
+
+  @override
+  Future<PaginatedTransactions> list({
+    int page = 1,
+    int pageSize = 20,
+    String? category,
+    String? scope,
+    DateTime? from,
+    DateTime? to,
+  }) async {
+    return PaginatedTransactions(
+      items: transactions,
+      totalCount: transactions.length,
+      page: page,
+      pageSize: pageSize,
+      hasMore: page == 1,
+    );
   }
 }
 
@@ -86,5 +112,38 @@ void main() {
     );
     await service.completer.future;
     await Future<void>.delayed(Duration.zero);
+  });
+
+  test('deduplicates transactions when the same page data is appended', () async {
+    final service = _DuplicatePageTransactionService([
+      Transaction(
+        id: 'tx-1',
+        amount: 24,
+        currencyCode: 'PHP',
+        category: 'Dining',
+        description: 'Lunch',
+        type: 'expense',
+        date: DateTime(2026, 5, 22),
+      ),
+    ]);
+    final container = ProviderContainer(
+      overrides: [
+        authProvider.overrideWith(
+          (ref) => _TestAuthNotifier(
+            const AuthState(
+              status: AuthStatus.authenticated,
+              userId: 'user-1',
+            ),
+          ),
+        ),
+        transactionServiceProvider.overrideWithValue(service),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    await Future<void>.delayed(Duration.zero);
+    await container.read(transactionListProvider.notifier).loadMore();
+
+    expect(container.read(transactionListProvider).transactions, hasLength(1));
   });
 }

@@ -38,6 +38,15 @@ class TransactionListScreen extends ConsumerStatefulWidget {
 
 class _TransactionListScreenState extends ConsumerState<TransactionListScreen> {
   static const _filterRailHeight = 56.0;
+  static const _datePresetLabels = <String, _TransactionDatePreset>{
+    'This week': _TransactionDatePreset.thisWeek,
+    'Last week': _TransactionDatePreset.lastWeek,
+    'This month': _TransactionDatePreset.thisMonth,
+    'Last month': _TransactionDatePreset.lastMonth,
+    'This year': _TransactionDatePreset.thisYear,
+    'Specific date': _TransactionDatePreset.specificDate,
+    'Custom range': _TransactionDatePreset.customRange,
+  };
 
   final _scrollController = ScrollController();
   final _filterAnchorKey = GlobalKey();
@@ -140,11 +149,131 @@ class _TransactionListScreenState extends ConsumerState<TransactionListScreen> {
     await ref.read(filteredTransactionListProvider.notifier).refresh();
   }
 
+  Future<void> _openDateFilterMenu() async {
+    final selected = await showModalBottomSheet<String>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) => SafeArea(
+        child: ListView(
+          shrinkWrap: true,
+          children: [
+            for (final entry in _datePresetLabels.entries)
+              ListTile(
+                title: Text(entry.key),
+                onTap: () => Navigator.of(context).pop(entry.key),
+              ),
+            ListTile(
+              title: const Text('Clear filter'),
+              onTap: () => Navigator.of(context).pop('clear'),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (!mounted || selected == null) return;
+
+    if (selected == 'clear') {
+      ref.read(transactionDateFilterProvider.notifier).state = null;
+      await ref.read(filteredTransactionListProvider.notifier).refresh();
+      return;
+    }
+
+    final filter = await _resolveDatePreset(_datePresetLabels[selected]!);
+    if (!mounted || filter == null) return;
+
+    ref.read(transactionDateFilterProvider.notifier).state = filter;
+    await ref.read(filteredTransactionListProvider.notifier).refresh();
+  }
+
+  Future<TransactionDateFilter?> _resolveDatePreset(
+    _TransactionDatePreset preset,
+  ) async {
+    final now = DateTime.now();
+    final localToday = DateTime(now.year, now.month, now.day);
+
+    switch (preset) {
+      case _TransactionDatePreset.thisWeek:
+        final start = localToday.subtract(Duration(days: localToday.weekday - 1));
+        return TransactionDateFilter(
+          kind: 'thisWeek',
+          from: start,
+          to: start
+              .add(const Duration(days: 7))
+              .subtract(const Duration(milliseconds: 1)),
+        );
+      case _TransactionDatePreset.lastWeek:
+        final thisWeekStart = localToday.subtract(Duration(days: localToday.weekday - 1));
+        final start = thisWeekStart.subtract(const Duration(days: 7));
+        return TransactionDateFilter(
+          kind: 'lastWeek',
+          from: start,
+          to: thisWeekStart.subtract(const Duration(milliseconds: 1)),
+        );
+      case _TransactionDatePreset.thisMonth:
+        final start = DateTime(localToday.year, localToday.month, 1);
+        return TransactionDateFilter(
+          kind: 'thisMonth',
+          from: start,
+          to: DateTime(localToday.year, localToday.month + 1, 1)
+              .subtract(const Duration(milliseconds: 1)),
+        );
+      case _TransactionDatePreset.lastMonth:
+        final start = DateTime(localToday.year, localToday.month - 1, 1);
+        return TransactionDateFilter(
+          kind: 'lastMonth',
+          from: start,
+          to: DateTime(localToday.year, localToday.month, 1)
+              .subtract(const Duration(milliseconds: 1)),
+        );
+      case _TransactionDatePreset.thisYear:
+        final start = DateTime(localToday.year, 1, 1);
+        return TransactionDateFilter(
+          kind: 'thisYear',
+          from: start,
+          to: DateTime(localToday.year + 1, 1, 1)
+              .subtract(const Duration(milliseconds: 1)),
+        );
+      case _TransactionDatePreset.specificDate:
+        final date = await showDatePicker(
+          context: context,
+          firstDate: DateTime(2020),
+          lastDate: DateTime(2100),
+          initialDate: localToday,
+        );
+        if (date == null) return null;
+        return TransactionDateFilter(
+          kind: 'specificDate',
+          from: DateTime(date.year, date.month, date.day),
+          to: DateTime(date.year, date.month, date.day + 1)
+              .subtract(const Duration(milliseconds: 1)),
+        );
+      case _TransactionDatePreset.customRange:
+        final range = await showDateRangePicker(
+          context: context,
+          firstDate: DateTime(2020),
+          lastDate: DateTime(2100),
+          initialDateRange: DateTimeRange(
+            start: DateTime(localToday.year, localToday.month, 1),
+            end: localToday,
+          ),
+        );
+        if (range == null) return null;
+        return TransactionDateFilter(
+          kind: 'customRange',
+          from: DateTime(range.start.year, range.start.month, range.start.day),
+          to: DateTime(range.end.year, range.end.month, range.end.day + 1)
+              .subtract(const Duration(milliseconds: 1)),
+        );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(filteredTransactionListProvider);
     final budgetState = ref.watch(budgetListProvider);
     final selectedCategory = ref.watch(categoryFilterProvider);
+    final selectedDateFilter = ref.watch(transactionDateFilterProvider);
     final userPreferences = ref.watch(userPreferencesProvider);
     final categories = {
       if (selectedCategory != null) selectedCategory,
@@ -186,6 +315,7 @@ class _TransactionListScreenState extends ConsumerState<TransactionListScreen> {
                   state,
                   budgetState.budgets,
                   selectedCategory,
+                  selectedDateFilter,
                   userPreferences,
                 ),
               ),
@@ -239,6 +369,7 @@ class _TransactionListScreenState extends ConsumerState<TransactionListScreen> {
     TransactionListState state,
     List<Budget> budgets,
     String? selectedCategory,
+    TransactionDateFilter? selectedDateFilter,
     ({String currency, String locale}) userPreferences,
   ) {
     if (state.error != null && state.transactions.isEmpty) {
@@ -247,6 +378,8 @@ class _TransactionListScreenState extends ConsumerState<TransactionListScreen> {
           child: _TransactionsEditorialHero(
             transactions: state.transactions,
             selectedCategory: selectedCategory,
+            selectedDateFilter: selectedDateFilter,
+            onOpenDateFilter: _openDateFilterMenu,
             topPadding: MediaQuery.paddingOf(context).top,
             currencyCode: userPreferences.currency,
             locale: userPreferences.locale,
@@ -297,6 +430,8 @@ class _TransactionListScreenState extends ConsumerState<TransactionListScreen> {
         child: _TransactionsEditorialHero(
           transactions: state.transactions,
           selectedCategory: selectedCategory,
+          selectedDateFilter: selectedDateFilter,
+          onOpenDateFilter: _openDateFilterMenu,
           topPadding: MediaQuery.paddingOf(context).top,
           currencyCode: userPreferences.currency,
           locale: userPreferences.locale,
@@ -908,6 +1043,8 @@ class _TransactionsEditorialHero extends StatelessWidget {
   const _TransactionsEditorialHero({
     required this.transactions,
     required this.selectedCategory,
+    required this.selectedDateFilter,
+    required this.onOpenDateFilter,
     required this.topPadding,
     required this.currencyCode,
     required this.locale,
@@ -915,6 +1052,8 @@ class _TransactionsEditorialHero extends StatelessWidget {
 
   final List<Transaction> transactions;
   final String? selectedCategory;
+  final TransactionDateFilter? selectedDateFilter;
+  final Future<void> Function() onOpenDateFilter;
   final double topPadding;
   final String currencyCode;
   final String locale;
@@ -1001,6 +1140,26 @@ class _TransactionsEditorialHero extends StatelessWidget {
               height: 1.32,
             ),
           ),
+          if (selectedDateFilter != null) ...[
+            const SizedBox(height: 10),
+            Text(
+              _dateFilterLabel(selectedDateFilter!),
+              style: textTheme.labelMedium?.copyWith(
+                color: colors.deepNavy,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+          const SizedBox(height: 12),
+          OutlinedButton.icon(
+            onPressed: onOpenDateFilter,
+            icon: AppIcons.icon(
+              AppIconKey.tune,
+              color: colors.deepNavy,
+              size: 18,
+            ),
+            label: const Text('Filter dates'),
+          ),
           const SizedBox(height: 18),
           Row(
             children: [
@@ -1075,6 +1234,32 @@ class _TransactionsEditorialHero extends StatelessWidget {
     return '$topCategory is showing up most lately. Follow the trail below for repeat moments and reflection cues.';
   }
 
+  String _dateFilterLabel(TransactionDateFilter filter) {
+    switch (filter.kind) {
+      case 'thisWeek':
+        return 'Filtered to this week';
+      case 'lastWeek':
+        return 'Filtered to last week';
+      case 'thisMonth':
+        return 'Filtered to this month';
+      case 'lastMonth':
+        return 'Filtered to last month';
+      case 'thisYear':
+        return 'Filtered to this year';
+      case 'specificDate':
+        return filter.from == null
+            ? 'Filtered by date'
+            : 'Filtered to ${DateFormat.MMMd().format(filter.from!)}';
+      case 'customRange':
+        if (filter.from == null || filter.to == null) {
+          return 'Filtered by custom range';
+        }
+        return 'Filtered to ${DateFormat.MMMd().format(filter.from!)} - ${DateFormat.MMMd().format(filter.to!)}';
+      default:
+        return 'Filtered by date';
+    }
+  }
+
   double _amountInUserCurrency(Transaction tx) {
     final amount = tx.amount.abs();
     if (tx.currencyCode == currencyCode) return amount;
@@ -1089,6 +1274,16 @@ class _TransactionsEditorialHero extends StatelessWidget {
     }
     return tx.category;
   }
+}
+
+enum _TransactionDatePreset {
+  thisWeek,
+  lastWeek,
+  thisMonth,
+  lastMonth,
+  thisYear,
+  specificDate,
+  customRange,
 }
 
 class _HeroPill extends StatelessWidget {

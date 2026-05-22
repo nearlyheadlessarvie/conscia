@@ -19,6 +19,13 @@ final transactionScopeFilterProvider = StateProvider<String>((ref) {
   return 'personal';
 });
 
+final transactionDateFilterProvider = StateProvider<TransactionDateFilter?>((
+  ref,
+) {
+  ref.watch(authCacheScopeProvider);
+  return null;
+});
+
 class TransactionListState {
   final List<Transaction> transactions;
   final bool isLoading;
@@ -55,11 +62,13 @@ class TransactionListNotifier extends StateNotifier<TransactionListState> {
   final TransactionService? _service;
   final String? _categoryFilter;
   final String? _scopeFilter;
+  final TransactionDateFilter? _dateFilter;
 
   TransactionListNotifier(
     this._service,
     this._categoryFilter, [
     this._scopeFilter,
+    this._dateFilter,
   ]) : super(const TransactionListState()) {
     loadMore();
   }
@@ -68,6 +77,7 @@ class TransactionListNotifier extends StateNotifier<TransactionListState> {
       : _service = null,
         _categoryFilter = null,
         _scopeFilter = null,
+        _dateFilter = null,
         super(TransactionListState(
           transactions: txs,
           isLoading: false,
@@ -79,6 +89,7 @@ class TransactionListNotifier extends StateNotifier<TransactionListState> {
       : _service = null,
         _categoryFilter = null,
         _scopeFilter = null,
+        _dateFilter = null,
         super(const TransactionListState(
           transactions: [],
           isLoading: false,
@@ -99,11 +110,13 @@ class TransactionListNotifier extends StateNotifier<TransactionListState> {
         page: nextPage,
         category: _categoryFilter,
         scope: _scopeFilter,
+        from: _dateFilter?.from,
+        to: _dateFilter?.to,
       );
       if (!mounted) return;
       final current = state;
       state = current.copyWith(
-        transactions: [...current.transactions, ...result.items],
+        transactions: _mergeTransactions(current.transactions, result.items),
         isLoading: false,
         hasMore: result.hasMore,
         currentPage: nextPage,
@@ -122,6 +135,22 @@ class TransactionListNotifier extends StateNotifier<TransactionListState> {
     state = const TransactionListState();
     await loadMore();
   }
+
+  List<Transaction> _mergeTransactions(
+    List<Transaction> current,
+    List<Transaction> incoming,
+  ) {
+    final merged = <Transaction>[];
+    final seenIds = <String>{};
+
+    for (final transaction in [...current, ...incoming]) {
+      if (seenIds.add(transaction.id)) {
+        merged.add(transaction);
+      }
+    }
+
+    return merged;
+  }
 }
 
 final transactionListProvider =
@@ -139,7 +168,8 @@ final filteredTransactionListProvider =
   final service = ref.watch(transactionServiceProvider);
   final category = ref.watch(categoryFilterProvider);
   final scope = ref.watch(transactionScopeFilterProvider);
-  return TransactionListNotifier(service, category, scope);
+  final dateFilter = ref.watch(transactionDateFilterProvider);
+  return TransactionListNotifier(service, category, scope, dateFilter);
 });
 
 final transactionDetailProvider =
