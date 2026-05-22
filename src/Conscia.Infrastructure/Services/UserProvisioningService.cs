@@ -5,24 +5,25 @@ using Conscia.Application.Interfaces;
 using Conscia.Domain.Entities;
 using Conscia.Domain.Enums;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Conscia.Infrastructure.Services;
 
 public sealed class UserProvisioningService : IUserProvisioningService
 {
-    private readonly IAmazonCognitoIdentityProvider _cognito;
+    private readonly IServiceProvider _services;
     private readonly IUserRepository _users;
     private readonly ISubscriptionAdminService _admin;
     private readonly string? _userPoolId;
     private readonly bool _useMockAuth;
 
     public UserProvisioningService(
-        IAmazonCognitoIdentityProvider cognito,
+        IServiceProvider services,
         IUserRepository users,
         ISubscriptionAdminService admin,
         IConfiguration configuration)
     {
-        _cognito = cognito;
+        _services = services;
         _users = users;
         _admin = admin;
         _useMockAuth = bool.TryParse(configuration["Auth:UseMock"], out var useMockAuth) && useMockAuth;
@@ -74,7 +75,9 @@ public sealed class UserProvisioningService : IUserProvisioningService
             throw new InvalidOperationException("Auth:Cognito:UserPoolId not configured");
         }
 
-        var created = await _cognito.AdminCreateUserAsync(new AdminCreateUserRequest
+        var cognito = _services.GetRequiredService<IAmazonCognitoIdentityProvider>();
+
+        var created = await cognito.AdminCreateUserAsync(new AdminCreateUserRequest
         {
             UserPoolId = _userPoolId,
             Username = email,

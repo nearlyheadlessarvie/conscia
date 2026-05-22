@@ -3,6 +3,7 @@ using Conscia.Application.DTOs;
 using Conscia.Application.Interfaces;
 using Conscia.Infrastructure.Services;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Moq;
 
 namespace Conscia.Tests.Unit.Infrastructure;
@@ -21,6 +22,9 @@ public class UserProvisioningServiceTests
                 ["Auth:UseMock"] = "true"
             })
             .Build();
+        var services = new ServiceCollection()
+            .AddSingleton(cognito.Object)
+            .BuildServiceProvider();
 
         admin.Setup(s => s.GrantLifetimePremiumAsync(
                 It.IsAny<Guid>(),
@@ -36,7 +40,7 @@ public class UserProvisioningServiceTests
                     true));
 
         var service = new UserProvisioningService(
-            cognito.Object,
+            services,
             users,
             admin.Object,
             config);
