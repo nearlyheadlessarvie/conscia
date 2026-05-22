@@ -275,7 +275,6 @@ public class UserRepository : DynamoRepository, IUserRepository
             ["Locale"] = new(user.Locale),
             ["CreatedAt"] = new(user.CreatedAt.ToString("O", CultureInfo.InvariantCulture)),
             ["HasCompletedOnboarding"] = BoolValue(user.HasCompletedOnboarding),
-            ["LocationSuggestionsEnabled"] = BoolValue(user.LocationSuggestionsEnabled),
             ["AiPersonalityIntensity"] = new(user.AiPersonalityIntensity)
         };
 
@@ -306,7 +305,6 @@ public class UserRepository : DynamoRepository, IUserRepository
         OccupationType = GetOptionalString(item, "OccupationType"),
         HouseholdSize = GetOptionalString(item, "HouseholdSize"),
         HasCompletedOnboarding = GetBool(item, "HasCompletedOnboarding"),
-        LocationSuggestionsEnabled = GetBool(item, "LocationSuggestionsEnabled"),
         AiPersonalityIntensity = item.TryGetValue("AiPersonalityIntensity", out var intensity)
             ? intensity.S
             : "balanced"

@@ -192,7 +192,6 @@ class _FakeUserService extends UserService {
     String? occupationType,
     String? householdSize,
     bool? hasCompletedOnboarding,
-    bool? locationSuggestionsEnabled,
     String? aiPersonalityIntensity,
   }) async {
     return UserProfile(
@@ -202,7 +201,6 @@ class _FakeUserService extends UserService {
       locale: locale ?? 'en_US',
       createdAt: DateTime(2026),
       hasCompletedOnboarding: hasCompletedOnboarding ?? true,
-      locationSuggestionsEnabled: locationSuggestionsEnabled ?? false,
       aiPersonalityIntensity: aiPersonalityIntensity ?? 'balanced',
       spendingPersonality: spendingPersonality,
       incomeRange: incomeRange,
@@ -253,7 +251,6 @@ Future<ProviderContainer> _pumpTransactionForm(
           locale: locale,
           createdAt: DateTime(2026),
           hasCompletedOnboarding: true,
-          locationSuggestionsEnabled: locationSuggestionsEnabled,
         ),
       ),
       sharedPreferencesProvider.overrideWithValue(resolvedPrefs),

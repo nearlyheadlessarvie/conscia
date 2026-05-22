@@ -127,7 +127,6 @@ class _FakeUserService extends UserService {
     String? occupationType,
     String? householdSize,
     bool? hasCompletedOnboarding,
-    bool? locationSuggestionsEnabled,
     String? aiPersonalityIntensity,
   }) async {
     return UserProfile(
@@ -137,7 +136,6 @@ class _FakeUserService extends UserService {
       locale: locale ?? 'en_US',
       createdAt: DateTime(2026),
       hasCompletedOnboarding: hasCompletedOnboarding ?? true,
-      locationSuggestionsEnabled: locationSuggestionsEnabled ?? false,
       aiPersonalityIntensity: aiPersonalityIntensity ?? 'balanced',
       spendingPersonality: spendingPersonality,
       incomeRange: incomeRange,
@@ -172,15 +170,14 @@ Future<void> _pumpPrePurchaseScreen(
           ),
         ),
         currentUserProvider.overrideWith(
-          (ref) async => UserProfile(
-            id: 'user-1',
-            email: 'prepurchase@example.com',
-            currencyCode: 'USD',
-            locale: 'en_US',
-            createdAt: DateTime(2026),
-            hasCompletedOnboarding: true,
-            locationSuggestionsEnabled: locationSuggestionsEnabled,
-          ),
+        (ref) async => UserProfile(
+          id: 'user-1',
+          email: 'prepurchase@example.com',
+          currencyCode: 'USD',
+          locale: 'en_US',
+          createdAt: DateTime(2026),
+          hasCompletedOnboarding: true,
+        ),
         ),
         sharedPreferencesProvider.overrideWithValue(resolvedPrefs),
         userServiceProvider.overrideWithValue(_FakeUserService()),
@@ -320,15 +317,14 @@ Future<void> _pumpPrePurchaseRouterApp(
           ),
         ),
         currentUserProvider.overrideWith(
-          (ref) async => UserProfile(
-            id: 'user-1',
-            email: 'prepurchase@example.com',
-            currencyCode: currencyCode,
-            locale: locale,
-            createdAt: DateTime(2026),
-            hasCompletedOnboarding: true,
-            locationSuggestionsEnabled: locationSuggestionsEnabled,
-          ),
+        (ref) async => UserProfile(
+          id: 'user-1',
+          email: 'prepurchase@example.com',
+          currencyCode: currencyCode,
+          locale: locale,
+          createdAt: DateTime(2026),
+          hasCompletedOnboarding: true,
+        ),
         ),
         sharedPreferencesProvider.overrideWithValue(prefs),
         userServiceProvider.overrideWithValue(_FakeUserService()),

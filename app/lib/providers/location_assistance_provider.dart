@@ -1,12 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:dio/dio.dart';
 import 'package:flutter/services.dart';
 
 import '../services/location_assistance_service.dart';
-import '../services/user_service.dart';
 import 'usage_provider.dart';
-import 'user_provider.dart';
 
 enum LocationSettingsEnableOutcome {
   enabled,
@@ -54,20 +51,14 @@ class LocationAssistanceNotifier extends StateNotifier<LocationAssistanceState> 
 
   final SharedPreferences _prefs;
   final LocationAssistanceService _service;
-  final UserService _userService;
-  final Ref _ref;
   Future<LocationSettingsEnableOutcome>? _enableRequest;
   DateTime? _lastSuccessfulEnableAt;
 
   LocationAssistanceNotifier(
-    Ref ref,
     SharedPreferences prefs,
     LocationAssistanceService service,
-    UserService userService,
-  )   : _ref = ref,
-        _prefs = prefs,
+  )   : _prefs = prefs,
         _service = service,
-        _userService = userService,
         super(_loadState(prefs));
 
   static LocationAssistanceState _loadState(
@@ -82,7 +73,7 @@ class LocationAssistanceNotifier extends StateNotifier<LocationAssistanceState> 
 
   Future<void> declinePrompt() async {
     await _prefs.setBool(_pendingEnableKey, false);
-    await _persistStateAndProfile(
+    await _persistState(
       isEnabled: false,
       hasPrompted: true,
       permissionDenied: false,
@@ -140,7 +131,7 @@ class LocationAssistanceNotifier extends StateNotifier<LocationAssistanceState> 
 
     final permission = await _service.checkPermissionStatus();
     if (permission == LocationPermissionStatus.granted) {
-      await _persistStateAndProfile(
+      await _persistState(
         isEnabled: true,
         hasPrompted: true,
         permissionDenied: false,
@@ -177,7 +168,7 @@ class LocationAssistanceNotifier extends StateNotifier<LocationAssistanceState> 
 
   Future<void> disableFromSettings() async {
     await _prefs.setBool(_pendingEnableKey, false);
-    await _persistStateAndProfile(
+    await _persistState(
       isEnabled: false,
       hasPrompted: true,
       permissionDenied: false,
@@ -193,7 +184,7 @@ class LocationAssistanceNotifier extends StateNotifier<LocationAssistanceState> 
     if (permission != LocationPermissionStatus.granted) return;
 
     await _prefs.setBool(_pendingEnableKey, false);
-    await _persistStateAndProfile(
+    await _persistState(
       isEnabled: true,
       hasPrompted: true,
       permissionDenied: false,
@@ -223,14 +214,14 @@ class LocationAssistanceNotifier extends StateNotifier<LocationAssistanceState> 
         locationServicesEnabled && permission == LocationPermissionStatus.granted;
     if (shouldRemainEnabled) return;
 
-    await _persistStateAndProfile(
+    await _persistState(
       isEnabled: false,
       hasPrompted: true,
       permissionDenied: permission != LocationPermissionStatus.granted,
     );
   }
 
-  Future<void> _persistStateAndProfile({
+  Future<void> _persistState({
     required bool isEnabled,
     required bool hasPrompted,
     required bool permissionDenied,
@@ -243,14 +234,6 @@ class LocationAssistanceNotifier extends StateNotifier<LocationAssistanceState> 
       hasPrompted: hasPrompted,
       permissionDenied: permissionDenied,
     );
-    try {
-      await _userService.updateProfile(
-        locationSuggestionsEnabled: isEnabled,
-      );
-      _ref.invalidate(currentUserProvider);
-    } on DioException {
-      // Keep the local prompt state sticky even if profile sync fails.
-    }
   }
 
   Future<bool> _resolvePermissionRequest() async {
@@ -271,7 +254,7 @@ class LocationAssistanceNotifier extends StateNotifier<LocationAssistanceState> 
     if (requestGranted) {
       _lastSuccessfulEnableAt = DateTime.now();
       await _prefs.setBool(_pendingEnableKey, false);
-      await _persistStateAndProfile(
+      await _persistState(
         isEnabled: true,
         hasPrompted: true,
         permissionDenied: false,
@@ -284,7 +267,7 @@ class LocationAssistanceNotifier extends StateNotifier<LocationAssistanceState> 
     final resolvedGranted =
         locationServicesEnabled && permission == LocationPermissionStatus.granted;
 
-    await _persistStateAndProfile(
+    await _persistState(
       isEnabled: resolvedGranted,
       hasPrompted: true,
       permissionDenied: !resolvedGranted,
@@ -342,12 +325,9 @@ final locationAssistanceProvider =
   (ref) {
     final prefs = ref.watch(sharedPreferencesProvider);
     final service = ref.watch(locationAssistanceServiceProvider);
-    final userService = ref.watch(userServiceProvider);
     return LocationAssistanceNotifier(
-      ref,
       prefs,
       service,
-      userService,
     );
   },
 );

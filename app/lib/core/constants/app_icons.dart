@@ -273,7 +273,7 @@ List<List<dynamic>> _hugeIconFor(AppIconKey key) {
     AppIconKey.logout => HugeIconsStrokeRounded.logout01,
     AppIconKey.language => HugeIconsStrokeRounded.languageCircle,
     AppIconKey.currency => HugeIconsStrokeRounded.exchangeDollar,
-    AppIconKey.location => HugeIconsStrokeRounded.location02,
+    AppIconKey.location => HugeIconsStrokeRounded.location04,
     AppIconKey.download => HugeIconsStrokeRounded.download02,
     AppIconKey.fingerprint => HugeIconsStrokeRounded.fingerprintScan,
     AppIconKey.star => HugeIconsStrokeRounded.star,

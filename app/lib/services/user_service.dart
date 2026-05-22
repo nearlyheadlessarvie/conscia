@@ -18,7 +18,6 @@ class UserProfile {
   final String? occupationType;
   final String? householdSize;
   final bool hasCompletedOnboarding;
-  final bool locationSuggestionsEnabled;
   final String aiPersonalityIntensity;
 
   const UserProfile({
@@ -28,7 +27,6 @@ class UserProfile {
     required this.locale,
     required this.createdAt,
     required this.hasCompletedOnboarding,
-    this.locationSuggestionsEnabled = false,
     this.aiPersonalityIntensity = 'balanced',
     this.displayName,
     this.profilePictureKey,
@@ -54,8 +52,6 @@ class UserProfile {
           ? DateTime.parse(json['createdAt'] as String)
           : DateTime.now(),
       hasCompletedOnboarding: json['hasCompletedOnboarding'] as bool? ?? false,
-      locationSuggestionsEnabled:
-          json['locationSuggestionsEnabled'] as bool? ?? false,
       aiPersonalityIntensity:
           json['aiPersonalityIntensity'] as String? ?? 'balanced',
       spendingPersonality: json['spendingPersonality'] as String?,
@@ -112,7 +108,6 @@ class UserService {
     String? occupationType,
     String? householdSize,
     bool? hasCompletedOnboarding,
-    bool? locationSuggestionsEnabled,
     String? aiPersonalityIntensity,
   }) async {
     try {
@@ -131,8 +126,6 @@ class UserService {
           if (householdSize != null) 'householdSize': householdSize,
           if (hasCompletedOnboarding != null)
             'hasCompletedOnboarding': hasCompletedOnboarding,
-          if (locationSuggestionsEnabled != null)
-            'locationSuggestionsEnabled': locationSuggestionsEnabled,
           if (aiPersonalityIntensity != null)
             'aiPersonalityIntensity': aiPersonalityIntensity,
         },

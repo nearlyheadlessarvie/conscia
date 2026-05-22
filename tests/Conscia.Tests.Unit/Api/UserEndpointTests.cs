@@ -83,34 +83,6 @@ public class UserEndpointTests : IClassFixture<TestWebAppFactory>
     }
 
     [Fact]
-    public async Task UpdateMe_LocationSuggestionsEnabled_Returns200()
-    {
-        var userId = Guid.Parse("a1b2c3d4-0001-4000-8000-000000000001");
-        _factory.UserServiceMock
-            .Setup(s => s.UpdateProfileAsync(
-                userId,
-                It.Is<UserProfileUpdateDto>(d => d.LocationSuggestionsEnabled == true),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new User
-            {
-                Id = userId,
-                Email = "alice@example.com",
-                PreferredCurrency = "USD",
-                Locale = "en-US",
-                LocationSuggestionsEnabled = true
-            });
-
-        var response = await _client.PutAsJsonAsync("/api/users/me", new
-        {
-            locationSuggestionsEnabled = true
-        });
-
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        var body = await response.Content.ReadAsStringAsync();
-        Assert.Contains("\"locationSuggestionsEnabled\":true", body);
-    }
-
-    [Fact]
     public async Task UpdateMe_AiPersonalityIntensity_Returns200()
     {
         var userId = Guid.Parse("a1b2c3d4-0001-4000-8000-000000000001");

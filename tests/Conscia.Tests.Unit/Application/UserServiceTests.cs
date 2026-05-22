@@ -173,22 +173,6 @@ public class UserServiceTests
     }
 
     [Fact]
-    public async Task UpdateProfileAsync_UpdatesLocationSuggestionsEnabled()
-    {
-        var id = Guid.NewGuid();
-        var user = new User { Id = id, LocationSuggestionsEnabled = false };
-        _repoMock.Setup(r => r.GetByIdAsync(id, It.IsAny<CancellationToken>())).ReturnsAsync(user);
-        _repoMock.Setup(r => r.UpdateAsync(It.IsAny<User>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((User u, CancellationToken _) => u);
-
-        var result = await _svc.UpdateProfileAsync(
-            id,
-            new UserProfileUpdateDto { LocationSuggestionsEnabled = true });
-
-        Assert.True(result.LocationSuggestionsEnabled);
-    }
-
-    [Fact]
     public async Task UpdateProfileAsync_UpdatesAiPersonalityIntensity()
     {
         var id = Guid.NewGuid();

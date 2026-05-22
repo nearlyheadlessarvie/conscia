@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:math' as math;
 
@@ -213,7 +214,7 @@ class LocalLocationAssistanceService implements LocationAssistanceService {
       return false;
     }
 
-    await refreshLocationHint();
+    unawaited(refreshLocationHint());
     return true;
   }
 

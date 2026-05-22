@@ -77,7 +77,6 @@ class _RecordingUserService extends UserService {
   _RecordingUserService() : super(Dio());
 
   String? lastLocale;
-  bool? lastLocationSuggestionsEnabled;
   String? lastAiPersonalityIntensity;
 
   @override
@@ -92,11 +91,9 @@ class _RecordingUserService extends UserService {
     String? occupationType,
     String? householdSize,
     bool? hasCompletedOnboarding,
-    bool? locationSuggestionsEnabled,
     String? aiPersonalityIntensity,
   }) async {
     lastLocale = locale;
-    lastLocationSuggestionsEnabled = locationSuggestionsEnabled;
     lastAiPersonalityIntensity = aiPersonalityIntensity;
     return UserProfile(
       id: 'user-1',
@@ -105,7 +102,6 @@ class _RecordingUserService extends UserService {
       locale: locale ?? 'en_US',
       createdAt: DateTime(2026),
       hasCompletedOnboarding: true,
-      locationSuggestionsEnabled: locationSuggestionsEnabled ?? false,
       aiPersonalityIntensity: aiPersonalityIntensity ?? 'balanced',
     );
   }
@@ -124,7 +120,6 @@ class _FailingCurrencyUserService extends _RecordingUserService {
     String? occupationType,
     String? householdSize,
     bool? hasCompletedOnboarding,
-    bool? locationSuggestionsEnabled,
     String? aiPersonalityIntensity,
   }) async {
     if (preferredCurrency != null) {
@@ -152,7 +147,6 @@ class _FailingCurrencyUserService extends _RecordingUserService {
       occupationType: occupationType,
       householdSize: householdSize,
       hasCompletedOnboarding: hasCompletedOnboarding,
-      locationSuggestionsEnabled: locationSuggestionsEnabled,
       aiPersonalityIntensity: aiPersonalityIntensity,
     );
   }
@@ -368,7 +362,6 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(locationService.permissionRequests, 1);
-    expect(userService.lastLocationSuggestionsEnabled, isTrue);
     expect(
       container.read(locationAssistanceProvider).isEnabled,
       isTrue,
@@ -382,7 +375,6 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(locationService.permissionRequests, 1);
-    expect(userService.lastLocationSuggestionsEnabled, isFalse);
     expect(
       container.read(locationAssistanceProvider).isEnabled,
       isFalse,

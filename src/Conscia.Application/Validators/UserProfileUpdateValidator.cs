@@ -40,7 +40,6 @@ public class UserProfileUpdateValidator : AbstractValidator<UserProfileUpdateDto
                 dto.OccupationType is not null ||
                 dto.HouseholdSize is not null ||
                 dto.HasCompletedOnboarding.HasValue ||
-                dto.LocationSuggestionsEnabled.HasValue ||
                 dto.AiPersonalityIntensity is not null)
             .WithMessage("At least one field must be provided");
 

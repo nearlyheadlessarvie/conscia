@@ -44,7 +44,6 @@ public class UserExportEndpointTests : IClassFixture<TestWebAppFactory>
                 OccupationType = "employed",
                 HouseholdSize = "solo",
                 HasCompletedOnboarding = true,
-                LocationSuggestionsEnabled = true,
                 AiPersonalityIntensity = "playful"
             });
 

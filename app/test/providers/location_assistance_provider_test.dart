@@ -1,9 +1,6 @@
 import 'package:conscia_app/providers/location_assistance_provider.dart';
-import 'package:conscia_app/providers/user_provider.dart';
 import 'package:conscia_app/providers/usage_provider.dart';
 import 'package:conscia_app/services/location_assistance_service.dart';
-import 'package:conscia_app/services/user_service.dart';
-import 'package:dio/dio.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -89,92 +86,16 @@ class _FakeLocationAssistanceService extends LocationAssistanceService {
   String? categoryForMerchant(String merchant) => merchantCategories[merchant];
 }
 
-class _FakeUserService extends UserService {
-  _FakeUserService() : super(Dio());
-
-  bool? lastLocationSuggestionsEnabled;
-
-  @override
-  Future<UserProfile> updateProfile({
-    String? preferredCurrency,
-    String? locale,
-    String? displayName,
-    String? profilePictureKey,
-    String? photoUrl,
-    String? spendingPersonality,
-    String? incomeRange,
-    String? occupationType,
-    String? householdSize,
-    bool? hasCompletedOnboarding,
-    bool? locationSuggestionsEnabled,
-    String? aiPersonalityIntensity,
-  }) async {
-    lastLocationSuggestionsEnabled = locationSuggestionsEnabled;
-    return UserProfile(
-      id: 'user-1',
-      email: 'user@example.com',
-      currencyCode: preferredCurrency ?? 'USD',
-      locale: locale ?? 'en_US',
-      createdAt: DateTime(2026),
-      hasCompletedOnboarding: true,
-      locationSuggestionsEnabled: locationSuggestionsEnabled ?? false,
-      aiPersonalityIntensity: aiPersonalityIntensity ?? 'balanced',
-    );
-  }
-}
-
-class _ThrowingUserService extends UserService {
-  _ThrowingUserService() : super(Dio());
-
-  @override
-  Future<UserProfile> updateProfile({
-    String? preferredCurrency,
-    String? locale,
-    String? displayName,
-    String? profilePictureKey,
-    String? photoUrl,
-    String? spendingPersonality,
-    String? incomeRange,
-    String? occupationType,
-    String? householdSize,
-    bool? hasCompletedOnboarding,
-    bool? locationSuggestionsEnabled,
-    String? aiPersonalityIntensity,
-  }) async {
-    throw DioException(
-      requestOptions: RequestOptions(path: '/profile'),
-      type: DioExceptionType.connectionError,
-      error: 'network down',
-    );
-  }
-}
-
 void main() {
   ProviderContainer buildContainer(
     SharedPreferences prefs, {
     LocationAssistanceService? service,
-    UserProfile? userProfile,
-    UserService? userService,
   }) {
-    final resolvedUserProfile = userProfile ??
-        UserProfile(
-          id: 'user-1',
-          email: 'user@example.com',
-          currencyCode: 'USD',
-          locale: 'en_US',
-          createdAt: DateTime(2026),
-          hasCompletedOnboarding: true,
-          locationSuggestionsEnabled: false,
-        );
-
     return ProviderContainer(
       overrides: [
         sharedPreferencesProvider.overrideWithValue(prefs),
         if (service != null)
           locationAssistanceServiceProvider.overrideWithValue(service),
-        currentUserProvider.overrideWith((ref) async => resolvedUserProfile),
-        userServiceProvider
-            .overrideWithValue(userService ?? _FakeUserService()),
       ],
     );
   }
@@ -218,7 +139,6 @@ void main() {
     final container = buildContainer(
       prefs,
       service: _FakeLocationAssistanceService(permissionGranted: true),
-      userService: _FakeUserService(),
     );
     addTearDown(container.dispose);
 
@@ -229,7 +149,6 @@ void main() {
     final rehydratedContainer = buildContainer(
       prefs,
       service: _FakeLocationAssistanceService(permissionGranted: true),
-      userService: _FakeUserService(),
     );
     addTearDown(rehydratedContainer.dispose);
     final state = rehydratedContainer.read(locationAssistanceProvider);
@@ -246,7 +165,6 @@ void main() {
     final container = buildContainer(
       prefs,
       service: _FakeLocationAssistanceService(permissionGranted: false),
-      userService: _FakeUserService(),
     );
     addTearDown(container.dispose);
 
@@ -257,7 +175,6 @@ void main() {
     final rehydratedContainer = buildContainer(
       prefs,
       service: _FakeLocationAssistanceService(permissionGranted: false),
-      userService: _FakeUserService(),
     );
     addTearDown(rehydratedContainer.dispose);
     final state = rehydratedContainer.read(locationAssistanceProvider);
@@ -280,7 +197,6 @@ void main() {
     final container = buildContainer(
       prefs,
       service: _FakeLocationAssistanceService(permissionGranted: true),
-      userService: _FakeUserService(),
     );
     addTearDown(container.dispose);
 
@@ -314,7 +230,6 @@ void main() {
     final container = buildContainer(
       prefs,
       service: service,
-      userService: _FakeUserService(),
     );
     addTearDown(container.dispose);
 
@@ -342,7 +257,6 @@ void main() {
     final container = buildContainer(
       prefs,
       service: service,
-      userService: _FakeUserService(),
     );
     addTearDown(container.dispose);
 
@@ -372,7 +286,6 @@ void main() {
     final container = buildContainer(
       prefs,
       service: service,
-      userService: _FakeUserService(),
     );
     addTearDown(container.dispose);
 
@@ -405,7 +318,6 @@ void main() {
     final container = buildContainer(
       prefs,
       service: service,
-      userService: _FakeUserService(),
     );
     addTearDown(container.dispose);
 
@@ -435,7 +347,6 @@ void main() {
     final container = buildContainer(
       prefs,
       service: service,
-      userService: _FakeUserService(),
     );
     addTearDown(container.dispose);
 
@@ -464,7 +375,6 @@ void main() {
     final container = buildContainer(
       prefs,
       service: service,
-      userService: _FakeUserService(),
     );
     addTearDown(container.dispose);
 
@@ -491,7 +401,6 @@ void main() {
     final container = buildContainer(
       prefs,
       service: service,
-      userService: _FakeUserService(),
     );
     addTearDown(container.dispose);
 
@@ -519,7 +428,6 @@ void main() {
         permissionGranted: false,
         locationServiceEnabled: false,
       ),
-      userService: _FakeUserService(),
     );
     addTearDown(firstContainer.dispose);
 
@@ -536,7 +444,6 @@ void main() {
         locationServiceEnabled: true,
         permissionStatus: LocationPermissionStatus.granted,
       ),
-      userService: _FakeUserService(),
     );
     addTearDown(secondContainer.dispose);
 
@@ -564,7 +471,6 @@ void main() {
         locationServiceEnabled: true,
         permissionStatus: LocationPermissionStatus.deniedForever,
       ),
-      userService: _FakeUserService(),
     );
     addTearDown(container.dispose);
 
@@ -575,27 +481,6 @@ void main() {
     final state = container.read(locationAssistanceProvider);
     expect(state.isEnabled, isFalse);
     expect(state.permissionDenied, isTrue);
-  });
-
-  test('decline still marks prompt handled when profile sync fails', () async {
-    SharedPreferences.setMockInitialValues({});
-    final prefs = await SharedPreferences.getInstance();
-
-    final container = buildContainer(
-      prefs,
-      userService: _ThrowingUserService(),
-    );
-    addTearDown(container.dispose);
-
-    await container.read(locationAssistanceProvider.notifier).declinePrompt();
-
-    final rehydratedContainer = buildContainer(prefs);
-    addTearDown(rehydratedContainer.dispose);
-    final state = rehydratedContainer.read(locationAssistanceProvider);
-
-    expect(state.hasPrompted, isTrue);
-    expect(state.shouldPromptOnFeatureOpen, isFalse);
-    expect(state.isEnabled, isFalse);
   });
 
   test('prompt stays handled when permission request throws transiently',
@@ -609,7 +494,6 @@ void main() {
         permissionGranted: false,
         throwOnRequest: true,
       ),
-      userService: _FakeUserService(),
     );
     addTearDown(container.dispose);
 
@@ -671,28 +555,13 @@ void main() {
     expect(suggestions.likelyCategories, isEmpty);
   });
 
-  test('provider keeps smart location state device-local even if server profile says enabled',
-      () async {
+  test('provider keeps smart location state device-local', () async {
     SharedPreferences.setMockInitialValues({});
     final prefs = await SharedPreferences.getInstance();
 
-    final container = buildContainer(
-      prefs,
-      userProfile: UserProfile(
-        id: 'user-1',
-        email: 'user@example.com',
-        currencyCode: 'USD',
-        locale: 'en_US',
-        createdAt: DateTime(2026),
-        hasCompletedOnboarding: true,
-        locationSuggestionsEnabled: true,
-      ),
-      userService: _FakeUserService(),
-    );
+    final container = buildContainer(prefs);
     addTearDown(container.dispose);
 
-    await container.read(currentUserProvider.future);
-    await Future<void>.delayed(Duration.zero);
     final state = container.read(locationAssistanceProvider);
 
     expect(state.isEnabled, isFalse);
