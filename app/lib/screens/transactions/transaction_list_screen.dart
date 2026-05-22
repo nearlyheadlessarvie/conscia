@@ -38,6 +38,7 @@ class TransactionListScreen extends ConsumerStatefulWidget {
 
 class _TransactionListScreenState extends ConsumerState<TransactionListScreen> {
   static const _filterRailHeight = 72.0;
+  static const _floatingDockSheetClearance = 104.0;
   static const _datePresetLabels = <String, _TransactionDatePreset>{
     'This week': _TransactionDatePreset.thisWeek,
     'Last week': _TransactionDatePreset.lastWeek,
@@ -153,22 +154,32 @@ class _TransactionListScreenState extends ConsumerState<TransactionListScreen> {
     final selected = await showModalBottomSheet<String>(
       context: context,
       showDragHandle: true,
-      builder: (context) => SafeArea(
-        child: ListView(
-          shrinkWrap: true,
-          children: [
-            for (final entry in _datePresetLabels.entries)
-              ListTile(
-                title: Text(entry.key),
-                onTap: () => Navigator.of(context).pop(entry.key),
-              ),
-            ListTile(
-              title: const Text('Clear filter'),
-              onTap: () => Navigator.of(context).pop('clear'),
+      builder: (context) {
+        final mediaQuery = MediaQuery.of(context);
+        final bottomClearance =
+            mediaQuery.padding.bottom + _floatingDockSheetClearance;
+
+        return SafeArea(
+          top: false,
+          child: Padding(
+            padding: EdgeInsets.only(bottom: bottomClearance),
+            child: ListView(
+              shrinkWrap: true,
+              children: [
+                for (final entry in _datePresetLabels.entries)
+                  ListTile(
+                    title: Text(entry.key),
+                    onTap: () => Navigator.of(context).pop(entry.key),
+                  ),
+                ListTile(
+                  title: const Text('Clear filter'),
+                  onTap: () => Navigator.of(context).pop('clear'),
+                ),
+              ],
             ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
 
     if (!mounted || selected == null) return;

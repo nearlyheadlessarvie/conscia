@@ -780,6 +780,40 @@ void main() {
     expect(find.byKey(const ValueKey('transaction-date-filter-label')), findsOneWidget);
   });
 
+  testWidgets('date filter sheet keeps clear action reachable', (
+    tester,
+  ) async {
+    final service = _StaticTransactionService(_manyTransactions());
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          _authenticatedOverride,
+          transactionServiceProvider.overrideWithValue(service),
+        ],
+        child: const MaterialApp(home: TransactionListScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('Filter dates'));
+    await tester.pumpAndSettle();
+
+    await tester.scrollUntilVisible(
+      find.text('Clear filter'),
+      120,
+      scrollable: find.byType(Scrollable).last,
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Clear filter'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Clear filter'), findsNothing);
+    expect(service.lastFrom, isNull);
+    expect(service.lastTo, isNull);
+  });
+
   testWidgets(
       'transaction header restores opaque state from saved scroll offset', (
     tester,
