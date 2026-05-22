@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 
+import 'package:conscia_app/core/constants/app_icons.dart';
 import 'package:conscia_app/core/constants/generated/app_constants.g.dart';
 import 'package:conscia_app/core/constants/conscience_journey.dart';
 import 'package:conscia_app/core/constants/category_icons.dart';
@@ -317,7 +318,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                           padding: EdgeInsets.symmetric(horizontal: 20),
                           sliver: SliverToBoxAdapter(
                             child: EmptyState(
-                              icon: Icons.notifications_none_rounded,
+                              icon: Icons.circle_outlined,
+                              illustration: _DashboardEmptyStateIcon(
+                                iconKey: AppIconKey.notifications,
+                              ),
                               title: 'All clear',
                               subtitle: 'New reminders will show up here.',
                             ),
@@ -377,7 +381,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                                   padding: const EdgeInsets.only(right: 12),
                                   children: [
                                     SwipeActionTile(
-                                      icon: Icons.delete_sweep_rounded,
+                                      icon: AppIconKey.delete,
                                       label: 'Dismiss',
                                       foregroundColor:
                                           Theme.of(context).appColors.expense,
@@ -553,7 +557,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               else if (budgets.isEmpty)
                 SliverToBoxAdapter(
                   child: EmptyState(
-                    icon: Icons.account_balance_wallet_outlined,
+                    icon: Icons.circle_outlined,
+                    illustration: const _DashboardEmptyStateIcon(
+                      iconKey: AppIconKey.wallet,
+                    ),
                     title: 'No budgets yet',
                     subtitle: 'Set up budgets to track your spending limits.',
                     actionLabel: 'Add Budget',
@@ -624,7 +631,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               else if (transactions.isEmpty)
                 SliverToBoxAdapter(
                   child: EmptyState(
-                    icon: Icons.receipt_long_outlined,
+                    icon: Icons.circle_outlined,
+                    illustration: const _DashboardEmptyStateIcon(
+                      iconKey: AppIconKey.receipt,
+                    ),
                     title: 'No transactions yet',
                     subtitle: 'Add your first transaction to get started.',
                     actionLabel: 'Add Transaction',
@@ -817,7 +827,8 @@ class _DashboardReflectQueueState extends State<_DashboardReflectQueue> {
     }
 
     final activePrompt = _visiblePrompts.firstOrNull;
-    final previewPrompts = _visiblePrompts.skip(1).take(2).toList(growable: false);
+    final previewPrompts =
+        _visiblePrompts.skip(1).take(2).toList(growable: false);
 
     return SizedBox(
       height: _deckHeight,
@@ -863,8 +874,10 @@ class _DashboardReflectQueueState extends State<_DashboardReflectQueue> {
       curve: Curves.easeOutCubic,
       child: _buildPromptCard(
         prompt,
-        onWorthIt: _isAdvancing ? null : () => _advanceQueue(prompt, 'worth_it'),
-        onNotSure: _isAdvancing ? null : () => _advanceQueue(prompt, 'not_sure'),
+        onWorthIt:
+            _isAdvancing ? null : () => _advanceQueue(prompt, 'worth_it'),
+        onNotSure:
+            _isAdvancing ? null : () => _advanceQueue(prompt, 'not_sure'),
         onRegret: _isAdvancing ? null : () => _advanceQueue(prompt, 'regret'),
         onDismiss: _isAdvancing ? null : () => _dismiss(prompt),
       ),
@@ -971,7 +984,8 @@ class _DashboardReflectQueueState extends State<_DashboardReflectQueue> {
 
   Future<void> _advanceQueue(Transaction tx, String feeling) async {
     if (_isAdvancing || _visiblePrompts.isEmpty) return;
-    final nextVisiblePrompts = List<Transaction>.from(_visiblePrompts)..removeAt(0);
+    final nextVisiblePrompts = List<Transaction>.from(_visiblePrompts)
+      ..removeAt(0);
     setState(() {
       _isAdvancing = true;
       _motion = switch (feeling) {
@@ -1237,10 +1251,11 @@ class _JourneyHeroMomentum extends StatelessWidget {
                 color: const Color(0xFFE97552),
                 borderRadius: BorderRadius.circular(999),
               ),
-              child: const Icon(
-                Icons.local_fire_department_rounded,
+              child: AppIcons.icon(
+                AppIconKey.fire,
                 color: Colors.white,
                 size: 14,
+                strokeWidth: 1.8,
               ),
             ),
             const SizedBox(width: 7),
@@ -1358,9 +1373,10 @@ class _JourneyHeroNextStepCard extends StatelessWidget {
                 foregroundColor: foreground,
               ),
               onPressed: onPressed,
-              child: const Icon(
-                Icons.chevron_right_rounded,
-                key: ValueKey('dashboard-journey-next-step-chevron'),
+              child: AppIcons.icon(
+                AppIconKey.chevronRight,
+                keyId: const ValueKey('dashboard-journey-next-step-chevron'),
+                color: foreground,
                 size: 30,
               ),
             ),
@@ -1669,8 +1685,8 @@ class _ProfileAvatar extends StatelessWidget {
       foregroundImage: photoUrl != null && photoUrl!.isNotEmpty
           ? NetworkImage(photoUrl!)
           : null,
-      child: Icon(
-        Icons.person_rounded,
+      child: AppIcons.icon(
+        AppIconKey.person,
         size: compact ? 20 : 24,
         color: colors.deepNavy,
       ),
@@ -1752,8 +1768,8 @@ class _BudgetManageRow extends StatelessWidget {
                   color: colors.deepNavy.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Icon(
-                  Icons.pie_chart_rounded,
+                child: AppIcons.icon(
+                  AppIconKey.pieChart,
                   color: colors.deepNavy,
                   size: 18,
                 ),
@@ -1783,8 +1799,8 @@ class _BudgetManageRow extends StatelessWidget {
                   ],
                 ),
               ),
-              Icon(
-                Icons.chevron_right_rounded,
+              AppIcons.icon(
+                AppIconKey.chevronRight,
                 color: colors.mutedInk,
                 size: 22,
               ),
@@ -1792,6 +1808,24 @@ class _BudgetManageRow extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _DashboardEmptyStateIcon extends StatelessWidget {
+  const _DashboardEmptyStateIcon({
+    required this.iconKey,
+  });
+
+  final AppIconKey iconKey;
+
+  @override
+  Widget build(BuildContext context) {
+    return AppIcons.icon(
+      iconKey,
+      color: Theme.of(context).colorScheme.outlineVariant,
+      size: 64,
+      strokeWidth: 1.7,
     );
   }
 }
@@ -2197,7 +2231,11 @@ class _NotificationBell extends StatelessWidget {
     return Stack(
       clipBehavior: Clip.none,
       children: [
-        const Icon(Icons.notifications_outlined),
+        AppIcons.icon(
+          AppIconKey.notifications,
+          color: colors.onSurface,
+          size: 24,
+        ),
         if (count > 0)
           Positioned(
             right: -8,
@@ -2304,7 +2342,11 @@ class _NotificationListTile extends StatelessWidget {
             width: 44,
             height: 44,
             decoration: BoxDecoration(color: iconBg, shape: BoxShape.circle),
-            child: Icon(_iconFor(alert.type), color: iconFg, size: 20),
+            child: AppIcons.icon(
+              _iconFor(alert.type),
+              color: iconFg,
+              size: 20,
+            ),
           ),
           const SizedBox(width: 14),
           Expanded(
@@ -2406,22 +2448,22 @@ class _NotificationListTile extends StatelessWidget {
     };
   }
 
-  IconData _iconFor(String type) {
+  AppIconKey _iconFor(String type) {
     switch (type) {
       case 'budget_nudge':
-        return Icons.account_balance_wallet_rounded;
+        return AppIconKey.wallet;
       case 'journey_level_up':
-        return Icons.stairs_rounded;
+        return AppIconKey.arrowUp;
       case 'journey_badge':
-        return Icons.workspace_premium_rounded;
+        return AppIconKey.premium;
       case 'journey_quest':
-        return Icons.flag_rounded;
+        return AppIconKey.flag;
       case 'ReflectionFollowUp':
-        return Icons.psychology_alt_rounded;
+        return AppIconKey.brain;
       case 'recurring_transaction_created':
-        return Icons.repeat_rounded;
+        return AppIconKey.recurring;
       default:
-        return Icons.notifications_active_rounded;
+        return AppIconKey.notifications;
     }
   }
 }

@@ -531,7 +531,7 @@ class _CategoryRow extends StatelessWidget {
         children: [
           SwipeActionTile(
             key: const ValueKey('category-swipe-action-archive'),
-            icon: Icons.archive_outlined,
+            icon: AppIconKey.archive,
             label: 'Archive',
             foregroundColor: colors.deepNavy,
             backgroundColor: colors.navySoft,

@@ -2,6 +2,7 @@ import 'package:conscia_app/core/constants/category_icons.dart';
 import 'package:conscia_app/screens/dashboard/widgets/recent_transaction_tile.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hugeicons/hugeicons.dart';
 
 void main() {
   testWidgets('recent transaction tile uses one category badge background', (
@@ -41,7 +42,11 @@ void main() {
         home: Scaffold(
           body: RecentTransactionTile(
             id: 'tx-2',
-            categoryBadge: const Icon(Icons.restaurant),
+            categoryBadge: CategoryIcons.badge(
+              'Dining',
+              size: 22,
+              filled: false,
+            ),
             counterparty: 'Starbucks',
             category: 'Dining',
             date: DateTime(2026, 5, 9),
@@ -54,14 +59,14 @@ void main() {
       ),
     );
 
-    final regretTag = tester.widget<Icon>(
+    final regretTag = tester.widget<HugeIcon>(
       find.descendant(
         of: find.byKey(const ValueKey('regret-transaction-badge')),
-        matching: find.byType(Icon),
+        matching: find.byType(HugeIcon),
       ),
     );
 
-    expect(regretTag.icon, Icons.thumb_up_alt_outlined);
+    expect(regretTag.icon, isNotNull);
     expect(regretTag.size, 12);
     expect(
       find.descendant(

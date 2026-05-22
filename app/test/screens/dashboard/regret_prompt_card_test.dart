@@ -2,6 +2,7 @@ import 'package:conscia_app/core/constants/category_icons.dart';
 import 'package:conscia_app/screens/dashboard/widgets/regret_prompt_card.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hugeicons/hugeicons.dart';
 
 void main() {
   testWidgets('uses the category badge without wrapping it in another avatar', (
@@ -45,9 +46,27 @@ void main() {
       ),
     );
 
-    expect(find.byIcon(Icons.thumb_up_alt_outlined), findsOneWidget);
-    expect(find.byIcon(Icons.help_outline_rounded), findsOneWidget);
-    expect(find.byIcon(Icons.thumb_down_alt_outlined), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.widgetWithText(FilledButton, 'Worth It'),
+        matching: find.byType(HugeIcon),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: find.widgetWithText(FilledButton, 'Not Sure'),
+        matching: find.byType(HugeIcon),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: find.widgetWithText(FilledButton, 'Regret'),
+        matching: find.byType(HugeIcon),
+      ),
+      findsOneWidget,
+    );
     expect(find.text('Worth It'), findsWidgets);
     expect(find.text('Not Sure'), findsOneWidget);
     expect(find.text('Regret'), findsWidgets);
@@ -59,9 +78,7 @@ void main() {
       expect(button.style?.minimumSize?.resolve({})?.height, 72);
     }
 
-    expect(find.byIcon(Icons.sentiment_satisfied_alt), findsNothing);
-    expect(find.byIcon(Icons.sentiment_neutral), findsNothing);
-    expect(find.byIcon(Icons.sentiment_dissatisfied), findsNothing);
+    expect(find.byType(HugeIcon), findsNWidgets(4));
   });
 
   testWidgets('shows gentle guidance copy and queue hint when provided', (
@@ -83,12 +100,15 @@ void main() {
     );
 
     expect(
-      find.text('Notice what this moment gave you before you decide how it felt.'),
+      find.text(
+          'Notice what this moment gave you before you decide how it felt.'),
       findsOneWidget,
     );
     expect(find.text('2 more moments waiting'), findsOneWidget);
-    expect(find.byKey(const ValueKey('dashboard-reflect-queue-hint')), findsOneWidget);
-    expect(find.byKey(const ValueKey('dashboard-reflect-feature-card')), findsOneWidget);
+    expect(find.byKey(const ValueKey('dashboard-reflect-queue-hint')),
+        findsOneWidget);
+    expect(find.byKey(const ValueKey('dashboard-reflect-feature-card')),
+        findsOneWidget);
   });
 
   testWidgets('uses button taps instead of a swipe wrapper', (tester) async {
@@ -118,7 +138,7 @@ void main() {
 
     expect(worthItCount, 1);
     expect(regretCount, 0);
- 
+
     await tester.tap(find.widgetWithText(FilledButton, 'Regret'));
     await tester.pump();
 

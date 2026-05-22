@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/constants/app_icons.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_layout.dart';
 import '../../core/utils/currency_formatter.dart';
@@ -742,7 +743,7 @@ class _SwipeDeleteBackground extends StatelessWidget {
       padding: const EdgeInsets.only(right: 10),
       children: [
         SwipeActionTile(
-          icon: Icons.delete_outline_rounded,
+          icon: AppIconKey.delete,
           label: label,
           foregroundColor: color,
           backgroundColor: colors.expenseSoft,

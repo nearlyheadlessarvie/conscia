@@ -709,7 +709,8 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Merchant (optional)'), findsOneWidget);
-    expect(find.byIcon(Icons.calendar_today_outlined), findsOneWidget);
+    expect(find.text('Timing'), findsOneWidget);
+    expect(find.text('Today'), findsOneWidget);
   });
 
   testWidgets('merchant field uses Conscia v2 floating label treatment',
@@ -765,7 +766,7 @@ void main() {
     expect(find.text('Monthly'), findsOneWidget);
     expect(find.text('Yearly'), findsOneWidget);
     expect(find.text('END DATE'), findsOneWidget);
-    expect(find.byIcon(Icons.calendar_today_outlined), findsWidgets);
+    expect(find.text('Never ends'), findsWidgets);
   });
 
   testWidgets('create transaction dto serializes recurring payload', (

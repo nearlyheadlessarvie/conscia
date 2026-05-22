@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/constants/app_icons.dart';
 import '../../../core/constants/category_icons.dart';
 import '../../../models/insights_models.dart';
 import '../../../widgets/feed_card.dart';
@@ -56,8 +57,8 @@ class CategoryTrendCard extends StatelessWidget {
                   ),
                 ),
               ),
-              Icon(
-                Icons.chevron_right_rounded,
+              AppIcons.icon(
+                AppIconKey.chevronRight,
                 color: colors.onSurfaceVariant,
                 size: 20,
               ),

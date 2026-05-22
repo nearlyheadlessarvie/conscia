@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/constants/app_icons.dart';
 import '../../../core/constants/category_visibility.dart';
 import '../../../core/constants/generated/app_constants.g.dart';
 import '../../../core/theme/app_colors.dart';
@@ -19,7 +20,7 @@ class TransactionStyleCategorySelector extends ConsumerStatefulWidget {
     required this.onCategorySelected,
     this.allowAllCategories = false,
     this.labelStyle,
-    this.moreCategoriesIcon = Icons.add,
+    this.moreCategoriesIcon = AppIconKey.add,
     this.showHeader = true,
   });
 
@@ -29,7 +30,7 @@ class TransactionStyleCategorySelector extends ConsumerStatefulWidget {
   final bool allowAllCategories;
   final ValueChanged<String?> onCategorySelected;
   final TextStyle? labelStyle;
-  final IconData moreCategoriesIcon;
+  final AppIconKey moreCategoriesIcon;
   final bool showHeader;
 
   @override
@@ -180,7 +181,10 @@ class _TransactionStyleCategorySelectorState
             ),
           ),
           widget.allowAllCategories || widget.isPremium
-              ? _MoreChip(onTap: _showCategoryPickerSheet)
+              ? _MoreChip(
+                  onTap: _showCategoryPickerSheet,
+                  iconKey: widget.moreCategoriesIcon,
+                )
               : widget.isExpense
                   ? _PremiumCategoriesChip(
                       onTap: () => PremiumUpgradeDialog.show(
@@ -214,9 +218,13 @@ class _TransactionStyleCategorySelectorState
 }
 
 class _MoreChip extends StatelessWidget {
-  const _MoreChip({required this.onTap});
+  const _MoreChip({
+    required this.onTap,
+    required this.iconKey,
+  });
 
   final VoidCallback onTap;
+  final AppIconKey iconKey;
 
   @override
   Widget build(BuildContext context) {
@@ -232,10 +240,10 @@ class _MoreChip extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              Icons.add_rounded,
-              size: 13,
+            AppIcons.icon(
+              iconKey,
               color: Theme.of(context).colorScheme.onSurfaceVariant,
+              size: 13,
             ),
             const SizedBox(width: 4),
             Text(
@@ -274,10 +282,10 @@ class _PremiumCategoriesChip extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              Icons.workspace_premium_rounded,
-              size: 13,
+            AppIcons.icon(
+              AppIconKey.premium,
               color: colors.deepNavy,
+              size: 13,
             ),
             const SizedBox(width: 4),
             Text(

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/constants/app_icons.dart';
 import '../../../core/constants/category_icons.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/theme/app_colors.dart';
@@ -211,7 +212,11 @@ class _FamilyBudgetPill extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.groups_rounded, size: 13, color: colors.family),
+          AppIcons.icon(
+            AppIconKey.people,
+            color: colors.family,
+            size: 13,
+          ),
           const SizedBox(width: 4),
           Text(
             'Family budget',

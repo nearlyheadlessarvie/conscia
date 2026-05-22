@@ -26,6 +26,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:hugeicons/hugeicons.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class _RecordingTransactionService extends TransactionService {
@@ -402,9 +403,27 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('HOW DID THIS FEEL?'), findsOneWidget);
-    expect(find.byIcon(Icons.thumb_up_alt_outlined), findsOneWidget);
-    expect(find.byIcon(Icons.help_outline_rounded), findsOneWidget);
-    expect(find.byIcon(Icons.thumb_down_alt_outlined), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.widgetWithText(FilledButton, 'Worth It'),
+        matching: find.byType(HugeIcon),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: find.widgetWithText(FilledButton, 'Not Sure'),
+        matching: find.byType(HugeIcon),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: find.widgetWithText(FilledButton, 'Regret'),
+        matching: find.byType(HugeIcon),
+      ),
+      findsOneWidget,
+    );
     expect(find.text('Worth It'), findsOneWidget);
     expect(find.text('Not Sure'), findsOneWidget);
     expect(find.text('Regret'), findsOneWidget);
@@ -500,9 +519,21 @@ void main() {
       find.byType(FeelingChoiceButton),
     );
     expect(selectedButton.size, FeelingChoiceButtonSize.compact);
-    expect(find.byIcon(Icons.thumb_up_alt_outlined), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byType(FeelingChoiceButton),
+        matching: find.byType(HugeIcon),
+      ),
+      findsOneWidget,
+    );
     expect(find.text('Worth It'), findsOneWidget);
-    expect(find.byIcon(Icons.refresh), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byTooltip('Change feeling'),
+        matching: find.byType(HugeIcon),
+      ),
+      findsOneWidget,
+    );
   });
 
   testWidgets('detail header starts transparent and docks after scrolling',

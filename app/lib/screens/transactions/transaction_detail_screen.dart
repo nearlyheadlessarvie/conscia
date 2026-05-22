@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../core/constants/app_icons.dart';
 import '../../core/errors/app_error.dart';
 import '../../core/constants/conscience_journey.dart';
 import '../../core/theme/app_colors.dart';
@@ -283,10 +284,10 @@ class _TransactionDetailScreenState
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(
-                          Icons.error_outline,
-                          size: 64,
+                        AppIcons.icon(
+                          AppIconKey.error,
                           color: Theme.of(context).colorScheme.error,
+                          size: 64,
                         ),
                         const SizedBox(height: 16),
                         Text(
@@ -298,7 +299,11 @@ class _TransactionDetailScreenState
                         FilledButton.icon(
                           onPressed: () => ref.invalidate(
                               transactionDetailProvider(widget.transactionId)),
-                          icon: const Icon(Icons.refresh),
+                          icon: AppIcons.icon(
+                            AppIconKey.refresh,
+                            color: Theme.of(context).colorScheme.onPrimary,
+                            size: 18,
+                          ),
                           label: const Text('Retry'),
                         ),
                       ],
@@ -322,7 +327,11 @@ class _TransactionDetailScreenState
                 trailing: IconButton(
                   tooltip: 'Transaction actions',
                   visualDensity: VisualDensity.compact,
-                  icon: const Icon(Icons.more_horiz_rounded),
+                  icon: AppIcons.icon(
+                    AppIconKey.more,
+                    color: Theme.of(context).appColors.deepNavy,
+                    size: 20,
+                  ),
                   onPressed: currentTransaction == null
                       ? null
                       : () => _showTransactionActions(currentTransaction),
@@ -454,8 +463,8 @@ class _TransactionDetailScreenState
                     _DetailRow(
                       label: 'Date',
                       value: DateFormat.yMMMd().add_jm().format(tx.date),
-                      leading: Icon(
-                        Icons.calendar_today_outlined,
+                      leading: AppIcons.icon(
+                        AppIconKey.calendar,
                         color: appColors.deepNavy,
                         size: 20,
                       ),
@@ -463,10 +472,8 @@ class _TransactionDetailScreenState
                     _DetailRow(
                       label: 'Type',
                       value: isIncome ? 'Income' : 'Expense',
-                      leading: Icon(
-                        isIncome
-                            ? Icons.arrow_downward_rounded
-                            : Icons.arrow_upward_rounded,
+                      leading: AppIcons.icon(
+                        isIncome ? AppIconKey.arrowDown : AppIconKey.arrowUp,
                         color: isIncome ? appColors.income : appColors.expense,
                         size: 20,
                       ),
@@ -479,10 +486,10 @@ class _TransactionDetailScreenState
                             : tx.isFamily
                                 ? 'Family transaction'
                                 : 'Recurring transaction',
-                        leading: Icon(
+                        leading: AppIcons.icon(
                           tx.isFamily
-                              ? Icons.people_rounded
-                              : Icons.repeat_rounded,
+                              ? AppIconKey.people
+                              : AppIconKey.recurring,
                           color: tx.isFamily
                               ? appColors.family
                               : appColors.deepNavy,
@@ -583,7 +590,11 @@ class _TransactionDetailScreenState
         IconButton(
           tooltip: 'Change feeling',
           onPressed: () => setState(() => _regretLevel = null),
-          icon: const Icon(Icons.refresh),
+          icon: AppIcons.icon(
+            AppIconKey.refresh,
+            color: Theme.of(context).appColors.deepNavy,
+            size: 20,
+          ),
         ),
       ],
     );
@@ -765,7 +776,7 @@ class _TransactionActionsSheet extends StatelessWidget {
             const SizedBox(height: 18),
             if (canReflect)
               _TransactionActionRow(
-                icon: Icons.auto_awesome_rounded,
+                icon: AppIconKey.ai,
                 title: 'Reflect with Conscia',
                 subtitle: 'Read the pattern behind this purchase.',
                 onTap: () =>
@@ -773,21 +784,21 @@ class _TransactionActionsSheet extends StatelessWidget {
               ),
             if (canAddBudget)
               _TransactionActionRow(
-                icon: Icons.flag_rounded,
+                icon: AppIconKey.flag,
                 title: 'Add budget',
                 subtitle: 'Create a monthly cap for this category.',
                 onTap: () =>
                     Navigator.of(context).pop(_TransactionAction.addBudget),
               ),
             _TransactionActionRow(
-              icon: Icons.edit_rounded,
+              icon: AppIconKey.edit,
               title: 'Edit transaction',
               subtitle: 'Adjust the amount, category, date, or details.',
               onTap: () => Navigator.of(context).pop(_TransactionAction.edit),
             ),
             if (canDelete)
               _TransactionActionRow(
-                icon: Icons.delete_outline_rounded,
+                icon: AppIconKey.delete,
                 title: 'Delete transaction',
                 subtitle: 'Remove this record from your history.',
                 destructive: true,
@@ -810,7 +821,7 @@ class _TransactionActionRow extends StatelessWidget {
     this.destructive = false,
   });
 
-  final IconData icon;
+  final AppIconKey icon;
   final String title;
   final String subtitle;
   final VoidCallback onTap;
@@ -837,7 +848,11 @@ class _TransactionActionRow extends StatelessWidget {
                 color: background,
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: Icon(icon, color: accent, size: 18),
+              child: AppIcons.icon(
+                icon,
+                color: accent,
+                size: 18,
+              ),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -862,7 +877,11 @@ class _TransactionActionRow extends StatelessWidget {
                 ],
               ),
             ),
-            Icon(Icons.chevron_right_rounded, color: colors.softInk),
+            AppIcons.icon(
+              AppIconKey.chevronRight,
+              color: colors.softInk,
+              size: 18,
+            ),
           ],
         ),
       ),
@@ -1220,8 +1239,11 @@ class _ReflectionSheetState extends ConsumerState<_ReflectionSheet> {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.error_outline,
-                            size: 48, color: colors.error),
+                        AppIcons.icon(
+                          AppIconKey.error,
+                          color: colors.error,
+                          size: 48,
+                        ),
                         const SizedBox(height: 16),
                         Text(_error!, textAlign: TextAlign.center),
                         const SizedBox(height: 16),
