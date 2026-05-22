@@ -2295,7 +2295,8 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('View level'));
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 700));
 
     expect(find.text('Continue your journey'), findsOneWidget);
   });

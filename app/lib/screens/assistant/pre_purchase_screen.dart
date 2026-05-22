@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/routing/app_router.dart';
+import '../../core/constants/app_icons.dart';
 import '../../core/constants/conscience_journey.dart';
 import '../../core/constants/generated/app_constants.g.dart';
 import '../../core/constants/category_icons.dart';
@@ -623,7 +624,11 @@ class _PrePurchaseScreenState extends ConsumerState<PrePurchaseScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.error_outline, size: 64, color: colors.error),
+            AppIcons.icon(
+              AppIconKey.error,
+              size: 64,
+              color: colors.error,
+            ),
             const SizedBox(height: 16),
             Text(
               'Something went wrong',
@@ -640,7 +645,11 @@ class _PrePurchaseScreenState extends ConsumerState<PrePurchaseScreen> {
             const SizedBox(height: 24),
             FilledButton.icon(
               onPressed: _submit,
-              icon: const Icon(Icons.refresh),
+              icon: AppIcons.icon(
+                AppIconKey.refresh,
+                color: colors.onPrimary,
+                size: 20,
+              ),
               label: const Text('Retry'),
             ),
             const SizedBox(height: 8),
@@ -736,7 +745,11 @@ class _ConscienceSheetError extends StatelessWidget {
       children: [
         const _SheetHandle(),
         const SizedBox(height: 36),
-        Icon(Icons.error_outline_rounded, color: colors.expense, size: 42),
+        AppIcons.icon(
+          AppIconKey.error,
+          color: colors.expense,
+          size: 42,
+        ),
         const SizedBox(height: 16),
         Text(
           'Conscia needs another try',
@@ -944,8 +957,11 @@ class _InsightSlideshowState extends State<_InsightSlideshow> {
                           type: 'Expense',
                         ),
                       )
-                    : const Icon(Icons.shopping_bag_outlined,
-                        size: 22, color: Colors.white),
+                    : AppIcons.icon(
+                        AppIconKey.label,
+                        size: 22,
+                        color: Colors.white,
+                      ),
                 title: 'Your purchase',
                 body: widget.description.isNotEmpty
                     ? '$amountFormatted · ${widget.description}'
@@ -958,8 +974,11 @@ class _InsightSlideshowState extends State<_InsightSlideshow> {
                   end: Alignment.bottomRight,
                   colors: [colors.amberSoft, colors.navySoft],
                 ),
-                icon: Icon(Icons.insights_rounded,
-                    size: 22, color: colors.deepNavy),
+                icon: AppIcons.icon(
+                  AppIconKey.insightTrend,
+                  size: 22,
+                  color: colors.deepNavy,
+                ),
                 title: 'Your recent snapshot',
                 body: widget.insightText ??
                     'Reviewing your spending patterns and history...',
@@ -971,8 +990,11 @@ class _InsightSlideshowState extends State<_InsightSlideshow> {
                   end: Alignment.bottomRight,
                   colors: [colors.angelSoft, colors.devilSoft],
                 ),
-                icon: Icon(Icons.psychology_rounded,
-                    size: 22, color: colors.deepNavy),
+                icon: AppIcons.icon(
+                  AppIconKey.ai,
+                  size: 22,
+                  color: colors.deepNavy,
+                ),
                 title: 'Both sides are making their case',
                 body:
                     'Angel and Devil are reviewing every angle of this decision.',

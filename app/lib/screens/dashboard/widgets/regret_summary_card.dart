@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/constants/app_icons.dart';
 import '../../../models/insights_models.dart';
 import '../../../providers/insights_provider.dart';
 import '../../../providers/user_provider.dart';
@@ -58,8 +59,11 @@ class RegretSummaryCard extends ConsumerWidget {
                   color: colors.errorContainer,
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: Icon(Icons.warning_amber_rounded,
-                    color: colors.onErrorContainer, size: 20),
+                child: AppIcons.icon(
+                  AppIconKey.warning,
+                  color: colors.onErrorContainer,
+                  size: 20,
+                ),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -81,7 +85,11 @@ class RegretSummaryCard extends ConsumerWidget {
                   ],
                 ),
               ),
-              Icon(Icons.chevron_right, color: colors.onSurfaceVariant),
+              AppIcons.icon(
+                AppIconKey.chevronRight,
+                color: colors.onSurfaceVariant,
+                size: 20,
+              ),
             ],
           ),
         ),

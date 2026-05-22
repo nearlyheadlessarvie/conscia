@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'package:conscia_app/core/constants/app_icons.dart';
 import 'package:conscia_app/widgets/feed_card.dart';
 
 class BudgetWarningBanner extends StatelessWidget {
@@ -30,8 +31,11 @@ class BudgetWarningBanner extends StatelessWidget {
             padding: const EdgeInsets.all(14),
             child: Row(
               children: [
-                const Icon(Icons.warning_amber_rounded,
-                    color: Color(0xFFFF9800), size: 28),
+                AppIcons.icon(
+                  AppIconKey.warning,
+                  color: const Color(0xFFFF9800),
+                  size: 28,
+                ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
@@ -56,7 +60,11 @@ class BudgetWarningBanner extends StatelessWidget {
                 ),
                 if (onDismiss != null)
                   IconButton(
-                    icon: const Icon(Icons.close, size: 20),
+                    icon: AppIcons.icon(
+                      AppIconKey.close,
+                      color: colors.onSurfaceVariant,
+                      size: 20,
+                    ),
                     onPressed: onDismiss,
                     visualDensity: VisualDensity.compact,
                   ),
