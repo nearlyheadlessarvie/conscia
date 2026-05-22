@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../core/constants/app_icons.dart';
 import '../core/constants/generated/app_constants.g.dart';
 import '../screens/settings/widgets/subscription_sheet.dart';
 import 'conscia_bottom_sheet.dart';
@@ -112,7 +113,14 @@ class _CurrencyPickerBodyState extends State<_CurrencyPickerBody> {
               TextField(
                 decoration: InputDecoration(
                   hintText: 'Search currencies...',
-                  prefixIcon: const Icon(Icons.search),
+                  prefixIcon: Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: AppIcons.icon(
+                      AppIconKey.search,
+                      color: colors.onSurfaceVariant,
+                      size: 18,
+                    ),
+                  ),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
@@ -130,8 +138,11 @@ class _CurrencyPickerBodyState extends State<_CurrencyPickerBody> {
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
             child: Row(
               children: [
-                Icon(Icons.workspace_premium,
-                    size: 16, color: colors.secondary),
+                AppIcons.icon(
+                  AppIconKey.premium,
+                  color: colors.secondary,
+                  size: 16,
+                ),
                 const SizedBox(width: 6),
                 Expanded(
                   child: Text(
@@ -167,10 +178,17 @@ class _CurrencyPickerBodyState extends State<_CurrencyPickerBody> {
                 title: Text(currency.code),
                 subtitle: Text(currency.name),
                 trailing: isSelected
-                    ? Icon(Icons.check, color: colors.primary)
+                    ? AppIcons.icon(
+                        AppIconKey.check,
+                        color: colors.primary,
+                        size: 18,
+                      )
                     : isLocked
-                        ? Icon(Icons.lock_outline,
-                            size: 18, color: colors.outline)
+                        ? AppIcons.icon(
+                            AppIconKey.lock,
+                            color: colors.outline,
+                            size: 18,
+                          )
                         : null,
                 enabled: !isLocked,
                 onTap: isLocked

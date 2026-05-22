@@ -29,6 +29,7 @@ enum AppIconKey {
   refresh,
   warning,
   error,
+  help,
   edit,
   delete,
   camera,
@@ -45,6 +46,9 @@ enum AppIconKey {
   email,
   visibility,
   visibilityOff,
+  thumbsUp,
+  thumbsDown,
+  arrowDown,
 }
 
 abstract class AppIcons {
@@ -294,6 +298,7 @@ List<List<dynamic>> _hugeIconFor(AppIconKey key) {
     AppIconKey.refresh => HugeIconsStrokeRounded.refresh,
     AppIconKey.warning => HugeIconsStrokeRounded.alertCircle,
     AppIconKey.error => HugeIconsStrokeRounded.alert02,
+    AppIconKey.help => HugeIconsStrokeRounded.helpCircle,
     AppIconKey.edit => HugeIconsStrokeRounded.pencilEdit02,
     AppIconKey.delete => HugeIconsStrokeRounded.delete02,
     AppIconKey.camera => HugeIconsStrokeRounded.camera01,
@@ -310,6 +315,9 @@ List<List<dynamic>> _hugeIconFor(AppIconKey key) {
     AppIconKey.email => HugeIconsStrokeRounded.mailAtSign01,
     AppIconKey.visibility => HugeIconsStrokeRounded.view,
     AppIconKey.visibilityOff => HugeIconsStrokeRounded.viewOff,
+    AppIconKey.thumbsUp => HugeIconsStrokeRounded.thumbsUp,
+    AppIconKey.thumbsDown => HugeIconsStrokeRounded.thumbsDown,
+    AppIconKey.arrowDown => HugeIconsStrokeRounded.arrowDown01,
   };
 }
 

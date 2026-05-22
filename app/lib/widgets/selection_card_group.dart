@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../core/constants/app_icons.dart';
 import '../core/theme/app_colors.dart';
 
 enum SelectionCardSemantics { radio, check }
@@ -165,7 +166,11 @@ class _SelectionIndicator extends StatelessWidget {
           ),
         ),
         child: selected
-            ? const Icon(Icons.check, size: 14, color: Colors.white)
+            ? AppIcons.icon(
+                AppIconKey.check,
+                color: Colors.white,
+                size: 14,
+              )
             : null,
       );
     }

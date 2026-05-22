@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../core/constants/app_icons.dart';
 import '../core/theme/app_colors.dart';
 import '../core/utils/localized_number_input.dart';
 import 'currency_picker_sheet.dart';
@@ -191,10 +192,10 @@ class _AmountHeroFieldState extends State<AmountHeroField> {
                         style: amountStyle,
                       ),
                       const SizedBox(width: 2),
-                      Icon(
-                        Icons.keyboard_arrow_down_rounded,
-                        size: 20,
+                      AppIcons.icon(
+                        AppIconKey.arrowDown,
                         color: amountColor.withValues(alpha: 0.65),
+                        size: 20,
                       ),
                     ],
                   ),

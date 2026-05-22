@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../core/constants/app_icons.dart';
 import '../core/theme/app_colors.dart';
 
 class SingleSelectList<T> extends StatelessWidget {
@@ -115,10 +116,10 @@ class _SingleSelectRow<T> extends StatelessWidget {
               width: 21,
               height: 21,
               child: selected
-                  ? Icon(
-                      Icons.check_rounded,
-                      size: 21,
+                  ? AppIcons.icon(
+                      AppIconKey.check,
                       color: colors.deepNavy,
+                      size: 21,
                     )
                   : null,
             ),
