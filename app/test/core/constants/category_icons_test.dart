@@ -48,10 +48,10 @@ void main() {
     expect(CategoryIcons.colorOptions.length, greaterThanOrEqualTo(20));
   });
 
-  test('iconOptions is reduced to the curated font-trial set', () {
+  test('iconOptions includes the expanded curated icon set', () {
     final keys = CategoryIcons.iconOptions.map((option) => option.key).toList();
 
-    expect(keys.length, 20);
+    expect(keys.length, 25);
     expect(
       keys,
       containsAll(<String>[
@@ -75,9 +75,13 @@ void main() {
         'phone',
         'pets',
         'other',
+        'gaming',
+        'entertainment',
+        'bank',
+        'savings',
+        'fitness',
       ]),
     );
-    expect(keys, isNot(contains('gaming')));
     expect(keys, isNot(contains('beauty')));
     expect(keys, isNot(contains('parking')));
   });

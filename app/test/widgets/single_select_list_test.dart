@@ -1,4 +1,5 @@
 import 'package:conscia_app/widgets/single_select_list.dart';
+import 'package:conscia_app/widgets/conscia_glyph.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -31,7 +32,7 @@ void main() {
       ),
     );
 
-    expect(find.byIcon(Icons.check_rounded), findsOneWidget);
+    expect(find.byType(ConsciaGlyph), findsOneWidget);
     expect(find.byType(Radio<String>), findsNothing);
     expect(find.byType(Divider), findsNWidgets(2));
 

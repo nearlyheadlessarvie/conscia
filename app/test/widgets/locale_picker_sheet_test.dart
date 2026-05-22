@@ -1,4 +1,5 @@
 import 'package:conscia_app/widgets/locale_picker_sheet.dart';
+import 'package:conscia_app/widgets/conscia_glyph.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -25,7 +26,7 @@ void main() {
     await tester.tap(find.text('Open locale picker'));
     await tester.pumpAndSettle();
 
-    expect(find.byIcon(Icons.check_rounded), findsOneWidget);
+    expect(find.byType(ConsciaGlyph), findsOneWidget);
     expect(find.text('✓'), findsNothing);
   });
 
