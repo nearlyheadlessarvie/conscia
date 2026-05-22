@@ -1,3 +1,5 @@
+import 'package:conscia_app/core/constants/app_icons.dart';
+import 'package:conscia_app/core/constants/category_icons.dart';
 import 'package:conscia_app/widgets/conscia_glyph.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -101,5 +103,38 @@ void main() {
         ConsciaGlyphKind.more,
       ],
     );
+  });
+
+  testWidgets('category badges use a lighter stroke treatment', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: CategoryIcons.badge(
+            'Dining',
+            size: 20,
+          ),
+        ),
+      ),
+    );
+
+    final hugeIcon = tester.widget<HugeIcon>(find.byType(HugeIcon));
+    expect(hugeIcon.strokeWidth, lessThan(20 * 0.11));
+  });
+
+  testWidgets('app icon helper renders hugeicons instead of material icons',
+      (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: AppIcons.icon(
+            AppIconKey.search,
+            color: Colors.black,
+          ),
+        ),
+      ),
+    );
+
+    expect(find.byType(HugeIcon), findsOneWidget);
+    expect(find.byType(Icon), findsNothing);
   });
 }

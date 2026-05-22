@@ -8,11 +8,19 @@ import 'conscia_glyph_mapper.dart';
 class ConsciaGlyph extends StatelessWidget {
   const ConsciaGlyph({
     super.key,
-    required this.kind,
+    required ConsciaGlyphKind this.kind,
     required this.color,
     this.size = 22,
     this.strokeWidth,
-  });
+  }) : icon = null;
+
+  const ConsciaGlyph.raw({
+    super.key,
+    required this.icon,
+    required this.color,
+    this.size = 22,
+    this.strokeWidth,
+  }) : kind = null;
 
   ConsciaGlyph.category(
     String category, {
@@ -20,7 +28,8 @@ class ConsciaGlyph extends StatelessWidget {
     required this.color,
     this.size = 22,
     this.strokeWidth,
-  }) : kind = ConsciaGlyphMapper.category(category);
+  })  : kind = ConsciaGlyphMapper.category(category),
+        icon = null;
 
   ConsciaGlyph.quest(
     String questKey, {
@@ -28,7 +37,8 @@ class ConsciaGlyph extends StatelessWidget {
     required this.color,
     this.size = 22,
     this.strokeWidth,
-  }) : kind = ConsciaGlyphMapper.quest(questKey);
+  })  : kind = ConsciaGlyphMapper.quest(questKey),
+        icon = null;
 
   ConsciaGlyph.milestone(
     String badgeKey, {
@@ -37,9 +47,10 @@ class ConsciaGlyph extends StatelessWidget {
     this.size = 22,
     this.strokeWidth,
     bool unlocked = true,
-  }) : kind = unlocked
+  })  : kind = unlocked
             ? ConsciaGlyphMapper.milestone(badgeKey)
-            : ConsciaGlyphKind.lock;
+            : ConsciaGlyphKind.lock,
+        icon = null;
 
   ConsciaGlyph.level(
     String levelKey, {
@@ -47,9 +58,11 @@ class ConsciaGlyph extends StatelessWidget {
     required this.color,
     this.size = 22,
     this.strokeWidth,
-  }) : kind = ConsciaGlyphMapper.level(levelKey);
+  })  : kind = ConsciaGlyphMapper.level(levelKey),
+        icon = null;
 
-  final ConsciaGlyphKind kind;
+  final ConsciaGlyphKind? kind;
+  final List<List<dynamic>>? icon;
   final Color color;
   final double size;
   final double? strokeWidth;
@@ -59,7 +72,7 @@ class ConsciaGlyph extends StatelessWidget {
     return SizedBox.square(
       dimension: size,
       child: HugeIcon(
-        icon: _hugeIconFor(kind),
+        icon: icon ?? _hugeIconFor(kind!),
         color: color,
         size: size,
         strokeWidth: strokeWidth ?? (size * 0.1).clamp(1.6, 2.2),
@@ -93,7 +106,8 @@ List<List<dynamic>> _hugeIconFor(ConsciaGlyphKind kind) {
     ConsciaGlyphKind.card => HugeIconsStrokeRounded.creditCard,
     ConsciaGlyphKind.cash => HugeIconsStrokeRounded.money03,
     ConsciaGlyphKind.bank => HugeIconsStrokeRounded.bank,
-    ConsciaGlyphKind.transfer => HugeIconsStrokeRounded.arrowDataTransferHorizontal,
+    ConsciaGlyphKind.transfer =>
+      HugeIconsStrokeRounded.arrowDataTransferHorizontal,
     ConsciaGlyphKind.refund => HugeIconsStrokeRounded.moneyReceiveSquare,
     ConsciaGlyphKind.fee => HugeIconsStrokeRounded.invoice02,
     ConsciaGlyphKind.debt => HugeIconsStrokeRounded.creditCardPos,

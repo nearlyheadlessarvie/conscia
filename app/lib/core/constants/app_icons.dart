@@ -1,9 +1,70 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:hugeicons/styles/stroke_rounded.dart';
+
+import '../../widgets/conscia_glyph.dart';
+
+enum AppIconKey {
+  home,
+  homeActive,
+  transactions,
+  transactionsActive,
+  scan,
+  assistant,
+  assistantActive,
+  settings,
+  settingsActive,
+  add,
+  close,
+  check,
+  chevronLeft,
+  chevronRight,
+  calendar,
+  person,
+  family,
+  search,
+  premium,
+  lock,
+  refresh,
+  warning,
+  error,
+  edit,
+  delete,
+  camera,
+  ai,
+  payments,
+  logout,
+  language,
+  currency,
+  location,
+  download,
+  fingerprint,
+  star,
+  admin,
+  email,
+  visibility,
+  visibilityOff,
+}
 
 abstract class AppIcons {
   static bool get _isIOS => defaultTargetPlatform == TargetPlatform.iOS;
+
+  static Widget icon(
+    AppIconKey key, {
+    required Color color,
+    double size = 20,
+    double? strokeWidth,
+    Key? keyId,
+  }) {
+    return ConsciaGlyph.raw(
+      key: keyId,
+      icon: _hugeIconFor(key),
+      color: color,
+      size: size,
+      strokeWidth: strokeWidth,
+    );
+  }
 
   static IconData adaptive({
     required IconData material,
@@ -31,8 +92,8 @@ abstract class AppIcons {
         material: Icons.auto_awesome_outlined,
         cupertino: CupertinoIcons.sparkles,
       );
-  static IconData get assistantActive =>
-      adaptive(material: Icons.auto_awesome, cupertino: CupertinoIcons.sparkles);
+  static IconData get assistantActive => adaptive(
+      material: Icons.auto_awesome, cupertino: CupertinoIcons.sparkles);
   static IconData get settings => adaptive(
         material: Icons.settings_outlined,
         cupertino: CupertinoIcons.settings,
@@ -127,8 +188,7 @@ abstract class AppIcons {
     );
   }
 
-  static _ProfileIconSpec _spendingStyleSpec(String value) =>
-      switch (value) {
+  static _ProfileIconSpec _spendingStyleSpec(String value) => switch (value) {
         'saver' => const _ProfileIconSpec(
             material: Icons.savings_rounded,
             cupertino: CupertinoIcons.money_dollar_circle_fill,
@@ -205,6 +265,52 @@ abstract class AppIcons {
             tint: Color(0xFFF1F4FA),
           ),
       };
+}
+
+List<List<dynamic>> _hugeIconFor(AppIconKey key) {
+  return switch (key) {
+    AppIconKey.home || AppIconKey.homeActive => HugeIconsStrokeRounded.house03,
+    AppIconKey.transactions ||
+    AppIconKey.transactionsActive =>
+      HugeIconsStrokeRounded.receiptText,
+    AppIconKey.scan => HugeIconsStrokeRounded.scan,
+    AppIconKey.assistant ||
+    AppIconKey.assistantActive =>
+      HugeIconsStrokeRounded.sparkles,
+    AppIconKey.settings ||
+    AppIconKey.settingsActive =>
+      HugeIconsStrokeRounded.settings02,
+    AppIconKey.add => HugeIconsStrokeRounded.plusSign,
+    AppIconKey.close => HugeIconsStrokeRounded.cancel01,
+    AppIconKey.check => HugeIconsStrokeRounded.checkmarkCircle02,
+    AppIconKey.chevronLeft => HugeIconsStrokeRounded.arrowLeft01,
+    AppIconKey.chevronRight => HugeIconsStrokeRounded.arrowRight01,
+    AppIconKey.calendar => HugeIconsStrokeRounded.calendar03,
+    AppIconKey.person => HugeIconsStrokeRounded.user,
+    AppIconKey.family => HugeIconsStrokeRounded.userGroup,
+    AppIconKey.search => HugeIconsStrokeRounded.search01,
+    AppIconKey.premium => HugeIconsStrokeRounded.star,
+    AppIconKey.lock => HugeIconsStrokeRounded.lock,
+    AppIconKey.refresh => HugeIconsStrokeRounded.refresh,
+    AppIconKey.warning => HugeIconsStrokeRounded.alertCircle,
+    AppIconKey.error => HugeIconsStrokeRounded.alert02,
+    AppIconKey.edit => HugeIconsStrokeRounded.pencilEdit02,
+    AppIconKey.delete => HugeIconsStrokeRounded.delete02,
+    AppIconKey.camera => HugeIconsStrokeRounded.camera01,
+    AppIconKey.ai => HugeIconsStrokeRounded.sparkles,
+    AppIconKey.payments => HugeIconsStrokeRounded.payment02,
+    AppIconKey.logout => HugeIconsStrokeRounded.logout03,
+    AppIconKey.language => HugeIconsStrokeRounded.languageCircle,
+    AppIconKey.currency => HugeIconsStrokeRounded.currency,
+    AppIconKey.location => HugeIconsStrokeRounded.location02,
+    AppIconKey.download => HugeIconsStrokeRounded.download02,
+    AppIconKey.fingerprint => HugeIconsStrokeRounded.fingerprintScan,
+    AppIconKey.star => HugeIconsStrokeRounded.star,
+    AppIconKey.admin => HugeIconsStrokeRounded.shieldUser,
+    AppIconKey.email => HugeIconsStrokeRounded.mailAtSign01,
+    AppIconKey.visibility => HugeIconsStrokeRounded.view,
+    AppIconKey.visibilityOff => HugeIconsStrokeRounded.viewOff,
+  };
 }
 
 class _ProfileBadge extends StatelessWidget {

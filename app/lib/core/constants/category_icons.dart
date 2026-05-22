@@ -402,7 +402,7 @@ class CategoryIcons {
       visual.iconKey,
       size: size,
       color: visual.accent,
-      strokeWidth: size * 0.11,
+      strokeWidth: size * 0.085,
     );
   }
 
@@ -504,7 +504,7 @@ class CategoryIcons {
       key: key,
       size: size,
       color: visual.accent,
-      strokeWidth: size * 0.11,
+      strokeWidth: size * 0.085,
     );
   }
 
@@ -572,7 +572,7 @@ class _CategoryBadge extends StatelessWidget {
           visual.iconKey,
           color: fg,
           size: size,
-          strokeWidth: size * 0.11,
+          strokeWidth: size * 0.085,
         ),
       ),
     );
