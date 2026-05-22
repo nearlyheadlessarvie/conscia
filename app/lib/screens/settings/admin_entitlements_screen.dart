@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/constants/app_icons.dart';
 import '../../core/errors/app_error.dart';
 import '../../providers/admin_entitlement_provider.dart';
 import '../../providers/auth_provider.dart';
@@ -201,6 +202,11 @@ class _AdminEntitlementsScreenState
                     FloatingLabelTextField(
                       controller: _reviewerPasswordController,
                       label: 'Temporary password',
+                      prefix: AppIcons.icon(
+                        AppIconKey.password,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        size: 20,
+                      ),
                     ),
                     const SizedBox(height: 4),
                     Material(

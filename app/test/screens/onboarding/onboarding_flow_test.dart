@@ -30,7 +30,6 @@ class _RecordingUserService extends UserService {
     String? occupationType,
     String? householdSize,
     bool? hasCompletedOnboarding,
-    bool? locationSuggestionsEnabled,
     String? aiPersonalityIntensity,
   }) async {
     updates.add({
@@ -42,7 +41,6 @@ class _RecordingUserService extends UserService {
       'occupationType': occupationType,
       'householdSize': householdSize,
       'hasCompletedOnboarding': hasCompletedOnboarding,
-      'locationSuggestionsEnabled': locationSuggestionsEnabled,
       'aiPersonalityIntensity': aiPersonalityIntensity,
     });
 
@@ -53,7 +51,6 @@ class _RecordingUserService extends UserService {
       locale: locale ?? 'en_US',
       createdAt: DateTime(2026),
       hasCompletedOnboarding: hasCompletedOnboarding ?? false,
-      locationSuggestionsEnabled: locationSuggestionsEnabled ?? false,
       aiPersonalityIntensity: aiPersonalityIntensity ?? 'balanced',
       spendingPersonality: spendingPersonality,
       incomeRange: incomeRange,

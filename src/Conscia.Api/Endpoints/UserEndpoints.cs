@@ -183,7 +183,6 @@ public static class UserEndpoints
                     user.OccupationType,
                     user.HouseholdSize,
                     user.HasCompletedOnboarding,
-                    user.LocationSuggestionsEnabled,
                     user.AiPersonalityIntensity
                 },
                 Transactions = transactions.Items,
@@ -260,7 +259,6 @@ public static class UserEndpoints
             user.OccupationType,
             user.HouseholdSize,
             user.HasCompletedOnboarding,
-            user.LocationSuggestionsEnabled,
             user.AiPersonalityIntensity,
         };
     }

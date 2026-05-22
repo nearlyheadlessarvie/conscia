@@ -52,7 +52,6 @@ public sealed class StoryDemoScenario
             PreferredCurrency = "PHP",
             Locale = "en_US",
             HasCompletedOnboarding = true,
-            LocationSuggestionsEnabled = true,
             AiPersonalityIntensity = "balanced",
             SpendingPersonality = "balanced",
             IncomeRange = "mid",
@@ -77,7 +76,6 @@ public sealed class StoryDemoScenario
             PreferredCurrency = "PHP",
             Locale = "en_US",
             HasCompletedOnboarding = true,
-            LocationSuggestionsEnabled = true,
             AiPersonalityIntensity = "balanced",
             HouseholdSize = "family",
             CreatedAt = nowUtc.AddMonths(-3)

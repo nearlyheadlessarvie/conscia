@@ -55,7 +55,6 @@ public class UserService : IUserService
         if (dto.OccupationType is not null) user.OccupationType = dto.OccupationType;
         if (dto.HouseholdSize is not null) user.HouseholdSize = dto.HouseholdSize;
         if (dto.HasCompletedOnboarding.HasValue) user.HasCompletedOnboarding = dto.HasCompletedOnboarding.Value;
-        if (dto.LocationSuggestionsEnabled.HasValue) user.LocationSuggestionsEnabled = dto.LocationSuggestionsEnabled.Value;
         if (dto.AiPersonalityIntensity is not null) user.AiPersonalityIntensity = dto.AiPersonalityIntensity;
 
         return await _repo.UpdateAsync(user, ct);

@@ -24,7 +24,6 @@ class _RecordingUserService extends UserService {
     String? occupationType,
     String? householdSize,
     bool? hasCompletedOnboarding,
-    bool? locationSuggestionsEnabled,
     String? aiPersonalityIntensity,
   }) async {
     lastUpdate = {
@@ -38,7 +37,6 @@ class _RecordingUserService extends UserService {
       'occupationType': occupationType,
       'householdSize': householdSize,
       'hasCompletedOnboarding': hasCompletedOnboarding,
-      'locationSuggestionsEnabled': locationSuggestionsEnabled,
       'aiPersonalityIntensity': aiPersonalityIntensity,
     };
 
@@ -52,7 +50,6 @@ class _RecordingUserService extends UserService {
       photoUrl: photoUrl,
       createdAt: DateTime(2026),
       hasCompletedOnboarding: true,
-      locationSuggestionsEnabled: locationSuggestionsEnabled ?? false,
       aiPersonalityIntensity: aiPersonalityIntensity ?? 'balanced',
       spendingPersonality: spendingPersonality,
       incomeRange: incomeRange,

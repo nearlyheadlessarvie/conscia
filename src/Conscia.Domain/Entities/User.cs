@@ -15,6 +15,5 @@ public class User
     public string? OccupationType { get; set; }         // "employed" | "self_employed" | "student" | "retired" | "other"
     public string? HouseholdSize { get; set; }          // "solo" | "couple" | "family" | "shared"
     public bool HasCompletedOnboarding { get; set; }
-    public bool LocationSuggestionsEnabled { get; set; }
     public string AiPersonalityIntensity { get; set; } = "balanced";
 }
