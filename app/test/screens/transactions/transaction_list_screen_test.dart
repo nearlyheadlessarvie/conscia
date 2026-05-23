@@ -346,6 +346,22 @@ void main() {
     expect(categoryTop, greaterThan(stripTop));
   });
 
+  testWidgets('first transaction date sits below the hero with breathing room', (
+    tester,
+  ) async {
+    await _pumpTransactionList(
+      tester,
+      transactions: _manyTransactions(),
+    );
+
+    final heroBottom = tester.getBottomLeft(
+      find.byKey(const ValueKey('selection-chip-button-Bills')).first,
+    ).dy;
+    final firstDateTop = tester.getTopLeft(find.textContaining('· ').first).dy;
+
+    expect(firstDateTop - heroBottom, greaterThanOrEqualTo(32));
+  });
+
   testWidgets('spending trail aggregates transactions in the user currency', (
     tester,
   ) async {

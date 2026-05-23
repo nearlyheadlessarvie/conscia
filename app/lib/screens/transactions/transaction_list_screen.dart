@@ -534,59 +534,68 @@ class _TransactionListScreenState extends ConsumerState<TransactionListScreen> {
 
     final sortedKeys = groups.keys.toList()..sort((a, b) => b.compareTo(a));
     return [
-      for (final key in sortedKeys)
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 0, 20, 18),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                FormLabel(label: _formatDateLabel(groups[key]!.first.date)),
-                const SizedBox(height: 10),
-                EditorialTransactionRowsGroup(
-                  surface: false,
-                  horizontalPadding: 0,
-                  children: [
-                    for (var index = 0; index < groups[key]!.length; index++)
-                      _SwipeableTransactionActionRow(
-                        key: ValueKey(
-                          'transaction-row-${groups[key]![index].id}',
-                        ),
-                        canReflect: groups[key]![index].type != 'income',
-                        canAddBudget:
-                            _canAddBudget(groups[key]![index], budgets),
-                        onEdit: () => TransactionFormSheet.show(
-                          context,
-                          transactionId: groups[key]![index].id,
-                        ),
-                        onReflect: () => context.push(
-                          AppRoutes.transactionDetail(
-                            groups[key]![index].id,
-                            autoReflect: true,
+      for (var groupIndex = 0; groupIndex < sortedKeys.length; groupIndex++) ...[
+        () {
+          final dayTransactions = groups[sortedKeys[groupIndex]]!;
+          return SliverToBoxAdapter(
+            child: Padding(
+              padding: EdgeInsets.fromLTRB(
+                20,
+                groupIndex == 0 ? 6 : 0,
+                20,
+                18,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  FormLabel(label: _formatDateLabel(dayTransactions.first.date)),
+                  const SizedBox(height: 10),
+                  EditorialTransactionRowsGroup(
+                    surface: false,
+                    horizontalPadding: 0,
+                    children: [
+                      for (var index = 0; index < dayTransactions.length; index++)
+                        _SwipeableTransactionActionRow(
+                          key: ValueKey(
+                            'transaction-row-${dayTransactions[index].id}',
+                          ),
+                          canReflect: dayTransactions[index].type != 'income',
+                          canAddBudget:
+                              _canAddBudget(dayTransactions[index], budgets),
+                          onEdit: () => TransactionFormSheet.show(
+                            context,
+                            transactionId: dayTransactions[index].id,
+                          ),
+                          onReflect: () => context.push(
+                            AppRoutes.transactionDetail(
+                              dayTransactions[index].id,
+                              autoReflect: true,
+                            ),
+                          ),
+                          onAddBudget: () => BudgetFormSheet.show(
+                            context,
+                            initialCategory:
+                                _displayCategory(dayTransactions[index]),
+                          ),
+                          onDelete: () =>
+                              _confirmDeleteTransaction(dayTransactions[index]),
+                          child: EditorialTransactionRow(
+                            data: EditorialTransactionRowData.fromTransaction(
+                              dayTransactions[index],
+                              displayCategory:
+                                  _displayCategory(dayTransactions[index]),
+                            ),
+                            locale: locale,
                           ),
                         ),
-                        onAddBudget: () => BudgetFormSheet.show(
-                          context,
-                          initialCategory:
-                              _displayCategory(groups[key]![index]),
-                        ),
-                        onDelete: () =>
-                            _confirmDeleteTransaction(groups[key]![index]),
-                        child: EditorialTransactionRow(
-                          data: EditorialTransactionRowData.fromTransaction(
-                            groups[key]![index],
-                            displayCategory:
-                                _displayCategory(groups[key]![index]),
-                          ),
-                          locale: locale,
-                        ),
-                      ),
-                  ],
-                ),
-              ],
+                    ],
+                  ),
+                ],
+              ),
             ),
-          ),
-        ),
+          );
+        }(),
+      ],
     ];
   }
 
