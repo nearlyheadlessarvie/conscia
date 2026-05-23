@@ -587,7 +587,7 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
     expect(find.text('Transactions').hitTestable(), findsOneWidget);
-    expect(find.text('All').hitTestable(), findsOneWidget);
+    expect(find.text('SPENDING TRAIL').hitTestable(), findsOneWidget);
 
     router.go(AppRoutes.settings);
     await tester.pump();

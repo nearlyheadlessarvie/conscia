@@ -117,6 +117,7 @@ void main() {
       (tester) async {
     await _pumpBudgetFormSheet(tester, isPremium: false);
 
+    await tester.ensureVisible(find.text('More'));
     await tester.tap(find.text('More'));
     await tester.pumpAndSettle();
 
@@ -131,12 +132,7 @@ void main() {
       (tester) async {
     await _pumpBudgetFormSheet(tester, isPremium: true);
 
-    final categoryRail = find.byWidgetPredicate(
-      (widget) =>
-          widget is ListView && widget.scrollDirection == Axis.horizontal,
-    );
-    await tester.drag(categoryRail, const Offset(-260, 0));
-    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('More'));
     await tester.tap(find.text('More'));
     await tester.pumpAndSettle();
 

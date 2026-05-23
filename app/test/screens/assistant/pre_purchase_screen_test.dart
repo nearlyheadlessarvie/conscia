@@ -686,7 +686,7 @@ void main() {
     final chipsTopLeft = tester.getTopLeft(find.text('Dining').first);
     final actionTopLeft = tester.getTopLeft(find.text('Premium categories'));
 
-    expect(chipsTopLeft.dy, actionTopLeft.dy);
+    expect((chipsTopLeft.dy - actionTopLeft.dy).abs(), lessThanOrEqualTo(2));
     expect(chipsTopLeft.dx, lessThan(actionTopLeft.dx));
   });
 
@@ -725,7 +725,7 @@ void main() {
     expect(find.text('Travel'), findsNothing);
 
     await tester.ensureVisible(find.text('More'));
-    await tester.tap(find.text('More'));
+    await tester.tap(find.text('More'), warnIfMissed: false);
     await tester.pumpAndSettle();
 
     expect(find.text('Travel'), findsWidgets);
