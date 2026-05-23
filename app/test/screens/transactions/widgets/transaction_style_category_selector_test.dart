@@ -1,6 +1,7 @@
 import 'package:conscia_app/providers/category_provider.dart';
 import 'package:conscia_app/providers/usage_provider.dart';
 import 'package:conscia_app/screens/transactions/widgets/transaction_style_category_selector.dart';
+import 'package:conscia_app/widgets/horizontal_edge_fade.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -80,5 +81,13 @@ void main() {
     expect(find.text('Salary'), findsOneWidget);
     expect(find.text('More'), findsNothing);
     expect(find.text('Premium categories'), findsNothing);
+  });
+
+  testWidgets('transaction category selector uses a fading edge hint',
+      (tester) async {
+    await _pumpSelector(tester, isPremium: true);
+    await tester.pumpAndSettle();
+
+    expect(find.byType(HorizontalEdgeFade), findsOneWidget);
   });
 }

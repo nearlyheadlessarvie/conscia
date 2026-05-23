@@ -1039,6 +1039,7 @@ class _TransactionFilterRailContent extends StatelessWidget {
               options: chipOptions,
               value: selectedCategory,
               scrollable: true,
+              fadeScrollable: true,
               avatarBuilder: (option, _) =>
                   CategoryIcons.rawIcon(option, size: 15, type: 'Expense'),
               trailingBuilder: (option, selected) => selected

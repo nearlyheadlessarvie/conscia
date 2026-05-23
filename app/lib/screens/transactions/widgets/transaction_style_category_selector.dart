@@ -8,6 +8,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../providers/category_provider.dart';
 import '../../../providers/category_recents_provider.dart';
 import '../../../widgets/conscia_bottom_sheet.dart';
+import '../../../widgets/horizontal_edge_fade.dart';
 import '../../../widgets/premium_upgrade_dialog.dart';
 import 'category_picker.dart';
 
@@ -148,53 +149,55 @@ class _TransactionStyleCategorySelectorState
 
     return SizedBox(
       height: 42,
-      child: ListView(
-        controller: _scrollController,
-        scrollDirection: Axis.horizontal,
-        children: [
-          if (widget.selectedCategory != null) ...[
-            CategoryChoicePill(
-              category: widget.selectedCategory!,
-              type: widget.isExpense ? 'Expense' : 'Income',
-              selected: true,
-              onTap: () {
-                widget.onCategorySelected(null);
-                _scrollToStart();
-              },
-            ),
-            const SizedBox(width: 8),
-          ],
-          ...visibleQuick.map(
-            (cat) => Padding(
-              padding: const EdgeInsets.only(right: 8),
-              child: CategoryChoicePill(
-                category: cat.name,
-                type: cat.type,
-                iconKey: cat.iconKey,
-                colorKey: cat.colorKey,
-                selected: false,
+      child: HorizontalEdgeFade(
+        child: ListView(
+          controller: _scrollController,
+          scrollDirection: Axis.horizontal,
+          children: [
+            if (widget.selectedCategory != null) ...[
+              CategoryChoicePill(
+                category: widget.selectedCategory!,
+                type: widget.isExpense ? 'Expense' : 'Income',
+                selected: true,
                 onTap: () {
-                  widget.onCategorySelected(cat.name);
+                  widget.onCategorySelected(null);
                   _scrollToStart();
                 },
               ),
+              const SizedBox(width: 8),
+            ],
+            ...visibleQuick.map(
+              (cat) => Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: CategoryChoicePill(
+                  category: cat.name,
+                  type: cat.type,
+                  iconKey: cat.iconKey,
+                  colorKey: cat.colorKey,
+                  selected: false,
+                  onTap: () {
+                    widget.onCategorySelected(cat.name);
+                    _scrollToStart();
+                  },
+                ),
+              ),
             ),
-          ),
-          widget.allowAllCategories || widget.isPremium
-              ? _MoreChip(
-                  onTap: _showCategoryPickerSheet,
-                  iconKey: widget.moreCategoriesIcon,
-                )
-              : widget.isExpense
-                  ? _PremiumCategoriesChip(
-                      onTap: () => PremiumUpgradeDialog.show(
-                        context,
-                        feature:
-                            'Free users can only log transactions in Dining, Groceries, and Salary.',
-                      ),
-                    )
-                  : const SizedBox.shrink(),
-        ],
+            widget.allowAllCategories || widget.isPremium
+                ? _MoreChip(
+                    onTap: _showCategoryPickerSheet,
+                    iconKey: widget.moreCategoriesIcon,
+                  )
+                : widget.isExpense
+                    ? _PremiumCategoriesChip(
+                        onTap: () => PremiumUpgradeDialog.show(
+                          context,
+                          feature:
+                              'Free users can only log transactions in Dining, Groceries, and Salary.',
+                        ),
+                      )
+                    : const SizedBox.shrink(),
+          ],
+        ),
       ),
     );
   }

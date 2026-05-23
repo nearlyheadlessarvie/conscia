@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../core/constants/app_icons.dart';
 import '../core/theme/app_colors.dart';
+import 'horizontal_edge_fade.dart';
 
 class SelectionChipGroup extends StatelessWidget {
   const SelectionChipGroup({
@@ -13,6 +14,7 @@ class SelectionChipGroup extends StatelessWidget {
     this.avatarBuilder,
     this.scrollable = false,
     this.trailingBuilder,
+    this.fadeScrollable = false,
   });
 
   final List<String> options;
@@ -22,6 +24,7 @@ class SelectionChipGroup extends StatelessWidget {
   final Widget? Function(String option, bool selected)? avatarBuilder;
   final Widget? Function(String option, bool selected)? trailingBuilder;
   final bool scrollable;
+  final bool fadeScrollable;
 
   @override
   Widget build(BuildContext context) {
@@ -44,11 +47,17 @@ class SelectionChipGroup extends StatelessWidget {
     }).toList();
 
     if (scrollable) {
-      return SingleChildScrollView(
+      final scrollView = SingleChildScrollView(
         scrollDirection: Axis.horizontal,
         child:
             Row(crossAxisAlignment: CrossAxisAlignment.start, children: chips),
       );
+
+      if (fadeScrollable) {
+        return HorizontalEdgeFade(child: scrollView);
+      }
+
+      return scrollView;
     }
 
     return Wrap(

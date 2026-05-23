@@ -14,6 +14,7 @@ import 'package:conscia_app/services/subscription_service.dart';
 import 'package:conscia_app/services/transaction_service.dart';
 import 'package:conscia_app/services/user_service.dart';
 import 'package:conscia_app/widgets/grouped_list_card.dart';
+import 'package:conscia_app/widgets/horizontal_edge_fade.dart';
 import 'package:conscia_app/widgets/skeleton_loader.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
@@ -835,6 +836,17 @@ void main() {
     );
 
     expect(chipSize.height, greaterThanOrEqualTo(38));
+  });
+
+  testWidgets('transaction category rail uses a fading edge hint', (
+    tester,
+  ) async {
+    await _pumpTransactionList(
+      tester,
+      transactions: _manyTransactions(),
+    );
+
+    expect(find.byType(HorizontalEdgeFade), findsOneWidget);
   });
 
   testWidgets('date filter action sends server-side range parameters', (
