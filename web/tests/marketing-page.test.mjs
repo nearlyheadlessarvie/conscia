@@ -17,6 +17,14 @@ test('homepage uses the new Journey-tone headline and store-style platform badge
   assert.doesNotMatch(html, /Meet the inner voices/);
 });
 
+test('homepage metadata and badges use production icon and store links', () => {
+  assert.match(html, /https:\/\/apps\.apple\.com\/app\/id6771674327/);
+  assert.match(html, /https:\/\/play\.google\.com\/store\/apps\/details\?id=com\.getconscia\.app\.ai/);
+  assert.match(html, /rel="icon" type="image\/svg\+xml" href="\/images\/app_icon\.svg"/);
+  assert.match(html, /rel="icon" type="image\/png" href="\/images\/app_icon\.png"/);
+  assert.match(html, /property="og:image" content="\/images\/app_icon\.png"/);
+});
+
 test('homepage renders the three redesigned chapters in order', () => {
   assert.match(html, /Log the moment/);
   assert.match(html, /Reflect without shame/);

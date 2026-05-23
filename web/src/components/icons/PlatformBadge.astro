@@ -4,7 +4,12 @@ interface Props {
   href?: string;
 }
 
-const { platform, href = 'conscia://open' } = Astro.props;
+const storeUrls = {
+  ios: 'https://apps.apple.com/app/id6771674327',
+  android: 'https://play.google.com/store/apps/details?id=com.getconscia.app.ai',
+};
+
+const { platform, href = platform === 'ios' ? storeUrls.ios : storeUrls.android } = Astro.props;
 
 const isIos = platform === 'ios';
 const label = isIos ? 'Open on iOS' : 'Open on Android';
