@@ -246,19 +246,19 @@ Why this set:
 - yearly view supports broader review without adding too many preset choices
 - specific/custom cover search-like and ad hoc analysis behavior
 
-### App Filter Rail Presentation
+### App Hero And Filter Presentation
 
-The transaction screen should integrate date filtering into the same sticky filter zone as category browsing, but as its own dedicated summary strip rather than as another category chip.
+The transaction screen should integrate date and category filtering directly into the hero instead of treating filters as a separate slab beneath it.
 
 Recommended layout:
 
-- add a dedicated sticky date strip above the category chip rail
+- keep the total amount and summary sentence in the hero
+- remove the three static insight pills from the hero
+- place the date strip inside the hero beneath the amount and summary
+- place the category rail beneath the date strip inside the same hero block
 - make the full date strip tappable to open preset and range selection
 - show the selected preset on the left side of the strip
 - show the resolved date range on the right side of the strip when applicable
-- keep category chips in their own horizontally scrolling lane below the date strip
-- remove the standalone date filter button from the hero
-- do not force the date strip to share space with category chips
 - use existing Conscia visual language rather than copying the dark/high-contrast inspiration literally
 
 Date strip content examples:
@@ -269,8 +269,10 @@ Date strip content examples:
 
 Interaction expectations:
 
-- the date strip remains visible as its own sticky row
-- tapping the strip opens the date preset picker or date range picker flow
+- the expanded hero contains amount, summary, date strip, and category rail as one integrated block
+- on scroll, that filter area compresses into a bleeding mini-hero rather than snapping into an unrelated sticky slab
+- the collapsed state should preserve the date strip and category rail as the essential visible controls
+- tapping the date strip opens the date preset picker or date range picker flow
 - the active date state should be readable without truncating it into an icon slot
 - category chips should render from all categories present in the currently loaded transaction dataset
 - the UI should not artificially cap the visible category list to the first four entries
@@ -279,11 +281,13 @@ Interaction expectations:
 
 Why this presentation:
 
-- it keeps date filtering in the browsing workflow without pretending it is a category
+- it keeps the hero informative rather than decorative
+- it makes filters feel native to the identity of the transaction screen
 - it gives the date state enough space to be readable and useful
 - it gives the category rail its own horizontal room again
 - it prevents real categories such as `Travel` or `Health` from disappearing due to an arbitrary chip cap
-- it removes the awkward detached button from the hero and makes the sticky filter area feel like one cohesive control surface
+- removing the static pills reduces visual competition and gives the filters room to matter
+- the mini-hero collapse can feel more premium and intentional than a separate sticky control slab
 
 ### Timezone Semantics
 
@@ -329,7 +333,8 @@ App tests should cover:
 - preset selection computes the expected request bounds
 - `Specific date` resolves to a single-day range
 - `Custom range` sends the chosen bounds
-- the date strip remains visible as its own sticky row
+- the expanded hero includes the date strip and category rail
+- the collapsed mini-hero preserves the date strip and category rail
 - the date strip shows readable preset/range content when active
 - tapping the active category chip clears the category filter
 - the active category chip renders a trailing clear affordance
@@ -371,8 +376,9 @@ App Store Connect notes should be explicit enough for an operator to configure:
 - Unlinked Apple notifications do not create guessed user subscriptions.
 - Transaction list APIs accept server-side `from` and `to` filtering.
 - The app offers `This week`, `Last week`, `This month`, `Last month`, `This year`, `Specific date`, and `Custom range` presets and resolves them to concrete ranges before calling the API.
-- The transaction screen uses a dedicated sticky date strip above the category rail.
-- The transaction screen shows the selected preset and resolved range in that date strip using Conscia styling.
+- The transaction screen integrates the date strip and category rail into the hero and collapsed mini-hero.
+- The transaction screen removes the static hero insight pills.
+- The transaction screen shows the selected preset and resolved range in the date strip using Conscia styling.
 - The category rail renders all categories present in the currently loaded transaction dataset instead of limiting itself to four items.
 - The transaction screen clears a category filter by tapping the selected category chip, without an `All` chip.
 - The selected category chip shows a visible trailing clear affordance.
