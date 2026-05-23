@@ -1,62 +1,48 @@
 export const heroContent = {
-  kicker: 'Meet the inner voices',
-  title: 'Your financial conscience.',
+  kicker: 'Personal finance · reimagined',
+  title: 'Your money has a story. Start reading it.',
   body:
-    'Conscia turns impulse, reason, and reflection into one product flow so people can catch a spending decision before it disappears into a ledger.',
-  secondaryCta: { label: 'See how it works', href: '#experience' },
-  proof: [
-    'Pre-purchase assistant before a spend',
-    'Fast logging when the moment already happened',
-    'Reflection and habit-building after the emotion settles',
-  ],
+    'Conscia helps you pause before a purchase, log every moment, and reflect on what your spending is actually telling you. One calm app. A steadier relationship with money.',
 };
 
 export const storyChapters = [
   {
-    id: 'catch-the-moment',
-    kicker: 'Catch the moment',
-    title: 'Pre-purchase assistant and fast logging, right when the spend is still live.',
+    id: 'log-the-moment',
+    kicker: 'Log the moment',
+    title: 'Every spend captured before the emotion fades.',
     body:
-      'Use Conscia before the tap or immediately after. The product helps while the emotional context still exists instead of waiting for a month-end postmortem.',
-    bullets: ['Pre-purchase assistant', 'Fast transaction logging', 'Real-world spending flow'],
-    scene: {
-      mood: 'warm',
-      devilPose: '2_push.png',
-      moneyPose: '4_save.png',
-      uiBadge: 'Logged in seconds',
-      cardTitle: 'Capture the spend',
-    },
+      'Conscia keeps transaction logging fast and thoughtful. Smart category memory, receipt scanning, and voice input keep the experience moving — without turning it into a spreadsheet.',
+    bullets: [
+      'Fast transaction entry with smart defaults',
+      'Scan a receipt and Conscia fills in the rest',
+      'Filter by time, category, or sentiment',
+    ],
+    screenId: 'transactions',
   },
   {
     id: 'reflect-without-shame',
     kicker: 'Reflect without shame',
-    title: 'Reflection prompts that help users notice patterns without turning the app into a guilt machine.',
+    title: 'Was it worth it? A small question that changes everything.',
     body:
-      'Conscia remembers hesitation, regret, and repeated second-guessing so users can learn from the moment rather than just archive it.',
-    bullets: ['Reflection prompts', 'Regret memory', 'Pattern awareness'],
-    scene: {
-      mood: 'soft',
-      angelPose: '8_shield.png',
-      moneyPose: '1_neutral.png',
-      uiBadge: 'Reflection + memory',
-      cardTitle: 'Notice what happened',
-      cardSide: 'left',
-    },
+      'Conscia nudges you to reflect on recent purchases — not to judge, but to notice. Over time the pattern becomes clear: what you regret, what you value, what you want to do differently.',
+    bullets: [
+      'Quick reflection prompts on recent purchases',
+      'Regret memory that builds real signal over time',
+      'Journey streak for building consistency',
+    ],
+    screenId: 'reflect',
   },
   {
-    id: 'build-better-habits',
-    kicker: 'Build better habits',
-    title: 'Budgets, recurring transactions, and insights that turn one decision into a steadier routine.',
+    id: 'see-the-patterns',
+    kicker: 'See the patterns',
+    title: 'Your spending has a signal. Conscia helps you read it.',
     body:
-      'The payoff is not one perfect choice. It is a better pattern: more context, calmer decisions, and stronger habits over time.',
-    bullets: ['Budgets', 'Insights', 'Recurring transactions'],
-    scene: {
-      mood: 'cool',
-      angelPose: '9_coinshield.png',
-      moneyPose: '4_save.png',
-      uiBadge: 'Reflection + budgets',
-      cardTitle: 'See the payoff',
-      cardSide: 'left',
-    },
+      'Insights go beyond "you overspent." Conscia connects regret, hesitation, and repeated choices into patterns you can actually act on — and budgets that keep you in range.',
+    bullets: [
+      'Regret rate by category and merchant',
+      'Budget pace tracking with calming language',
+      'Milestone badges for building habits',
+    ],
+    screenId: 'insights',
   },
 ];

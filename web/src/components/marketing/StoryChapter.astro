@@ -21,7 +21,7 @@ const { chapter, reverse = false } = Astro.props;
         </ul>
       </div>
 
-      <StoryScene {...chapter.scene} />
+      {chapter.scene && <StoryScene {...chapter.scene} />}
     </div>
   </div>
 </section>

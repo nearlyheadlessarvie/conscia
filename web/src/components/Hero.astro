@@ -30,13 +30,15 @@ import { heroContent } from '../data/marketingChapters.js';
 
         <p class="section-copy mt-7 max-w-2xl">{heroContent.body}</p>
 
-        <div class="mt-10 grid gap-4 sm:grid-cols-3">
-          {heroContent.proof.map((item) => (
-            <div class="glass-card px-4 py-4 text-sm leading-6 text-[var(--ink-muted)]">
-              {item}
-            </div>
-          ))}
-        </div>
+        {heroContent.proof && (
+          <div class="mt-10 grid gap-4 sm:grid-cols-3">
+            {heroContent.proof.map((item) => (
+              <div class="glass-card px-4 py-4 text-sm leading-6 text-[var(--ink-muted)]">
+                {item}
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       <HeroBattleScene />
