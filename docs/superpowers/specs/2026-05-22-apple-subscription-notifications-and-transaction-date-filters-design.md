@@ -248,35 +248,42 @@ Why this set:
 
 ### App Filter Rail Presentation
 
-The transaction screen should integrate date filtering into the same sticky filter zone as category browsing, but not as another horizontally scrolling category chip.
+The transaction screen should integrate date filtering into the same sticky filter zone as category browsing, but as its own dedicated summary strip rather than as another category chip.
 
 Recommended layout:
 
-- pin a compact icon-only date filter control on the far left of the sticky filter rail
-- keep category chips in their own horizontally scrolling lane to the right
+- add a dedicated sticky date strip above the category chip rail
+- make the full date strip tappable to open preset and range selection
+- show the selected preset on the left side of the strip
+- show the resolved date range on the right side of the strip when applicable
+- keep category chips in their own horizontally scrolling lane below the date strip
 - remove the standalone date filter button from the hero
-- hide the date state label when no date filter is active
-- when a date filter is active, show a small one-line label beneath the pinned date control
+- do not force the date strip to share space with category chips
+- use existing Conscia visual language rather than copying the dark/high-contrast inspiration literally
 
-Date state label examples:
+Date strip content examples:
 
-- `Last month`
-- `May 12`
-- `May 1-12`
+- left: `This month`, `Last week`, `Custom`
+- right: `May 1-31`, `Sep 21-27`, `May 12`
+- inactive state can use a calm label such as `Any time`
 
 Interaction expectations:
 
-- the pinned date control always remains visible while category chips scroll independently
-- tapping the date control opens the date preset picker or date range picker flow
-- the date control should receive a stronger active treatment when a date filter is applied
+- the date strip remains visible as its own sticky row
+- tapping the strip opens the date preset picker or date range picker flow
+- the active date state should be readable without truncating it into an icon slot
+- category chips should render from all categories present in the currently loaded transaction dataset
+- the UI should not artificially cap the visible category list to the first four entries
 - category filters should clear by tapping the currently selected category again instead of relying on a dedicated `All` chip
 - the currently selected category chip should show a small trailing clear affordance such as `X` so the deselect action is discoverable
 
 Why this presentation:
 
 - it keeps date filtering in the browsing workflow without pretending it is a category
-- it gives the user a permanently reachable date tool while preserving horizontal space for real categories
-- it removes the awkward detached button from the hero and makes the sticky rail feel like one cohesive control surface
+- it gives the date state enough space to be readable and useful
+- it gives the category rail its own horizontal room again
+- it prevents real categories such as `Travel` or `Health` from disappearing due to an arbitrary chip cap
+- it removes the awkward detached button from the hero and makes the sticky filter area feel like one cohesive control surface
 
 ### Timezone Semantics
 
@@ -322,10 +329,11 @@ App tests should cover:
 - preset selection computes the expected request bounds
 - `Specific date` resolves to a single-day range
 - `Custom range` sends the chosen bounds
-- the pinned date filter control remains visible while category chips scroll
-- the date state label is hidden when inactive and shown when active
+- the date strip remains visible as its own sticky row
+- the date strip shows readable preset/range content when active
 - tapping the active category chip clears the category filter
 - the active category chip renders a trailing clear affordance
+- the category rail includes all categories present in the loaded dataset rather than truncating to the first four
 
 ## Documentation
 
@@ -363,8 +371,9 @@ App Store Connect notes should be explicit enough for an operator to configure:
 - Unlinked Apple notifications do not create guessed user subscriptions.
 - Transaction list APIs accept server-side `from` and `to` filtering.
 - The app offers `This week`, `Last week`, `This month`, `Last month`, `This year`, `Specific date`, and `Custom range` presets and resolves them to concrete ranges before calling the API.
-- The transaction screen uses a pinned icon-only date filter control on the sticky rail, with category chips scrolling beside it.
-- The transaction screen hides the date state label until a date filter is active.
+- The transaction screen uses a dedicated sticky date strip above the category rail.
+- The transaction screen shows the selected preset and resolved range in that date strip using Conscia styling.
+- The category rail renders all categories present in the currently loaded transaction dataset instead of limiting itself to four items.
 - The transaction screen clears a category filter by tapping the selected category chip, without an `All` chip.
 - The selected category chip shows a visible trailing clear affordance.
 - Tests cover Apple notification verification and state transitions plus transaction filter API behavior.
