@@ -1,0 +1,93 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Footer from '../components/Footer.astro';
+import Logo from '../components/icons/Logo.astro';
+---
+
+<Layout
+  title="Account Deletion — Conscia"
+  description="How to delete your Conscia account and what data is removed."
+>
+  <header class="bg-[var(--navy)] py-6">
+    <div class="mx-auto flex max-w-7xl items-center gap-3 px-6">
+      <a href="/" class="flex items-center gap-3 transition hover:opacity-80">
+        <Logo size="32" />
+        <span class="font-heading text-xl font-bold text-white">Conscia</span>
+      </a>
+    </div>
+  </header>
+
+  <main class="mx-auto max-w-3xl px-6 py-16">
+    <h1 class="font-heading text-4xl font-bold text-[var(--navy)]">Account Deletion</h1>
+    <p class="mt-2 text-sm text-gray-500">Conscia · getconscia.com</p>
+
+    <div class="mt-10 space-y-10 text-gray-700 leading-relaxed">
+
+      <section>
+        <h2 class="font-heading text-xl font-semibold text-gray-900">How to delete your account</h2>
+        <p class="mt-3">
+          Account deletion is available directly inside the Conscia app. Follow these steps:
+        </p>
+        <ol class="mt-4 list-decimal space-y-2 pl-6">
+          <li>Open <strong>Conscia</strong> on your device.</li>
+          <li>Tap the <strong>Settings</strong> icon in the bottom navigation bar (rightmost icon).</li>
+          <li>Scroll down to the <strong>Data &amp; privacy</strong> section.</li>
+          <li>Tap <strong>Delete account</strong>.</li>
+          <li>Read the confirmation message, then tap <strong>Delete account</strong> again to confirm.</li>
+        </ol>
+        <p class="mt-4">
+          Deletion is <strong>permanent and immediate</strong>. There is no waiting period or grace period after confirmation.
+        </p>
+      </section>
+
+      <section>
+        <h2 class="font-heading text-xl font-semibold text-gray-900">What gets deleted</h2>
+        <p class="mt-3">When you confirm deletion, the following data is permanently removed from Conscia's servers:</p>
+        <ul class="mt-3 list-disc space-y-2 pl-6">
+          <li><strong>Account credentials and profile data</strong> — your display name, email address, and authentication records.</li>
+          <li><strong>All transactions and receipts</strong> — every transaction you have logged, including any scanned receipt images.</li>
+          <li><strong>Budget configurations</strong> — all budget categories, caps, and history.</li>
+          <li><strong>AI interaction history</strong> — all pre-purchase advisor queries and responses.</li>
+          <li><strong>Reflection and regret data</strong> — all reflection responses, regret markers, and pattern signals.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2 class="font-heading text-xl font-semibold text-gray-900">Data retention</h2>
+        <p class="mt-3">
+          <strong>None.</strong> All data listed above is deleted immediately and permanently upon confirmation.
+          No personal data is retained after account deletion.
+        </p>
+        <p class="mt-3">
+          Anonymised, non-identifiable aggregate statistics (e.g. total registered user counts) may persist
+          in our analytics systems but cannot be linked back to your account.
+        </p>
+      </section>
+
+      <section>
+        <h2 class="font-heading text-xl font-semibold text-gray-900">Export your data first</h2>
+        <p class="mt-3">
+          Before deleting your account, you can export a full JSON copy of your Conscia history:
+        </p>
+        <ol class="mt-3 list-decimal space-y-2 pl-6">
+          <li>Open <strong>Settings</strong> in the Conscia app.</li>
+          <li>Scroll to <strong>Data &amp; privacy</strong>.</li>
+          <li>Tap <strong>Download my data</strong>.</li>
+        </ol>
+      </section>
+
+      <section>
+        <h2 class="font-heading text-xl font-semibold text-gray-900">Questions</h2>
+        <p class="mt-3">
+          If you are unable to access the app or need further help, contact us at
+          <a href="mailto:privacy@getconscia.com" class="font-semibold text-[var(--navy)] underline hover:opacity-80">
+            privacy@getconscia.com
+          </a>.
+        </p>
+      </section>
+
+    </div>
+  </main>
+
+  <Footer />
+</Layout>
