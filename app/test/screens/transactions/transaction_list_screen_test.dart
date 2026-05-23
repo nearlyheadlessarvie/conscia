@@ -262,7 +262,8 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byTooltip('Add transaction'), findsOneWidget);
-    expect(find.byTooltip('Filter dates'), findsOneWidget);
+    expect(find.byKey(const ValueKey('transaction-date-filter-strip')), findsOneWidget);
+    expect(find.text('Any time'), findsOneWidget);
     expect(find.byType(FloatingActionButton), findsNothing);
 
     await tester.tap(find.byTooltip('Add transaction'));
@@ -314,7 +315,7 @@ void main() {
     expect(find.text('SPENDING TRAIL'), findsOneWidget);
     expect(find.textContaining('Shopping is showing up'), findsOneWidget);
     expect(find.text('Fri · May 8'), findsOneWidget);
-    expect(find.byTooltip('Filter dates'), findsOneWidget);
+    expect(find.byKey(const ValueKey('transaction-date-filter-strip')), findsOneWidget);
     expect(find.byKey(const ValueKey('selection-chip-button-All')),
         findsNothing);
     expect(find.byType(GroupedListCard), findsNothing);
@@ -630,7 +631,9 @@ void main() {
       ],
     );
 
-    final filterY = tester.getCenter(find.byTooltip('Filter dates')).dy;
+    final stripY = tester
+        .getCenter(find.byKey(const ValueKey('transaction-date-filter-strip')))
+        .dy;
     final giftY = tester
         .getCenter(find.byKey(const ValueKey('selection-chip-button-Gift')))
         .dy;
@@ -643,7 +646,7 @@ void main() {
             find.byKey(const ValueKey('selection-chip-button-Subscriptions')))
         .dy;
 
-    expect((filterY - giftY).abs(), lessThan(12));
+    expect(giftY, greaterThan(stripY));
     expect((giftY - groceriesY).abs(), lessThan(8));
     expect((giftY - subscriptionsY).abs(), lessThan(8));
   });
@@ -669,9 +672,11 @@ void main() {
           find.byKey(const ValueKey('editorial-sticky-header-Transactions')),
         )
         .dy;
-    final filterTop = tester.getTopLeft(find.byTooltip('Filter dates')).dy;
+    final filterTop = tester
+        .getTopLeft(find.byKey(const ValueKey('transaction-date-filter-strip')))
+        .dy;
     final filterBottom = tester
-        .getBottomLeft(find.byTooltip('Filter dates'))
+        .getBottomLeft(find.byKey(const ValueKey('transaction-date-filter-strip')))
         .dy;
     final railTop = tester
         .getTopLeft(
@@ -688,7 +693,7 @@ void main() {
     expect(railTop, lessThanOrEqualTo(headerBottom + 1));
     expect(filterTop, greaterThanOrEqualTo(headerBottom + 6));
     expect(filterTop, lessThanOrEqualTo(headerBottom + 10));
-    expect(railBottom, lessThanOrEqualTo(filterBottom + 32));
+    expect(railBottom, lessThanOrEqualTo(filterBottom + 56));
   });
 
   testWidgets('docked transaction filters remain tappable', (
@@ -744,7 +749,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(tester.takeException(), isNull);
-    expect(find.byTooltip('Filter dates'), findsOneWidget);
+    expect(find.byKey(const ValueKey('transaction-date-filter-strip')), findsOneWidget);
   });
 
   testWidgets('selected category chip shows clear affordance and clears on re-tap', (
@@ -792,17 +797,17 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.byKey(const ValueKey('transaction-date-filter-label')), findsNothing);
+    expect(find.text('Any time'), findsOneWidget);
 
-    await tester.tap(find.byTooltip('Filter dates'));
+    await tester.tap(find.byKey(const ValueKey('transaction-date-filter-strip')));
     await tester.pumpAndSettle();
     await tester.tap(find.text('This month'));
     await tester.pumpAndSettle();
 
     expect(service.lastFrom, isNotNull);
     expect(service.lastTo, isNotNull);
-    expect(find.byKey(const ValueKey('transaction-date-filter-label')), findsOneWidget);
-    expect(find.text('This mo'), findsOneWidget);
+    expect(find.text('This month'), findsWidgets);
+    expect(find.byKey(const ValueKey('transaction-date-filter-range')), findsOneWidget);
   });
 
   testWidgets('date filter sheet keeps clear action reachable', (
@@ -821,7 +826,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byTooltip('Filter dates'));
+    await tester.tap(find.byKey(const ValueKey('transaction-date-filter-strip')));
     await tester.pumpAndSettle();
 
     await tester.scrollUntilVisible(
@@ -837,6 +842,45 @@ void main() {
     expect(find.text('Clear filter'), findsNothing);
     expect(service.lastFrom, isNull);
     expect(service.lastTo, isNull);
+  });
+
+  testWidgets('transaction filters render all categories present in loaded data', (
+    tester,
+  ) async {
+    await _pumpTransactionList(
+      tester,
+      transactions: [
+        Transaction(
+          id: 'tx-health',
+          amount: 5000,
+          currencyCode: 'PHP',
+          category: 'Health',
+          description: 'Asian Hospital',
+          type: 'expense',
+          date: DateTime(2026, 5, 23),
+        ),
+        Transaction(
+          id: 'tx-travel',
+          amount: 30000,
+          currencyCode: 'PHP',
+          category: 'Travel',
+          description: 'Disneyland',
+          type: 'expense',
+          date: DateTime(2026, 5, 23),
+        ),
+        ..._manyTransactions(),
+      ],
+    );
+
+    await tester.scrollUntilVisible(
+      find.byKey(const ValueKey('selection-chip-button-Health')),
+      120,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey('selection-chip-button-Health')), findsOneWidget);
+    expect(find.byKey(const ValueKey('selection-chip-button-Travel')), findsOneWidget);
   });
 
   testWidgets(
