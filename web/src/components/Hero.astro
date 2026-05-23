@@ -26,9 +26,11 @@ const navLinks = [
             <li>
               <a
                 href={href}
-                class="text-sm font-medium text-[var(--ink-muted)] transition hover:text-[var(--navy)]"
+                data-section={href.slice(1)}
+                class="nav-link relative text-sm font-medium text-[var(--ink-muted)] transition-colors hover:text-[var(--navy)]"
               >
                 {label}
+                <span class="nav-link-bar absolute -bottom-1 left-0 h-[2px] w-full origin-left scale-x-0 rounded-full bg-[var(--gold)] transition-transform duration-300"></span>
               </a>
             </li>
           ))}
@@ -72,7 +74,34 @@ const navLinks = [
     if (!navShell) return;
     navShell.classList.toggle('is-docked', window.scrollY > 50);
   };
-
   dockAtTop();
   window.addEventListener('scroll', dockAtTop, { passive: true });
+
+  // Scrollspy
+  const links = document.querySelectorAll<HTMLAnchorElement>('a[data-section]');
+  const sectionIds = Array.from(links).map(a => a.dataset.section!);
+
+  const setActive = (id: string | null) => {
+    links.forEach(a => {
+      const bar = a.querySelector('.nav-link-bar') as HTMLElement | null;
+      const isActive = a.dataset.section === id;
+      a.classList.toggle('text-[var(--navy)]', isActive);
+      a.classList.toggle('text-[var(--ink-muted)]', !isActive);
+      if (bar) bar.style.transform = isActive ? 'scaleX(1)' : 'scaleX(0)';
+    });
+  };
+
+  const observer = new IntersectionObserver(
+    entries => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) setActive(entry.target.id);
+      });
+    },
+    { rootMargin: '-30% 0px -60% 0px' }
+  );
+
+  sectionIds.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) observer.observe(el);
+  });
 </script>
