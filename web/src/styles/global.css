@@ -208,17 +208,32 @@ body {
   @apply lg:order-1;
 }
 
-.story-scene {
+.story-copy-shell {
+  max-width: 560px;
+}
+
+.story-shot-shell {
   position: relative;
-  border-radius: 34px;
-  border: 1px solid rgba(23, 36, 79, 0.08);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.88) 0%, rgba(255, 252, 246, 0.92) 100%);
-  box-shadow: var(--shadow-soft);
-  overflow: hidden;
   display: flex;
+  min-height: 340px;
   align-items: center;
   justify-content: center;
-  padding: 28px 20px;
+  overflow: hidden;
+  border-radius: 34px;
+  border: 1px solid rgba(23, 36, 79, 0.08);
+  background:
+    radial-gradient(circle at 18% 20%, rgba(233, 237, 255, 0.85), transparent 34%),
+    radial-gradient(circle at 84% 28%, rgba(246, 203, 104, 0.22), transparent 30%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.88) 0%, rgba(255, 252, 246, 0.94) 100%);
+  box-shadow: var(--shadow-soft);
+  padding: 34px 24px;
+}
+
+.chapter-grid-reverse .story-shot-shell {
+  background:
+    radial-gradient(circle at 72% 18%, rgba(233, 237, 255, 0.85), transparent 34%),
+    radial-gradient(circle at 18% 74%, rgba(246, 203, 104, 0.22), transparent 30%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.88) 0%, rgba(255, 252, 246, 0.94) 100%);
 }
 
 .device-shot {
@@ -349,6 +364,11 @@ body {
   .hero-shot-back {
     right: 11%;
     bottom: 3%;
+  }
+
+  .story-shot-shell {
+    min-height: 300px;
+    padding: 28px 18px;
   }
 }
 
