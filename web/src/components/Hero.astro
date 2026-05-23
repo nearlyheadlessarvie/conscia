@@ -54,7 +54,34 @@ const navLinks = [
 
         <p class="section-copy mt-6 max-w-xl">{heroContent.body}</p>
 
-        <div class="mt-10 flex flex-wrap gap-3">
+        <ul class="mt-8 space-y-3 text-sm font-medium text-[var(--ink-muted)]">
+          {heroContent.supportBullets.map((item) => (
+            <li class="flex items-center gap-3">
+              <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-[rgba(246,203,104,0.22)] text-[11px] text-[var(--navy)]">
+                •
+              </span>
+              <span>{item}</span>
+            </li>
+          ))}
+        </ul>
+
+        <div class="mt-10 flex flex-wrap items-center gap-4">
+          <a
+            href="https://apps.apple.com/app/id6771674327"
+            class="inline-flex items-center justify-center rounded-full bg-[var(--navy)] px-7 py-3 text-sm font-semibold text-white transition-transform duration-300 hover:-translate-y-0.5"
+          >
+            {heroContent.ctaPrimary}
+          </a>
+          <a
+            href="#how-it-works"
+            class="inline-flex items-center gap-2 text-sm font-semibold text-[var(--navy)] transition-colors hover:text-[var(--ink-strong)]"
+          >
+            <span>{heroContent.ctaSecondary}</span>
+            <span aria-hidden="true">→</span>
+          </a>
+        </div>
+
+        <div class="mt-8 flex flex-wrap gap-3">
           <PlatformBadge platform="ios" />
           <PlatformBadge platform="android" />
         </div>

@@ -7,13 +7,16 @@ import { dirname, resolve } from 'node:path';
 const testDir = dirname(fileURLToPath(import.meta.url));
 const html = readFileSync(resolve(testDir, '../dist/index.html'), 'utf8');
 
-test('homepage leads with the all-in-one money system message', () => {
-  assert.match(html, /all-in-one money system/i);
-  assert.match(html, /track spending/i);
-  assert.match(html, /manage budgets/i);
-  assert.match(html, /scan receipts/i);
-  assert.match(html, /shared household/i);
-  assert.doesNotMatch(html, /Your money has a story/);
+test('homepage follows the approved all-in-one money system story', () => {
+  assert.match(html, /Your all-in-one money system\./);
+  assert.match(
+    html,
+    /Track spending, reflect on purchases, manage budgets, scan receipts, surface patterns, and coordinate shared household planning/i,
+  );
+  assert.match(html, /Transactions that tell your story\./);
+  assert.match(html, /Pause\. Reflect\. Decide with clarity\./);
+  assert.match(html, /Budgets that keep you in control\./);
+  assert.match(html, /Money is better together\./);
 });
 
 test('homepage metadata and badges use production icon and store links', () => {
@@ -24,20 +27,18 @@ test('homepage metadata and badges use production icon and store links', () => {
   assert.match(html, /property="og:image" content="\/images\/app_icon\.png"/);
 });
 
-test('homepage presents system sections in the new order', () => {
-  assert.match(html, /Transactions and filters/);
-  assert.match(html, /Reflection and purchase assistant/);
-  assert.match(html, /Budgets and categories/);
-  assert.match(html, /Insights and merchant signals/);
-  assert.match(html, /Shared household and settings/);
+test('homepage presents the approved section story blocks', () => {
+  assert.match(html, /Transactions that tell your story\./);
+  assert.match(html, /Pause\. Reflect\. Decide with clarity\./);
+  assert.match(html, /Budgets that keep you in control\./);
+  assert.match(html, /Patterns (>|&gt;) reactions\./);
+  assert.match(html, /Money is better together\./);
 });
 
-test('homepage references current product surfaces instead of older journey-only framing', () => {
-  assert.match(html, /receipt/i);
-  assert.match(html, /purchase assistant/i);
-  assert.match(html, /shared household/i);
-  assert.match(html, /merchant/i);
-  assert.doesNotMatch(html, /Three moments\. One loop\./);
+test('homepage hero includes the approved CTA rhythm', () => {
+  assert.match(html, /Get Conscia/);
+  assert.match(html, /See how it works/);
+  assert.match(html, /Record every money moment/i);
 });
 
 test('homepage contains no mascot references', () => {
