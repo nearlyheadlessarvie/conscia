@@ -69,14 +69,6 @@ const navLinks = [
 </section>
 
 <script>
-  const navShell = document.querySelector('.hero-nav-shell');
-  const dockAtTop = () => {
-    if (!navShell) return;
-    navShell.classList.toggle('is-docked', window.scrollY > 50);
-  };
-  dockAtTop();
-  window.addEventListener('scroll', dockAtTop, { passive: true });
-
   // Scrollspy
   const links = document.querySelectorAll<HTMLAnchorElement>('a[data-section]');
   const sectionIds = Array.from(links).map(a => a.dataset.section!);
@@ -104,4 +96,16 @@ const navLinks = [
     const el = document.getElementById(id);
     if (el) observer.observe(el);
   });
+
+  // Nav dock + top-of-page threshold
+  const navShell = document.querySelector('.hero-nav-shell');
+  const dockAtTop = () => {
+    if (!navShell) return;
+    navShell.classList.toggle('is-docked', window.scrollY > 50);
+  };
+  dockAtTop();
+  window.addEventListener('scroll', () => {
+    dockAtTop();
+    if (window.scrollY < 80) setActive(null);
+  }, { passive: true });
 </script>
