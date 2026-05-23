@@ -1,6 +1,7 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import Hero from '../components/Hero.astro';
+import HowItWorks from '../components/HowItWorks.astro';
 import StoryChapter from '../components/marketing/StoryChapter.astro';
 import Footer from '../components/Footer.astro';
 import { storyChapters } from '../data/marketingChapters.js';
@@ -8,8 +9,9 @@ import { storyChapters } from '../data/marketingChapters.js';
 
 <Layout>
   <Hero />
-  <StoryChapter chapter={storyChapters[2]} reverse={true} />
+  <HowItWorks />
   <StoryChapter chapter={storyChapters[0]} />
   <StoryChapter chapter={storyChapters[1]} reverse={true} />
+  <StoryChapter chapter={storyChapters[2]} />
   <Footer />
 </Layout>
