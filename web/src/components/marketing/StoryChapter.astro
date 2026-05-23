@@ -14,14 +14,14 @@ const { chapter, reverse = false } = Astro.props;
         <ul class="mt-8 space-y-4 text-sm leading-7 text-[var(--ink-muted)]">
           {chapter.bullets.map((item) => (
             <li class="flex items-start gap-3">
-              <span class="mt-2 h-2.5 w-2.5 rounded-full bg-[var(--gold)]"></span>
+              <span class="mt-2 h-2.5 w-2.5 shrink-0 rounded-full bg-[var(--gold)]"></span>
               <span>{item}</span>
             </li>
           ))}
         </ul>
       </div>
 
-      {chapter.scene && <StoryScene {...chapter.scene} />}
+      <StoryScene screenId={chapter.screenId} />
     </div>
   </div>
 </section>
