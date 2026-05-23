@@ -1,0 +1,29 @@
+---
+interface Props {
+  src: string;
+  alt: string;
+  widthClass?: string;
+  class?: string;
+  eager?: boolean;
+}
+
+const {
+  src,
+  alt,
+  widthClass = 'w-[220px]',
+  class: className = '',
+  eager = false,
+} = Astro.props;
+---
+
+<div class:list={['device-shot', widthClass, className]}>
+  <div class="device-shot-frame">
+    <img
+      src={src}
+      alt={alt}
+      class="device-shot-image"
+      loading={eager ? 'eager' : 'lazy'}
+      decoding="async"
+    />
+  </div>
+</div>

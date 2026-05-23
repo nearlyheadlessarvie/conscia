@@ -221,6 +221,102 @@ body {
   padding: 28px 20px;
 }
 
+.device-shot {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.device-shot-frame {
+  position: relative;
+  overflow: hidden;
+  border-radius: 34px;
+  background: linear-gradient(180deg, #fefefe 0%, #f7f8ff 100%);
+  border: 1px solid rgba(23, 36, 79, 0.12);
+  padding: 7px;
+  box-shadow:
+    0 28px 70px rgba(23, 36, 79, 0.2),
+    0 8px 22px rgba(23, 36, 79, 0.1);
+}
+
+.device-shot-frame::before {
+  content: '';
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  z-index: 2;
+  width: 72px;
+  height: 8px;
+  transform: translateX(-50%);
+  border-radius: 999px;
+  background: rgba(11, 17, 36, 0.14);
+}
+
+.device-shot-image {
+  display: block;
+  width: 100%;
+  border-radius: 27px;
+}
+
+.hero-shots {
+  position: relative;
+  width: min(100%, 620px);
+  min-height: 470px;
+}
+
+.hero-shots-panel {
+  position: absolute;
+  border-radius: 34px;
+  border: 1px solid rgba(255, 255, 255, 0.75);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.76) 0%, rgba(255, 248, 223, 0.58) 100%);
+  backdrop-filter: blur(12px);
+  box-shadow: var(--shadow-soft);
+}
+
+.hero-shots-panel-left {
+  left: 4%;
+  top: 22%;
+  width: 34%;
+  height: 44%;
+}
+
+.hero-shots-panel-right {
+  right: 8%;
+  top: 10%;
+  width: 28%;
+  height: 40%;
+}
+
+.hero-shot {
+  position: absolute;
+  z-index: 2;
+}
+
+.hero-shot-left {
+  left: 5%;
+  top: 18%;
+  transform: rotate(-8deg);
+}
+
+.hero-shot-center {
+  left: 34%;
+  top: 2%;
+  z-index: 4;
+}
+
+.hero-shot-right {
+  right: 2%;
+  top: 12%;
+  transform: rotate(7deg);
+}
+
+.hero-shot-back {
+  right: 18%;
+  bottom: 0;
+  z-index: 1;
+  transform: rotate(6deg);
+  opacity: 0.96;
+}
+
 
 @media (max-width: 640px) {
   .platform-badge {
@@ -229,6 +325,30 @@ body {
 
   .platform-badge-icon {
     @apply h-9 w-9 rounded-[12px];
+  }
+
+  .hero-shots {
+    min-height: 390px;
+  }
+
+  .hero-shot-left {
+    left: 0;
+    top: 24%;
+  }
+
+  .hero-shot-center {
+    left: 26%;
+    top: 4%;
+  }
+
+  .hero-shot-right {
+    right: -1%;
+    top: 17%;
+  }
+
+  .hero-shot-back {
+    right: 11%;
+    bottom: 3%;
   }
 }
 
