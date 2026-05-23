@@ -688,7 +688,7 @@ void main() {
     expect(railTop, lessThanOrEqualTo(headerBottom + 1));
     expect(filterTop, greaterThanOrEqualTo(headerBottom + 6));
     expect(filterTop, lessThanOrEqualTo(headerBottom + 10));
-    expect(railBottom, lessThanOrEqualTo(filterBottom + 24));
+    expect(railBottom, lessThanOrEqualTo(filterBottom + 32));
   });
 
   testWidgets('docked transaction filters remain tappable', (
@@ -721,6 +721,30 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(service.lastCategory, 'Dining');
+  });
+
+  testWidgets('pinned transaction rail stays compact without overflow', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await _pumpTransactionList(
+      tester,
+      transactions: _manyTransactions(),
+    );
+
+    await tester.drag(
+      find.byType(CustomScrollView),
+      const Offset(0, -460),
+      warnIfMissed: false,
+    );
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    expect(find.byTooltip('Filter dates'), findsOneWidget);
   });
 
   testWidgets('selected category chip shows clear affordance and clears on re-tap', (

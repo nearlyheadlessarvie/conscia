@@ -935,7 +935,10 @@ class _TransactionFilterRailOverlay extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).appColors;
-    final railHeight = pinned ? 64.0 : _TransactionListScreenState._filterRailHeight;
+    final railHeight = pinned ? 72.0 : _TransactionListScreenState._filterRailHeight;
+    final verticalPadding = pinned
+        ? const EdgeInsets.fromLTRB(20, 8, 20, 8)
+        : const EdgeInsets.fromLTRB(20, 8, 20, 4);
 
     return GestureDetector(
       behavior: HitTestBehavior.translucent,
@@ -963,10 +966,7 @@ class _TransactionFilterRailOverlay extends StatelessWidget {
               ),
             ),
           ),
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 8, 20, 4),
-            child: child,
-          ),
+          child: Padding(padding: verticalPadding, child: child),
         ),
       ),
     );
