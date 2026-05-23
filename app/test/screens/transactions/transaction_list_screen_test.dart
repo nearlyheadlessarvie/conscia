@@ -802,6 +802,7 @@ void main() {
     expect(service.lastFrom, isNotNull);
     expect(service.lastTo, isNotNull);
     expect(find.byKey(const ValueKey('transaction-date-filter-label')), findsOneWidget);
+    expect(find.text('This mo'), findsOneWidget);
   });
 
   testWidgets('date filter sheet keeps clear action reachable', (

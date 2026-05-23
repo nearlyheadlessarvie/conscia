@@ -935,7 +935,7 @@ class _TransactionFilterRailOverlay extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).appColors;
-    final railHeight = pinned ? 72.0 : _TransactionListScreenState._filterRailHeight;
+    final railHeight = pinned ? 76.0 : _TransactionListScreenState._filterRailHeight;
     final verticalPadding = pinned
         ? const EdgeInsets.fromLTRB(20, 8, 20, 8)
         : const EdgeInsets.fromLTRB(20, 8, 20, 4);
@@ -1104,13 +1104,15 @@ class _PinnedDateFilterButton extends StatelessWidget {
               ? colors.deepNavy
               : colors.ink.withValues(alpha: 0.72),
           fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
+          fontSize: 10,
+          height: 1.05,
         );
 
     return SizedBox(
-      width: 44,
+      width: 60,
       child: Column(
         mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Tooltip(
             message: 'Filter dates',
@@ -1152,6 +1154,7 @@ class _PinnedDateFilterButton extends StatelessWidget {
                 key: const ValueKey('transaction-date-filter-label'),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
                 style: labelStyle,
               ),
             ),
@@ -1352,26 +1355,29 @@ class _TransactionsEditorialHero extends StatelessWidget {
 String _dateFilterLabel(TransactionDateFilter filter) {
   switch (filter.kind) {
     case 'thisWeek':
-      return 'Filtered to this week';
+      return 'This wk';
     case 'lastWeek':
-      return 'Filtered to last week';
+      return 'Last wk';
     case 'thisMonth':
-      return 'Filtered to this month';
+      return 'This mo';
     case 'lastMonth':
-      return 'Filtered to last month';
+      return 'Last mo';
     case 'thisYear':
-      return 'Filtered to this year';
+      return 'This yr';
     case 'specificDate':
-      return filter.from == null
-          ? 'Filtered by date'
-          : 'Filtered to ${DateFormat.MMMd().format(filter.from!)}';
+      return filter.from == null ? 'Date' : DateFormat.MMMd().format(filter.from!);
     case 'customRange':
       if (filter.from == null || filter.to == null) {
-        return 'Filtered by custom range';
+        return 'Custom';
       }
-      return 'Filtered to ${DateFormat.MMMd().format(filter.from!)} - ${DateFormat.MMMd().format(filter.to!)}';
+      final from = filter.from!;
+      final to = filter.to!;
+      if (from.year == to.year && from.month == to.month) {
+        return '${DateFormat.MMMd().format(from)}-${to.day}';
+      }
+      return '${DateFormat.MMMd().format(from)}-${DateFormat.MMMd().format(to)}';
     default:
-      return 'Filtered by date';
+      return 'Date';
   }
 }
 
