@@ -904,8 +904,8 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.byKey(const ValueKey('selection-chip-button-Health')), findsOneWidget);
-    expect(find.byKey(const ValueKey('selection-chip-button-Travel')), findsOneWidget);
+    expect(find.byKey(const ValueKey('selection-chip-button-Health')), findsWidgets);
+    expect(find.byKey(const ValueKey('selection-chip-button-Travel')), findsWidgets);
   });
 
   testWidgets(

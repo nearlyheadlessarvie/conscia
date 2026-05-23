@@ -17,7 +17,6 @@ import '../../services/budget_service.dart';
 import '../../services/transaction_service.dart';
 import '../../core/utils/currency_formatter.dart';
 import '../../widgets/conscia_confirm_sheet.dart';
-import '../../widgets/conscia_glyph.dart';
 import '../../widgets/editorial_sticky_header.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/feed_card.dart';
@@ -318,13 +317,15 @@ class _TransactionListScreenState extends ConsumerState<TransactionListScreen> {
                   budgetState.budgets,
                   selectedCategory,
                   selectedDateFilter,
+                  categories,
+                  showSkeletonPills,
                   userPreferences,
                 ),
               ),
             ),
-            if (_filterOverlayTop != null)
+            if (isFilterPinned)
               Positioned(
-                top: _filterOverlayTop!,
+                top: filterPinnedTop,
                 left: 0,
                 right: 0,
                 child: _TransactionFilterRailOverlay(
@@ -374,6 +375,8 @@ class _TransactionListScreenState extends ConsumerState<TransactionListScreen> {
     List<Budget> budgets,
     String? selectedCategory,
     TransactionDateFilter? selectedDateFilter,
+    List<String> categories,
+    bool showSkeletonPills,
     ({String currency, String locale}) userPreferences,
   ) {
     if (state.error != null && state.transactions.isEmpty) {
@@ -382,6 +385,14 @@ class _TransactionListScreenState extends ConsumerState<TransactionListScreen> {
           child: _TransactionsEditorialHero(
             transactions: state.transactions,
             selectedCategory: selectedCategory,
+            selectedDateFilter: selectedDateFilter,
+            categories: categories,
+            showSkeletonPills: showSkeletonPills,
+            onDateTap: _openDateFilterMenu,
+            onCategorySelected: (value) {
+              ref.read(categoryFilterProvider.notifier).state =
+                  selectedCategory == value ? null : value;
+            },
             topPadding: MediaQuery.paddingOf(context).top,
             currencyCode: userPreferences.currency,
             locale: userPreferences.locale,
@@ -432,6 +443,14 @@ class _TransactionListScreenState extends ConsumerState<TransactionListScreen> {
         child: _TransactionsEditorialHero(
           transactions: state.transactions,
           selectedCategory: selectedCategory,
+          selectedDateFilter: selectedDateFilter,
+          categories: categories,
+          showSkeletonPills: showSkeletonPills,
+          onDateTap: _openDateFilterMenu,
+          onCategorySelected: (value) {
+            ref.read(categoryFilterProvider.notifier).state =
+                selectedCategory == value ? null : value;
+          },
           topPadding: MediaQuery.paddingOf(context).top,
           currencyCode: userPreferences.currency,
           locale: userPreferences.locale,
@@ -446,7 +465,7 @@ class _TransactionListScreenState extends ConsumerState<TransactionListScreen> {
     return SliverToBoxAdapter(
       child: SizedBox(
         key: _filterAnchorKey,
-        height: _filterRailHeight,
+        height: 1,
       ),
     );
   }
@@ -1158,6 +1177,11 @@ class _TransactionsEditorialHero extends StatelessWidget {
   const _TransactionsEditorialHero({
     required this.transactions,
     required this.selectedCategory,
+    required this.selectedDateFilter,
+    required this.categories,
+    required this.showSkeletonPills,
+    required this.onDateTap,
+    required this.onCategorySelected,
     required this.topPadding,
     required this.currencyCode,
     required this.locale,
@@ -1165,6 +1189,11 @@ class _TransactionsEditorialHero extends StatelessWidget {
 
   final List<Transaction> transactions;
   final String? selectedCategory;
+  final TransactionDateFilter? selectedDateFilter;
+  final List<String> categories;
+  final bool showSkeletonPills;
+  final Future<void> Function() onDateTap;
+  final ValueChanged<String> onCategorySelected;
   final double topPadding;
   final String currencyCode;
   final String locale;
@@ -1185,14 +1214,6 @@ class _TransactionsEditorialHero extends StatelessWidget {
         .where((tx) => tx.type != 'income')
         .fold(0.0, (sum, tx) => sum + _amountInUserCurrency(tx));
     final topCategory = _topExpenseCategory(basis);
-    final repeatCount = basis
-        .where((tx) => tx.type != 'income')
-        .map(_displayCategory)
-        .toSet()
-        .length;
-    final regretCount = basis
-        .where((tx) => tx.regretLevel != null && tx.type != 'income')
-        .length;
 
     return Container(
       width: double.infinity,
@@ -1252,41 +1273,13 @@ class _TransactionsEditorialHero extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 18),
-          Row(
-            children: [
-              Expanded(
-                child: _HeroPill(
-                  glyph: ConsciaGlyph(
-                    kind: ConsciaGlyphKind.trail,
-                    size: 14,
-                    color: colors.deepNavy,
-                  ),
-                  label: '${basis.length} moments',
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: _HeroPill(
-                  glyph: ConsciaGlyph(
-                    kind: ConsciaGlyphKind.signal,
-                    size: 14,
-                    color: colors.deepNavy,
-                  ),
-                  label: '$repeatCount patterns',
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: _HeroPill(
-                  glyph: ConsciaGlyph(
-                    kind: ConsciaGlyphKind.reflect,
-                    size: 14,
-                    color: colors.deepNavy,
-                  ),
-                  label: '$regretCount reflected',
-                ),
-              ),
-            ],
+          _TransactionFilterRailContent(
+            selectedCategory: selectedCategory,
+            selectedDateFilter: selectedDateFilter,
+            categories: categories,
+            showSkeletonPills: showSkeletonPills,
+            onDateTap: onDateTap,
+            onSelected: onCategorySelected,
           ),
         ],
       ),
@@ -1388,42 +1381,4 @@ enum _TransactionDatePreset {
   thisYear,
   specificDate,
   customRange,
-}
-
-class _HeroPill extends StatelessWidget {
-  const _HeroPill({required this.glyph, required this.label});
-
-  final Widget glyph;
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).appColors;
-    return Container(
-      height: 38,
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.82),
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: colors.border),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          glyph,
-          const SizedBox(width: 6),
-          Flexible(
-            child: Text(
-              label,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: colors.deepNavy,
-                    fontWeight: FontWeight.w800,
-                  ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 }
