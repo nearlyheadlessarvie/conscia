@@ -67,12 +67,15 @@ The hero should:
 - use broader system-first copy
 - present store badges as secondary proof, not the whole story
 - pair the copy with product imagery that communicates multiple parts of the system
+- follow the approved mockup’s storytelling structure and composition as closely as practical
 
 Recommended hero message direction:
 - primary idea: Conscia is your all-in-one money system
 - supporting idea: transactions, reflection, budgets, receipts, insights, and household coordination live in one calm place
 
 The visual treatment should use the app-like cream, lavender, and gold atmosphere rather than the older marketing mood.
+
+The hero media should no longer be a hand-drawn app simulation. It should use a layered collage of real emulator screenshots inside polished device-frame compositions, matching the approved mockup.
 
 ### Section Sequence
 
@@ -91,14 +94,22 @@ This order matches the broader product story:
 - notice patterns
 - coordinate the system with household and settings controls
 
+The storytelling rhythm should follow the approved mockup:
+- broad system-first hero
+- one product story per section
+- alternating screenshot and copy layout
+- short supporting bullets beneath each section narrative
+
 ### Section Format
 
 Each major section should use:
 - one concise copy block
-- one strong phone mock or grouped app visual
+- one strong real screenshot in a polished device frame
 - minimal supporting bullets or chips only where they help scanning
 
 The rhythm should stay editorial and breathable. Avoid dense dashboard grids or excessive feature-card repetition.
+
+The approved mockup is the source of truth for section pacing, screenshot prominence, and copy rhythm. Implementation should only make minimal wording or spacing changes when needed to fit the live page cleanly.
 
 ## Visual System Changes
 
@@ -133,18 +144,29 @@ The hierarchy should feel calm and deliberate, not loud or startup-polished.
 
 ## Product Imagery
 
-The existing simulated screens should be updated to better reflect the real app.
+The existing simulated Astro screens should be replaced with real emulator screenshots.
 
-Priority references from the app:
-- transactions hero with date strip and category rail
-- reflection screen with worth-it / not-sure / regret states
-- budgets overview with donut and category pacing
-- receipt scan entry screen
+Use screenshot-driven marketing media throughout the homepage:
+- hero: layered multi-phone collage
+- sections: one featured screenshot per story block
+- footer CTA area: optional smaller screenshot support only if it improves the composition
+
+Screenshot treatment rules:
+- use the real app screenshots as the primary media source
+- present them inside polished device-frame compositions like the approved mockup
+- do not show them as raw file dumps
+- keep crops tight and intentional so key UI details remain readable
+- avoid introducing illustrative fake UI where a real screenshot can do the job better
+
+Priority screenshot references from the app:
+- transactions with date strip and category rail
 - purchase assistant
-- settings / subscription / household views
-- insights and merchant signal screens
+- budgets overview with donut and category pacing
+- insights / merchant signals
+- shared household and settings
+- receipt scan where useful in the supporting narrative
 
-The web does not need to reproduce every screen exactly, but the screens should now read as clearly connected to the current product rather than earlier conceptual mocks.
+The screenshot composition and sequencing should follow the approved mockup closely.
 
 ## Icon Asset Rules
 
@@ -193,6 +215,11 @@ The copy should avoid:
 
 Premium can appear as one supporting part of the system, especially in settings/subscription imagery, but the homepage should primarily sell the product as a whole.
 
+The approved mockup copy/story is distinctly Conscia and should be treated as the source of truth. During implementation:
+- follow its headlines, section order, and overall narrative closely
+- keep edits minimal
+- only adjust wording when necessary for fit, consistency, or live-page clarity
+
 ## Testing And Verification
 
 Implementation should verify:
@@ -217,7 +244,7 @@ Make this pass in focused slices:
 1. update shared metadata and store links
 2. restage hero and homepage section order
 3. tune the global visual system to the app atmosphere
-4. refresh simulated app visuals to match the current product
+4. replace simulated app visuals with screenshot-based media compositions
 5. update tests for the revised homepage content
 
 This keeps the work broad in effect but still tractable and reviewable.
