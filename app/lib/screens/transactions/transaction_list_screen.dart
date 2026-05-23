@@ -541,7 +541,7 @@ class _TransactionListScreenState extends ConsumerState<TransactionListScreen> {
             child: Padding(
               padding: EdgeInsets.fromLTRB(
                 20,
-                groupIndex == 0 ? 6 : 0,
+                groupIndex == 0 ? 10 : 0,
                 20,
                 18,
               ),

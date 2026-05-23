@@ -360,7 +360,7 @@ void main() {
     ).dy;
     final firstDateTop = tester.getTopLeft(find.textContaining('· ').first).dy;
 
-    expect(firstDateTop - heroBottom, greaterThanOrEqualTo(32));
+    expect(firstDateTop - heroBottom, greaterThanOrEqualTo(38));
   });
 
   testWidgets('spending trail aggregates transactions in the user currency', (
