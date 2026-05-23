@@ -4,39 +4,44 @@ import { readFileSync } from 'node:fs';
 
 const html = readFileSync(new URL('../dist/index.html', import.meta.url), 'utf8');
 
-test('homepage uses the mascot-led storytelling headline and store-style platform badges', () => {
-  assert.match(html, /Your financial conscience\./);
-  assert.match(html, /Meet the inner voices/);
+test('homepage uses the new Journey-tone headline and store-style platform badges', () => {
+  assert.match(html, /Your money has a story/);
+  assert.match(html, /Personal finance/);
   assert.match(html, /aria-label="Open on iOS"/);
   assert.match(html, /aria-label="Open on Android"/);
   assert.match(html, /Download on the/);
   assert.match(html, /App Store/);
   assert.match(html, /Get it on/);
   assert.match(html, /Google Play/);
-  assert.doesNotMatch(html, /See how it works/);
-  assert.doesNotMatch(html, /How it works/);
-  assert.doesNotMatch(html, /Start with the free plan/);
-  assert.doesNotMatch(html, /Join the beta/);
+  assert.doesNotMatch(html, /Your financial conscience/);
+  assert.doesNotMatch(html, /Meet the inner voices/);
 });
 
-test('homepage renders the three storytelling chapters in order', () => {
-  assert.match(html, /Catch the moment/);
+test('homepage renders the three redesigned chapters in order', () => {
+  assert.match(html, /Log the moment/);
   assert.match(html, /Reflect without shame/);
-  assert.match(html, /Build better habits/);
-  assert.match(html, /Pre-purchase assistant/);
-  assert.match(html, /Reflection prompts/);
-  assert.match(html, /Recurring transactions/);
+  assert.match(html, /See the patterns/);
+  assert.doesNotMatch(html, /Catch the moment/);
+  assert.doesNotMatch(html, /Build better habits/);
 });
 
-test('homepage removes the dead-end open app section and keeps the lighter footer', () => {
-  assert.doesNotMatch(html, /Why the app first/);
-  assert.doesNotMatch(html, /The app handles onboarding and account creation/);
-  assert.doesNotMatch(html, />Open the app</);
-  assert.match(html, /Send feedback/);
+test('homepage includes How it works section', () => {
+  assert.match(html, /How it works/);
+  assert.match(html, /Pause before you spend/);
+  assert.match(html, /Log every moment/);
+  assert.match(html, /Reflect and notice/);
 });
 
-test('hero mascot sprites render at scaled dimensions instead of full atlas cell size', () => {
-  assert.match(html, /aria-label="Devil mascot"/);
-  assert.match(html, /width:275\.88px; height:275\.88px;/);
-  assert.doesNotMatch(html, /aria-label="Devil mascot"[^>]*width:1254px; height:1254px;/);
+test('homepage contains no mascot references', () => {
+  assert.doesNotMatch(html, /aria-label="Devil mascot"/);
+  assert.doesNotMatch(html, /aria-label="Angel mascot"/);
+  assert.doesNotMatch(html, /aria-label="Receipt mascot"/);
+  assert.doesNotMatch(html, /mascot-sprite/);
+  assert.doesNotMatch(html, /hero-battle-scene/);
+});
+
+test('footer uses dark navy design with tagline', () => {
+  assert.match(html, /Small choices, big freedom/);
+  assert.match(html, /\/privacy/);
+  assert.match(html, /\/terms/);
 });
