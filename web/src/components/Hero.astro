@@ -3,6 +3,13 @@ import LogoWithText from './icons/LogoWithText.astro';
 import PlatformBadge from './icons/PlatformBadge.astro';
 import HeroPhone from './marketing/HeroPhone.astro';
 import { heroContent } from '../data/marketingChapters.js';
+
+const navLinks = [
+  { label: 'How it works', href: '#how-it-works' },
+  { label: 'Log the moment', href: '#log-the-moment' },
+  { label: 'Reflect without shame', href: '#reflect-without-shame' },
+  { label: 'See the patterns', href: '#see-the-patterns' },
+];
 ---
 
 <section
@@ -14,10 +21,18 @@ import { heroContent } from '../data/marketingChapters.js';
     <div class="section-shell">
       <nav class="hero-nav glass-card flex items-center justify-between px-5 py-4 md:px-7">
         <LogoWithText size="38" />
-        <div class="flex items-center gap-3">
-          <PlatformBadge platform="ios" />
-          <PlatformBadge platform="android" />
-        </div>
+        <ul class="hidden items-center gap-6 md:flex">
+          {navLinks.map(({ label, href }) => (
+            <li>
+              <a
+                href={href}
+                class="text-sm font-medium text-[var(--ink-muted)] transition hover:text-[var(--navy)]"
+              >
+                {label}
+              </a>
+            </li>
+          ))}
+        </ul>
       </nav>
     </div>
   </div>
