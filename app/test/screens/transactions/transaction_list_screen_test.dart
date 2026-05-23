@@ -718,7 +718,7 @@ void main() {
     expect(railTop, lessThanOrEqualTo(headerBottom + 1));
     expect(filterTop, greaterThanOrEqualTo(headerBottom + 6));
     expect(filterTop, lessThanOrEqualTo(headerBottom + 10));
-    expect(railBottom, lessThanOrEqualTo(filterBottom + 56));
+    expect(railBottom, lessThanOrEqualTo(filterBottom + 60));
   });
 
   testWidgets('docked transaction filters remain tappable', (
@@ -804,6 +804,21 @@ void main() {
 
     expect(find.byKey(const ValueKey('selection-chip-clear-Dining')), findsNothing);
     expect(service.lastCategory, isNull);
+  });
+
+  testWidgets('transaction category chips stay legible at a larger size', (
+    tester,
+  ) async {
+    await _pumpTransactionList(
+      tester,
+      transactions: _manyTransactions(),
+    );
+
+    final chipSize = tester.getSize(
+      find.byKey(const ValueKey('selection-chip-button-Dining')).first,
+    );
+
+    expect(chipSize.height, greaterThanOrEqualTo(38));
   });
 
   testWidgets('date filter action sends server-side range parameters', (

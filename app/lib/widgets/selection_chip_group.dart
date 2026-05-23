@@ -80,21 +80,21 @@ class SelectionChipButton extends StatelessWidget {
     final colors = Theme.of(context).appColors;
     final textStyle = Theme.of(context).textTheme.labelSmall?.copyWith(
           fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-          fontSize: 12,
+          fontSize: 13,
         );
 
     return Material(
       color: Colors.transparent,
       child: InkWell(
         key: ValueKey('selection-chip-button-$label'),
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(20),
         onTap: onTap,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 160),
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
           decoration: BoxDecoration(
             color: selected ? colors.heroTint : colors.surfaceMuted,
-            borderRadius: BorderRadius.circular(18),
+            borderRadius: BorderRadius.circular(20),
             border: Border.all(
               color: selected ? colors.sectionBorder : Colors.transparent,
             ),

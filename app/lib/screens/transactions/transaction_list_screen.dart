@@ -36,7 +36,7 @@ class TransactionListScreen extends ConsumerStatefulWidget {
 }
 
 class _TransactionListScreenState extends ConsumerState<TransactionListScreen> {
-  static const _filterRailHeight = 104.0;
+  static const _filterRailHeight = 108.0;
   static const _datePresetLabels = <String, _TransactionDatePreset>{
     'This week': _TransactionDatePreset.thisWeek,
     'Last week': _TransactionDatePreset.lastWeek,
@@ -954,7 +954,7 @@ class _TransactionFilterRailOverlay extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).appColors;
-    final railHeight = pinned ? 100.0 : _TransactionListScreenState._filterRailHeight;
+    final railHeight = pinned ? 106.0 : _TransactionListScreenState._filterRailHeight;
     final verticalPadding = pinned
         ? const EdgeInsets.fromLTRB(20, 8, 20, 8)
         : const EdgeInsets.fromLTRB(20, 8, 20, 6);
@@ -1031,7 +1031,7 @@ class _TransactionFilterRailContent extends StatelessWidget {
               value: selectedCategory,
               scrollable: true,
               avatarBuilder: (option, _) =>
-                  CategoryIcons.rawIcon(option, size: 13, type: 'Expense'),
+                  CategoryIcons.rawIcon(option, size: 15, type: 'Expense'),
               trailingBuilder: (option, selected) => selected
                   ? AppIcons.icon(
                       AppIconKey.close,
@@ -1068,7 +1068,7 @@ class _TransactionFilterRailContent extends StatelessWidget {
                     selected: true,
                     avatar: CategoryIcons.rawIcon(
                       selectedCategory!,
-                      size: 13,
+                      size: 15,
                       type: 'Expense',
                     ),
                     trailing: AppIcons.icon(

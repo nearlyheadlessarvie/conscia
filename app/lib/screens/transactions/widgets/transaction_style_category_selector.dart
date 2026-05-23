@@ -147,7 +147,7 @@ class _TransactionStyleCategorySelectorState
         .toList();
 
     return SizedBox(
-      height: 36,
+      height: 42,
       child: ListView(
         controller: _scrollController,
         scrollDirection: Axis.horizontal,
@@ -231,11 +231,11 @@ class _MoreChip extends StatelessWidget {
     final colors = Theme.of(context).appColors;
     return GestureDetector(
       onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
         decoration: BoxDecoration(
           color: colors.surfaceMuted,
-          borderRadius: BorderRadius.circular(18),
+          borderRadius: BorderRadius.circular(20),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -243,14 +243,14 @@ class _MoreChip extends StatelessWidget {
             AppIcons.icon(
               iconKey,
               color: Theme.of(context).colorScheme.onSurfaceVariant,
-              size: 13,
+              size: 15,
             ),
-            const SizedBox(width: 4),
+            const SizedBox(width: 6),
             Text(
               'More',
               style: Theme.of(context).textTheme.labelSmall?.copyWith(
                     fontWeight: FontWeight.w500,
-                    fontSize: 12,
+                    fontSize: 13,
                   ),
             ),
           ],

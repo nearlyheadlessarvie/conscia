@@ -224,11 +224,11 @@ class CategoryChoicePill extends StatelessWidget {
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 160),
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         decoration: BoxDecoration(
           color:
               selected ? accent.withValues(alpha: 0.12) : colors.surfaceMuted,
-          borderRadius: BorderRadius.circular(18),
+          borderRadius: BorderRadius.circular(20),
           border: Border.all(
             color:
                 selected ? accent.withValues(alpha: 0.3) : Colors.transparent,
@@ -239,28 +239,28 @@ class CategoryChoicePill extends StatelessWidget {
           children: [
             CategoryIcons.rawIcon(
               category,
-              size: 13,
+              size: 16,
               type: type,
               iconKey: iconKey,
               colorKey: colorKey,
             ),
-            const SizedBox(width: 6),
+            const SizedBox(width: 8),
             Text(
               category,
               style: Theme.of(context).textTheme.labelSmall?.copyWith(
                     fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-                    fontSize: 12,
+                    fontSize: 13,
                     color: selected
                         ? accent
                         : Theme.of(context).colorScheme.onSurface,
                   ),
             ),
             if (selected) ...[
-              const SizedBox(width: 4),
+              const SizedBox(width: 6),
               AppIcons.icon(
                 AppIconKey.close,
                 color: accent,
-                size: 12,
+                size: 13,
                 strokeWidth: 1.8,
               ),
             ],
