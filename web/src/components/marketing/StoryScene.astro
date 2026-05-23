@@ -2,9 +2,12 @@
 import TransactionsScreen from '../screens/TransactionsScreen.astro';
 import ReflectScreen from '../screens/ReflectScreen.astro';
 import InsightsScreen from '../screens/InsightsScreen.astro';
+import AssistantScreen from '../screens/AssistantScreen.astro';
+import BudgetsScreen from '../screens/BudgetsScreen.astro';
+import HouseholdScreen from '../screens/HouseholdScreen.astro';
 
 interface Props {
-  screenId: 'transactions' | 'reflect' | 'insights';
+  screenId: 'transactions' | 'reflect' | 'insights' | 'assistant' | 'budgets' | 'household';
 }
 
 const { screenId } = Astro.props;
@@ -16,6 +19,9 @@ const { screenId } = Astro.props;
       {screenId === 'transactions' && <TransactionsScreen />}
       {screenId === 'reflect' && <ReflectScreen />}
       {screenId === 'insights' && <InsightsScreen />}
+      {screenId === 'assistant' && <AssistantScreen />}
+      {screenId === 'budgets' && <BudgetsScreen />}
+      {screenId === 'household' && <HouseholdScreen />}
     </div>
   </div>
 </div>

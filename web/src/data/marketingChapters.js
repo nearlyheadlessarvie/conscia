@@ -30,7 +30,7 @@ export const storyChapters = [
       'Worth it / not sure / regret reflections',
       'A calmer loop for building better instincts',
     ],
-    screenId: 'reflect',
+    screenId: 'assistant',
   },
   {
     id: 'budgets-and-categories',
@@ -43,7 +43,7 @@ export const storyChapters = [
       'One category system across transactions and insights',
       'Receipt capture that lands in the same workflow',
     ],
-    screenId: 'transactions',
+    screenId: 'budgets',
   },
   {
     id: 'insights-and-merchant-signals',
@@ -69,6 +69,6 @@ export const storyChapters = [
       'Settings, premium, and profile controls in one hub',
       'A system broad enough for daily money life',
     ],
-    screenId: 'insights',
+    screenId: 'household',
   },
 ];
