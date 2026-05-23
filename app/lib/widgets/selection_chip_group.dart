@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../core/constants/app_icons.dart';
 import '../core/theme/app_colors.dart';
 import 'horizontal_edge_fade.dart';
 
