@@ -316,9 +316,34 @@ void main() {
     expect(find.textContaining('Shopping is showing up'), findsOneWidget);
     expect(find.text('Fri · May 8'), findsOneWidget);
     expect(find.byKey(const ValueKey('transaction-date-filter-strip')), findsOneWidget);
+    expect(find.text('3 moments'), findsNothing);
+    expect(find.text('3 patterns'), findsNothing);
+    expect(find.text('1 reflected'), findsNothing);
     expect(find.byKey(const ValueKey('selection-chip-button-All')),
         findsNothing);
     expect(find.byType(GroupedListCard), findsNothing);
+  });
+
+  testWidgets('transaction hero contains filters in the expanded state', (
+    tester,
+  ) async {
+    await _pumpTransactionList(
+      tester,
+      transactions: _manyTransactions(),
+    );
+
+    final summaryBottom = tester
+        .getBottomLeft(find.textContaining('showing up most lately'))
+        .dy;
+    final stripTop = tester
+        .getTopLeft(find.byKey(const ValueKey('transaction-date-filter-strip')))
+        .dy;
+    final categoryTop = tester
+        .getTopLeft(find.byKey(const ValueKey('selection-chip-button-Bills')))
+        .dy;
+
+    expect(stripTop, greaterThan(summaryBottom));
+    expect(categoryTop, greaterThan(stripTop));
   });
 
   testWidgets('spending trail aggregates transactions in the user currency', (
