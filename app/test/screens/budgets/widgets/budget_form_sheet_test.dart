@@ -5,6 +5,7 @@ import 'package:conscia_app/providers/user_provider.dart';
 import 'package:conscia_app/providers/usage_provider.dart';
 import 'package:conscia_app/models/family_space.dart';
 import 'package:conscia_app/screens/budgets/widgets/budget_form_sheet.dart';
+import 'package:conscia_app/screens/transactions/widgets/transaction_style_category_selector.dart';
 import 'package:conscia_app/services/budget_service.dart';
 import 'package:conscia_app/services/subscription_service.dart';
 import 'package:conscia_app/services/user_service.dart';
@@ -117,8 +118,15 @@ void main() {
       (tester) async {
     await _pumpBudgetFormSheet(tester, isPremium: false);
 
-    await tester.ensureVisible(find.text('More'));
-    await tester.tap(find.text('More'));
+    final categoryRail = find.descendant(
+      of: find.byType(TransactionStyleCategorySelector),
+      matching: find.byWidgetPredicate(
+        (widget) => widget is ListView && widget.scrollDirection == Axis.horizontal,
+      ),
+    );
+    await tester.drag(categoryRail, const Offset(-260, 0), warnIfMissed: false);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('More'), warnIfMissed: false);
     await tester.pumpAndSettle();
 
     expect(find.text('Groceries'), findsWidgets);
@@ -132,8 +140,15 @@ void main() {
       (tester) async {
     await _pumpBudgetFormSheet(tester, isPremium: true);
 
-    await tester.ensureVisible(find.text('More'));
-    await tester.tap(find.text('More'));
+    final categoryRail = find.descendant(
+      of: find.byType(TransactionStyleCategorySelector),
+      matching: find.byWidgetPredicate(
+        (widget) => widget is ListView && widget.scrollDirection == Axis.horizontal,
+      ),
+    );
+    await tester.drag(categoryRail, const Offset(-260, 0), warnIfMissed: false);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('More'), warnIfMissed: false);
     await tester.pumpAndSettle();
 
     expect(find.text('Travel'), findsOneWidget);
