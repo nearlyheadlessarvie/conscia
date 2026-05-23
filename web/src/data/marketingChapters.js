@@ -1,47 +1,73 @@
 export const heroContent = {
-  kicker: 'Personal finance · reimagined',
-  title: 'Your money has a story. Start reading it.',
+  kicker: 'All-in-one money system',
+  title: 'Your all-in-one money system.',
   body:
-    'Conscia helps you pause before a purchase, log every moment, and reflect on what your spending is actually telling you. One calm app. A steadier relationship with money.',
+    'Track spending, reflect on purchases, manage budgets, scan receipts, surface patterns, and coordinate shared household planning without stitching five tools together.',
 };
 
 export const storyChapters = [
   {
-    id: 'log-the-moment',
-    kicker: 'Log the moment',
-    title: 'Every spend captured before the emotion fades.',
+    id: 'transactions-and-filters',
+    kicker: 'Transactions and filters',
+    title: 'See the trail, not just the total.',
     body:
-      'Conscia keeps transaction logging fast and thoughtful. Smart category memory, receipt scanning, and voice input keep the experience moving — without turning it into a spreadsheet.',
+      'Conscia keeps transactions readable with calm summaries, date filters, category rails, and context that makes repeat moments easier to notice.',
     bullets: [
-      'Fast transaction entry with smart defaults',
-      'Scan a receipt and Conscia fills in the rest',
-      'Filter by time, category, or sentiment',
+      'Date-aware filtering and category rails',
+      'Grouped moments with reflection cues',
+      'Personal and family records in one system',
     ],
     screenId: 'transactions',
   },
   {
-    id: 'reflect-without-shame',
-    kicker: 'Reflect without shame',
-    title: 'Was it worth it? A small question that changes everything.',
+    id: 'reflection-and-purchase-assistant',
+    kicker: 'Reflection and purchase assistant',
+    title: 'Pause before and after the moment that matters.',
     body:
-      'Conscia nudges you to reflect on recent purchases — not to judge, but to notice. Over time the pattern becomes clear: what you regret, what you value, what you want to do differently.',
+      'Conscia helps you think through a purchase before you commit, then reflect without shame afterward so each decision becomes signal instead of blur.',
     bullets: [
-      'Quick reflection prompts on recent purchases',
-      'Regret memory that builds real signal over time',
-      'Journey streak for building consistency',
+      'Purchase assistant for high-friction decisions',
+      'Worth it / not sure / regret reflections',
+      'A calmer loop for building better instincts',
     ],
     screenId: 'reflect',
   },
   {
-    id: 'see-the-patterns',
-    kicker: 'See the patterns',
-    title: 'Your spending has a signal. Conscia helps you read it.',
+    id: 'budgets-and-categories',
+    kicker: 'Budgets and categories',
+    title: 'Keep your money system tidy and in range.',
     body:
-      'Insights go beyond "you overspent." Conscia connects regret, hesitation, and repeated choices into patterns you can actually act on — and budgets that keep you in range.',
+      'Budgets, category labels, and receipt scan flows stay connected, so the same system that captures your money also keeps it organized and usable.',
     bullets: [
-      'Regret rate by category and merchant',
-      'Budget pace tracking with calming language',
-      'Milestone badges for building habits',
+      'Monthly pacing with calm budget signals',
+      'One category system across transactions and insights',
+      'Receipt capture that lands in the same workflow',
+    ],
+    screenId: 'transactions',
+  },
+  {
+    id: 'insights-and-merchant-signals',
+    kicker: 'Insights and merchant signals',
+    title: 'Notice the patterns before they quietly repeat.',
+    body:
+      'Conscia surfaces regret signals, merchant patterns, and category trends so your history becomes something you can actually act on.',
+    bullets: [
+      'Regret signals by category and merchant',
+      'Merchant watchlists grounded in real behavior',
+      'Signals that stay readable instead of punitive',
+    ],
+    screenId: 'insights',
+  },
+  {
+    id: 'shared-household-and-settings',
+    kicker: 'Shared household and settings',
+    title: 'Share the system without losing the personal layer.',
+    body:
+      'Shared household planning, profile controls, privacy boundaries, and premium settings all live in the same calm system instead of scattered setup screens.',
+    bullets: [
+      'Family roles with clear privacy boundaries',
+      'Settings, premium, and profile controls in one hub',
+      'A system broad enough for daily money life',
     ],
     screenId: 'insights',
   },

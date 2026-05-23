@@ -1,20 +1,19 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import { dirname, resolve } from 'node:path';
 
-const html = readFileSync(new URL('../dist/index.html', import.meta.url), 'utf8');
+const testDir = dirname(fileURLToPath(import.meta.url));
+const html = readFileSync(resolve(testDir, '../dist/index.html'), 'utf8');
 
-test('homepage uses the new Journey-tone headline and store-style platform badges', () => {
-  assert.match(html, /Your money has a story/);
-  assert.match(html, /Personal finance/);
-  assert.match(html, /aria-label="Open on iOS"/);
-  assert.match(html, /aria-label="Open on Android"/);
-  assert.match(html, /Download on the/);
-  assert.match(html, /App Store/);
-  assert.match(html, /Get it on/);
-  assert.match(html, /Google Play/);
-  assert.doesNotMatch(html, /Your financial conscience/);
-  assert.doesNotMatch(html, /Meet the inner voices/);
+test('homepage leads with the all-in-one money system message', () => {
+  assert.match(html, /all-in-one money system/i);
+  assert.match(html, /track spending/i);
+  assert.match(html, /manage budgets/i);
+  assert.match(html, /scan receipts/i);
+  assert.match(html, /shared household/i);
+  assert.doesNotMatch(html, /Your money has a story/);
 });
 
 test('homepage metadata and badges use production icon and store links', () => {
@@ -25,19 +24,20 @@ test('homepage metadata and badges use production icon and store links', () => {
   assert.match(html, /property="og:image" content="\/images\/app_icon\.png"/);
 });
 
-test('homepage renders the three redesigned chapters in order', () => {
-  assert.match(html, /Log the moment/);
-  assert.match(html, /Reflect without shame/);
-  assert.match(html, /See the patterns/);
-  assert.doesNotMatch(html, /Catch the moment/);
-  assert.doesNotMatch(html, /Build better habits/);
+test('homepage presents system sections in the new order', () => {
+  assert.match(html, /Transactions and filters/);
+  assert.match(html, /Reflection and purchase assistant/);
+  assert.match(html, /Budgets and categories/);
+  assert.match(html, /Insights and merchant signals/);
+  assert.match(html, /Shared household and settings/);
 });
 
-test('homepage includes How it works section', () => {
-  assert.match(html, /How it works/);
-  assert.match(html, /Pause before you spend/);
-  assert.match(html, /Log every moment/);
-  assert.match(html, /Reflect and notice/);
+test('homepage references current product surfaces instead of older journey-only framing', () => {
+  assert.match(html, /receipt/i);
+  assert.match(html, /purchase assistant/i);
+  assert.match(html, /shared household/i);
+  assert.match(html, /merchant/i);
+  assert.doesNotMatch(html, /Three moments\. One loop\./);
 });
 
 test('homepage contains no mascot references', () => {
@@ -48,8 +48,7 @@ test('homepage contains no mascot references', () => {
   assert.doesNotMatch(html, /hero-battle-scene/);
 });
 
-test('footer uses dark navy design with tagline', () => {
+test('footer keeps the lockup while the homepage atmosphere shifts app-ward', () => {
   assert.match(html, /Small choices, big freedom/);
-  assert.match(html, /\/privacy/);
-  assert.match(html, /\/terms/);
+  assert.doesNotMatch(html, /Meet the inner voices/);
 });
