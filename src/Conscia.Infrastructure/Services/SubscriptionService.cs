@@ -65,6 +65,7 @@ public class SubscriptionService : ISubscriptionService
             UserId = userId,
             Tier = SubscriptionTier.Premium,
             Platform = Platform.iOS,
+            Status = Domain.Enums.SubscriptionStatus.Active,
             OriginalTransactionId = receiptData,
             ExpiresAt = expiresAt
         };
@@ -108,6 +109,7 @@ public class SubscriptionService : ISubscriptionService
             UserId = userId,
             Tier = SubscriptionTier.Premium,
             Platform = Platform.Android,
+            Status = Domain.Enums.SubscriptionStatus.Active,
             OriginalTransactionId = purchaseToken,
             ExpiresAt = expiresAt
         };
@@ -127,6 +129,7 @@ public class SubscriptionService : ISubscriptionService
             return new EffectiveSubscriptionStatus
             {
                 Tier = SubscriptionTier.Premium,
+                Status = Domain.Enums.SubscriptionStatus.Active,
                 IsActive = true,
                 IsLifetime = true,
                 Source = "lifetime"
@@ -139,6 +142,7 @@ public class SubscriptionService : ISubscriptionService
             return new EffectiveSubscriptionStatus
             {
                 Tier = SubscriptionTier.Premium,
+                Status = sub.Status,
                 IsActive = true,
                 IsLifetime = false,
                 Source = "store",
@@ -150,6 +154,7 @@ public class SubscriptionService : ISubscriptionService
         return new EffectiveSubscriptionStatus
         {
             Tier = SubscriptionTier.Free,
+            Status = sub?.Status ?? Domain.Enums.SubscriptionStatus.Unknown,
             IsActive = false,
             IsLifetime = false,
             Source = "none"
@@ -160,6 +165,86 @@ public class SubscriptionService : ISubscriptionService
     {
         var status = await GetEffectiveStatusAsync(userId, ct);
         return status.IsActive;
+    }
+
+    public async Task ProcessAppleServerNotificationAsync(AppleServerNotification notification, CancellationToken ct = default)
+    {
+        var originalTransactionId = notification.Data.OriginalTransactionId;
+        var existing = await _subscriptions.GetByOriginalTransactionIdAsync(originalTransactionId, ct);
+        if (existing is null)
+        {
+            _logger.LogInformation(
+                "Ignoring Apple notification {NotificationType} for unlinked original transaction {OriginalTransactionId}",
+                notification.NotificationType,
+                originalTransactionId);
+            return;
+        }
+
+        switch (notification.NotificationType)
+        {
+            case "SUBSCRIBED":
+            case "DID_RENEW":
+            case "DID_RECOVER":
+                existing.Tier = SubscriptionTier.Premium;
+                existing.Status = Domain.Enums.SubscriptionStatus.Active;
+                ApplyNewerExpiry(existing, notification.Data.ExpiresAt);
+                break;
+
+            case "DID_CHANGE_RENEWAL_STATUS":
+                existing.Tier = SubscriptionTier.Premium;
+                existing.Status = string.Equals(notification.Subtype, "AUTO_RENEW_DISABLED", StringComparison.OrdinalIgnoreCase)
+                    ? Domain.Enums.SubscriptionStatus.Canceled
+                    : Domain.Enums.SubscriptionStatus.Active;
+                ApplyNewerExpiry(existing, notification.Data.ExpiresAt);
+                break;
+
+            case "DID_FAIL_TO_RENEW":
+                existing.Tier = SubscriptionTier.Premium;
+                if (string.Equals(notification.Subtype, "GRACE_PERIOD", StringComparison.OrdinalIgnoreCase))
+                {
+                    existing.Status = Domain.Enums.SubscriptionStatus.GracePeriod;
+                    ApplyNewerExpiry(existing, notification.Data.GracePeriodExpiresAt ?? notification.Data.ExpiresAt);
+                }
+                else
+                {
+                    existing.Status = Domain.Enums.SubscriptionStatus.BillingRetry;
+                    if (notification.Data.ExpiresAt.HasValue)
+                    {
+                        existing.ExpiresAt = notification.Data.ExpiresAt.Value;
+                    }
+                }
+                break;
+
+            case "EXPIRED":
+                existing.Tier = SubscriptionTier.Free;
+                existing.Status = Domain.Enums.SubscriptionStatus.Expired;
+                if (notification.Data.ExpiresAt.HasValue)
+                {
+                    existing.ExpiresAt = notification.Data.ExpiresAt.Value;
+                }
+                break;
+
+            case "REFUND":
+                existing.Tier = SubscriptionTier.Free;
+                existing.Status = Domain.Enums.SubscriptionStatus.Refunded;
+                existing.ExpiresAt = notification.Data.RevocationDate ?? notification.Data.ExpiresAt ?? existing.ExpiresAt;
+                break;
+
+            case "REVOKE":
+            case "REVOKED":
+                existing.Tier = SubscriptionTier.Free;
+                existing.Status = Domain.Enums.SubscriptionStatus.Revoked;
+                existing.ExpiresAt = notification.Data.RevocationDate ?? notification.Data.ExpiresAt ?? existing.ExpiresAt;
+                break;
+
+            default:
+                _logger.LogInformation(
+                    "Ignoring unsupported Apple notification type {NotificationType}",
+                    notification.NotificationType);
+                return;
+        }
+
+        await _subscriptions.UpdateAsync(existing, ct);
     }
 
     private async Task TryRefreshAppleExpiry(UserSubscription existing, string transactionId, CancellationToken ct)
@@ -173,6 +258,9 @@ public class SubscriptionService : ISubscriptionService
             {
                 existing.ExpiresAt = txnInfo.ExpiresDate;
                 existing.Tier = txnInfo.IsRevoked ? SubscriptionTier.Free : SubscriptionTier.Premium;
+                existing.Status = txnInfo.IsRevoked
+                    ? Domain.Enums.SubscriptionStatus.Revoked
+                    : Domain.Enums.SubscriptionStatus.Active;
                 await _subscriptions.UpdateAsync(existing, ct);
             }
         }
@@ -193,12 +281,23 @@ public class SubscriptionService : ISubscriptionService
             {
                 existing.ExpiresAt = subInfo.ExpiryTime;
                 existing.Tier = subInfo.IsCanceled ? SubscriptionTier.Free : SubscriptionTier.Premium;
+                existing.Status = subInfo.IsCanceled
+                    ? Domain.Enums.SubscriptionStatus.Canceled
+                    : Domain.Enums.SubscriptionStatus.Active;
                 await _subscriptions.UpdateAsync(existing, ct);
             }
         }
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Failed to refresh Google expiry for subscription {SubId}", existing.Id);
+        }
+    }
+
+    private static void ApplyNewerExpiry(UserSubscription subscription, DateTime? candidateExpiry)
+    {
+        if (candidateExpiry.HasValue && candidateExpiry > (subscription.ExpiresAt ?? DateTime.MinValue))
+        {
+            subscription.ExpiresAt = candidateExpiry.Value;
         }
     }
 }

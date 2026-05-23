@@ -34,7 +34,7 @@ public class AIEndpointTests : IClassFixture<TestWebAppFactory>
             });
 
         _factory.TransactionServiceMock
-            .Setup(s => s.ListAsync(UserId, 1, 100, null, It.IsAny<CancellationToken>()))
+            .Setup(s => s.ListAsync(UserId, 1, 100, null, null, null, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new PagedResult<Transaction> { Items = new List<Transaction>(), Page = 1, PageSize = 100, TotalCount = 0 });
 
         _factory.AIServiceMock
@@ -179,7 +179,7 @@ public class AIEndpointTests : IClassFixture<TestWebAppFactory>
             .Setup(s => s.ListStatusesByUserAsync(UserId, null, It.IsAny<CancellationToken>()))
             .ReturnsAsync([]);
         _factory.TransactionServiceMock
-            .Setup(s => s.ListAsync(UserId, 1, 100, null, It.IsAny<CancellationToken>()))
+            .Setup(s => s.ListAsync(UserId, 1, 100, null, null, null, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new PagedResult<Transaction> { Items = [], Page = 1, PageSize = 100, TotalCount = 0 });
         _factory.AIServiceMock
             .Setup(s => s.GeneratePrePurchaseResponseAsync(It.IsAny<AIContext>(), It.IsAny<CancellationToken>()))

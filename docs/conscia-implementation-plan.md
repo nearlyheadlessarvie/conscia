@@ -475,7 +475,7 @@ Textract DetectText returns raw lines of text. A small Bedrock call (~200 input 
 |---|---|
 | POST `/api/v1/subscriptions/verify-ios` | Validate App Store receipt, activate premium |
 | POST `/api/v1/subscriptions/verify-android` | Validate Play Store token, activate premium |
-| POST `/api/v1/webhooks/appstore` | App Store Server Notification V2 handler |
+| POST `/api/v1/subscriptions/apple/notifications` | App Store Server Notification V2 handler |
 | POST `/api/v1/webhooks/playstore` | Google Play RTDN handler |
 | GET `/api/v1/subscriptions/status` | Current subscription state |
 

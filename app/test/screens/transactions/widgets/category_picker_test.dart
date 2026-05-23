@@ -195,4 +195,24 @@ void main() {
     expect(glyph.kind, ConsciaGlyphKind.dining);
     expect(glyph.color, const Color(0xFF43A047));
   });
+
+  testWidgets('category picker pills stay comfortably legible', (tester) async {
+    await _pumpPicker(
+      tester,
+      isExpense: true,
+      categories: [
+        _category(id: 'dining', name: 'Dining', type: 'Expense'),
+      ],
+    );
+    await tester.pumpAndSettle();
+
+    final pillSize = tester.getSize(
+      find.ancestor(
+        of: find.text('Dining'),
+        matching: find.byType(AnimatedContainer),
+      ).first,
+    );
+
+    expect(pillSize.height, greaterThanOrEqualTo(40));
+  });
 }

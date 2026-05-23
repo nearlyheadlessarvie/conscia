@@ -48,7 +48,7 @@ public class UserExportEndpointTests : IClassFixture<TestWebAppFactory>
             });
 
         _factory.TransactionServiceMock
-            .Setup(s => s.ListAsync(UserId, 1, 10000, null, It.IsAny<CancellationToken>()))
+            .Setup(s => s.ListAsync(UserId, 1, 10000, null, null, null, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new PagedResult<Transaction>
             {
                 Items =

@@ -17,7 +17,6 @@ import '../../services/budget_service.dart';
 import '../../services/transaction_service.dart';
 import '../../core/utils/currency_formatter.dart';
 import '../../widgets/conscia_confirm_sheet.dart';
-import '../../widgets/conscia_glyph.dart';
 import '../../widgets/editorial_sticky_header.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/feed_card.dart';
@@ -37,7 +36,16 @@ class TransactionListScreen extends ConsumerStatefulWidget {
 }
 
 class _TransactionListScreenState extends ConsumerState<TransactionListScreen> {
-  static const _filterRailHeight = 56.0;
+  static const _filterRailHeight = 108.0;
+  static const _datePresetLabels = <String, _TransactionDatePreset>{
+    'This week': _TransactionDatePreset.thisWeek,
+    'Last week': _TransactionDatePreset.lastWeek,
+    'This month': _TransactionDatePreset.thisMonth,
+    'Last month': _TransactionDatePreset.lastMonth,
+    'This year': _TransactionDatePreset.thisYear,
+    'Specific date': _TransactionDatePreset.specificDate,
+    'Custom range': _TransactionDatePreset.customRange,
+  };
 
   final _scrollController = ScrollController();
   final _filterAnchorKey = GlobalKey();
@@ -140,11 +148,133 @@ class _TransactionListScreenState extends ConsumerState<TransactionListScreen> {
     await ref.read(filteredTransactionListProvider.notifier).refresh();
   }
 
+  Future<void> _openDateFilterMenu() async {
+    final selected = await showModalBottomSheet<String>(
+      context: context,
+      useRootNavigator: true,
+      showDragHandle: true,
+      builder: (context) => SafeArea(
+        top: false,
+        child: ListView(
+          shrinkWrap: true,
+          children: [
+            for (final entry in _datePresetLabels.entries)
+              ListTile(
+                title: Text(entry.key),
+                onTap: () => Navigator.of(context).pop(entry.key),
+              ),
+            ListTile(
+              title: const Text('Clear filter'),
+              onTap: () => Navigator.of(context).pop('clear'),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (!mounted || selected == null) return;
+
+    if (selected == 'clear') {
+      ref.read(transactionDateFilterProvider.notifier).state = null;
+      await ref.read(filteredTransactionListProvider.notifier).refresh();
+      return;
+    }
+
+    final filter = await _resolveDatePreset(_datePresetLabels[selected]!);
+    if (!mounted || filter == null) return;
+
+    ref.read(transactionDateFilterProvider.notifier).state = filter;
+    await ref.read(filteredTransactionListProvider.notifier).refresh();
+  }
+
+  Future<TransactionDateFilter?> _resolveDatePreset(
+    _TransactionDatePreset preset,
+  ) async {
+    final now = DateTime.now();
+    final localToday = DateTime(now.year, now.month, now.day);
+
+    switch (preset) {
+      case _TransactionDatePreset.thisWeek:
+        final start = localToday.subtract(Duration(days: localToday.weekday - 1));
+        return TransactionDateFilter(
+          kind: 'thisWeek',
+          from: start,
+          to: start
+              .add(const Duration(days: 7))
+              .subtract(const Duration(milliseconds: 1)),
+        );
+      case _TransactionDatePreset.lastWeek:
+        final thisWeekStart = localToday.subtract(Duration(days: localToday.weekday - 1));
+        final start = thisWeekStart.subtract(const Duration(days: 7));
+        return TransactionDateFilter(
+          kind: 'lastWeek',
+          from: start,
+          to: thisWeekStart.subtract(const Duration(milliseconds: 1)),
+        );
+      case _TransactionDatePreset.thisMonth:
+        final start = DateTime(localToday.year, localToday.month, 1);
+        return TransactionDateFilter(
+          kind: 'thisMonth',
+          from: start,
+          to: DateTime(localToday.year, localToday.month + 1, 1)
+              .subtract(const Duration(milliseconds: 1)),
+        );
+      case _TransactionDatePreset.lastMonth:
+        final start = DateTime(localToday.year, localToday.month - 1, 1);
+        return TransactionDateFilter(
+          kind: 'lastMonth',
+          from: start,
+          to: DateTime(localToday.year, localToday.month, 1)
+              .subtract(const Duration(milliseconds: 1)),
+        );
+      case _TransactionDatePreset.thisYear:
+        final start = DateTime(localToday.year, 1, 1);
+        return TransactionDateFilter(
+          kind: 'thisYear',
+          from: start,
+          to: DateTime(localToday.year + 1, 1, 1)
+              .subtract(const Duration(milliseconds: 1)),
+        );
+      case _TransactionDatePreset.specificDate:
+        final date = await showDatePicker(
+          context: context,
+          firstDate: DateTime(2020),
+          lastDate: DateTime(2100),
+          initialDate: localToday,
+        );
+        if (date == null) return null;
+        return TransactionDateFilter(
+          kind: 'specificDate',
+          from: DateTime(date.year, date.month, date.day),
+          to: DateTime(date.year, date.month, date.day + 1)
+              .subtract(const Duration(milliseconds: 1)),
+        );
+      case _TransactionDatePreset.customRange:
+        final range = await showDateRangePicker(
+          context: context,
+          firstDate: DateTime(2020),
+          lastDate: DateTime(2100),
+          initialDateRange: DateTimeRange(
+            start: DateTime(localToday.year, localToday.month, 1),
+            end: localToday,
+          ),
+        );
+        if (range == null) return null;
+        return TransactionDateFilter(
+          kind: 'customRange',
+          from: DateTime(range.start.year, range.start.month, range.start.day),
+          to: DateTime(range.end.year, range.end.month, range.end.day + 1)
+              .subtract(const Duration(milliseconds: 1)),
+        );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(filteredTransactionListProvider);
     final budgetState = ref.watch(budgetListProvider);
     final selectedCategory = ref.watch(categoryFilterProvider);
+    final selectedDateFilter = ref.watch(transactionDateFilterProvider);
     final userPreferences = ref.watch(userPreferencesProvider);
     final categories = {
       if (selectedCategory != null) selectedCategory,
@@ -186,13 +316,16 @@ class _TransactionListScreenState extends ConsumerState<TransactionListScreen> {
                   state,
                   budgetState.budgets,
                   selectedCategory,
+                  selectedDateFilter,
+                  categories,
+                  showSkeletonPills,
                   userPreferences,
                 ),
               ),
             ),
-            if (_filterOverlayTop != null)
+            if (isFilterPinned)
               Positioned(
-                top: _filterOverlayTop!,
+                top: filterPinnedTop,
                 left: 0,
                 right: 0,
                 child: _TransactionFilterRailOverlay(
@@ -200,11 +333,13 @@ class _TransactionListScreenState extends ConsumerState<TransactionListScreen> {
                   scrollController: _scrollController,
                   child: _TransactionFilterRailContent(
                     selectedCategory: selectedCategory,
+                    selectedDateFilter: selectedDateFilter,
                     categories: categories,
                     showSkeletonPills: showSkeletonPills,
+                    onDateTap: _openDateFilterMenu,
                     onSelected: (value) {
                       ref.read(categoryFilterProvider.notifier).state =
-                          value == 'All' ? null : value;
+                          selectedCategory == value ? null : value;
                     },
                   ),
                 ),
@@ -239,6 +374,9 @@ class _TransactionListScreenState extends ConsumerState<TransactionListScreen> {
     TransactionListState state,
     List<Budget> budgets,
     String? selectedCategory,
+    TransactionDateFilter? selectedDateFilter,
+    List<String> categories,
+    bool showSkeletonPills,
     ({String currency, String locale}) userPreferences,
   ) {
     if (state.error != null && state.transactions.isEmpty) {
@@ -247,6 +385,14 @@ class _TransactionListScreenState extends ConsumerState<TransactionListScreen> {
           child: _TransactionsEditorialHero(
             transactions: state.transactions,
             selectedCategory: selectedCategory,
+            selectedDateFilter: selectedDateFilter,
+            categories: categories,
+            showSkeletonPills: showSkeletonPills,
+            onDateTap: _openDateFilterMenu,
+            onCategorySelected: (value) {
+              ref.read(categoryFilterProvider.notifier).state =
+                  selectedCategory == value ? null : value;
+            },
             topPadding: MediaQuery.paddingOf(context).top,
             currencyCode: userPreferences.currency,
             locale: userPreferences.locale,
@@ -297,6 +443,14 @@ class _TransactionListScreenState extends ConsumerState<TransactionListScreen> {
         child: _TransactionsEditorialHero(
           transactions: state.transactions,
           selectedCategory: selectedCategory,
+          selectedDateFilter: selectedDateFilter,
+          categories: categories,
+          showSkeletonPills: showSkeletonPills,
+          onDateTap: _openDateFilterMenu,
+          onCategorySelected: (value) {
+            ref.read(categoryFilterProvider.notifier).state =
+                selectedCategory == value ? null : value;
+          },
           topPadding: MediaQuery.paddingOf(context).top,
           currencyCode: userPreferences.currency,
           locale: userPreferences.locale,
@@ -311,7 +465,7 @@ class _TransactionListScreenState extends ConsumerState<TransactionListScreen> {
     return SliverToBoxAdapter(
       child: SizedBox(
         key: _filterAnchorKey,
-        height: _filterRailHeight,
+        height: 1,
       ),
     );
   }
@@ -380,59 +534,68 @@ class _TransactionListScreenState extends ConsumerState<TransactionListScreen> {
 
     final sortedKeys = groups.keys.toList()..sort((a, b) => b.compareTo(a));
     return [
-      for (final key in sortedKeys)
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 0, 20, 18),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                FormLabel(label: _formatDateLabel(groups[key]!.first.date)),
-                const SizedBox(height: 10),
-                EditorialTransactionRowsGroup(
-                  surface: false,
-                  horizontalPadding: 0,
-                  children: [
-                    for (var index = 0; index < groups[key]!.length; index++)
-                      _SwipeableTransactionActionRow(
-                        key: ValueKey(
-                          'transaction-row-${groups[key]![index].id}',
-                        ),
-                        canReflect: groups[key]![index].type != 'income',
-                        canAddBudget:
-                            _canAddBudget(groups[key]![index], budgets),
-                        onEdit: () => TransactionFormSheet.show(
-                          context,
-                          transactionId: groups[key]![index].id,
-                        ),
-                        onReflect: () => context.push(
-                          AppRoutes.transactionDetail(
-                            groups[key]![index].id,
-                            autoReflect: true,
+      for (var groupIndex = 0; groupIndex < sortedKeys.length; groupIndex++) ...[
+        () {
+          final dayTransactions = groups[sortedKeys[groupIndex]]!;
+          return SliverToBoxAdapter(
+            child: Padding(
+              padding: EdgeInsets.fromLTRB(
+                20,
+                groupIndex == 0 ? 10 : 0,
+                20,
+                18,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  FormLabel(label: _formatDateLabel(dayTransactions.first.date)),
+                  const SizedBox(height: 10),
+                  EditorialTransactionRowsGroup(
+                    surface: false,
+                    horizontalPadding: 0,
+                    children: [
+                      for (var index = 0; index < dayTransactions.length; index++)
+                        _SwipeableTransactionActionRow(
+                          key: ValueKey(
+                            'transaction-row-${dayTransactions[index].id}',
+                          ),
+                          canReflect: dayTransactions[index].type != 'income',
+                          canAddBudget:
+                              _canAddBudget(dayTransactions[index], budgets),
+                          onEdit: () => TransactionFormSheet.show(
+                            context,
+                            transactionId: dayTransactions[index].id,
+                          ),
+                          onReflect: () => context.push(
+                            AppRoutes.transactionDetail(
+                              dayTransactions[index].id,
+                              autoReflect: true,
+                            ),
+                          ),
+                          onAddBudget: () => BudgetFormSheet.show(
+                            context,
+                            initialCategory:
+                                _displayCategory(dayTransactions[index]),
+                          ),
+                          onDelete: () =>
+                              _confirmDeleteTransaction(dayTransactions[index]),
+                          child: EditorialTransactionRow(
+                            data: EditorialTransactionRowData.fromTransaction(
+                              dayTransactions[index],
+                              displayCategory:
+                                  _displayCategory(dayTransactions[index]),
+                            ),
+                            locale: locale,
                           ),
                         ),
-                        onAddBudget: () => BudgetFormSheet.show(
-                          context,
-                          initialCategory:
-                              _displayCategory(groups[key]![index]),
-                        ),
-                        onDelete: () =>
-                            _confirmDeleteTransaction(groups[key]![index]),
-                        child: EditorialTransactionRow(
-                          data: EditorialTransactionRowData.fromTransaction(
-                            groups[key]![index],
-                            displayCategory:
-                                _displayCategory(groups[key]![index]),
-                          ),
-                          locale: locale,
-                        ),
-                      ),
-                  ],
-                ),
-              ],
+                    ],
+                  ),
+                ],
+              ),
             ),
-          ),
-        ),
+          );
+        }(),
+      ],
     ];
   }
 
@@ -800,8 +963,10 @@ class _TransactionFilterRailOverlay extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).appColors;
-    final railHeight =
-        pinned ? 43.0 : _TransactionListScreenState._filterRailHeight;
+    final railHeight = pinned ? 106.0 : _TransactionListScreenState._filterRailHeight;
+    final verticalPadding = pinned
+        ? const EdgeInsets.fromLTRB(20, 8, 20, 8)
+        : const EdgeInsets.fromLTRB(20, 8, 20, 6);
 
     return GestureDetector(
       behavior: HitTestBehavior.translucent,
@@ -829,10 +994,7 @@ class _TransactionFilterRailOverlay extends StatelessWidget {
               ),
             ),
           ),
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 8, 20, 4),
-            child: child,
-          ),
+          child: Padding(padding: verticalPadding, child: child),
         ),
       ),
     );
@@ -842,63 +1004,180 @@ class _TransactionFilterRailOverlay extends StatelessWidget {
 class _TransactionFilterRailContent extends StatelessWidget {
   const _TransactionFilterRailContent({
     required this.selectedCategory,
+    required this.selectedDateFilter,
     required this.categories,
     required this.showSkeletonPills,
+    required this.onDateTap,
     required this.onSelected,
   });
 
   final String? selectedCategory;
+  final TransactionDateFilter? selectedDateFilter;
   final List<String> categories;
   final bool showSkeletonPills;
+  final Future<void> Function() onDateTap;
   final ValueChanged<String> onSelected;
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).appColors;
+    final chipOptions = categories.toList(growable: false);
+
     if (!showSkeletonPills) {
-      return SelectionChipGroup(
-        options: ['All', ...categories.take(4)],
-        value: selectedCategory ?? 'All',
-        scrollable: true,
-        avatarBuilder: (option, _) => option == 'All'
-            ? null
-            : CategoryIcons.rawIcon(option, size: 13, type: 'Expense'),
-        onSelected: onSelected,
+      return Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _TransactionDateFilterStrip(
+            selectedDateFilter: selectedDateFilter,
+            onTap: onDateTap,
+          ),
+          const SizedBox(height: 8),
+          Padding(
+            padding: const EdgeInsets.only(top: 2),
+            child: SelectionChipGroup(
+              options: chipOptions,
+              value: selectedCategory,
+              scrollable: true,
+              fadeScrollable: true,
+              avatarBuilder: (option, _) =>
+                  CategoryIcons.rawIcon(option, size: 15, type: 'Expense'),
+              trailingBuilder: (option, selected) => selected
+                  ? AppIcons.icon(
+                      AppIconKey.close,
+                      keyId: ValueKey('selection-chip-clear-$option'),
+                      size: 14,
+                      color: colors.deepNavy,
+                    )
+                  : null,
+              onSelected: onSelected,
+            ),
+          ),
+        ],
       );
     }
 
-    final visibleOption = selectedCategory ?? 'All';
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
-        children: [
-          SelectionChipButton(
-            label: visibleOption,
-            selected: true,
-            avatar: visibleOption == 'All'
-                ? null
-                : CategoryIcons.rawIcon(
-                    visibleOption,
-                    size: 13,
-                    type: 'Expense',
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _TransactionDateFilterStrip(
+          selectedDateFilter: selectedDateFilter,
+          onTap: onDateTap,
+        ),
+        const SizedBox(height: 8),
+        Padding(
+          padding: const EdgeInsets.only(top: 2),
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                if (selectedCategory != null)
+                  SelectionChipButton(
+                    label: selectedCategory!,
+                    selected: true,
+                    avatar: CategoryIcons.rawIcon(
+                      selectedCategory!,
+                      size: 15,
+                      type: 'Expense',
+                    ),
+                    trailing: AppIcons.icon(
+                      AppIconKey.close,
+                      keyId: ValueKey('selection-chip-clear-$selectedCategory'),
+                      size: 14,
+                      color: colors.deepNavy,
+                    ),
+                    onTap: () => onSelected(selectedCategory!),
                   ),
-            onTap: () => onSelected(visibleOption),
-          ),
-          const SizedBox(width: 10),
-          for (var index = 0; index < 4; index++) ...[
-            SkeletonLoader(
-              key: ValueKey('transaction-filter-skeleton-pill-$index'),
-              width: switch (index) {
-                0 => 70,
-                1 => 84,
-                2 => 76,
-                _ => 66,
-              },
-              height: 30,
-              borderRadius: 999,
+                if (selectedCategory != null) const SizedBox(width: 10),
+                for (var index = 0; index < 4; index++) ...[
+                  SkeletonLoader(
+                    key: ValueKey('transaction-filter-skeleton-pill-$index'),
+                    width: switch (index) {
+                      0 => 70,
+                      1 => 84,
+                      2 => 76,
+                      _ => 66,
+                    },
+                    height: 30,
+                    borderRadius: 999,
+                  ),
+                  if (index < 3) const SizedBox(width: 10),
+                ],
+              ],
             ),
-            if (index < 3) const SizedBox(width: 10),
-          ],
-        ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _TransactionDateFilterStrip extends StatelessWidget {
+  const _TransactionDateFilterStrip({
+    required this.selectedDateFilter,
+    required this.onTap,
+  });
+
+  final TransactionDateFilter? selectedDateFilter;
+  final Future<void> Function() onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).appColors;
+    final isActive = selectedDateFilter != null;
+    final presetStyle = Theme.of(context).textTheme.labelMedium?.copyWith(
+          color: colors.deepNavy,
+          fontWeight: FontWeight.w700,
+        );
+    final rangeStyle = Theme.of(context).textTheme.labelMedium?.copyWith(
+          color: colors.ink.withValues(alpha: 0.74),
+          fontWeight: FontWeight.w600,
+        );
+
+    return Tooltip(
+      message: 'Filter dates',
+      child: Material(
+        key: const ValueKey('transaction-date-filter-strip'),
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(18),
+          onTap: onTap,
+          child: Ink(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            decoration: BoxDecoration(
+              color: isActive ? colors.heroTint : colors.surfaceMuted,
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(
+                color: isActive
+                    ? colors.sectionBorder
+                    : colors.border.withValues(alpha: 0.45),
+              ),
+            ),
+            child: Row(
+              children: [
+                AppIcons.icon(
+                  AppIconKey.tune,
+                  color: colors.deepNavy,
+                  size: 16,
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    _dateFilterPresetLabel(selectedDateFilter),
+                    style: presetStyle,
+                  ),
+                ),
+                if (_dateFilterRangeLabel(selectedDateFilter) case final range?)
+                  Text(
+                    range,
+                    key: const ValueKey('transaction-date-filter-range'),
+                    style: rangeStyle,
+                  ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -908,6 +1187,11 @@ class _TransactionsEditorialHero extends StatelessWidget {
   const _TransactionsEditorialHero({
     required this.transactions,
     required this.selectedCategory,
+    required this.selectedDateFilter,
+    required this.categories,
+    required this.showSkeletonPills,
+    required this.onDateTap,
+    required this.onCategorySelected,
     required this.topPadding,
     required this.currencyCode,
     required this.locale,
@@ -915,6 +1199,11 @@ class _TransactionsEditorialHero extends StatelessWidget {
 
   final List<Transaction> transactions;
   final String? selectedCategory;
+  final TransactionDateFilter? selectedDateFilter;
+  final List<String> categories;
+  final bool showSkeletonPills;
+  final Future<void> Function() onDateTap;
+  final ValueChanged<String> onCategorySelected;
   final double topPadding;
   final String currencyCode;
   final String locale;
@@ -935,14 +1224,6 @@ class _TransactionsEditorialHero extends StatelessWidget {
         .where((tx) => tx.type != 'income')
         .fold(0.0, (sum, tx) => sum + _amountInUserCurrency(tx));
     final topCategory = _topExpenseCategory(basis);
-    final repeatCount = basis
-        .where((tx) => tx.type != 'income')
-        .map(_displayCategory)
-        .toSet()
-        .length;
-    final regretCount = basis
-        .where((tx) => tx.regretLevel != null && tx.type != 'income')
-        .length;
 
     return Container(
       width: double.infinity,
@@ -1002,41 +1283,13 @@ class _TransactionsEditorialHero extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 18),
-          Row(
-            children: [
-              Expanded(
-                child: _HeroPill(
-                  glyph: ConsciaGlyph(
-                    kind: ConsciaGlyphKind.trail,
-                    size: 14,
-                    color: colors.deepNavy,
-                  ),
-                  label: '${basis.length} moments',
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: _HeroPill(
-                  glyph: ConsciaGlyph(
-                    kind: ConsciaGlyphKind.signal,
-                    size: 14,
-                    color: colors.deepNavy,
-                  ),
-                  label: '$repeatCount patterns',
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: _HeroPill(
-                  glyph: ConsciaGlyph(
-                    kind: ConsciaGlyphKind.reflect,
-                    size: 14,
-                    color: colors.deepNavy,
-                  ),
-                  label: '$regretCount reflected',
-                ),
-              ),
-            ],
+          _TransactionFilterRailContent(
+            selectedCategory: selectedCategory,
+            selectedDateFilter: selectedDateFilter,
+            categories: categories,
+            showSkeletonPills: showSkeletonPills,
+            onDateTap: onDateTap,
+            onSelected: onCategorySelected,
           ),
         ],
       ),
@@ -1091,40 +1344,51 @@ class _TransactionsEditorialHero extends StatelessWidget {
   }
 }
 
-class _HeroPill extends StatelessWidget {
-  const _HeroPill({required this.glyph, required this.label});
+String _dateFilterPresetLabel(TransactionDateFilter? filter) {
+  if (filter == null) return 'Any time';
 
-  final Widget glyph;
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).appColors;
-    return Container(
-      height: 38,
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.82),
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: colors.border),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          glyph,
-          const SizedBox(width: 6),
-          Flexible(
-            child: Text(
-              label,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: colors.deepNavy,
-                    fontWeight: FontWeight.w800,
-                  ),
-            ),
-          ),
-        ],
-      ),
-    );
+  switch (filter.kind) {
+    case 'thisWeek':
+      return 'This week';
+    case 'lastWeek':
+      return 'Last week';
+    case 'thisMonth':
+      return 'This month';
+    case 'lastMonth':
+      return 'Last month';
+    case 'thisYear':
+      return 'This year';
+    case 'specificDate':
+      return 'Specific date';
+    case 'customRange':
+      return 'Custom';
+    default:
+      return 'Any time';
   }
+}
+
+String? _dateFilterRangeLabel(TransactionDateFilter? filter) {
+  if (filter == null || filter.from == null) return null;
+
+  if (filter.kind == 'specificDate') {
+    return DateFormat.MMMd().format(filter.from!);
+  }
+
+  if (filter.to == null) return null;
+  final from = filter.from!;
+  final to = filter.to!;
+  if (from.year == to.year && from.month == to.month) {
+    return '${DateFormat.MMMd().format(from)}-${to.day}';
+  }
+  return '${DateFormat.MMMd().format(from)}-${DateFormat.MMMd().format(to)}';
+}
+
+enum _TransactionDatePreset {
+  thisWeek,
+  lastWeek,
+  thisMonth,
+  lastMonth,
+  thisYear,
+  specificDate,
+  customRange,
 }

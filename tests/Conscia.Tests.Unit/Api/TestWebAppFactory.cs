@@ -29,6 +29,7 @@ public class TestWebAppFactory : WebApplicationFactory<Program>
     public Mock<ITransactionRepository> TransactionRepoMock { get; } = new();
     public Mock<IRecurringScheduleRepository> RecurringScheduleRepoMock { get; } = new();
     public Mock<ISubscriptionService> SubscriptionServiceMock { get; } = new();
+    public Mock<IAppleServerNotificationVerifier> AppleServerNotificationVerifierMock { get; } = new();
     public Mock<IAIService> AIServiceMock { get; } = new();
     public Mock<IInAppAlertRepository> AlertRepoMock { get; } = new();
     public Mock<IAlertService> AlertServiceMock { get; } = new();
@@ -78,6 +79,7 @@ public class TestWebAppFactory : WebApplicationFactory<Program>
             ReplaceService<ITransactionRepository>(services, TransactionRepoMock.Object);
             ReplaceService<IRecurringScheduleRepository>(services, RecurringScheduleRepoMock.Object);
             ReplaceService<ISubscriptionService>(services, SubscriptionServiceMock.Object);
+            ReplaceService<IAppleServerNotificationVerifier>(services, AppleServerNotificationVerifierMock.Object);
             ReplaceService<IAIService>(services, AIServiceMock.Object);
             ReplaceService<IInAppAlertRepository>(services, AlertRepoMock.Object);
             ReplaceService<IAlertService>(services, AlertServiceMock.Object);

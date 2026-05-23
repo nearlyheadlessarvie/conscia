@@ -14,6 +14,7 @@ import 'package:conscia_app/services/subscription_service.dart';
 import 'package:conscia_app/services/transaction_service.dart';
 import 'package:conscia_app/services/user_service.dart';
 import 'package:conscia_app/widgets/grouped_list_card.dart';
+import 'package:conscia_app/widgets/horizontal_edge_fade.dart';
 import 'package:conscia_app/widgets/skeleton_loader.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
@@ -63,6 +64,8 @@ class _StaticTransactionService extends TransactionService {
   final List<Transaction> transactions;
   String? lastScope;
   String? lastCategory;
+  DateTime? lastFrom;
+  DateTime? lastTo;
   String? deletedId;
 
   @override
@@ -71,9 +74,13 @@ class _StaticTransactionService extends TransactionService {
     int pageSize = 20,
     String? category,
     String? scope,
+    DateTime? from,
+    DateTime? to,
   }) async {
     lastScope = scope;
     lastCategory = category;
+    lastFrom = from;
+    lastTo = to;
     final filtered = transactions.where((t) {
       final matchesScope = scope == null || t.scope == scope;
       final normalizedCategory = t.category.startsWith('Family ')
@@ -81,7 +88,9 @@ class _StaticTransactionService extends TransactionService {
           : t.category;
       final matchesCategory =
           category == null || normalizedCategory == category;
-      return matchesScope && matchesCategory;
+      final matchesDate = (from == null || !t.date.isBefore(from)) &&
+          (to == null || !t.date.isAfter(to));
+      return matchesScope && matchesCategory && matchesDate;
     }).toList();
 
     return PaginatedTransactions(
@@ -254,6 +263,8 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byTooltip('Add transaction'), findsOneWidget);
+    expect(find.byKey(const ValueKey('transaction-date-filter-strip')), findsOneWidget);
+    expect(find.text('Any time'), findsOneWidget);
     expect(find.byType(FloatingActionButton), findsNothing);
 
     await tester.tap(find.byTooltip('Add transaction'));
@@ -305,9 +316,51 @@ void main() {
     expect(find.text('SPENDING TRAIL'), findsOneWidget);
     expect(find.textContaining('Shopping is showing up'), findsOneWidget);
     expect(find.text('Fri · May 8'), findsOneWidget);
+    expect(find.byKey(const ValueKey('transaction-date-filter-strip')), findsOneWidget);
+    expect(find.text('3 moments'), findsNothing);
+    expect(find.text('3 patterns'), findsNothing);
+    expect(find.text('1 reflected'), findsNothing);
     expect(find.byKey(const ValueKey('selection-chip-button-All')),
-        findsOneWidget);
+        findsNothing);
     expect(find.byType(GroupedListCard), findsNothing);
+  });
+
+  testWidgets('transaction hero contains filters in the expanded state', (
+    tester,
+  ) async {
+    await _pumpTransactionList(
+      tester,
+      transactions: _manyTransactions(),
+    );
+
+    final summaryBottom = tester
+        .getBottomLeft(find.textContaining('showing up most lately'))
+        .dy;
+    final stripTop = tester
+        .getTopLeft(find.byKey(const ValueKey('transaction-date-filter-strip')))
+        .dy;
+    final categoryTop = tester
+        .getTopLeft(find.byKey(const ValueKey('selection-chip-button-Bills')))
+        .dy;
+
+    expect(stripTop, greaterThan(summaryBottom));
+    expect(categoryTop, greaterThan(stripTop));
+  });
+
+  testWidgets('first transaction date sits below the hero with breathing room', (
+    tester,
+  ) async {
+    await _pumpTransactionList(
+      tester,
+      transactions: _manyTransactions(),
+    );
+
+    final heroBottom = tester.getBottomLeft(
+      find.byKey(const ValueKey('selection-chip-button-Bills')).first,
+    ).dy;
+    final firstDateTop = tester.getTopLeft(find.textContaining('· ').first).dy;
+
+    expect(firstDateTop - heroBottom, greaterThanOrEqualTo(38));
   });
 
   testWidgets('spending trail aggregates transactions in the user currency', (
@@ -546,12 +599,11 @@ void main() {
       ],
     );
 
-    await tester.tap(find.byKey(const ValueKey('selection-chip-button-All')));
+    await tester.tap(find.byKey(const ValueKey('selection-chip-button-Bills')));
     await tester.pump();
 
     expect(tester.takeException(), isNull);
-    expect(
-        find.byKey(const ValueKey('selection-chip-check-All')), findsNothing);
+    expect(find.byKey(const ValueKey('selection-chip-clear-Bills')), findsOneWidget);
   });
 
   testWidgets('transaction filters stay visible while filtered list refreshes',
@@ -621,8 +673,8 @@ void main() {
       ],
     );
 
-    final allY = tester
-        .getCenter(find.byKey(const ValueKey('selection-chip-button-All')))
+    final stripY = tester
+        .getCenter(find.byKey(const ValueKey('transaction-date-filter-strip')))
         .dy;
     final giftY = tester
         .getCenter(find.byKey(const ValueKey('selection-chip-button-Gift')))
@@ -636,9 +688,9 @@ void main() {
             find.byKey(const ValueKey('selection-chip-button-Subscriptions')))
         .dy;
 
-    expect((allY - giftY).abs(), lessThan(8));
-    expect((allY - groceriesY).abs(), lessThan(8));
-    expect((allY - subscriptionsY).abs(), lessThan(8));
+    expect(giftY, greaterThan(stripY));
+    expect((giftY - groceriesY).abs(), lessThan(8));
+    expect((giftY - subscriptionsY).abs(), lessThan(8));
   });
 
   testWidgets(
@@ -663,10 +715,10 @@ void main() {
         )
         .dy;
     final filterTop = tester
-        .getTopLeft(find.byKey(const ValueKey('selection-chip-button-All')))
+        .getTopLeft(find.byKey(const ValueKey('transaction-date-filter-strip')))
         .dy;
     final filterBottom = tester
-        .getBottomLeft(find.byKey(const ValueKey('selection-chip-button-All')))
+        .getBottomLeft(find.byKey(const ValueKey('transaction-date-filter-strip')))
         .dy;
     final railTop = tester
         .getTopLeft(
@@ -683,7 +735,7 @@ void main() {
     expect(railTop, lessThanOrEqualTo(headerBottom + 1));
     expect(filterTop, greaterThanOrEqualTo(headerBottom + 6));
     expect(filterTop, lessThanOrEqualTo(headerBottom + 10));
-    expect(railBottom, lessThanOrEqualTo(filterBottom + 6));
+    expect(railBottom, lessThanOrEqualTo(filterBottom + 60));
   });
 
   testWidgets('docked transaction filters remain tappable', (
@@ -716,6 +768,187 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(service.lastCategory, 'Dining');
+  });
+
+  testWidgets('pinned transaction rail stays compact without overflow', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await _pumpTransactionList(
+      tester,
+      transactions: _manyTransactions(),
+    );
+
+    await tester.drag(
+      find.byType(CustomScrollView),
+      const Offset(0, -460),
+      warnIfMissed: false,
+    );
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    expect(find.byKey(const ValueKey('transaction-date-filter-strip')), findsOneWidget);
+  });
+
+  testWidgets('selected category chip shows clear affordance and clears on re-tap', (
+    tester,
+  ) async {
+    final service = _StaticTransactionService(_manyTransactions());
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          _authenticatedOverride,
+          transactionServiceProvider.overrideWithValue(service),
+        ],
+        child: const MaterialApp(home: TransactionListScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('selection-chip-button-Dining')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey('selection-chip-clear-Dining')), findsOneWidget);
+    expect(service.lastCategory, 'Dining');
+
+    await tester.tap(find.byKey(const ValueKey('selection-chip-button-Dining')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey('selection-chip-clear-Dining')), findsNothing);
+    expect(service.lastCategory, isNull);
+  });
+
+  testWidgets('transaction category chips stay legible at a larger size', (
+    tester,
+  ) async {
+    await _pumpTransactionList(
+      tester,
+      transactions: _manyTransactions(),
+    );
+
+    final chipSize = tester.getSize(
+      find.byKey(const ValueKey('selection-chip-button-Dining')).first,
+    );
+
+    expect(chipSize.height, greaterThanOrEqualTo(38));
+  });
+
+  testWidgets('transaction category rail uses a fading edge hint', (
+    tester,
+  ) async {
+    await _pumpTransactionList(
+      tester,
+      transactions: _manyTransactions(),
+    );
+
+    expect(find.byType(HorizontalEdgeFade), findsOneWidget);
+  });
+
+  testWidgets('date filter action sends server-side range parameters', (
+    tester,
+  ) async {
+    final service = _StaticTransactionService(_manyTransactions());
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          _authenticatedOverride,
+          transactionServiceProvider.overrideWithValue(service),
+        ],
+        child: const MaterialApp(home: TransactionListScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Any time'), findsOneWidget);
+
+    await tester.tap(find.byKey(const ValueKey('transaction-date-filter-strip')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('This month'));
+    await tester.pumpAndSettle();
+
+    expect(service.lastFrom, isNotNull);
+    expect(service.lastTo, isNotNull);
+    expect(find.text('This month'), findsWidgets);
+    expect(find.byKey(const ValueKey('transaction-date-filter-range')), findsOneWidget);
+  });
+
+  testWidgets('date filter sheet keeps clear action reachable', (
+    tester,
+  ) async {
+    final service = _StaticTransactionService(_manyTransactions());
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          _authenticatedOverride,
+          transactionServiceProvider.overrideWithValue(service),
+        ],
+        child: const MaterialApp(home: TransactionListScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('transaction-date-filter-strip')));
+    await tester.pumpAndSettle();
+
+    await tester.scrollUntilVisible(
+      find.text('Clear filter'),
+      120,
+      scrollable: find.byType(Scrollable).last,
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Clear filter'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Clear filter'), findsNothing);
+    expect(service.lastFrom, isNull);
+    expect(service.lastTo, isNull);
+  });
+
+  testWidgets('transaction filters render all categories present in loaded data', (
+    tester,
+  ) async {
+    await _pumpTransactionList(
+      tester,
+      transactions: [
+        Transaction(
+          id: 'tx-health',
+          amount: 5000,
+          currencyCode: 'PHP',
+          category: 'Health',
+          description: 'Asian Hospital',
+          type: 'expense',
+          date: DateTime(2026, 5, 23),
+        ),
+        Transaction(
+          id: 'tx-travel',
+          amount: 30000,
+          currencyCode: 'PHP',
+          category: 'Travel',
+          description: 'Disneyland',
+          type: 'expense',
+          date: DateTime(2026, 5, 23),
+        ),
+        ..._manyTransactions(),
+      ],
+    );
+
+    await tester.scrollUntilVisible(
+      find.byKey(const ValueKey('selection-chip-button-Health')),
+      120,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey('selection-chip-button-Health')), findsWidgets);
+    expect(find.byKey(const ValueKey('selection-chip-button-Travel')), findsWidgets);
   });
 
   testWidgets(

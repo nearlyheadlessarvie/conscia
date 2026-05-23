@@ -92,6 +92,8 @@ class _StaticTransactionService extends TransactionService {
     int pageSize = 20,
     String? category,
     String? scope,
+    DateTime? from,
+    DateTime? to,
   }) async {
     return const PaginatedTransactions(
       items: [],

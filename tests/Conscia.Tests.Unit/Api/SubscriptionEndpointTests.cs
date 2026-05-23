@@ -1,5 +1,7 @@
 using System.Net;
 using System.Net.Http.Headers;
+using System.Net.Http.Json;
+using Conscia.Application.Interfaces;
 using Conscia.Application.Models;
 using Conscia.Domain.Enums;
 using Moq;
@@ -25,6 +27,7 @@ public class SubscriptionEndpointTests : IClassFixture<TestWebAppFactory>
             .ReturnsAsync(new EffectiveSubscriptionStatus
             {
                 Tier = SubscriptionTier.Premium,
+                Status = SubscriptionStatus.Active,
                 IsActive = true,
                 IsLifetime = true,
                 Source = "lifetime"
@@ -40,5 +43,44 @@ public class SubscriptionEndpointTests : IClassFixture<TestWebAppFactory>
         var body = await response.Content.ReadAsStringAsync();
         Assert.Contains("\"source\":\"lifetime\"", body);
         Assert.Contains("\"isLifetime\":true", body);
+    }
+
+    [Fact]
+    public async Task AppleNotification_MissingSignedPayload_Returns400()
+    {
+        var client = _factory.CreateClient();
+
+        var response = await client.PostAsJsonAsync("/api/subscriptions/apple/notifications", new { });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task AppleNotification_ValidPayload_DelegatesToService()
+    {
+        _factory.AppleServerNotificationVerifierMock
+            .Setup(v => v.VerifyAndDecodeAsync("signed-payload", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new AppleServerNotification(
+                "DID_RENEW",
+                null,
+                DateTime.UtcNow,
+                new AppleServerNotificationData("PROD", "orig-123", DateTime.UtcNow.AddDays(30), null)));
+
+        _factory.SubscriptionServiceMock
+            .Setup(s => s.ProcessAppleServerNotificationAsync(It.IsAny<AppleServerNotification>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        var client = _factory.CreateClient();
+        var response = await client.PostAsJsonAsync("/api/subscriptions/apple/notifications", new
+        {
+            signedPayload = "signed-payload"
+        });
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        _factory.SubscriptionServiceMock.Verify(
+            s => s.ProcessAppleServerNotificationAsync(
+                It.Is<AppleServerNotification>(n => n.NotificationType == "DID_RENEW" && n.Data.OriginalTransactionId == "orig-123"),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 }

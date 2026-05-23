@@ -22,6 +22,7 @@ public static class SubscriptionEndpoints
             return Results.Ok(new
             {
                 tier = status.Tier.ToString(),
+                status = status.Status.ToString(),
                 platform = status.Platform?.ToString(),
                 isActive = status.IsActive,
                 isLifetime = status.IsLifetime,
@@ -29,6 +30,29 @@ public static class SubscriptionEndpoints
                 expiresAt = status.ExpiresAt
             });
         }).WithName("GetSubscriptionStatus");
+
+        group.MapPost("/apple/notifications", async (
+            AppleServerNotificationRequest request,
+            IAppleServerNotificationVerifier verifier,
+            ISubscriptionService svc,
+            HttpContext ctx) =>
+        {
+            if (string.IsNullOrWhiteSpace(request.SignedPayload))
+                return Results.BadRequest(new { error = "signedPayload is required" });
+
+            try
+            {
+                var notification = await verifier.VerifyAndDecodeAsync(request.SignedPayload, ctx.RequestAborted);
+                await svc.ProcessAppleServerNotificationAsync(notification, ctx.RequestAborted);
+                return Results.Ok(new { accepted = true });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return Results.BadRequest(new { error = ex.Message });
+            }
+        })
+        .AllowAnonymous()
+        .WithName("AppleSubscriptionNotifications");
 
         group.MapPost("/verify/ios", async (HttpContext ctx, VerifyReceiptRequest req, ISubscriptionService svc) =>
         {
@@ -83,3 +107,4 @@ public static class SubscriptionEndpoints
 }
 
 public record VerifyReceiptRequest(string Token);
+public record AppleServerNotificationRequest(string? SignedPayload);

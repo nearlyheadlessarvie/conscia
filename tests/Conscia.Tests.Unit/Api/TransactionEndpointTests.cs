@@ -74,7 +74,7 @@ public class TransactionEndpointTests : IClassFixture<TestWebAppFactory>
     public async Task ListTransactions_ReturnsPagedResult()
     {
         _factory.TransactionServiceMock
-            .Setup(s => s.ListAsync(UserId, 1, 20, null, It.IsAny<CancellationToken>()))
+            .Setup(s => s.ListAsync(UserId, 1, 20, null, null, null, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new PagedResult<Transaction>
             {
                 Items = new List<Transaction>
@@ -107,7 +107,7 @@ public class TransactionEndpointTests : IClassFixture<TestWebAppFactory>
     {
         var familySpaceId = Guid.NewGuid();
         _factory.TransactionServiceMock
-            .Setup(s => s.ListFamilyAsync(UserId, 1, 20, null, It.IsAny<CancellationToken>()))
+            .Setup(s => s.ListFamilyAsync(UserId, 1, 20, null, null, null, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new PagedResult<Transaction>
             {
                 Items = new List<Transaction>
@@ -137,6 +137,8 @@ public class TransactionEndpointTests : IClassFixture<TestWebAppFactory>
             UserId,
             1,
             20,
+            null,
+            null,
             null,
             It.IsAny<CancellationToken>()), Times.Once);
 
@@ -318,5 +320,31 @@ public class TransactionEndpointTests : IClassFixture<TestWebAppFactory>
         _factory.TransactionServiceMock.Verify(
             s => s.UpdateAsync(UserId, transactionId, It.IsAny<UpdateTransactionDto>(), It.IsAny<CancellationToken>()),
             Times.Never);
+    }
+
+    [Fact]
+    public async Task ListTransactions_WithDateRange_PassesBoundsToService()
+    {
+        var from = new DateTime(2026, 05, 01, 0, 0, 0, DateTimeKind.Utc);
+        var to = new DateTime(2026, 05, 31, 23, 59, 59, DateTimeKind.Utc);
+
+        _factory.TransactionServiceMock
+            .Setup(s => s.ListAsync(UserId, 1, 20, null, from, to, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PagedResult<Transaction>());
+
+        var response = await _client.GetAsync($"/api/transactions?from={Uri.EscapeDataString(from.ToString("O"))}&to={Uri.EscapeDataString(to.ToString("O"))}");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        _factory.TransactionServiceMock.Verify(
+            s => s.ListAsync(UserId, 1, 20, null, from, to, It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task ListTransactions_WithOnlyOneDateBound_Returns400()
+    {
+        var response = await _client.GetAsync("/api/transactions?from=2026-05-01T00:00:00.0000000Z");
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 }

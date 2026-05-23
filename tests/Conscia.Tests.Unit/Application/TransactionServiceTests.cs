@@ -367,6 +367,21 @@ public class TransactionServiceTests
     }
 
     [Fact]
+    public async Task ListAsync_WithDateRange_UsesRepositoryBounds()
+    {
+        var userId = Guid.NewGuid();
+        var from = new DateTime(2026, 05, 01, 0, 0, 0, DateTimeKind.Utc);
+        var to = new DateTime(2026, 05, 31, 23, 59, 59, DateTimeKind.Utc);
+
+        _repoMock.Setup(r => r.QueryByUserAsync(userId, from, to, null, 10, null, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Array.Empty<Transaction>(), (string?)null));
+
+        await _svc.ListAsync(userId, 1, 10, null, from, to);
+
+        _repoMock.Verify(r => r.QueryByUserAsync(userId, from, to, null, 10, null, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
     public async Task CreateAsync_FetchesExchangeRate_WhenCurrencyDiffersFromBase()
     {
         var userId = Guid.NewGuid();

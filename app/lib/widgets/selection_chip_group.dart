@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../core/constants/app_icons.dart';
 import '../core/theme/app_colors.dart';
+import 'horizontal_edge_fade.dart';
 
 class SelectionChipGroup extends StatelessWidget {
   const SelectionChipGroup({
@@ -12,7 +12,8 @@ class SelectionChipGroup extends StatelessWidget {
     this.labelBuilder,
     this.avatarBuilder,
     this.scrollable = false,
-    this.showTrailingCheck = false,
+    this.trailingBuilder,
+    this.fadeScrollable = false,
   });
 
   final List<String> options;
@@ -20,8 +21,9 @@ class SelectionChipGroup extends StatelessWidget {
   final ValueChanged<String> onSelected;
   final String Function(String option)? labelBuilder;
   final Widget? Function(String option, bool selected)? avatarBuilder;
+  final Widget? Function(String option, bool selected)? trailingBuilder;
   final bool scrollable;
-  final bool showTrailingCheck;
+  final bool fadeScrollable;
 
   @override
   Widget build(BuildContext context) {
@@ -38,24 +40,23 @@ class SelectionChipGroup extends StatelessWidget {
           selected: selected,
           avatar: avatarBuilder?.call(option, selected),
           onTap: () => onSelected(option),
-          trailing: showTrailingCheck && selected
-              ? AppIcons.icon(
-                  AppIconKey.check,
-                  keyId: ValueKey('selection-chip-check-$option'),
-                  size: 16,
-                  color: Theme.of(context).appColors.deepNavy,
-                )
-              : null,
+          trailing: trailingBuilder?.call(option, selected),
         ),
       );
     }).toList();
 
     if (scrollable) {
-      return SingleChildScrollView(
+      final scrollView = SingleChildScrollView(
         scrollDirection: Axis.horizontal,
         child:
             Row(crossAxisAlignment: CrossAxisAlignment.start, children: chips),
       );
+
+      if (fadeScrollable) {
+        return HorizontalEdgeFade(child: scrollView);
+      }
+
+      return scrollView;
     }
 
     return Wrap(
@@ -87,21 +88,21 @@ class SelectionChipButton extends StatelessWidget {
     final colors = Theme.of(context).appColors;
     final textStyle = Theme.of(context).textTheme.labelSmall?.copyWith(
           fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-          fontSize: 12,
+          fontSize: 13,
         );
 
     return Material(
       color: Colors.transparent,
       child: InkWell(
         key: ValueKey('selection-chip-button-$label'),
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(20),
         onTap: onTap,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 160),
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
           decoration: BoxDecoration(
             color: selected ? colors.heroTint : colors.surfaceMuted,
-            borderRadius: BorderRadius.circular(18),
+            borderRadius: BorderRadius.circular(20),
             border: Border.all(
               color: selected ? colors.sectionBorder : Colors.transparent,
             ),

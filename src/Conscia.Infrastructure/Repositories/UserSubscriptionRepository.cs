@@ -120,6 +120,7 @@ public class UserSubscriptionRepository : DynamoRepository, IUserSubscriptionRep
             ["Id"] = new(subscription.Id.ToString()),
             ["UserId"] = new(subscription.UserId.ToString()),
             ["Tier"] = new(subscription.Tier.ToString()),
+            ["Status"] = new(subscription.Status.ToString()),
             ["Platform"] = new(subscription.Platform.ToString())
         };
 
@@ -133,6 +134,9 @@ public class UserSubscriptionRepository : DynamoRepository, IUserSubscriptionRep
         Id = Guid.Parse(item["Id"].S),
         UserId = Guid.Parse(item["UserId"].S),
         Tier = Enum.Parse<SubscriptionTier>(item["Tier"].S),
+        Status = item.TryGetValue("Status", out var status)
+            ? Enum.Parse<SubscriptionStatus>(status.S)
+            : SubscriptionStatus.Unknown,
         Platform = Enum.Parse<Platform>(item["Platform"].S),
         ExpiresAt = GetOptionalDateTime(item, "ExpiresAt"),
         OriginalTransactionId = GetOptionalString(item, "OriginalTransactionId")

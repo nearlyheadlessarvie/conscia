@@ -149,7 +149,7 @@ public static class UserEndpoints
             var user = await svc.GetByIdAsync(userId, ct);
             if (user is null) return Results.NotFound();
 
-            var transactions = await txnSvc.ListAsync(userId, 1, 10000, null, ct);
+            var transactions = await txnSvc.ListAsync(userId, 1, 10000, null, ct: ct);
             var budgets = await budgetSvc.ListStatusesByUserAsync(userId, ct: ct);
             var recurringSchedules = await recurringScheduleSvc.ListAsync(userId, ct);
             var alerts = await alertSvc.ListAlertsAsync(userId, ct);

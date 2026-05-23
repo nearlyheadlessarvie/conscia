@@ -79,7 +79,13 @@ void main() {
             options: const ['employed', 'retired'],
             value: 'retired',
             labelBuilder: (option) => option,
-            showTrailingCheck: true,
+            trailingBuilder: (option, selected) => selected
+                ? SizedBox(
+                    key: ValueKey('selection-chip-check-$option'),
+                    width: 12,
+                    height: 12,
+                  )
+                : null,
             onSelected: (_) {},
           ),
         ),

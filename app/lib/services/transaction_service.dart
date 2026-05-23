@@ -98,6 +98,18 @@ class PaginatedTransactions {
   });
 }
 
+class TransactionDateFilter {
+  final String kind;
+  final DateTime? from;
+  final DateTime? to;
+
+  const TransactionDateFilter({
+    required this.kind,
+    this.from,
+    this.to,
+  });
+}
+
 class CreateTransactionDto {
   final double amount;
   final String currencyCode;
@@ -167,6 +179,8 @@ class TransactionService {
     int pageSize = 20,
     String? category,
     String? scope,
+    DateTime? from,
+    DateTime? to,
   }) async {
     try {
       final response = await _dio.get(
@@ -176,6 +190,8 @@ class TransactionService {
           'pageSize': pageSize,
           if (category != null) 'category': category,
           if (scope != null) 'scope': scope,
+          if (from != null && to != null) 'from': from.toIso8601String(),
+          if (from != null && to != null) 'to': to.toIso8601String(),
         },
       );
       final data = response.data as Map<String, dynamic>;
