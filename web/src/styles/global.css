@@ -268,7 +268,9 @@ body {
 
 .device-shot-image {
   display: block;
-  width: 100%;
+  width: calc(100% + 16px);
+  max-width: none;
+  margin: -8px;
   border-radius: 27px;
 }
 
