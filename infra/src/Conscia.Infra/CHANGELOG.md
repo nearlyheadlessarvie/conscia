@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.1](https://github.com/nearlyheadlessarvie/conscia/compare/infra/v1.2.0...infra/v1.2.1) (2026-05-26)
+
+
+### Bug Fixes
+
+* **infra:** rewrite static page routes at cloudfront ([6b2ef2e](https://github.com/nearlyheadlessarvie/conscia/commit/6b2ef2e656a2d672d7e87fc703e567ba947aca56))
+
 ## [1.2.0](https://github.com/nearlyheadlessarvie/conscia/compare/infra/v1.1.1...infra/v1.2.0) (2026-05-26)
 
 
