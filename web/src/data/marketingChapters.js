@@ -3,8 +3,6 @@ export const heroContent = {
   title: 'Your all-in-one money system.',
   body:
     'Track spending, reflect on purchases, manage budgets, scan receipts, surface patterns, and coordinate shared household planning — all in one calm place.',
-  ctaPrimary: 'Get Conscia',
-  ctaSecondary: 'See how it works',
   supportBullets: [
     'Record every money moment',
     'Reflect before, during, and after',

@@ -35,10 +35,12 @@ test('homepage presents the approved section story blocks', () => {
   assert.match(html, /Money is better together\./);
 });
 
-test('homepage hero includes the approved CTA rhythm', () => {
-  assert.match(html, /Get Conscia/);
-  assert.match(html, /See how it works/);
+test('homepage hero uses store badges as the primary actions', () => {
+  assert.doesNotMatch(html, /Get Conscia/);
+  assert.doesNotMatch(html, /See how it works/);
   assert.match(html, /Record every money moment/i);
+  assert.match(html, /App Store/);
+  assert.match(html, /Google Play/);
 });
 
 test('homepage contains no mascot references', () => {
