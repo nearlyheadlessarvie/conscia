@@ -336,7 +336,6 @@ jobs:
             -destination generic/platform=iOS \
             DEVELOPMENT_TEAM="${{ steps.profile.outputs.team_id }}" \
             CODE_SIGN_STYLE=Manual \
-            PROVISIONING_PROFILE_SPECIFIER="${{ steps.profile.outputs.name }}" \
             PRODUCT_BUNDLE_IDENTIFIER="${IOS_BUNDLE_ID}" \
             CODE_SIGN_IDENTITY="Apple Distribution" \
             archive
