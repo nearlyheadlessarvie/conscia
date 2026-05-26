@@ -13,8 +13,7 @@ public class RecurringProcessorStackProps : StackProps
     public required ITable RecurringSchedulesTable { get; set; }
     public required ITable OutboxEventsTable { get; set; }
     public required ITable InAppAlertsTable { get; set; }
-    public string AssetPath { get; set; } =
-        AssetPathResolver.ResolvePublishedAsset("../publish/recurring-processor", "recurring-processor");
+    public string? AssetPath { get; set; }
 }
 
 public class RecurringProcessorStack : Stack
@@ -24,12 +23,15 @@ public class RecurringProcessorStack : Stack
     public RecurringProcessorStack(Construct scope, string id, RecurringProcessorStackProps props)
         : base(scope, id, props)
     {
+        var assetPath = props.AssetPath
+            ?? AssetPathResolver.ResolvePublishedAsset("../publish/recurring-processor", "recurring-processor");
+
         RecurringProcessorLambda = new Function(this, "RecurringProcessorLambda", new FunctionProps
         {
             FunctionName = "conscia-recurring-processor",
             Runtime = Runtime.DOTNET_8,
             Handler = "Conscia.RecurringProcessor",
-            Code = Code.FromAsset(props.AssetPath),
+            Code = Code.FromAsset(assetPath),
             MemorySize = 512,
             Timeout = Duration.Minutes(2),
             Architecture = Architecture.ARM_64,

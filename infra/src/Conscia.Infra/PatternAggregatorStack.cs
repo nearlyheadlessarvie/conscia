@@ -12,8 +12,7 @@ public class PatternAggregatorStackProps : StackProps
     public required ITable TransactionsTable { get; set; }
     public required ITable WeeklyInsightsTable { get; set; }
     public required ITable PurchasePatternsTable { get; set; }
-    public string AssetPath { get; set; } =
-        AssetPathResolver.ResolvePublishedAsset("../publish/pattern-aggregator", "pattern-aggregator");
+    public string? AssetPath { get; set; }
 }
 
 public class PatternAggregatorStack : Stack
@@ -21,12 +20,15 @@ public class PatternAggregatorStack : Stack
     public PatternAggregatorStack(Construct scope, string id, PatternAggregatorStackProps props)
         : base(scope, id, props)
     {
+        var assetPath = props.AssetPath
+            ?? AssetPathResolver.ResolvePublishedAsset("../publish/pattern-aggregator", "pattern-aggregator");
+
         var lambda = new Function(this, "PatternAggregatorLambda", new FunctionProps
         {
             FunctionName = "conscia-pattern-aggregator",
             Runtime = Runtime.DOTNET_8,
             Handler = "Conscia.PatternAggregator",
-            Code = Code.FromAsset(props.AssetPath),
+            Code = Code.FromAsset(assetPath),
             MemorySize = 512,
             Timeout = Duration.Minutes(5),
             Architecture = Architecture.ARM_64,

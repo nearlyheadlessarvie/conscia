@@ -30,8 +30,7 @@ public class ComputeStackProps : StackProps
     public required ITable ConscienceJourneyTable { get; set; }
     public required IQueue AiQueue { get; set; }
     public required ProductionRuntimeSettings RuntimeSettings { get; set; }
-    public string ApiAssetPath { get; set; } =
-        AssetPathResolver.ResolvePublishedAsset("../publish/api", "api");
+    public string? ApiAssetPath { get; set; }
     public DomainSettings? DomainSettings { get; set; }
 }
 
@@ -43,12 +42,15 @@ public class ComputeStack : Stack
     public ComputeStack(Construct scope, string id, ComputeStackProps props)
         : base(scope, id, props)
     {
+        var apiAssetPath = props.ApiAssetPath
+            ?? AssetPathResolver.ResolvePublishedAsset("../publish/api", "api");
+
         ApiLambda = new Function(this, "ApiLambda", new FunctionProps
         {
             FunctionName = "conscia-api",
             Runtime = Runtime.DOTNET_8,
             Handler = "Conscia.Api",
-            Code = Code.FromAsset(props.ApiAssetPath),
+            Code = Code.FromAsset(apiAssetPath),
             MemorySize = 1024,
             Timeout = Duration.Seconds(30),
             Architecture = Architecture.ARM_64,

@@ -310,9 +310,10 @@ public class StackTests
     }
 
     [Fact]
-    public void AssetPathResolver_FallsBackToPlaceholder_WhenPublishAssetIsMissing()
+    public void AssetPathResolver_Throws_WhenPublishAssetIsMissing_AndFallbackNotEnabled()
     {
         var originalDirectory = Directory.GetCurrentDirectory();
+        var originalFallback = System.Environment.GetEnvironmentVariable("CONSCIA_ALLOW_PLACEHOLDER_ASSETS");
         var tempRoot = Path.Combine(Path.GetTempPath(), "conscia-infra-tests", Guid.NewGuid().ToString("N"));
         var infraRoot = Path.Combine(tempRoot, "infra");
         Directory.CreateDirectory(Path.Combine(infraRoot, "src", "Conscia.Infra"));
@@ -322,6 +323,40 @@ public class StackTests
 
         try
         {
+            System.Environment.SetEnvironmentVariable("CONSCIA_ALLOW_PLACEHOLDER_ASSETS", null);
+            Directory.SetCurrentDirectory(infraRoot);
+
+            var ex = Assert.Throws<InvalidOperationException>(() =>
+                AssetPathResolver.ResolvePublishedAsset("../publish/api", "api"));
+
+            Assert.Contains("Publish release binaries before deploying runtime stacks.", ex.Message);
+        }
+        finally
+        {
+            Directory.SetCurrentDirectory(originalDirectory);
+            System.Environment.SetEnvironmentVariable("CONSCIA_ALLOW_PLACEHOLDER_ASSETS", originalFallback);
+            if (Directory.Exists(tempRoot))
+            {
+                Directory.Delete(tempRoot, true);
+            }
+        }
+    }
+
+    [Fact]
+    public void AssetPathResolver_FallsBackToPlaceholder_WhenPublishAssetIsMissing_AndFallbackEnabled()
+    {
+        var originalDirectory = Directory.GetCurrentDirectory();
+        var originalFallback = System.Environment.GetEnvironmentVariable("CONSCIA_ALLOW_PLACEHOLDER_ASSETS");
+        var tempRoot = Path.Combine(Path.GetTempPath(), "conscia-infra-tests", Guid.NewGuid().ToString("N"));
+        var infraRoot = Path.Combine(tempRoot, "infra");
+        Directory.CreateDirectory(Path.Combine(infraRoot, "src", "Conscia.Infra"));
+        File.WriteAllText(
+            Path.Combine(infraRoot, "src", "Conscia.Infra", "Conscia.Infra.csproj"),
+            "<Project Sdk=\"Microsoft.NET.Sdk\"></Project>");
+
+        try
+        {
+            System.Environment.SetEnvironmentVariable("CONSCIA_ALLOW_PLACEHOLDER_ASSETS", "true");
             Directory.SetCurrentDirectory(infraRoot);
 
             var resolved = AssetPathResolver.ResolvePublishedAsset("../publish/api", "api");
@@ -333,6 +368,7 @@ public class StackTests
         finally
         {
             Directory.SetCurrentDirectory(originalDirectory);
+            System.Environment.SetEnvironmentVariable("CONSCIA_ALLOW_PLACEHOLDER_ASSETS", originalFallback);
             if (Directory.Exists(tempRoot))
             {
                 Directory.Delete(tempRoot, true);
@@ -370,15 +406,66 @@ public class StackTests
         var stack = new EmailStack(app, "TestEmail", new EmailStackProps
         {
             Env = TestEnv,
-            DomainSettings = TestDomainSettings
+            DomainSettings = TestDomainSettings with
+            {
+                IcloudInboxMxRecords =
+                [
+                    new DnsMxRecord(10, "mx01.mail.icloud.com"),
+                    new DnsMxRecord(10, "mx02.mail.icloud.com")
+                ],
+                IcloudInboxTxtRecords =
+                [
+                    new DnsTxtRecord("@", "v=spf1 include:icloud.com ~all"),
+                    new DnsTxtRecord("@", "apple-domain=abc123")
+                ],
+                IcloudInboxCnameRecords =
+                [
+                    new DnsCnameRecord("sig1._domainkey", "sig1.dkim.mail.icloud.com"),
+                    new DnsCnameRecord("sig2._domainkey", "sig2.dkim.mail.icloud.com")
+                ]
+            }
         });
         var template = Template.FromStack(stack);
 
         template.HasResourceProperties("AWS::SES::EmailIdentity", new Dictionary<string, object>
         {
-            ["EmailIdentity"] = "getconscia.com"
+            ["EmailIdentity"] = "getconscia.com",
+            ["MailFromAttributes"] = new Dictionary<string, object>
+            {
+                ["BehaviorOnMxFailure"] = "REJECT_MESSAGE",
+                ["MailFromDomain"] = "feedback.getconscia.com"
+            }
         });
         template.ResourceCountIs("AWS::SES::ConfigurationSet", 1);
+        template.ResourceCountIs("AWS::Route53::RecordSet", 11);
+        template.HasResourceProperties("AWS::Route53::RecordSet", new Dictionary<string, object>
+        {
+            ["Name"] = "feedback.getconscia.com.",
+            ["Type"] = "MX",
+            ["ResourceRecords"] = new object[] { "10 feedback-smtp.us-east-1.amazonses.com" }
+        });
+        template.HasResourceProperties("AWS::Route53::RecordSet", new Dictionary<string, object>
+        {
+            ["Name"] = "feedback.getconscia.com.",
+            ["Type"] = "TXT",
+            ["ResourceRecords"] = new object[] { "\"v=spf1 include:amazonses.com ~all\"" }
+        });
+        template.HasResourceProperties("AWS::Route53::RecordSet", new Dictionary<string, object>
+        {
+            ["Name"] = "getconscia.com.",
+            ["Type"] = "MX",
+            ["ResourceRecords"] = Match.ArrayWith(new object[]
+            {
+                "10 mx01.mail.icloud.com",
+                "10 mx02.mail.icloud.com"
+            })
+        });
+        template.HasResourceProperties("AWS::Route53::RecordSet", new Dictionary<string, object>
+        {
+            ["Name"] = "_dmarc.getconscia.com.",
+            ["Type"] = "TXT",
+            ["ResourceRecords"] = new object[] { "\"v=DMARC1; p=quarantine; adkim=s; aspf=s; pct=100\"" }
+        });
     }
 
     [Fact]

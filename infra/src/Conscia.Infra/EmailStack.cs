@@ -1,4 +1,5 @@
 using Amazon.CDK;
+using Amazon.CDK.AWS.Route53;
 using Amazon.CDK.AWS.SES;
 using Constructs;
 
@@ -26,6 +27,12 @@ public class EmailStack : Stack
             return;
         }
 
+        var hostedZone = HostedZone.FromHostedZoneAttributes(this, "HostedZone", new HostedZoneAttributes
+        {
+            HostedZoneId = props.DomainSettings.HostedZoneId,
+            ZoneName = props.DomainSettings.RootDomainName
+        });
+
         var configurationSet = new CfnConfigurationSet(this, "SesConfigurationSet", new CfnConfigurationSetProps
         {
             Name = "conscia-production"
@@ -45,10 +52,17 @@ public class EmailStack : Stack
             FeedbackAttributes = new CfnEmailIdentity.FeedbackAttributesProperty
             {
                 EmailForwardingEnabled = true
+            },
+            MailFromAttributes = new CfnEmailIdentity.MailFromAttributesProperty
+            {
+                BehaviorOnMxFailure = "REJECT_MESSAGE",
+                MailFromDomain = props.DomainSettings.SesMailFromDomain
             }
         });
 
         identity.AddDependency(configurationSet);
+        PublishSesDnsRecords(props.DomainSettings, hostedZone, identity);
+        PublishInboxDnsRecords(props.DomainSettings, hostedZone);
 
         new CfnOutput(this, "SesIdentityName", new CfnOutputProps
         {
@@ -64,5 +78,160 @@ public class EmailStack : Stack
         {
             Value = configurationSet.Name!
         });
+
+        new CfnOutput(this, "SesMailFromDomain", new CfnOutputProps
+        {
+            Value = props.DomainSettings.SesMailFromDomain
+        });
+
+        new CfnOutput(this, "IcloudInboxStatus", new CfnOutputProps
+        {
+            Value = HasIcloudInboxRecords(props.DomainSettings)
+                ? "iCloud inbox DNS records are configured in Route53."
+                : "iCloud inbox DNS records are not configured. Add ICLOUD_INBOX_*_RECORDS_JSON values from Apple Custom Email Domain setup before switching inbox delivery."
+        });
+    }
+
+    private void PublishSesDnsRecords(
+        DomainSettings domainSettings,
+        IHostedZone hostedZone,
+        CfnEmailIdentity identity)
+    {
+        CreateCnameRecord(hostedZone, "SesDkimRecord1", identity.GetAtt("DkimDNSTokenName1").ToString(), identity.GetAtt("DkimDNSTokenValue1").ToString());
+        CreateCnameRecord(hostedZone, "SesDkimRecord2", identity.GetAtt("DkimDNSTokenName2").ToString(), identity.GetAtt("DkimDNSTokenValue2").ToString());
+        CreateCnameRecord(hostedZone, "SesDkimRecord3", identity.GetAtt("DkimDNSTokenName3").ToString(), identity.GetAtt("DkimDNSTokenValue3").ToString());
+
+        new CfnRecordSet(this, "SesMailFromMxRecord", new CfnRecordSetProps
+        {
+            HostedZoneId = hostedZone.HostedZoneId,
+            Name = $"{domainSettings.SesMailFromDomain}.",
+            Type = "MX",
+            Ttl = "300",
+            ResourceRecords =
+            [
+                $"10 feedback-smtp.{Region}.amazonses.com"
+            ]
+        });
+
+        new CfnRecordSet(this, "SesMailFromSpfRecord", new CfnRecordSetProps
+        {
+            HostedZoneId = hostedZone.HostedZoneId,
+            Name = $"{domainSettings.SesMailFromDomain}.",
+            Type = "TXT",
+            Ttl = "300",
+            ResourceRecords =
+            [
+                "\"v=spf1 include:amazonses.com ~all\""
+            ]
+        });
+
+        new CfnRecordSet(this, "DmarcPolicyRecord", new CfnRecordSetProps
+        {
+            HostedZoneId = hostedZone.HostedZoneId,
+            Name = $"{domainSettings.DmarcRecordName}.{domainSettings.RootDomainName}.",
+            Type = "TXT",
+            Ttl = "300",
+            ResourceRecords =
+            [
+                QuoteTxt(domainSettings.DmarcValue)
+            ]
+        });
+    }
+
+    private void PublishInboxDnsRecords(DomainSettings domainSettings, IHostedZone hostedZone)
+    {
+        if (domainSettings.IcloudInboxMxRecords is { Count: > 0 })
+        {
+            new CfnRecordSet(this, "IcloudInboxMxRecord", new CfnRecordSetProps
+            {
+                HostedZoneId = hostedZone.HostedZoneId,
+                Name = $"{domainSettings.RootDomainName}.",
+                Type = "MX",
+                Ttl = "300",
+                ResourceRecords = domainSettings.IcloudInboxMxRecords
+                    .Select(record => $"{record.Priority} {record.Host}")
+                    .ToArray()
+            });
+        }
+
+        if (domainSettings.IcloudInboxTxtRecords is { Count: > 0 })
+        {
+            for (var index = 0; index < domainSettings.IcloudInboxTxtRecords.Count; index++)
+            {
+                var record = domainSettings.IcloudInboxTxtRecords[index];
+                new CfnRecordSet(this, $"IcloudInboxTxtRecord{index + 1}", new CfnRecordSetProps
+                {
+                    HostedZoneId = hostedZone.HostedZoneId,
+                    Name = ToAbsoluteRecordName(record.Name, domainSettings.RootDomainName),
+                    Type = "TXT",
+                    Ttl = "300",
+                    ResourceRecords =
+                    [
+                        QuoteTxt(record.Value)
+                    ]
+                });
+            }
+        }
+
+        if (domainSettings.IcloudInboxCnameRecords is { Count: > 0 })
+        {
+            for (var index = 0; index < domainSettings.IcloudInboxCnameRecords.Count; index++)
+            {
+                var record = domainSettings.IcloudInboxCnameRecords[index];
+                CreateCnameRecord(
+                    hostedZone,
+                    $"IcloudInboxCnameRecord{index + 1}",
+                    ToAbsoluteRecordName(record.Name, domainSettings.RootDomainName),
+                    record.Value);
+            }
+        }
+    }
+
+    private void CreateCnameRecord(IHostedZone hostedZone, string id, string name, string value)
+    {
+        new CfnRecordSet(this, id, new CfnRecordSetProps
+        {
+            HostedZoneId = hostedZone.HostedZoneId,
+            Name = EnsureTrailingDot(name),
+            Type = "CNAME",
+            Ttl = "300",
+            ResourceRecords =
+            [
+                value
+            ]
+        });
+    }
+
+    private static bool HasIcloudInboxRecords(DomainSettings domainSettings)
+    {
+        return domainSettings.IcloudInboxMxRecords is { Count: > 0 }
+            || domainSettings.IcloudInboxTxtRecords is { Count: > 0 }
+            || domainSettings.IcloudInboxCnameRecords is { Count: > 0 };
+    }
+
+    private static string ToAbsoluteRecordName(string name, string rootDomainName)
+    {
+        if (string.IsNullOrWhiteSpace(name) || name == "@")
+        {
+            return $"{rootDomainName}.";
+        }
+
+        if (name.EndsWith($".{rootDomainName}", StringComparison.OrdinalIgnoreCase))
+        {
+            return EnsureTrailingDot(name);
+        }
+
+        return $"{name}.{rootDomainName}.";
+    }
+
+    private static string EnsureTrailingDot(string value)
+    {
+        return value.EndsWith(".", StringComparison.Ordinal) ? value : $"{value}.";
+    }
+
+    private static string QuoteTxt(string value)
+    {
+        var escaped = value.Replace("\"", "\\\"", StringComparison.Ordinal);
+        return $"\"{escaped}\"";
     }
 }

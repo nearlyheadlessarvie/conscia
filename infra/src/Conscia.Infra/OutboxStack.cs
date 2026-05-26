@@ -16,8 +16,7 @@ public class OutboxStackProps : StackProps
     public required ITable MonthlyCategorySpendsTable { get; set; }
     public required ITable PushDeviceTokensTable { get; set; }
     public required ProductionRuntimeSettings RuntimeSettings { get; set; }
-    public string AssetPath { get; set; } =
-        AssetPathResolver.ResolvePublishedAsset("../publish/outbox", "outbox");
+    public string? AssetPath { get; set; }
     public DomainSettings? DomainSettings { get; set; }
 }
 
@@ -28,12 +27,15 @@ public class OutboxStack : Stack
     public OutboxStack(Construct scope, string id, OutboxStackProps props)
         : base(scope, id, props)
     {
+        var assetPath = props.AssetPath
+            ?? AssetPathResolver.ResolvePublishedAsset("../publish/outbox", "outbox");
+
         OutboxLambda = new Function(this, "OutboxLambda", new FunctionProps
         {
             FunctionName = "conscia-outbox-processor",
             Runtime = Runtime.DOTNET_8,
             Handler = "Conscia.OutboxProcessor",
-            Code = Code.FromAsset(props.AssetPath),
+            Code = Code.FromAsset(assetPath),
             MemorySize = 512,
             Timeout = Duration.Seconds(60),
             Architecture = Architecture.ARM_64,
