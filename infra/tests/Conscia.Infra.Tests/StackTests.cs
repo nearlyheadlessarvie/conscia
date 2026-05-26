@@ -490,7 +490,7 @@ public class StackTests
     }
 
     [Fact]
-    public void ObservabilityStack_CreatesApiAndOutboxLogGroups()
+    public void ObservabilityStack_ManagesLambdaLogRetention()
     {
         var app = new App();
         var helperStack = new Stack(app, "Helper", new StackProps { Env = TestEnv });
@@ -507,7 +507,7 @@ public class StackTests
         });
 
         var template = Template.FromStack(stack);
-        template.ResourceCountIs("AWS::Logs::LogGroup", 3);
+        template.ResourceCountIs("Custom::LogRetention", 3);
     }
 
     private static Template CreateDatabaseTemplate()

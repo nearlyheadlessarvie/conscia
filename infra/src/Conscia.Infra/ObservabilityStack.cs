@@ -24,11 +24,10 @@ public class ObservabilityStack : Stack
 
     private void CreateLogGroup(string id, IFunction lambda)
     {
-        new LogGroup(this, id, new LogGroupProps
+        _ = new LogRetention(this, id, new LogRetentionProps
         {
             LogGroupName = $"/aws/lambda/{lambda.FunctionName}",
-            Retention = RetentionDays.ONE_MONTH,
-            RemovalPolicy = RemovalPolicy.DESTROY
+            Retention = RetentionDays.ONE_MONTH
         });
     }
 }
