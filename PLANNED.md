@@ -44,6 +44,7 @@ This file is the canonical follow-up list for the repo as of 2026-05-26. Everyth
 - Google Play RTDN support remains deferred.
 - Browser/web push is still not wired; current push support is device-token registration plus backend delivery for mobile.
 - Collaborative household planning can go further, but reimbursement/settlement flows are still intentionally out of scope.
+- Migrate the Android app and affected Flutter plugins away from the deprecated Kotlin Gradle Plugin path to Flutter's built-in Kotlin support before a future Flutter upgrade makes the Android build fail.
 
 ### Web and positioning
 
