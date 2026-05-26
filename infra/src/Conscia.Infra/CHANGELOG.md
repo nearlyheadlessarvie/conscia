@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.1.1](https://github.com/nearlyheadlessarvie/conscia/compare/infra/v1.1.0...infra/v1.1.1) (2026-05-26)
+
+
+### Bug Fixes
+
+* **infra:** accept icloud dns json and correct cdk diff ([95aa33d](https://github.com/nearlyheadlessarvie/conscia/commit/95aa33da105409193d89c45a6c91e9af96dbdf9b))
+* **infra:** group route53 txt records by hostname ([aae99f2](https://github.com/nearlyheadlessarvie/conscia/commit/aae99f2a0e058c7c95b72f67bc85b808dd80cdb7))
+* **infra:** move lambda runtime secrets to secrets manager ([601025b](https://github.com/nearlyheadlessarvie/conscia/commit/601025be79b1daf56d81b9acb83f91ae36dea605))
+
 ## [1.1.0](https://github.com/nearlyheadlessarvie/conscia/compare/infra/v1.0.0...infra/v1.1.0) (2026-05-26)
 
 
