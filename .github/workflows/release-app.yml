@@ -338,6 +338,8 @@ jobs:
             CODE_SIGN_STYLE=Manual \
             PRODUCT_BUNDLE_IDENTIFIER="${IOS_BUNDLE_ID}" \
             CODE_SIGN_IDENTITY="Apple Distribution" \
+            PROVISIONING_PROFILE_SPECIFIER="${{ steps.profile.outputs.name }}" \
+            PROVISIONING_PROFILE="${{ steps.profile.outputs.uuid }}" \
             archive
 
       - name: Export signed IPA
