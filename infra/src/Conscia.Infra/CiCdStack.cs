@@ -67,6 +67,23 @@ public class CiCdStack : Stack
 
         deployRole.AddToPolicy(new PolicyStatement(new PolicyStatementProps
         {
+            Actions = new[]
+            {
+                "secretsmanager:CreateSecret",
+                "secretsmanager:DescribeSecret",
+                "secretsmanager:GetSecretValue",
+                "secretsmanager:PutSecretValue",
+                "secretsmanager:TagResource",
+                "secretsmanager:UpdateSecret"
+            },
+            Resources = new[]
+            {
+                $"arn:aws:secretsmanager:{Region}:{Account}:secret:conscia/prod/*"
+            }
+        }));
+
+        deployRole.AddToPolicy(new PolicyStatement(new PolicyStatementProps
+        {
             Actions = new[] { "ssm:GetParameter" },
             Resources = new[] { $"arn:aws:ssm:{Region}:{Account}:parameter/cdk-bootstrap/*" }
         }));
