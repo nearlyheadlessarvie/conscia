@@ -186,6 +186,14 @@ jobs:
           )
           PY
 
+      - name: Configure iOS Google Sign-In metadata
+        working-directory: app
+        run: |
+          dart run tool/configure_google_sign_in_ios.dart \
+            --info-plist ios/Runner/Info.plist \
+            --google-service-info-plist ios/Runner/GoogleService-Info.plist \
+            --server-client-id "${GOOGLE_SERVER_CLIENT_ID}"
+
       - name: Materialize optional firebase_options.dart override
         if: env.FIREBASE_OPTIONS_DART_BASE64 != ''
         shell: bash
