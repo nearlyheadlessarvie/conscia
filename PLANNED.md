@@ -14,7 +14,7 @@ This file is the canonical follow-up list for the repo as of 2026-05-26. Everyth
 
 ### Infra and release hardening
 
-- Replace the obsolete `DnsValidatedCertificate` usage in `infra/src/Conscia.Infra/WebStack.cs` with the modern certificate construct.
+- Replace the obsolete `DnsValidatedCertificate` usage in `infra/src/Conscia.Infra/WebStack.cs` with a proper modern certificate flow that still provisions the CloudFront viewer certificate in `us-east-1`; this likely needs a dedicated certificate stack or cross-region certificate handoff rather than a naive in-stack `Certificate` swap.
 - Add CloudWatch alarms for recurring processor failures, outbox failures, and unusually high duration/error rates.
 - Consider CI assertions around email-stack outputs so missing iCloud JSON values are surfaced earlier when inbox delivery is expected.
 
