@@ -251,21 +251,30 @@ jobs:
         id: profile
         shell: bash
         run: |
-          PROFILE_DIR="$HOME/Library/MobileDevice/Provisioning Profiles"
           PROFILE_PLIST="$RUNNER_TEMP/profile.plist"
           PROFILE_PATH=""
+          PROFILE_DIRS=(
+            "$HOME/Library/Developer/Xcode/UserData/Provisioning Profiles"
+            "$HOME/Library/MobileDevice/Provisioning Profiles"
+          )
 
-          for candidate in "$PROFILE_DIR"/*.mobileprovision; do
-            test -f "$candidate" || continue
-            security cms -D -i "$candidate" > "$PROFILE_PLIST"
-            APP_IDENTIFIER=$(/usr/libexec/PlistBuddy -c 'Print :Entitlements:application-identifier' "$PROFILE_PLIST" 2>/dev/null || true)
-            if [[ "$APP_IDENTIFIER" == *".${IOS_BUNDLE_ID}" ]]; then
-              PROFILE_PATH="$candidate"
-              break
-            fi
+          for profile_dir in "${PROFILE_DIRS[@]}"; do
+            for candidate in "$profile_dir"/*.mobileprovision; do
+              test -f "$candidate" || continue
+              security cms -D -i "$candidate" > "$PROFILE_PLIST"
+              APP_IDENTIFIER=$(/usr/libexec/PlistBuddy -c 'Print :Entitlements:application-identifier' "$PROFILE_PLIST" 2>/dev/null || true)
+              if [[ "$APP_IDENTIFIER" == *".${IOS_BUNDLE_ID}" ]]; then
+                PROFILE_PATH="$candidate"
+                break 2
+              fi
+            done
           done
 
-          test -n "$PROFILE_PATH" || (echo "No provisioning profile found for ${IOS_BUNDLE_ID}" && exit 1)
+          test -n "$PROFILE_PATH" || (
+            echo "No provisioning profile found for ${IOS_BUNDLE_ID}" &&
+            find "$HOME/Library" -path "*/Provisioning Profiles/*.mobileprovision" -maxdepth 6 -print 2>/dev/null &&
+            exit 1
+          )
           security cms -D -i "$PROFILE_PATH" > "$PROFILE_PLIST"
           PROFILE_NAME=$(/usr/libexec/PlistBuddy -c 'Print :Name' "$PROFILE_PLIST")
           TEAM_ID=$(/usr/libexec/PlistBuddy -c 'Print :TeamIdentifier:0' "$PROFILE_PLIST")
