@@ -156,19 +156,22 @@ public class EmailStack : Stack
 
         if (domainSettings.IcloudInboxTxtRecords is { Count: > 0 })
         {
-            for (var index = 0; index < domainSettings.IcloudInboxTxtRecords.Count; index++)
+            var groupedTxtRecords = domainSettings.IcloudInboxTxtRecords
+                .GroupBy(record => ToAbsoluteRecordName(record.Name, domainSettings.RootDomainName))
+                .ToList();
+
+            for (var index = 0; index < groupedTxtRecords.Count; index++)
             {
-                var record = domainSettings.IcloudInboxTxtRecords[index];
+                var group = groupedTxtRecords[index];
                 new CfnRecordSet(this, $"IcloudInboxTxtRecord{index + 1}", new CfnRecordSetProps
                 {
                     HostedZoneId = hostedZone.HostedZoneId,
-                    Name = ToAbsoluteRecordName(record.Name, domainSettings.RootDomainName),
+                    Name = group.Key,
                     Type = "TXT",
                     Ttl = "300",
-                    ResourceRecords =
-                    [
-                        QuoteTxt(record.Value)
-                    ]
+                    ResourceRecords = group
+                        .Select(record => QuoteTxt(record.Value))
+                        .ToArray()
                 });
             }
         }
