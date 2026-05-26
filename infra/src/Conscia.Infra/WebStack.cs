@@ -30,6 +30,32 @@ public class WebStack : Stack
             Encryption = BucketEncryption.S3_MANAGED
         });
 
+        var directoryIndexRewrite = new Function(this, "DirectoryIndexRewrite", new FunctionProps
+        {
+            Code = FunctionCode.FromInline(
+                """
+                function handler(event) {
+                  var request = event.request;
+                  var uri = request.uri;
+
+                  if (uri.startsWith('/.well-known/')) {
+                    return request;
+                  }
+
+                  if (uri.endsWith('/')) {
+                    request.uri = uri + 'index.html';
+                    return request;
+                  }
+
+                  if (!uri.includes('.')) {
+                    request.uri = uri + '/index.html';
+                  }
+
+                  return request;
+                }
+                """)
+        });
+
         var distributionProps = new DistributionProps
         {
             DefaultBehavior = new BehaviorOptions
@@ -38,7 +64,15 @@ public class WebStack : Stack
                 ViewerProtocolPolicy = ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
                 CachePolicy = CachePolicy.CACHING_OPTIMIZED,
                 AllowedMethods = AllowedMethods.ALLOW_GET_HEAD,
-                Compress = true
+                Compress = true,
+                FunctionAssociations =
+                [
+                    new FunctionAssociation
+                    {
+                        EventType = FunctionEventType.VIEWER_REQUEST,
+                        Function = directoryIndexRewrite
+                    }
+                ]
             },
             DefaultRootObject = "index.html",
             ErrorResponses = new[]
