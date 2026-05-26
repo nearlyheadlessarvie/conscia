@@ -437,7 +437,7 @@ public class StackTests
             }
         });
         template.ResourceCountIs("AWS::SES::ConfigurationSet", 1);
-        template.ResourceCountIs("AWS::Route53::RecordSet", 11);
+        template.ResourceCountIs("AWS::Route53::RecordSet", 10);
         template.HasResourceProperties("AWS::Route53::RecordSet", new Dictionary<string, object>
         {
             ["Name"] = "feedback.getconscia.com.",
@@ -465,6 +465,16 @@ public class StackTests
             ["Name"] = "_dmarc.getconscia.com.",
             ["Type"] = "TXT",
             ["ResourceRecords"] = new object[] { "\"v=DMARC1; p=quarantine; adkim=s; aspf=s; pct=100\"" }
+        });
+        template.HasResourceProperties("AWS::Route53::RecordSet", new Dictionary<string, object>
+        {
+            ["Name"] = "getconscia.com.",
+            ["Type"] = "TXT",
+            ["ResourceRecords"] = Match.ArrayWith(new object[]
+            {
+                "\"v=spf1 include:icloud.com ~all\"",
+                "\"apple-domain=abc123\""
+            })
         });
     }
 
