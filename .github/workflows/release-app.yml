@@ -318,6 +318,7 @@ jobs:
         working-directory: app
         run: |
           flutter build ios --release --config-only \
+            --no-codesign \
             --dart-define=API_BASE_URL="${API_BASE_URL}" \
             --dart-define=MOCK_AUTH="${MOCK_AUTH}" \
             --dart-define=PUSH_NOTIFICATIONS_ENABLED="${PUSH_NOTIFICATIONS_ENABLED}" \
