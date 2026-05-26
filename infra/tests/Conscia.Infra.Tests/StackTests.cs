@@ -400,11 +400,21 @@ public class StackTests
 
         template.ResourceCountIs("AWS::S3::Bucket", 1);
         template.ResourceCountIs("AWS::CloudFront::Distribution", 1);
+        template.ResourceCountIs("AWS::CloudFront::Function", 1);
         template.HasResourceProperties("AWS::CloudFront::Distribution", new Dictionary<string, object>
         {
             ["DistributionConfig"] = new Dictionary<string, object>
             {
-                ["Aliases"] = Match.ArrayWith(TestDomainSettings.WebDomainNames)
+                ["Aliases"] = Match.ArrayWith(TestDomainSettings.WebDomainNames),
+                ["DefaultCacheBehavior"] = Match.ObjectLike(new Dictionary<string, object>
+                {
+                    ["FunctionAssociations"] = Match.ArrayWith([
+                        Match.ObjectLike(new Dictionary<string, object>
+                        {
+                            ["EventType"] = "viewer-request"
+                        })
+                    ])
+                })
             }
         });
         template.ResourceCountIs("AWS::Route53::RecordSet", 2);
