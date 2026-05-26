@@ -190,6 +190,11 @@ public class StackTests
                 "invites@getconscia.com",
                 "conscia-production",
                 "conscia://invite"),
+            RuntimeSecretSettings = new RuntimeSecretSettings(
+                "test/auth-app-jwt-signing-key",
+                "test/apple-private-key",
+                "test/google-play-service-account-json",
+                "test/firebase-admin-service-account-json"),
             ApiAssetPath = CreateAssetStub("api")
         });
 
@@ -206,7 +211,8 @@ public class StackTests
                 {
                     ["AWS__DynamoDB__ControlPlaneTable"] = Match.AnyValue(),
                     ["AWS__DynamoDB__TransactionsTable"] = Match.AnyValue(),
-                    ["Firebase__AdminServiceAccountJson"] = "firebase-service-account",
+                    ["Firebase__AdminServiceAccountJsonSecretId"] = "test/firebase-admin-service-account-json",
+                    ["GooglePlay__ServiceAccountJsonSecretId"] = "test/google-play-service-account-json",
                     ["InviteEmail__FromEmail"] = "invites@getconscia.com"
                 })
             }
@@ -242,6 +248,11 @@ public class StackTests
                 "invites@getconscia.com",
                 "conscia-production",
                 "conscia://invite"),
+            RuntimeSecretSettings = new RuntimeSecretSettings(
+                "test/auth-app-jwt-signing-key",
+                "test/apple-private-key",
+                "test/google-play-service-account-json",
+                "test/firebase-admin-service-account-json"),
             AssetPath = CreateAssetStub("outbox"),
             DomainSettings = TestDomainSettings
         });
@@ -262,7 +273,7 @@ public class StackTests
                 ["Variables"] = Match.ObjectLike(new Dictionary<string, object>
                 {
                     ["AWS__DynamoDB__PushDeviceTokensTable"] = Match.AnyValue(),
-                    ["Firebase__AdminServiceAccountJson"] = "firebase-service-account",
+                    ["Firebase__AdminServiceAccountJsonSecretId"] = "test/firebase-admin-service-account-json",
                     ["InviteEmail__FromEmail"] = "invites@getconscia.com"
                 })
             }
