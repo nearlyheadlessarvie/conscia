@@ -27,9 +27,14 @@ jobs:
         id: detect
         shell: pwsh
         run: |
-          git fetch origin "${{ github.event.pull_request.base.ref }}" --depth=1
-          $changedFiles = git diff --name-only "origin/${{ github.event.pull_request.base.ref }}...HEAD"
           $isReleaseTitle = "${{ github.event.pull_request.title }}" -match '^chore\([^)]+\): release'
+          if (-not $isReleaseTitle) {
+            "is_app_release=false" >> $env:GITHUB_OUTPUT
+            exit 0
+          }
+
+          git fetch origin "${{ github.event.pull_request.base.ref }}"
+          $changedFiles = git diff --name-only "origin/${{ github.event.pull_request.base.ref }}...HEAD"
           $touchesAppVersion = $changedFiles -contains 'app/pubspec.yaml'
           if ($isReleaseTitle -and $touchesAppVersion) {
             "is_app_release=true" >> $env:GITHUB_OUTPUT
