@@ -454,17 +454,6 @@ app.MapHealthChecks("/health/live", new HealthCheckOptions
     ResponseWriter = HealthResponseWriter.WriteAsync
 }).AllowAnonymous();
 
-app.MapHealthChecks("/health/ready", new HealthCheckOptions
-{
-    Predicate = check => check.Tags.Contains("ready"),
-    ResponseWriter = HealthResponseWriter.WriteAsync
-}).AllowAnonymous();
-
-app.MapHealthChecks("/health", new HealthCheckOptions
-{
-    ResponseWriter = HealthResponseWriter.WriteAsync
-}).AllowAnonymous();
-
 app.MapGet("/api", () => Results.Ok(new { version = "1.0", service = "Conscia API" }))
     .WithName("ApiRoot")
     .WithTags("System");
