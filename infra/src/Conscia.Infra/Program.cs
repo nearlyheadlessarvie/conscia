@@ -15,6 +15,7 @@ sealed class Program
         };
         var domainSettings = DomainSettings.FromEnvironment();
         var runtimeSettings = ProductionRuntimeSettings.FromEnvironment();
+        var runtimeSecretSettings = RuntimeSecretSettings.FromEnvironment();
 
         var database = new DatabaseStack(app, "Conscia-Database", new StackProps { Env = env });
 
@@ -50,6 +51,7 @@ sealed class Program
             ConscienceJourneyTable = database.ConscienceJourneyTable,
             AiQueue = ai.AiQueue,
             RuntimeSettings = runtimeSettings,
+            RuntimeSecretSettings = runtimeSecretSettings,
             DomainSettings = domainSettings
         });
 
@@ -63,6 +65,7 @@ sealed class Program
             MonthlyCategorySpendsTable = database.MonthlyCategorySpendsTable,
             PushDeviceTokensTable = database.PushDeviceTokensTable,
             RuntimeSettings = runtimeSettings,
+            RuntimeSecretSettings = runtimeSecretSettings,
             DomainSettings = domainSettings
         });
 

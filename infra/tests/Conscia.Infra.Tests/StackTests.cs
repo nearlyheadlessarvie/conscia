@@ -190,6 +190,11 @@ public class StackTests
                 "invites@getconscia.com",
                 "conscia-production",
                 "conscia://invite"),
+            RuntimeSecretSettings = new RuntimeSecretSettings(
+                "test/auth-app-jwt-signing-key",
+                "test/apple-private-key",
+                "test/google-play-service-account-json",
+                "test/firebase-admin-service-account-json"),
             ApiAssetPath = CreateAssetStub("api")
         });
 
@@ -206,7 +211,8 @@ public class StackTests
                 {
                     ["AWS__DynamoDB__ControlPlaneTable"] = Match.AnyValue(),
                     ["AWS__DynamoDB__TransactionsTable"] = Match.AnyValue(),
-                    ["Firebase__AdminServiceAccountJson"] = "firebase-service-account",
+                    ["Firebase__AdminServiceAccountJsonSecretId"] = "test/firebase-admin-service-account-json",
+                    ["GooglePlay__ServiceAccountJsonSecretId"] = "test/google-play-service-account-json",
                     ["InviteEmail__FromEmail"] = "invites@getconscia.com"
                 })
             }
@@ -242,6 +248,11 @@ public class StackTests
                 "invites@getconscia.com",
                 "conscia-production",
                 "conscia://invite"),
+            RuntimeSecretSettings = new RuntimeSecretSettings(
+                "test/auth-app-jwt-signing-key",
+                "test/apple-private-key",
+                "test/google-play-service-account-json",
+                "test/firebase-admin-service-account-json"),
             AssetPath = CreateAssetStub("outbox"),
             DomainSettings = TestDomainSettings
         });
@@ -262,7 +273,7 @@ public class StackTests
                 ["Variables"] = Match.ObjectLike(new Dictionary<string, object>
                 {
                     ["AWS__DynamoDB__PushDeviceTokensTable"] = Match.AnyValue(),
-                    ["Firebase__AdminServiceAccountJson"] = "firebase-service-account",
+                    ["Firebase__AdminServiceAccountJsonSecretId"] = "test/firebase-admin-service-account-json",
                     ["InviteEmail__FromEmail"] = "invites@getconscia.com"
                 })
             }
@@ -389,11 +400,21 @@ public class StackTests
 
         template.ResourceCountIs("AWS::S3::Bucket", 1);
         template.ResourceCountIs("AWS::CloudFront::Distribution", 1);
+        template.ResourceCountIs("AWS::CloudFront::Function", 1);
         template.HasResourceProperties("AWS::CloudFront::Distribution", new Dictionary<string, object>
         {
             ["DistributionConfig"] = new Dictionary<string, object>
             {
-                ["Aliases"] = Match.ArrayWith(TestDomainSettings.WebDomainNames)
+                ["Aliases"] = Match.ArrayWith(TestDomainSettings.WebDomainNames),
+                ["DefaultCacheBehavior"] = Match.ObjectLike(new Dictionary<string, object>
+                {
+                    ["FunctionAssociations"] = Match.ArrayWith([
+                        Match.ObjectLike(new Dictionary<string, object>
+                        {
+                            ["EventType"] = "viewer-request"
+                        })
+                    ])
+                })
             }
         });
         template.ResourceCountIs("AWS::Route53::RecordSet", 2);
@@ -437,7 +458,7 @@ public class StackTests
             }
         });
         template.ResourceCountIs("AWS::SES::ConfigurationSet", 1);
-        template.ResourceCountIs("AWS::Route53::RecordSet", 11);
+        template.ResourceCountIs("AWS::Route53::RecordSet", 10);
         template.HasResourceProperties("AWS::Route53::RecordSet", new Dictionary<string, object>
         {
             ["Name"] = "feedback.getconscia.com.",
@@ -466,10 +487,20 @@ public class StackTests
             ["Type"] = "TXT",
             ["ResourceRecords"] = new object[] { "\"v=DMARC1; p=quarantine; adkim=s; aspf=s; pct=100\"" }
         });
+        template.HasResourceProperties("AWS::Route53::RecordSet", new Dictionary<string, object>
+        {
+            ["Name"] = "getconscia.com.",
+            ["Type"] = "TXT",
+            ["ResourceRecords"] = Match.ArrayWith(new object[]
+            {
+                "\"v=spf1 include:icloud.com ~all\"",
+                "\"apple-domain=abc123\""
+            })
+        });
     }
 
     [Fact]
-    public void ObservabilityStack_CreatesApiAndOutboxLogGroups()
+    public void ObservabilityStack_ManagesLambdaLogRetention()
     {
         var app = new App();
         var helperStack = new Stack(app, "Helper", new StackProps { Env = TestEnv });
@@ -486,7 +517,7 @@ public class StackTests
         });
 
         var template = Template.FromStack(stack);
-        template.ResourceCountIs("AWS::Logs::LogGroup", 3);
+        template.ResourceCountIs("Custom::LogRetention", 3);
     }
 
     private static Template CreateDatabaseTemplate()

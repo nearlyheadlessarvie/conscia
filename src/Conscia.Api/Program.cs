@@ -3,6 +3,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Amazon;
+using Amazon.Lambda.AspNetCoreServer.Hosting;
 using Amazon.BedrockRuntime;
 using Amazon.CognitoIdentityProvider;
 using Amazon.DynamoDBv2;
@@ -27,6 +28,7 @@ using Conscia.Application.Services;
 using Conscia.Application.Triggers;
 using Conscia.Application.Validators;
 using Conscia.Infrastructure.Repositories;
+using Conscia.Infrastructure.Configuration;
 using Conscia.Infrastructure.Services;
 using FluentValidation;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -40,6 +42,14 @@ using Serilog;
 using Serilog.Formatting.Compact;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.Services.AddAWSLambdaHosting(LambdaEventSource.RestApi);
+var runtimeSecretOverrides = await RuntimeSecretConfigurationLoader.LoadAsync(
+    builder.Configuration,
+    builder.Environment.IsProduction());
+if (runtimeSecretOverrides.Count > 0)
+{
+    builder.Configuration.AddInMemoryCollection(runtimeSecretOverrides);
+}
 
 builder.Host.UseSerilog((context, config) =>
 {
@@ -441,17 +451,6 @@ app.UseMiddleware<SubscriptionTierMiddleware>();
 app.MapHealthChecks("/health/live", new HealthCheckOptions
 {
     Predicate = check => check.Tags.Contains("live"),
-    ResponseWriter = HealthResponseWriter.WriteAsync
-}).AllowAnonymous();
-
-app.MapHealthChecks("/health/ready", new HealthCheckOptions
-{
-    Predicate = check => check.Tags.Contains("ready"),
-    ResponseWriter = HealthResponseWriter.WriteAsync
-}).AllowAnonymous();
-
-app.MapHealthChecks("/health", new HealthCheckOptions
-{
     ResponseWriter = HealthResponseWriter.WriteAsync
 }).AllowAnonymous();
 
