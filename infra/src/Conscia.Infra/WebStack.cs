@@ -105,6 +105,8 @@ public class WebStack : Stack
                 ZoneName = props.DomainSettings.RootDomainName
             });
 
+            #pragma warning disable CS0618
+            #pragma warning disable CS0612
             var certificate = new DnsValidatedCertificate(this, "WebsiteCertificate", new DnsValidatedCertificateProps
             {
                 DomainName = props.DomainSettings.RootDomainName,
@@ -113,6 +115,8 @@ public class WebStack : Stack
                 Region = "us-east-1",
                 CleanupRoute53Records = true
             });
+            #pragma warning restore CS0612
+            #pragma warning restore CS0618
 
             distributionProps.Certificate = certificate;
             distributionProps.DomainNames = props.DomainSettings.WebDomainNames;
