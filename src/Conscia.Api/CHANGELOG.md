@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.1.2](https://github.com/nearlyheadlessarvie/conscia/compare/api/v1.1.1...api/v1.1.2) (2026-05-26)
+
+
+### Bug Fixes
+
+* **api:** remove public health readiness endpoints ([26b57bf](https://github.com/nearlyheadlessarvie/conscia/commit/26b57bf8a366c63b9af7b27ae8cce643338a403f))
+* **api:** remove public health readiness endpoints ([fe5fb51](https://github.com/nearlyheadlessarvie/conscia/commit/fe5fb513f7574cb2e2f7b64123c83bc5ea0ec8be))
+
 ## [1.1.1](https://github.com/nearlyheadlessarvie/conscia/compare/api/v1.1.0...api/v1.1.1) (2026-05-26)
 
 
