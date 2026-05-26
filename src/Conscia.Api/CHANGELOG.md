@@ -1,0 +1,24 @@
+# Changelog
+
+## [1.1.0](https://github.com/nearlyheadlessarvie/conscia/compare/api/v1.0.0...api/v1.1.0) (2026-05-26)
+
+
+### Features
+
+* add query versioning and release automation ([4bf0eb5](https://github.com/nearlyheadlessarvie/conscia/commit/4bf0eb5e71de8f77d7a38bbe5c37631aa661e0ad))
+* **api:** add admin entitlement operations ([94785a4](https://github.com/nearlyheadlessarvie/conscia/commit/94785a4108cff457d5b3b75a9e573b2012c02ca1))
+* **api:** add lifetime entitlement status merge ([852501f](https://github.com/nearlyheadlessarvie/conscia/commit/852501f6e15823ce8ba8d2994896416f3fa20603))
+* **api:** add transaction date range filtering ([ff00372](https://github.com/nearlyheadlessarvie/conscia/commit/ff0037247812aa5d8d88df1b6850717251ea6e7f))
+* **api:** handle Apple subscription notifications ([0ea883f](https://github.com/nearlyheadlessarvie/conscia/commit/0ea883f4e90c70a957042110da9a514617558833))
+* harden production runtime and add passkeys ([5e77481](https://github.com/nearlyheadlessarvie/conscia/commit/5e77481fec95f2976da49e157829c726c587cee8))
+* harden production runtime and add passkeys ([d8bf1b6](https://github.com/nearlyheadlessarvie/conscia/commit/d8bf1b60438a24e0b8e496e58cc50202b59d55f5))
+
+
+### Bug Fixes
+
+* **api:** add admin access probe ([e23f84d](https://github.com/nearlyheadlessarvie/conscia/commit/e23f84dbaedb7c81fba3ea40a5dd8c0ac4c0e2fa))
+* **api:** register cognito client in development ([9e046da](https://github.com/nearlyheadlessarvie/conscia/commit/9e046da47caa722167e529fa8aac3d016e220982))
+* **infra:** move lambda runtime secrets to secrets manager ([601025b](https://github.com/nearlyheadlessarvie/conscia/commit/601025be79b1daf56d81b9acb83f91ae36dea605))
+* make smart nearby suggestions device-local ([a613e37](https://github.com/nearlyheadlessarvie/conscia/commit/a613e377b8d1dec9d70ad8ce4958ad0caf67bf74))
+* make smart nearby suggestions device-local ([0827c02](https://github.com/nearlyheadlessarvie/conscia/commit/0827c024aa5d5ce925557532b0f6fc1e1f59b5f8))
+* productionize recurring and receipt scanning ([836268c](https://github.com/nearlyheadlessarvie/conscia/commit/836268c2fa239d7d293222f27158e8adf5e6dc18))
