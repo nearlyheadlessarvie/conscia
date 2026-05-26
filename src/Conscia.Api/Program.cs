@@ -3,6 +3,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Amazon;
+using Amazon.Lambda.AspNetCoreServer.Hosting;
 using Amazon.BedrockRuntime;
 using Amazon.CognitoIdentityProvider;
 using Amazon.DynamoDBv2;
@@ -41,6 +42,7 @@ using Serilog;
 using Serilog.Formatting.Compact;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.Services.AddAWSLambdaHosting(LambdaEventSource.RestApi);
 var runtimeSecretOverrides = await RuntimeSecretConfigurationLoader.LoadAsync(
     builder.Configuration,
     builder.Environment.IsProduction());

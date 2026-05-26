@@ -70,9 +70,10 @@ jobs:
         run: |
           API_URL=$(aws cloudformation describe-stacks --stack-name Conscia-Compute --query "Stacks[0].Outputs[?OutputKey=='ApiEndpoint'].OutputValue" --output text)
           if [ -n "${CONSCIA_API_DOMAIN_NAME:-}" ]; then
-            curl -sf "https://${CONSCIA_API_DOMAIN_NAME}/health" || exit 1
+            curl -sf "https://${CONSCIA_API_DOMAIN_NAME}/health/live" || exit 1
           else
-            curl -sf "${API_URL%/}/health" || exit 1
+            API_ROOT="${API_URL%/api/}"
+            curl -sf "${API_ROOT%/}/health/live" || exit 1
           fi
           echo "Health check passed"
 
