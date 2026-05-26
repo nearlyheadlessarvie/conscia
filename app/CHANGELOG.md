@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.1.2](https://github.com/nearlyheadlessarvie/conscia/compare/app/v1.1.1...app/v1.1.2) (2026-05-26)
+
+
+### Bug Fixes
+
+* **app:** relax ios archive signing inputs ([b1f0d01](https://github.com/nearlyheadlessarvie/conscia/commit/b1f0d01b03b405bfb21cd9b9c75f2a5be08f9a4d))
+* **app:** relax ios archive signing inputs ([03695aa](https://github.com/nearlyheadlessarvie/conscia/commit/03695aa488e1e65b6d4a1e5880cdcf6fe9f542e9))
+
 ## [1.1.1](https://github.com/nearlyheadlessarvie/conscia/compare/app/v1.1.0...app/v1.1.1) (2026-05-26)
 
 
