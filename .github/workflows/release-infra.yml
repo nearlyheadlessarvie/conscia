@@ -69,7 +69,7 @@ jobs:
 
       - name: CDK diff (dry run)
         working-directory: infra
-        run: cdk diff --all
+        run: cdk diff
 
       - name: Deploy all stacks
         working-directory: infra
