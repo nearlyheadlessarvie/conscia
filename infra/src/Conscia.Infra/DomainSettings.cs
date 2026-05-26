@@ -66,7 +66,10 @@ public sealed record DomainSettings(
 
         try
         {
-            return JsonSerializer.Deserialize<List<T>>(value);
+            return JsonSerializer.Deserialize<List<T>>(value, new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            });
         }
         catch (JsonException ex)
         {

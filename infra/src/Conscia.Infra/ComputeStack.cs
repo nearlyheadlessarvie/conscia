@@ -7,6 +7,7 @@ using Amazon.CDK.AWS.IAM;
 using Amazon.CDK.AWS.Lambda;
 using Amazon.CDK.AWS.Route53;
 using Amazon.CDK.AWS.S3;
+using Amazon.CDK.AWS.SecretsManager;
 using Amazon.CDK.AWS.SQS;
 using Constructs;
 
@@ -30,6 +31,7 @@ public class ComputeStackProps : StackProps
     public required ITable ConscienceJourneyTable { get; set; }
     public required IQueue AiQueue { get; set; }
     public required ProductionRuntimeSettings RuntimeSettings { get; set; }
+    public required RuntimeSecretSettings RuntimeSecretSettings { get; set; }
     public string? ApiAssetPath { get; set; }
     public DomainSettings? DomainSettings { get; set; }
 }
@@ -59,16 +61,16 @@ public class ComputeStack : Stack
                 ["ASPNETCORE_ENVIRONMENT"] = "Production",
                 ["Auth__Cognito__UserPoolId"] = props.UserPool.UserPoolId,
                 ["Auth__Cognito__ClientId"] = props.UserPoolClient.UserPoolClientId,
-                ["Auth__AppJwtSigningKey"] = props.RuntimeSettings.AuthAppJwtSigningKey ?? string.Empty,
+                ["Auth__AppJwtSigningKeySecretId"] = props.RuntimeSecretSettings.AuthAppJwtSigningKeySecretName,
                 ["Auth__Google__ClientId"] = props.RuntimeSettings.AuthGoogleClientId ?? string.Empty,
                 ["Auth__Apple__ClientId"] = props.RuntimeSettings.AuthAppleClientId ?? string.Empty,
                 ["Apple__KeyId"] = props.RuntimeSettings.AppleKeyId ?? string.Empty,
                 ["Apple__IssuerId"] = props.RuntimeSettings.AppleIssuerId ?? string.Empty,
                 ["Apple__BundleId"] = props.RuntimeSettings.AppleBundleId ?? string.Empty,
-                ["Apple__PrivateKey"] = props.RuntimeSettings.ApplePrivateKey ?? string.Empty,
+                ["Apple__PrivateKeySecretId"] = props.RuntimeSecretSettings.ApplePrivateKeySecretName,
                 ["GooglePlay__PackageName"] = props.RuntimeSettings.GooglePlayPackageName ?? string.Empty,
-                ["GooglePlay__ServiceAccountJson"] = props.RuntimeSettings.GooglePlayServiceAccountJson ?? string.Empty,
-                ["Firebase__AdminServiceAccountJson"] = props.RuntimeSettings.FirebaseAdminServiceAccountJson ?? string.Empty,
+                ["GooglePlay__ServiceAccountJsonSecretId"] = props.RuntimeSecretSettings.GooglePlayServiceAccountJsonSecretName,
+                ["Firebase__AdminServiceAccountJsonSecretId"] = props.RuntimeSecretSettings.FirebaseAdminServiceAccountJsonSecretName,
                 ["Firebase__ProjectId"] = props.RuntimeSettings.FirebaseProjectId ?? string.Empty,
                 ["InviteEmail__FromEmail"] = props.RuntimeSettings.InviteEmailFromEmail ?? string.Empty,
                 ["InviteEmail__ConfigurationSetName"] = props.RuntimeSettings.InviteEmailConfigurationSetName ?? string.Empty,
@@ -147,6 +149,7 @@ public class ComputeStack : Stack
         props.ConscienceJourneyTable.GrantReadWriteData(ApiLambda);
         props.ReceiptBucket.GrantReadWrite(ApiLambda);
         props.AiQueue.GrantSendMessages(ApiLambda);
+        GrantRuntimeSecretReads(props.RuntimeSecretSettings);
 
         ApiLambda.AddToRolePolicy(new PolicyStatement(new PolicyStatementProps
         {
@@ -162,6 +165,18 @@ public class ComputeStack : Stack
 
         new CfnOutput(this, "ApiUrl", new CfnOutputProps { Value = Api.Url });
         new CfnOutput(this, "ApiEndpoint", new CfnOutputProps { Value = Api.Url });
+    }
+
+    private void GrantRuntimeSecretReads(RuntimeSecretSettings runtimeSecretSettings)
+    {
+        Secret.FromSecretNameV2(this, "AuthAppJwtSigningKeySecret", runtimeSecretSettings.AuthAppJwtSigningKeySecretName)
+            .GrantRead(ApiLambda);
+        Secret.FromSecretNameV2(this, "ApplePrivateKeySecret", runtimeSecretSettings.ApplePrivateKeySecretName)
+            .GrantRead(ApiLambda);
+        Secret.FromSecretNameV2(this, "GooglePlayServiceAccountJsonSecret", runtimeSecretSettings.GooglePlayServiceAccountJsonSecretName)
+            .GrantRead(ApiLambda);
+        Secret.FromSecretNameV2(this, "FirebaseAdminServiceAccountJsonSecret", runtimeSecretSettings.FirebaseAdminServiceAccountJsonSecretName)
+            .GrantRead(ApiLambda);
     }
 
     private void ConfigureCustomApiDomain(DomainSettings domainSettings)
