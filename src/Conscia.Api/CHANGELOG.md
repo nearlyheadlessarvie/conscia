@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.1](https://github.com/nearlyheadlessarvie/conscia/compare/api/v1.1.0...api/v1.1.1) (2026-05-26)
+
+
+### Bug Fixes
+
+* **api:** wire lambda hosting and correct smoke test ([4b273ca](https://github.com/nearlyheadlessarvie/conscia/commit/4b273cad15195ebbc886410f4b8c16984708127f))
+
 ## [1.1.0](https://github.com/nearlyheadlessarvie/conscia/compare/api/v1.0.0...api/v1.1.0) (2026-05-26)
 
 
