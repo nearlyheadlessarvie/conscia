@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.1.1](https://github.com/nearlyheadlessarvie/conscia/compare/app/v1.1.0...app/v1.1.1) (2026-05-26)
+
+
+### Bug Fixes
+
+* **app:** resolve android keystore path from android root ([f2b6dd1](https://github.com/nearlyheadlessarvie/conscia/commit/f2b6dd14cd492526e4b612578b2fb3b4def348c6))
+* **app:** resolve android keystore path from android root ([02779a8](https://github.com/nearlyheadlessarvie/conscia/commit/02779a83bafea0e4e8b8deb5b02ea2e573ef4e2d))
+
 ## [1.1.0](https://github.com/nearlyheadlessarvie/conscia/compare/app/v1.0.0...app/v1.1.0) (2026-05-26)
 
 
