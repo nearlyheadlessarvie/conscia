@@ -11,6 +11,12 @@ public static class AssetPathResolver
             return assetPath;
         }
 
+        if (!AllowPlaceholderAssets())
+        {
+            throw new InvalidOperationException(
+                $"Missing published asset at '{assetPath}'. Publish release binaries before deploying runtime stacks.");
+        }
+
         var placeholderPath = Path.Combine(
             infraRoot,
             "src",
@@ -28,6 +34,14 @@ public static class AssetPathResolver
         }
 
         return placeholderPath;
+    }
+
+    private static bool AllowPlaceholderAssets()
+    {
+        return string.Equals(
+            Environment.GetEnvironmentVariable("CONSCIA_ALLOW_PLACEHOLDER_ASSETS"),
+            "true",
+            StringComparison.OrdinalIgnoreCase);
     }
 
     private static string FindInfraRoot()
