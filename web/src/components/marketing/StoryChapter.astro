@@ -1,5 +1,5 @@
 ---
-import StoryScene from './StoryScene.astro';
+import DeviceShot from './DeviceShot.astro';
 
 const { chapter, reverse = false } = Astro.props;
 ---
@@ -7,21 +7,23 @@ const { chapter, reverse = false } = Astro.props;
 <section id={chapter.id} class="py-24 md:py-32">
   <div class="section-shell">
     <div class:list={['chapter-grid', reverse && 'chapter-grid-reverse']}>
-      <div>
+      <div class="story-copy-shell">
         <span class="section-kicker">{chapter.kicker}</span>
         <h2 class="section-heading mt-6">{chapter.title}</h2>
         <p class="section-copy mt-6">{chapter.body}</p>
-        <ul class="mt-8 space-y-4 text-sm leading-7 text-[var(--ink-muted)]">
+        <ul class="mt-8 grid gap-4 text-sm leading-7 text-[var(--ink-muted)] md:grid-cols-3">
           {chapter.bullets.map((item) => (
             <li class="flex items-start gap-3">
-              <span class="mt-2 h-2.5 w-2.5 rounded-full bg-[var(--gold)]"></span>
+              <span class="mt-2 h-2.5 w-2.5 shrink-0 rounded-full bg-[var(--gold)]"></span>
               <span>{item}</span>
             </li>
           ))}
         </ul>
       </div>
 
-      <StoryScene {...chapter.scene} />
+      <div class="story-shot-shell">
+        <DeviceShot src={chapter.image} alt={chapter.imageAlt} widthClass="w-[210px] md:w-[232px]" />
+      </div>
     </div>
   </div>
 </section>

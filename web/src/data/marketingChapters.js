@@ -1,62 +1,91 @@
 export const heroContent = {
-  kicker: 'Meet the inner voices',
-  title: 'Your financial conscience.',
+  kicker: 'Finance wellness, made simple',
+  title: 'Your all-in-one money system.',
   body:
-    'Conscia turns impulse, reason, and reflection into one product flow so people can catch a spending decision before it disappears into a ledger.',
-  secondaryCta: { label: 'See how it works', href: '#experience' },
-  proof: [
-    'Pre-purchase assistant before a spend',
-    'Fast logging when the moment already happened',
-    'Reflection and habit-building after the emotion settles',
+    'Track spending, reflect on purchases, manage budgets, scan receipts, surface patterns, and coordinate shared household planning — all in one calm place.',
+  supportBullets: [
+    'Record every money moment',
+    'Reflect before, during, and after',
+    'Start on the budgets that matter',
+    'Insights that help you make better choices',
+    'Plan together with the people you trust',
   ],
 };
 
 export const storyChapters = [
   {
-    id: 'catch-the-moment',
-    kicker: 'Catch the moment',
-    title: 'Pre-purchase assistant and fast logging, right when the spend is still live.',
+    id: 'transactions-and-filters',
+    kicker: 'Track every moment',
+    title: 'Transactions that tell your story.',
     body:
-      'Use Conscia before the tap or immediately after. The product helps while the emotional context still exists instead of waiting for a month-end postmortem.',
-    bullets: ['Pre-purchase assistant', 'Fast transaction logging', 'Real-world spending flow'],
-    scene: {
-      mood: 'warm',
-      devilPose: '2_push.png',
-      moneyPose: '4_save.png',
-      uiBadge: 'Logged in seconds',
-      cardTitle: 'Capture the spend',
-    },
+      'Capture every expense in seconds. Filter by time or category, and see your money moments in context.',
+    bullets: [
+      'Smart filters surface what matters fast',
+      'Categories keep your records readable',
+      'Realtime totals reveal your spending trail',
+    ],
+    image: '/images/marketing/section-transactions.png',
+    imageAlt: 'Conscia transactions screen with spending trail, date filter, and category chips',
+    screenId: 'transactions',
   },
   {
-    id: 'reflect-without-shame',
-    kicker: 'Reflect without shame',
-    title: 'Reflection prompts that help users notice patterns without turning the app into a guilt machine.',
+    id: 'reflection-and-purchase-assistant',
+    kicker: 'Reflect with intention',
+    title: 'Pause. Reflect. Decide with clarity.',
     body:
-      'Conscia remembers hesitation, regret, and repeated second-guessing so users can learn from the moment rather than just archive it.',
-    bullets: ['Reflection prompts', 'Regret memory', 'Pattern awareness'],
-    scene: {
-      mood: 'soft',
-      angelPose: '8_shield.png',
-      moneyPose: '1_neutral.png',
-      uiBadge: 'Reflection + memory',
-      cardTitle: 'Notice what happened',
-      cardSide: 'left',
-    },
+      'Conscia guides you before, during, and after you spend so you can turn purchases into something useful instead of automatic.',
+    bullets: [
+      'Pre-purchase prompts bring the decision into focus',
+      'Reflections turn moments into signal',
+      'Gentle follow-through helps the next choice feel clearer',
+    ],
+    image: '/images/marketing/section-assistant.png',
+    imageAlt: 'Conscia purchase assistant screen prompting a buying decision',
+    screenId: 'assistant',
   },
   {
-    id: 'build-better-habits',
-    kicker: 'Build better habits',
-    title: 'Budgets, recurring transactions, and insights that turn one decision into a steadier routine.',
+    id: 'budgets-and-categories',
+    kicker: 'Stay on budget',
+    title: 'Budgets that keep you in control.',
     body:
-      'The payoff is not one perfect choice. It is a better pattern: more context, calmer decisions, and stronger habits over time.',
-    bullets: ['Budgets', 'Insights', 'Recurring transactions'],
-    scene: {
-      mood: 'cool',
-      angelPose: '9_coinshield.png',
-      moneyPose: '4_save.png',
-      uiBadge: 'Reflection + budgets',
-      cardTitle: 'See the payoff',
-      cardSide: 'left',
-    },
+      'Create calm, clear monthly guardrails so you always know what is okay, what is close, and what needs attention.',
+    bullets: [
+      'Monthly caps keep your spending visible',
+      'View progress by category in one glance',
+      'Category flows stay tidy across the full system',
+    ],
+    image: '/images/marketing/section-budgets.png',
+    imageAlt: 'Conscia budgets screen with category budget pacing and donut chart',
+    screenId: 'budgets',
+  },
+  {
+    id: 'insights-and-merchant-signals',
+    kicker: 'Insights that matter',
+    title: 'Patterns > reactions.',
+    body:
+      'Conscia surfaces the patterns behind your spending so you can act with understanding, not impulse.',
+    bullets: [
+      'Regret signals catch what is heating up',
+      'Merchant watchlists reveal where habits repeat',
+      'Actionable views help you respond early on',
+    ],
+    image: '/images/marketing/section-insights.png',
+    imageAlt: 'Conscia insights screen highlighting regret patterns and merchant signals',
+    screenId: 'insights',
+  },
+  {
+    id: 'shared-household-and-settings',
+    kicker: 'Plan together',
+    title: 'Money is better together.',
+    body:
+      'Coordinate, plan, and stay aligned with the people you trust, while keeping your personal layer intact.',
+    bullets: [
+      'Shared households create a calm planning layer',
+      'Roles and boundaries stay clear from the start',
+      'Settings and premium live in the same system',
+    ],
+    image: '/images/marketing/section-household.png',
+    imageAlt: 'Conscia shared household screen with members and invite controls',
+    screenId: 'household',
   },
 ];

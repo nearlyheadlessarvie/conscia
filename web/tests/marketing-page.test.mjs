@@ -1,42 +1,57 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import { dirname, resolve } from 'node:path';
 
-const html = readFileSync(new URL('../dist/index.html', import.meta.url), 'utf8');
+const testDir = dirname(fileURLToPath(import.meta.url));
+const html = readFileSync(resolve(testDir, '../dist/index.html'), 'utf8');
 
-test('homepage uses the mascot-led storytelling headline and store-style platform badges', () => {
-  assert.match(html, /Your financial conscience\./);
-  assert.match(html, /Meet the inner voices/);
-  assert.match(html, /aria-label="Open on iOS"/);
-  assert.match(html, /aria-label="Open on Android"/);
-  assert.match(html, /Download on the/);
-  assert.match(html, /App Store/);
-  assert.match(html, /Get it on/);
-  assert.match(html, /Google Play/);
+test('homepage follows the approved all-in-one money system story', () => {
+  assert.match(html, /Your all-in-one money system\./);
+  assert.match(
+    html,
+    /Track spending, reflect on purchases, manage budgets, scan receipts, surface patterns, and coordinate shared household planning/i,
+  );
+  assert.match(html, /Transactions that tell your story\./);
+  assert.match(html, /Pause\. Reflect\. Decide with clarity\./);
+  assert.match(html, /Budgets that keep you in control\./);
+  assert.match(html, /Money is better together\./);
+});
+
+test('homepage metadata and badges use production icon and store links', () => {
+  assert.match(html, /https:\/\/apps\.apple\.com\/app\/id6771674327/);
+  assert.match(html, /https:\/\/play\.google\.com\/store\/apps\/details\?id=com\.getconscia\.app\.ai/);
+  assert.match(html, /rel="icon" type="image\/svg\+xml" href="\/images\/app_icon\.svg"/);
+  assert.match(html, /rel="icon" type="image\/png" href="\/images\/app_icon\.png"/);
+  assert.match(html, /property="og:image" content="\/images\/app_icon\.png"/);
+});
+
+test('homepage presents the approved section story blocks', () => {
+  assert.match(html, /Transactions that tell your story\./);
+  assert.match(html, /Pause\. Reflect\. Decide with clarity\./);
+  assert.match(html, /Budgets that keep you in control\./);
+  assert.match(html, /Patterns (>|&gt;) reactions\./);
+  assert.match(html, /Money is better together\./);
+});
+
+test('homepage hero uses store badges as the primary actions', () => {
+  assert.doesNotMatch(html, /Get Conscia/);
   assert.doesNotMatch(html, /See how it works/);
-  assert.doesNotMatch(html, /How it works/);
-  assert.doesNotMatch(html, /Start with the free plan/);
-  assert.doesNotMatch(html, /Join the beta/);
+  assert.match(html, /Record every money moment/i);
+  assert.match(html, /App Store/);
+  assert.match(html, /Google Play/);
 });
 
-test('homepage renders the three storytelling chapters in order', () => {
-  assert.match(html, /Catch the moment/);
-  assert.match(html, /Reflect without shame/);
-  assert.match(html, /Build better habits/);
-  assert.match(html, /Pre-purchase assistant/);
-  assert.match(html, /Reflection prompts/);
-  assert.match(html, /Recurring transactions/);
+test('homepage contains no mascot references', () => {
+  assert.doesNotMatch(html, /aria-label="Devil mascot"/);
+  assert.doesNotMatch(html, /aria-label="Angel mascot"/);
+  assert.doesNotMatch(html, /aria-label="Receipt mascot"/);
+  assert.doesNotMatch(html, /mascot-sprite/);
+  assert.doesNotMatch(html, /hero-battle-scene/);
 });
 
-test('homepage removes the dead-end open app section and keeps the lighter footer', () => {
-  assert.doesNotMatch(html, /Why the app first/);
-  assert.doesNotMatch(html, /The app handles onboarding and account creation/);
-  assert.doesNotMatch(html, />Open the app</);
-  assert.match(html, /Send feedback/);
-});
-
-test('hero mascot sprites render at scaled dimensions instead of full atlas cell size', () => {
-  assert.match(html, /aria-label="Devil mascot"/);
-  assert.match(html, /width:275\.88px; height:275\.88px;/);
-  assert.doesNotMatch(html, /aria-label="Devil mascot"[^>]*width:1254px; height:1254px;/);
+test('footer keeps the lockup while the homepage atmosphere shifts app-ward', () => {
+  assert.match(html, /Small choices, big freedom/);
+  assert.doesNotMatch(html, /Meet the inner voices/);
 });

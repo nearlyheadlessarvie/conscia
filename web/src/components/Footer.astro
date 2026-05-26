@@ -1,34 +1,28 @@
 ---
 import LogoWithText from './icons/LogoWithText.astro';
+import PlatformBadge from './icons/PlatformBadge.astro';
 ---
 
-<footer class="pb-10 pt-8">
+<footer class="bg-[#111a46] px-6 py-14">
   <div class="section-shell">
-    <div class="rounded-[36px] border border-[rgba(23,36,79,0.1)] bg-[linear-gradient(145deg,#ffffff_0%,rgba(255,255,255,0.85)_100%)] px-6 py-10 shadow-[var(--shadow-soft)] md:px-10">
-      <div class="flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
-        <div class="max-w-2xl">
-          <span class="section-kicker">Still curious?</span>
-          <h2 class="mt-6 font-heading text-4xl font-extrabold tracking-tight text-[var(--ink-strong)] md:text-5xl">
-            Conscia is for people who want a little more honesty between the urge and the payment.
-          </h2>
-        </div>
+    <div class="flex flex-col gap-10 lg:flex-row lg:items-start lg:justify-between">
 
-        <div class="flex flex-col gap-3 sm:flex-row lg:flex-col">
-          <a href="mailto:feedback@getconscia.com" class="premium-cta-secondary">Send feedback</a>
-        </div>
+      <div>
+        <LogoWithText size="36" textClass="text-white" />
+        <p class="mt-3 text-sm text-white/50">Small choices, big freedom.</p>
+        <nav class="mt-6 flex flex-wrap gap-5 text-sm font-medium text-white/40">
+          <a href="/privacy" class="transition hover:text-white/70">Privacy</a>
+          <a href="/terms" class="transition hover:text-white/70">Terms</a>
+          <a href="/account-deletion" class="transition hover:text-white/70">Account deletion</a>
+          <a href="mailto:hello@getconscia.com" class="transition hover:text-white/70">Contact</a>
+        </nav>
       </div>
 
-      <div class="mt-10 border-t border-[rgba(23,36,79,0.08)] pt-6">
-        <div class="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
-          <LogoWithText size="34" />
-
-          <nav class="flex flex-wrap gap-5 text-sm font-medium text-[var(--ink-muted)]">
-            <a href="/privacy" class="transition hover:text-[var(--navy)]">Privacy</a>
-            <a href="/terms" class="transition hover:text-[var(--navy)]">Terms</a>
-            <a href="mailto:hello@getconscia.com" class="transition hover:text-[var(--navy)]">Contact</a>
-          </nav>
-        </div>
+      <div class="flex flex-col gap-3 sm:flex-row lg:flex-col">
+        <PlatformBadge platform="ios" />
+        <PlatformBadge platform="android" />
       </div>
+
     </div>
   </div>
 </footer>

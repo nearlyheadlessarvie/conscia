@@ -6,7 +6,7 @@ import Logo from '../components/icons/Logo.astro';
 
 <Layout title="Terms of Service — Conscia" description="Terms and conditions for using the Conscia app and services.">
   <!-- Header -->
-  <header class="bg-primary py-6">
+  <header class="bg-[#111a46] py-6">
     <div class="mx-auto flex max-w-7xl items-center gap-3 px-6">
       <a href="/" class="flex items-center gap-3 transition hover:opacity-80">
         <Logo size="32" />
@@ -17,7 +17,7 @@ import Logo from '../components/icons/Logo.astro';
 
   <main class="mx-auto max-w-3xl px-6 py-16">
     <h1 class="font-heading text-4xl font-bold text-primary">Terms of Service</h1>
-    <p class="mt-2 text-sm text-gray-500">Last updated: May 1, 2026</p>
+    <p class="mt-2 text-sm text-gray-500">Last updated: May 23, 2026</p>
 
     <div class="mt-10 space-y-10 text-gray-700 leading-relaxed">
       <!-- 1 -->
@@ -32,7 +32,7 @@ import Logo from '../components/icons/Logo.astro';
         <p class="mt-3">Conscia is a personal finance tracking application with AI-powered spending advice. The App provides:</p>
         <ul class="mt-3 list-disc space-y-2 pl-6">
           <li>Manual transaction and budget tracking</li>
-          <li>AI pre-purchase advice via dual-personality advisors (Impulse and Reason)</li>
+          <li>AI pre-purchase advice to help you pause and decide with more clarity</li>
           <li>Purchase reflection prompts</li>
           <li>Receipt scanning with AI extraction (Premium)</li>
           <li>Multi-currency support (Premium)</li>
@@ -66,12 +66,13 @@ import Logo from '../components/icons/Logo.astro';
               </tr>
             </thead>
             <tbody class="divide-y divide-gray-100">
-              <tr><td class="px-4 py-2">Manual tracking</td><td class="px-4 py-2 text-center">Unlimited</td><td class="px-4 py-2 text-center">Unlimited</td></tr>
-              <tr><td class="px-4 py-2">Budget categories</td><td class="px-4 py-2 text-center">3</td><td class="px-4 py-2 text-center">Unlimited</td></tr>
-              <tr><td class="px-4 py-2">AI assists / month</td><td class="px-4 py-2 text-center">5</td><td class="px-4 py-2 text-center">Unlimited</td></tr>
+              <tr><td class="px-4 py-2">Transaction categories</td><td class="px-4 py-2 text-center">3</td><td class="px-4 py-2 text-center">Unlimited</td></tr>
+              <tr><td class="px-4 py-2">Budgets</td><td class="px-4 py-2 text-center">Unlimited</td><td class="px-4 py-2 text-center">Unlimited</td></tr>
+              <tr><td class="px-4 py-2">Custom categories</td><td class="px-4 py-2 text-center">—</td><td class="px-4 py-2 text-center">Included</td></tr>
+              <tr><td class="px-4 py-2">AI Assists / month</td><td class="px-4 py-2 text-center">5</td><td class="px-4 py-2 text-center">Unlimited</td></tr>
               <tr><td class="px-4 py-2">Reflections / month</td><td class="px-4 py-2 text-center">10</td><td class="px-4 py-2 text-center">Unlimited</td></tr>
-              <tr><td class="px-4 py-2">Currencies</td><td class="px-4 py-2 text-center">1</td><td class="px-4 py-2 text-center">Unlimited</td></tr>
-              <tr><td class="px-4 py-2">Receipt scanning</td><td class="px-4 py-2 text-center">—</td><td class="px-4 py-2 text-center">Included</td></tr>
+              <tr><td class="px-4 py-2">Receipt Scanner</td><td class="px-4 py-2 text-center">—</td><td class="px-4 py-2 text-center">Included</td></tr>
+              <tr><td class="px-4 py-2">Multi-Currency</td><td class="px-4 py-2 text-center">1</td><td class="px-4 py-2 text-center">Unlimited</td></tr>
             </tbody>
           </table>
         </div>
@@ -81,12 +82,11 @@ import Logo from '../components/icons/Logo.astro';
       <section>
         <h2 class="font-heading text-xl font-semibold text-gray-900">5. Subscriptions & Billing</h2>
         <ul class="mt-3 list-disc space-y-2 pl-6">
-          <li>Premium subscriptions are billed monthly at <strong>$4.99/month</strong> through the Apple App Store or Google Play Store.</li>
+          <li>Premium is available as a <strong>one-time Lifetime Access purchase</strong> through the Apple App Store or Google Play Store.</li>
           <li>Payment is charged to your App Store or Play Store account at confirmation of purchase.</li>
-          <li>Subscriptions auto-renew unless cancelled at least 24 hours before the end of the current billing period.</li>
-          <li>You can manage and cancel your subscription through your device's App Store or Play Store settings.</li>
+          <li>Lifetime Access is non-recurring — there are no ongoing subscription charges.</li>
           <li>Refunds are handled by Apple or Google according to their respective refund policies.</li>
-          <li>We reserve the right to change pricing with at least 30 days' notice. Existing subscribers will be notified before any price change takes effect.</li>
+          <li>We reserve the right to change pricing for new purchases with at least 30 days' notice. Existing Lifetime Access holders are not affected by price changes.</li>
         </ul>
       </section>
 
@@ -111,7 +111,7 @@ import Logo from '../components/icons/Logo.astro';
           <li>You retain ownership of all financial data you enter into Conscia.</li>
           <li>You grant us a limited license to process your data solely to provide the service.</li>
           <li>You can export or delete your data at any time from the Settings screen.</li>
-          <li>Upon account deletion, all your data will be permanently removed within 30 days.</li>
+          <li>Upon account deletion, all your data is permanently removed immediately. See our <a href="/account-deletion" class="font-semibold text-primary underline hover:opacity-80">Account Deletion</a> page for full details.</li>
         </ul>
       </section>
 
@@ -119,7 +119,7 @@ import Logo from '../components/icons/Logo.astro';
       <section>
         <h2 class="font-heading text-xl font-semibold text-gray-900">8. AI-Generated Content</h2>
         <ul class="mt-3 list-disc space-y-2 pl-6">
-          <li>AI responses (from Impulse, Reason, and neutral advisors) are generated by machine learning models and may be inaccurate, incomplete, or inappropriate.</li>
+          <li>AI responses are generated by machine learning models and may be inaccurate, incomplete, or inappropriate.</li>
           <li>AI advice does not constitute financial, legal, or professional advice of any kind.</li>
           <li>We do not guarantee the accuracy, reliability, or suitability of any AI-generated content.</li>
           <li>You are solely responsible for any financial decisions you make.</li>

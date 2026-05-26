@@ -1,56 +1,125 @@
 ---
 import LogoWithText from './icons/LogoWithText.astro';
 import PlatformBadge from './icons/PlatformBadge.astro';
-import HeroBattleScene from './marketing/HeroBattleScene.astro';
+import HeroShots from './marketing/HeroShots.astro';
 import { heroContent } from '../data/marketingChapters.js';
+
+const navLinks = [
+  { label: 'How it works', href: '#how-it-works' },
+  { label: 'Transactions', href: '#transactions-and-filters' },
+  { label: 'Reflection', href: '#reflection-and-purchase-assistant' },
+  { label: 'Insights', href: '#insights-and-merchant-signals' },
+  { label: 'Household', href: '#shared-household-and-settings' },
+];
 ---
 
-<section class="relative pt-6">
+<section
+  class="relative pt-6"
+  style="background: radial-gradient(ellipse at 12% 24%, rgba(233,237,255,0.88) 0%, transparent 48%), radial-gradient(ellipse at 88% 24%, rgba(246,203,104,0.3) 0%, transparent 42%), linear-gradient(170deg, #f7f6ff 0%, #fffdf8 46%, #fff7da 100%);"
+>
+  <!-- sticky nav -->
   <div class="hero-nav-shell fixed inset-x-0 top-4 z-50">
     <div class="section-shell">
       <nav class="hero-nav glass-card flex items-center justify-between px-5 py-4 md:px-7">
-        <LogoWithText size="38" />
-
-        <div class="flex items-center gap-3">
-          <PlatformBadge platform="ios" />
-          <PlatformBadge platform="android" />
-        </div>
+        <a href="/" class="transition hover:opacity-80" aria-label="Conscia home">
+          <LogoWithText size="38" />
+        </a>
+        <ul class="hidden items-center gap-6 md:flex">
+          {navLinks.map(({ label, href }) => (
+            <li>
+              <a
+                href={href}
+                data-section={href.slice(1)}
+                class="nav-link relative text-sm font-medium text-[var(--ink-muted)] transition-colors hover:text-[var(--navy)]"
+              >
+                {label}
+                <span class="nav-link-bar absolute -bottom-1 left-0 h-[2px] w-full origin-left scale-x-0 rounded-full bg-[var(--gold)] transition-transform duration-300"></span>
+              </a>
+            </li>
+          ))}
+        </ul>
       </nav>
     </div>
   </div>
 
-  <div class="section-shell relative pb-12 pt-28 md:pb-16 md:pt-32 lg:pb-20 lg:pt-36">
-    <div class="story-grid items-center gap-14">
+  <!-- hero body -->
+  <div class="section-shell relative pb-16 pt-32 md:pb-20 md:pt-40">
+    <div class="grid items-center gap-12 lg:grid-cols-2">
+
+      <!-- copy -->
       <div class="relative z-10">
         <span class="section-kicker">{heroContent.kicker}</span>
 
-        <h1 class="mt-7 max-w-3xl font-heading text-5xl font-extrabold leading-[1.02] tracking-[-0.04em] text-[var(--ink-strong)] md:text-6xl lg:text-7xl">
+        <h1 class="mt-7 max-w-2xl font-heading text-5xl font-extrabold leading-[1.04] tracking-[-0.04em] text-[var(--ink-strong)] md:text-6xl lg:text-7xl">
           {heroContent.title}
         </h1>
 
-        <p class="section-copy mt-7 max-w-2xl">{heroContent.body}</p>
+        <p class="section-copy mt-6 max-w-xl">{heroContent.body}</p>
 
-        <div class="mt-10 grid gap-4 sm:grid-cols-3">
-          {heroContent.proof.map((item) => (
-            <div class="glass-card px-4 py-4 text-sm leading-6 text-[var(--ink-muted)]">
-              {item}
-            </div>
+        <ul class="mt-8 space-y-3 text-sm font-medium text-[var(--ink-muted)]">
+          {heroContent.supportBullets.map((item) => (
+            <li class="flex items-center gap-3">
+              <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-[rgba(246,203,104,0.22)] text-[11px] text-[var(--navy)]">
+                •
+              </span>
+              <span>{item}</span>
+            </li>
           ))}
+        </ul>
+
+        <div class="mt-8 flex flex-wrap gap-3">
+          <PlatformBadge platform="ios" />
+          <PlatformBadge platform="android" />
         </div>
       </div>
 
-      <HeroBattleScene />
+      <!-- screenshots -->
+      <div class="flex justify-center lg:justify-end">
+        <HeroShots />
+      </div>
+
     </div>
   </div>
 </section>
 
 <script>
+  // Scrollspy
+  const links = document.querySelectorAll<HTMLAnchorElement>('a[data-section]');
+  const sectionIds = Array.from(links).map(a => a.dataset.section!);
+
+  const setActive = (id: string | null) => {
+    links.forEach(a => {
+      const bar = a.querySelector('.nav-link-bar') as HTMLElement | null;
+      const isActive = a.dataset.section === id;
+      a.classList.toggle('text-[var(--navy)]', isActive);
+      a.classList.toggle('text-[var(--ink-muted)]', !isActive);
+      if (bar) bar.style.transform = isActive ? 'scaleX(1)' : 'scaleX(0)';
+    });
+  };
+
+  const observer = new IntersectionObserver(
+    entries => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) setActive(entry.target.id);
+      });
+    },
+    { rootMargin: '-30% 0px -60% 0px' }
+  );
+
+  sectionIds.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) observer.observe(el);
+  });
+
+  // Nav dock + top-of-page threshold
   const navShell = document.querySelector('.hero-nav-shell');
   const dockAtTop = () => {
     if (!navShell) return;
     navShell.classList.toggle('is-docked', window.scrollY > 50);
   };
-
   dockAtTop();
-  window.addEventListener('scroll', dockAtTop, { passive: true });
+  window.addEventListener('scroll', () => {
+    dockAtTop();
+    if (window.scrollY < 80) setActive(null);
+  }, { passive: true });
 </script>
