@@ -524,13 +524,7 @@ app.MapGet("/api", () => Results.Ok(new { version = "1.0", service = "Conscia AP
     .WithName("ApiRoot")
     .WithTags("System");
 
-app.MapGet("/version.json", (IConfiguration configuration) => Results.Ok(new
-{
-    service = "conscia-api",
-    version = configuration["Version:Release"] ?? "unknown",
-    commitSha = configuration["Version:CommitSha"] ?? "unknown",
-    deployedAt = configuration["Version:DeployedAt"] ?? "unknown"
-}))
+app.MapGet("/version.json", () => Results.Ok(VersionMetadataResolver.Resolve()))
     .WithName("Version")
     .WithTags("System")
     .AllowAnonymous();
