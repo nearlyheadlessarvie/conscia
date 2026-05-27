@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.3](https://github.com/nearlyheadlessarvie/conscia/compare/infra/v1.2.2...infra/v1.2.3) (2026-05-27)
+
+
+### Bug Fixes
+
+* **infra:** ignore incomplete icloud cname records ([#87](https://github.com/nearlyheadlessarvie/conscia/issues/87)) ([490d74d](https://github.com/nearlyheadlessarvie/conscia/commit/490d74d67491352dc05e7ca1d00ec6c1c862f92b))
+
 ## [1.2.2](https://github.com/nearlyheadlessarvie/conscia/compare/infra/v1.2.1...infra/v1.2.2) (2026-05-27)
 
 
