@@ -135,8 +135,6 @@ jobs:
     runs-on: macos-latest
     env:
       IOS_GOOGLE_SERVICE_INFO_PLIST_BASE64: ${{ secrets.IOS_GOOGLE_SERVICE_INFO_PLIST_BASE64 }}
-      IOS_GOOGLE_CLIENT_ID: ${{ secrets.IOS_GOOGLE_CLIENT_ID }}
-      IOS_GOOGLE_REVERSED_CLIENT_ID: ${{ secrets.IOS_GOOGLE_REVERSED_CLIENT_ID }}
       APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
       APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
       APP_STORE_CONNECT_API_PRIVATE_KEY: ${{ secrets.APP_STORE_CONNECT_API_PRIVATE_KEY }}
@@ -159,8 +157,6 @@ jobs:
           test -n "${API_BASE_URL}" || (echo "Missing API_BASE_URL variable" && exit 1)
           test -n "${GOOGLE_SERVER_CLIENT_ID}" || (echo "Missing GOOGLE_SERVER_CLIENT_ID secret" && exit 1)
           test -n "${IOS_GOOGLE_SERVICE_INFO_PLIST_BASE64}" || (echo "Missing IOS_GOOGLE_SERVICE_INFO_PLIST_BASE64 secret" && exit 1)
-          test -n "${IOS_GOOGLE_CLIENT_ID}" || (echo "Missing IOS_GOOGLE_CLIENT_ID secret" && exit 1)
-          test -n "${IOS_GOOGLE_REVERSED_CLIENT_ID}" || (echo "Missing IOS_GOOGLE_REVERSED_CLIENT_ID secret" && exit 1)
           test -n "${APP_STORE_CONNECT_API_KEY_ID}" || (echo "Missing APP_STORE_CONNECT_API_KEY_ID secret" && exit 1)
           test -n "${APP_STORE_CONNECT_ISSUER_ID}" || (echo "Missing APP_STORE_CONNECT_ISSUER_ID secret" && exit 1)
           test -n "${APP_STORE_CONNECT_API_PRIVATE_KEY}" || (echo "Missing APP_STORE_CONNECT_API_PRIVATE_KEY secret" && exit 1)
@@ -190,13 +186,26 @@ jobs:
           )
           PY
 
+      - name: Derive iOS Google Sign-In metadata
+        id: ios_google
+        shell: bash
+        run: |
+          CLIENT_ID=$(/usr/libexec/PlistBuddy -c 'Print :CLIENT_ID' app/ios/Runner/GoogleService-Info.plist 2>/dev/null || true)
+          REVERSED_CLIENT_ID=$(/usr/libexec/PlistBuddy -c 'Print :REVERSED_CLIENT_ID' app/ios/Runner/GoogleService-Info.plist 2>/dev/null || true)
+
+          test -n "$CLIENT_ID" || (echo "Missing CLIENT_ID in ios/Runner/GoogleService-Info.plist" && exit 1)
+          test -n "$REVERSED_CLIENT_ID" || (echo "Missing REVERSED_CLIENT_ID in ios/Runner/GoogleService-Info.plist" && exit 1)
+
+          echo "client_id=$CLIENT_ID" >> "$GITHUB_OUTPUT"
+          echo "reversed_client_id=$REVERSED_CLIENT_ID" >> "$GITHUB_OUTPUT"
+
       - name: Configure iOS Google Sign-In metadata
         working-directory: app
         run: |
           dart run tool/configure_google_sign_in_ios.dart \
             --info-plist ios/Runner/Info.plist \
-            --client-id "${IOS_GOOGLE_CLIENT_ID}" \
-            --reversed-client-id "${IOS_GOOGLE_REVERSED_CLIENT_ID}" \
+            --client-id "${{ steps.ios_google.outputs.client_id }}" \
+            --reversed-client-id "${{ steps.ios_google.outputs.reversed_client_id }}" \
             --server-client-id "${GOOGLE_SERVER_CLIENT_ID}"
 
       - name: Materialize optional firebase_options.dart override
