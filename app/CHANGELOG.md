@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.1.4](https://github.com/nearlyheadlessarvie/conscia/compare/app/v1.1.3...app/v1.1.4) (2026-05-27)
+
+
+### Bug Fixes
+
+* **api:** correlate app errors with backend failures ([34066bb](https://github.com/nearlyheadlessarvie/conscia/commit/34066bb7124da8296e12b1504a44bdf450463e1e))
+* **api:** correlate app errors with backend failures ([6125e77](https://github.com/nearlyheadlessarvie/conscia/commit/6125e77095ac7f05371b9a4b25c87ed3065827a8))
+* **app:** clarify apple and passkey auth failures ([b40e41f](https://github.com/nearlyheadlessarvie/conscia/commit/b40e41f97ced94a6abd4f7148ceda99eb8f5a392))
+
 ## [1.1.3](https://github.com/nearlyheadlessarvie/conscia/compare/app/v1.1.2...app/v1.1.3) (2026-05-27)
 
 
