@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.6](https://github.com/nearlyheadlessarvie/conscia/compare/infra/v1.2.5...infra/v1.2.6) (2026-05-27)
+
+
+### Bug Fixes
+
+* clarify Cognito passkey availability ([#108](https://github.com/nearlyheadlessarvie/conscia/issues/108)) ([a5f5aaa](https://github.com/nearlyheadlessarvie/conscia/commit/a5f5aaa896f916c0e954c99b82d2f38fc0f7a6e2))
+
 ## [1.2.5](https://github.com/nearlyheadlessarvie/conscia/compare/infra/v1.2.4...infra/v1.2.5) (2026-05-27)
 
 
