@@ -245,6 +245,14 @@ jobs:
         run: |
           gem install fastlane --no-document
 
+      - name: Select Xcode 26
+        shell: bash
+        run: |
+          XCODE_APP=$(find /Applications -maxdepth 1 -type d -name 'Xcode_26*.app' | sort -V | tail -n 1)
+          test -n "$XCODE_APP" || (echo "No Xcode 26 installation found on runner" && exit 1)
+          sudo xcode-select -s "$XCODE_APP/Contents/Developer"
+          xcodebuild -version
+
       - name: Run tests
         working-directory: app
         run: flutter test
