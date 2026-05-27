@@ -57,6 +57,16 @@ jobs:
           role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
           aws-region: ${{ vars.AWS_REGION || 'ap-southeast-1' }}
 
+      - name: Prepare release metadata
+        run: |
+          if [[ "${GITHUB_REF:-}" == refs/tags/api/v* ]]; then
+            echo "API_RELEASE_VERSION=${GITHUB_REF#refs/tags/api/v}" >> "$GITHUB_ENV"
+          else
+            echo "API_RELEASE_VERSION=workflow-dispatch" >> "$GITHUB_ENV"
+          fi
+          echo "API_COMMIT_SHA=${GITHUB_SHA}" >> "$GITHUB_ENV"
+          echo "API_DEPLOYED_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_ENV"
+
       - name: Install CDK
         run: npm install -g aws-cdk
 

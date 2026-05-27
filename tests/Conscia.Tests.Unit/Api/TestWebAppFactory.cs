@@ -106,6 +106,9 @@ public class TestWebAppFactory : WebApplicationFactory<Program>
         builder.UseSetting("AWS:SQS:ServiceURL", "http://localhost:9324");
         builder.UseSetting("AppCompatibility:CurrentSupportedAppVersion", "1.0.0+1");
         builder.UseSetting("AppCompatibility:PreviousSupportedAppVersion", "1.0.0+1");
+        builder.UseSetting("Version:Release", "1.2.3");
+        builder.UseSetting("Version:CommitSha", "abc123def456");
+        builder.UseSetting("Version:DeployedAt", "2026-05-27T12:34:56Z");
     }
 
     public string GenerateTestToken(string userId = "a1b2c3d4-0001-4000-8000-000000000001",

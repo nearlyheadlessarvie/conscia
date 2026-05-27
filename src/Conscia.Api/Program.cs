@@ -274,6 +274,7 @@ if (useMockAuth)
                 IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(signingKey)),
                 ClockSkew = TimeSpan.FromMinutes(1)
             };
+            options.Events = CreateJwtBearerDiagnostics("Mock");
         });
 }
 else
@@ -327,6 +328,7 @@ else
                 ValidateIssuerSigningKey = true,
                 ValidateAudience = false
             };
+            options.Events = CreateJwtBearerDiagnostics("Cognito");
         });
 
     if (appJwtEnabled)
@@ -344,6 +346,7 @@ else
                 ValidateLifetime = true,
                 ClockSkew = TimeSpan.FromMinutes(1)
             };
+            options.Events = CreateJwtBearerDiagnostics("AppJwt");
         });
     }
 }
@@ -408,6 +411,42 @@ builder.Services.AddRateLimiter(options =>
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+
+JwtBearerEvents CreateJwtBearerDiagnostics(string schemeName) => new()
+{
+    OnAuthenticationFailed = context =>
+    {
+        var logger = context.HttpContext.RequestServices
+            .GetRequiredService<ILoggerFactory>()
+            .CreateLogger("Conscia.Api.Authentication");
+        logger.LogWarning(
+            context.Exception,
+            "JWT authentication failed for {Scheme} {RequestPath}. CorrelationId: {CorrelationId}. Reason: {Reason}",
+            schemeName,
+            context.Request.Path,
+            CorrelationIdMiddleware.GetCorrelationId(context.HttpContext) ?? "n/a",
+            context.Exception.Message);
+        return Task.CompletedTask;
+    },
+    OnChallenge = context =>
+    {
+        if (context.AuthenticateFailure is not null ||
+            !string.IsNullOrWhiteSpace(context.Request.Headers.Authorization))
+        {
+            return Task.CompletedTask;
+        }
+
+        var logger = context.HttpContext.RequestServices
+            .GetRequiredService<ILoggerFactory>()
+            .CreateLogger("Conscia.Api.Authentication");
+        logger.LogWarning(
+            "JWT authentication challenge for {Scheme} {RequestPath}. CorrelationId: {CorrelationId}. Reason: Missing bearer token.",
+            schemeName,
+            context.Request.Path,
+            CorrelationIdMiddleware.GetCorrelationId(context.HttpContext) ?? "n/a");
+        return Task.CompletedTask;
+    }
+};
 
 // --- JSON Serialization ---
 builder.Services.ConfigureHttpJsonOptions(options =>
@@ -484,6 +523,17 @@ app.MapHealthChecks("/health/live", new HealthCheckOptions
 app.MapGet("/api", () => Results.Ok(new { version = "1.0", service = "Conscia API" }))
     .WithName("ApiRoot")
     .WithTags("System");
+
+app.MapGet("/version.json", (IConfiguration configuration) => Results.Ok(new
+{
+    service = "conscia-api",
+    version = configuration["Version:Release"] ?? "unknown",
+    commitSha = configuration["Version:CommitSha"] ?? "unknown",
+    deployedAt = configuration["Version:DeployedAt"] ?? "unknown"
+}))
+    .WithName("Version")
+    .WithTags("System")
+    .AllowAnonymous();
 
 // --- API Endpoints ---
 var apiVersionSet = app.NewApiVersionSet("Conscia")
