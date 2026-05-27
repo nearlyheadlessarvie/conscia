@@ -4,6 +4,7 @@ import 'package:passkeys/authenticator.dart';
 import 'package:passkeys/types.dart';
 
 import '../core/constants/api_constants.dart';
+import '../core/errors/app_error.dart';
 import 'auth_service.dart';
 
 class PasskeyService {
@@ -95,6 +96,10 @@ bool isPasskeyCancellation(Object error) =>
     error is PasskeyAuthCancelledException;
 
 String friendlyPasskeyErrorMessage(Object error) {
+  if (error is AppError || error is DioException) {
+    return AppError.from(error, log: false).userMessage;
+  }
+
   return switch (error) {
     NoCredentialsAvailableException() =>
       'No passkey was found for this account on this device.',

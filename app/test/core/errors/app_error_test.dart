@@ -1,4 +1,5 @@
 import 'package:conscia_app/core/errors/app_error.dart';
+import 'package:conscia_app/services/auth_service.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -119,5 +120,29 @@ void main() {
 
     expect(reused, same(original));
     expect(logged, hasLength(1));
+  });
+
+  test('shows apple sign-in cancellation without reference id', () {
+    AppError.configure(
+      referenceIdFactory: () => 'APPLE123',
+      logger: (_) {},
+    );
+
+    expect(
+      AppError.from(const AppleSignInFailure.cancelled()).userMessage,
+      'Apple sign-in was cancelled.',
+    );
+  });
+
+  test('shows apple sign-in device failure with reference id', () {
+    AppError.configure(
+      referenceIdFactory: () => 'APPLE456',
+      logger: (_) {},
+    );
+
+    expect(
+      AppError.from(const AppleSignInFailure.unavailable()).userMessage,
+      'Apple sign-in could not finish on this device. Please try again. Reference: APPLE456',
+    );
   });
 }
