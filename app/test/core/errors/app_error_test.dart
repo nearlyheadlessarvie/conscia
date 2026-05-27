@@ -32,6 +32,59 @@ void main() {
     expect(logged.single.referenceId, 'REF12345');
   });
 
+  test('prefers backend correlation id over local fallback reference id', () {
+    final logged = <AppError>[];
+    AppError.configure(
+      referenceIdFactory: () => 'LOCAL123',
+      logger: logged.add,
+    );
+
+    final error = DioException(
+      requestOptions: RequestOptions(path: '/api/auth/google'),
+      response: Response(
+        requestOptions: RequestOptions(path: '/api/auth/google'),
+        statusCode: 500,
+        data: {
+          'error': 'Google sign-in could not be verified',
+          'correlationId': 'api-correlation-123',
+        },
+      ),
+      type: DioExceptionType.badResponse,
+    );
+
+    final appError = AppError.from(error);
+
+    expect(
+      appError.userMessage,
+      'Conscia is having trouble right now. Please try again. Reference: api-correlation-123',
+    );
+    expect(logged.single.referenceId, 'api-correlation-123');
+  });
+
+  test('uses local fallback reference id when backend correlation id is absent', () {
+    AppError.configure(
+      referenceIdFactory: () => 'LOCAL123',
+      logger: (_) {},
+    );
+
+    final error = DioException(
+      requestOptions: RequestOptions(path: '/api/transactions'),
+      response: Response(
+        requestOptions: RequestOptions(path: '/api/transactions'),
+        statusCode: 500,
+        data: {'error': 'An unexpected error occurred'},
+      ),
+      type: DioExceptionType.badResponse,
+    );
+
+    final appError = AppError.from(error);
+
+    expect(
+      appError.userMessage,
+      'Conscia is having trouble right now. Please try again. Reference: LOCAL123',
+    );
+  });
+
   test('keeps safe API validation messages without reference id', () {
     AppError.configure(
       referenceIdFactory: () => 'VAL12345',

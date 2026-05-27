@@ -16,6 +16,7 @@ public class GlobalExceptionHandler : IExceptionHandler
 
     public async ValueTask<bool> TryHandleAsync(HttpContext context, Exception exception, CancellationToken ct)
     {
+        var correlationId = CorrelationIdMiddleware.GetCorrelationId(context);
         var (statusCode, error) = exception switch
         {
             KeyNotFoundException e => (404, new ErrorResponse(e.Message)),
@@ -27,7 +28,14 @@ public class GlobalExceptionHandler : IExceptionHandler
             _ => (500, new ErrorResponse("An unexpected error occurred"))
         };
 
-        _logger.LogError(exception, "Unhandled exception: {StatusCode} {ErrorMessage}", statusCode, error.Error);
+        error = error with { CorrelationId = correlationId };
+
+        _logger.LogError(
+            exception,
+            "Unhandled exception {CorrelationId}: {StatusCode} {ErrorMessage}",
+            correlationId,
+            statusCode,
+            error.Error);
 
         if (_environment.IsDevelopment() && error.Details is null)
         {

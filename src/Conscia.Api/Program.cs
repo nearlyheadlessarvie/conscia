@@ -39,6 +39,7 @@ using Microsoft.IdentityModel.Tokens;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Trace;
 using Serilog;
+using Serilog.Events;
 using Serilog.Formatting.Compact;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -432,7 +433,33 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseMiddleware<CorrelationIdMiddleware>();
-app.UseSerilogRequestLogging();
+app.UseWhen(
+    ctx => !ctx.Request.Path.Equals("/health/live", StringComparison.OrdinalIgnoreCase),
+    branch => branch.UseSerilogRequestLogging(options =>
+    {
+        options.EnrichDiagnosticContext = (diagnosticContext, httpContext) =>
+        {
+            var correlationId = CorrelationIdMiddleware.GetCorrelationId(httpContext);
+            if (!string.IsNullOrWhiteSpace(correlationId))
+            {
+                diagnosticContext.Set("CorrelationId", correlationId);
+            }
+        };
+        options.GetLevel = (httpContext, _, ex) =>
+        {
+            if (ex is not null || httpContext.Response.StatusCode >= 500)
+            {
+                return LogEventLevel.Error;
+            }
+
+            if (httpContext.Response.StatusCode >= 400)
+            {
+                return LogEventLevel.Warning;
+            }
+
+            return LogEventLevel.Debug;
+        };
+    }));
 app.UseExceptionHandler();
 app.UseHttpsRedirection();
 app.UseMiddleware<ColdStartMiddleware>();
