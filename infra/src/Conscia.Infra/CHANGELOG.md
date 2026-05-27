@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.5](https://github.com/nearlyheadlessarvie/conscia/compare/infra/v1.2.4...infra/v1.2.5) (2026-05-27)
+
+
+### Bug Fixes
+
+* **api:** source version metadata from release artifact ([#99](https://github.com/nearlyheadlessarvie/conscia/issues/99)) ([77346e6](https://github.com/nearlyheadlessarvie/conscia/commit/77346e6b3155b467a9b6a5a748a8fc81e20b68ff))
+
 ## [1.2.4](https://github.com/nearlyheadlessarvie/conscia/compare/infra/v1.2.3...infra/v1.2.4) (2026-05-27)
 
 
