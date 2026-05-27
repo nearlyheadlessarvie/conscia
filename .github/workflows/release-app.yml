@@ -359,7 +359,6 @@ jobs:
             DEVELOPMENT_TEAM="${{ steps.profile.outputs.team_id }}" \
             CODE_SIGN_STYLE=Automatic \
             PRODUCT_BUNDLE_IDENTIFIER="${IOS_BUNDLE_ID}" \
-            CODE_SIGN_IDENTITY="Apple Distribution" \
             archive
 
       - name: Export signed IPA
