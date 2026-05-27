@@ -5,6 +5,16 @@ on:
     tags:
       - 'app/v*'
   workflow_dispatch:
+    inputs:
+      platform:
+        description: Platform to release
+        required: true
+        default: both
+        type: choice
+        options:
+          - both
+          - android
+          - ios
 
 permissions:
   contents: read
@@ -19,6 +29,7 @@ env:
 
 jobs:
   build-android:
+    if: github.event_name != 'workflow_dispatch' || inputs.platform == 'both' || inputs.platform == 'android'
     runs-on: ubuntu-latest
     env:
       ANDROID_GOOGLE_SERVICES_JSON_BASE64: ${{ secrets.ANDROID_GOOGLE_SERVICES_JSON_BASE64 }}
@@ -132,6 +143,7 @@ jobs:
           status: completed
 
   build-ios:
+    if: github.event_name != 'workflow_dispatch' || inputs.platform == 'both' || inputs.platform == 'ios'
     runs-on: macos-latest
     env:
       IOS_GOOGLE_SERVICE_INFO_PLIST_BASE64: ${{ secrets.IOS_GOOGLE_SERVICE_INFO_PLIST_BASE64 }}
