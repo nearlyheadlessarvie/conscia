@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.2](https://github.com/nearlyheadlessarvie/conscia/compare/infra/v1.2.1...infra/v1.2.2) (2026-05-27)
+
+
+### Bug Fixes
+
+* **infra:** send cognito emails from ses domain ([36a8cbc](https://github.com/nearlyheadlessarvie/conscia/commit/36a8cbcac63e95423dc41bc1d9681381c7c5e8f2))
+
 ## [1.2.1](https://github.com/nearlyheadlessarvie/conscia/compare/infra/v1.2.0...infra/v1.2.1) (2026-05-26)
 
 
