@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.1.5](https://github.com/nearlyheadlessarvie/conscia/compare/api/v1.1.4...api/v1.1.5) (2026-05-27)
+
+
+### Bug Fixes
+
+* **api:** configure cognito token issuer ([#100](https://github.com/nearlyheadlessarvie/conscia/issues/100)) ([4381e38](https://github.com/nearlyheadlessarvie/conscia/commit/4381e384f67eb7ac18098e4521d617326aafbe44))
+* **api:** source version metadata from release artifact ([#99](https://github.com/nearlyheadlessarvie/conscia/issues/99)) ([77346e6](https://github.com/nearlyheadlessarvie/conscia/commit/77346e6b3155b467a9b6a5a748a8fc81e20b68ff))
+
 ## [1.1.4](https://github.com/nearlyheadlessarvie/conscia/compare/api/v1.1.3...api/v1.1.4) (2026-05-27)
 
 
