@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.4](https://github.com/nearlyheadlessarvie/conscia/compare/api/v1.1.3...api/v1.1.4) (2026-05-27)
+
+
+### Bug Fixes
+
+* **api:** add deploy metadata and auth diagnostics ([#93](https://github.com/nearlyheadlessarvie/conscia/issues/93)) ([6bc3f21](https://github.com/nearlyheadlessarvie/conscia/commit/6bc3f21f15cd3fb8c0d943609a4db23fc5f781b4))
+
 ## [1.1.3](https://github.com/nearlyheadlessarvie/conscia/compare/api/v1.1.2...api/v1.1.3) (2026-05-27)
 
 
