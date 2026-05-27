@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.6](https://github.com/nearlyheadlessarvie/conscia/compare/api/v1.1.5...api/v1.1.6) (2026-05-27)
+
+
+### Bug Fixes
+
+* clarify Cognito passkey availability ([#108](https://github.com/nearlyheadlessarvie/conscia/issues/108)) ([a5f5aaa](https://github.com/nearlyheadlessarvie/conscia/commit/a5f5aaa896f916c0e954c99b82d2f38fc0f7a6e2))
+
 ## [1.1.5](https://github.com/nearlyheadlessarvie/conscia/compare/api/v1.1.4...api/v1.1.5) (2026-05-27)
 
 
