@@ -17,12 +17,24 @@ public class AuthStack : Stack
     public AuthStack(Construct scope, string id, AuthStackProps? props = null)
         : base(scope, id, props)
     {
+        var rootDomainName = props?.DomainSettings?.RootDomainName ?? "getconscia.com";
+        var cognitoEmail = props?.DomainSettings is null
+            ? null
+            : UserPoolEmail.WithSES(new UserPoolSESOptions
+            {
+                ConfigurationSetName = "conscia-production",
+                FromEmail = $"no-reply@{rootDomainName}",
+                SesRegion = Region,
+                SesVerifiedDomain = rootDomainName
+            });
+
         UserPool = new UserPool(this, "ConsciaUserPool", new UserPoolProps
         {
             UserPoolName = "conscia-users",
             SelfSignUpEnabled = true,
             SignInAliases = new SignInAliases { Email = true },
             AutoVerify = new AutoVerifiedAttrs { Email = true },
+            Email = cognitoEmail,
             PasswordPolicy = new PasswordPolicy
             {
                 MinLength = 8,
@@ -40,7 +52,7 @@ public class AuthStack : Stack
         userPoolResource.AddPropertyOverride(
             "Policies.SignInPolicy.AllowedFirstAuthFactors",
             new[] { "PASSWORD", "WEB_AUTHN" });
-        userPoolResource.WebAuthnRelyingPartyId = props?.DomainSettings?.RootDomainName ?? "getconscia.com";
+        userPoolResource.WebAuthnRelyingPartyId = rootDomainName;
         userPoolResource.WebAuthnUserVerification = "preferred";
 
         UserPoolClient = new UserPoolClient(this, "ConsciaAppClient", new UserPoolClientProps
