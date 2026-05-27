@@ -92,7 +92,9 @@ function Update-AppCompatibilityOptionsSource {
 $appBuildVersion = Get-AppBuildVersion -Path $PubspecPath
 $appSettings = Update-AppCompatibilityFile -Path $AppSettingsPath -CurrentAppVersion $appBuildVersion
 Update-AppCompatibilityFile -Path $DevelopmentAppSettingsPath -CurrentAppVersion $appBuildVersion | Out-Null
-Update-ReleaseMatrix -Path $ReleaseMatrixPath -CurrentAppVersion $appSettings.Current -PreviousAppVersion $appSettings.Previous
+if (Test-Path $ReleaseMatrixPath) {
+    Update-ReleaseMatrix -Path $ReleaseMatrixPath -CurrentAppVersion $appSettings.Current -PreviousAppVersion $appSettings.Previous
+}
 Update-AppCompatibilityOptionsSource -Path $AppCompatibilityOptionsPath -CurrentAppVersion $appSettings.Current -PreviousAppVersion $appSettings.Previous
 
 Write-Host "Updated app compatibility metadata to current=$($appSettings.Current) previous=$($appSettings.Previous)"

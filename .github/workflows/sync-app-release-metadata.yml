@@ -17,15 +17,11 @@ jobs:
     if: github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.pull_request.head.ref }}
-          token: ${{ secrets.GITHUB_TOKEN }}
-          fetch-depth: 0
-
       - name: Detect app release PR
         id: detect
         shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           $isReleaseTitle = "${{ github.event.pull_request.title }}" -match '^chore\([^)]+\): release'
           if (-not $isReleaseTitle) {
@@ -33,14 +29,23 @@ jobs:
             exit 0
           }
 
-          git fetch origin "${{ github.event.pull_request.base.ref }}"
-          $changedFiles = git diff --name-only "origin/${{ github.event.pull_request.base.ref }}...HEAD"
+          $changedFiles = gh api `
+            "repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/files" `
+            --paginate `
+            --jq '.[].filename'
           $touchesAppVersion = $changedFiles -contains 'app/pubspec.yaml'
           if ($isReleaseTitle -and $touchesAppVersion) {
             "is_app_release=true" >> $env:GITHUB_OUTPUT
           } else {
             "is_app_release=false" >> $env:GITHUB_OUTPUT
           }
+
+      - uses: actions/checkout@v4
+        if: steps.detect.outputs.is_app_release == 'true'
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
 
       - name: Sync compatibility window
         if: steps.detect.outputs.is_app_release == 'true'
@@ -54,7 +59,7 @@ jobs:
           if (-not (git diff --quiet)) {
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add release-matrix.md src/Conscia.Api/appsettings.json src/Conscia.Api/appsettings.Development.json src/Conscia.Api/Versioning/AppCompatibilityOptions.cs
+            git add src/Conscia.Api/appsettings.json src/Conscia.Api/appsettings.Development.json src/Conscia.Api/Versioning/AppCompatibilityOptions.cs
             git commit -m "chore(app): sync compatibility metadata"
             git push
           }
