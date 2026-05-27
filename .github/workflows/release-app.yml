@@ -357,7 +357,6 @@ jobs:
             -archivePath build/ios/archive/Runner.xcarchive \
             -destination generic/platform=iOS \
             DEVELOPMENT_TEAM="${{ steps.profile.outputs.team_id }}" \
-            CODE_SIGN_STYLE=Automatic \
             PRODUCT_BUNDLE_IDENTIFIER="${IOS_BUNDLE_ID}" \
             archive
 
