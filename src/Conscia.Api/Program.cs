@@ -320,13 +320,13 @@ else
         })
         .AddJwtBearer("Cognito", options =>
         {
-            var region = CognitoRegionResolver.Resolve(builder.Configuration);
-            var userPoolId = builder.Configuration["Auth:Cognito:UserPoolId"]!;
-            options.Authority = $"https://cognito-idp.{region}.amazonaws.com/{userPoolId}";
+            var issuer = CognitoRegionResolver.ResolveIssuer(builder.Configuration);
+            options.Authority = issuer;
             options.TokenValidationParameters = new TokenValidationParameters
             {
                 ValidateIssuerSigningKey = true,
-                ValidateAudience = false
+                ValidateAudience = false,
+                ValidIssuer = issuer
             };
             options.Events = CreateJwtBearerDiagnostics("Cognito");
         });
@@ -524,13 +524,7 @@ app.MapGet("/api", () => Results.Ok(new { version = "1.0", service = "Conscia AP
     .WithName("ApiRoot")
     .WithTags("System");
 
-app.MapGet("/version.json", (IConfiguration configuration) => Results.Ok(new
-{
-    service = "conscia-api",
-    version = configuration["Version:Release"] ?? "unknown",
-    commitSha = configuration["Version:CommitSha"] ?? "unknown",
-    deployedAt = configuration["Version:DeployedAt"] ?? "unknown"
-}))
+app.MapGet("/version.json", () => Results.Ok(VersionMetadataResolver.Resolve()))
     .WithName("Version")
     .WithTags("System")
     .AllowAnonymous();

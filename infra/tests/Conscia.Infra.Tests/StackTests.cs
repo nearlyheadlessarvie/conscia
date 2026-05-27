@@ -195,10 +195,7 @@ public class StackTests
                 "conscia-prod",
                 "invites@getconscia.com",
                 "conscia-production",
-                "conscia://invite",
-                "1.2.3",
-                "abc123def456",
-                "2026-05-27T12:34:56Z"),
+                "conscia://invite"),
             RuntimeSecretSettings = new RuntimeSecretSettings(
                 "test/auth-app-jwt-signing-key",
                 "test/apple-private-key",
@@ -222,10 +219,7 @@ public class StackTests
                     ["AWS__DynamoDB__TransactionsTable"] = Match.AnyValue(),
                     ["Firebase__AdminServiceAccountJsonSecretId"] = "test/firebase-admin-service-account-json",
                     ["GooglePlay__ServiceAccountJsonSecretId"] = "test/google-play-service-account-json",
-                    ["InviteEmail__FromEmail"] = "invites@getconscia.com",
-                    ["Version__Release"] = "1.2.3",
-                    ["Version__CommitSha"] = "abc123def456",
-                    ["Version__DeployedAt"] = "2026-05-27T12:34:56Z"
+                    ["InviteEmail__FromEmail"] = "invites@getconscia.com"
                 })
             }
         });
@@ -259,10 +253,7 @@ public class StackTests
                 "conscia-prod",
                 "invites@getconscia.com",
                 "conscia-production",
-                "conscia://invite",
-                "1.2.3",
-                "abc123def456",
-                "2026-05-27T12:34:56Z"),
+                "conscia://invite"),
             RuntimeSecretSettings = new RuntimeSecretSettings(
                 "test/auth-app-jwt-signing-key",
                 "test/apple-private-key",
