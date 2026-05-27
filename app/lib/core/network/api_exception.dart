@@ -5,6 +5,7 @@ class ApiException implements Exception {
     required this.message,
     this.statusCode,
     this.errorCode,
+    this.correlationId,
   });
 
   factory ApiException.fromDioException(DioException error) {
@@ -17,11 +18,15 @@ class ApiException implements Exception {
               'Request failed'
           : 'Request failed';
       final errorCode = data is Map ? data['error'] as String? : null;
+      final correlationId =
+          (data is Map ? data['correlationId'] as String? : null) ??
+          (data is Map ? data['referenceId'] as String? : null);
 
       return ApiException(
         message: message,
         statusCode: statusCode,
         errorCode: errorCode,
+        correlationId: correlationId,
       );
     }
 
@@ -51,6 +56,7 @@ class ApiException implements Exception {
   final String message;
   final int? statusCode;
   final String? errorCode;
+  final String? correlationId;
 
   bool get isUnauthorized => statusCode == 401;
   bool get isForbidden => statusCode == 403;

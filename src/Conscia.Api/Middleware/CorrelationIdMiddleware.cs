@@ -4,7 +4,8 @@ namespace Conscia.Api.Middleware;
 
 public class CorrelationIdMiddleware
 {
-    private const string HeaderName = "X-Correlation-Id";
+    public const string HeaderName = "X-Correlation-Id";
+    public const string ItemKey = "CorrelationId";
     private readonly RequestDelegate _next;
 
     public CorrelationIdMiddleware(RequestDelegate next) => _next = next;
@@ -14,7 +15,7 @@ public class CorrelationIdMiddleware
         var correlationId = context.Request.Headers[HeaderName].FirstOrDefault()
                             ?? Guid.NewGuid().ToString();
 
-        context.Items["CorrelationId"] = correlationId;
+        context.Items[ItemKey] = correlationId;
         context.Response.OnStarting(() =>
         {
             context.Response.Headers[HeaderName] = correlationId;
@@ -26,4 +27,9 @@ public class CorrelationIdMiddleware
             await _next(context);
         }
     }
+
+    public static string? GetCorrelationId(HttpContext context) =>
+        context.Items.TryGetValue(ItemKey, out var value)
+            ? value as string
+            : null;
 }

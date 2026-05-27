@@ -28,7 +28,7 @@ class AppError {
     }
 
     final appError = AppError(
-      referenceId: referenceId ?? _referenceIdFactory(),
+      referenceId: _resolveReferenceId(error, referenceId),
       message: _friendlyMessage(error, fallbackMessage),
       originalError: error,
       stackTrace: stackTrace,
@@ -140,5 +140,24 @@ class AppError {
     debugPrint(
       '[ConsciaError:${error.referenceId}] ${error.originalError}',
     );
+  }
+
+  static String _resolveReferenceId(Object error, String? explicitReferenceId) {
+    if (explicitReferenceId != null && explicitReferenceId.trim().isNotEmpty) {
+      return explicitReferenceId.trim();
+    }
+
+    final apiError = switch (error) {
+      ApiException apiException => apiException,
+      DioException dioException => ApiException.fromDioException(dioException),
+      _ => null,
+    };
+
+    final correlationId = apiError?.correlationId?.trim();
+    if (correlationId != null && correlationId.isNotEmpty) {
+      return correlationId;
+    }
+
+    return _referenceIdFactory();
   }
 }
