@@ -1,5 +1,13 @@
 default_platform(:ios)
 
+def team_id_from_profile(profile_path)
+  profile_xml = `security cms -D -i "#{profile_path}"`
+  match = profile_xml.match(%r{<key>TeamIdentifier</key>\s*<array>\s*<string>([^<]+)</string>}m)
+  raise "Unable to determine team id from provisioning profile at #{profile_path}" unless match
+
+  match[1]
+end
+
 platform :ios do
   desc "Build and upload the Conscia iOS release to TestFlight"
   lane :release do
@@ -34,15 +42,20 @@ platform :ios do
       keychain_password: keychain_password
     )
 
+    profile_env_key = "sigh_#{ENV.fetch("IOS_BUNDLE_ID")}_appstore_profile-path"
+    team_id = team_id_from_profile(ENV.fetch(profile_env_key))
+
     build_app(
       workspace: "Runner.xcworkspace",
       scheme: "Runner",
       configuration: "Release",
       clean: true,
       export_method: "app-store",
+      export_team_id: team_id,
       archive_path: "../build/ios/archive/Runner.xcarchive",
       output_directory: "../build/ios/ipa",
       output_name: "Runner.ipa",
+      xcargs: "DEVELOPMENT_TEAM=#{team_id}",
       export_options: {
         compileBitcode: false,
         signingStyle: "manual",
