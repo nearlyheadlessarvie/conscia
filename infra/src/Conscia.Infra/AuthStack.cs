@@ -35,6 +35,7 @@ public class AuthStack : Stack
             SignInAliases = new SignInAliases { Email = true },
             AutoVerify = new AutoVerifiedAttrs { Email = true },
             Email = cognitoEmail,
+            Mfa = Mfa.OFF,
             PasswordPolicy = new PasswordPolicy
             {
                 MinLength = 8,

@@ -113,6 +113,7 @@ public class StackTests
         template.HasResourceProperties("AWS::Cognito::UserPool", new Dictionary<string, object>
         {
             ["UserPoolName"] = "conscia-users",
+            ["MfaConfiguration"] = "OFF",
             ["UserPoolTier"] = "ESSENTIALS",
             ["WebAuthnRelyingPartyID"] = "getconscia.com",
             ["WebAuthnUserVerification"] = "preferred",

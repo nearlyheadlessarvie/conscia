@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using Conscia.Application.DTOs;
+using Conscia.Application.Exceptions;
 using Conscia.Application.Interfaces;
 using Moq;
 
@@ -63,6 +64,31 @@ public class PasskeyEndpointTests
         Assert.Equal("challenge-session", body!["session"]);
         Assert.Equal("WEB_AUTHN", body["challengeName"]);
         Assert.Equal("{\"challenge\":\"abc\"}", body["credentialRequestOptions"]);
+    }
+
+    [Fact]
+    public async Task StartLogin_PasskeyUnavailable_ReturnsBadRequest()
+    {
+        await using var factory = new TestWebAppFactory();
+        factory.PasskeyAuthServiceMock
+            .Setup(service => service.StartAuthenticationAsync(
+                "demo@example.com",
+                It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new PasskeyAuthenticationUnavailableException(
+                "No passkey is registered for this account yet. Sign in with your password, then set up a passkey in Settings."));
+
+        using var client = factory.CreateClient();
+        var response = await client.PostAsJsonAsync("/api/auth/passkeys/login/start", new
+        {
+            email = "demo@example.com"
+        });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<Dictionary<string, string>>();
+        Assert.NotNull(body);
+        Assert.Equal(
+            "No passkey is registered for this account yet. Sign in with your password, then set up a passkey in Settings.",
+            body!["error"]);
     }
 
     [Fact]

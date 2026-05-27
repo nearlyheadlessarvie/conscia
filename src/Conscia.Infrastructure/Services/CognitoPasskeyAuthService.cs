@@ -3,6 +3,7 @@ using System.Security.Claims;
 using Amazon.CognitoIdentityProvider;
 using Amazon.CognitoIdentityProvider.Model;
 using Conscia.Application.DTOs;
+using Conscia.Application.Exceptions;
 using Conscia.Application.Interfaces;
 using Conscia.Domain.Entities;
 using Conscia.Domain.Enums;
@@ -13,6 +14,9 @@ namespace Conscia.Infrastructure.Services;
 
 public sealed class CognitoPasskeyAuthService : IPasskeyAuthService
 {
+    private const string NoRegisteredPasskeyMessage =
+        "No passkey is registered for this account yet. Sign in with your password, then set up a passkey in Settings.";
+
     private readonly IAmazonCognitoIdentityProvider _cognito;
     private readonly IUserRepository _users;
     private readonly ILogger<CognitoPasskeyAuthService> _logger;
@@ -77,19 +81,19 @@ public sealed class CognitoPasskeyAuthService : IPasskeyAuthService
         var challengeName = response.ChallengeName?.Value;
         if (string.IsNullOrWhiteSpace(challengeName))
         {
-            throw new InvalidOperationException("Cognito did not return a passkey challenge.");
+            throw CreatePasskeyUnavailable(normalizedEmail, response, "missing challenge");
         }
 
         if (response.ChallengeParameters is null ||
             !response.ChallengeParameters.TryGetValue("CREDENTIAL_REQUEST_OPTIONS", out var requestOptions))
         {
-            throw new InvalidOperationException("Cognito did not return passkey authentication options.");
+            throw CreatePasskeyUnavailable(normalizedEmail, response, "missing credential request options");
         }
 
         var credentialRequestOptions = SerializeDocument(requestOptions);
         if (string.IsNullOrWhiteSpace(credentialRequestOptions))
         {
-            throw new InvalidOperationException("Cognito did not return passkey authentication options.");
+            throw CreatePasskeyUnavailable(normalizedEmail, response, "blank credential request options");
         }
 
         return new StartPasskeyAuthenticationResponse(
@@ -211,4 +215,27 @@ public sealed class CognitoPasskeyAuthService : IPasskeyAuthService
 
     private static string? SerializeDocument(Amazon.Runtime.Documents.Document? document)
         => document?.ToString();
+
+    private PasskeyAuthenticationUnavailableException CreatePasskeyUnavailable(
+        string email,
+        InitiateAuthResponse response,
+        string reason)
+    {
+        var availableChallenges = response.AvailableChallenges is null
+            ? string.Empty
+            : string.Join(",", response.AvailableChallenges);
+        var challengeParameters = response.ChallengeParameters is null
+            ? string.Empty
+            : string.Join(",", response.ChallengeParameters.Keys);
+
+        _logger.LogWarning(
+            "Cognito passkey sign-in unavailable for {Email}. Reason: {Reason}; ChallengeName: {ChallengeName}; AvailableChallenges: {AvailableChallenges}; ChallengeParameters: {ChallengeParameters}",
+            email,
+            reason,
+            response.ChallengeName?.Value,
+            availableChallenges,
+            challengeParameters);
+
+        return new PasskeyAuthenticationUnavailableException(NoRegisteredPasskeyMessage);
+    }
 }

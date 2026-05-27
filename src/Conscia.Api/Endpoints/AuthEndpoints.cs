@@ -1,5 +1,6 @@
 using Asp.Versioning.Builder;
 using Conscia.Application.DTOs;
+using Conscia.Application.Exceptions;
 using Conscia.Application.Interfaces;
 
 namespace Conscia.Api.Endpoints;
@@ -144,7 +145,16 @@ public static class AuthEndpoints
                 return Results.BadRequest(new { error = "Email is required" });
             }
 
-            var result = await passkeys.StartAuthenticationAsync(req.Email, ctx.RequestAborted);
+            StartPasskeyAuthenticationResponse result;
+            try
+            {
+                result = await passkeys.StartAuthenticationAsync(req.Email, ctx.RequestAborted);
+            }
+            catch (PasskeyAuthenticationUnavailableException ex)
+            {
+                return Results.BadRequest(new { error = ex.Message });
+            }
+
             return Results.Ok(result);
         }).WithName("StartPasskeyLogin").RequireRateLimiting("auth");
 
