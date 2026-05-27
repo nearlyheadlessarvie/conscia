@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.1.6](https://github.com/nearlyheadlessarvie/conscia/compare/app/v1.1.5...app/v1.1.6) (2026-05-27)
+
+
+### Bug Fixes
+
+* **app:** pin connectivity_plus for ios builds ([#97](https://github.com/nearlyheadlessarvie/conscia/issues/97)) ([2ed71ff](https://github.com/nearlyheadlessarvie/conscia/commit/2ed71fffc112c18419ae10b4bc57313242ae03aa))
+* **app:** surface google sign-in failures ([#102](https://github.com/nearlyheadlessarvie/conscia/issues/102)) ([133684a](https://github.com/nearlyheadlessarvie/conscia/commit/133684a3ec06cdc31fc9e294880fdd39bab43f11))
+
 ## [1.1.5](https://github.com/nearlyheadlessarvie/conscia/compare/app/v1.1.4...app/v1.1.5) (2026-05-27)
 
 
