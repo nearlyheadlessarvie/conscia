@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.1.3](https://github.com/nearlyheadlessarvie/conscia/compare/app/v1.1.2...app/v1.1.3) (2026-05-27)
+
+
+### Bug Fixes
+
+* **app:** configure ios google sign-in metadata ([dfd8f40](https://github.com/nearlyheadlessarvie/conscia/commit/dfd8f40fd2e80bfe91433027ebb91c0d00b77eab))
+* **app:** configure ios google sign-in metadata ([8d11dfb](https://github.com/nearlyheadlessarvie/conscia/commit/8d11dfbc50c6a69b75555deb5d10bd6047fd1a3c))
+
 ## [1.1.2](https://github.com/nearlyheadlessarvie/conscia/compare/app/v1.1.1...app/v1.1.2) (2026-05-26)
 
 
