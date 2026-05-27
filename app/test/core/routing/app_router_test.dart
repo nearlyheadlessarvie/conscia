@@ -593,6 +593,17 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
     expect(find.text('Settings').hitTestable(), findsOneWidget);
+
+    router.go(AppRoutes.assistant);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(
+      find.byKey(
+        const ValueKey('assistant-submit-cta'),
+        skipOffstage: false,
+      ),
+      findsOneWidget,
+    );
   });
 
   testWidgets('explicit logout from settings returns to plain sign in without redirect',

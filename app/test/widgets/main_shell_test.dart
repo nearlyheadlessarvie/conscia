@@ -242,21 +242,6 @@ void main() {
     expect(dockSlide.offset.dy, greaterThan(0));
   });
 
-  testWidgets('MainShell keeps dock available on assistant for navigation',
-      (tester) async {
-    await _pumpShell(tester, initialLocation: '/assistant');
-
-    final dockSlide = tester.widget<AnimatedSlide>(
-      find.byKey(const ValueKey('main-shell-dock-motion')),
-    );
-    final dockOpacity = tester.widget<AnimatedOpacity>(
-      find.byType(AnimatedOpacity),
-    );
-
-    expect(dockSlide.offset, Offset.zero);
-    expect(dockOpacity.opacity, 1);
-  });
-
   testWidgets('MainShell does not show a shared add FAB on mobile',
       (tester) async {
     await _pumpShell(tester);

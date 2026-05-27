@@ -1,4 +1,5 @@
 import 'package:conscia_app/core/constants/category_icons.dart';
+import 'package:conscia_app/core/theme/app_theme.dart';
 import 'package:conscia_app/screens/dashboard/widgets/recent_transaction_tile.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -75,5 +76,47 @@ void main() {
       ),
       findsOneWidget,
     );
+  });
+
+  testWidgets('regret tag keeps icon and background distinct in dark mode',
+      (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.dark(),
+        home: Scaffold(
+          body: RecentTransactionTile(
+            id: 'tx-3',
+            categoryBadge: CategoryIcons.badge(
+              'Dining',
+              size: 22,
+              filled: false,
+            ),
+            counterparty: 'Late snack',
+            category: 'Dining',
+            date: DateTime(2026, 5, 9),
+            amount: 280,
+            isIncome: false,
+            currencyCode: 'PHP',
+            regretLevel: 2,
+          ),
+        ),
+      ),
+    );
+
+    final tag = tester.widget<Container>(
+      find.descendant(
+        of: find.byKey(const ValueKey('regret-transaction-badge')),
+        matching: find.byType(Container),
+      ),
+    );
+    final icon = tester.widget<HugeIcon>(
+      find.descendant(
+        of: find.byKey(const ValueKey('regret-transaction-badge')),
+        matching: find.byType(HugeIcon),
+      ),
+    );
+    final decoration = tag.decoration! as BoxDecoration;
+
+    expect(decoration.color, isNot(icon.color));
   });
 }

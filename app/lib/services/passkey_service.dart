@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:passkeys/authenticator.dart';
 import 'package:passkeys/types.dart';
 
@@ -98,6 +99,18 @@ bool isPasskeyCancellation(Object error) =>
 String friendlyPasskeyErrorMessage(Object error) {
   if (error is AppError || error is DioException) {
     return AppError.from(error, log: false).userMessage;
+  }
+
+  if (error is PlatformException) {
+    return switch (error.code) {
+      'domain-not-associated' =>
+        'Passkeys are not fully configured for this app yet.',
+      'deviceNotSupported' =>
+        'This device does not support passkeys yet.',
+      'ios-security-key-timeout' =>
+        'Passkey verification timed out. Please try again.',
+      _ => 'Passkey sign-in is unavailable right now.',
+    };
   }
 
   return switch (error) {

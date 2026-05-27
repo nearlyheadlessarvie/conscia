@@ -261,13 +261,18 @@ class _IconTag extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).appColors;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       margin: const EdgeInsets.only(left: 4),
       width: 22,
       height: 22,
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.13),
+        color: isDark ? color.withValues(alpha: 0.22) : color.withValues(alpha: 0.13),
         borderRadius: BorderRadius.circular(999),
+        border: Border.all(
+          color: isDark ? colors.border : Colors.transparent,
+        ),
       ),
       child: Center(
         child: AppIcons.icon(
@@ -290,9 +295,11 @@ class _RegretIconTag extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).appColors;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final presentation = FeelingChoiceButton.presentationForLevel(
       level,
-      Theme.of(context).appColors,
+      colors,
     );
 
     return Container(
@@ -300,8 +307,16 @@ class _RegretIconTag extends StatelessWidget {
       width: 22,
       height: 22,
       decoration: BoxDecoration(
-        color: presentation.backgroundColor,
+        color: isDark
+            ? Color.alphaBlend(
+                colors.surfaceRaised.withValues(alpha: 0.18),
+                presentation.backgroundColor,
+              )
+            : presentation.backgroundColor,
         borderRadius: BorderRadius.circular(999),
+        border: Border.all(
+          color: isDark ? colors.border : Colors.transparent,
+        ),
       ),
       child: Center(
         child: AppIcons.icon(

@@ -122,8 +122,15 @@ class _MainShellState extends ConsumerState<MainShell> {
 
   bool _handleScrollNotification(ScrollNotification notification) {
     if (notification.metrics.axis != Axis.vertical) return false;
+    if (notification.metrics.outOfRange) {
+      _resetScrollAccumulation();
+      return false;
+    }
+
     if (notification.metrics.pixels <= 0) {
-      _setDockVisible(true);
+      if (notification is! OverscrollNotification) {
+        _setDockVisible(true);
+      }
       _resetScrollAccumulation();
       return false;
     }
@@ -131,17 +138,21 @@ class _MainShellState extends ConsumerState<MainShell> {
     final delta = notification is ScrollUpdateNotification
         ? notification.scrollDelta ?? 0
         : 0.0;
+    final nearLowerEdge =
+        notification.metrics.extentAfter <= _edgeHideThreshold;
     if (delta > 0) {
       _downwardScrollAccumulation += delta;
       _upwardScrollAccumulation = 0;
-      final reachedLowerEdge =
-          notification.metrics.extentAfter <= _edgeHideThreshold;
       if (_downwardScrollAccumulation >= _hideDockThreshold ||
-          reachedLowerEdge) {
+          nearLowerEdge) {
         _setDockVisible(false);
         _downwardScrollAccumulation = 0;
       }
     } else if (delta < 0) {
+      if (nearLowerEdge) {
+        _resetScrollAccumulation();
+        return false;
+      }
       _upwardScrollAccumulation += -delta;
       _downwardScrollAccumulation = 0;
       if (_upwardScrollAccumulation >= _showDockThreshold) {
@@ -166,6 +177,10 @@ class _MainShellState extends ConsumerState<MainShell> {
   void _onDestinationSelected(BuildContext context, int index) {
     if (index == 2) {
       context.push('/scan');
+      return;
+    }
+    if (index == 3) {
+      context.push('/assistant');
       return;
     }
     context.go(_tabs[index].path);

@@ -115,9 +115,8 @@ class _SubscriptionSheetBodyState
     final textTheme = theme.textTheme;
 
     final iapAsync = ref.watch(iapStatusProvider);
-    final priceLabel = iapAsync.whenOrNull(
-      data: (status) => status.product?.price,
-    );
+    final iapStatus = iapAsync.valueOrNull ?? ref.read(iapServiceProvider).status;
+    final priceLabel = iapStatus.product?.price;
     final subscription = ref.watch(subscriptionProvider).valueOrNull;
     final isCurrentPremium = subscription?.isPremium ?? false;
 
@@ -222,8 +221,12 @@ class _SubscriptionSheetBodyState
                         : _subscribe,
                 style: FilledButton.styleFrom(
                   minimumSize: const Size.fromHeight(52),
-                  backgroundColor: colors.amber,
-                  foregroundColor: colors.ink,
+                  backgroundColor: theme.brightness == Brightness.dark
+                      ? colors.deepNavy
+                      : colors.amber,
+                  foregroundColor: theme.brightness == Brightness.dark
+                      ? colors.paper
+                      : colors.ink,
                   shape: const StadiumBorder(),
                   textStyle: textTheme.labelLarge
                       ?.copyWith(fontWeight: FontWeight.w800),
@@ -312,11 +315,19 @@ class _SubscriptionSheetBodyState
       final started = await iapService.purchaseSubscription();
 
       if (!started) {
+        final status = iapService.status;
         if (!mounted) return;
         setState(() {
           _waitingForPurchase = false;
-          _error = iapService.status.product == null
-              ? 'Product not configured in store yet. Set up "$kPremiumMonthlyId" in App Store Connect / Play Console.'
+          _error = status.product == null
+              ? switch (status.state) {
+                  IAPState.uninitialized =>
+                    'Store products are still loading. Try again in a moment.',
+                  IAPState.unavailable =>
+                    'This device cannot reach the App Store or Play Store right now.',
+                  _ => status.errorMessage ??
+                      'No subscription product was loaded from the store.'
+                }
               : 'Could not start purchase flow.';
         });
       }

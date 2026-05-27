@@ -31,6 +31,7 @@ class IAPService {
 
   StreamSubscription<List<PurchaseDetails>>? _subscription;
   bool _initialized = false;
+  Future<void>? _initializationFuture;
 
   final _statusController = StreamController<IAPStatus>.broadcast();
   IAPStatus _status = const IAPStatus();
@@ -54,7 +55,22 @@ class IAPService {
   }
 
   Future<void> initialize() async {
+    final inFlight = _initializationFuture;
+    if (inFlight != null) {
+      await inFlight;
+      return;
+    }
     if (_initialized) return;
+    final initialization = _initializeInternal();
+    _initializationFuture = initialization;
+    try {
+      await initialization;
+    } finally {
+      _initializationFuture = null;
+    }
+  }
+
+  Future<void> _initializeInternal() async {
     _initialized = true;
 
     if (_isDevMode) {
@@ -77,12 +93,20 @@ class IAPService {
     final response =
         await InAppPurchase.instance.queryProductDetails(_kProductIds);
 
+    if (response.error != null) {
+      _emit(IAPStatus(
+        state: IAPState.error,
+        errorMessage: response.error!.message,
+      ));
+      return;
+    }
+
     if (response.productDetails.isEmpty) {
       _emit(IAPStatus(
         state: IAPState.available,
         errorMessage: response.notFoundIDs.isNotEmpty
-            ? 'Product not found in store. Configure "$kPremiumMonthlyId" in App Store Connect / Play Console.'
-            : null,
+            ? 'Store did not return product "$kPremiumMonthlyId". Returned missing IDs: ${response.notFoundIDs.join(', ')}.'
+            : 'Store connection succeeded, but no subscription products were returned yet.',
       ));
       return;
     }
@@ -94,6 +118,7 @@ class IAPService {
   }
 
   Future<bool> purchaseSubscription() async {
+    await initialize();
     if (_isDevMode) return false;
     if (_status.state == IAPState.purchasing) return false;
 
@@ -113,6 +138,7 @@ class IAPService {
   }
 
   Future<void> restorePurchases() async {
+    await initialize();
     if (_isDevMode) return;
 
     final product = _status.product;
