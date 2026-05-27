@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Headers;
+using System.Text.Json;
 
 namespace Conscia.Tests.Unit.Api;
 
@@ -42,5 +43,21 @@ public class ApiVersioningTests : IClassFixture<TestWebAppFactory>
         var response = await client.SendAsync(request);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task VersionJson_ReturnsConfiguredDeployMetadata_WithoutApiVersion()
+    {
+        using var client = _factory.CreateRawClient();
+
+        var response = await client.GetAsync("/version.json");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        using var payload = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        Assert.Equal("conscia-api", payload.RootElement.GetProperty("service").GetString());
+        Assert.Equal("1.2.3", payload.RootElement.GetProperty("version").GetString());
+        Assert.Equal("abc123def456", payload.RootElement.GetProperty("commitSha").GetString());
+        Assert.Equal("2026-05-27T12:34:56Z", payload.RootElement.GetProperty("deployedAt").GetString());
     }
 }
