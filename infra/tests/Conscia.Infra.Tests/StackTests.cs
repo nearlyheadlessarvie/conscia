@@ -116,6 +116,12 @@ public class StackTests
             ["UserPoolTier"] = "ESSENTIALS",
             ["WebAuthnRelyingPartyID"] = "getconscia.com",
             ["WebAuthnUserVerification"] = "preferred",
+            ["EmailConfiguration"] = Match.ObjectLike(new Dictionary<string, object>
+            {
+                ["EmailSendingAccount"] = "DEVELOPER",
+                ["From"] = "no-reply@getconscia.com",
+                ["SourceArn"] = Match.AnyValue()
+            }),
             ["Policies"] = Match.ObjectLike(new Dictionary<string, object>
             {
                 ["SignInPolicy"] = Match.ObjectLike(new Dictionary<string, object>

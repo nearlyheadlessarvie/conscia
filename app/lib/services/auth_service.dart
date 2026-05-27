@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/services.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 
@@ -77,6 +78,23 @@ class AuthConfirmationResult {
       userId: json['userId'] as String?,
     );
   }
+}
+
+enum AppleSignInFailureKind {
+  cancelled,
+  unavailable,
+}
+
+class AppleSignInFailure implements Exception {
+  const AppleSignInFailure._(this.kind);
+
+  const AppleSignInFailure.cancelled()
+      : this._(AppleSignInFailureKind.cancelled);
+
+  const AppleSignInFailure.unavailable()
+      : this._(AppleSignInFailureKind.unavailable);
+
+  final AppleSignInFailureKind kind;
 }
 
 class AuthService {
@@ -175,19 +193,30 @@ class AuthService {
   }
 
   Future<AuthTokens> signInWithApple() async {
-    final credential = await SignInWithApple.getAppleIDCredential(
-      scopes: [
-        AppleIDAuthorizationScopes.email,
-        AppleIDAuthorizationScopes.fullName,
-      ],
-    );
-    final response = await _dio.post(
-      ApiConstants.appleSignIn,
-      data: {
-        'identityToken': credential.identityToken,
-        'authorizationCode': credential.authorizationCode,
-      },
-    );
-    return AuthTokens.fromJson(response.data as Map<String, dynamic>);
+    try {
+      final credential = await SignInWithApple.getAppleIDCredential(
+        scopes: [
+          AppleIDAuthorizationScopes.email,
+          AppleIDAuthorizationScopes.fullName,
+        ],
+      );
+      final response = await _dio.post(
+        ApiConstants.appleSignIn,
+        data: {
+          'identityToken': credential.identityToken,
+          'authorizationCode': credential.authorizationCode,
+        },
+      );
+      return AuthTokens.fromJson(response.data as Map<String, dynamic>);
+    } on SignInWithAppleAuthorizationException catch (error) {
+      if (error.code == AuthorizationErrorCode.canceled) {
+        throw const AppleSignInFailure.cancelled();
+      }
+      throw const AppleSignInFailure.unavailable();
+    } on SignInWithAppleException {
+      throw const AppleSignInFailure.unavailable();
+    } on PlatformException {
+      throw const AppleSignInFailure.unavailable();
+    }
   }
 }
