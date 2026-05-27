@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.1.3](https://github.com/nearlyheadlessarvie/conscia/compare/api/v1.1.2...api/v1.1.3) (2026-05-27)
+
+
+### Bug Fixes
+
+* **api:** correlate app errors with backend failures ([34066bb](https://github.com/nearlyheadlessarvie/conscia/commit/34066bb7124da8296e12b1504a44bdf450463e1e))
+* **api:** correlate app errors with backend failures ([6125e77](https://github.com/nearlyheadlessarvie/conscia/commit/6125e77095ac7f05371b9a4b25c87ed3065827a8))
+* **api:** resolve cognito region from lambda env ([4ffdcfe](https://github.com/nearlyheadlessarvie/conscia/commit/4ffdcfe985c7bcaf199e22f9778d9e99a1532093))
+
 ## [1.1.2](https://github.com/nearlyheadlessarvie/conscia/compare/api/v1.1.1...api/v1.1.2) (2026-05-26)
 
 
