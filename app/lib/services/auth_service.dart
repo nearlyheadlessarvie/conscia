@@ -85,6 +85,12 @@ enum AppleSignInFailureKind {
   unavailable,
 }
 
+enum GoogleSignInFailureKind {
+  cancelled,
+  missingIdToken,
+  platform,
+}
+
 class AppleSignInFailure implements Exception {
   const AppleSignInFailure._(this.kind);
 
@@ -95,6 +101,53 @@ class AppleSignInFailure implements Exception {
       : this._(AppleSignInFailureKind.unavailable);
 
   final AppleSignInFailureKind kind;
+}
+
+class GoogleSignInFailure implements Exception {
+  const GoogleSignInFailure._({
+    required this.kind,
+    required this.message,
+    this.code,
+  });
+
+  const GoogleSignInFailure.cancelled()
+      : this._(
+          kind: GoogleSignInFailureKind.cancelled,
+          message: 'Google sign-in was cancelled.',
+        );
+
+  const GoogleSignInFailure.missingIdToken()
+      : this._(
+          kind: GoogleSignInFailureKind.missingIdToken,
+          message:
+              'Google sign-in did not return an ID token for this app build. Please try again.',
+        );
+
+  factory GoogleSignInFailure.fromPlatformException(PlatformException error) {
+    final normalizedCode = error.code.trim().toLowerCase();
+    if (normalizedCode == 'sign_in_canceled' ||
+        normalizedCode == 'sign_in_cancelled' ||
+        normalizedCode == 'canceled' ||
+        normalizedCode == 'cancelled') {
+      return const GoogleSignInFailure.cancelled();
+    }
+
+    return GoogleSignInFailure._(
+      kind: GoogleSignInFailureKind.platform,
+      message:
+          'Google sign-in could not finish on this device. Please try again.',
+      code: error.code,
+    );
+  }
+
+  final GoogleSignInFailureKind kind;
+  final String message;
+  final String? code;
+
+  bool get isCancellation => kind == GoogleSignInFailureKind.cancelled;
+
+  @override
+  String toString() => code == null ? message : '$message ($code)';
 }
 
 class AuthService {
@@ -178,18 +231,30 @@ class AuthService {
   }
 
   Future<AuthTokens> signInWithGoogle() async {
-    final googleUser = await GoogleSignIn(
-      serverClientId: ApiConstants.googleServerClientId.isEmpty
-          ? null
-          : ApiConstants.googleServerClientId,
-    ).signIn();
-    if (googleUser == null) throw Exception('Google sign-in cancelled');
-    final googleAuth = await googleUser.authentication;
-    final response = await _dio.post(
-      ApiConstants.googleSignIn,
-      data: {'idToken': googleAuth.idToken},
-    );
-    return AuthTokens.fromJson(response.data as Map<String, dynamic>);
+    try {
+      final googleUser = await GoogleSignIn(
+        serverClientId: ApiConstants.googleServerClientId.isEmpty
+            ? null
+            : ApiConstants.googleServerClientId,
+      ).signIn();
+      if (googleUser == null) {
+        throw const GoogleSignInFailure.cancelled();
+      }
+
+      final googleAuth = await googleUser.authentication;
+      final idToken = googleAuth.idToken;
+      if (idToken == null || idToken.isEmpty) {
+        throw const GoogleSignInFailure.missingIdToken();
+      }
+
+      final response = await _dio.post(
+        ApiConstants.googleSignIn,
+        data: {'idToken': idToken},
+      );
+      return AuthTokens.fromJson(response.data as Map<String, dynamic>);
+    } on PlatformException catch (error) {
+      throw GoogleSignInFailure.fromPlatformException(error);
+    }
   }
 
   Future<AuthTokens> signInWithApple() async {

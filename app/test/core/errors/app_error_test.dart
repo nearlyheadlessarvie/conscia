@@ -1,6 +1,7 @@
 import 'package:conscia_app/core/errors/app_error.dart';
 import 'package:conscia_app/services/auth_service.dart';
 import 'package:dio/dio.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -144,5 +145,38 @@ void main() {
       AppError.from(const AppleSignInFailure.unavailable()).userMessage,
       'Apple sign-in could not finish on this device. Please try again. Reference: APPLE456',
     );
+  });
+
+  test('shows google sign-in missing token failure with reference id', () {
+    AppError.configure(
+      referenceIdFactory: () => 'GOOGLE1',
+      logger: (_) {},
+    );
+
+    expect(
+      AppError.from(const GoogleSignInFailure.missingIdToken()).userMessage,
+      'Google sign-in did not return an ID token for this app build. Please try again. Reference: GOOGLE1',
+    );
+  });
+
+  test('shows google sign-in cancellation without reference id', () {
+    AppError.configure(
+      referenceIdFactory: () => 'GOOGLE2',
+      logger: (_) {},
+    );
+
+    expect(
+      AppError.from(const GoogleSignInFailure.cancelled()).userMessage,
+      'Google sign-in was cancelled.',
+    );
+  });
+
+  test('maps cancelled google platform exception to cancellation failure', () {
+    final failure = GoogleSignInFailure.fromPlatformException(
+      PlatformException(code: 'sign_in_canceled'),
+    );
+
+    expect(failure.isCancellation, isTrue);
+    expect(failure.message, 'Google sign-in was cancelled.');
   });
 }
