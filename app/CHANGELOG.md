@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.5](https://github.com/nearlyheadlessarvie/conscia/compare/app/v1.1.4...app/v1.1.5) (2026-05-27)
+
+
+### Bug Fixes
+
+* **app:** pin runner release signing profile ([#91](https://github.com/nearlyheadlessarvie/conscia/issues/91)) ([a605322](https://github.com/nearlyheadlessarvie/conscia/commit/a605322920d8d8fc56a34e5b43ae4e1b3cb36ba6))
+
 ## [1.1.4](https://github.com/nearlyheadlessarvie/conscia/compare/app/v1.1.3...app/v1.1.4) (2026-05-27)
 
 
