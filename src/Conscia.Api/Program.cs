@@ -320,13 +320,13 @@ else
         })
         .AddJwtBearer("Cognito", options =>
         {
-            var region = CognitoRegionResolver.Resolve(builder.Configuration);
-            var userPoolId = builder.Configuration["Auth:Cognito:UserPoolId"]!;
-            options.Authority = $"https://cognito-idp.{region}.amazonaws.com/{userPoolId}";
+            var issuer = CognitoRegionResolver.ResolveIssuer(builder.Configuration);
+            options.Authority = issuer;
             options.TokenValidationParameters = new TokenValidationParameters
             {
                 ValidateIssuerSigningKey = true,
-                ValidateAudience = false
+                ValidateAudience = false,
+                ValidIssuer = issuer
             };
             options.Events = CreateJwtBearerDiagnostics("Cognito");
         });
