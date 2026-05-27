@@ -50,7 +50,14 @@ jobs:
           if [[ "${GITHUB_REF:-}" == refs/tags/api/v* ]]; then
             API_VERSION="${GITHUB_REF#refs/tags/api/v}"
           else
-            API_VERSION=$(python3 -c 'from pathlib import Path; import re; content = Path("src/Conscia.Api/Conscia.Api.csproj").read_text(encoding="utf-8"); match = re.search(r"<Version>([^<]+)</Version>", content); print(match.group(1) if match else "unknown")')
+            LAST_API_TAG=$(git describe --tags --match 'api/v*' --abbrev=0 2>/dev/null || true)
+            REF_NAME=$(printf '%s' "${GITHUB_REF_NAME:-manual}" | sed 's#[/_]#-#g')
+            SHORT_SHA="${GITHUB_SHA::7}"
+            if [[ -n "$LAST_API_TAG" ]]; then
+              API_VERSION="${LAST_API_TAG#api/v}+${REF_NAME}.${SHORT_SHA}"
+            else
+              API_VERSION="${REF_NAME}.${SHORT_SHA}"
+            fi
           fi
           API_DEPLOYED_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)
           export API_VERSION
