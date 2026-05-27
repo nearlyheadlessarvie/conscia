@@ -96,6 +96,10 @@ class AppError {
       };
     }
 
+    if (error is GoogleSignInFailure) {
+      return error.message;
+    }
+
     if (apiError != null) {
       if (apiError.isUnauthorized) {
         return 'Please sign in again to continue.';
@@ -117,6 +121,10 @@ class AppError {
 
   static bool _shouldShowReference(Object error) {
     if (error case AppleSignInFailure(kind: AppleSignInFailureKind.cancelled)) {
+      return false;
+    }
+
+    if (error is GoogleSignInFailure && error.isCancellation) {
       return false;
     }
 
