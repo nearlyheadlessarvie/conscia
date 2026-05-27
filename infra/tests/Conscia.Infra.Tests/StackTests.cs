@@ -506,6 +506,26 @@ public class StackTests
     }
 
     [Fact]
+    public void EmailStack_IgnoresIncompleteIcloudCnameRecords()
+    {
+        var app = new App();
+        var stack = new EmailStack(app, "TestEmailInvalidCname", new EmailStackProps
+        {
+            Env = TestEnv,
+            DomainSettings = TestDomainSettings with
+            {
+                IcloudInboxCnameRecords =
+                [
+                    new DnsCnameRecord("sig1._domainkey", null!)
+                ]
+            }
+        });
+        var template = Template.FromStack(stack);
+
+        template.ResourceCountIs("AWS::Route53::RecordSet", 6);
+    }
+
+    [Fact]
     public void ObservabilityStack_ManagesLambdaLogRetention()
     {
         var app = new App();
