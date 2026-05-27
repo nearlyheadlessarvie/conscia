@@ -22,5 +22,12 @@ final iapServiceProvider = Provider<IAPService>((ref) {
 
 final iapStatusProvider = StreamProvider<IAPStatus>((ref) {
   final service = ref.watch(iapServiceProvider);
-  return service.statusStream;
+  return Stream<IAPStatus>.multi((controller) {
+    controller.add(service.status);
+    final subscription = service.statusStream.listen(
+      controller.add,
+      onError: controller.addError,
+    );
+    controller.onCancel = subscription.cancel;
+  });
 });

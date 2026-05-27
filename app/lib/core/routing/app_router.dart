@@ -341,12 +341,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             ),
           ),
           GoRoute(
-            path: AppRoutes.assistant,
-            pageBuilder: (context, state) => const NoTransitionPage(
-              child: PrePurchaseScreen(),
-            ),
-          ),
-          GoRoute(
             path: AppRoutes.settings,
             pageBuilder: (context, state) => const NoTransitionPage(
               child: SettingsScreen(),
@@ -356,6 +350,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
 
       // ── Full-screen routes ─────────────────────────────────────────
+      GoRoute(
+        path: AppRoutes.assistant,
+        builder: (context, state) => const PrePurchaseScreen(),
+      ),
       GoRoute(
         path: '/transactions/add',
         builder: (context, state) {

@@ -335,7 +335,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                             ),
                             title: 'Locale & Number Format',
                             subtitle:
-                                '${userPreferences.currency} · ${_regionFormatLabels[userPreferences.locale] ?? 'English'} numbers only',
+                                '${userPreferences.currency} · ${_regionFormatLabels[normalizeSupportedLocale(userPreferences.locale)] ?? 'Default'} numbers only',
                             onTap: () => _showLocalePicker(context, ref),
                           ),
                           _SettingsActionRow(
@@ -884,7 +884,7 @@ class _SettingsEditorialHero extends StatelessWidget {
               EditorialHeroChip(label: '$currencyCode currency'),
               EditorialHeroChip(
                 label:
-                    '${_regionFormatLabels[locale]?.split(' / ').first ?? 'English'} numbers',
+                    '${_regionFormatLabels[normalizeSupportedLocale(locale)]?.split(' / ').first ?? 'Default'} numbers',
               ),
             ],
           ),

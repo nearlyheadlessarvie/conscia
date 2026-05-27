@@ -86,6 +86,33 @@ jobs:
           )
           PY
 
+      - name: Validate Android Firebase config
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          package_name = os.environ["GOOGLE_PLAY_PACKAGE_NAME"]
+          config = json.loads(Path("app/android/app/google-services.json").read_text())
+          clients = config.get("client", [])
+
+          matching_clients = [
+              client for client in clients
+              if client.get("client_info", {})
+                  .get("android_client_info", {})
+                  .get("package_name") == package_name
+          ]
+
+          if not matching_clients:
+              raise SystemExit(
+                  f'google-services.json does not contain package "{package_name}"'
+              )
+
+          print(f'Validated Android Firebase config for {package_name}')
+          PY
+
       - name: Materialize optional firebase_options.dart override
         if: env.FIREBASE_OPTIONS_DART_BASE64 != ''
         shell: bash
@@ -208,11 +235,14 @@ jobs:
         id: ios_google
         shell: bash
         run: |
+          BUNDLE_ID=$(/usr/libexec/PlistBuddy -c 'Print :BUNDLE_ID' app/ios/Runner/GoogleService-Info.plist 2>/dev/null || true)
           CLIENT_ID=$(/usr/libexec/PlistBuddy -c 'Print :CLIENT_ID' app/ios/Runner/GoogleService-Info.plist 2>/dev/null || true)
           REVERSED_CLIENT_ID=$(/usr/libexec/PlistBuddy -c 'Print :REVERSED_CLIENT_ID' app/ios/Runner/GoogleService-Info.plist 2>/dev/null || true)
 
+          test -n "$BUNDLE_ID" || (echo "Missing BUNDLE_ID in ios/Runner/GoogleService-Info.plist" && exit 1)
           test -n "$CLIENT_ID" || (echo "Missing CLIENT_ID in ios/Runner/GoogleService-Info.plist" && exit 1)
           test -n "$REVERSED_CLIENT_ID" || (echo "Missing REVERSED_CLIENT_ID in ios/Runner/GoogleService-Info.plist" && exit 1)
+          test "$BUNDLE_ID" = "${IOS_BUNDLE_ID}" || (echo "GoogleService-Info.plist BUNDLE_ID ($BUNDLE_ID) does not match IOS_BUNDLE_ID (${IOS_BUNDLE_ID})" && exit 1)
 
           echo "client_id=$CLIENT_ID" >> "$GITHUB_OUTPUT"
           echo "reversed_client_id=$REVERSED_CLIENT_ID" >> "$GITHUB_OUTPUT"
@@ -271,6 +301,22 @@ jobs:
         working-directory: app/ios
         shell: bash
         run: fastlane ios release
+
+      - name: Validate archived iOS auth configuration
+        shell: bash
+        run: |
+          APP_BUNDLE="app/build/ios/archive/Runner.xcarchive/Products/Applications/Runner.app"
+          INFO_PLIST="$APP_BUNDLE/Info.plist"
+          GOOGLE_PLIST="$APP_BUNDLE/GoogleService-Info.plist"
+
+          test -f "$GOOGLE_PLIST" || (echo "Runner.app is missing GoogleService-Info.plist" && exit 1)
+
+          GID_CLIENT_ID=$(/usr/libexec/PlistBuddy -c 'Print :GIDClientID' "$INFO_PLIST" 2>/dev/null || true)
+          test -n "$GID_CLIENT_ID" || (echo "Runner.app Info.plist is missing GIDClientID" && exit 1)
+
+          codesign -d --entitlements :- "$APP_BUNDLE" > entitlements.plist 2>/dev/null
+          grep -q 'webcredentials:getconscia.com' entitlements.plist || (echo "Runner.app entitlements are missing webcredentials:getconscia.com" && exit 1)
+          grep -q 'applinks:getconscia.com' entitlements.plist || (echo "Runner.app entitlements are missing applinks:getconscia.com" && exit 1)
 
       - name: Upload iOS artifact
         uses: actions/upload-artifact@v4

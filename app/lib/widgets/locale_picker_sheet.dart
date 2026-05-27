@@ -3,6 +3,15 @@ import 'package:flutter/material.dart';
 import 'conscia_bottom_sheet.dart';
 import 'single_select_list.dart';
 
+String normalizeSupportedLocale(String? locale) {
+  final normalized = (locale ?? '').trim().replaceAll('-', '_');
+  if (normalized.isEmpty) return 'en_US';
+  if (normalized == 'en_IN') return 'en_IN';
+  if (normalized.startsWith('de_')) return 'de_DE';
+  if (normalized.startsWith('fr_')) return 'fr_FR';
+  return 'en_US';
+}
+
 class LocalePickerSheet {
   LocalePickerSheet._();
 
@@ -42,9 +51,10 @@ class _LocalePickerBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final normalizedSelection = normalizeSupportedLocale(selectedLocale);
     (String, String, String)? selectedOption;
     for (final locale in _locales) {
-      if (locale.$1 == selectedLocale) {
+      if (locale.$1 == normalizedSelection) {
         selectedOption = locale;
         break;
       }

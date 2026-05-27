@@ -1,5 +1,6 @@
 import 'package:conscia_app/providers/iap_provider.dart';
 import 'package:conscia_app/providers/subscription_provider.dart';
+import 'package:conscia_app/core/theme/app_theme.dart';
 import 'package:conscia_app/screens/settings/widgets/subscription_sheet.dart';
 import 'package:conscia_app/services/iap_service.dart';
 import 'package:conscia_app/services/subscription_service.dart';
@@ -16,11 +17,25 @@ class _FakeIAPService extends IAPService {
         );
 
   int manageCalls = 0;
+  int purchaseCalls = 0;
+  bool purchaseShouldSucceed = false;
+  @override
+  IAPStatus get status => fakeStatus;
+  IAPStatus fakeStatus = const IAPStatus();
 
   @override
   Future<bool> openManageSubscriptions() async {
     manageCalls += 1;
     return false;
+  }
+
+  @override
+  Future<void> initialize() async {}
+
+  @override
+  Future<bool> purchaseSubscription() async {
+    purchaseCalls += 1;
+    return purchaseShouldSucceed;
   }
 }
 
@@ -213,5 +228,77 @@ void main() {
     final bottomSheet = tester.widget<BottomSheet>(find.byType(BottomSheet));
     final shape = bottomSheet.shape as RoundedRectangleBorder;
     expect(shape.borderRadius, const BorderRadius.vertical(top: Radius.circular(32)));
+  });
+
+  testWidgets('subscription CTA stays readable in dark theme', (tester) async {
+    final iapService = _FakeIAPService();
+
+    tester.view.platformDispatcher.platformBrightnessTestValue =
+        Brightness.dark;
+    addTearDown(
+      tester.view.platformDispatcher.clearPlatformBrightnessTestValue,
+    );
+
+    tester.view.physicalSize = const Size(800, 1200);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          subscriptionProvider.overrideWith(
+            (ref) async => const SubscriptionStatus(
+              tier: 'free',
+              isPremium: false,
+            ),
+          ),
+          iapServiceProvider.overrideWithValue(iapService),
+        ],
+        child: MaterialApp(
+          theme: AppTheme.dark(),
+          home: Scaffold(
+            body: Builder(
+              builder: (context) => FilledButton(
+                onPressed: () => SubscriptionSheet.show(context),
+                child: const Text('Open subscription'),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Open subscription'));
+    await tester.pumpAndSettle();
+
+    final cta = tester.widget<FilledButton>(
+      find.widgetWithText(FilledButton, 'Subscribe Now'),
+    );
+    final background = cta.style?.backgroundColor?.resolve(<WidgetState>{});
+    final foreground = cta.style?.foregroundColor?.resolve(<WidgetState>{});
+
+    expect(background, isNot(foreground));
+  });
+
+  testWidgets('subscription sheet does not show a config error before store product loads',
+      (tester) async {
+    final iapService = _FakeIAPService()
+      ..fakeStatus = const IAPStatus(state: IAPState.uninitialized);
+
+    await _pumpSheetHost(
+      tester,
+      status: const SubscriptionStatus(
+        tier: 'free',
+        isPremium: false,
+      ),
+      iapService: iapService,
+    );
+
+    expect(find.text('Subscribe Now'), findsOneWidget);
+    expect(
+      find.textContaining('Product not configured in store yet'),
+      findsNothing,
+    );
   });
 }
