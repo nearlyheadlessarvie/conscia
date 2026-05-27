@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.7](https://github.com/nearlyheadlessarvie/conscia/compare/app/v1.1.6...app/v1.1.7) (2026-05-27)
+
+
+### Bug Fixes
+
+* **app:** resolve mobile subscription and auth regressions ([#114](https://github.com/nearlyheadlessarvie/conscia/issues/114)) ([5ddd9ff](https://github.com/nearlyheadlessarvie/conscia/commit/5ddd9ff13e20948d2c1d71cfafca13d3c97f4af4))
+
 ## [1.1.6](https://github.com/nearlyheadlessarvie/conscia/compare/app/v1.1.5...app/v1.1.6) (2026-05-27)
 
 
