@@ -239,111 +239,6 @@ jobs:
         run: |
           gem install fastlane --no-document
 
-      - name: Install App Store Connect API key
-        shell: bash
-        run: |
-          python3 - <<'PY'
-          import json
-          import os
-          from pathlib import Path
-
-          api_key = {
-              "key_id": os.environ["APP_STORE_CONNECT_API_KEY_ID"],
-              "issuer_id": os.environ["APP_STORE_CONNECT_ISSUER_ID"],
-              "key": os.environ["APP_STORE_CONNECT_API_PRIVATE_KEY"],
-              "duration": 1200,
-              "in_house": False,
-          }
-          Path(os.environ["RUNNER_TEMP"], "appstore_api_key.json").write_text(
-              json.dumps(api_key),
-              encoding="utf-8",
-          )
-          PY
-
-      - name: Install iOS signing assets with Match
-        shell: bash
-        run: |
-          KEYCHAIN_NAME="app-signing.keychain-db"
-
-          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_NAME"
-          security set-keychain-settings -lut 21600 "$KEYCHAIN_NAME"
-          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_NAME"
-          security list-keychains -d user -s "$KEYCHAIN_NAME" login.keychain-db
-
-          fastlane match appstore \
-            --readonly \
-            --git_url "$MATCH_GIT_URL" \
-            --git_basic_authorization "$MATCH_GIT_BASIC_AUTHORIZATION" \
-            --app_identifier "$IOS_BUNDLE_ID" \
-            --api_key_path "$RUNNER_TEMP/appstore_api_key.json" \
-            --keychain_name "$KEYCHAIN_NAME" \
-            --keychain_password "$KEYCHAIN_PASSWORD"
-
-          security set-key-partition-list -S apple-tool:,apple: -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_NAME"
-
-      - name: Derive provisioning profile metadata
-        id: profile
-        shell: bash
-        run: |
-          PROFILE_PLIST="$RUNNER_TEMP/profile.plist"
-          PROFILE_PATH=""
-          PROFILE_DIRS=(
-            "$HOME/Library/Developer/Xcode/UserData/Provisioning Profiles"
-            "$HOME/Library/MobileDevice/Provisioning Profiles"
-          )
-
-          for profile_dir in "${PROFILE_DIRS[@]}"; do
-            for candidate in "$profile_dir"/*.mobileprovision; do
-              test -f "$candidate" || continue
-              security cms -D -i "$candidate" > "$PROFILE_PLIST"
-              APP_IDENTIFIER=$(/usr/libexec/PlistBuddy -c 'Print :Entitlements:application-identifier' "$PROFILE_PLIST" 2>/dev/null || true)
-              if [[ "$APP_IDENTIFIER" == *".${IOS_BUNDLE_ID}" ]]; then
-                PROFILE_PATH="$candidate"
-                break 2
-              fi
-            done
-          done
-
-          test -n "$PROFILE_PATH" || (
-            echo "No provisioning profile found for ${IOS_BUNDLE_ID}" &&
-            find "$HOME/Library" -path "*/Provisioning Profiles/*.mobileprovision" -maxdepth 6 -print 2>/dev/null &&
-            exit 1
-          )
-          security cms -D -i "$PROFILE_PATH" > "$PROFILE_PLIST"
-          PROFILE_NAME=$(/usr/libexec/PlistBuddy -c 'Print :Name' "$PROFILE_PLIST")
-          TEAM_ID=$(/usr/libexec/PlistBuddy -c 'Print :TeamIdentifier:0' "$PROFILE_PLIST")
-          PROFILE_UUID=$(/usr/libexec/PlistBuddy -c 'Print :UUID' "$PROFILE_PLIST")
-          echo "name=$PROFILE_NAME" >> "$GITHUB_OUTPUT"
-          echo "team_id=$TEAM_ID" >> "$GITHUB_OUTPUT"
-          echo "uuid=$PROFILE_UUID" >> "$GITHUB_OUTPUT"
-
-      - name: Generate export options
-        shell: bash
-        run: |
-          cat > "$RUNNER_TEMP/ExportOptions.plist" <<EOF
-          <?xml version="1.0" encoding="UTF-8"?>
-          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-          <plist version="1.0">
-          <dict>
-            <key>method</key>
-            <string>app-store</string>
-            <key>signingStyle</key>
-            <string>manual</string>
-            <key>teamID</key>
-            <string>${{ steps.profile.outputs.team_id }}</string>
-            <key>provisioningProfiles</key>
-            <dict>
-              <key>${IOS_BUNDLE_ID}</key>
-              <string>${{ steps.profile.outputs.name }}</string>
-            </dict>
-            <key>stripSwiftSymbols</key>
-            <true/>
-            <key>compileBitcode</key>
-            <false/>
-          </dict>
-          </plist>
-          EOF
-
       - name: Run tests
         working-directory: app
         run: flutter test
@@ -358,27 +253,10 @@ jobs:
             --dart-define=PUSH_NOTIFICATIONS_ENABLED="${PUSH_NOTIFICATIONS_ENABLED}" \
             --dart-define=GOOGLE_SERVER_CLIENT_ID="${GOOGLE_SERVER_CLIENT_ID}"
 
-      - name: Archive signed iOS app
-        working-directory: app
+      - name: Build and upload iOS release with Fastlane
+        working-directory: app/ios
         shell: bash
-        run: |
-          xcodebuild \
-            -workspace ios/Runner.xcworkspace \
-            -scheme Runner \
-            -configuration Release \
-            -archivePath build/ios/archive/Runner.xcarchive \
-            -destination generic/platform=iOS \
-            DEVELOPMENT_TEAM="${{ steps.profile.outputs.team_id }}" \
-            archive
-
-      - name: Export signed IPA
-        working-directory: app
-        shell: bash
-        run: |
-          xcodebuild -exportArchive \
-            -archivePath build/ios/archive/Runner.xcarchive \
-            -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist" \
-            -exportPath build/ios/ipa
+        run: fastlane ios release
 
       - name: Upload iOS artifact
         uses: actions/upload-artifact@v4
@@ -386,31 +264,8 @@ jobs:
           name: ios-release
           path: app/build/ios/ipa/*.ipa
 
-      - name: Resolve IPA path
-        id: ipa
-        shell: bash
-        run: |
-          IPA_PATH=$(find app/build/ios/ipa -maxdepth 1 -name "*.ipa" | head -n 1)
-          test -n "$IPA_PATH" || (echo "No IPA was exported" && exit 1)
-          echo "path=$IPA_PATH" >> "$GITHUB_OUTPUT"
-
-      - name: Upload to TestFlight
-        uses: apple-actions/upload-testflight-build@v4
-        with:
-          app-path: ${{ steps.ipa.outputs.path }}
-          issuer-id: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
-          api-key-id: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
-          api-private-key: ${{ secrets.APP_STORE_CONNECT_API_PRIVATE_KEY }}
-          backend: AppStoreAPI
-          wait-for-processing: true
-
       - name: Clean up iOS signing assets
         if: ${{ always() }}
         shell: bash
         run: |
           security delete-keychain app-signing.keychain-db || true
-          rm -f "$RUNNER_TEMP/appstore_api_key.json" || true
-
-      - name: Extract version
-        id: version
-        run: echo "version=${GITHUB_REF#refs/tags/app/v}" >> $GITHUB_OUTPUT
