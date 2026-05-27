@@ -26,20 +26,10 @@ void main() {
 </plist>
 ''';
 
-    const googleServiceInfo = '''<?xml version="1.0" encoding="UTF-8"?>
-<plist version="1.0">
-<dict>
-\t<key>CLIENT_ID</key>
-\t<string>ios-client-id.apps.googleusercontent.com</string>
-\t<key>REVERSED_CLIENT_ID</key>
-\t<string>com.googleusercontent.apps.1234567890-example</string>
-</dict>
-</plist>
-''';
-
     final updated = applyGoogleSignInConfig(
       infoPlist: infoPlist,
-      googleServiceInfoPlist: googleServiceInfo,
+      clientId: 'ios-client-id.apps.googleusercontent.com',
+      reversedClientId: 'com.googleusercontent.apps.1234567890-example',
       serverClientId: 'server-client-id.apps.googleusercontent.com',
     );
 

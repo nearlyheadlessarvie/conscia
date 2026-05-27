@@ -2,13 +2,10 @@ import 'dart:io';
 
 String applyGoogleSignInConfig({
   required String infoPlist,
-  required String googleServiceInfoPlist,
+  required String clientId,
+  required String reversedClientId,
   String? serverClientId,
 }) {
-  final clientId = _readPlistValue(googleServiceInfoPlist, 'CLIENT_ID');
-  final reversedClientId =
-      _readPlistValue(googleServiceInfoPlist, 'REVERSED_CLIENT_ID');
-
   var updated = _upsertStringKey(infoPlist, 'GIDClientID', clientId);
   if (serverClientId != null && serverClientId.trim().isNotEmpty) {
     updated = _upsertStringKey(
@@ -19,18 +16,6 @@ String applyGoogleSignInConfig({
   }
 
   return _ensureGoogleUrlScheme(updated, reversedClientId);
-}
-
-String _readPlistValue(String plist, String key) {
-  final pattern = RegExp(
-    '<key>${RegExp.escape(key)}</key>\\s*<string>([^<]+)</string>',
-  );
-  final match = pattern.firstMatch(plist);
-  if (match == null) {
-    throw StateError('Missing $key in GoogleService-Info.plist');
-  }
-
-  return match.group(1)!.trim();
 }
 
 String _upsertStringKey(String plist, String key, String value) {
@@ -97,11 +82,11 @@ String _insertBeforeRootDictClose(String plist, String content) {
 void main(List<String> args) {
   final options = _parseArgs(args);
   final infoPlistFile = File(options.infoPlistPath);
-  final googleServiceInfoFile = File(options.googleServiceInfoPlistPath);
 
   final updated = applyGoogleSignInConfig(
     infoPlist: infoPlistFile.readAsStringSync(),
-    googleServiceInfoPlist: googleServiceInfoFile.readAsStringSync(),
+    clientId: options.clientId,
+    reversedClientId: options.reversedClientId,
     serverClientId: options.serverClientId,
   );
 
@@ -110,7 +95,8 @@ void main(List<String> args) {
 
 _Options _parseArgs(List<String> args) {
   String? infoPlistPath;
-  String? googleServiceInfoPlistPath;
+  String? clientId;
+  String? reversedClientId;
   String? serverClientId;
 
   for (var index = 0; index < args.length; index++) {
@@ -118,8 +104,10 @@ _Options _parseArgs(List<String> args) {
     switch (arg) {
       case '--info-plist':
         infoPlistPath = args[++index];
-      case '--google-service-info-plist':
-        googleServiceInfoPlistPath = args[++index];
+      case '--client-id':
+        clientId = args[++index];
+      case '--reversed-client-id':
+        reversedClientId = args[++index];
       case '--server-client-id':
         serverClientId = args[++index];
       default:
@@ -127,17 +115,19 @@ _Options _parseArgs(List<String> args) {
     }
   }
 
-  if (infoPlistPath == null || googleServiceInfoPlistPath == null) {
+  if (infoPlistPath == null || clientId == null || reversedClientId == null) {
     throw ArgumentError(
       'Usage: dart run tool/configure_google_sign_in_ios.dart '
-      '--info-plist <path> --google-service-info-plist <path> '
+      '--info-plist <path> --client-id <id> '
+      '--reversed-client-id <id> '
       '[--server-client-id <id>]',
     );
   }
 
   return _Options(
     infoPlistPath: infoPlistPath,
-    googleServiceInfoPlistPath: googleServiceInfoPlistPath,
+    clientId: clientId,
+    reversedClientId: reversedClientId,
     serverClientId: serverClientId,
   );
 }
@@ -145,11 +135,13 @@ _Options _parseArgs(List<String> args) {
 class _Options {
   const _Options({
     required this.infoPlistPath,
-    required this.googleServiceInfoPlistPath,
+    required this.clientId,
+    required this.reversedClientId,
     this.serverClientId,
   });
 
   final String infoPlistPath;
-  final String googleServiceInfoPlistPath;
+  final String clientId;
+  final String reversedClientId;
   final String? serverClientId;
 }

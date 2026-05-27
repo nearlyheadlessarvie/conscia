@@ -185,14 +185,27 @@ jobs:
               base64.b64decode(os.environ["IOS_GOOGLE_SERVICE_INFO_PLIST_BASE64"])
           )
           PY
-          plutil -convert xml1 app/ios/Runner/GoogleService-Info.plist
+
+      - name: Derive iOS Google Sign-In metadata
+        id: ios_google
+        shell: bash
+        run: |
+          CLIENT_ID=$(/usr/libexec/PlistBuddy -c 'Print :CLIENT_ID' app/ios/Runner/GoogleService-Info.plist 2>/dev/null || true)
+          REVERSED_CLIENT_ID=$(/usr/libexec/PlistBuddy -c 'Print :REVERSED_CLIENT_ID' app/ios/Runner/GoogleService-Info.plist 2>/dev/null || true)
+
+          test -n "$CLIENT_ID" || (echo "Missing CLIENT_ID in ios/Runner/GoogleService-Info.plist" && exit 1)
+          test -n "$REVERSED_CLIENT_ID" || (echo "Missing REVERSED_CLIENT_ID in ios/Runner/GoogleService-Info.plist" && exit 1)
+
+          echo "client_id=$CLIENT_ID" >> "$GITHUB_OUTPUT"
+          echo "reversed_client_id=$REVERSED_CLIENT_ID" >> "$GITHUB_OUTPUT"
 
       - name: Configure iOS Google Sign-In metadata
         working-directory: app
         run: |
           dart run tool/configure_google_sign_in_ios.dart \
             --info-plist ios/Runner/Info.plist \
-            --google-service-info-plist ios/Runner/GoogleService-Info.plist \
+            --client-id "${{ steps.ios_google.outputs.client_id }}" \
+            --reversed-client-id "${{ steps.ios_google.outputs.reversed_client_id }}" \
             --server-client-id "${GOOGLE_SERVER_CLIENT_ID}"
 
       - name: Materialize optional firebase_options.dart override
