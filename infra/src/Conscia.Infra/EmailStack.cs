@@ -176,11 +176,15 @@ public class EmailStack : Stack
             }
         }
 
-        if (domainSettings.IcloudInboxCnameRecords is { Count: > 0 })
+        var validIcloudInboxCnameRecords = domainSettings.IcloudInboxCnameRecords?
+            .Where(record => !string.IsNullOrWhiteSpace(record.Name) && !string.IsNullOrWhiteSpace(record.Value))
+            .ToList();
+
+        if (validIcloudInboxCnameRecords is { Count: > 0 })
         {
-            for (var index = 0; index < domainSettings.IcloudInboxCnameRecords.Count; index++)
+            for (var index = 0; index < validIcloudInboxCnameRecords.Count; index++)
             {
-                var record = domainSettings.IcloudInboxCnameRecords[index];
+                var record = validIcloudInboxCnameRecords[index];
                 CreateCnameRecord(
                     hostedZone,
                     $"IcloudInboxCnameRecord{index + 1}",
@@ -207,9 +211,13 @@ public class EmailStack : Stack
 
     private static bool HasIcloudInboxRecords(DomainSettings domainSettings)
     {
+        var hasValidIcloudInboxCnameRecord = domainSettings.IcloudInboxCnameRecords?
+            .Any(record => !string.IsNullOrWhiteSpace(record.Name) && !string.IsNullOrWhiteSpace(record.Value))
+            ?? false;
+
         return domainSettings.IcloudInboxMxRecords is { Count: > 0 }
             || domainSettings.IcloudInboxTxtRecords is { Count: > 0 }
-            || domainSettings.IcloudInboxCnameRecords is { Count: > 0 };
+            || hasValidIcloudInboxCnameRecord;
     }
 
     private static string ToAbsoluteRecordName(string name, string rootDomainName)
