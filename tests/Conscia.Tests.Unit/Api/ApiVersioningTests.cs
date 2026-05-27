@@ -46,18 +46,38 @@ public class ApiVersioningTests : IClassFixture<TestWebAppFactory>
     }
 
     [Fact]
-    public async Task VersionJson_ReturnsConfiguredDeployMetadata_WithoutApiVersion()
+    public async Task VersionJson_ReturnsPublishedMetadataFile_WithoutApiVersion()
     {
+        var metadataPath = Path.Combine(AppContext.BaseDirectory, "version.json");
+        var hadOriginal = File.Exists(metadataPath);
+        var originalContents = hadOriginal ? await File.ReadAllTextAsync(metadataPath) : null;
+        await File.WriteAllTextAsync(
+            metadataPath,
+            "{\"service\":\"conscia-api\",\"version\":\"1.2.3\",\"commitSha\":\"abc123def456\",\"deployedAt\":\"2026-05-27T12:34:56Z\"}");
+
         using var client = _factory.CreateRawClient();
+        try
+        {
+            var response = await client.GetAsync("/version.json");
 
-        var response = await client.GetAsync("/version.json");
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-
-        using var payload = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
-        Assert.Equal("conscia-api", payload.RootElement.GetProperty("service").GetString());
-        Assert.Equal("1.2.3", payload.RootElement.GetProperty("version").GetString());
-        Assert.Equal("abc123def456", payload.RootElement.GetProperty("commitSha").GetString());
-        Assert.Equal("2026-05-27T12:34:56Z", payload.RootElement.GetProperty("deployedAt").GetString());
+            using var payload = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+            Assert.Equal("conscia-api", payload.RootElement.GetProperty("service").GetString());
+            Assert.Equal("1.2.3", payload.RootElement.GetProperty("version").GetString());
+            Assert.Equal("abc123def456", payload.RootElement.GetProperty("commitSha").GetString());
+            Assert.Equal("2026-05-27T12:34:56Z", payload.RootElement.GetProperty("deployedAt").GetString());
+        }
+        finally
+        {
+            if (hadOriginal)
+            {
+                await File.WriteAllTextAsync(metadataPath, originalContents!);
+            }
+            else if (File.Exists(metadataPath))
+            {
+                File.Delete(metadataPath);
+            }
+        }
     }
 }

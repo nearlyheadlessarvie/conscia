@@ -47,6 +47,40 @@ jobs:
       - name: Publish Lambda assets
         run: |
           dotnet publish src/Conscia.Api -c Release -r linux-arm64 --self-contained -o publish/api
+          if [[ "${GITHUB_REF:-}" == refs/tags/api/v* ]]; then
+            API_VERSION="${GITHUB_REF#refs/tags/api/v}"
+          else
+            API_VERSION=$(python3 - <<'PY'
+            from pathlib import Path
+            import re
+
+            content = Path("src/Conscia.Api/Conscia.Api.csproj").read_text(encoding="utf-8")
+            match = re.search(r"<Version>([^<]+)</Version>", content)
+            print(match.group(1) if match else "unknown")
+            PY
+            )
+          fi
+          API_DEPLOYED_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          export API_VERSION
+          export API_DEPLOYED_AT
+          python3 - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          Path("publish/api/version.json").write_text(
+              json.dumps(
+                  {
+                      "service": "conscia-api",
+                      "version": os.environ["API_VERSION"],
+                      "commitSha": os.environ["GITHUB_SHA"],
+                      "deployedAt": os.environ["API_DEPLOYED_AT"],
+                  },
+                  separators=(",", ":"),
+              ),
+              encoding="utf-8",
+          )
+          PY
           dotnet publish src/Conscia.OutboxProcessor -c Release -r linux-arm64 --self-contained -o publish/outbox
           dotnet publish src/Conscia.RecurringProcessor -c Release -r linux-arm64 --self-contained -o publish/recurring-processor
           dotnet publish src/Conscia.PatternAggregator -c Release -r linux-arm64 --self-contained -o publish/pattern-aggregator
@@ -56,16 +90,6 @@ jobs:
         with:
           role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
           aws-region: ${{ vars.AWS_REGION || 'ap-southeast-1' }}
-
-      - name: Prepare release metadata
-        run: |
-          if [[ "${GITHUB_REF:-}" == refs/tags/api/v* ]]; then
-            echo "API_RELEASE_VERSION=${GITHUB_REF#refs/tags/api/v}" >> "$GITHUB_ENV"
-          else
-            echo "API_RELEASE_VERSION=workflow-dispatch" >> "$GITHUB_ENV"
-          fi
-          echo "API_COMMIT_SHA=${GITHUB_SHA}" >> "$GITHUB_ENV"
-          echo "API_DEPLOYED_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_ENV"
 
       - name: Install CDK
         run: npm install -g aws-cdk

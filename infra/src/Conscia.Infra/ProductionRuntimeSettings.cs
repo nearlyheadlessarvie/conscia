@@ -14,10 +14,7 @@ public sealed record ProductionRuntimeSettings(
     string? FirebaseProjectId,
     string? InviteEmailFromEmail,
     string? InviteEmailConfigurationSetName,
-    string InviteEmailDeepLinkBaseUri,
-    string? VersionRelease = null,
-    string? VersionCommitSha = null,
-    string? VersionDeployedAt = null)
+    string InviteEmailDeepLinkBaseUri)
 {
     public static ProductionRuntimeSettings FromEnvironment() => new(
         AuthAppJwtSigningKey: Get("AUTH_APP_JWT_SIGNING_KEY"),
@@ -33,10 +30,7 @@ public sealed record ProductionRuntimeSettings(
         FirebaseProjectId: Get("FIREBASE_PROJECT_ID"),
         InviteEmailFromEmail: Get("SES_FROM_EMAIL"),
         InviteEmailConfigurationSetName: Get("SES_CONFIGURATION_SET"),
-        InviteEmailDeepLinkBaseUri: Get("INVITE_EMAIL_DEEP_LINK_BASE_URI") ?? "https://getconscia.com/open/family-invite",
-        VersionRelease: Get("API_RELEASE_VERSION"),
-        VersionCommitSha: Get("API_COMMIT_SHA"),
-        VersionDeployedAt: Get("API_DEPLOYED_AT"));
+        InviteEmailDeepLinkBaseUri: Get("INVITE_EMAIL_DEEP_LINK_BASE_URI") ?? "https://getconscia.com/open/family-invite");
 
     private static string? Get(string name)
     {
