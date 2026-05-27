@@ -47,4 +47,22 @@ public class CognitoRegionResolverTests
 
         Assert.Equal("ap-southeast-1", region);
     }
+
+    [Fact]
+    public void ResolveIssuer_BuildsCognitoIssuerFromConfiguredRegionAndUserPool()
+    {
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["AWS_REGION"] = "ap-southeast-1",
+                ["Auth:Cognito:UserPoolId"] = "ap-southeast-1_abc123"
+            })
+            .Build();
+
+        var issuer = CognitoRegionResolver.ResolveIssuer(configuration);
+
+        Assert.Equal(
+            "https://cognito-idp.ap-southeast-1.amazonaws.com/ap-southeast-1_abc123",
+            issuer);
+    }
 }
