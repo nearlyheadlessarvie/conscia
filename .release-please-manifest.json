@@ -1,6 +1,6 @@
 {
   "app": "2.0.0",
   "src/Conscia.Api": "1.2.0",
-  "infra/src/Conscia.Infra": "1.5.1",
+  "infra/src/Conscia.Infra": "1.5.2",
   "web": "1.2.0"
 }
