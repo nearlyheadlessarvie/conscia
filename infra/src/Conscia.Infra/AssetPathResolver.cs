@@ -2,6 +2,20 @@ namespace Conscia.Infra;
 
 public static class AssetPathResolver
 {
+    public static string ResolveRepositoryFile(string relativePath)
+    {
+        var infraRoot = FindInfraRoot();
+        var repositoryRoot = Directory.GetParent(infraRoot)?.FullName
+            ?? throw new InvalidOperationException("Could not locate the repository root from the infra directory.");
+        var filePath = Path.GetFullPath(Path.Combine(repositoryRoot, relativePath));
+        if (!File.Exists(filePath))
+        {
+            throw new InvalidOperationException($"Missing repository file at '{filePath}'.");
+        }
+
+        return filePath;
+    }
+
     public static string ResolvePublishedAsset(string relativePath, string placeholderName)
     {
         var infraRoot = FindInfraRoot();
