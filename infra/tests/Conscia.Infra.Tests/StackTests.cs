@@ -122,6 +122,7 @@ public class StackTests
         template.ResourceCountIs("AWS::Cognito::UserPoolDomain", 1);
         template.ResourceCountIs("AWS::Cognito::UserPoolIdentityProvider", 2);
         template.ResourceCountIs("AWS::Cognito::ManagedLoginBranding", 1);
+        template.ResourceCountIs("AWS::Cognito::Terms", 2);
         template.HasResourceProperties("AWS::Cognito::UserPool", new Dictionary<string, object>
         {
             ["UserPoolName"] = "conscia-users",
@@ -228,6 +229,26 @@ public class StackTests
                     }),
                     ["input"] = Match.AnyValue()
                 })
+            })
+        }));
+        template.HasResourceProperties("AWS::Cognito::Terms", Match.ObjectLike(new Dictionary<string, object>
+        {
+            ["TermsName"] = "terms-of-use",
+            ["TermsSource"] = "LINK",
+            ["Enforcement"] = "NONE",
+            ["Links"] = Match.ObjectLike(new Dictionary<string, object>
+            {
+                ["cognito:default"] = "https://getconscia.com/terms"
+            })
+        }));
+        template.HasResourceProperties("AWS::Cognito::Terms", Match.ObjectLike(new Dictionary<string, object>
+        {
+            ["TermsName"] = "privacy-policy",
+            ["TermsSource"] = "LINK",
+            ["Enforcement"] = "NONE",
+            ["Links"] = Match.ObjectLike(new Dictionary<string, object>
+            {
+                ["cognito:default"] = "https://getconscia.com/privacy"
             })
         }));
         var brandingResources = template.FindResources("AWS::Cognito::ManagedLoginBranding");

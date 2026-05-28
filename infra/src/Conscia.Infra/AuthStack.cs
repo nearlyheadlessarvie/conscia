@@ -276,6 +276,40 @@ public class AuthStack : Stack
                 Settings = BuildManagedLoginBrandingSettings()
             });
 
+            _ = new CfnResource(this, "ManagedLoginTermsOfUse", new CfnResourceProps
+            {
+                Type = "AWS::Cognito::Terms",
+                Properties = new Dictionary<string, object>
+                {
+                    ["UserPoolId"] = UserPool.UserPoolId,
+                    ["ClientId"] = UserPoolClient.UserPoolClientId,
+                    ["TermsName"] = "terms-of-use",
+                    ["TermsSource"] = "LINK",
+                    ["Enforcement"] = "NONE",
+                    ["Links"] = new Dictionary<string, string>
+                    {
+                        ["cognito:default"] = $"https://{rootDomainName}/terms"
+                    }
+                }
+            });
+
+            _ = new CfnResource(this, "ManagedLoginPrivacyPolicy", new CfnResourceProps
+            {
+                Type = "AWS::Cognito::Terms",
+                Properties = new Dictionary<string, object>
+                {
+                    ["UserPoolId"] = UserPool.UserPoolId,
+                    ["ClientId"] = UserPoolClient.UserPoolClientId,
+                    ["TermsName"] = "privacy-policy",
+                    ["TermsSource"] = "LINK",
+                    ["Enforcement"] = "NONE",
+                    ["Links"] = new Dictionary<string, string>
+                    {
+                        ["cognito:default"] = $"https://{rootDomainName}/privacy"
+                    }
+                }
+            });
+
             _ = new ARecord(this, "ManagedLoginAliasRecord", new ARecordProps
             {
                 Zone = hostedZone,
