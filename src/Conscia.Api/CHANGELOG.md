@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.0](https://github.com/nearlyheadlessarvie/conscia/compare/api/v1.1.6...api/v1.2.0) (2026-05-28)
+
+
+### Features
+
+* **app:** cut over mobile auth to cognito managed login ([#118](https://github.com/nearlyheadlessarvie/conscia/issues/118)) ([1823f77](https://github.com/nearlyheadlessarvie/conscia/commit/1823f779bcc460cf5e5b513c060e347e9e26b3d8))
+
 ## [1.1.6](https://github.com/nearlyheadlessarvie/conscia/compare/api/v1.1.5...api/v1.1.6) (2026-05-27)
 
 
