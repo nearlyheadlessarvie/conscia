@@ -309,6 +309,20 @@ public class StackTests
         var template = Template.FromStack(stack);
         template.ResourceCountIs("AWS::Lambda::Function", 1);
         template.ResourceCountIs("AWS::EC2::SecurityGroup", 0);
+        template.HasResourceProperties("AWS::IAM::Policy", Match.ObjectLike(new Dictionary<string, object>
+        {
+            ["PolicyDocument"] = Match.ObjectLike(new Dictionary<string, object>
+            {
+                ["Statement"] = Match.ArrayWith([
+                    Match.ObjectLike(new Dictionary<string, object>
+                    {
+                        ["Action"] = Match.ArrayWith(["aws-marketplace:ViewSubscriptions", "aws-marketplace:Subscribe"]),
+                        ["Effect"] = "Allow",
+                        ["Resource"] = "*"
+                    })
+                ])
+            })
+        }));
         template.HasResourceProperties("AWS::Lambda::Function", new Dictionary<string, object>
         {
             ["Environment"] = new Dictionary<string, object>

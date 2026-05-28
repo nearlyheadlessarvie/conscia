@@ -26,13 +26,11 @@ jobs:
       ICLOUD_INBOX_MX_RECORDS_JSON: ${{ vars.ICLOUD_INBOX_MX_RECORDS_JSON }}
       ICLOUD_INBOX_TXT_RECORDS_JSON: ${{ vars.ICLOUD_INBOX_TXT_RECORDS_JSON }}
       ICLOUD_INBOX_CNAME_RECORDS_JSON: ${{ vars.ICLOUD_INBOX_CNAME_RECORDS_JSON }}
-      AUTH_APP_JWT_SIGNING_KEY_SECRET_NAME: conscia/prod/auth-app-jwt-signing-key
       APPLE_PRIVATE_KEY_SECRET_NAME: conscia/prod/apple-private-key
       COGNITO_APPLE_PRIVATE_KEY_SECRET_NAME: conscia/prod/cognito-apple-private-key
       COGNITO_GOOGLE_CLIENT_SECRET_SECRET_NAME: conscia/prod/cognito-google-client-secret
       GOOGLE_PLAY_SERVICE_ACCOUNT_JSON_SECRET_NAME: conscia/prod/google-play-service-account-json
       FIREBASE_ADMIN_SERVICE_ACCOUNT_JSON_SECRET_NAME: conscia/prod/firebase-admin-service-account-json
-      AUTH_APP_JWT_SIGNING_KEY: ${{ secrets.AUTH_APP_JWT_SIGNING_KEY }}
       AUTH_GOOGLE_CLIENT_ID: ${{ secrets.AUTH_GOOGLE_CLIENT_ID }}
       AUTH_APPLE_CLIENT_ID: ${{ secrets.AUTH_APPLE_CLIENT_ID }}
       COGNITO_APPLE_KEY_ID: ${{ secrets.COGNITO_APPLE_KEY_ID }}
@@ -99,7 +97,6 @@ jobs:
             fi
           }
 
-          upsert_secret "$AUTH_APP_JWT_SIGNING_KEY_SECRET_NAME" "$AUTH_APP_JWT_SIGNING_KEY"
           upsert_secret "$COGNITO_GOOGLE_CLIENT_SECRET_SECRET_NAME" "$COGNITO_GOOGLE_CLIENT_SECRET"
           upsert_secret "$COGNITO_APPLE_PRIVATE_KEY_SECRET_NAME" "$COGNITO_APPLE_PRIVATE_KEY"
           upsert_secret "$APPLE_PRIVATE_KEY_SECRET_NAME" "$APPLE_PRIVATE_KEY"

@@ -158,6 +158,12 @@ public class ComputeStack : Stack
 
         ApiLambda.AddToRolePolicy(new PolicyStatement(new PolicyStatementProps
         {
+            Actions = ["aws-marketplace:ViewSubscriptions", "aws-marketplace:Subscribe"],
+            Resources = ["*"]
+        }));
+
+        ApiLambda.AddToRolePolicy(new PolicyStatement(new PolicyStatementProps
+        {
             Actions = ["textract:DetectDocumentText"],
             Resources = ["*"]
         }));
