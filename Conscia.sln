@@ -29,6 +29,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Conscia.PatternAggregator",
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Conscia.RecurringProcessor", "src\Conscia.RecurringProcessor\Conscia.RecurringProcessor.csproj", "{35A359F0-890A-49C5-9F55-39A4FBE8C989}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Conscia.CognitoPreSignupLinker", "src\Conscia.CognitoPreSignupLinker\Conscia.CognitoPreSignupLinker.csproj", "{C8250275-7958-4D7B-B86C-5C9937517033}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -183,6 +185,18 @@ Global
 		{35A359F0-890A-49C5-9F55-39A4FBE8C989}.Release|x64.Build.0 = Release|Any CPU
 		{35A359F0-890A-49C5-9F55-39A4FBE8C989}.Release|x86.ActiveCfg = Release|Any CPU
 		{35A359F0-890A-49C5-9F55-39A4FBE8C989}.Release|x86.Build.0 = Release|Any CPU
+		{C8250275-7958-4D7B-B86C-5C9937517033}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C8250275-7958-4D7B-B86C-5C9937517033}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C8250275-7958-4D7B-B86C-5C9937517033}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{C8250275-7958-4D7B-B86C-5C9937517033}.Debug|x64.Build.0 = Debug|Any CPU
+		{C8250275-7958-4D7B-B86C-5C9937517033}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{C8250275-7958-4D7B-B86C-5C9937517033}.Debug|x86.Build.0 = Debug|Any CPU
+		{C8250275-7958-4D7B-B86C-5C9937517033}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C8250275-7958-4D7B-B86C-5C9937517033}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C8250275-7958-4D7B-B86C-5C9937517033}.Release|x64.ActiveCfg = Release|Any CPU
+		{C8250275-7958-4D7B-B86C-5C9937517033}.Release|x64.Build.0 = Release|Any CPU
+		{C8250275-7958-4D7B-B86C-5C9937517033}.Release|x86.ActiveCfg = Release|Any CPU
+		{C8250275-7958-4D7B-B86C-5C9937517033}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -200,5 +214,6 @@ Global
 		{30E5D1A6-40FE-4C6D-A34E-B454F54E9A55} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
 		{11858E1F-BD5A-4039-A78C-11161D90E008} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
 		{35A359F0-890A-49C5-9F55-39A4FBE8C989} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
+		{C8250275-7958-4D7B-B86C-5C9937517033} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
 	EndGlobalSection
 EndGlobal

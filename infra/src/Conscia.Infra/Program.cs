@@ -29,6 +29,9 @@ sealed class Program
         var auth = new AuthStack(app, "Conscia-Auth", new AuthStackProps
         {
             Env = env,
+            CognitoPreSignupLinkerAssetPath = AssetPathResolver.ResolvePublishedAsset(
+                "../publish/cognito-pre-signup-linker",
+                "cognito-pre-signup-linker"),
             DomainSettings = domainSettings,
             ManagedLoginProviderSettings = managedLoginProviderSettings,
             ManagedLoginSecretSettings = managedLoginSecretSettings
