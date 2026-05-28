@@ -108,7 +108,7 @@ public class WebStack : Stack
             var certificate = new DnsValidatedCertificate(this, "WebsiteCertificate", new DnsValidatedCertificateProps
             {
                 DomainName = props.DomainSettings.RootDomainName,
-                SubjectAlternativeNames = [props.DomainSettings.WwwDomainName],
+                SubjectAlternativeNames = props.DomainSettings.WebDomainNames.Skip(1).ToArray(),
                 HostedZone = hostedZone,
                 Region = "us-east-1",
                 CleanupRoute53Records = true

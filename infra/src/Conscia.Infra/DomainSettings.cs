@@ -13,6 +13,12 @@ public sealed record DomainSettings(
     string WwwDomainName,
     string ApiDomainName,
     string HostedZoneId,
+    string? AuthDomainName = null,
+    string? CognitoDomainName = null,
+    string? ManagedLoginRedirectUri = null,
+    string? ManagedLoginLogoutUri = null,
+    string DevManagedLoginRedirectUri = "conscia://auth/callback",
+    string DevManagedLoginLogoutUri = "conscia://auth/logout",
     string SesMailFromSubdomain = "feedback",
     string DmarcRecordName = "_dmarc",
     string DmarcValue = "v=DMARC1; p=quarantine; adkim=s; aspf=s; pct=100",
@@ -20,7 +26,23 @@ public sealed record DomainSettings(
     IReadOnlyList<DnsTxtRecord>? IcloudInboxTxtRecords = null,
     IReadOnlyList<DnsCnameRecord>? IcloudInboxCnameRecords = null)
 {
-    public string[] WebDomainNames => [RootDomainName, WwwDomainName];
+    public string ResolvedAuthDomainName => string.IsNullOrWhiteSpace(AuthDomainName)
+        ? $"auth.{RootDomainName}"
+        : AuthDomainName;
+
+    public string ResolvedCognitoDomainName => string.IsNullOrWhiteSpace(CognitoDomainName)
+        ? $"login.{RootDomainName}"
+        : CognitoDomainName;
+
+    public string ResolvedManagedLoginRedirectUri => string.IsNullOrWhiteSpace(ManagedLoginRedirectUri)
+        ? $"https://{ResolvedAuthDomainName}/open/auth/callback"
+        : ManagedLoginRedirectUri;
+
+    public string ResolvedManagedLoginLogoutUri => string.IsNullOrWhiteSpace(ManagedLoginLogoutUri)
+        ? $"https://{ResolvedAuthDomainName}/open/auth/logout"
+        : ManagedLoginLogoutUri;
+
+    public string[] WebDomainNames => [RootDomainName, WwwDomainName, ResolvedAuthDomainName];
     public string SesMailFromDomain => $"{SesMailFromSubdomain}.{RootDomainName}";
 
     public string[] AllowedCorsOrigins =>
@@ -42,6 +64,12 @@ public sealed record DomainSettings(
             Get("CONSCIA_WWW_DOMAIN_NAME") ?? $"www.{rootDomain}",
             Get("CONSCIA_API_DOMAIN_NAME") ?? $"api.{rootDomain}",
             hostedZoneId,
+            Get("CONSCIA_AUTH_DOMAIN_NAME") ?? $"auth.{rootDomain}",
+            Get("CONSCIA_COGNITO_DOMAIN_NAME") ?? $"login.{rootDomain}",
+            Get("COGNITO_REDIRECT_URI"),
+            Get("COGNITO_LOGOUT_URI"),
+            Get("COGNITO_DEV_REDIRECT_URI") ?? "conscia://auth/callback",
+            Get("COGNITO_DEV_LOGOUT_URI") ?? "conscia://auth/logout",
             Get("CONSCIA_SES_MAIL_FROM_SUBDOMAIN") ?? "feedback",
             Get("CONSCIA_DMARC_RECORD_NAME") ?? "_dmarc",
             Get("CONSCIA_DMARC_VALUE") ?? "v=DMARC1; p=quarantine; adkim=s; aspf=s; pct=100",
