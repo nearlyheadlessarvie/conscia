@@ -27,6 +27,7 @@ permissions:
 env:
   APP_DIR: app
   API_BASE_URL: ${{ vars.API_BASE_URL }}
+  COGNITO_CLIENT_ID: ${{ vars.COGNITO_CLIENT_ID }}
   MOCK_AUTH: ${{ vars.MOCK_AUTH || 'false' }}
   PUSH_NOTIFICATIONS_ENABLED: ${{ vars.PUSH_NOTIFICATIONS_ENABLED || 'false' }}
   GOOGLE_SERVER_CLIENT_ID: ${{ secrets.GOOGLE_SERVER_CLIENT_ID }}
@@ -56,6 +57,7 @@ jobs:
         shell: bash
         run: |
           test -n "${API_BASE_URL}" || (echo "Missing API_BASE_URL variable" && exit 1)
+          test -n "${COGNITO_CLIENT_ID}" || (echo "Missing COGNITO_CLIENT_ID variable" && exit 1)
           test -n "${GOOGLE_SERVER_CLIENT_ID}" || (echo "Missing GOOGLE_SERVER_CLIENT_ID secret" && exit 1)
           test -n "${ANDROID_GOOGLE_SERVICES_JSON_BASE64}" || (echo "Missing ANDROID_GOOGLE_SERVICES_JSON_BASE64 secret" && exit 1)
           test -n "${ANDROID_KEYSTORE_BASE64}" || (echo "Missing ANDROID_KEYSTORE_BASE64 secret" && exit 1)
@@ -155,6 +157,7 @@ jobs:
         run: |
           flutter build appbundle --release \
             --dart-define=API_BASE_URL="${API_BASE_URL}" \
+            --dart-define=COGNITO_CLIENT_ID="${COGNITO_CLIENT_ID}" \
             --dart-define=MOCK_AUTH="${MOCK_AUTH}" \
             --dart-define=PUSH_NOTIFICATIONS_ENABLED="${PUSH_NOTIFICATIONS_ENABLED}" \
             --dart-define=GOOGLE_SERVER_CLIENT_ID="${GOOGLE_SERVER_CLIENT_ID}"
@@ -200,6 +203,7 @@ jobs:
         shell: bash
         run: |
           test -n "${API_BASE_URL}" || (echo "Missing API_BASE_URL variable" && exit 1)
+          test -n "${COGNITO_CLIENT_ID}" || (echo "Missing COGNITO_CLIENT_ID variable" && exit 1)
           test -n "${GOOGLE_SERVER_CLIENT_ID}" || (echo "Missing GOOGLE_SERVER_CLIENT_ID secret" && exit 1)
           test -n "${IOS_GOOGLE_SERVICE_INFO_PLIST_BASE64}" || (echo "Missing IOS_GOOGLE_SERVICE_INFO_PLIST_BASE64 secret" && exit 1)
           test -n "${APP_STORE_CONNECT_API_KEY_ID}" || (echo "Missing APP_STORE_CONNECT_API_KEY_ID secret" && exit 1)
@@ -293,6 +297,7 @@ jobs:
           flutter build ios --release --config-only \
             --no-codesign \
             --dart-define=API_BASE_URL="${API_BASE_URL}" \
+            --dart-define=COGNITO_CLIENT_ID="${COGNITO_CLIENT_ID}" \
             --dart-define=MOCK_AUTH="${MOCK_AUTH}" \
             --dart-define=PUSH_NOTIFICATIONS_ENABLED="${PUSH_NOTIFICATIONS_ENABLED}" \
             --dart-define=GOOGLE_SERVER_CLIENT_ID="${GOOGLE_SERVER_CLIENT_ID}"
