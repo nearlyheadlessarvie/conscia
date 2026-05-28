@@ -206,7 +206,6 @@ public class StackTests
             ConscienceJourneyTable = database.ConscienceJourneyTable,
             AiQueue = ai.AiQueue,
             RuntimeSettings = new ProductionRuntimeSettings(
-                "jwt-signing-key",
                 "google-client-id",
                 "com.getconscia.app.ai",
                 "APPLEKEYID",
@@ -221,7 +220,6 @@ public class StackTests
                 "conscia-production",
                 "conscia://invite"),
             RuntimeSecretSettings = new RuntimeSecretSettings(
-                "test/auth-app-jwt-signing-key",
                 "test/apple-private-key",
                 "test/google-play-service-account-json",
                 "test/firebase-admin-service-account-json"),
@@ -247,6 +245,12 @@ public class StackTests
                 })
             }
         });
+
+        var lambda = template.FindResources("AWS::Lambda::Function").Single().Value;
+        var properties = (IDictionary<string, object>)lambda["Properties"];
+        var environment = (IDictionary<string, object>)properties["Environment"];
+        var variables = (IDictionary<string, object>)environment["Variables"];
+        Assert.DoesNotContain("Auth__AppJwtSigningKeySecretId", variables.Keys.Cast<string>());
     }
 
     [Fact]
@@ -264,7 +268,6 @@ public class StackTests
             MonthlyCategorySpendsTable = database.MonthlyCategorySpendsTable,
             PushDeviceTokensTable = database.PushDeviceTokensTable,
             RuntimeSettings = new ProductionRuntimeSettings(
-                "jwt-signing-key",
                 "google-client-id",
                 "com.getconscia.app.ai",
                 "APPLEKEYID",
@@ -279,7 +282,6 @@ public class StackTests
                 "conscia-production",
                 "conscia://invite"),
             RuntimeSecretSettings = new RuntimeSecretSettings(
-                "test/auth-app-jwt-signing-key",
                 "test/apple-private-key",
                 "test/google-play-service-account-json",
                 "test/firebase-admin-service-account-json"),
