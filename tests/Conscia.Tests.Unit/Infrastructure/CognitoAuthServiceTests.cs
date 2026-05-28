@@ -1,3 +1,5 @@
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
 using Amazon.CognitoIdentityProvider;
 using Amazon.CognitoIdentityProvider.Model;
 using Conscia.Domain.Entities;
@@ -12,7 +14,6 @@ namespace Conscia.Tests.Unit.Infrastructure;
 public class CognitoAuthServiceTests
 {
     private readonly Mock<IAmazonCognitoIdentityProvider> _cognito = new();
-    private readonly FakeExternalSocialTokenVerifier _socialVerifier = new();
     private readonly InMemoryUserRepository _repo = new();
     private readonly CognitoAuthService _auth;
 
@@ -21,16 +22,13 @@ public class CognitoAuthServiceTests
         var config = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
-                ["Auth:Cognito:ClientId"] = "client-123",
-                ["Auth:Cognito:UserPoolId"] = "pool-123",
-                ["Auth:AppJwtSigningKey"] = "social-signing-key-at-least-32-chars-long"
+                ["Auth:Cognito:ClientId"] = "client-123"
             })
             .Build();
 
         _auth = new CognitoAuthService(
             config,
             _cognito.Object,
-            _socialVerifier,
             _repo,
             NullLogger<CognitoAuthService>.Instance);
     }
@@ -146,117 +144,85 @@ public class CognitoAuthServiceTests
     }
 
     [Fact]
-    public async Task LoginWithGoogleAsync_NewVerifiedToken_CreatesLocalIdentityAndCognitoUser()
+    public async Task LoginAsync_UserPasswordAuth_UsesIdTokenClaimsForLocalUser()
     {
-        _socialVerifier.GooglePayload = new SocialTokenPayload(
-            ProviderSub: "google-sub-123",
-            Email: "Social@Example.com",
-            EmailVerified: true);
-
+        var userId = Guid.NewGuid();
         _cognito
-            .Setup(c => c.AdminCreateUserAsync(
-                It.Is<AdminCreateUserRequest>(r =>
-                    r.UserPoolId == "pool-123" &&
-                    r.MessageAction == MessageActionType.SUPPRESS &&
-                    r.UserAttributes.Any(a => a.Name == "email" && a.Value == "social@example.com") &&
-                    r.UserAttributes.Any(a => a.Name == "email_verified" && a.Value == "true")),
+            .Setup(c => c.InitiateAuthAsync(
+                It.Is<InitiateAuthRequest>(r =>
+                    r.ClientId == "client-123" &&
+                    r.AuthFlow == AuthFlowType.USER_PASSWORD_AUTH &&
+                    r.AuthParameters["USERNAME"] == "login@example.com" &&
+                    r.AuthParameters["PASSWORD"] == "password123"),
                 It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new AdminCreateUserResponse());
+            .ReturnsAsync(new InitiateAuthResponse
+            {
+                AuthenticationResult = new AuthenticationResultType
+                {
+                    AccessToken = CreateJwt(userId, "login@example.com"),
+                    IdToken = CreateJwt(userId, "login@example.com"),
+                    RefreshToken = "refresh-token-123"
+                }
+            });
 
-        var result = await _auth.LoginWithGoogleAsync("valid-google-token");
+        var result = await _auth.LoginAsync(" Login@Example.com ", "password123");
 
         Assert.True(result.Success);
-        Assert.Equal("social@example.com", result.Email);
-        Assert.False(string.IsNullOrWhiteSpace(result.AccessToken));
-        Assert.False(string.IsNullOrWhiteSpace(result.RefreshToken));
+        Assert.Equal(userId.ToString(), result.UserId);
+        Assert.Equal("login@example.com", result.Email);
+        Assert.Equal("refresh-token-123", result.RefreshToken);
 
         var user = _repo.Users.Single();
-        Assert.Equal("social@example.com", user.Email);
+        Assert.Equal(userId, user.Id);
+        Assert.Equal("login@example.com", user.Email);
         Assert.True(user.EmailConfirmed);
 
         var identity = _repo.Identities.Single();
-        Assert.Equal(AuthProvider.Google, identity.Provider);
-        Assert.Equal("google-sub-123", identity.ProviderSub);
-        Assert.Equal(user.Id, identity.UserId);
+        Assert.Equal(AuthProvider.Email, identity.Provider);
+        Assert.Equal("login@example.com", identity.ProviderSub);
+    }
 
-        _cognito.Verify(c => c.AdminCreateUserAsync(
-            It.IsAny<AdminCreateUserRequest>(),
+    [Fact]
+    public async Task RefreshAsync_CognitoRefreshToken_UsesRefreshFlowAndPreservesRefreshToken()
+    {
+        var userId = Guid.NewGuid();
+        _cognito
+            .Setup(c => c.InitiateAuthAsync(
+                It.Is<InitiateAuthRequest>(r =>
+                    r.ClientId == "client-123" &&
+                    r.AuthFlow == AuthFlowType.REFRESH_TOKEN_AUTH &&
+                    r.AuthParameters["REFRESH_TOKEN"] == "refresh-token-123"),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new InitiateAuthResponse
+            {
+                AuthenticationResult = new AuthenticationResultType
+                {
+                    AccessToken = CreateJwt(userId, "refresh@example.com"),
+                    IdToken = CreateJwt(userId, "refresh@example.com")
+                }
+            });
+
+        var result = await _auth.RefreshAsync("refresh-token-123");
+
+        Assert.True(result.Success);
+        Assert.Equal(userId.ToString(), result.UserId);
+        Assert.Equal("refresh@example.com", result.Email);
+        Assert.Equal("refresh-token-123", result.RefreshToken);
+        _cognito.Verify(c => c.InitiateAuthAsync(
+            It.IsAny<InitiateAuthRequest>(),
             It.IsAny<CancellationToken>()), Times.Once);
     }
 
-    [Fact]
-    public async Task LoginWithAppleAsync_ExistingIdentity_ReturnsAppTokensWithoutCreatingCognitoUser()
+    private static string CreateJwt(Guid userId, string email)
     {
-        var user = new User
-        {
-            Id = Guid.NewGuid(),
-            Email = "apple@example.com",
-            EmailConfirmed = true
-        };
-        await _repo.AddAsync(user);
-        await _repo.AddIdentityAsync(new UserIdentity
-        {
-            Id = Guid.NewGuid(),
-            UserId = user.Id,
-            Provider = AuthProvider.Apple,
-            ProviderSub = "apple-sub-123"
-        });
+        var token = new JwtSecurityToken(
+            issuer: "https://cognito-idp.ap-southeast-1.amazonaws.com/ap-southeast-1_example",
+            claims:
+            [
+                new Claim("sub", userId.ToString()),
+                new Claim("email", email)
+            ]);
 
-        _socialVerifier.ApplePayload = new SocialTokenPayload(
-            ProviderSub: "apple-sub-123",
-            Email: "ignored@example.com",
-            EmailVerified: true);
-
-        var result = await _auth.LoginWithAppleAsync("valid-apple-token", "auth-code");
-
-        Assert.True(result.Success);
-        Assert.Equal(user.Id.ToString(), result.UserId);
-        Assert.Equal("apple@example.com", result.Email);
-        Assert.False(string.IsNullOrWhiteSpace(result.AccessToken));
-        Assert.False(string.IsNullOrWhiteSpace(result.RefreshToken));
-
-        _cognito.Verify(c => c.AdminCreateUserAsync(
-            It.IsAny<AdminCreateUserRequest>(),
-            It.IsAny<CancellationToken>()), Times.Never);
-    }
-
-    [Fact]
-    public async Task RefreshAsync_AppRefreshToken_IssuesNewAppAccessToken()
-    {
-        _socialVerifier.GooglePayload = new SocialTokenPayload(
-            ProviderSub: "google-refresh-sub",
-            Email: "refresh@example.com",
-            EmailVerified: true);
-
-        _cognito
-            .Setup(c => c.AdminCreateUserAsync(
-                It.IsAny<AdminCreateUserRequest>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new AdminCreateUserResponse());
-
-        var initial = await _auth.LoginWithGoogleAsync("valid-google-token");
-        var refreshed = await _auth.RefreshAsync(initial.RefreshToken!);
-
-        Assert.True(refreshed.Success);
-        Assert.False(string.IsNullOrWhiteSpace(refreshed.AccessToken));
-        Assert.Equal(initial.RefreshToken, refreshed.RefreshToken);
-        Assert.Equal(initial.UserId, refreshed.UserId);
-        Assert.Equal("refresh@example.com", refreshed.Email);
-
-        _cognito.Verify(c => c.InitiateAuthAsync(
-            It.IsAny<InitiateAuthRequest>(),
-            It.IsAny<CancellationToken>()), Times.Never);
-    }
-
-    private sealed class FakeExternalSocialTokenVerifier : IExternalSocialTokenVerifier
-    {
-        public SocialTokenPayload? GooglePayload { get; set; }
-        public SocialTokenPayload? ApplePayload { get; set; }
-
-        public Task<SocialTokenPayload?> VerifyGoogleAsync(string idToken, CancellationToken ct = default) =>
-            Task.FromResult(GooglePayload);
-
-        public Task<SocialTokenPayload?> VerifyAppleAsync(string identityToken, CancellationToken ct = default) =>
-            Task.FromResult(ApplePayload);
+        return new JwtSecurityTokenHandler().WriteToken(token);
     }
 }

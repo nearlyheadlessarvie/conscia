@@ -31,24 +31,8 @@ public sealed class ProductionRuntimeOptionsValidator : IValidateOptions<Product
             errors.Add("Auth:UseMock must be false in production.");
         }
 
-        Require(errors, "Auth:AppJwtSigningKey");
         Require(errors, "Auth:Cognito:ClientId");
         Require(errors, "Auth:Cognito:UserPoolId");
-
-        if (options.RequireExternalSocialAuth)
-        {
-            RequireAny(errors,
-                "Google social auth audience",
-                "Auth:Google:ClientIds",
-                "Auth:Google:ClientId",
-                "Auth:Google:WebClientId");
-
-            RequireAny(errors,
-                "Apple social auth audience",
-                "Auth:Apple:ClientIds",
-                "Auth:Apple:ClientId",
-                "Apple:BundleId");
-        }
 
         if (options.RequireSubscriptionValidation)
         {
@@ -87,30 +71,5 @@ public sealed class ProductionRuntimeOptionsValidator : IValidateOptions<Product
         {
             errors.Add($"{key} must be configured in production.");
         }
-    }
-
-    private void RequireAny(List<string> errors, string label, params string[] keys)
-    {
-        foreach (var key in keys)
-        {
-            if (HasValue(key))
-            {
-                return;
-            }
-        }
-
-        errors.Add($"{label} must be configured in production.");
-    }
-
-    private bool HasValue(string key)
-    {
-        if (!string.IsNullOrWhiteSpace(_configuration[key]))
-        {
-            return true;
-        }
-
-        return _configuration.GetSection(key)
-            .GetChildren()
-            .Any(child => !string.IsNullOrWhiteSpace(child.Value));
     }
 }

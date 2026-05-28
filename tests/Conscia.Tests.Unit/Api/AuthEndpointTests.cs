@@ -154,7 +154,7 @@ public class AuthEndpointTests
     }
 
     [Fact]
-    public async Task GoogleLogin_ValidToken_Returns200()
+    public async Task GoogleLogin_EndpointRemoved_Returns404()
     {
         await using var factory = new TestWebAppFactory();
         using var client = factory.CreateClient();
@@ -164,30 +164,11 @@ public class AuthEndpointTests
             idToken = "mock-google-id-token"
         });
 
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        var body = await response.Content.ReadFromJsonAsync<Dictionary<string, object>>();
-        Assert.NotNull(body);
-        Assert.True(body!.ContainsKey("accessToken"));
-        Assert.True(body.ContainsKey("refreshToken"));
-        Assert.True(body.ContainsKey("userId"));
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
     [Fact]
-    public async Task GoogleLogin_EmptyToken_Returns400()
-    {
-        await using var factory = new TestWebAppFactory();
-        using var client = factory.CreateClient();
-
-        var response = await client.PostAsJsonAsync("/api/auth/google", new
-        {
-            idToken = ""
-        });
-
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
-    }
-
-    [Fact]
-    public async Task AppleLogin_ValidToken_Returns200()
+    public async Task AppleLogin_EndpointRemoved_Returns404()
     {
         await using var factory = new TestWebAppFactory();
         using var client = factory.CreateClient();
@@ -198,25 +179,7 @@ public class AuthEndpointTests
             authorizationCode = "mock-auth-code"
         });
 
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        var body = await response.Content.ReadFromJsonAsync<Dictionary<string, object>>();
-        Assert.NotNull(body);
-        Assert.True(body!.ContainsKey("accessToken"));
-    }
-
-    [Fact]
-    public async Task AppleLogin_EmptyToken_Returns400()
-    {
-        await using var factory = new TestWebAppFactory();
-        using var client = factory.CreateClient();
-
-        var response = await client.PostAsJsonAsync("/api/auth/apple", new
-        {
-            identityToken = "",
-            authorizationCode = (string?)null
-        });
-
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
     [Fact]

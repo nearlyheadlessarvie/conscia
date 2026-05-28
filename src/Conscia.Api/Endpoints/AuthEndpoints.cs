@@ -99,28 +99,6 @@ public static class AuthEndpoints
             }
         }).WithName("SetPassword").RequireAuthorization().RequireRateLimiting("auth");
 
-        group.MapPost("/google", async (HttpContext ctx, GoogleLoginRequest req, IAuthService auth) =>
-        {
-            if (string.IsNullOrWhiteSpace(req.IdToken))
-                return Results.BadRequest(new { error = "IdToken is required" });
-
-            var result = await auth.LoginWithGoogleAsync(req.IdToken, ctx.RequestAborted);
-            return result.Success
-                ? Results.Ok(new { result.AccessToken, result.RefreshToken, result.UserId })
-                : Results.BadRequest(new { result.Error });
-        }).WithName("GoogleLogin").RequireRateLimiting("standard");
-
-        group.MapPost("/apple", async (HttpContext ctx, AppleLoginRequest req, IAuthService auth) =>
-        {
-            if (string.IsNullOrWhiteSpace(req.IdentityToken))
-                return Results.BadRequest(new { error = "IdentityToken is required" });
-
-            var result = await auth.LoginWithAppleAsync(req.IdentityToken, req.AuthorizationCode, ctx.RequestAborted);
-            return result.Success
-                ? Results.Ok(new { result.AccessToken, result.RefreshToken, result.UserId })
-                : Results.BadRequest(new { result.Error });
-        }).WithName("AppleLogin").RequireRateLimiting("standard");
-
         group.MapPost("/passkeys/register/start", async (
             HttpContext ctx,
             IPasskeyAuthService passkeys) =>
@@ -233,5 +211,3 @@ public record ResendConfirmationRequest(string Email);
 public record LoginRequest(string Email, string Password);
 public record RefreshRequest(string RefreshToken);
 public record SetPasswordRequest(string Password);
-public record GoogleLoginRequest(string IdToken);
-public record AppleLoginRequest(string IdentityToken, string? AuthorizationCode);

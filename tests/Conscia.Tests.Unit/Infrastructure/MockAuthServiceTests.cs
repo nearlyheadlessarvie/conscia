@@ -178,50 +178,6 @@ public class MockAuthServiceTests
     }
 
     [Fact]
-    public async Task LoginWithGoogle_NewUser_CreatesUserAndIdentity()
-    {
-        var result = await _auth.LoginWithGoogleAsync("mock-google-token");
-
-        Assert.True(result.Success);
-        Assert.NotNull(result.AccessToken);
-        Assert.NotNull(result.UserId);
-
-        var identity = _repo.Identities.FirstOrDefault(i => i.Provider == AuthProvider.Google);
-        Assert.NotNull(identity);
-    }
-
-    [Fact]
-    public async Task LoginWithGoogle_SameToken_ReturnsSameUser()
-    {
-        var first = await _auth.LoginWithGoogleAsync("consistent-token");
-        var second = await _auth.LoginWithGoogleAsync("consistent-token");
-
-        Assert.Equal(first.UserId, second.UserId);
-    }
-
-    [Fact]
-    public async Task LoginWithApple_NewUser_CreatesUserAndIdentity()
-    {
-        var result = await _auth.LoginWithAppleAsync("mock-apple-identity-token", "mock-auth-code");
-
-        Assert.True(result.Success);
-        Assert.NotNull(result.AccessToken);
-        Assert.NotNull(result.UserId);
-
-        var identity = _repo.Identities.FirstOrDefault(i => i.Provider == AuthProvider.Apple);
-        Assert.NotNull(identity);
-    }
-
-    [Fact]
-    public async Task LoginWithApple_SameToken_ReturnsSameUser()
-    {
-        var first = await _auth.LoginWithAppleAsync("apple-consistent", null);
-        var second = await _auth.LoginWithAppleAsync("apple-consistent", null);
-
-        Assert.Equal(first.UserId, second.UserId);
-    }
-
-    [Fact]
     public async Task Refresh_ValidRefreshToken_ReturnsFreshTokensForSameUser()
     {
         await _auth.RegisterAsync("refreshable@test.com", "pass");

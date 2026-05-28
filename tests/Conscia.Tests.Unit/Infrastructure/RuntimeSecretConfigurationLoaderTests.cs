@@ -14,7 +14,7 @@ public class RuntimeSecretConfigurationLoaderTests
         var configuration = new ConfigurationManager();
         configuration.AddInMemoryCollection(new Dictionary<string, string?>
         {
-            ["Auth:AppJwtSigningKeySecretId"] = "conscia/dev/auth"
+            ["Firebase:AdminServiceAccountJsonSecretId"] = "conscia/dev/firebase-admin-service-account-json"
         });
 
         var secretsManager = new Mock<IAmazonSecretsManager>(MockBehavior.Strict);
@@ -24,11 +24,11 @@ public class RuntimeSecretConfigurationLoaderTests
             isProduction: false,
             secretsManager: secretsManager.Object);
 
-        Assert.Null(configuration["Auth:AppJwtSigningKey"]);
+        Assert.Null(configuration["Firebase:AdminServiceAccountJson"]);
     }
 
     [Fact]
-    public async Task LoadAsync_HydratesMappedConfigurationKeysFromSecretsManager()
+    public async Task LoadAsync_IgnoresLegacyAppJwtSecretMapping()
     {
         var configuration = new ConfigurationManager();
         configuration.AddInMemoryCollection(new Dictionary<string, string?>
@@ -63,7 +63,7 @@ public class RuntimeSecretConfigurationLoaderTests
         configuration.AddInMemoryCollection(overrides.ToDictionary(
             pair => pair.Key,
             pair => (string?)pair.Value));
-        Assert.Equal("jwt-signing-key", configuration["Auth:AppJwtSigningKey"]);
+        Assert.Null(configuration["Auth:AppJwtSigningKey"]);
         Assert.Equal("{\"project_id\":\"conscia-prod\"}", configuration["Firebase:AdminServiceAccountJson"]);
     }
 }

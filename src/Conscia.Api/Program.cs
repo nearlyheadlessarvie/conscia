@@ -1,4 +1,3 @@
-using System.IdentityModel.Tokens.Jwt;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -162,7 +161,6 @@ builder.Services.Configure<InviteEmailOptions>(builder.Configuration.GetSection(
 builder.Services.Configure<AdminBootstrapOptions>(builder.Configuration.GetSection(AdminBootstrapOptions.SectionName));
 builder.Services.AddHttpClient<IAppleReceiptValidator, AppleReceiptValidator>();
 builder.Services.AddHttpClient<IGooglePlayValidator, GooglePlayValidator>();
-builder.Services.AddHttpClient<IExternalSocialTokenVerifier, ExternalSocialTokenVerifier>();
 builder.Services.AddScoped<IAppleServerNotificationVerifier, AppleServerNotificationVerifier>();
 
 // --- Services ---
@@ -283,43 +281,8 @@ else
     builder.Services.AddScoped<IAuthService, CognitoAuthService>();
     builder.Services.AddScoped<IPasskeyAuthService, CognitoPasskeyAuthService>();
 
-    var appJwtSigningKey = builder.Configuration["Auth:AppJwtSigningKey"];
-    var appJwtIssuer = builder.Configuration["Auth:AppJwtIssuer"] ?? "conscia-app";
-    var appJwtAudience = builder.Configuration["Auth:AppJwtAudience"] ?? "conscia-api";
-    var appJwtEnabled = !string.IsNullOrWhiteSpace(appJwtSigningKey);
-
-    var authBuilder = builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-        .AddPolicyScheme(JwtBearerDefaults.AuthenticationScheme, "Cognito or app JWT", options =>
-        {
-            options.ForwardDefaultSelector = context =>
-            {
-                if (!appJwtEnabled)
-                {
-                    return "Cognito";
-                }
-
-                var header = context.Request.Headers.Authorization.ToString();
-                const string bearer = "Bearer ";
-                if (!header.StartsWith(bearer, StringComparison.OrdinalIgnoreCase))
-                {
-                    return "Cognito";
-                }
-
-                var token = header[bearer.Length..].Trim();
-                try
-                {
-                    var issuer = new JwtSecurityTokenHandler().ReadJwtToken(token).Issuer;
-                    return string.Equals(issuer, appJwtIssuer, StringComparison.Ordinal)
-                        ? "AppJwt"
-                        : "Cognito";
-                }
-                catch
-                {
-                    return "Cognito";
-                }
-            };
-        })
-        .AddJwtBearer("Cognito", options =>
+    builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+        .AddJwtBearer(options =>
         {
             var issuer = CognitoRegionResolver.ResolveIssuer(builder.Configuration);
             options.Authority = issuer;
@@ -331,25 +294,6 @@ else
             };
             options.Events = CreateJwtBearerDiagnostics("Cognito");
         });
-
-    if (appJwtEnabled)
-    {
-        authBuilder.AddJwtBearer("AppJwt", options =>
-        {
-            options.TokenValidationParameters = new TokenValidationParameters
-            {
-                ValidateIssuerSigningKey = true,
-                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(appJwtSigningKey!)),
-                ValidateIssuer = true,
-                ValidIssuer = appJwtIssuer,
-                ValidateAudience = true,
-                ValidAudience = appJwtAudience,
-                ValidateLifetime = true,
-                ClockSkew = TimeSpan.FromMinutes(1)
-            };
-            options.Events = CreateJwtBearerDiagnostics("AppJwt");
-        });
-    }
 }
 
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
