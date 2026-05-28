@@ -226,7 +226,7 @@ public class StackTests
                     {
                         ["borderRadius"] = 28.0
                     }),
-                    ["primaryButton"] = Match.AnyValue(),
+                    ["pageText"] = Match.AnyValue(),
                     ["input"] = Match.AnyValue()
                 })
             })
