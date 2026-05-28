@@ -104,13 +104,23 @@ public class StackTests
         var stack = new AuthStack(app, "TestAuth", new AuthStackProps
         {
             Env = TestEnv,
-            DomainSettings = TestDomainSettings
+            DomainSettings = TestDomainSettings,
+            ManagedLoginProviderSettings = new ManagedLoginProviderSettings(
+                "google-web-client-id.apps.googleusercontent.com",
+                "com.getconscia.auth",
+                "ABCDE12345",
+                "1A2B3C4D5E"),
+            ManagedLoginSecretSettings = new ManagedLoginSecretSettings(
+                "test/cognito-google-client-secret",
+                "test/apple-private-key")
         });
         var template = Template.FromStack(stack);
 
         template.ResourceCountIs("AWS::Cognito::UserPool", 1);
         template.ResourceCountIs("AWS::Cognito::UserPoolClient", 1);
         template.ResourceCountIs("AWS::Cognito::UserPoolDomain", 1);
+        template.ResourceCountIs("AWS::Cognito::UserPoolIdentityProvider", 2);
+        template.ResourceCountIs("AWS::Cognito::ManagedLoginBranding", 1);
         template.HasResourceProperties("AWS::Cognito::UserPool", new Dictionary<string, object>
         {
             ["UserPoolName"] = "conscia-users",
@@ -150,7 +160,7 @@ public class StackTests
                 "https://auth.getconscia.com/open/auth/logout",
                 "conscia://auth/logout"
             ]),
-            ["SupportedIdentityProviders"] = Match.ArrayWith(["COGNITO"]),
+            ["SupportedIdentityProviders"] = Match.ArrayWith(["COGNITO", "Google", "SignInWithApple"]),
             ["ExplicitAuthFlows"] = Match.ArrayWith([
                 "ALLOW_USER_PASSWORD_AUTH",
                 "ALLOW_USER_SRP_AUTH",
@@ -163,6 +173,20 @@ public class StackTests
             ["Domain"] = "login.getconscia.com",
             ["ManagedLoginVersion"] = 2
         });
+        template.HasResourceProperties("AWS::Cognito::UserPoolIdentityProvider", Match.ObjectLike(new Dictionary<string, object>
+        {
+            ["ProviderName"] = "Google",
+            ["ProviderType"] = "Google"
+        }));
+        template.HasResourceProperties("AWS::Cognito::UserPoolIdentityProvider", Match.ObjectLike(new Dictionary<string, object>
+        {
+            ["ProviderName"] = "SignInWithApple",
+            ["ProviderType"] = "SignInWithApple"
+        }));
+        template.HasResourceProperties("AWS::Cognito::ManagedLoginBranding", Match.ObjectLike(new Dictionary<string, object>
+        {
+            ["UseCognitoProvidedValues"] = true
+        }));
     }
 
     [Fact]
