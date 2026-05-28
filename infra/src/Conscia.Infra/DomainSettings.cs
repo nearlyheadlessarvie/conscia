@@ -13,7 +13,6 @@ public sealed record DomainSettings(
     string WwwDomainName,
     string ApiDomainName,
     string HostedZoneId,
-    string? AuthDomainName = null,
     string? CognitoDomainName = null,
     string? ManagedLoginRedirectUri = null,
     string? ManagedLoginLogoutUri = null,
@@ -26,23 +25,19 @@ public sealed record DomainSettings(
     IReadOnlyList<DnsTxtRecord>? IcloudInboxTxtRecords = null,
     IReadOnlyList<DnsCnameRecord>? IcloudInboxCnameRecords = null)
 {
-    public string ResolvedAuthDomainName => string.IsNullOrWhiteSpace(AuthDomainName)
-        ? $"auth.{RootDomainName}"
-        : AuthDomainName;
-
     public string ResolvedCognitoDomainName => string.IsNullOrWhiteSpace(CognitoDomainName)
         ? $"login.{RootDomainName}"
         : CognitoDomainName;
 
     public string ResolvedManagedLoginRedirectUri => string.IsNullOrWhiteSpace(ManagedLoginRedirectUri)
-        ? $"https://{ResolvedAuthDomainName}/open/auth/callback"
+        ? DevManagedLoginRedirectUri
         : ManagedLoginRedirectUri;
 
     public string ResolvedManagedLoginLogoutUri => string.IsNullOrWhiteSpace(ManagedLoginLogoutUri)
-        ? $"https://{ResolvedAuthDomainName}/open/auth/logout"
+        ? DevManagedLoginLogoutUri
         : ManagedLoginLogoutUri;
 
-    public string[] WebDomainNames => [RootDomainName, WwwDomainName, ResolvedAuthDomainName];
+    public string[] WebDomainNames => [RootDomainName, WwwDomainName];
     public string SesMailFromDomain => $"{SesMailFromSubdomain}.{RootDomainName}";
 
     public string[] AllowedCorsOrigins =>
@@ -64,7 +59,6 @@ public sealed record DomainSettings(
             Get("CONSCIA_WWW_DOMAIN_NAME") ?? $"www.{rootDomain}",
             Get("CONSCIA_API_DOMAIN_NAME") ?? $"api.{rootDomain}",
             hostedZoneId,
-            Get("CONSCIA_AUTH_DOMAIN_NAME") ?? $"auth.{rootDomain}",
             Get("CONSCIA_COGNITO_DOMAIN_NAME") ?? $"login.{rootDomain}",
             Get("COGNITO_REDIRECT_URI"),
             Get("COGNITO_LOGOUT_URI"),
