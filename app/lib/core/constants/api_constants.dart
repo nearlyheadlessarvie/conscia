@@ -23,14 +23,14 @@ class ApiConstants {
 
   static const String cognitoRedirectUri = String.fromEnvironment(
     'COGNITO_REDIRECT_URI',
-    defaultValue: 'https://auth.getconscia.com/open/auth/callback',
+    defaultValue: 'conscia://auth/callback',
   );
 
   static const String cognitoAppRedirectUri = 'conscia://auth/callback';
 
   static const String cognitoLogoutUri = String.fromEnvironment(
     'COGNITO_LOGOUT_URI',
-    defaultValue: 'https://auth.getconscia.com/open/auth/logout',
+    defaultValue: 'conscia://auth/logout',
   );
 
   static const String baseUrl = String.fromEnvironment(
