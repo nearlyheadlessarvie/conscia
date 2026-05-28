@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.5.0](https://github.com/nearlyheadlessarvie/conscia/compare/infra/v1.4.0...infra/v1.5.0) (2026-05-28)
+
+
+### Features
+
+* **infra:** add cognito pre-signup account linker ([#125](https://github.com/nearlyheadlessarvie/conscia/issues/125)) ([174f0d0](https://github.com/nearlyheadlessarvie/conscia/commit/174f0d089b38ced4d0bf31571176b3e6c831bea8))
+
 ## [1.4.0](https://github.com/nearlyheadlessarvie/conscia/compare/infra/v1.3.0...infra/v1.4.0) (2026-05-28)
 
 
