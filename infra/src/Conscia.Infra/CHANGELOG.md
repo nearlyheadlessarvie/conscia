@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.5.2](https://github.com/nearlyheadlessarvie/conscia/compare/infra/v1.5.1...infra/v1.5.2) (2026-05-28)
+
+
+### Bug Fixes
+
+* **app:** remove auth subdomain managed login surface ([#132](https://github.com/nearlyheadlessarvie/conscia/issues/132)) ([059f268](https://github.com/nearlyheadlessarvie/conscia/commit/059f26810f0c898ad764528a6c480b919e267059))
+
 ## [1.5.1](https://github.com/nearlyheadlessarvie/conscia/compare/infra/v1.5.0...infra/v1.5.1) (2026-05-28)
 
 
