@@ -15,9 +15,9 @@ public sealed record ManagedLoginProviderSettings(
 
     public static ManagedLoginProviderSettings? FromEnvironment()
     {
-        var googleClientId = Get("COGNITO_GOOGLE_CLIENT_ID");
+        var googleClientId = Get("AUTH_GOOGLE_CLIENT_ID");
         var appleServicesId = Get("COGNITO_APPLE_SERVICES_ID") ?? Get("COGNITO_APPLE_CLIENT_ID");
-        var appleTeamId = Get("COGNITO_APPLE_TEAM_ID");
+        var appleTeamId = Get("APPLE_TEAM_ID");
         var appleKeyId = Get("COGNITO_APPLE_KEY_ID");
 
         if (string.IsNullOrWhiteSpace(googleClientId)
@@ -37,7 +37,7 @@ public sealed record ManagedLoginProviderSettings(
                 || string.IsNullOrWhiteSpace(appleKeyId))
             {
                 throw new InvalidOperationException(
-                    "COGNITO_APPLE_SERVICES_ID, COGNITO_APPLE_TEAM_ID, and COGNITO_APPLE_KEY_ID must all be set together.");
+                    "COGNITO_APPLE_SERVICES_ID, APPLE_TEAM_ID, and COGNITO_APPLE_KEY_ID must all be set together.");
             }
         }
 

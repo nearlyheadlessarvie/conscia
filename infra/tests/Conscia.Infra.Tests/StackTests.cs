@@ -190,6 +190,60 @@ public class StackTests
     }
 
     [Fact]
+    public void ManagedLoginProviderSettings_FromEnvironment_UsesSharedAndDedicatedVariables()
+    {
+        var previousGoogleClientId = System.Environment.GetEnvironmentVariable("AUTH_GOOGLE_CLIENT_ID");
+        var previousAppleServicesId = System.Environment.GetEnvironmentVariable("COGNITO_APPLE_SERVICES_ID");
+        var previousAppleTeamId = System.Environment.GetEnvironmentVariable("APPLE_TEAM_ID");
+        var previousAppleKeyId = System.Environment.GetEnvironmentVariable("COGNITO_APPLE_KEY_ID");
+
+        try
+        {
+            System.Environment.SetEnvironmentVariable("AUTH_GOOGLE_CLIENT_ID", "google-web-client-id.apps.googleusercontent.com");
+            System.Environment.SetEnvironmentVariable("COGNITO_APPLE_SERVICES_ID", "com.getconscia.auth");
+            System.Environment.SetEnvironmentVariable("APPLE_TEAM_ID", "ABCDE12345");
+            System.Environment.SetEnvironmentVariable("COGNITO_APPLE_KEY_ID", "1A2B3C4D5E");
+
+            var settings = ManagedLoginProviderSettings.FromEnvironment();
+
+            Assert.NotNull(settings);
+            Assert.Equal("google-web-client-id.apps.googleusercontent.com", settings!.GoogleClientId);
+            Assert.Equal("com.getconscia.auth", settings.AppleServicesId);
+            Assert.Equal("ABCDE12345", settings.AppleTeamId);
+            Assert.Equal("1A2B3C4D5E", settings.AppleKeyId);
+        }
+        finally
+        {
+            System.Environment.SetEnvironmentVariable("AUTH_GOOGLE_CLIENT_ID", previousGoogleClientId);
+            System.Environment.SetEnvironmentVariable("COGNITO_APPLE_SERVICES_ID", previousAppleServicesId);
+            System.Environment.SetEnvironmentVariable("APPLE_TEAM_ID", previousAppleTeamId);
+            System.Environment.SetEnvironmentVariable("COGNITO_APPLE_KEY_ID", previousAppleKeyId);
+        }
+    }
+
+    [Fact]
+    public void ManagedLoginSecretSettings_FromEnvironment_RequiresDedicatedApplePrivateKeySecretName()
+    {
+        var previousDedicatedAppleSecret = System.Environment.GetEnvironmentVariable("COGNITO_APPLE_PRIVATE_KEY_SECRET_NAME");
+        var previousSharedAppleSecret = System.Environment.GetEnvironmentVariable("APPLE_PRIVATE_KEY_SECRET_NAME");
+
+        try
+        {
+            System.Environment.SetEnvironmentVariable("COGNITO_APPLE_PRIVATE_KEY_SECRET_NAME", null);
+            System.Environment.SetEnvironmentVariable("APPLE_PRIVATE_KEY_SECRET_NAME", "conscia/prod/apple-private-key");
+
+            var settings = ManagedLoginSecretSettings.FromEnvironment();
+
+            Assert.Equal("conscia/prod/cognito-apple-private-key", settings.ApplePrivateKeySecretName);
+        }
+        finally
+        {
+            System.Environment.SetEnvironmentVariable("COGNITO_APPLE_PRIVATE_KEY_SECRET_NAME", previousDedicatedAppleSecret);
+            System.Environment.SetEnvironmentVariable("APPLE_PRIVATE_KEY_SECRET_NAME", previousSharedAppleSecret);
+        }
+    }
+
+    [Fact]
     public void AIStack_CreatesSqsQueueWithDlq()
     {
         var app = new App();

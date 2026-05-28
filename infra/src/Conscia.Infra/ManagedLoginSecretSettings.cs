@@ -8,8 +8,7 @@ public sealed record ManagedLoginSecretSettings(
         GoogleClientSecretSecretName: Get("COGNITO_GOOGLE_CLIENT_SECRET_SECRET_NAME")
             ?? "conscia/prod/cognito-google-client-secret",
         ApplePrivateKeySecretName: Get("COGNITO_APPLE_PRIVATE_KEY_SECRET_NAME")
-            ?? Get("APPLE_PRIVATE_KEY_SECRET_NAME")
-            ?? "conscia/prod/apple-private-key");
+            ?? "conscia/prod/cognito-apple-private-key");
 
     private static string? Get(string name)
     {
