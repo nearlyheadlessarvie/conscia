@@ -1,5 +1,17 @@
 # Changelog
 
+## [2.0.0](https://github.com/nearlyheadlessarvie/conscia/compare/app/v1.2.0...app/v2.0.0) (2026-05-28)
+
+
+### ⚠ BREAKING CHANGES
+
+* **app:** the app now requires iOS 17.4+ and macOS 14.4+ to use the upstream managed login auth plugin.
+
+### Bug Fixes
+
+* **app:** accept custom auth callback scheme ([#124](https://github.com/nearlyheadlessarvie/conscia/issues/124)) ([6019b57](https://github.com/nearlyheadlessarvie/conscia/commit/6019b570dcf3c691e6bd8994dfd0a7d991146b1c))
+* **app:** raise apple minimums for managed login ([#129](https://github.com/nearlyheadlessarvie/conscia/issues/129)) ([dd3f4c7](https://github.com/nearlyheadlessarvie/conscia/commit/dd3f4c7282f2f50bdf678d93ababc5fd371034d9))
+
 ## [1.2.0](https://github.com/nearlyheadlessarvie/conscia/compare/app/v1.1.7...app/v1.2.0) (2026-05-28)
 
 
