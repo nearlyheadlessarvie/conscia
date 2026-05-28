@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.0](https://github.com/nearlyheadlessarvie/conscia/compare/infra/v1.2.6...infra/v1.3.0) (2026-05-28)
+
+
+### Features
+
+* **infra:** add cognito managed login foundation ([#116](https://github.com/nearlyheadlessarvie/conscia/issues/116)) ([765ac9a](https://github.com/nearlyheadlessarvie/conscia/commit/765ac9ad7ebf4570671f82fdf1d194c149c7feb3))
+
 ## [1.2.6](https://github.com/nearlyheadlessarvie/conscia/compare/infra/v1.2.5...infra/v1.2.6) (2026-05-27)
 
 
