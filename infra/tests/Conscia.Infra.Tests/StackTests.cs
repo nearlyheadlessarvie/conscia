@@ -136,7 +136,12 @@ public class StackTests
         {
             ["AllowedOAuthFlowsUserPoolClient"] = true,
             ["AllowedOAuthFlows"] = Match.ArrayWith(["code"]),
-            ["AllowedOAuthScopes"] = Match.ArrayWith(["openid", "email", "profile"]),
+            ["AllowedOAuthScopes"] = Match.ArrayWith([
+                "openid",
+                "email",
+                "profile",
+                "aws.cognito.signin.user.admin"
+            ]),
             ["CallbackURLs"] = Match.ArrayWith([
                 "https://auth.getconscia.com/open/auth/callback",
                 "conscia://auth/callback"

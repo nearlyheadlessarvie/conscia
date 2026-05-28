@@ -99,7 +99,8 @@ public class AuthStack : Stack
                 [
                     OAuthScope.OPENID,
                     OAuthScope.EMAIL,
-                    OAuthScope.PROFILE
+                    OAuthScope.PROFILE,
+                    OAuthScope.COGNITO_ADMIN
                 ]
             },
             GenerateSecret = false,
