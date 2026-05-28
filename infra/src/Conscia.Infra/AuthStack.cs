@@ -1,5 +1,8 @@
 using Amazon.CDK;
+using Amazon.CDK.AWS.CertificateManager;
 using Amazon.CDK.AWS.Cognito;
+using Amazon.CDK.AWS.Route53;
+using Amazon.CDK.AWS.Route53.Targets;
 using Constructs;
 
 namespace Conscia.Infra;
@@ -18,6 +21,12 @@ public class AuthStack : Stack
         : base(scope, id, props)
     {
         var rootDomainName = props?.DomainSettings?.RootDomainName ?? "getconscia.com";
+        var authDomainName = props?.DomainSettings?.ResolvedAuthDomainName ?? $"auth.{rootDomainName}";
+        var cognitoDomainName = props?.DomainSettings?.ResolvedCognitoDomainName ?? $"login.{rootDomainName}";
+        var redirectUri = props?.DomainSettings?.ResolvedManagedLoginRedirectUri ?? $"https://{authDomainName}/open/auth/callback";
+        var logoutUri = props?.DomainSettings?.ResolvedManagedLoginLogoutUri ?? $"https://{authDomainName}/open/auth/logout";
+        var devRedirectUri = props?.DomainSettings?.DevManagedLoginRedirectUri ?? "conscia://auth/callback";
+        var devLogoutUri = props?.DomainSettings?.DevManagedLoginLogoutUri ?? "conscia://auth/logout";
         var cognitoEmail = props?.DomainSettings is null
             ? null
             : UserPoolEmail.WithSES(new UserPoolSESOptions
@@ -65,6 +74,35 @@ public class AuthStack : Stack
                 UserPassword = true,
                 UserSrp = true
             },
+            SupportedIdentityProviders =
+            [
+                UserPoolClientIdentityProvider.COGNITO
+            ],
+            OAuth = new OAuthSettings
+            {
+                DefaultRedirectUri = redirectUri,
+                CallbackUrls =
+                [
+                    redirectUri,
+                    devRedirectUri
+                ],
+                LogoutUrls =
+                [
+                    logoutUri,
+                    devLogoutUri
+                ],
+                Flows = new OAuthFlows
+                {
+                    AuthorizationCodeGrant = true
+                },
+                Scopes =
+                [
+                    OAuthScope.OPENID,
+                    OAuthScope.EMAIL,
+                    OAuthScope.PROFILE,
+                    OAuthScope.COGNITO_ADMIN
+                ]
+            },
             GenerateSecret = false,
             AccessTokenValidity = Duration.Hours(1),
             IdTokenValidity = Duration.Hours(1),
@@ -79,6 +117,42 @@ public class AuthStack : Stack
             "ALLOW_REFRESH_TOKEN_AUTH",
             "ALLOW_USER_AUTH"
         ];
+
+        if (props?.DomainSettings is not null)
+        {
+            var hostedZone = HostedZone.FromHostedZoneAttributes(this, "CognitoHostedZone", new HostedZoneAttributes
+            {
+                HostedZoneId = props.DomainSettings.HostedZoneId,
+                ZoneName = props.DomainSettings.RootDomainName
+            });
+
+            var certificate = new DnsValidatedCertificate(this, "ManagedLoginCertificate", new DnsValidatedCertificateProps
+            {
+                DomainName = cognitoDomainName,
+                HostedZone = hostedZone,
+                Region = "us-east-1",
+                CleanupRoute53Records = true
+            });
+
+            var domain = UserPool.AddDomain("ManagedLoginDomain", new UserPoolDomainOptions
+            {
+                CustomDomain = new CustomDomainOptions
+                {
+                    DomainName = cognitoDomainName,
+                    Certificate = certificate
+                }
+            });
+            var domainResource = (CfnUserPoolDomain)(domain.Node.DefaultChild
+                ?? throw new InvalidOperationException("User pool domain CloudFormation resource was not created."));
+            domainResource.ManagedLoginVersion = 2;
+
+            _ = new ARecord(this, "ManagedLoginAliasRecord", new ARecordProps
+            {
+                Zone = hostedZone,
+                RecordName = cognitoDomainName,
+                Target = RecordTarget.FromAlias(new UserPoolDomainTarget(domain))
+            });
+        }
 
         new CfnOutput(this, "UserPoolId", new CfnOutputProps { Value = UserPool.UserPoolId });
         new CfnOutput(this, "UserPoolClientId", new CfnOutputProps { Value = UserPoolClient.UserPoolClientId });

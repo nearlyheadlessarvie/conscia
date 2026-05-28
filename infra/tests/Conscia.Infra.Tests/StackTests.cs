@@ -110,6 +110,7 @@ public class StackTests
 
         template.ResourceCountIs("AWS::Cognito::UserPool", 1);
         template.ResourceCountIs("AWS::Cognito::UserPoolClient", 1);
+        template.ResourceCountIs("AWS::Cognito::UserPoolDomain", 1);
         template.HasResourceProperties("AWS::Cognito::UserPool", new Dictionary<string, object>
         {
             ["UserPoolName"] = "conscia-users",
@@ -133,12 +134,34 @@ public class StackTests
         });
         template.HasResourceProperties("AWS::Cognito::UserPoolClient", new Dictionary<string, object>
         {
+            ["AllowedOAuthFlowsUserPoolClient"] = true,
+            ["AllowedOAuthFlows"] = Match.ArrayWith(["code"]),
+            ["AllowedOAuthScopes"] = Match.ArrayWith([
+                "openid",
+                "email",
+                "profile",
+                "aws.cognito.signin.user.admin"
+            ]),
+            ["CallbackURLs"] = Match.ArrayWith([
+                "https://auth.getconscia.com/open/auth/callback",
+                "conscia://auth/callback"
+            ]),
+            ["LogoutURLs"] = Match.ArrayWith([
+                "https://auth.getconscia.com/open/auth/logout",
+                "conscia://auth/logout"
+            ]),
+            ["SupportedIdentityProviders"] = Match.ArrayWith(["COGNITO"]),
             ["ExplicitAuthFlows"] = Match.ArrayWith([
                 "ALLOW_USER_PASSWORD_AUTH",
                 "ALLOW_USER_SRP_AUTH",
                 "ALLOW_REFRESH_TOKEN_AUTH",
                 "ALLOW_USER_AUTH"
             ])
+        });
+        template.HasResourceProperties("AWS::Cognito::UserPoolDomain", new Dictionary<string, object>
+        {
+            ["Domain"] = "login.getconscia.com",
+            ["ManagedLoginVersion"] = 2
         });
     }
 
@@ -412,7 +435,12 @@ public class StackTests
         {
             ["DistributionConfig"] = new Dictionary<string, object>
             {
-                ["Aliases"] = Match.ArrayWith(TestDomainSettings.WebDomainNames),
+                ["Aliases"] = Match.ArrayWith(new[]
+                {
+                    "getconscia.com",
+                    "www.getconscia.com",
+                    "auth.getconscia.com"
+                }),
                 ["DefaultCacheBehavior"] = Match.ObjectLike(new Dictionary<string, object>
                 {
                     ["FunctionAssociations"] = Match.ArrayWith([
@@ -424,7 +452,7 @@ public class StackTests
                 })
             }
         });
-        template.ResourceCountIs("AWS::Route53::RecordSet", 2);
+        template.ResourceCountIs("AWS::Route53::RecordSet", 3);
     }
 
     [Fact]
