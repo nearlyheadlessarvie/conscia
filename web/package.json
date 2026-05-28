@@ -1,7 +1,7 @@
 {
   "name": "conscia-web",
   "type": "module",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "scripts": {
     "generate:passkey-associations": "node scripts/generate-passkey-associations.mjs",
     "dev": "astro dev",
