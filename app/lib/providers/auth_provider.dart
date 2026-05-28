@@ -783,10 +783,9 @@ final class _UnavailableManagedLoginService extends CognitoManagedLoginService {
               ),
           clientId: '',
           loginDomain: Uri.parse('https://login.getconscia.com'),
-          redirectUri:
-              Uri.parse('https://auth.getconscia.com/open/auth/callback'),
+          redirectUri: Uri.parse(ApiConstants.cognitoAppRedirectUri),
           appRedirectUri: Uri.parse(ApiConstants.cognitoAppRedirectUri),
-          logoutUri: Uri.parse('https://auth.getconscia.com/open/auth/logout'),
+          logoutUri: Uri.parse('conscia://auth/logout'),
         );
 
   static final instance = _UnavailableManagedLoginService._();

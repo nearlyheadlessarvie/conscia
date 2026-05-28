@@ -164,9 +164,9 @@ class _FakeManagedLoginService extends CognitoManagedLoginService {
               ),
           clientId: 'managed-client-id',
           loginDomain: Uri.parse('https://login.getconscia.com'),
-          redirectUri: Uri.parse('https://auth.getconscia.com/open/auth/callback'),
+          redirectUri: Uri.parse('conscia://auth/callback'),
           appRedirectUri: Uri.parse('conscia://auth/callback'),
-          logoutUri: Uri.parse('https://auth.getconscia.com/open/auth/logout'),
+          logoutUri: Uri.parse('conscia://auth/logout'),
         );
 
   AuthTokens signInTokens = const AuthTokens(
