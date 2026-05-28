@@ -1,6 +1,8 @@
 using Amazon.CDK;
 using Amazon.CDK.AWS.CertificateManager;
 using Amazon.CDK.AWS.Cognito;
+using Amazon.CDK.AWS.IAM;
+using Amazon.CDK.AWS.Lambda;
 using Amazon.CDK.AWS.Route53;
 using Amazon.CDK.AWS.Route53.Targets;
 using Constructs;
@@ -10,6 +12,7 @@ namespace Conscia.Infra;
 
 public sealed class AuthStackProps : StackProps
 {
+    public string? CognitoPreSignupLinkerAssetPath { get; init; }
     public DomainSettings? DomainSettings { get; init; }
     public ManagedLoginProviderSettings? ManagedLoginProviderSettings { get; init; }
     public ManagedLoginSecretSettings? ManagedLoginSecretSettings { get; init; }
@@ -52,6 +55,8 @@ public class AuthStack : Stack
         var logoutUri = props?.DomainSettings?.ResolvedManagedLoginLogoutUri ?? $"https://{authDomainName}/open/auth/logout";
         var devRedirectUri = props?.DomainSettings?.DevManagedLoginRedirectUri ?? "conscia://auth/callback";
         var devLogoutUri = props?.DomainSettings?.DevManagedLoginLogoutUri ?? "conscia://auth/logout";
+        var hasFederatedProviders = props?.ManagedLoginProviderSettings?.HasGoogle == true
+            || props?.ManagedLoginProviderSettings?.HasApple == true;
         var cognitoEmail = props?.DomainSettings is null
             ? null
             : UserPoolEmail.WithSES(new UserPoolSESOptions
@@ -61,6 +66,25 @@ public class AuthStack : Stack
                 SesRegion = Region,
                 SesVerifiedDomain = rootDomainName
             });
+        Function? preSignupLinker = null;
+
+        if (hasFederatedProviders)
+        {
+            var linkerAssetPath = props?.CognitoPreSignupLinkerAssetPath
+                ?? AssetPathResolver.ResolvePublishedAsset("../publish/cognito-pre-signup-linker", "cognito-pre-signup-linker");
+
+            preSignupLinker = new Function(this, "CognitoPreSignupLinker", new FunctionProps
+            {
+                FunctionName = "conscia-cognito-pre-signup-linker",
+                Runtime = Runtime.DOTNET_8,
+                Handler = "Conscia.CognitoPreSignupLinker",
+                Code = Code.FromAsset(linkerAssetPath),
+                MemorySize = 512,
+                Timeout = Duration.Seconds(30),
+                Architecture = Architecture.ARM_64,
+                Tracing = Tracing.ACTIVE
+            });
+        }
 
         UserPool = new UserPool(this, "ConsciaUserPool", new UserPoolProps
         {
@@ -79,6 +103,12 @@ public class AuthStack : Stack
                 RequireSymbols = false
             },
             AccountRecovery = AccountRecovery.EMAIL_ONLY,
+            LambdaTriggers = preSignupLinker is null
+                ? null
+                : new UserPoolTriggers
+                {
+                    PreSignUp = preSignupLinker
+                },
             RemovalPolicy = RemovalPolicy.DESTROY
         });
         var userPoolResource = (CfnUserPool)(UserPool.Node.DefaultChild
@@ -89,6 +119,22 @@ public class AuthStack : Stack
             new[] { "PASSWORD", "WEB_AUTHN" });
         userPoolResource.WebAuthnRelyingPartyId = rootDomainName;
         userPoolResource.WebAuthnUserVerification = "preferred";
+
+        if (preSignupLinker is not null)
+        {
+            preSignupLinker.AddToRolePolicy(new PolicyStatement(new PolicyStatementProps
+            {
+                Actions =
+                [
+                    "cognito-idp:AdminLinkProviderForUser",
+                    "cognito-idp:ListUsers"
+                ],
+                Resources =
+                [
+                    "*"
+                ]
+            }));
+        }
 
         var supportedIdentityProviders = new List<UserPoolClientIdentityProvider>
         {

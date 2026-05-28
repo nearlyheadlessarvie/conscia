@@ -198,6 +198,43 @@ void main() {
     );
   });
 
+  test('signIn accepts custom-scheme callback handoff from the auth web page',
+      () async {
+    final adapter = _CapturingAdapter()
+      ..enqueueJsonResponse({
+        'access_token': 'managed-access-token',
+        'id_token': _fakeJwt(
+          sub: '4dfd3d03-c1da-4dd8-8a63-c973d4d1f83a',
+          email: 'story-demo@example.com',
+        ),
+        'refresh_token': 'managed-refresh-token',
+        'expires_in': 3600,
+        'token_type': 'Bearer',
+      });
+
+    final dio = Dio()..httpClientAdapter = adapter;
+    final service = CognitoManagedLoginService(
+      dio: dio,
+      launchUrl: (uri, {mode = LaunchMode.platformDefault}) async => true,
+      openAuthSession: (uri, {required appCallbackUri}) async => Uri.parse(
+        'conscia://auth/callback'
+        '?code=managed-code'
+        '&state=${uri.queryParameters['state']}',
+      ),
+      clientId: 'managed-client-id',
+      loginDomain: Uri.parse('https://login.getconscia.com'),
+      redirectUri: Uri.parse('https://auth.getconscia.com/open/auth/callback'),
+      appRedirectUri: Uri.parse('conscia://auth/callback'),
+      logoutUri: Uri.parse('https://auth.getconscia.com/open/auth/logout'),
+    );
+
+    final tokens =
+        await service.signIn(provider: CognitoManagedLoginProvider.google);
+
+    expect(tokens.accessToken, 'managed-access-token');
+    expect(tokens.userId, '4dfd3d03-c1da-4dd8-8a63-c973d4d1f83a');
+  });
+
   test('refreshSession returns fresh tokens from the token endpoint', () async {
     final adapter = _CapturingAdapter()
       ..enqueueJsonResponse({

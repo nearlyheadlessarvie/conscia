@@ -105,6 +105,7 @@ public class StackTests
         {
             Env = TestEnv,
             DomainSettings = TestDomainSettings,
+            CognitoPreSignupLinkerAssetPath = CreateAssetStub("cognito-pre-signup-linker"),
             ManagedLoginProviderSettings = new ManagedLoginProviderSettings(
                 "google-web-client-id.apps.googleusercontent.com",
                 "com.getconscia.auth",
@@ -128,6 +129,10 @@ public class StackTests
             ["UserPoolTier"] = "ESSENTIALS",
             ["WebAuthnRelyingPartyID"] = "getconscia.com",
             ["WebAuthnUserVerification"] = "preferred",
+            ["LambdaConfig"] = Match.ObjectLike(new Dictionary<string, object>
+            {
+                ["PreSignUp"] = Match.AnyValue()
+            }),
             ["EmailConfiguration"] = Match.ObjectLike(new Dictionary<string, object>
             {
                 ["EmailSendingAccount"] = "DEVELOPER",
@@ -224,6 +229,25 @@ public class StackTests
                     ["primaryButton"] = Match.AnyValue(),
                     ["input"] = Match.AnyValue()
                 })
+            })
+        }));
+        template.HasResourceProperties("AWS::Lambda::Function", Match.ObjectLike(new Dictionary<string, object>
+        {
+            ["FunctionName"] = "conscia-cognito-pre-signup-linker"
+        }));
+        template.HasResourceProperties("AWS::IAM::Policy", Match.ObjectLike(new Dictionary<string, object>
+        {
+            ["PolicyDocument"] = Match.ObjectLike(new Dictionary<string, object>
+            {
+                ["Statement"] = Match.ArrayWith([
+                    Match.ObjectLike(new Dictionary<string, object>
+                    {
+                        ["Action"] = Match.ArrayWith([
+                            "cognito-idp:AdminLinkProviderForUser",
+                            "cognito-idp:ListUsers"
+                        ])
+                    })
+                ])
             })
         }));
     }
