@@ -7,11 +7,13 @@ import '../core/constants/api_constants.dart';
 
 class AuthTokens {
   final String accessToken;
+  final String? idToken;
   final String refreshToken;
   final String userId;
 
   const AuthTokens({
     required this.accessToken,
+    this.idToken,
     required this.refreshToken,
     required this.userId,
   });
@@ -19,6 +21,7 @@ class AuthTokens {
   factory AuthTokens.fromJson(Map<String, dynamic> json) {
     return AuthTokens(
       accessToken: json['accessToken'] as String,
+      idToken: json['idToken'] as String?,
       refreshToken: json['refreshToken'] as String,
       userId: json['userId'] as String,
     );

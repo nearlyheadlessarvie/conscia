@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 
 import '../network/api_exception.dart';
 import '../../services/auth_service.dart';
+import '../../services/cognito_managed_login_service.dart';
 
 typedef AppErrorLogger = void Function(AppError error);
 typedef ReferenceIdFactory = String Function();
@@ -100,6 +101,14 @@ class AppError {
       return error.message;
     }
 
+    if (error is CognitoManagedLoginCancelledException) {
+      return 'Conscia sign-in was cancelled.';
+    }
+
+    if (error is CognitoManagedLoginException) {
+      return error.message;
+    }
+
     if (apiError != null) {
       if (apiError.isUnauthorized) {
         return 'Please sign in again to continue.';
@@ -125,6 +134,11 @@ class AppError {
     }
 
     if (error is GoogleSignInFailure && error.isCancellation) {
+      return false;
+    }
+
+    if (error is CognitoManagedLoginCancelledException ||
+        error is CognitoManagedLoginException) {
       return false;
     }
 

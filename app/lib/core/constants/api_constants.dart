@@ -16,6 +16,26 @@ class ApiConstants {
     defaultValue: '',
   );
 
+  static const String cognitoClientId = String.fromEnvironment(
+    'COGNITO_CLIENT_ID',
+    defaultValue: '',
+  );
+
+  static const String cognitoLoginDomain = String.fromEnvironment(
+    'COGNITO_LOGIN_DOMAIN',
+    defaultValue: 'https://login.getconscia.com',
+  );
+
+  static const String cognitoRedirectUri = String.fromEnvironment(
+    'COGNITO_REDIRECT_URI',
+    defaultValue: 'https://auth.getconscia.com/open/auth/callback',
+  );
+
+  static const String cognitoLogoutUri = String.fromEnvironment(
+    'COGNITO_LOGOUT_URI',
+    defaultValue: 'https://auth.getconscia.com/open/auth/logout',
+  );
+
   static const String baseUrl = String.fromEnvironment(
     'API_BASE_URL',
     defaultValue: 'http://localhost:5248/api/',

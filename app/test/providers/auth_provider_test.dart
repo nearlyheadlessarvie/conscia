@@ -3,12 +3,14 @@ import 'dart:typed_data';
 
 import 'package:conscia_app/providers/auth_provider.dart';
 import 'package:conscia_app/services/auth_service.dart';
+import 'package:conscia_app/services/cognito_managed_login_service.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 String _fakeJwt({
   required DateTime expiresAt,
@@ -146,6 +148,58 @@ class _FakeSecureStorage extends FlutterSecureStorage {
     AppleOptions? mOptions,
   }) async {
     _values.remove(key);
+  }
+}
+
+class _FakeManagedLoginService extends CognitoManagedLoginService {
+  _FakeManagedLoginService()
+      : super(
+          dio: Dio(),
+          incomingLinks: const Stream<Uri>.empty(),
+          readInitialLink: () async => null,
+          launchUrl: (uri, {mode = LaunchMode.platformDefault}) async => true,
+          clientId: 'managed-client-id',
+          loginDomain: Uri.parse('https://login.getconscia.com'),
+          redirectUri: Uri.parse('https://auth.getconscia.com/open/auth/callback'),
+          logoutUri: Uri.parse('https://auth.getconscia.com/open/auth/logout'),
+        );
+
+  AuthTokens signInTokens = const AuthTokens(
+    accessToken: 'managed.access.token',
+    idToken: 'managed.id.token',
+    refreshToken: 'managed-refresh-token',
+    userId: 'user-1',
+  );
+  AuthTokens refreshTokens = const AuthTokens(
+    accessToken: 'managed.refreshed.access.token',
+    idToken: 'managed.refreshed.id.token',
+    refreshToken: 'managed-refreshed-refresh-token',
+    userId: 'user-1',
+  );
+  CognitoManagedLoginProvider? lastProvider;
+  String? lastEmailHint;
+  String? lastRefreshToken;
+  int logoutCount = 0;
+
+  @override
+  Future<AuthTokens> signIn({
+    CognitoManagedLoginProvider? provider,
+    String? emailHint,
+  }) async {
+    lastProvider = provider;
+    lastEmailHint = emailHint;
+    return signInTokens;
+  }
+
+  @override
+  Future<AuthTokens> refreshSession(String refreshToken) async {
+    lastRefreshToken = refreshToken;
+    return refreshTokens;
+  }
+
+  @override
+  Future<void> logout() async {
+    logoutCount += 1;
   }
 }
 
@@ -508,5 +562,83 @@ void main() {
       adapter.lastRequestOptions?.headers['X-Conscia-App-Version'],
       isNotNull,
     );
+  });
+
+  test('signInWithGoogle persists managed login tokens including id token',
+      () async {
+    final service = _FakeAuthService(
+      const AuthTokens(
+        accessToken: 'unused.access.token',
+        refreshToken: 'unused-refresh-token',
+        userId: 'user-1',
+      ),
+    );
+    final managedLogin = _FakeManagedLoginService()
+      ..signInTokens = const AuthTokens(
+        accessToken: 'managed.access.token',
+        idToken: 'managed.id.token',
+        refreshToken: 'managed-refresh-token',
+        userId: 'managed-user',
+      );
+    final storage = _FakeSecureStorage();
+    final notifier = AuthNotifier(
+      service,
+      storage,
+      autoRestoreSession: false,
+      managedLoginService: managedLogin,
+      useManagedLogin: true,
+    );
+
+    await notifier.signInWithGoogle();
+
+    expect(managedLogin.lastProvider, CognitoManagedLoginProvider.google);
+    expect(notifier.state.status, AuthStatus.authenticated);
+    expect(notifier.state.userId, 'managed-user');
+    expect(notifier.state.accessToken, 'managed.access.token');
+    expect(await storage.read(key: 'access_token'), 'managed.access.token');
+    expect(await storage.read(key: 'id_token'), 'managed.id.token');
+  });
+
+  test('refreshSession uses managed login token refresh and stores id token',
+      () async {
+    final storage = _FakeSecureStorage({
+      'access_token': _fakeJwt(
+        expiresAt: DateTime.now().toUtc().add(const Duration(minutes: 10)),
+      ),
+      'id_token': _fakeJwt(
+        expiresAt: DateTime.now().toUtc().add(const Duration(minutes: 10)),
+      ),
+      'refresh_token': 'managed-refresh-token',
+      'user_id': 'user-1',
+    });
+    final managedLogin = _FakeManagedLoginService()
+      ..refreshTokens = const AuthTokens(
+        accessToken: 'managed.refreshed.access.token',
+        idToken: 'managed.refreshed.id.token',
+        refreshToken: 'managed.refreshed.refresh.token',
+        userId: 'managed-user',
+      );
+    final notifier = AuthNotifier(
+      _FakeAuthService(
+        const AuthTokens(
+          accessToken: 'unused.access.token',
+          refreshToken: 'unused-refresh-token',
+          userId: 'user-1',
+        ),
+      ),
+      storage,
+      autoRestoreSession: false,
+      managedLoginService: managedLogin,
+      useManagedLogin: true,
+    );
+
+    await notifier.loginWithStoredToken();
+    final refreshed = await notifier.refreshSession();
+
+    expect(refreshed, isTrue);
+    expect(managedLogin.lastRefreshToken, 'managed-refresh-token');
+    expect(await storage.read(key: 'access_token'), 'managed.refreshed.access.token');
+    expect(await storage.read(key: 'id_token'), 'managed.refreshed.id.token');
+    expect(await storage.read(key: 'refresh_token'), 'managed.refreshed.refresh.token');
   });
 }
