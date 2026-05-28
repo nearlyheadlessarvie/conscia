@@ -2,7 +2,7 @@
 const eyebrow = 'CONSCIA AUTH';
 const title = 'You are signed out';
 const description =
-  'Your browser session has been cleared. If Conscia does not reopen automatically, you can jump back to the app below.';
+  'Your browser session has been cleared. Use the button below to return to the app.';
 const schemeBase = 'conscia://auth/logout';
 ---
 
@@ -10,6 +10,7 @@ const schemeBase = 'conscia://auth/logout';
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex, nofollow" />
     <title>Signed out of Conscia</title>
     <style>
       :root {
@@ -170,9 +171,6 @@ const schemeBase = 'conscia://auth/logout';
       if (openApp instanceof HTMLAnchorElement) {
         openApp.href = target;
       }
-      window.setTimeout(() => {
-        window.location.replace(target);
-      }, 220);
     </script>
   </body>
 </html>
