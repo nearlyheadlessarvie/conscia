@@ -96,7 +96,11 @@ builder.Services.AddOpenTelemetry()
     });
 
 // --- AWS SDK clients ---
-if (builder.Environment.IsDevelopment())
+var useLocalAwsEmulators = LocalAwsModeResolver.ShouldUseLocalAwsEmulators(
+    builder.Configuration,
+    builder.Environment);
+
+if (useLocalAwsEmulators)
 {
     var credentials = new BasicAWSCredentials("local", "local");
 
@@ -127,11 +131,12 @@ if (builder.Environment.IsDevelopment())
 }
 else
 {
-    builder.Services.AddAWSService<IAmazonDynamoDB>();
-    builder.Services.AddAWSService<IAmazonS3>();
-    builder.Services.AddAWSService<IAmazonSQS>();
-    builder.Services.AddAWSService<IAmazonCognitoIdentityProvider>();
-    builder.Services.AddAWSService<IAmazonTextract>();
+    var awsRegion = RegionEndpoint.GetBySystemName(CognitoRegionResolver.Resolve(builder.Configuration));
+    builder.Services.AddSingleton<IAmazonDynamoDB>(_ => new AmazonDynamoDBClient(awsRegion));
+    builder.Services.AddSingleton<IAmazonS3>(_ => new AmazonS3Client(awsRegion));
+    builder.Services.AddSingleton<IAmazonSQS>(_ => new AmazonSQSClient(awsRegion));
+    builder.Services.AddSingleton<IAmazonCognitoIdentityProvider>(_ => new AmazonCognitoIdentityProviderClient(awsRegion));
+    builder.Services.AddSingleton<IAmazonTextract>(_ => new AmazonTextractClient(awsRegion));
 }
 
 // --- DynamoDB Repositories ---
