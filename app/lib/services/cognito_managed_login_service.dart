@@ -36,6 +36,8 @@ class CognitoManagedLoginException implements Exception {
 }
 
 class CognitoManagedLoginService {
+  static final _customSchemeCallbackUri = Uri.parse('conscia://auth/callback');
+
   CognitoManagedLoginService({
     required Dio dio,
     required Stream<Uri> incomingLinks,
@@ -223,9 +225,16 @@ class CognitoManagedLoginService {
       return false;
     }
 
-    if (uri.scheme != _redirectUri.scheme ||
-        uri.host != _redirectUri.host ||
-        uri.path != _redirectUri.path) {
+    final matchesRedirectUri =
+        uri.scheme == _redirectUri.scheme &&
+        uri.host == _redirectUri.host &&
+        uri.path == _redirectUri.path;
+    final matchesCustomSchemeCallback =
+        uri.scheme == _customSchemeCallbackUri.scheme &&
+        uri.host == _customSchemeCallbackUri.host &&
+        uri.path == _customSchemeCallbackUri.path;
+
+    if (!matchesRedirectUri && !matchesCustomSchemeCallback) {
       return false;
     }
 
