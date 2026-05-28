@@ -11,11 +11,6 @@ class ApiConstants {
     defaultValue: false,
   );
 
-  static const String googleServerClientId = String.fromEnvironment(
-    'GOOGLE_SERVER_CLIENT_ID',
-    defaultValue: '',
-  );
-
   static const String cognitoClientId = String.fromEnvironment(
     'COGNITO_CLIENT_ID',
     defaultValue: '',
@@ -48,8 +43,6 @@ class ApiConstants {
   static const String login = 'auth/login';
   static const String refreshToken = 'auth/refresh';
   static const String logout = 'auth/logout';
-  static const String appleSignIn = 'auth/apple';
-  static const String googleSignIn = 'auth/google';
   static const String passkeyRegisterStart = 'auth/passkeys/register/start';
   static const String passkeyRegisterComplete =
       'auth/passkeys/register/complete';

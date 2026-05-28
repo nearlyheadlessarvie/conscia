@@ -4,7 +4,6 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 
 import '../network/api_exception.dart';
-import '../../services/auth_service.dart';
 import '../../services/cognito_managed_login_service.dart';
 
 typedef AppErrorLogger = void Function(AppError error);
@@ -84,23 +83,6 @@ class AppError {
       _ => null,
     };
 
-    final appleError = switch (error) {
-      AppleSignInFailure appleSignInFailure => appleSignInFailure,
-      _ => null,
-    };
-
-    if (appleError != null) {
-      return switch (appleError.kind) {
-        AppleSignInFailureKind.cancelled => 'Apple sign-in was cancelled.',
-        AppleSignInFailureKind.unavailable =>
-          'Apple sign-in could not finish on this device. Please try again.',
-      };
-    }
-
-    if (error is GoogleSignInFailure) {
-      return error.message;
-    }
-
     if (error is CognitoManagedLoginCancelledException) {
       return 'Conscia sign-in was cancelled.';
     }
@@ -129,14 +111,6 @@ class AppError {
   }
 
   static bool _shouldShowReference(Object error) {
-    if (error case AppleSignInFailure(kind: AppleSignInFailureKind.cancelled)) {
-      return false;
-    }
-
-    if (error is GoogleSignInFailure && error.isCancellation) {
-      return false;
-    }
-
     if (error is CognitoManagedLoginCancelledException ||
         error is CognitoManagedLoginException) {
       return false;
