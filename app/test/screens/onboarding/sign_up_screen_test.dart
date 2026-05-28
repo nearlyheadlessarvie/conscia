@@ -1,28 +1,18 @@
-import 'package:conscia_app/providers/auth_provider.dart';
 import 'package:conscia_app/core/errors/app_error.dart';
+import 'package:conscia_app/providers/auth_provider.dart';
 import 'package:conscia_app/screens/onboarding/sign_up_screen.dart';
 import 'package:conscia_app/services/auth_service.dart';
+import 'package:conscia_app/services/cognito_managed_login_service.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher/url_launcher.dart';
 
-class _FailingAuthService extends AuthService {
-  _FailingAuthService() : super(Dio());
-
-  @override
-  Future<AuthRegistrationResult> register(String email, String password) {
-    throw DioException(
-      requestOptions: RequestOptions(path: 'auth/register'),
-      response: Response(
-        requestOptions: RequestOptions(path: 'auth/register'),
-        statusCode: 400,
-        data: {'error': 'Account already exists. Please sign in.'},
-      ),
-    );
-  }
+class _FakeAuthService extends AuthService {
+  _FakeAuthService() : super(Dio());
 }
 
 class _FakeSecureStorage extends FlutterSecureStorage {
@@ -40,6 +30,44 @@ class _FakeSecureStorage extends FlutterSecureStorage {
   }
 }
 
+class _FakeManagedLoginService extends CognitoManagedLoginService {
+  _FakeManagedLoginService()
+      : super(
+          dio: Dio(),
+          incomingLinks: const Stream<Uri>.empty(),
+          readInitialLink: () async => null,
+          launchUrl: (uri, {mode = LaunchMode.platformDefault}) async => true,
+          clientId: 'managed-client-id',
+          loginDomain: Uri.parse('https://login.getconscia.com'),
+          redirectUri: Uri.parse('https://auth.getconscia.com/open/auth/callback'),
+          logoutUri: Uri.parse('https://auth.getconscia.com/open/auth/logout'),
+        );
+}
+
+class _RecordingAuthNotifier extends AuthNotifier {
+  _RecordingAuthNotifier()
+      : super(
+          _FakeAuthService(),
+          _FakeSecureStorage(),
+          autoRestoreSession: false,
+          useManagedLogin: true,
+          managedLoginService: _FakeManagedLoginService(),
+        );
+
+  String? lastEmailHint;
+  Object? signUpError;
+
+  @override
+  Future<void> signUpWithManagedLogin({String? emailHint}) async {
+    final error = signUpError;
+    if (error != null) {
+      throw error;
+    }
+
+    lastEmailHint = emailHint;
+  }
+}
+
 void main() {
   setUp(() {
     SharedPreferences.setMockInitialValues({});
@@ -47,12 +75,15 @@ void main() {
 
   tearDown(AppError.resetForTests);
 
-  testWidgets('sign up screen does not show social auth buttons', (
+  testWidgets('sign up screen keeps email-first managed login entry only', (
     tester,
   ) async {
     await tester.pumpWidget(
-      const ProviderScope(
-        child: MaterialApp(
+      ProviderScope(
+        overrides: [
+          authProvider.overrideWith((ref) => _RecordingAuthNotifier()),
+        ],
+        child: const MaterialApp(
           home: SignUpScreen(),
         ),
       ),
@@ -60,20 +91,43 @@ void main() {
 
     expect(find.text('Sign up with Google'), findsNothing);
     expect(find.text('Sign up with Apple'), findsNothing);
-    expect(find.text('Start with clarity'), findsOneWidget);
+    expect(find.byType(TextField), findsOneWidget);
+    expect(find.text('Password'), findsNothing);
     expect(find.text('Create Account'), findsOneWidget);
   });
 
-  testWidgets('sign up shows friendly API errors instead of DioException text',
-      (
+  testWidgets('create account launches managed signup with email hint', (
     tester,
   ) async {
-    final authNotifier = AuthNotifier(
-      _FailingAuthService(),
-      _FakeSecureStorage(),
+    final authNotifier = _RecordingAuthNotifier();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          authProvider.overrideWith((ref) => authNotifier),
+        ],
+        child: const MaterialApp(
+          home: SignUpScreen(),
+        ),
+      ),
     );
+
+    await tester.enterText(find.byType(TextField), 'story-demo@example.com');
+    await tester.tap(find.widgetWithText(FilledButton, 'Create Account'));
+    await tester.pump();
+
+    expect(authNotifier.lastEmailHint, 'story-demo@example.com');
+  });
+
+  testWidgets('sign up shows friendly managed login errors', (
+    tester,
+  ) async {
+    final authNotifier = _RecordingAuthNotifier()
+      ..signUpError = const CognitoManagedLoginException(
+        'Managed signup is temporarily unavailable.',
+      );
     AppError.configure(
-      referenceIdFactory: () => 'SIGNUP01',
+      referenceIdFactory: () => 'SIGNUPML',
       logger: (_) {},
     );
 
@@ -88,21 +142,12 @@ void main() {
       ),
     );
 
-    final fields = find.byType(TextField);
-    await tester.enterText(fields.at(0), 'nearlyheadlessarvie@live.com.ph');
-    await tester.enterText(fields.at(1), 'Secure123');
-    await tester.enterText(fields.at(2), 'Secure123');
-
+    await tester.enterText(find.byType(TextField), 'story-demo@example.com');
     await tester.tap(find.widgetWithText(FilledButton, 'Create Account'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
 
-    expect(
-      find.text('Account already exists. Please sign in.'),
-      findsOneWidget,
-    );
-    expect(find.textContaining('Reference: SIGNUP01'), findsNothing);
-    expect(find.textContaining('DioException'), findsNothing);
-    expect(find.text('Dismiss'), findsNothing);
+    expect(find.text('Managed signup is temporarily unavailable.'), findsOneWidget);
+    expect(find.textContaining('Reference: SIGNUPML'), findsNothing);
   });
 }

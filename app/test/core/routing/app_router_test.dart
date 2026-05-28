@@ -186,7 +186,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 100));
 
     expect(find.text('Welcome back'), findsOneWidget);
-    expect(find.text('Sign In'), findsOneWidget);
+    expect(find.text('Continue with Email or Passkey'), findsOneWidget);
     expect(find.text('Build a calmer money rhythm'), findsNothing);
   });
 
