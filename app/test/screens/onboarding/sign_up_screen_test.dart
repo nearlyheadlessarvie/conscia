@@ -34,12 +34,17 @@ class _FakeManagedLoginService extends CognitoManagedLoginService {
   _FakeManagedLoginService()
       : super(
           dio: Dio(),
-          incomingLinks: const Stream<Uri>.empty(),
-          readInitialLink: () async => null,
           launchUrl: (uri, {mode = LaunchMode.platformDefault}) async => true,
+          openAuthSession: (uri, {required appCallbackUri}) async =>
+              Uri.parse(
+                'conscia://auth/callback'
+                '?code=test-code'
+                '&state=test-state',
+              ),
           clientId: 'managed-client-id',
           loginDomain: Uri.parse('https://login.getconscia.com'),
           redirectUri: Uri.parse('https://auth.getconscia.com/open/auth/callback'),
+          appRedirectUri: Uri.parse('conscia://auth/callback'),
           logoutUri: Uri.parse('https://auth.getconscia.com/open/auth/logout'),
         );
 }

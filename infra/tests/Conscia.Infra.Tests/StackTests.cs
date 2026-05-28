@@ -190,7 +190,46 @@ public class StackTests
         }));
         template.HasResourceProperties("AWS::Cognito::ManagedLoginBranding", Match.ObjectLike(new Dictionary<string, object>
         {
-            ["UseCognitoProvidedValues"] = true
+            ["UseCognitoProvidedValues"] = false,
+            ["Assets"] = Match.ArrayWith([
+                Match.ObjectLike(new Dictionary<string, object>
+                {
+                    ["Category"] = "FORM_LOGO",
+                    ["ColorMode"] = "DYNAMIC",
+                    ["Extension"] = "SVG"
+                }),
+                Match.ObjectLike(new Dictionary<string, object>
+                {
+                    ["Category"] = "PAGE_BACKGROUND",
+                    ["ColorMode"] = "LIGHT",
+                    ["Extension"] = "SVG"
+                }),
+                Match.ObjectLike(new Dictionary<string, object>
+                {
+                    ["Category"] = "PAGE_BACKGROUND",
+                    ["ColorMode"] = "DARK",
+                    ["Extension"] = "SVG"
+                })
+            ]),
+            ["Settings"] = Match.ObjectLike(new Dictionary<string, object>
+            {
+                ["categories"] = Match.ObjectLike(new Dictionary<string, object>
+                {
+                    ["global"] = Match.ObjectLike(new Dictionary<string, object>
+                    {
+                        ["colorSchemeMode"] = "DYNAMIC"
+                    })
+                }),
+                ["componentClasses"] = Match.ObjectLike(new Dictionary<string, object>
+                {
+                    ["buttons"] = Match.ObjectLike(new Dictionary<string, object>
+                    {
+                        ["borderRadius"] = 28.0
+                    }),
+                    ["primaryButton"] = Match.AnyValue(),
+                    ["input"] = Match.AnyValue()
+                })
+            })
         }));
         template.HasResourceProperties("AWS::Lambda::Function", Match.ObjectLike(new Dictionary<string, object>
         {

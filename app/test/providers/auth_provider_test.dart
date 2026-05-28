@@ -155,12 +155,17 @@ class _FakeManagedLoginService extends CognitoManagedLoginService {
   _FakeManagedLoginService()
       : super(
           dio: Dio(),
-          incomingLinks: const Stream<Uri>.empty(),
-          readInitialLink: () async => null,
           launchUrl: (uri, {mode = LaunchMode.platformDefault}) async => true,
+          openAuthSession: (uri, {required appCallbackUri}) async =>
+              Uri.parse(
+                'conscia://auth/callback'
+                '?code=test-code'
+                '&state=test-state',
+              ),
           clientId: 'managed-client-id',
           loginDomain: Uri.parse('https://login.getconscia.com'),
           redirectUri: Uri.parse('https://auth.getconscia.com/open/auth/callback'),
+          appRedirectUri: Uri.parse('conscia://auth/callback'),
           logoutUri: Uri.parse('https://auth.getconscia.com/open/auth/logout'),
         );
 
@@ -176,6 +181,8 @@ class _FakeManagedLoginService extends CognitoManagedLoginService {
     refreshToken: 'managed-refreshed-refresh-token',
     userId: 'user-1',
   );
+  Object? signInError;
+  Object? signUpError;
   CognitoManagedLoginProvider? lastProvider;
   String? lastEmailHint;
   String? lastRefreshToken;
@@ -186,7 +193,21 @@ class _FakeManagedLoginService extends CognitoManagedLoginService {
     CognitoManagedLoginProvider? provider,
     String? emailHint,
   }) async {
+    final error = signInError;
+    if (error != null) {
+      throw error;
+    }
     lastProvider = provider;
+    lastEmailHint = emailHint;
+    return signInTokens;
+  }
+
+  @override
+  Future<AuthTokens> signUp({String? emailHint}) async {
+    final error = signUpError;
+    if (error != null) {
+      throw error;
+    }
     lastEmailHint = emailHint;
     return signInTokens;
   }
@@ -640,5 +661,55 @@ void main() {
     expect(await storage.read(key: 'access_token'), 'managed.refreshed.access.token');
     expect(await storage.read(key: 'id_token'), 'managed.refreshed.id.token');
     expect(await storage.read(key: 'refresh_token'), 'managed.refreshed.refresh.token');
+  });
+
+  test('continueWithManagedLogin ignores auth-sheet cancellation quietly',
+      () async {
+    final managedLogin = _FakeManagedLoginService()
+      ..signInError = const CognitoManagedLoginCancelledException();
+    final notifier = AuthNotifier(
+      _FakeAuthService(
+        const AuthTokens(
+          accessToken: 'unused.access.token',
+          refreshToken: 'unused-refresh-token',
+          userId: 'user-1',
+        ),
+      ),
+      _FakeSecureStorage(),
+      autoRestoreSession: false,
+      managedLoginService: managedLogin,
+      useManagedLogin: true,
+    );
+
+    await notifier.continueWithManagedLogin(emailHint: 'calm@example.com');
+
+    expect(notifier.state.isLoading, isFalse);
+    expect(notifier.state.error, isNull);
+    expect(notifier.state.status, AuthStatus.unauthenticated);
+  });
+
+  test('signUpWithManagedLogin ignores auth-sheet cancellation quietly',
+      () async {
+    final managedLogin = _FakeManagedLoginService()
+      ..signUpError = const CognitoManagedLoginCancelledException();
+    final notifier = AuthNotifier(
+      _FakeAuthService(
+        const AuthTokens(
+          accessToken: 'unused.access.token',
+          refreshToken: 'unused-refresh-token',
+          userId: 'user-1',
+        ),
+      ),
+      _FakeSecureStorage(),
+      autoRestoreSession: false,
+      managedLoginService: managedLogin,
+      useManagedLogin: true,
+    );
+
+    await notifier.signUpWithManagedLogin(emailHint: 'calm@example.com');
+
+    expect(notifier.state.isLoading, isFalse);
+    expect(notifier.state.error, isNull);
+    expect(notifier.state.status, AuthStatus.unauthenticated);
   });
 }

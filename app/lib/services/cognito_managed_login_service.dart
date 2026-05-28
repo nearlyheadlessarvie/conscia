@@ -1,9 +1,10 @@
-import 'dart:async';
 import 'dart:convert';
 import 'dart:math' as math;
 
 import 'package:crypto/crypto.dart';
 import 'package:dio/dio.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_web_auth_2/flutter_web_auth_2.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'auth_service.dart';
@@ -22,6 +23,11 @@ typedef LaunchExternalUrl = Future<bool> Function(
   LaunchMode mode,
 });
 
+typedef OpenAuthSession = Future<Uri> Function(
+  Uri uri, {
+  required Uri appCallbackUri,
+});
+
 class CognitoManagedLoginCancelledException implements Exception {
   const CognitoManagedLoginCancelledException();
 }
@@ -35,27 +41,49 @@ class CognitoManagedLoginException implements Exception {
   String toString() => message;
 }
 
-class CognitoManagedLoginService {
-  static final _customSchemeCallbackUri = Uri.parse('conscia://auth/callback');
+Future<Uri> openManagedLoginAuthSheet(
+  Uri uri, {
+  required Uri appCallbackUri,
+}) async {
+  try {
+    final result = await FlutterWebAuth2.authenticate(
+      url: uri.toString(),
+      callbackUrlScheme: appCallbackUri.scheme,
+    );
+    return Uri.parse(result);
+  } on PlatformException catch (e) {
+    if (e.code == 'CANCELED') {
+      throw const CognitoManagedLoginCancelledException();
+    }
 
+    final message = e.message?.trim();
+    throw CognitoManagedLoginException(
+      message?.isNotEmpty == true
+          ? message!
+          : 'Conscia sign-in could not finish right now.',
+    );
+  }
+}
+
+class CognitoManagedLoginService {
   CognitoManagedLoginService({
     required Dio dio,
-    required Stream<Uri> incomingLinks,
-    required Future<Uri?> Function() readInitialLink,
     required LaunchExternalUrl launchUrl,
+    required OpenAuthSession openAuthSession,
     required String clientId,
     required Uri loginDomain,
     required Uri redirectUri,
+    required Uri appRedirectUri,
     required Uri logoutUri,
     this.scopes = _defaultScopes,
     math.Random? random,
   })  : _dio = dio,
-        _incomingLinks = incomingLinks,
-        _readInitialLink = readInitialLink,
         _launchUrl = launchUrl,
+        _openAuthSession = openAuthSession,
         _clientId = clientId,
         _loginDomain = _normalizeBaseUri(loginDomain),
         _redirectUri = redirectUri,
+        _appRedirectUri = appRedirectUri,
         _logoutUri = logoutUri,
         _random = random ?? math.Random.secure() {
     _dio.options.baseUrl = _loginDomain.toString();
@@ -65,12 +93,12 @@ class CognitoManagedLoginService {
       'openid email profile aws.cognito.signin.user.admin';
 
   final Dio _dio;
-  final Stream<Uri> _incomingLinks;
-  final Future<Uri?> Function() _readInitialLink;
   final LaunchExternalUrl _launchUrl;
+  final OpenAuthSession _openAuthSession;
   final String _clientId;
   final Uri _loginDomain;
   final Uri _redirectUri;
+  final Uri _appRedirectUri;
   final Uri _logoutUri;
   final String scopes;
   final math.Random _random;
@@ -153,17 +181,8 @@ class CognitoManagedLoginService {
       },
     );
 
-    final launched = await _launchUrl(
-      authorizeUri,
-      mode: LaunchMode.externalApplication,
-    );
-    if (!launched) {
-      throw const CognitoManagedLoginException(
-        'Could not open Conscia sign-in in the browser.',
-      );
-    }
+    final callbackUri = await _openCallbackSession(authorizeUri);
 
-    final callbackUri = await _waitForCallback(state);
     final error = callbackUri.queryParameters['error'];
     if (error != null && error.isNotEmpty) {
       if (error == 'access_denied') {
@@ -175,6 +194,12 @@ class CognitoManagedLoginService {
         description?.trim().isNotEmpty == true
             ? description!
             : 'Conscia sign-in could not finish right now.',
+      );
+    }
+
+    if (!_matchesCallback(callbackUri, state)) {
+      throw const CognitoManagedLoginException(
+        'Conscia sign-in returned to an unexpected callback URL.',
       );
     }
 
@@ -204,41 +229,23 @@ class CognitoManagedLoginService {
     return _tokensFromOAuthJson(response.data ?? const <String, dynamic>{});
   }
 
-  Future<Uri> _waitForCallback(String expectedState) async {
-    final initialLink = await _readInitialLink();
-    if (_matchesCallback(initialLink, expectedState)) {
-      return initialLink!;
-    }
-
-    return _incomingLinks.firstWhere(
-      (uri) => _matchesCallback(uri, expectedState),
-    ).timeout(
-      const Duration(minutes: 5),
-      onTimeout: () => throw const CognitoManagedLoginException(
-        'Conscia sign-in timed out before the browser returned to the app.',
-      ),
-    );
-  }
-
   bool _matchesCallback(Uri? uri, String expectedState) {
     if (uri == null) {
       return false;
     }
 
-    final matchesRedirectUri =
-        uri.scheme == _redirectUri.scheme &&
-        uri.host == _redirectUri.host &&
-        uri.path == _redirectUri.path;
-    final matchesCustomSchemeCallback =
-        uri.scheme == _customSchemeCallbackUri.scheme &&
-        uri.host == _customSchemeCallbackUri.host &&
-        uri.path == _customSchemeCallbackUri.path;
-
-    if (!matchesRedirectUri && !matchesCustomSchemeCallback) {
+    if (!_matchesCallbackBase(uri, _appRedirectUri) &&
+        !_matchesCallbackBase(uri, _redirectUri)) {
       return false;
     }
 
     return uri.queryParameters['state'] == expectedState;
+  }
+
+  bool _matchesCallbackBase(Uri uri, Uri expected) {
+    return uri.scheme == expected.scheme &&
+        uri.host == expected.host &&
+        uri.path == expected.path;
   }
 
   AuthTokens _tokensFromOAuthJson(Map<String, dynamic> json) {
@@ -271,6 +278,26 @@ class CognitoManagedLoginService {
       refreshToken: refreshToken,
       userId: userId,
     );
+  }
+
+  Future<Uri> _openCallbackSession(Uri authorizeUri) async {
+    try {
+      return await _openAuthSession(
+        authorizeUri,
+        appCallbackUri: _appRedirectUri,
+      );
+    } on PlatformException catch (e) {
+      if (e.code == 'CANCELED') {
+        throw const CognitoManagedLoginCancelledException();
+      }
+
+      final message = e.message?.trim();
+      throw CognitoManagedLoginException(
+        message?.isNotEmpty == true
+            ? message!
+            : 'Conscia sign-in could not finish right now.',
+      );
+    }
   }
 
   String? _readSubject(String? token) {
@@ -321,7 +348,8 @@ class CognitoManagedLoginService {
   }
 
   static Uri _normalizeBaseUri(Uri uri) {
-    final path = uri.path.endsWith('/') ? uri.path.substring(0, uri.path.length - 1) : uri.path;
+    final path =
+        uri.path.endsWith('/') ? uri.path.substring(0, uri.path.length - 1) : uri.path;
     return uri.replace(path: path, query: null, fragment: null);
   }
 }
