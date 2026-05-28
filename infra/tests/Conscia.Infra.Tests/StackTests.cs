@@ -158,11 +158,9 @@ public class StackTests
                 "aws.cognito.signin.user.admin"
             ]),
             ["CallbackURLs"] = Match.ArrayWith([
-                "https://auth.getconscia.com/open/auth/callback",
                 "conscia://auth/callback"
             ]),
             ["LogoutURLs"] = Match.ArrayWith([
-                "https://auth.getconscia.com/open/auth/logout",
                 "conscia://auth/logout"
             ]),
             ["SupportedIdentityProviders"] = Match.ArrayWith(["COGNITO", "Google", "SignInWithApple"]),
@@ -595,8 +593,7 @@ public class StackTests
                 ["Aliases"] = Match.ArrayWith(new[]
                 {
                     "getconscia.com",
-                    "www.getconscia.com",
-                    "auth.getconscia.com"
+                    "www.getconscia.com"
                 }),
                 ["DefaultCacheBehavior"] = Match.ObjectLike(new Dictionary<string, object>
                 {
@@ -616,7 +613,7 @@ public class StackTests
         var config = Assert.IsAssignableFrom<IDictionary<string, object>>(properties["DistributionConfig"]);
         Assert.DoesNotContain("CustomErrorResponses", config.Keys);
 
-        template.ResourceCountIs("AWS::Route53::RecordSet", 3);
+        template.ResourceCountIs("AWS::Route53::RecordSet", 2);
     }
 
     [Fact]
