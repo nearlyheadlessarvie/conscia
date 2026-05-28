@@ -609,6 +609,13 @@ public class StackTests
                 })
             }
         });
+
+        var distributions = template.FindResources("AWS::CloudFront::Distribution");
+        var distribution = Assert.Single(distributions);
+        var properties = Assert.IsAssignableFrom<IDictionary<string, object>>(distribution.Value["Properties"]);
+        var config = Assert.IsAssignableFrom<IDictionary<string, object>>(properties["DistributionConfig"]);
+        Assert.DoesNotContain("CustomErrorResponses", config.Keys);
+
         template.ResourceCountIs("AWS::Route53::RecordSet", 3);
     }
 

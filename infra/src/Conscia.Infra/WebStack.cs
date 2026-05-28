@@ -75,23 +75,6 @@ public class WebStack : Stack
                 ]
             },
             DefaultRootObject = "index.html",
-            ErrorResponses = new[]
-            {
-                new ErrorResponse
-                {
-                    HttpStatus = 404,
-                    ResponseHttpStatus = 200,
-                    ResponsePagePath = "/index.html",
-                    Ttl = Duration.Seconds(0)
-                },
-                new ErrorResponse
-                {
-                    HttpStatus = 403,
-                    ResponseHttpStatus = 200,
-                    ResponsePagePath = "/index.html",
-                    Ttl = Duration.Seconds(0)
-                }
-            },
             PriceClass = PriceClass.PRICE_CLASS_100,
             Comment = "Conscia Marketing Site (getconscia.com)"
         };
