@@ -1,7 +1,9 @@
 using System.Net;
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using Conscia.Application.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
+using Moq;
 namespace Conscia.Tests.Unit.Api;
 
 public class AuthEndpointTests
@@ -283,5 +285,42 @@ public class AuthEndpointTests
         });
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task SetPassword_Authenticated_Returns204()
+    {
+        await using var factory = new TestWebAppFactory();
+        using var client = factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+            "Bearer",
+            factory.GenerateTestToken());
+
+        var response = await client.PostAsJsonAsync("/api/auth/password", new
+        {
+            password = "StrongPass123"
+        });
+
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+        factory.CurrentUserPasswordServiceMock.Verify(
+            s => s.SetPasswordAsync(
+                It.IsAny<System.Security.Claims.ClaimsPrincipal>(),
+                "StrongPass123",
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task SetPassword_Unauthenticated_Returns401()
+    {
+        await using var factory = new TestWebAppFactory();
+        using var client = factory.CreateClient();
+
+        var response = await client.PostAsJsonAsync("/api/auth/password", new
+        {
+            password = "StrongPass123"
+        });
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
 }

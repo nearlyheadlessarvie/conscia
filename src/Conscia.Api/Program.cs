@@ -185,6 +185,7 @@ builder.Services.AddScoped<IConscienceJourneyService, ConscienceJourneyService>(
 builder.Services.AddScoped<IAdminAuthorizationService, AdminAuthorizationService>();
 builder.Services.AddScoped<ISubscriptionAdminService, SubscriptionAdminService>();
 builder.Services.AddScoped<IUserProvisioningService, UserProvisioningService>();
+builder.Services.AddScoped<ICurrentUserPasswordService, CurrentUserPasswordService>();
 builder.Services.AddSingleton<IRecurringScheduleGenerator, RecurringScheduleGenerator>();
 builder.Services.AddScoped<IInviteEmailSender, NoopInviteEmailSender>();
 builder.Services.AddScoped<ITriggerEvaluator, BudgetWarningEvaluator>();
@@ -510,6 +511,7 @@ if (app.Environment.IsDevelopment())
 
 app.UseMiddleware<AppCompatibilityMiddleware>();
 app.UseAuthentication();
+app.UseMiddleware<CurrentUserBootstrapMiddleware>();
 app.UseAuthorization();
 app.UseRateLimiter();
 app.UseMiddleware<SubscriptionTierMiddleware>();

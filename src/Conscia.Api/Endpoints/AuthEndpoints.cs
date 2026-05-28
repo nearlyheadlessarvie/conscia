@@ -80,6 +80,25 @@ public static class AuthEndpoints
                 : Results.Json(new { error = "Session expired" }, statusCode: 401);
         }).WithName("Refresh").RequireRateLimiting("auth");
 
+        group.MapPost("/password", async (
+            HttpContext ctx,
+            SetPasswordRequest req,
+            ICurrentUserPasswordService passwordService) =>
+        {
+            if (string.IsNullOrWhiteSpace(req.Password))
+                return Results.BadRequest(new { error = "Password is required" });
+
+            try
+            {
+                await passwordService.SetPasswordAsync(ctx.User, req.Password, ctx.RequestAborted);
+                return Results.NoContent();
+            }
+            catch (InvalidOperationException ex)
+            {
+                return Results.BadRequest(new { error = ex.Message });
+            }
+        }).WithName("SetPassword").RequireAuthorization().RequireRateLimiting("auth");
+
         group.MapPost("/google", async (HttpContext ctx, GoogleLoginRequest req, IAuthService auth) =>
         {
             if (string.IsNullOrWhiteSpace(req.IdToken))
@@ -213,5 +232,6 @@ public record ConfirmRegistrationRequest(string Email, string ConfirmationCode);
 public record ResendConfirmationRequest(string Email);
 public record LoginRequest(string Email, string Password);
 public record RefreshRequest(string RefreshToken);
+public record SetPasswordRequest(string Password);
 public record GoogleLoginRequest(string IdToken);
 public record AppleLoginRequest(string IdentityToken, string? AuthorizationCode);
