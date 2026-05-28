@@ -26,22 +26,12 @@ public class AuthStack : Stack
     private const string LightMuted = "655b63ff";
     private const string LightSurface = "fffaf4ff";
     private const string LightSurfaceBorder = "e5d9ceff";
-    private const string LightAccent = "24346fff";
-    private const string LightAccentHover = "162354ff";
-    private const string LightAccentText = "fffaf4ff";
-    private const string LightSecondaryText = "24346fff";
-    private const string LightSecondaryBorder = "d8c8b7ff";
     private const string LightFocus = "c59e4bff";
     private const string LightDivider = "e6ddd5ff";
     private const string DarkInk = "f6efe6ff";
     private const string DarkMuted = "d3c6bcff";
     private const string DarkSurface = "171a2cff";
     private const string DarkSurfaceBorder = "353a5bff";
-    private const string DarkAccent = "f0d58cff";
-    private const string DarkAccentHover = "f4dfabff";
-    private const string DarkAccentText = "17111fff";
-    private const string DarkSecondaryText = "f6efe6ff";
-    private const string DarkSecondaryBorder = "43486cff";
     private const string DarkFocus = "f0d58cff";
     private const string DarkDivider = "343a58ff";
 
@@ -437,67 +427,7 @@ public class AuthStack : Stack
                         ["placeholderColor"] = DarkMuted
                     }
                 },
-                ["primaryButton"] = new Dictionary<string, object>
-                {
-                    ["lightMode"] = new Dictionary<string, object>
-                    {
-                        ["defaults"] = new Dictionary<string, object>
-                        {
-                            ["backgroundColor"] = LightAccent,
-                            ["textColor"] = LightAccentText
-                        },
-                        ["hover"] = new Dictionary<string, object>
-                        {
-                            ["backgroundColor"] = LightAccentHover,
-                            ["textColor"] = LightAccentText
-                        },
-                        ["active"] = new Dictionary<string, object>
-                        {
-                            ["backgroundColor"] = LightAccentHover,
-                            ["textColor"] = LightAccentText
-                        }
-                    },
-                    ["darkMode"] = new Dictionary<string, object>
-                    {
-                        ["defaults"] = new Dictionary<string, object>
-                        {
-                            ["backgroundColor"] = DarkAccent,
-                            ["textColor"] = DarkAccentText
-                        },
-                        ["hover"] = new Dictionary<string, object>
-                        {
-                            ["backgroundColor"] = DarkAccentHover,
-                            ["textColor"] = DarkAccentText
-                        },
-                        ["active"] = new Dictionary<string, object>
-                        {
-                            ["backgroundColor"] = DarkAccentHover,
-                            ["textColor"] = DarkAccentText
-                        }
-                    }
-                },
-                ["secondaryButton"] = new Dictionary<string, object>
-                {
-                    ["lightMode"] = new Dictionary<string, object>
-                    {
-                        ["defaults"] = new Dictionary<string, object>
-                        {
-                            ["backgroundColor"] = LightSurface,
-                            ["borderColor"] = LightSecondaryBorder,
-                            ["textColor"] = LightSecondaryText
-                        }
-                    },
-                    ["darkMode"] = new Dictionary<string, object>
-                    {
-                        ["defaults"] = new Dictionary<string, object>
-                        {
-                            ["backgroundColor"] = DarkSurface,
-                            ["borderColor"] = DarkSecondaryBorder,
-                            ["textColor"] = DarkSecondaryText
-                        }
-                    }
-                },
-                ["text"] = new Dictionary<string, object>
+                ["pageText"] = new Dictionary<string, object>
                 {
                     ["lightMode"] = new Dictionary<string, object>
                     {
