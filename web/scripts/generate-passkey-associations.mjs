@@ -44,6 +44,12 @@ const appleAssociation = {
           {
             '/': '/open/family-invite*',
           },
+          {
+            '/': '/open/auth/callback*',
+          },
+          {
+            '/': '/open/auth/logout*',
+          },
         ],
       },
     ],
