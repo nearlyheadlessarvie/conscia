@@ -26,6 +26,8 @@ class ApiConstants {
     defaultValue: 'https://auth.getconscia.com/open/auth/callback',
   );
 
+  static const String cognitoAppRedirectUri = 'conscia://auth/callback';
+
   static const String cognitoLogoutUri = String.fromEnvironment(
     'COGNITO_LOGOUT_URI',
     defaultValue: 'https://auth.getconscia.com/open/auth/logout',

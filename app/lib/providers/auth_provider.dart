@@ -1,6 +1,5 @@
 import 'dart:convert';
 
-import 'package:app_links/app_links.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -381,6 +380,13 @@ class AuthNotifier extends StateNotifier<AuthState> {
         saveLastEmail(emailHint.trim());
       }
       await _setAuthenticated(tokens);
+    } on CognitoManagedLoginCancelledException {
+      state = state.copyWith(
+        isLoading: false,
+        isRestoringSession: false,
+        error: null,
+      );
+      return;
     } catch (e, s) {
       final error = AppError.from(e, stackTrace: s);
       state = state.copyWith(isLoading: false, error: error.userMessage);
@@ -400,6 +406,13 @@ class AuthNotifier extends StateNotifier<AuthState> {
         saveLastEmail(emailHint.trim());
       }
       await _setAuthenticated(tokens);
+    } on CognitoManagedLoginCancelledException {
+      state = state.copyWith(
+        isLoading: false,
+        isRestoringSession: false,
+        error: null,
+      );
+      return;
     } catch (e, s) {
       final error = AppError.from(e, stackTrace: s);
       state = state.copyWith(isLoading: false, error: error.userMessage);
@@ -723,7 +736,6 @@ final authServiceProvider = Provider<AuthService>((ref) {
 });
 
 final managedLoginServiceProvider = Provider<CognitoManagedLoginService>((ref) {
-  final appLinks = AppLinks();
   final dio = Dio(
     BaseOptions(
       connectTimeout: ApiConstants.connectTimeout,
@@ -733,12 +745,12 @@ final managedLoginServiceProvider = Provider<CognitoManagedLoginService>((ref) {
 
   return CognitoManagedLoginService(
     dio: dio,
-    incomingLinks: appLinks.uriLinkStream,
-    readInitialLink: appLinks.getInitialLink,
     launchUrl: launchUrl,
+    openAuthSession: openManagedLoginAuthSheet,
     clientId: ApiConstants.cognitoClientId,
     loginDomain: Uri.parse(ApiConstants.cognitoLoginDomain),
     redirectUri: Uri.parse(ApiConstants.cognitoRedirectUri),
+    appRedirectUri: Uri.parse(ApiConstants.cognitoAppRedirectUri),
     logoutUri: Uri.parse(ApiConstants.cognitoLogoutUri),
   );
 });
@@ -764,13 +776,16 @@ final class _UnavailableManagedLoginService extends CognitoManagedLoginService {
   _UnavailableManagedLoginService._()
       : super(
           dio: Dio(),
-          incomingLinks: const Stream<Uri>.empty(),
-          readInitialLink: () async => null,
           launchUrl: (uri, {mode = LaunchMode.platformDefault}) async => false,
+          openAuthSession: (uri, {required appCallbackUri}) async =>
+              throw const CognitoManagedLoginException(
+                'Managed login is not configured for this session.',
+              ),
           clientId: '',
           loginDomain: Uri.parse('https://login.getconscia.com'),
           redirectUri:
               Uri.parse('https://auth.getconscia.com/open/auth/callback'),
+          appRedirectUri: Uri.parse(ApiConstants.cognitoAppRedirectUri),
           logoutUri: Uri.parse('https://auth.getconscia.com/open/auth/logout'),
         );
 
