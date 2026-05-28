@@ -25,5 +25,6 @@ public class ReleaseAppIosWorkflowTests
         Assert.Contains("Build and upload iOS release with Fastlane", source);
         Assert.Contains("run: fastlane ios release", source);
         Assert.DoesNotContain("PROVISIONING_PROFILE_SPECIFIER=", source);
+        Assert.DoesNotContain("GIDClientID", source);
     }
 }
