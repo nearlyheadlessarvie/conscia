@@ -1,7 +1,9 @@
 using System.Net;
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using Conscia.Application.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
+using Moq;
 namespace Conscia.Tests.Unit.Api;
 
 public class AuthEndpointTests
@@ -152,7 +154,7 @@ public class AuthEndpointTests
     }
 
     [Fact]
-    public async Task GoogleLogin_ValidToken_Returns200()
+    public async Task GoogleLogin_EndpointRemoved_Returns404()
     {
         await using var factory = new TestWebAppFactory();
         using var client = factory.CreateClient();
@@ -162,30 +164,11 @@ public class AuthEndpointTests
             idToken = "mock-google-id-token"
         });
 
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        var body = await response.Content.ReadFromJsonAsync<Dictionary<string, object>>();
-        Assert.NotNull(body);
-        Assert.True(body!.ContainsKey("accessToken"));
-        Assert.True(body.ContainsKey("refreshToken"));
-        Assert.True(body.ContainsKey("userId"));
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
     [Fact]
-    public async Task GoogleLogin_EmptyToken_Returns400()
-    {
-        await using var factory = new TestWebAppFactory();
-        using var client = factory.CreateClient();
-
-        var response = await client.PostAsJsonAsync("/api/auth/google", new
-        {
-            idToken = ""
-        });
-
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
-    }
-
-    [Fact]
-    public async Task AppleLogin_ValidToken_Returns200()
+    public async Task AppleLogin_EndpointRemoved_Returns404()
     {
         await using var factory = new TestWebAppFactory();
         using var client = factory.CreateClient();
@@ -196,25 +179,7 @@ public class AuthEndpointTests
             authorizationCode = "mock-auth-code"
         });
 
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        var body = await response.Content.ReadFromJsonAsync<Dictionary<string, object>>();
-        Assert.NotNull(body);
-        Assert.True(body!.ContainsKey("accessToken"));
-    }
-
-    [Fact]
-    public async Task AppleLogin_EmptyToken_Returns400()
-    {
-        await using var factory = new TestWebAppFactory();
-        using var client = factory.CreateClient();
-
-        var response = await client.PostAsJsonAsync("/api/auth/apple", new
-        {
-            identityToken = "",
-            authorizationCode = (string?)null
-        });
-
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
     [Fact]
@@ -283,5 +248,42 @@ public class AuthEndpointTests
         });
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task SetPassword_Authenticated_Returns204()
+    {
+        await using var factory = new TestWebAppFactory();
+        using var client = factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+            "Bearer",
+            factory.GenerateTestToken());
+
+        var response = await client.PostAsJsonAsync("/api/auth/password", new
+        {
+            password = "StrongPass123"
+        });
+
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+        factory.CurrentUserPasswordServiceMock.Verify(
+            s => s.SetPasswordAsync(
+                It.IsAny<System.Security.Claims.ClaimsPrincipal>(),
+                "StrongPass123",
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task SetPassword_Unauthenticated_Returns401()
+    {
+        await using var factory = new TestWebAppFactory();
+        using var client = factory.CreateClient();
+
+        var response = await client.PostAsJsonAsync("/api/auth/password", new
+        {
+            password = "StrongPass123"
+        });
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
 }

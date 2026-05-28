@@ -1,11 +1,13 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Security.Claims;
 using System.Text.Json;
 using Amazon.S3;
 using Conscia.Application.DTOs;
 using Conscia.Application.Interfaces;
 using Conscia.Domain.Entities;
+using Conscia.Domain.Enums;
 using Moq;
 
 namespace Conscia.Tests.Unit.Api;
@@ -62,6 +64,60 @@ public class UserEndpointTests : IClassFixture<TestWebAppFactory>
         var response = await client.GetAsync("/api/users/me");
 
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetMe_FirstAuthenticatedRequest_BootstrapsMissingLocalUser()
+    {
+        var userId = Guid.Parse("a1b2c3d4-0001-4000-8000-000000000001");
+        _factory.UserServiceMock
+            .Setup(s => s.GetByIdAsync(userId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(() => _factory.UserRepo.Users.SingleOrDefault(u => u.Id == userId));
+
+        var response = await _client.GetAsync("/api/users/me");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var user = Assert.Single(_factory.UserRepo.Users);
+        Assert.Equal(userId, user.Id);
+        Assert.Equal("alice@example.com", user.Email);
+        Assert.False(user.EmailConfirmed);
+
+        var identity = Assert.Single(_factory.UserRepo.Identities);
+        Assert.Equal(AuthProvider.Email, identity.Provider);
+        Assert.Equal("alice@example.com", identity.ProviderSub);
+        Assert.Equal(userId, identity.UserId);
+    }
+
+    [Fact]
+    public async Task GetMe_FirstAuthenticatedRequest_StoresGoogleIdentityFromClaims()
+    {
+        var client = _factory.CreateClient();
+        var userId = Guid.Parse("b1b2c3d4-0001-4000-8000-000000000001");
+        var token = _factory.GenerateTestToken(
+            userId: userId.ToString(),
+            email: "social@example.com",
+            additionalClaims:
+            [
+                new Claim("identities", """
+                    [{"providerName":"Google","userId":"google-sub-123","providerType":"Google"}]
+                    """),
+                new Claim("email_verified", "true")
+            ]);
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        _factory.UserServiceMock
+            .Setup(s => s.GetByIdAsync(userId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(() => _factory.UserRepo.Users.SingleOrDefault(u => u.Id == userId));
+
+        var response = await client.GetAsync("/api/users/me");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var user = Assert.Single(_factory.UserRepo.Users.Where(u => u.Id == userId));
+        Assert.Equal("social@example.com", user.Email);
+        Assert.True(user.EmailConfirmed);
+
+        var identity = Assert.Single(_factory.UserRepo.Identities.Where(i => i.UserId == userId));
+        Assert.Equal(AuthProvider.Google, identity.Provider);
+        Assert.Equal("google-sub-123", identity.ProviderSub);
     }
 
     [Fact]

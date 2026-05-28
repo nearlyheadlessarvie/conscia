@@ -34,9 +34,6 @@ public class ProductionRuntimeOptionsValidatorTests
 
         Assert.False(result.Succeeded);
         Assert.Contains(result.Failures!, failure => failure.Contains("Auth:UseMock"));
-        Assert.Contains(result.Failures!, failure => failure.Contains("Auth:AppJwtSigningKey"));
-        Assert.Contains(result.Failures!, failure => failure.Contains("Google social auth audience"));
-        Assert.Contains(result.Failures!, failure => failure.Contains("Apple social auth audience"));
         Assert.Contains(result.Failures!, failure => failure.Contains("GooglePlay:ServiceAccountJson"));
         Assert.Contains(result.Failures!, failure => failure.Contains("Firebase:AdminServiceAccountJson"));
         Assert.Contains(result.Failures!, failure => failure.Contains("InviteEmail:FromEmail"));
@@ -51,11 +48,8 @@ public class ProductionRuntimeOptionsValidatorTests
             config: new Dictionary<string, string?>
             {
                 ["Auth:UseMock"] = "false",
-                ["Auth:AppJwtSigningKey"] = "social-signing-key-at-least-32-chars-long",
                 ["Auth:Cognito:ClientId"] = "client-123",
                 ["Auth:Cognito:UserPoolId"] = "pool-123",
-                ["Auth:Google:ClientId"] = "google.apps.googleusercontent.com",
-                ["Auth:Apple:ClientId"] = "com.getconscia.app.ai",
                 ["Apple:KeyId"] = "ABC1234567",
                 ["Apple:IssuerId"] = "00000000-0000-0000-0000-000000000000",
                 ["Apple:BundleId"] = "com.getconscia.app.ai",

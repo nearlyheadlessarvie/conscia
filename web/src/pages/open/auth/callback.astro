@@ -1,0 +1,178 @@
+---
+const eyebrow = 'CONSCIA AUTH';
+const title = 'Returning you to Conscia';
+const description =
+  'Your browser finished sign-in. If the app does not open automatically, use the button below to continue.';
+const schemeBase = 'conscia://auth/callback';
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Return to Conscia</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        --page-top: #f5e7d1;
+        --page-bottom: #f7f1e6;
+        --card: rgba(255, 250, 242, 0.88);
+        --card-border: rgba(49, 35, 18, 0.08);
+        --ink: #1f1a24;
+        --muted: #625a6b;
+        --accent: #ba6a2e;
+        --accent-strong: #7a4320;
+        --button-ink: #fff8ef;
+        --shadow: 0 30px 90px rgba(56, 33, 18, 0.12);
+      }
+
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --page-top: #18141d;
+          --page-bottom: #100d15;
+          --card: rgba(25, 20, 31, 0.88);
+          --card-border: rgba(255, 227, 196, 0.08);
+          --ink: #f7f0e7;
+          --muted: #d0c4d7;
+          --accent: #f4a86a;
+          --accent-strong: #ffd2a7;
+          --button-ink: #231913;
+          --shadow: 0 30px 90px rgba(0, 0, 0, 0.34);
+        }
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: ui-rounded, "Avenir Next", "Segoe UI", sans-serif;
+        color: var(--ink);
+        background:
+          radial-gradient(circle at top left, rgba(255, 255, 255, 0.26), transparent 34%),
+          linear-gradient(180deg, var(--page-top), var(--page-bottom));
+      }
+
+      main {
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        padding: 28px 18px;
+      }
+
+      .card {
+        width: min(100%, 440px);
+        position: relative;
+        overflow: hidden;
+        padding: 30px 24px 26px;
+        border-radius: 28px;
+        background: var(--card);
+        border: 1px solid var(--card-border);
+        box-shadow: var(--shadow);
+        backdrop-filter: blur(16px);
+      }
+
+      .halo {
+        position: absolute;
+        inset: -28% auto auto -18%;
+        width: 240px;
+        height: 240px;
+        border-radius: 50%;
+        background: radial-gradient(circle, rgba(244, 168, 106, 0.32), transparent 70%);
+        pointer-events: none;
+      }
+
+      .eyebrow {
+        margin: 0 0 10px;
+        font-size: 0.75rem;
+        font-weight: 800;
+        letter-spacing: 0.18em;
+        color: var(--accent);
+      }
+
+      h1 {
+        margin: 0;
+        font-size: clamp(2rem, 5vw, 2.5rem);
+        line-height: 0.98;
+        letter-spacing: -0.04em;
+      }
+
+      p {
+        margin: 14px 0 0;
+        line-height: 1.55;
+        color: var(--muted);
+      }
+
+      .actions {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+        margin-top: 24px;
+      }
+
+      .button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 50px;
+        padding: 0 18px;
+        border-radius: 999px;
+        text-decoration: none;
+        font-weight: 800;
+        letter-spacing: 0.01em;
+      }
+
+      .button-primary {
+        color: var(--button-ink);
+        background: linear-gradient(135deg, var(--accent), var(--accent-strong));
+      }
+
+      .button-secondary {
+        color: var(--ink);
+        background: transparent;
+        border: 1px solid var(--card-border);
+      }
+
+      .note {
+        margin-top: 18px;
+        font-size: 0.92rem;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <section class="card">
+        <div class="halo"></div>
+        <p class="eyebrow">{eyebrow}</p>
+        <h1>{title}</h1>
+        <p>{description}</p>
+        <div class="actions">
+          <a class="button button-primary" id="open-app" href={schemeBase}>
+            Open Conscia
+          </a>
+          <a class="button button-secondary" href="/">
+            Stay on the web
+          </a>
+        </div>
+        <p class="note">
+          If you are on mobile and the button does nothing, make sure Conscia is installed on this device.
+        </p>
+      </section>
+    </main>
+    <script is:inline>
+      const base = 'conscia://auth/callback';
+      const query = window.location.search;
+      const hash = window.location.hash;
+      const target = `${base}${query}${hash}`;
+      const openApp = document.getElementById('open-app');
+      if (openApp instanceof HTMLAnchorElement) {
+        openApp.href = target;
+      }
+      window.setTimeout(() => {
+        window.location.replace(target);
+      }, 220);
+    </script>
+  </body>
+</html>

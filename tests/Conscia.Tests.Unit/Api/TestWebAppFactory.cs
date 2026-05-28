@@ -41,6 +41,7 @@ public class TestWebAppFactory : WebApplicationFactory<Program>
     public Mock<IAdminAuthorizationService> AdminAuthorizationServiceMock { get; } = new();
     public Mock<ISubscriptionAdminService> SubscriptionAdminServiceMock { get; } = new();
     public Mock<IUserProvisioningService> UserProvisioningServiceMock { get; } = new();
+    public Mock<ICurrentUserPasswordService> CurrentUserPasswordServiceMock { get; } = new();
     public Mock<IWeeklyInsightsRepository> WeeklyInsightsRepoMock { get; } = new();
     public Mock<IPurchasePatternRepository> PurchasePatternRepoMock { get; } = new();
     public Mock<IMonthlyCategorySpendRepository> MonthlyCategorySpendRepoMock { get; } = new();
@@ -91,6 +92,7 @@ public class TestWebAppFactory : WebApplicationFactory<Program>
             ReplaceService<IAdminAuthorizationService>(services, AdminAuthorizationServiceMock.Object);
             ReplaceService<ISubscriptionAdminService>(services, SubscriptionAdminServiceMock.Object);
             ReplaceService<IUserProvisioningService>(services, UserProvisioningServiceMock.Object);
+            ReplaceService<ICurrentUserPasswordService>(services, CurrentUserPasswordServiceMock.Object);
             ReplaceService<IWeeklyInsightsRepository>(services, WeeklyInsightsRepoMock.Object);
             ReplaceService<IPurchasePatternRepository>(services, PurchasePatternRepoMock.Object);
             ReplaceService<IMonthlyCategorySpendRepository>(services, MonthlyCategorySpendRepoMock.Object);
@@ -108,17 +110,24 @@ public class TestWebAppFactory : WebApplicationFactory<Program>
         builder.UseSetting("AppCompatibility:PreviousSupportedAppVersion", "1.0.0+1");
     }
 
-    public string GenerateTestToken(string userId = "a1b2c3d4-0001-4000-8000-000000000001",
-        string email = "alice@example.com", string tier = "Premium")
+    public string GenerateTestToken(
+        string userId = "a1b2c3d4-0001-4000-8000-000000000001",
+        string email = "alice@example.com",
+        string tier = "Premium",
+        IEnumerable<Claim>? additionalClaims = null)
     {
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(SigningKey));
         var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
-        var claims = new[]
+        var claims = new List<Claim>
         {
             new Claim(ClaimTypes.NameIdentifier, userId),
             new Claim(ClaimTypes.Email, email),
             new Claim("tier", tier)
         };
+        if (additionalClaims is not null)
+        {
+            claims.AddRange(additionalClaims);
+        }
 
         var token = new JwtSecurityToken(
             issuer: "conscia-mock",

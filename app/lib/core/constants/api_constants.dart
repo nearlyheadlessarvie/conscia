@@ -11,9 +11,24 @@ class ApiConstants {
     defaultValue: false,
   );
 
-  static const String googleServerClientId = String.fromEnvironment(
-    'GOOGLE_SERVER_CLIENT_ID',
+  static const String cognitoClientId = String.fromEnvironment(
+    'COGNITO_CLIENT_ID',
     defaultValue: '',
+  );
+
+  static const String cognitoLoginDomain = String.fromEnvironment(
+    'COGNITO_LOGIN_DOMAIN',
+    defaultValue: 'https://login.getconscia.com',
+  );
+
+  static const String cognitoRedirectUri = String.fromEnvironment(
+    'COGNITO_REDIRECT_URI',
+    defaultValue: 'https://auth.getconscia.com/open/auth/callback',
+  );
+
+  static const String cognitoLogoutUri = String.fromEnvironment(
+    'COGNITO_LOGOUT_URI',
+    defaultValue: 'https://auth.getconscia.com/open/auth/logout',
   );
 
   static const String baseUrl = String.fromEnvironment(
@@ -28,8 +43,6 @@ class ApiConstants {
   static const String login = 'auth/login';
   static const String refreshToken = 'auth/refresh';
   static const String logout = 'auth/logout';
-  static const String appleSignIn = 'auth/apple';
-  static const String googleSignIn = 'auth/google';
   static const String passkeyRegisterStart = 'auth/passkeys/register/start';
   static const String passkeyRegisterComplete =
       'auth/passkeys/register/complete';

@@ -6,7 +6,9 @@ import '../../providers/auth_provider.dart';
 import '../constants/api_constants.dart';
 
 const _tokenKey = 'access_token';
+const _idTokenKey = 'id_token';
 const _apiVersion = '1';
+const useAccessTokenRequestExtraKey = 'useAccessToken';
 
 final appVersionProvider = FutureProvider<String>((ref) async {
   final info = await PackageInfo.fromPlatform();
@@ -47,8 +49,13 @@ final dioProvider = Provider<Dio>((ref) {
 
         final authState = ref.read(authProvider);
         if (authState.isAuthenticated) {
-          final token =
-              authState.accessToken ?? await storage.read(key: _tokenKey);
+          final useAccessToken = requestUsesAccessToken(options);
+          final token = useAccessToken
+              ? authState.accessToken ?? await storage.read(key: _tokenKey)
+              : authState.idToken ??
+                  await storage.read(key: _idTokenKey) ??
+                  authState.accessToken ??
+                  await storage.read(key: _tokenKey);
           if (token != null && token.isNotEmpty) {
             options.headers['Authorization'] = 'Bearer $token';
             return handler.next(options);
@@ -91,7 +98,10 @@ final dioProvider = Provider<Dio>((ref) {
           refreshInFlight = null;
 
           if (refreshed) {
-            final nextToken = await storage.read(key: _tokenKey);
+            final nextToken = requestUsesAccessToken(request)
+                ? await storage.read(key: _tokenKey)
+                : await storage.read(key: _idTokenKey) ??
+                    await storage.read(key: _tokenKey);
             final retryHeaders = Map<String, dynamic>.from(request.headers);
             if (nextToken != null) {
               retryHeaders['Authorization'] = 'Bearer $nextToken';
@@ -130,3 +140,6 @@ bool _isPublicRequest(RequestOptions options) {
 }
 
 bool _isHealthRequest(RequestOptions options) => _isPublicRequest(options);
+
+bool requestUsesAccessToken(RequestOptions options) =>
+    options.extra[useAccessTokenRequestExtraKey] == true;

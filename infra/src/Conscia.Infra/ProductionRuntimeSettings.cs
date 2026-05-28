@@ -1,7 +1,6 @@
 namespace Conscia.Infra;
 
 public sealed record ProductionRuntimeSettings(
-    string? AuthAppJwtSigningKey,
     string? AuthGoogleClientId,
     string? AuthAppleClientId,
     string? AppleKeyId,
@@ -17,7 +16,6 @@ public sealed record ProductionRuntimeSettings(
     string InviteEmailDeepLinkBaseUri)
 {
     public static ProductionRuntimeSettings FromEnvironment() => new(
-        AuthAppJwtSigningKey: Get("AUTH_APP_JWT_SIGNING_KEY"),
         AuthGoogleClientId: Get("AUTH_GOOGLE_CLIENT_ID"),
         AuthAppleClientId: Get("AUTH_APPLE_CLIENT_ID"),
         AppleKeyId: Get("APPLE_KEY_ID"),

@@ -10,6 +10,8 @@ namespace Conscia.Infra;
 public sealed class AuthStackProps : StackProps
 {
     public DomainSettings? DomainSettings { get; init; }
+    public ManagedLoginProviderSettings? ManagedLoginProviderSettings { get; init; }
+    public ManagedLoginSecretSettings? ManagedLoginSecretSettings { get; init; }
 }
 
 public class AuthStack : Stack
@@ -65,6 +67,66 @@ public class AuthStack : Stack
         userPoolResource.WebAuthnRelyingPartyId = rootDomainName;
         userPoolResource.WebAuthnUserVerification = "preferred";
 
+        var supportedIdentityProviders = new List<UserPoolClientIdentityProvider>
+        {
+            UserPoolClientIdentityProvider.COGNITO
+        };
+        var identityProviderResources = new List<CfnResource>();
+
+        if (props?.ManagedLoginProviderSettings?.HasGoogle == true)
+        {
+            supportedIdentityProviders.Add(UserPoolClientIdentityProvider.GOOGLE);
+
+            var googleProvider = new UserPoolIdentityProviderGoogle(this, "ManagedLoginGoogleProvider", new UserPoolIdentityProviderGoogleProps
+            {
+                UserPool = UserPool,
+                ClientId = props.ManagedLoginProviderSettings.GoogleClientId!,
+                ClientSecretValue = SecretValue.SecretsManager(
+                    props.ManagedLoginSecretSettings?.GoogleClientSecretSecretName
+                    ?? "conscia/prod/cognito-google-client-secret"),
+                Scopes = ["openid", "email", "profile"],
+                AttributeMapping = new AttributeMapping
+                {
+                    Email = ProviderAttribute.GOOGLE_EMAIL,
+                    EmailVerified = ProviderAttribute.GOOGLE_EMAIL_VERIFIED,
+                    GivenName = ProviderAttribute.GOOGLE_GIVEN_NAME,
+                    FamilyName = ProviderAttribute.GOOGLE_FAMILY_NAME,
+                    Fullname = ProviderAttribute.GOOGLE_NAME
+                }
+            });
+
+            identityProviderResources.Add((CfnResource)(googleProvider.Node.DefaultChild
+                ?? throw new InvalidOperationException("Google identity provider CloudFormation resource was not created.")));
+        }
+
+        if (props?.ManagedLoginProviderSettings?.HasApple == true)
+        {
+            supportedIdentityProviders.Add(UserPoolClientIdentityProvider.APPLE);
+
+            var appleProvider = new UserPoolIdentityProviderApple(this, "ManagedLoginAppleProvider", new UserPoolIdentityProviderAppleProps
+            {
+                UserPool = UserPool,
+                ClientId = props.ManagedLoginProviderSettings.AppleServicesId!,
+                TeamId = props.ManagedLoginProviderSettings.AppleTeamId!,
+                KeyId = props.ManagedLoginProviderSettings.AppleKeyId!,
+                PrivateKeyValue = SecretValue.SecretsManager(
+                    props.ManagedLoginSecretSettings?.ApplePrivateKeySecretName
+                    ?? "conscia/prod/apple-private-key"),
+                Scopes = ["email", "name"],
+                AttributeMapping = new AttributeMapping
+                {
+                    Email = ProviderAttribute.APPLE_EMAIL,
+                    EmailVerified = ProviderAttribute.APPLE_EMAIL_VERIFIED,
+                    GivenName = ProviderAttribute.APPLE_FIRST_NAME,
+                    FamilyName = ProviderAttribute.APPLE_LAST_NAME,
+                    Fullname = ProviderAttribute.APPLE_NAME
+                }
+            });
+
+            identityProviderResources.Add((CfnResource)(appleProvider.Node.DefaultChild
+                ?? throw new InvalidOperationException("Apple identity provider CloudFormation resource was not created.")));
+        }
+
         UserPoolClient = new UserPoolClient(this, "ConsciaAppClient", new UserPoolClientProps
         {
             UserPool = UserPool,
@@ -74,10 +136,7 @@ public class AuthStack : Stack
                 UserPassword = true,
                 UserSrp = true
             },
-            SupportedIdentityProviders =
-            [
-                UserPoolClientIdentityProvider.COGNITO
-            ],
+            SupportedIdentityProviders = supportedIdentityProviders.ToArray(),
             OAuth = new OAuthSettings
             {
                 DefaultRedirectUri = redirectUri,
@@ -117,6 +176,10 @@ public class AuthStack : Stack
             "ALLOW_REFRESH_TOKEN_AUTH",
             "ALLOW_USER_AUTH"
         ];
+        foreach (var identityProviderResource in identityProviderResources)
+        {
+            userPoolClientResource.AddDependency(identityProviderResource);
+        }
 
         if (props?.DomainSettings is not null)
         {
@@ -145,6 +208,13 @@ public class AuthStack : Stack
             var domainResource = (CfnUserPoolDomain)(domain.Node.DefaultChild
                 ?? throw new InvalidOperationException("User pool domain CloudFormation resource was not created."));
             domainResource.ManagedLoginVersion = 2;
+
+            _ = new CfnManagedLoginBranding(this, "ManagedLoginBranding", new CfnManagedLoginBrandingProps
+            {
+                UserPoolId = UserPool.UserPoolId,
+                ClientId = UserPoolClient.UserPoolClientId,
+                UseCognitoProvidedValues = true
+            });
 
             _ = new ARecord(this, "ManagedLoginAliasRecord", new ARecordProps
             {

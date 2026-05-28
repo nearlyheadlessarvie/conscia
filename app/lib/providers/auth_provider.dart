@@ -1,15 +1,18 @@
 import 'dart:convert';
 
+import 'package:app_links/app_links.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../core/constants/api_constants.dart';
 import '../core/errors/app_error.dart';
 import '../core/routing/app_router.dart';
 import '../services/auth_service.dart';
+import '../services/cognito_managed_login_service.dart';
 
 enum AuthStatus {
   unauthenticated,
@@ -23,6 +26,7 @@ const _unset = Object();
 class AuthState {
   final AuthStatus status;
   final String? accessToken;
+  final String? idToken;
   final String? refreshToken;
   final String? userId;
   final String? pendingEmail;
@@ -34,6 +38,7 @@ class AuthState {
   const AuthState({
     this.status = AuthStatus.unauthenticated,
     this.accessToken,
+    this.idToken,
     this.refreshToken,
     this.userId,
     this.pendingEmail,
@@ -49,6 +54,7 @@ class AuthState {
   AuthState copyWith({
     AuthStatus? status,
     Object? accessToken = _unset,
+    Object? idToken = _unset,
     Object? refreshToken = _unset,
     Object? userId = _unset,
     Object? pendingEmail = _unset,
@@ -62,6 +68,7 @@ class AuthState {
       accessToken: identical(accessToken, _unset)
           ? this.accessToken
           : accessToken as String?,
+      idToken: identical(idToken, _unset) ? this.idToken : idToken as String?,
       refreshToken: identical(refreshToken, _unset)
           ? this.refreshToken
           : refreshToken as String?,
@@ -79,11 +86,14 @@ class AuthState {
 
 class AuthNotifier extends StateNotifier<AuthState> {
   final AuthService _authService;
+  final CognitoManagedLoginService _managedLoginService;
   final FlutterSecureStorage _storage;
+  final bool _useManagedLogin;
   String? _pendingPassword;
 
   static const confirmationResendCooldown = Duration(minutes: 1);
   static const _accessTokenKey = 'access_token';
+  static const _idTokenKey = 'id_token';
   static const _refreshTokenKey = 'refresh_token';
   static const _userIdKey = 'user_id';
   static const _pendingConfirmationEmailKey = 'pending_confirmation_email';
@@ -93,8 +103,13 @@ class AuthNotifier extends StateNotifier<AuthState> {
   AuthNotifier(
     this._authService,
     this._storage, {
+    CognitoManagedLoginService? managedLoginService,
+    bool? useManagedLogin,
     bool autoRestoreSession = true,
-  }) : super(
+  })  : _managedLoginService =
+            managedLoginService ?? _UnavailableManagedLoginService.instance,
+        _useManagedLogin = useManagedLogin ?? !ApiConstants.useMockAuth,
+        super(
           AuthState(isRestoringSession: autoRestoreSession),
         ) {
     if (autoRestoreSession) {
@@ -105,11 +120,13 @@ class AuthNotifier extends StateNotifier<AuthState> {
   Future<void> _loadStoredTokens() async {
     try {
       final accessToken = await _storage.read(key: _accessTokenKey);
+      final idToken = await _storage.read(key: _idTokenKey);
       final refreshToken = await _storage.read(key: _refreshTokenKey);
       final userId = await _storage.read(key: _userIdKey);
 
       await _restoreStoredSession(
         accessToken: accessToken,
+        idToken: idToken,
         refreshToken: refreshToken,
         userId: userId,
       );
@@ -126,6 +143,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
   Future<void> loginWithStoredToken() async {
     final accessToken = await _storage.read(key: _accessTokenKey);
+    final idToken = await _storage.read(key: _idTokenKey);
     final refreshToken = await _storage.read(key: _refreshTokenKey);
     final userId = await _storage.read(key: _userIdKey);
 
@@ -135,6 +153,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
     final restored = await _restoreStoredSession(
       accessToken: accessToken,
+      idToken: idToken,
       refreshToken: refreshToken,
       userId: userId,
       throwIfMissing: true,
@@ -162,6 +181,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       state = state.copyWith(
         status: AuthStatus.authenticated,
         accessToken: tokens.accessToken,
+        idToken: tokens.idToken,
         refreshToken: tokens.refreshToken,
         userId: tokens.userId,
         pendingEmail: null,
@@ -231,6 +251,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
         state = state.copyWith(
           status: AuthStatus.unauthenticated,
           pendingEmail: null,
+          idToken: null,
           userId: null,
           isLoading: false,
           wasExplicitLogout: false,
@@ -297,32 +318,16 @@ class AuthNotifier extends StateNotifier<AuthState> {
       error: null,
     );
     try {
-      if (ApiConstants.useMockAuth) {
+      if (!_useManagedLogin) {
         final tokens =
             await _authService.login('google_user@gmail.com', 'mock');
-        await _persistTokens(tokens);
-        state = state.copyWith(
-          status: AuthStatus.authenticated,
-          accessToken: tokens.accessToken,
-          refreshToken: tokens.refreshToken,
-          userId: tokens.userId,
-          isLoading: false,
-          isRestoringSession: false,
-          wasExplicitLogout: false,
-        );
+        await _setAuthenticated(tokens);
         return;
       }
-      final tokens = await _authService.signInWithGoogle();
-      await _persistTokens(tokens);
-      state = state.copyWith(
-        status: AuthStatus.authenticated,
-        accessToken: tokens.accessToken,
-        refreshToken: tokens.refreshToken,
-        userId: tokens.userId,
-        isLoading: false,
-        isRestoringSession: false,
-        wasExplicitLogout: false,
+      final tokens = await _managedLoginService.signIn(
+        provider: CognitoManagedLoginProvider.google,
       );
+      await _setAuthenticated(tokens);
     } catch (e, s) {
       final error = AppError.from(e, stackTrace: s);
       state = state.copyWith(isLoading: false, error: error.userMessage);
@@ -337,30 +342,16 @@ class AuthNotifier extends StateNotifier<AuthState> {
       error: null,
     );
     try {
-      if (ApiConstants.useMockAuth) {
+      if (!_useManagedLogin) {
         final tokens = await _authService.login(
             'apple_user@privaterelay.appleid.com', 'mock');
-        await _persistTokens(tokens);
-        state = state.copyWith(
-          status: AuthStatus.authenticated,
-          accessToken: tokens.accessToken,
-          refreshToken: tokens.refreshToken,
-          userId: tokens.userId,
-          isLoading: false,
-          isRestoringSession: false,
-        );
+        await _setAuthenticated(tokens);
         return;
       }
-      final tokens = await _authService.signInWithApple();
-      await _persistTokens(tokens);
-      state = state.copyWith(
-        status: AuthStatus.authenticated,
-        accessToken: tokens.accessToken,
-        refreshToken: tokens.refreshToken,
-        userId: tokens.userId,
-        isLoading: false,
-        isRestoringSession: false,
+      final tokens = await _managedLoginService.signIn(
+        provider: CognitoManagedLoginProvider.apple,
       );
+      await _setAuthenticated(tokens);
     } catch (e, s) {
       final error = AppError.from(e, stackTrace: s);
       state = state.copyWith(isLoading: false, error: error.userMessage);
@@ -378,6 +369,44 @@ class AuthNotifier extends StateNotifier<AuthState> {
     await _setAuthenticated(tokens);
   }
 
+  Future<void> continueWithManagedLogin({String? emailHint}) async {
+    state = state.copyWith(
+      isLoading: true,
+      isRestoringSession: false,
+      error: null,
+    );
+    try {
+      final tokens = await _managedLoginService.signIn(emailHint: emailHint);
+      if (emailHint != null && emailHint.trim().isNotEmpty) {
+        saveLastEmail(emailHint.trim());
+      }
+      await _setAuthenticated(tokens);
+    } catch (e, s) {
+      final error = AppError.from(e, stackTrace: s);
+      state = state.copyWith(isLoading: false, error: error.userMessage);
+      throw error;
+    }
+  }
+
+  Future<void> signUpWithManagedLogin({String? emailHint}) async {
+    state = state.copyWith(
+      isLoading: true,
+      isRestoringSession: false,
+      error: null,
+    );
+    try {
+      final tokens = await _managedLoginService.signUp(emailHint: emailHint);
+      if (emailHint != null && emailHint.trim().isNotEmpty) {
+        saveLastEmail(emailHint.trim());
+      }
+      await _setAuthenticated(tokens);
+    } catch (e, s) {
+      final error = AppError.from(e, stackTrace: s);
+      state = state.copyWith(isLoading: false, error: error.userMessage);
+      throw error;
+    }
+  }
+
   Future<void> logout() async {
     _pendingPassword = null;
     state = const AuthState(
@@ -385,8 +414,16 @@ class AuthNotifier extends StateNotifier<AuthState> {
       isRestoringSession: false,
     );
     await _storage.delete(key: _accessTokenKey);
+    await _storage.delete(key: _idTokenKey);
     await _storage.delete(key: _refreshTokenKey);
     await _storage.delete(key: _userIdKey);
+    if (_useManagedLogin) {
+      try {
+        await _managedLoginService.logout();
+      } catch (_) {
+        // Local sign-out already succeeded; don't trap the user on a browser failure.
+      }
+    }
   }
 
   Future<bool> refreshSession() async {
@@ -398,11 +435,14 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
 
     try {
-      final tokens = await _authService.refreshSession(refreshToken);
+      final tokens = !_useManagedLogin
+          ? await _authService.refreshSession(refreshToken)
+          : await _managedLoginService.refreshSession(refreshToken);
       await _persistTokens(tokens);
       state = state.copyWith(
         status: AuthStatus.authenticated,
         accessToken: tokens.accessToken,
+        idToken: tokens.idToken,
         refreshToken: tokens.refreshToken,
         userId: tokens.userId,
         pendingEmail: null,
@@ -426,12 +466,14 @@ class AuthNotifier extends StateNotifier<AuthState> {
       wasExplicitLogout: false,
     );
     await _storage.delete(key: _accessTokenKey);
+    await _storage.delete(key: _idTokenKey);
     await _storage.delete(key: _refreshTokenKey);
     await _storage.delete(key: _userIdKey);
   }
 
   Future<bool> _restoreStoredSession({
     required String? accessToken,
+    required String? idToken,
     required String? refreshToken,
     required String? userId,
     bool throwIfMissing = false,
@@ -445,6 +487,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
     if (!_looksLikeJwt(accessToken)) {
       await _storage.delete(key: _accessTokenKey);
+      await _storage.delete(key: _idTokenKey);
       await _storage.delete(key: _refreshTokenKey);
       await _storage.delete(key: _userIdKey);
       if (throwIfMissing) {
@@ -456,11 +499,14 @@ class AuthNotifier extends StateNotifier<AuthState> {
     final isExpired = _isJwtExpired(accessToken);
     if (isExpired) {
       try {
-        final tokens = await _authService.refreshSession(refreshToken);
+        final tokens = !_useManagedLogin
+            ? await _authService.refreshSession(refreshToken)
+            : await _managedLoginService.refreshSession(refreshToken);
         await _persistTokens(tokens);
         state = state.copyWith(
           status: AuthStatus.authenticated,
           accessToken: tokens.accessToken,
+          idToken: tokens.idToken,
           refreshToken: tokens.refreshToken,
           userId: tokens.userId,
           pendingEmail: null,
@@ -479,6 +525,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
     state = state.copyWith(
       status: AuthStatus.authenticated,
       accessToken: accessToken,
+      idToken: idToken,
       refreshToken: refreshToken,
       userId: userId,
       isRestoringSession: false,
@@ -523,6 +570,11 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
   Future<void> _persistTokens(AuthTokens tokens) async {
     await _storage.write(key: _accessTokenKey, value: tokens.accessToken);
+    if (tokens.idToken == null || tokens.idToken!.isEmpty) {
+      await _storage.delete(key: _idTokenKey);
+    } else {
+      await _storage.write(key: _idTokenKey, value: tokens.idToken);
+    }
     await _storage.write(key: _refreshTokenKey, value: tokens.refreshToken);
     await _storage.write(key: _userIdKey, value: tokens.userId);
   }
@@ -533,6 +585,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
     state = state.copyWith(
       status: AuthStatus.authenticated,
       accessToken: tokens.accessToken,
+      idToken: tokens.idToken,
       refreshToken: tokens.refreshToken,
       userId: tokens.userId,
       pendingEmail: null,
@@ -560,6 +613,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       status: AuthStatus.pendingConfirmation,
       pendingEmail: normalizedEmail,
       accessToken: null,
+      idToken: null,
       refreshToken: null,
       userId: null,
       isLoading: false,
@@ -587,6 +641,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       status: AuthStatus.pendingConfirmation,
       pendingEmail: normalizedEmail,
       accessToken: null,
+      idToken: null,
       refreshToken: null,
       userId: userId,
       isLoading: false,
@@ -667,10 +722,32 @@ final authServiceProvider = Provider<AuthService>((ref) {
   return AuthService(ref.watch(authDioProvider));
 });
 
+final managedLoginServiceProvider = Provider<CognitoManagedLoginService>((ref) {
+  final appLinks = AppLinks();
+  final dio = Dio(
+    BaseOptions(
+      connectTimeout: ApiConstants.connectTimeout,
+      receiveTimeout: ApiConstants.receiveTimeout,
+    ),
+  );
+
+  return CognitoManagedLoginService(
+    dio: dio,
+    incomingLinks: appLinks.uriLinkStream,
+    readInitialLink: appLinks.getInitialLink,
+    launchUrl: launchUrl,
+    clientId: ApiConstants.cognitoClientId,
+    loginDomain: Uri.parse(ApiConstants.cognitoLoginDomain),
+    redirectUri: Uri.parse(ApiConstants.cognitoRedirectUri),
+    logoutUri: Uri.parse(ApiConstants.cognitoLogoutUri),
+  );
+});
+
 final authProvider = StateNotifierProvider<AuthNotifier, AuthState>((ref) {
   return AuthNotifier(
     ref.watch(authServiceProvider),
     ref.watch(secureStorageProvider),
+    managedLoginService: ref.watch(managedLoginServiceProvider),
   );
 });
 
@@ -682,3 +759,47 @@ final authCacheScopeProvider = Provider<String>((ref) {
     auth.pendingEmail ?? '',
   ].join(':');
 });
+
+final class _UnavailableManagedLoginService extends CognitoManagedLoginService {
+  _UnavailableManagedLoginService._()
+      : super(
+          dio: Dio(),
+          incomingLinks: const Stream<Uri>.empty(),
+          readInitialLink: () async => null,
+          launchUrl: (uri, {mode = LaunchMode.platformDefault}) async => false,
+          clientId: '',
+          loginDomain: Uri.parse('https://login.getconscia.com'),
+          redirectUri:
+              Uri.parse('https://auth.getconscia.com/open/auth/callback'),
+          logoutUri: Uri.parse('https://auth.getconscia.com/open/auth/logout'),
+        );
+
+  static final instance = _UnavailableManagedLoginService._();
+
+  @override
+  Future<AuthTokens> signIn({
+    CognitoManagedLoginProvider? provider,
+    String? emailHint,
+  }) {
+    throw const CognitoManagedLoginException(
+      'Managed login is not configured for this session.',
+    );
+  }
+
+  @override
+  Future<AuthTokens> signUp({String? emailHint}) {
+    throw const CognitoManagedLoginException(
+      'Managed login is not configured for this session.',
+    );
+  }
+
+  @override
+  Future<AuthTokens> refreshSession(String refreshToken) {
+    throw const CognitoManagedLoginException(
+      'Managed login is not configured for this session.',
+    );
+  }
+
+  @override
+  Future<void> logout() async {}
+}

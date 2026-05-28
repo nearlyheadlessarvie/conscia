@@ -1,17 +1,16 @@
 import 'package:dio/dio.dart';
-import 'package:flutter/services.dart';
-import 'package:google_sign_in/google_sign_in.dart';
-import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 
 import '../core/constants/api_constants.dart';
 
 class AuthTokens {
   final String accessToken;
+  final String? idToken;
   final String refreshToken;
   final String userId;
 
   const AuthTokens({
     required this.accessToken,
+    this.idToken,
     required this.refreshToken,
     required this.userId,
   });
@@ -19,6 +18,7 @@ class AuthTokens {
   factory AuthTokens.fromJson(Map<String, dynamic> json) {
     return AuthTokens(
       accessToken: json['accessToken'] as String,
+      idToken: json['idToken'] as String?,
       refreshToken: json['refreshToken'] as String,
       userId: json['userId'] as String,
     );
@@ -78,76 +78,6 @@ class AuthConfirmationResult {
       userId: json['userId'] as String?,
     );
   }
-}
-
-enum AppleSignInFailureKind {
-  cancelled,
-  unavailable,
-}
-
-enum GoogleSignInFailureKind {
-  cancelled,
-  missingIdToken,
-  platform,
-}
-
-class AppleSignInFailure implements Exception {
-  const AppleSignInFailure._(this.kind);
-
-  const AppleSignInFailure.cancelled()
-      : this._(AppleSignInFailureKind.cancelled);
-
-  const AppleSignInFailure.unavailable()
-      : this._(AppleSignInFailureKind.unavailable);
-
-  final AppleSignInFailureKind kind;
-}
-
-class GoogleSignInFailure implements Exception {
-  const GoogleSignInFailure._({
-    required this.kind,
-    required this.message,
-    this.code,
-  });
-
-  const GoogleSignInFailure.cancelled()
-      : this._(
-          kind: GoogleSignInFailureKind.cancelled,
-          message: 'Google sign-in was cancelled.',
-        );
-
-  const GoogleSignInFailure.missingIdToken()
-      : this._(
-          kind: GoogleSignInFailureKind.missingIdToken,
-          message:
-              'Google sign-in did not return an ID token for this app build. Please try again.',
-        );
-
-  factory GoogleSignInFailure.fromPlatformException(PlatformException error) {
-    final normalizedCode = error.code.trim().toLowerCase();
-    if (normalizedCode == 'sign_in_canceled' ||
-        normalizedCode == 'sign_in_cancelled' ||
-        normalizedCode == 'canceled' ||
-        normalizedCode == 'cancelled') {
-      return const GoogleSignInFailure.cancelled();
-    }
-
-    return GoogleSignInFailure._(
-      kind: GoogleSignInFailureKind.platform,
-      message:
-          'Google sign-in could not finish on this device. Please try again.',
-      code: error.code,
-    );
-  }
-
-  final GoogleSignInFailureKind kind;
-  final String message;
-  final String? code;
-
-  bool get isCancellation => kind == GoogleSignInFailureKind.cancelled;
-
-  @override
-  String toString() => code == null ? message : '$message ($code)';
 }
 
 class AuthService {
@@ -227,61 +157,6 @@ class AuthService {
       return AuthTokens.fromJson(response.data as Map<String, dynamic>);
     } on DioException {
       rethrow;
-    }
-  }
-
-  Future<AuthTokens> signInWithGoogle() async {
-    try {
-      final googleUser = await GoogleSignIn(
-        serverClientId: ApiConstants.googleServerClientId.isEmpty
-            ? null
-            : ApiConstants.googleServerClientId,
-      ).signIn();
-      if (googleUser == null) {
-        throw const GoogleSignInFailure.cancelled();
-      }
-
-      final googleAuth = await googleUser.authentication;
-      final idToken = googleAuth.idToken;
-      if (idToken == null || idToken.isEmpty) {
-        throw const GoogleSignInFailure.missingIdToken();
-      }
-
-      final response = await _dio.post(
-        ApiConstants.googleSignIn,
-        data: {'idToken': idToken},
-      );
-      return AuthTokens.fromJson(response.data as Map<String, dynamic>);
-    } on PlatformException catch (error) {
-      throw GoogleSignInFailure.fromPlatformException(error);
-    }
-  }
-
-  Future<AuthTokens> signInWithApple() async {
-    try {
-      final credential = await SignInWithApple.getAppleIDCredential(
-        scopes: [
-          AppleIDAuthorizationScopes.email,
-          AppleIDAuthorizationScopes.fullName,
-        ],
-      );
-      final response = await _dio.post(
-        ApiConstants.appleSignIn,
-        data: {
-          'identityToken': credential.identityToken,
-          'authorizationCode': credential.authorizationCode,
-        },
-      );
-      return AuthTokens.fromJson(response.data as Map<String, dynamic>);
-    } on SignInWithAppleAuthorizationException catch (error) {
-      if (error.code == AuthorizationErrorCode.canceled) {
-        throw const AppleSignInFailure.cancelled();
-      }
-      throw const AppleSignInFailure.unavailable();
-    } on SignInWithAppleException {
-      throw const AppleSignInFailure.unavailable();
-    } on PlatformException {
-      throw const AppleSignInFailure.unavailable();
     }
   }
 }

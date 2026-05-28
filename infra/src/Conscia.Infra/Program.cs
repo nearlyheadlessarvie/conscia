@@ -14,6 +14,8 @@ sealed class Program
             Region = System.Environment.GetEnvironmentVariable("CDK_DEFAULT_REGION") ?? "ap-southeast-1"
         };
         var domainSettings = DomainSettings.FromEnvironment();
+        var managedLoginProviderSettings = ManagedLoginProviderSettings.FromEnvironment();
+        var managedLoginSecretSettings = ManagedLoginSecretSettings.FromEnvironment();
         var runtimeSettings = ProductionRuntimeSettings.FromEnvironment();
         var runtimeSecretSettings = RuntimeSecretSettings.FromEnvironment();
 
@@ -27,7 +29,9 @@ sealed class Program
         var auth = new AuthStack(app, "Conscia-Auth", new AuthStackProps
         {
             Env = env,
-            DomainSettings = domainSettings
+            DomainSettings = domainSettings,
+            ManagedLoginProviderSettings = managedLoginProviderSettings,
+            ManagedLoginSecretSettings = managedLoginSecretSettings
         });
 
         var ai = new AIStack(app, "Conscia-AI", new StackProps { Env = env });

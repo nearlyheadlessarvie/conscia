@@ -8,7 +8,6 @@ public static class RuntimeSecretConfigurationLoader
 {
     private static readonly (string SecretIdKey, string TargetKey)[] Mappings =
     [
-        ("Auth:AppJwtSigningKeySecretId", "Auth:AppJwtSigningKey"),
         ("Apple:PrivateKeySecretId", "Apple:PrivateKey"),
         ("GooglePlay:ServiceAccountJsonSecretId", "GooglePlay:ServiceAccountJson"),
         ("Firebase:AdminServiceAccountJsonSecretId", "Firebase:AdminServiceAccountJson")

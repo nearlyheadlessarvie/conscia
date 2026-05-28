@@ -4,6 +4,7 @@ using Amazon.Lambda.Core;
 using Amazon.Lambda.RuntimeSupport;
 using Amazon.Lambda.Serialization.SystemTextJson;
 using Conscia.Application.Interfaces;
+using Conscia.Application.Lambda;
 using Conscia.Application.Services;
 using Conscia.Infrastructure.Repositories;
 using Conscia.Infrastructure.Services;
@@ -28,7 +29,7 @@ services.AddScoped<RecurringScheduleProcessor>();
 
 var provider = services.BuildServiceProvider();
 
-Func<string?, ILambdaContext, Task> handler = async (_, context) =>
+Func<ScheduledLambdaEvent?, ILambdaContext, Task> handler = async (_, context) =>
 {
     using var scope = provider.CreateScope();
     var processor = scope.ServiceProvider.GetRequiredService<RecurringScheduleProcessor>();

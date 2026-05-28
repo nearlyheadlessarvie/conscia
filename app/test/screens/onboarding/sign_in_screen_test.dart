@@ -1,31 +1,18 @@
 import 'package:conscia_app/core/errors/app_error.dart';
 import 'package:conscia_app/providers/auth_provider.dart';
-import 'package:conscia_app/providers/passkey_provider.dart';
 import 'package:conscia_app/screens/onboarding/sign_in_screen.dart';
 import 'package:conscia_app/services/auth_service.dart';
-import 'package:conscia_app/services/passkey_service.dart';
+import 'package:conscia_app/services/cognito_managed_login_service.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher/url_launcher.dart';
 
-class _FailingAuthService extends AuthService {
-  _FailingAuthService() : super(Dio());
-
-  @override
-  Future<AuthTokens> login(String email, String password) {
-    throw DioException(
-      requestOptions: RequestOptions(path: '/api/auth/login'),
-      response: Response(
-        requestOptions: RequestOptions(path: '/api/auth/login'),
-        statusCode: 401,
-        data: {'error': 'Invalid email or password'},
-      ),
-      type: DioExceptionType.badResponse,
-    );
-  }
+class _FakeAuthService extends AuthService {
+  _FakeAuthService() : super(Dio());
 }
 
 class _FakeSecureStorage extends FlutterSecureStorage {
@@ -68,6 +55,50 @@ class _FakeSecureStorage extends FlutterSecureStorage {
   }) async {}
 }
 
+class _FakeManagedLoginService extends CognitoManagedLoginService {
+  _FakeManagedLoginService()
+      : super(
+          dio: Dio(),
+          incomingLinks: const Stream<Uri>.empty(),
+          readInitialLink: () async => null,
+          launchUrl: (uri, {mode = LaunchMode.platformDefault}) async => true,
+          clientId: 'managed-client-id',
+          loginDomain: Uri.parse('https://login.getconscia.com'),
+          redirectUri: Uri.parse('https://auth.getconscia.com/open/auth/callback'),
+          logoutUri: Uri.parse('https://auth.getconscia.com/open/auth/logout'),
+        );
+}
+
+class _RecordingAuthNotifier extends AuthNotifier {
+  _RecordingAuthNotifier()
+      : super(
+          _FakeAuthService(),
+          const _FakeSecureStorage(),
+          autoRestoreSession: false,
+          useManagedLogin: true,
+          managedLoginService: _FakeManagedLoginService(),
+        );
+
+  String? lastEmailHint;
+  int googleCount = 0;
+  Object? continueError;
+
+  @override
+  Future<void> continueWithManagedLogin({String? emailHint}) async {
+    final error = continueError;
+    if (error != null) {
+      throw error;
+    }
+
+    lastEmailHint = emailHint;
+  }
+
+  @override
+  Future<void> signInWithGoogle() async {
+    googleCount += 1;
+  }
+}
+
 void main() {
   setUp(() {
     SharedPreferences.setMockInitialValues({});
@@ -75,120 +106,34 @@ void main() {
 
   tearDown(AppError.resetForTests);
 
-  test('password sign-in maps 401 to invalid username or password', () {
-    AppError.configure(
-      referenceIdFactory: () => 'LOGIN401',
-      logger: (_) {},
-    );
-
-    final error = DioException(
-      requestOptions: RequestOptions(path: '/api/auth/login'),
-      response: Response(
-        requestOptions: RequestOptions(path: '/api/auth/login'),
-        statusCode: 401,
-        data: {'error': 'Invalid email or password'},
-      ),
-      type: DioExceptionType.badResponse,
-    );
-
-    expect(
-      friendlySignInErrorMessage(error, isPasswordSignIn: true),
-      'Invalid username or password.',
-    );
-  });
-
-  test('non-password sign-in keeps API message mapping', () {
-    AppError.configure(
-      referenceIdFactory: () => 'LOGIN500',
-      logger: (_) {},
-    );
-
-    final error = DioException(
-      requestOptions: RequestOptions(path: '/api/auth/google'),
-      response: Response(
-        requestOptions: RequestOptions(path: '/api/auth/google'),
-        statusCode: 500,
-        data: {'message': 'Provider unavailable'},
-      ),
-      type: DioExceptionType.badResponse,
-    );
-
-    expect(
-      friendlySignInErrorMessage(error),
-      'Conscia is having trouble right now. Please try again. Reference: LOGIN500',
-    );
-  });
-
-  test('reuses auth provider reference ids when available', () {
-    AppError.configure(
-      referenceIdFactory: () => 'ORIGINAL',
-      logger: (_) {},
-    );
-
-    final appError = AppError.from(
-      DioException(
-        requestOptions: RequestOptions(path: '/api/auth/login'),
-        response: Response(
-          requestOptions: RequestOptions(path: '/api/auth/login'),
-          statusCode: 401,
-          data: {'error': 'Invalid email or password'},
+  testWidgets('sign in screen removes the local password field', (tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          authProvider.overrideWith((ref) => _RecordingAuthNotifier()),
+        ],
+        child: const MaterialApp(
+          home: SignInScreen(),
         ),
-        type: DioExceptionType.badResponse,
       ),
     );
+    await tester.pumpAndSettle();
 
+    expect(find.byType(TextField), findsOneWidget);
+    expect(find.text('Password'), findsNothing);
+    expect(find.text('Continue with Email'), findsOneWidget);
+    expect(find.text('Sign in with Apple'), findsOneWidget);
     expect(
-      friendlySignInErrorMessage(appError, isPasswordSignIn: true),
-      'Invalid username or password.',
+      find.text(
+        'We will finish email, password, and passkey sign-in securely in your browser.',
+      ),
+      findsNothing,
     );
   });
 
-  testWidgets(
-    'sign in screen shows inline auth error note instead of dismissible banner',
-    (tester) async {
-      final authNotifier = AuthNotifier(
-        _FailingAuthService(),
-        const _FakeSecureStorage(),
-      );
-
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            authProvider.overrideWith((ref) => authNotifier),
-          ],
-          child: const MaterialApp(
-            home: SignInScreen(),
-          ),
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      final fields = find.byType(TextField);
-      await tester.enterText(fields.at(0), 'nearlyheadlessarvie@live.com.ph');
-      await tester.enterText(fields.at(1), 'Secure123');
-      await tester.tap(find.widgetWithText(FilledButton, 'Sign In'));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 300));
-
-      expect(find.text('Dismiss'), findsNothing);
-      expect(find.text('Invalid username or password.'), findsOneWidget);
-    },
-  );
-
-  testWidgets('pressing enter in password field submits sign in',
+  testWidgets('continue button launches managed login with typed email hint',
       (tester) async {
-    var loginCallCount = 0;
-    final authService = _RecordingAuthService(
-      onLogin: (email, password) {
-        loginCallCount += 1;
-        return const AuthTokens(
-          accessToken: 'header.payload.signature',
-          refreshToken: 'refresh-token',
-          userId: 'user-1',
-        );
-      },
-    );
-    final authNotifier = AuthNotifier(authService, const _FakeSecureStorage());
+    final authNotifier = _RecordingAuthNotifier();
 
     await tester.pumpWidget(
       ProviderScope(
@@ -202,34 +147,22 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    final fields = find.byType(TextField);
-    await tester.enterText(fields.at(0), 'nearlyheadlessarvie@live.com.ph');
-    await tester.enterText(fields.at(1), 'Secure123');
-    await tester.testTextInput.receiveAction(TextInputAction.done);
+    await tester.enterText(find.byType(TextField), 'story-demo@example.com');
+    await tester.tap(
+      find.widgetWithText(FilledButton, 'Continue with Email'),
+    );
     await tester.pump();
 
-    expect(loginCallCount, 1);
+    expect(authNotifier.lastEmailHint, 'story-demo@example.com');
   });
 
-  testWidgets('sign in screen replaces legacy biometrics with passkey action',
-      (tester) async {
-    final authNotifier = AuthNotifier(
-      _RecordingAuthService(
-        onLogin: (_, __) => const AuthTokens(
-          accessToken: 'header.payload.signature',
-          refreshToken: 'refresh-token',
-          userId: 'user-1',
-        ),
-      ),
-      const _FakeSecureStorage(),
-    );
+  testWidgets('google button still routes through auth notifier', (tester) async {
+    final authNotifier = _RecordingAuthNotifier();
 
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
           authProvider.overrideWith((ref) => authNotifier),
-          passkeyAvailabilityProvider.overrideWith((ref) async => true),
-          passkeyServiceProvider.overrideWithValue(_RecordingPasskeyService()),
         ],
         child: const MaterialApp(
           home: SignInScreen(),
@@ -238,81 +171,42 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Sign in with Biometrics'), findsNothing);
-    expect(find.text('Sign in with Passkey'), findsOneWidget);
+    await tester.tap(find.widgetWithText(OutlinedButton, 'Sign in with Google'));
+    await tester.pump();
+
+    expect(authNotifier.googleCount, 1);
   });
 
-  testWidgets('passkey sign in authenticates with typed email', (tester) async {
-    final authNotifier = AuthNotifier(
-      _RecordingAuthService(
-        onLogin: (_, __) => const AuthTokens(
-          accessToken: 'header.payload.signature',
-          refreshToken: 'refresh-token',
-          userId: 'user-1',
-        ),
-      ),
-      const _FakeSecureStorage(),
+  testWidgets('managed login launch failures render as inline notices',
+      (tester) async {
+    final authNotifier = _RecordingAuthNotifier()
+      ..continueError = const CognitoManagedLoginException(
+        'Conscia sign-in could not finish right now.',
+      );
+    AppError.configure(
+      referenceIdFactory: () => 'LOGINML1',
+      logger: (_) {},
     );
-    final passkeys = _RecordingPasskeyService();
-    final container = ProviderContainer(
-      overrides: [
-        authProvider.overrideWith((ref) => authNotifier),
-        passkeyAvailabilityProvider.overrideWith((ref) async => true),
-        passkeyServiceProvider.overrideWithValue(passkeys),
-      ],
-    );
-    addTearDown(container.dispose);
 
     await tester.pumpWidget(
-      UncontrolledProviderScope(
-        container: container,
-        child: const MaterialApp(home: SignInScreen()),
+      ProviderScope(
+        overrides: [
+          authProvider.overrideWith((ref) => authNotifier),
+        ],
+        child: const MaterialApp(
+          home: SignInScreen(),
+        ),
       ),
     );
     await tester.pumpAndSettle();
 
-    final fields = find.byType(TextField);
-    await tester.enterText(fields.at(0), 'story-demo@example.com');
-    await tester
-        .tap(find.widgetWithText(OutlinedButton, 'Sign in with Passkey'));
+    await tester.tap(
+      find.widgetWithText(FilledButton, 'Continue with Email'),
+    );
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
 
-    expect(passkeys.lastEmail, 'story-demo@example.com');
-    expect(container.read(authProvider).isAuthenticated, isTrue);
+    expect(find.text('Conscia sign-in could not finish right now.'), findsOneWidget);
+    expect(find.text('Dismiss'), findsNothing);
   });
-}
-
-class _RecordingAuthService extends AuthService {
-  _RecordingAuthService({required this.onLogin}) : super(Dio());
-
-  final AuthTokens Function(String email, String password) onLogin;
-
-  @override
-  Future<AuthTokens> login(String email, String password) async {
-    return onLogin(email, password);
-  }
-}
-
-class _RecordingPasskeyService extends PasskeyService {
-  _RecordingPasskeyService()
-      : super(
-          publicDio: Dio(),
-          authenticatedDio: Dio(),
-        );
-
-  String? lastEmail;
-
-  @override
-  Future<bool> isSupported() async => true;
-
-  @override
-  Future<AuthTokens> signIn(String email) async {
-    lastEmail = email;
-    return const AuthTokens(
-      accessToken: 'header.payload.signature',
-      refreshToken: 'refresh-token',
-      userId: 'user-1',
-    );
-  }
 }

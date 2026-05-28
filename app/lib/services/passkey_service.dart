@@ -6,6 +6,7 @@ import 'package:passkeys/types.dart';
 
 import '../core/constants/api_constants.dart';
 import '../core/errors/app_error.dart';
+import '../core/network/dio_client.dart';
 import 'auth_service.dart';
 
 class PasskeyService {
@@ -76,8 +77,14 @@ class PasskeyService {
   }
 
   Future<void> registerCurrentUserPasskey() async {
-    final startResponse =
-        await _authenticatedDio.post(ApiConstants.passkeyRegisterStart);
+    final startResponse = await _authenticatedDio.post(
+      ApiConstants.passkeyRegisterStart,
+      options: Options(
+        extra: {
+          useAccessTokenRequestExtraKey: true,
+        },
+      ),
+    );
     final startData = startResponse.data as Map<String, dynamic>;
     final request = RegisterRequestType.fromJsonString(
       startData['credentialCreationOptions'] as String,
@@ -89,6 +96,11 @@ class PasskeyService {
       data: {
         'credential': platformResponse.toJsonString(),
       },
+      options: Options(
+        extra: {
+          useAccessTokenRequestExtraKey: true,
+        },
+      ),
     );
   }
 }

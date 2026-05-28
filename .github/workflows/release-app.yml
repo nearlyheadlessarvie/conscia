@@ -27,9 +27,9 @@ permissions:
 env:
   APP_DIR: app
   API_BASE_URL: ${{ vars.API_BASE_URL }}
+  COGNITO_CLIENT_ID: ${{ vars.COGNITO_CLIENT_ID }}
   MOCK_AUTH: ${{ vars.MOCK_AUTH || 'false' }}
   PUSH_NOTIFICATIONS_ENABLED: ${{ vars.PUSH_NOTIFICATIONS_ENABLED || 'false' }}
-  GOOGLE_SERVER_CLIENT_ID: ${{ secrets.GOOGLE_SERVER_CLIENT_ID }}
   FIREBASE_OPTIONS_DART_BASE64: ${{ secrets.FIREBASE_OPTIONS_DART_BASE64 }}
 
 jobs:
@@ -56,7 +56,7 @@ jobs:
         shell: bash
         run: |
           test -n "${API_BASE_URL}" || (echo "Missing API_BASE_URL variable" && exit 1)
-          test -n "${GOOGLE_SERVER_CLIENT_ID}" || (echo "Missing GOOGLE_SERVER_CLIENT_ID secret" && exit 1)
+          test -n "${COGNITO_CLIENT_ID}" || (echo "Missing COGNITO_CLIENT_ID variable" && exit 1)
           test -n "${ANDROID_GOOGLE_SERVICES_JSON_BASE64}" || (echo "Missing ANDROID_GOOGLE_SERVICES_JSON_BASE64 secret" && exit 1)
           test -n "${ANDROID_KEYSTORE_BASE64}" || (echo "Missing ANDROID_KEYSTORE_BASE64 secret" && exit 1)
           test -n "${ANDROID_KEYSTORE_PASSWORD}" || (echo "Missing ANDROID_KEYSTORE_PASSWORD secret" && exit 1)
@@ -155,9 +155,9 @@ jobs:
         run: |
           flutter build appbundle --release \
             --dart-define=API_BASE_URL="${API_BASE_URL}" \
+            --dart-define=COGNITO_CLIENT_ID="${COGNITO_CLIENT_ID}" \
             --dart-define=MOCK_AUTH="${MOCK_AUTH}" \
-            --dart-define=PUSH_NOTIFICATIONS_ENABLED="${PUSH_NOTIFICATIONS_ENABLED}" \
-            --dart-define=GOOGLE_SERVER_CLIENT_ID="${GOOGLE_SERVER_CLIENT_ID}"
+            --dart-define=PUSH_NOTIFICATIONS_ENABLED="${PUSH_NOTIFICATIONS_ENABLED}"
 
       - name: Upload Android artifact
         uses: actions/upload-artifact@v4
@@ -200,7 +200,7 @@ jobs:
         shell: bash
         run: |
           test -n "${API_BASE_URL}" || (echo "Missing API_BASE_URL variable" && exit 1)
-          test -n "${GOOGLE_SERVER_CLIENT_ID}" || (echo "Missing GOOGLE_SERVER_CLIENT_ID secret" && exit 1)
+          test -n "${COGNITO_CLIENT_ID}" || (echo "Missing COGNITO_CLIENT_ID variable" && exit 1)
           test -n "${IOS_GOOGLE_SERVICE_INFO_PLIST_BASE64}" || (echo "Missing IOS_GOOGLE_SERVICE_INFO_PLIST_BASE64 secret" && exit 1)
           test -n "${APP_STORE_CONNECT_API_KEY_ID}" || (echo "Missing APP_STORE_CONNECT_API_KEY_ID secret" && exit 1)
           test -n "${APP_STORE_CONNECT_ISSUER_ID}" || (echo "Missing APP_STORE_CONNECT_ISSUER_ID secret" && exit 1)
@@ -230,31 +230,6 @@ jobs:
               base64.b64decode(os.environ["IOS_GOOGLE_SERVICE_INFO_PLIST_BASE64"])
           )
           PY
-
-      - name: Derive iOS Google Sign-In metadata
-        id: ios_google
-        shell: bash
-        run: |
-          BUNDLE_ID=$(/usr/libexec/PlistBuddy -c 'Print :BUNDLE_ID' app/ios/Runner/GoogleService-Info.plist 2>/dev/null || true)
-          CLIENT_ID=$(/usr/libexec/PlistBuddy -c 'Print :CLIENT_ID' app/ios/Runner/GoogleService-Info.plist 2>/dev/null || true)
-          REVERSED_CLIENT_ID=$(/usr/libexec/PlistBuddy -c 'Print :REVERSED_CLIENT_ID' app/ios/Runner/GoogleService-Info.plist 2>/dev/null || true)
-
-          test -n "$BUNDLE_ID" || (echo "Missing BUNDLE_ID in ios/Runner/GoogleService-Info.plist" && exit 1)
-          test -n "$CLIENT_ID" || (echo "Missing CLIENT_ID in ios/Runner/GoogleService-Info.plist" && exit 1)
-          test -n "$REVERSED_CLIENT_ID" || (echo "Missing REVERSED_CLIENT_ID in ios/Runner/GoogleService-Info.plist" && exit 1)
-          test "$BUNDLE_ID" = "${IOS_BUNDLE_ID}" || (echo "GoogleService-Info.plist BUNDLE_ID ($BUNDLE_ID) does not match IOS_BUNDLE_ID (${IOS_BUNDLE_ID})" && exit 1)
-
-          echo "client_id=$CLIENT_ID" >> "$GITHUB_OUTPUT"
-          echo "reversed_client_id=$REVERSED_CLIENT_ID" >> "$GITHUB_OUTPUT"
-
-      - name: Configure iOS Google Sign-In metadata
-        working-directory: app
-        run: |
-          dart run tool/configure_google_sign_in_ios.dart \
-            --info-plist ios/Runner/Info.plist \
-            --client-id "${{ steps.ios_google.outputs.client_id }}" \
-            --reversed-client-id "${{ steps.ios_google.outputs.reversed_client_id }}" \
-            --server-client-id "${GOOGLE_SERVER_CLIENT_ID}"
 
       - name: Materialize optional firebase_options.dart override
         if: env.FIREBASE_OPTIONS_DART_BASE64 != ''
@@ -293,9 +268,9 @@ jobs:
           flutter build ios --release --config-only \
             --no-codesign \
             --dart-define=API_BASE_URL="${API_BASE_URL}" \
+            --dart-define=COGNITO_CLIENT_ID="${COGNITO_CLIENT_ID}" \
             --dart-define=MOCK_AUTH="${MOCK_AUTH}" \
-            --dart-define=PUSH_NOTIFICATIONS_ENABLED="${PUSH_NOTIFICATIONS_ENABLED}" \
-            --dart-define=GOOGLE_SERVER_CLIENT_ID="${GOOGLE_SERVER_CLIENT_ID}"
+            --dart-define=PUSH_NOTIFICATIONS_ENABLED="${PUSH_NOTIFICATIONS_ENABLED}"
 
       - name: Build and upload iOS release with Fastlane
         working-directory: app/ios
@@ -310,9 +285,6 @@ jobs:
           GOOGLE_PLIST="$APP_BUNDLE/GoogleService-Info.plist"
 
           test -f "$GOOGLE_PLIST" || (echo "Runner.app is missing GoogleService-Info.plist" && exit 1)
-
-          GID_CLIENT_ID=$(/usr/libexec/PlistBuddy -c 'Print :GIDClientID' "$INFO_PLIST" 2>/dev/null || true)
-          test -n "$GID_CLIENT_ID" || (echo "Runner.app Info.plist is missing GIDClientID" && exit 1)
 
           codesign -d --entitlements :- "$APP_BUNDLE" > entitlements.plist 2>/dev/null
           grep -q 'webcredentials:getconscia.com' entitlements.plist || (echo "Runner.app entitlements are missing webcredentials:getconscia.com" && exit 1)

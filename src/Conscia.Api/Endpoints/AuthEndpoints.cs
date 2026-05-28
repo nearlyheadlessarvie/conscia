@@ -80,27 +80,24 @@ public static class AuthEndpoints
                 : Results.Json(new { error = "Session expired" }, statusCode: 401);
         }).WithName("Refresh").RequireRateLimiting("auth");
 
-        group.MapPost("/google", async (HttpContext ctx, GoogleLoginRequest req, IAuthService auth) =>
+        group.MapPost("/password", async (
+            HttpContext ctx,
+            SetPasswordRequest req,
+            ICurrentUserPasswordService passwordService) =>
         {
-            if (string.IsNullOrWhiteSpace(req.IdToken))
-                return Results.BadRequest(new { error = "IdToken is required" });
+            if (string.IsNullOrWhiteSpace(req.Password))
+                return Results.BadRequest(new { error = "Password is required" });
 
-            var result = await auth.LoginWithGoogleAsync(req.IdToken, ctx.RequestAborted);
-            return result.Success
-                ? Results.Ok(new { result.AccessToken, result.RefreshToken, result.UserId })
-                : Results.BadRequest(new { result.Error });
-        }).WithName("GoogleLogin").RequireRateLimiting("standard");
-
-        group.MapPost("/apple", async (HttpContext ctx, AppleLoginRequest req, IAuthService auth) =>
-        {
-            if (string.IsNullOrWhiteSpace(req.IdentityToken))
-                return Results.BadRequest(new { error = "IdentityToken is required" });
-
-            var result = await auth.LoginWithAppleAsync(req.IdentityToken, req.AuthorizationCode, ctx.RequestAborted);
-            return result.Success
-                ? Results.Ok(new { result.AccessToken, result.RefreshToken, result.UserId })
-                : Results.BadRequest(new { result.Error });
-        }).WithName("AppleLogin").RequireRateLimiting("standard");
+            try
+            {
+                await passwordService.SetPasswordAsync(ctx.User, req.Password, ctx.RequestAborted);
+                return Results.NoContent();
+            }
+            catch (InvalidOperationException ex)
+            {
+                return Results.BadRequest(new { error = ex.Message });
+            }
+        }).WithName("SetPassword").RequireAuthorization().RequireRateLimiting("auth");
 
         group.MapPost("/passkeys/register/start", async (
             HttpContext ctx,
@@ -213,5 +210,4 @@ public record ConfirmRegistrationRequest(string Email, string ConfirmationCode);
 public record ResendConfirmationRequest(string Email);
 public record LoginRequest(string Email, string Password);
 public record RefreshRequest(string RefreshToken);
-public record GoogleLoginRequest(string IdToken);
-public record AppleLoginRequest(string IdentityToken, string? AuthorizationCode);
+public record SetPasswordRequest(string Password);

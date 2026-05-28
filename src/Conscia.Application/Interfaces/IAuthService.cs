@@ -1,5 +1,3 @@
-using System.Security.Claims;
-
 namespace Conscia.Application.Interfaces;
 
 public interface IAuthService
@@ -9,9 +7,6 @@ public interface IAuthService
     Task<AuthResult> ResendConfirmationAsync(string email, CancellationToken ct = default);
     Task<AuthResult> LoginAsync(string email, string password, CancellationToken ct = default);
     Task<AuthResult> RefreshAsync(string refreshToken, CancellationToken ct = default);
-    Task<AuthResult> LoginWithGoogleAsync(string idToken, CancellationToken ct = default);
-    Task<AuthResult> LoginWithAppleAsync(string identityToken, string? authorizationCode, CancellationToken ct = default);
-    Task<ClaimsPrincipal?> ValidateTokenAsync(string token, CancellationToken ct = default);
 }
 
 public class AuthResult

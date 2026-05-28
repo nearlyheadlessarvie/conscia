@@ -1,7 +1,6 @@
 import 'package:conscia_app/core/errors/app_error.dart';
-import 'package:conscia_app/services/auth_service.dart';
+import 'package:conscia_app/services/cognito_managed_login_service.dart';
 import 'package:dio/dio.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -123,60 +122,29 @@ void main() {
     expect(logged, hasLength(1));
   });
 
-  test('shows apple sign-in cancellation without reference id', () {
+  test('shows managed login cancellation without reference id', () {
     AppError.configure(
-      referenceIdFactory: () => 'APPLE123',
+      referenceIdFactory: () => 'LOGIN123',
       logger: (_) {},
     );
 
     expect(
-      AppError.from(const AppleSignInFailure.cancelled()).userMessage,
-      'Apple sign-in was cancelled.',
+      AppError.from(const CognitoManagedLoginCancelledException()).userMessage,
+      'Conscia sign-in was cancelled.',
     );
   });
 
-  test('shows apple sign-in device failure with reference id', () {
+  test('shows managed login errors without reference id', () {
     AppError.configure(
-      referenceIdFactory: () => 'APPLE456',
+      referenceIdFactory: () => 'LOGIN456',
       logger: (_) {},
     );
 
     expect(
-      AppError.from(const AppleSignInFailure.unavailable()).userMessage,
-      'Apple sign-in could not finish on this device. Please try again. Reference: APPLE456',
+      AppError.from(
+        const CognitoManagedLoginException('Browser login failed.'),
+      ).userMessage,
+      'Browser login failed.',
     );
-  });
-
-  test('shows google sign-in missing token failure with reference id', () {
-    AppError.configure(
-      referenceIdFactory: () => 'GOOGLE1',
-      logger: (_) {},
-    );
-
-    expect(
-      AppError.from(const GoogleSignInFailure.missingIdToken()).userMessage,
-      'Google sign-in did not return an ID token for this app build. Please try again. Reference: GOOGLE1',
-    );
-  });
-
-  test('shows google sign-in cancellation without reference id', () {
-    AppError.configure(
-      referenceIdFactory: () => 'GOOGLE2',
-      logger: (_) {},
-    );
-
-    expect(
-      AppError.from(const GoogleSignInFailure.cancelled()).userMessage,
-      'Google sign-in was cancelled.',
-    );
-  });
-
-  test('maps cancelled google platform exception to cancellation failure', () {
-    final failure = GoogleSignInFailure.fromPlatformException(
-      PlatformException(code: 'sign_in_canceled'),
-    );
-
-    expect(failure.isCancellation, isTrue);
-    expect(failure.message, 'Google sign-in was cancelled.');
   });
 }

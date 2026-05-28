@@ -61,7 +61,6 @@ public class ComputeStack : Stack
                 ["ASPNETCORE_ENVIRONMENT"] = "Production",
                 ["Auth__Cognito__UserPoolId"] = props.UserPool.UserPoolId,
                 ["Auth__Cognito__ClientId"] = props.UserPoolClient.UserPoolClientId,
-                ["Auth__AppJwtSigningKeySecretId"] = props.RuntimeSecretSettings.AuthAppJwtSigningKeySecretName,
                 ["Auth__Google__ClientId"] = props.RuntimeSettings.AuthGoogleClientId ?? string.Empty,
                 ["Auth__Apple__ClientId"] = props.RuntimeSettings.AuthAppleClientId ?? string.Empty,
                 ["Apple__KeyId"] = props.RuntimeSettings.AppleKeyId ?? string.Empty,
@@ -159,6 +158,12 @@ public class ComputeStack : Stack
 
         ApiLambda.AddToRolePolicy(new PolicyStatement(new PolicyStatementProps
         {
+            Actions = ["aws-marketplace:ViewSubscriptions", "aws-marketplace:Subscribe"],
+            Resources = ["*"]
+        }));
+
+        ApiLambda.AddToRolePolicy(new PolicyStatement(new PolicyStatementProps
+        {
             Actions = ["textract:DetectDocumentText"],
             Resources = ["*"]
         }));
@@ -169,8 +174,6 @@ public class ComputeStack : Stack
 
     private void GrantRuntimeSecretReads(RuntimeSecretSettings runtimeSecretSettings)
     {
-        Secret.FromSecretNameV2(this, "AuthAppJwtSigningKeySecret", runtimeSecretSettings.AuthAppJwtSigningKeySecretName)
-            .GrantRead(ApiLambda);
         Secret.FromSecretNameV2(this, "ApplePrivateKeySecret", runtimeSecretSettings.ApplePrivateKeySecretName)
             .GrantRead(ApiLambda);
         Secret.FromSecretNameV2(this, "GooglePlayServiceAccountJsonSecret", runtimeSecretSettings.GooglePlayServiceAccountJsonSecretName)

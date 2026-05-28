@@ -104,13 +104,23 @@ public class StackTests
         var stack = new AuthStack(app, "TestAuth", new AuthStackProps
         {
             Env = TestEnv,
-            DomainSettings = TestDomainSettings
+            DomainSettings = TestDomainSettings,
+            ManagedLoginProviderSettings = new ManagedLoginProviderSettings(
+                "google-web-client-id.apps.googleusercontent.com",
+                "com.getconscia.auth",
+                "ABCDE12345",
+                "1A2B3C4D5E"),
+            ManagedLoginSecretSettings = new ManagedLoginSecretSettings(
+                "test/cognito-google-client-secret",
+                "test/apple-private-key")
         });
         var template = Template.FromStack(stack);
 
         template.ResourceCountIs("AWS::Cognito::UserPool", 1);
         template.ResourceCountIs("AWS::Cognito::UserPoolClient", 1);
         template.ResourceCountIs("AWS::Cognito::UserPoolDomain", 1);
+        template.ResourceCountIs("AWS::Cognito::UserPoolIdentityProvider", 2);
+        template.ResourceCountIs("AWS::Cognito::ManagedLoginBranding", 1);
         template.HasResourceProperties("AWS::Cognito::UserPool", new Dictionary<string, object>
         {
             ["UserPoolName"] = "conscia-users",
@@ -150,7 +160,7 @@ public class StackTests
                 "https://auth.getconscia.com/open/auth/logout",
                 "conscia://auth/logout"
             ]),
-            ["SupportedIdentityProviders"] = Match.ArrayWith(["COGNITO"]),
+            ["SupportedIdentityProviders"] = Match.ArrayWith(["COGNITO", "Google", "SignInWithApple"]),
             ["ExplicitAuthFlows"] = Match.ArrayWith([
                 "ALLOW_USER_PASSWORD_AUTH",
                 "ALLOW_USER_SRP_AUTH",
@@ -163,6 +173,74 @@ public class StackTests
             ["Domain"] = "login.getconscia.com",
             ["ManagedLoginVersion"] = 2
         });
+        template.HasResourceProperties("AWS::Cognito::UserPoolIdentityProvider", Match.ObjectLike(new Dictionary<string, object>
+        {
+            ["ProviderName"] = "Google",
+            ["ProviderType"] = "Google"
+        }));
+        template.HasResourceProperties("AWS::Cognito::UserPoolIdentityProvider", Match.ObjectLike(new Dictionary<string, object>
+        {
+            ["ProviderName"] = "SignInWithApple",
+            ["ProviderType"] = "SignInWithApple"
+        }));
+        template.HasResourceProperties("AWS::Cognito::ManagedLoginBranding", Match.ObjectLike(new Dictionary<string, object>
+        {
+            ["UseCognitoProvidedValues"] = true
+        }));
+    }
+
+    [Fact]
+    public void ManagedLoginProviderSettings_FromEnvironment_UsesSharedAndDedicatedVariables()
+    {
+        var previousGoogleClientId = System.Environment.GetEnvironmentVariable("AUTH_GOOGLE_CLIENT_ID");
+        var previousAppleServicesId = System.Environment.GetEnvironmentVariable("COGNITO_APPLE_SERVICES_ID");
+        var previousAppleTeamId = System.Environment.GetEnvironmentVariable("APPLE_TEAM_ID");
+        var previousAppleKeyId = System.Environment.GetEnvironmentVariable("COGNITO_APPLE_KEY_ID");
+
+        try
+        {
+            System.Environment.SetEnvironmentVariable("AUTH_GOOGLE_CLIENT_ID", "google-web-client-id.apps.googleusercontent.com");
+            System.Environment.SetEnvironmentVariable("COGNITO_APPLE_SERVICES_ID", "com.getconscia.auth");
+            System.Environment.SetEnvironmentVariable("APPLE_TEAM_ID", "ABCDE12345");
+            System.Environment.SetEnvironmentVariable("COGNITO_APPLE_KEY_ID", "1A2B3C4D5E");
+
+            var settings = ManagedLoginProviderSettings.FromEnvironment();
+
+            Assert.NotNull(settings);
+            Assert.Equal("google-web-client-id.apps.googleusercontent.com", settings!.GoogleClientId);
+            Assert.Equal("com.getconscia.auth", settings.AppleServicesId);
+            Assert.Equal("ABCDE12345", settings.AppleTeamId);
+            Assert.Equal("1A2B3C4D5E", settings.AppleKeyId);
+        }
+        finally
+        {
+            System.Environment.SetEnvironmentVariable("AUTH_GOOGLE_CLIENT_ID", previousGoogleClientId);
+            System.Environment.SetEnvironmentVariable("COGNITO_APPLE_SERVICES_ID", previousAppleServicesId);
+            System.Environment.SetEnvironmentVariable("APPLE_TEAM_ID", previousAppleTeamId);
+            System.Environment.SetEnvironmentVariable("COGNITO_APPLE_KEY_ID", previousAppleKeyId);
+        }
+    }
+
+    [Fact]
+    public void ManagedLoginSecretSettings_FromEnvironment_RequiresDedicatedApplePrivateKeySecretName()
+    {
+        var previousDedicatedAppleSecret = System.Environment.GetEnvironmentVariable("COGNITO_APPLE_PRIVATE_KEY_SECRET_NAME");
+        var previousSharedAppleSecret = System.Environment.GetEnvironmentVariable("APPLE_PRIVATE_KEY_SECRET_NAME");
+
+        try
+        {
+            System.Environment.SetEnvironmentVariable("COGNITO_APPLE_PRIVATE_KEY_SECRET_NAME", null);
+            System.Environment.SetEnvironmentVariable("APPLE_PRIVATE_KEY_SECRET_NAME", "conscia/prod/apple-private-key");
+
+            var settings = ManagedLoginSecretSettings.FromEnvironment();
+
+            Assert.Equal("conscia/prod/cognito-apple-private-key", settings.ApplePrivateKeySecretName);
+        }
+        finally
+        {
+            System.Environment.SetEnvironmentVariable("COGNITO_APPLE_PRIVATE_KEY_SECRET_NAME", previousDedicatedAppleSecret);
+            System.Environment.SetEnvironmentVariable("APPLE_PRIVATE_KEY_SECRET_NAME", previousSharedAppleSecret);
+        }
     }
 
     [Fact]
@@ -206,7 +284,6 @@ public class StackTests
             ConscienceJourneyTable = database.ConscienceJourneyTable,
             AiQueue = ai.AiQueue,
             RuntimeSettings = new ProductionRuntimeSettings(
-                "jwt-signing-key",
                 "google-client-id",
                 "com.getconscia.app.ai",
                 "APPLEKEYID",
@@ -221,7 +298,6 @@ public class StackTests
                 "conscia-production",
                 "conscia://invite"),
             RuntimeSecretSettings = new RuntimeSecretSettings(
-                "test/auth-app-jwt-signing-key",
                 "test/apple-private-key",
                 "test/google-play-service-account-json",
                 "test/firebase-admin-service-account-json"),
@@ -233,6 +309,20 @@ public class StackTests
         var template = Template.FromStack(stack);
         template.ResourceCountIs("AWS::Lambda::Function", 1);
         template.ResourceCountIs("AWS::EC2::SecurityGroup", 0);
+        template.HasResourceProperties("AWS::IAM::Policy", Match.ObjectLike(new Dictionary<string, object>
+        {
+            ["PolicyDocument"] = Match.ObjectLike(new Dictionary<string, object>
+            {
+                ["Statement"] = Match.ArrayWith([
+                    Match.ObjectLike(new Dictionary<string, object>
+                    {
+                        ["Action"] = Match.ArrayWith(["aws-marketplace:ViewSubscriptions", "aws-marketplace:Subscribe"]),
+                        ["Effect"] = "Allow",
+                        ["Resource"] = "*"
+                    })
+                ])
+            })
+        }));
         template.HasResourceProperties("AWS::Lambda::Function", new Dictionary<string, object>
         {
             ["Environment"] = new Dictionary<string, object>
@@ -247,6 +337,12 @@ public class StackTests
                 })
             }
         });
+
+        var lambda = template.FindResources("AWS::Lambda::Function").Single().Value;
+        var properties = (IDictionary<string, object>)lambda["Properties"];
+        var environment = (IDictionary<string, object>)properties["Environment"];
+        var variables = (IDictionary<string, object>)environment["Variables"];
+        Assert.DoesNotContain("Auth__AppJwtSigningKeySecretId", variables.Keys.Cast<string>());
     }
 
     [Fact]
@@ -264,7 +360,6 @@ public class StackTests
             MonthlyCategorySpendsTable = database.MonthlyCategorySpendsTable,
             PushDeviceTokensTable = database.PushDeviceTokensTable,
             RuntimeSettings = new ProductionRuntimeSettings(
-                "jwt-signing-key",
                 "google-client-id",
                 "com.getconscia.app.ai",
                 "APPLEKEYID",
@@ -279,7 +374,6 @@ public class StackTests
                 "conscia-production",
                 "conscia://invite"),
             RuntimeSecretSettings = new RuntimeSecretSettings(
-                "test/auth-app-jwt-signing-key",
                 "test/apple-private-key",
                 "test/google-play-service-account-json",
                 "test/firebase-admin-service-account-json"),
