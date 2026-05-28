@@ -153,14 +153,6 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                             errorText: _emailFieldError,
                             autofillHints: const [AutofillHints.email],
                           ),
-                          const SizedBox(height: 14),
-                          Text(
-                            'We will create your account securely in your browser, where email, social sign-in, and passkeys stay on the same Cognito session.',
-                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                  color: colors.onSurfaceVariant,
-                                  height: 1.35,
-                                ),
-                          ),
                         ],
                       ),
                     ),

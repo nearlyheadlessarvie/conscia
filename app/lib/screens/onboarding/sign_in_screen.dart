@@ -1,5 +1,4 @@
 import 'package:dio/dio.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -182,7 +181,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                         children: [
                           FloatingLabelTextField(
                             controller: _emailController,
-                            label: 'Email (optional)',
+                            label: 'Email',
                             prefix: AppIcons.icon(
                               AppIconKey.email,
                               color: Theme.of(context)
@@ -195,14 +194,6 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                             onChanged: (_) => _clearInlineErrors(),
                             errorText: _emailFieldError,
                             autofillHints: const [AutofillHints.email],
-                          ),
-                          const SizedBox(height: 14),
-                          Text(
-                            'We will finish email, password, and passkey sign-in securely in your browser.',
-                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                  color: colors.onSurfaceVariant,
-                                  height: 1.35,
-                                ),
                           ),
                         ],
                       ),
@@ -219,7 +210,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                                 child:
                                     CircularProgressIndicator(strokeWidth: 2),
                               )
-                            : const Text('Continue with Email or Passkey'),
+                            : const Text('Continue with Email'),
                       ),
                     ),
                     const SizedBox(height: 24),
@@ -242,52 +233,50 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                       ],
                     ),
                     const SizedBox(height: 24),
-                    if (defaultTargetPlatform == TargetPlatform.iOS) ...[
-                      SizedBox(
-                        height: 48,
-                        width: double.infinity,
-                        child: ElevatedButton.icon(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.black,
-                            foregroundColor: Colors.white,
-                            elevation: 0,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(24),
-                            ),
+                    SizedBox(
+                      height: 48,
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.black,
+                          foregroundColor: Colors.white,
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(24),
                           ),
-                          icon: AppIcons.icon(
-                            AppIconKey.appleBrand,
-                            color: Colors.white,
-                            size: 24,
-                          ),
-                          label: const Text('Sign in with Apple'),
-                          onPressed: _isLoading
-                              ? null
-                              : () async {
-                                  setState(() {
-                                    _isLoading = true;
-                                    _errorMessage = null;
-                                  });
-                                  try {
-                                    await ref
-                                        .read(authProvider.notifier)
-                                        .signInWithApple();
-                                  } catch (e) {
-                                    if (!mounted) return;
-                                    setState(() {
-                                      _errorMessage =
-                                          friendlySignInErrorMessage(e);
-                                    });
-                                  } finally {
-                                    if (mounted) {
-                                      setState(() => _isLoading = false);
-                                    }
-                                  }
-                                },
                         ),
+                        icon: AppIcons.icon(
+                          AppIconKey.appleBrand,
+                          color: Colors.white,
+                          size: 24,
+                        ),
+                        label: const Text('Sign in with Apple'),
+                        onPressed: _isLoading
+                            ? null
+                            : () async {
+                                setState(() {
+                                  _isLoading = true;
+                                  _errorMessage = null;
+                                });
+                                try {
+                                  await ref
+                                      .read(authProvider.notifier)
+                                      .signInWithApple();
+                                } catch (e) {
+                                  if (!mounted) return;
+                                  setState(() {
+                                    _errorMessage =
+                                        friendlySignInErrorMessage(e);
+                                  });
+                                } finally {
+                                  if (mounted) {
+                                    setState(() => _isLoading = false);
+                                  }
+                                }
+                              },
                       ),
-                      const SizedBox(height: 12),
-                    ],
+                    ),
+                    const SizedBox(height: 12),
                     _GoogleSignInButton(
                       isLoading: _isLoading,
                       onPressed: () async {

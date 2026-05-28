@@ -121,7 +121,14 @@ void main() {
 
     expect(find.byType(TextField), findsOneWidget);
     expect(find.text('Password'), findsNothing);
-    expect(find.text('Continue with Email or Passkey'), findsOneWidget);
+    expect(find.text('Continue with Email'), findsOneWidget);
+    expect(find.text('Sign in with Apple'), findsOneWidget);
+    expect(
+      find.text(
+        'We will finish email, password, and passkey sign-in securely in your browser.',
+      ),
+      findsNothing,
+    );
   });
 
   testWidgets('continue button launches managed login with typed email hint',
@@ -142,7 +149,7 @@ void main() {
 
     await tester.enterText(find.byType(TextField), 'story-demo@example.com');
     await tester.tap(
-      find.widgetWithText(FilledButton, 'Continue with Email or Passkey'),
+      find.widgetWithText(FilledButton, 'Continue with Email'),
     );
     await tester.pump();
 
@@ -194,7 +201,7 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.tap(
-      find.widgetWithText(FilledButton, 'Continue with Email or Passkey'),
+      find.widgetWithText(FilledButton, 'Continue with Email'),
     );
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));

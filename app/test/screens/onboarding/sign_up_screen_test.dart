@@ -94,6 +94,12 @@ void main() {
     expect(find.byType(TextField), findsOneWidget);
     expect(find.text('Password'), findsNothing);
     expect(find.text('Create Account'), findsOneWidget);
+    expect(
+      find.text(
+        'We will create your account securely in your browser, where email, social sign-in, and passkeys stay on the same Cognito session.',
+      ),
+      findsNothing,
+    );
   });
 
   testWidgets('create account launches managed signup with email hint', (
