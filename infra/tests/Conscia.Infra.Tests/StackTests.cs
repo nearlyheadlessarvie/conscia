@@ -482,6 +482,48 @@ public class StackTests
     }
 
     [Fact]
+    public void PatternAggregatorStack_GrantsBehavioralInsightsDependencies()
+    {
+        var app = new App();
+        var database = new DatabaseStack(app, "D", new StackProps { Env = TestEnv });
+        _ = new PatternAggregatorStack(app, "P", new PatternAggregatorStackProps
+        {
+            Env = TestEnv,
+            ControlPlaneTable = database.ControlPlaneTable,
+            TransactionsTable = database.TransactionsTable,
+            WeeklyInsightsTable = database.WeeklyInsightsTable,
+            PurchasePatternsTable = database.PurchasePatternsTable,
+            MonthlyCategorySpendsTable = database.MonthlyCategorySpendsTable,
+            AssetPath = CreateAssetStub("pattern-aggregator")
+        });
+
+        var template = Template.FromStack((Stack)app.Node.FindChild("P"));
+        template.HasResourceProperties("AWS::Lambda::Function", new Dictionary<string, object>
+        {
+            ["Environment"] = new Dictionary<string, object>
+            {
+                ["Variables"] = Match.ObjectLike(new Dictionary<string, object>
+                {
+                    ["AWS__DynamoDB__ControlPlaneTable"] = Match.AnyValue(),
+                    ["AWS__DynamoDB__MonthlyCategorySpendsTable"] = Match.AnyValue()
+                })
+            }
+        });
+        template.HasResourceProperties("AWS::IAM::Policy", Match.ObjectLike(new Dictionary<string, object>
+        {
+            ["PolicyDocument"] = Match.ObjectLike(new Dictionary<string, object>
+            {
+                ["Statement"] = Match.ArrayWith([
+                    Match.ObjectLike(new Dictionary<string, object>
+                    {
+                        ["Action"] = Match.ArrayWith(["dynamodb:BatchGetItem", "dynamodb:GetRecords", "dynamodb:GetShardIterator", "dynamodb:Query", "dynamodb:GetItem", "dynamodb:Scan", "dynamodb:ConditionCheckItem", "dynamodb:DescribeTable"])
+                    })
+                ])
+            })
+        }));
+    }
+
+    [Fact]
     public void AssetPathResolver_Throws_WhenPublishAssetIsMissing_AndFallbackNotEnabled()
     {
         var originalDirectory = Directory.GetCurrentDirectory();

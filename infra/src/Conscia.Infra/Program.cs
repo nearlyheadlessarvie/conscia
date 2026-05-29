@@ -94,9 +94,11 @@ sealed class Program
         _ = new PatternAggregatorStack(app, "Conscia-PatternAggregator", new PatternAggregatorStackProps
         {
             Env = env,
+            ControlPlaneTable = database.ControlPlaneTable,
             TransactionsTable = database.TransactionsTable,
             WeeklyInsightsTable = database.WeeklyInsightsTable,
-            PurchasePatternsTable = database.PurchasePatternsTable
+            PurchasePatternsTable = database.PurchasePatternsTable,
+            MonthlyCategorySpendsTable = database.MonthlyCategorySpendsTable
         });
 
         _ = new EmailStack(app, "Conscia-Email", new EmailStackProps
