@@ -10,6 +10,7 @@ class InAppAlertBanner extends StatelessWidget {
     required this.message,
     this.actionLabel,
     this.onAction,
+    this.onTap,
     this.onDismiss,
   });
 
@@ -17,6 +18,7 @@ class InAppAlertBanner extends StatelessWidget {
   final String message;
   final String? actionLabel;
   final VoidCallback? onAction;
+  final VoidCallback? onTap;
   final VoidCallback? onDismiss;
 
   @override
@@ -27,6 +29,7 @@ class InAppAlertBanner extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: FeedCard(
+        onTap: onTap,
         padding: const EdgeInsets.all(18),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
