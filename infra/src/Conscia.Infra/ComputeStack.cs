@@ -178,6 +178,12 @@ public class ComputeStack : Stack
             Resources = ["*"]
         }));
 
+        ApiLambda.AddToRolePolicy(new PolicyStatement(new PolicyStatementProps
+        {
+            Actions = ["cognito-idp:AdminDeleteUser"],
+            Resources = [props.UserPool.UserPoolArn]
+        }));
+
         new CfnOutput(this, "ApiUrl", new CfnOutputProps { Value = Api.Url });
         new CfnOutput(this, "ApiEndpoint", new CfnOutputProps { Value = Api.Url });
     }
