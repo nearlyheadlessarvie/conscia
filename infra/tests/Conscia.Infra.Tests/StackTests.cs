@@ -259,6 +259,7 @@ public class StackTests
                     Match.ObjectLike(new Dictionary<string, object>
                     {
                         ["Action"] = Match.ArrayWith([
+                            "cognito-idp:AdminCreateUser",
                             "cognito-idp:AdminLinkProviderForUser",
                             "cognito-idp:ListUsers"
                         ])
