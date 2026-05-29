@@ -1,5 +1,22 @@
 # Changelog
 
+## [2.1.0](https://github.com/nearlyheadlessarvie/conscia/compare/app/v2.0.1...app/v2.1.0) (2026-05-29)
+
+
+### Features
+
+* **app:** add passkey-first sign-in preference ([aedec11](https://github.com/nearlyheadlessarvie/conscia/commit/aedec11266c5462ace9b190d997ab6171edecfec))
+* **app:** restore hybrid in-app auth code flow ([aedec11](https://github.com/nearlyheadlessarvie/conscia/commit/aedec11266c5462ace9b190d997ab6171edecfec))
+* **infra:** wire admin bootstrap emails release configuration ([aedec11](https://github.com/nearlyheadlessarvie/conscia/commit/aedec11266c5462ace9b190d997ab6171edecfec))
+
+
+### Bug Fixes
+
+* **api:** delete Cognito user during account deletion ([aedec11](https://github.com/nearlyheadlessarvie/conscia/commit/aedec11266c5462ace9b190d997ab6171edecfec))
+* **app:** clear stale onboarding state on sign in ([#148](https://github.com/nearlyheadlessarvie/conscia/issues/148)) ([d3b9d77](https://github.com/nearlyheadlessarvie/conscia/commit/d3b9d77b1c4264bd3d0755f6ad9aa28720e66411))
+* **app:** keep Cognito social auth cancellation and signout local ([aedec11](https://github.com/nearlyheadlessarvie/conscia/commit/aedec11266c5462ace9b190d997ab6171edecfec))
+* **infra:** preserve Cognito pre-signup trigger event version ([aedec11](https://github.com/nearlyheadlessarvie/conscia/commit/aedec11266c5462ace9b190d997ab6171edecfec))
+
 ## [2.0.1](https://github.com/nearlyheadlessarvie/conscia/compare/app/v2.0.0...app/v2.0.1) (2026-05-28)
 
 
