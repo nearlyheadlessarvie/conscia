@@ -31,6 +31,17 @@ jobs:
       SES_CONFIGURATION_SET: ${{ vars.SES_CONFIGURATION_SET }}
       INVITE_EMAIL_DEEP_LINK_BASE_URI: ${{ vars.INVITE_EMAIL_DEEP_LINK_BASE_URI }}
     steps:
+      - name: Validate release ref
+        shell: bash
+        run: |
+          case "${GITHUB_REF}" in
+            refs/heads/main|refs/tags/api/v*) ;;
+            *)
+              echo "::error::Release API must run from main or an api/v* tag. Current ref: ${GITHUB_REF}"
+              exit 1
+              ;;
+          esac
+
       - uses: actions/checkout@v4
 
       - uses: actions/setup-dotnet@v4
@@ -62,6 +73,7 @@ jobs:
           export API_VERSION
           export API_DEPLOYED_AT
           python3 -c 'import json, os; from pathlib import Path; Path("publish/api/version.json").write_text(json.dumps({"service": "conscia-api", "version": os.environ["API_VERSION"], "commitSha": os.environ["GITHUB_SHA"], "deployedAt": os.environ["API_DEPLOYED_AT"]}, separators=(",", ":")), encoding="utf-8")'
+          dotnet publish src/Conscia.CognitoPreSignupLinker -c Release -r linux-arm64 --self-contained -o publish/cognito-pre-signup-linker
           dotnet publish src/Conscia.OutboxProcessor -c Release -r linux-arm64 --self-contained -o publish/outbox
           dotnet publish src/Conscia.RecurringProcessor -c Release -r linux-arm64 --self-contained -o publish/recurring-processor
           dotnet publish src/Conscia.PatternAggregator -c Release -r linux-arm64 --self-contained -o publish/pattern-aggregator

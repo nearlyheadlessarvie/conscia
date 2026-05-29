@@ -23,6 +23,17 @@ jobs:
       ANDROID_PASSKEY_SHA256_CERT_FINGERPRINTS: ${{ vars.ANDROID_PASSKEY_SHA256_CERT_FINGERPRINTS }}
       REQUIRE_PASSKEY_ASSOCIATIONS: 'true'
     steps:
+      - name: Validate release ref
+        shell: bash
+        run: |
+          case "${GITHUB_REF}" in
+            refs/heads/main|refs/tags/web/v*) ;;
+            *)
+              echo "::error::Release Marketing Site must run from main or a web/v* tag. Current ref: ${GITHUB_REF}"
+              exit 1
+              ;;
+          esac
+
       - uses: actions/checkout@v4
 
       - uses: actions/setup-node@v4
