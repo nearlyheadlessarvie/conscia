@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.5.3](https://github.com/nearlyheadlessarvie/conscia/compare/infra/v1.5.2...infra/v1.5.3) (2026-05-29)
+
+
+### Bug Fixes
+
+* **infra:** align managed login branding payload ([#136](https://github.com/nearlyheadlessarvie/conscia/issues/136)) ([178b6ca](https://github.com/nearlyheadlessarvie/conscia/commit/178b6caaf47a344c2e11c1eba4aeebbe7bd58752))
+
 ## [1.5.2](https://github.com/nearlyheadlessarvie/conscia/compare/infra/v1.5.1...infra/v1.5.2) (2026-05-28)
 
 
