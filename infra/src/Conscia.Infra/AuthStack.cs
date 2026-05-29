@@ -22,13 +22,11 @@ public class AuthStack : Stack
 {
     public IUserPool UserPool { get; }
     public IUserPoolClient UserPoolClient { get; }
-    private const string LightInk = "1f2655ff";
     private const string LightMuted = "655b63ff";
     private const string LightSurface = "fffaf4ff";
     private const string LightSurfaceBorder = "e5d9ceff";
     private const string LightFocus = "c59e4bff";
     private const string LightDivider = "e6ddd5ff";
-    private const string DarkInk = "f6efe6ff";
     private const string DarkMuted = "d3c6bcff";
     private const string DarkSurface = "171a2cff";
     private const string DarkSurfaceBorder = "353a5bff";
@@ -277,6 +275,40 @@ public class AuthStack : Stack
                 Settings = BuildManagedLoginBrandingSettings()
             });
 
+            _ = new CfnResource(this, "ManagedLoginTermsOfUse", new CfnResourceProps
+            {
+                Type = "AWS::Cognito::Terms",
+                Properties = new Dictionary<string, object>
+                {
+                    ["UserPoolId"] = UserPool.UserPoolId,
+                    ["ClientId"] = UserPoolClient.UserPoolClientId,
+                    ["TermsName"] = "terms-of-use",
+                    ["TermsSource"] = "LINK",
+                    ["Enforcement"] = "NONE",
+                    ["Links"] = new Dictionary<string, string>
+                    {
+                        ["cognito:default"] = $"https://{rootDomainName}/terms"
+                    }
+                }
+            });
+
+            _ = new CfnResource(this, "ManagedLoginPrivacyPolicy", new CfnResourceProps
+            {
+                Type = "AWS::Cognito::Terms",
+                Properties = new Dictionary<string, object>
+                {
+                    ["UserPoolId"] = UserPool.UserPoolId,
+                    ["ClientId"] = UserPoolClient.UserPoolClientId,
+                    ["TermsName"] = "privacy-policy",
+                    ["TermsSource"] = "LINK",
+                    ["Enforcement"] = "NONE",
+                    ["Links"] = new Dictionary<string, string>
+                    {
+                        ["cognito:default"] = $"https://{rootDomainName}/privacy"
+                    }
+                }
+            });
+
             _ = new ARecord(this, "ManagedLoginAliasRecord", new ARecordProps
             {
                 Zone = hostedZone,
@@ -298,7 +330,7 @@ public class AuthStack : Stack
                 Category = "FORM_LOGO",
                 ColorMode = "DYNAMIC",
                 Extension = "SVG",
-                Bytes = EncodeSvg(BuildDynamicLogoSvg())
+                Bytes = EncodeSvg(LoadManagedLoginLogoSvg())
             },
             new CfnManagedLoginBranding.AssetTypeProperty
             {
@@ -425,21 +457,6 @@ public class AuthStack : Stack
                         },
                         ["placeholderColor"] = DarkMuted
                     }
-                },
-                ["pageText"] = new Dictionary<string, object>
-                {
-                    ["lightMode"] = new Dictionary<string, object>
-                    {
-                        ["headingColor"] = LightInk,
-                        ["bodyColor"] = LightMuted,
-                        ["descriptionColor"] = LightMuted
-                    },
-                    ["darkMode"] = new Dictionary<string, object>
-                    {
-                        ["headingColor"] = DarkInk,
-                        ["bodyColor"] = DarkMuted,
-                        ["descriptionColor"] = DarkMuted
-                    }
                 }
             }
         };
@@ -448,14 +465,8 @@ public class AuthStack : Stack
     private static string EncodeSvg(string svg) =>
         Convert.ToBase64String(Encoding.UTF8.GetBytes(svg));
 
-    private static string BuildDynamicLogoSvg() =>
-        """
-        <svg width="160" height="160" viewBox="0 0 160 160" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <rect x="16" y="16" width="128" height="128" rx="36" fill="#FFF8EF"/>
-          <path d="M78 40c-17 14-29 33-31 55 11-11 24-18 40-22-5 16-6 31-1 47 22-17 32-40 31-68-10-8-24-12-39-12Z" fill="#24346F"/>
-          <path d="M98 47c13 11 21 26 22 46-9-6-18-10-29-12 3 10 3 20-1 31 16-11 25-28 26-49-5-8-11-13-18-16Z" fill="#E0AE52"/>
-        </svg>
-        """;
+    private static string LoadManagedLoginLogoSvg() =>
+        File.ReadAllText(AssetPathResolver.ResolveRepositoryFile("web/public/images/app_icon.svg"));
 
     private static string BuildPageBackgroundSvg(
         string topColor,

@@ -122,6 +122,7 @@ public class StackTests
         template.ResourceCountIs("AWS::Cognito::UserPoolDomain", 1);
         template.ResourceCountIs("AWS::Cognito::UserPoolIdentityProvider", 2);
         template.ResourceCountIs("AWS::Cognito::ManagedLoginBranding", 1);
+        template.ResourceCountIs("AWS::Cognito::Terms", 2);
         template.HasResourceProperties("AWS::Cognito::UserPool", new Dictionary<string, object>
         {
             ["UserPoolName"] = "conscia-users",
@@ -224,11 +225,41 @@ public class StackTests
                     {
                         ["borderRadius"] = 28.0
                     }),
-                    ["pageText"] = Match.AnyValue(),
                     ["input"] = Match.AnyValue()
                 })
             })
         }));
+        template.HasResourceProperties("AWS::Cognito::Terms", Match.ObjectLike(new Dictionary<string, object>
+        {
+            ["TermsName"] = "terms-of-use",
+            ["TermsSource"] = "LINK",
+            ["Enforcement"] = "NONE",
+            ["Links"] = Match.ObjectLike(new Dictionary<string, object>
+            {
+                ["cognito:default"] = "https://getconscia.com/terms"
+            })
+        }));
+        template.HasResourceProperties("AWS::Cognito::Terms", Match.ObjectLike(new Dictionary<string, object>
+        {
+            ["TermsName"] = "privacy-policy",
+            ["TermsSource"] = "LINK",
+            ["Enforcement"] = "NONE",
+            ["Links"] = Match.ObjectLike(new Dictionary<string, object>
+            {
+                ["cognito:default"] = "https://getconscia.com/privacy"
+            })
+        }));
+        var brandingResources = template.FindResources("AWS::Cognito::ManagedLoginBranding");
+        var branding = Assert.Single(brandingResources);
+        var brandingProperties = Assert.IsAssignableFrom<IDictionary<string, object>>(branding.Value["Properties"]);
+        var settings = Assert.IsAssignableFrom<IDictionary<string, object>>(brandingProperties["Settings"]);
+        var componentClasses = Assert.IsAssignableFrom<IDictionary<string, object>>(settings["componentClasses"]);
+        Assert.DoesNotContain("pageText", componentClasses.Keys);
+        var assets = Assert.IsAssignableFrom<object[]>(brandingProperties["Assets"]);
+        var formLogoAsset = assets
+            .Select(Assert.IsAssignableFrom<IDictionary<string, object>>)
+            .Single(asset => string.Equals(asset["Category"]?.ToString(), "FORM_LOGO", StringComparison.Ordinal));
+        Assert.Equal(LoadAppIconBase64(), formLogoAsset["Bytes"]?.ToString());
         template.HasResourceProperties("AWS::Lambda::Function", Match.ObjectLike(new Dictionary<string, object>
         {
             ["FunctionName"] = "conscia-cognito-pre-signup-linker"
@@ -772,5 +803,28 @@ public class StackTests
         Directory.CreateDirectory(path);
         File.WriteAllText(Path.Combine(path, "placeholder.txt"), name);
         return path;
+    }
+
+    private static string LoadAppIconBase64()
+    {
+        var repoRoot = FindRepoRoot();
+        var iconPath = Path.Combine(repoRoot, "web", "public", "images", "app_icon.svg");
+        return Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(File.ReadAllText(iconPath)));
+    }
+
+    private static string FindRepoRoot()
+    {
+        var current = new DirectoryInfo(AppContext.BaseDirectory);
+        while (current is not null)
+        {
+            if (File.Exists(Path.Combine(current.FullName, "AGENTS.md")))
+            {
+                return current.FullName;
+            }
+
+            current = current.Parent;
+        }
+
+        throw new InvalidOperationException("Could not locate the repository root from the test output directory.");
     }
 }
