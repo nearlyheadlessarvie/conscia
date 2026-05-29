@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:typed_data';
 
 import 'package:conscia_app/providers/budget_providers.dart';
 import 'package:conscia_app/providers/category_frequency_provider.dart';
@@ -162,6 +163,22 @@ Future<void> _pumpReceiptRouterAppWithPreviousRoute(WidgetTester tester) async {
 }
 
 void main() {
+  test('receipt upload metadata treats converted HEIC bytes as JPEG', () {
+    final image = XFile.fromData(
+      Uint8List.fromList([0xFF, 0xD8, 0xFF, 0xE0]),
+      mimeType: 'image/heic',
+      path: 'receipt.heic',
+    );
+
+    final metadata = receiptUploadMetadata(
+      image,
+      Uint8List.fromList([0xFF, 0xD8, 0xFF, 0xE0]),
+    );
+
+    expect(metadata.filename, 'receipt.jpg');
+    expect(metadata.contentType.mimeType, 'image/jpeg');
+  });
+
   testWidgets('premium receipt scanner uses redesigned shared surface',
       (tester) async {
     SharedPreferences.setMockInitialValues({

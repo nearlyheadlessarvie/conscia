@@ -21,6 +21,27 @@ import 'widgets/premium_gate.dart';
 
 typedef ReceiptImagePicker = Future<XFile?> Function(ImageSource source);
 
+({String filename, DioMediaType contentType}) receiptUploadMetadata(
+  XFile image,
+  List<int> bytes,
+) {
+  final detectedType = _detectReceiptUploadType(bytes) ??
+      _receiptUploadTypeForMime(image.mimeType) ??
+      _receiptUploadTypeForFilename(image.name);
+
+  if (detectedType == null) {
+    return (
+      filename: image.name,
+      contentType: DioMediaType('application', 'octet-stream'),
+    );
+  }
+
+  return (
+    filename: _filenameWithExtension(image.name, detectedType.extension),
+    contentType: DioMediaType.parse(detectedType.mimeType),
+  );
+}
+
 final receiptImagePickerProvider = Provider<ReceiptImagePicker>((ref) {
   final picker = ImagePicker();
   return (source) => picker.pickImage(
@@ -102,10 +123,12 @@ class _ReceiptScannerScreenState extends ConsumerState<ReceiptScannerScreen> {
     try {
       final dio = ref.read(dioProvider);
       final bytes = await image.readAsBytes();
+      final metadata = receiptUploadMetadata(image, bytes);
       final formData = FormData.fromMap({
         'image': MultipartFile.fromBytes(
           bytes,
-          filename: image.name,
+          filename: metadata.filename,
+          contentType: metadata.contentType,
         ),
       });
 
@@ -249,6 +272,138 @@ class _ReceiptScannerScreenState extends ConsumerState<ReceiptScannerScreen> {
       ),
     );
   }
+}
+
+class _ReceiptUploadType {
+  const _ReceiptUploadType(this.mimeType, this.extension);
+
+  final String mimeType;
+  final String extension;
+}
+
+const _jpegReceiptUploadType = _ReceiptUploadType('image/jpeg', 'jpg');
+const _pngReceiptUploadType = _ReceiptUploadType('image/png', 'png');
+const _pdfReceiptUploadType = _ReceiptUploadType('application/pdf', 'pdf');
+const _tiffReceiptUploadType = _ReceiptUploadType('image/tiff', 'tif');
+const _heicReceiptUploadType = _ReceiptUploadType('image/heic', 'heic');
+
+_ReceiptUploadType? _detectReceiptUploadType(List<int> bytes) {
+  if (bytes.length >= 3 &&
+      bytes[0] == 0xFF &&
+      bytes[1] == 0xD8 &&
+      bytes[2] == 0xFF) {
+    return _jpegReceiptUploadType;
+  }
+
+  if (bytes.length >= 8 &&
+      bytes[0] == 0x89 &&
+      bytes[1] == 0x50 &&
+      bytes[2] == 0x4E &&
+      bytes[3] == 0x47 &&
+      bytes[4] == 0x0D &&
+      bytes[5] == 0x0A &&
+      bytes[6] == 0x1A &&
+      bytes[7] == 0x0A) {
+    return _pngReceiptUploadType;
+  }
+
+  if (bytes.length >= 4 &&
+      bytes[0] == 0x25 &&
+      bytes[1] == 0x50 &&
+      bytes[2] == 0x44 &&
+      bytes[3] == 0x46) {
+    return _pdfReceiptUploadType;
+  }
+
+  if (bytes.length >= 4 &&
+      ((bytes[0] == 0x49 &&
+              bytes[1] == 0x49 &&
+              bytes[2] == 0x2A &&
+              bytes[3] == 0x00) ||
+          (bytes[0] == 0x4D &&
+              bytes[1] == 0x4D &&
+              bytes[2] == 0x00 &&
+              bytes[3] == 0x2A))) {
+    return _tiffReceiptUploadType;
+  }
+
+  if (bytes.length >= 12 &&
+      bytes[4] == 0x66 &&
+      bytes[5] == 0x74 &&
+      bytes[6] == 0x79 &&
+      bytes[7] == 0x70) {
+    final brand = String.fromCharCodes(bytes.sublist(8, 12)).toLowerCase();
+    if (brand == 'heic' ||
+        brand == 'heix' ||
+        brand == 'hevc' ||
+        brand == 'hevx' ||
+        brand == 'heif' ||
+        brand == 'mif1') {
+      return _heicReceiptUploadType;
+    }
+  }
+
+  return null;
+}
+
+_ReceiptUploadType? _receiptUploadTypeForMime(String? mimeType) {
+  switch (mimeType?.toLowerCase()) {
+    case 'image/jpeg':
+    case 'image/jpg':
+      return _jpegReceiptUploadType;
+    case 'image/png':
+      return _pngReceiptUploadType;
+    case 'application/pdf':
+      return _pdfReceiptUploadType;
+    case 'image/tiff':
+    case 'image/tif':
+      return _tiffReceiptUploadType;
+    case 'image/heic':
+    case 'image/heif':
+      return _heicReceiptUploadType;
+    default:
+      return null;
+  }
+}
+
+_ReceiptUploadType? _receiptUploadTypeForFilename(String filename) {
+  final lower = filename.toLowerCase();
+  if (lower.endsWith('.jpg') || lower.endsWith('.jpeg')) {
+    return _jpegReceiptUploadType;
+  }
+  if (lower.endsWith('.png')) {
+    return _pngReceiptUploadType;
+  }
+  if (lower.endsWith('.pdf')) {
+    return _pdfReceiptUploadType;
+  }
+  if (lower.endsWith('.tif') || lower.endsWith('.tiff')) {
+    return _tiffReceiptUploadType;
+  }
+  if (lower.endsWith('.heic') || lower.endsWith('.heif')) {
+    return _heicReceiptUploadType;
+  }
+
+  return null;
+}
+
+String _filenameWithExtension(String filename, String extension) {
+  final trimmed = filename.trim();
+  if (trimmed.isEmpty) return 'receipt.$extension';
+
+  final slashIndex = trimmed.lastIndexOf('/');
+  final backslashIndex = trimmed.lastIndexOf(r'\');
+  final separatorIndex =
+      slashIndex > backslashIndex ? slashIndex : backslashIndex;
+  final basename =
+      separatorIndex >= 0 ? trimmed.substring(separatorIndex + 1) : trimmed;
+  final dotIndex = basename.lastIndexOf('.');
+
+  if (dotIndex <= 0) {
+    return '$basename.$extension';
+  }
+
+  return '${basename.substring(0, dotIndex)}.$extension';
 }
 
 class _ReceiptScanHero extends StatelessWidget {
