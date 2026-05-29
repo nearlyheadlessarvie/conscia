@@ -335,6 +335,12 @@ public class StackTests
         Assert.NotNull(stack.ApiLambda);
 
         var template = Template.FromStack(stack);
+        template.HasParameter("AdminBootstrapEmails", new Dictionary<string, object>
+        {
+            ["Type"] = "String",
+            ["Default"] = string.Empty,
+            ["NoEcho"] = true
+        });
         template.ResourceCountIs("AWS::Lambda::Function", 1);
         template.ResourceCountIs("AWS::EC2::SecurityGroup", 0);
         template.HasResourceProperties("AWS::IAM::Policy", Match.ObjectLike(new Dictionary<string, object>
@@ -361,6 +367,7 @@ public class StackTests
                     ["AWS__DynamoDB__TransactionsTable"] = Match.AnyValue(),
                     ["Firebase__AdminServiceAccountJsonSecretId"] = "test/firebase-admin-service-account-json",
                     ["GooglePlay__ServiceAccountJsonSecretId"] = "test/google-play-service-account-json",
+                    ["AdminBootstrap__Emails"] = Match.AnyValue(),
                     ["InviteEmail__FromEmail"] = "invites@getconscia.com"
                 })
             }
@@ -371,6 +378,8 @@ public class StackTests
         var environment = (IDictionary<string, object>)properties["Environment"];
         var variables = (IDictionary<string, object>)environment["Variables"];
         Assert.DoesNotContain("Auth__AppJwtSigningKeySecretId", variables.Keys.Cast<string>());
+        Assert.DoesNotContain("AdminBootstrap__EmailsSecretId", variables.Keys.Cast<string>());
+        Assert.DoesNotContain("AdminBootstrap__Emails__0", variables.Keys.Cast<string>());
     }
 
     [Fact]
