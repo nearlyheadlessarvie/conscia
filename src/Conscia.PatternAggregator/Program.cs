@@ -25,6 +25,8 @@ services.AddSingleton<IAmazonDynamoDB>(_ =>
 services.AddScoped<IPurchasePatternRepository, PurchasePatternRepository>();
 services.AddScoped<IWeeklyInsightsRepository, WeeklyInsightsRepository>();
 services.AddScoped<ITransactionRepository, TransactionRepository>();
+services.AddScoped<IBudgetRepository, BudgetRepository>();
+services.AddScoped<IMonthlyCategorySpendRepository, MonthlyCategorySpendRepository>();
 services.AddScoped<IBehavioralInsightsService, BehavioralInsightsService>();
 services.AddScoped<PatternAggregatorService>();
 
