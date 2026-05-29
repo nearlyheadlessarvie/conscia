@@ -79,13 +79,24 @@ Future<void> _pumpSecurityScreen(
 }
 
 void main() {
-  testWidgets('security screen sets an account password', (tester) async {
+  testWidgets('security screen opens a password sheet before saving', (
+    tester,
+  ) async {
     SharedPreferences.setMockInitialValues({});
     final prefs = await SharedPreferences.getInstance();
     final auth = _RecordingAuthService();
 
     await _pumpSecurityScreen(tester, prefs: prefs, authService: auth);
     await tester.pumpAndSettle();
+
+    expect(find.byType(TextField), findsNothing);
+    expect(find.text('Change Password'), findsOneWidget);
+
+    await tester.tap(find.text('Change Password'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Change password'), findsOneWidget);
+    expect(find.byType(TextField), findsNWidgets(2));
 
     await tester.enterText(find.byType(TextField).at(0), 'StrongPass123');
     await tester.enterText(find.byType(TextField).at(1), 'StrongPass123');

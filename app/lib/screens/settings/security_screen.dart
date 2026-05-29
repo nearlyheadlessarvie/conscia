@@ -12,6 +12,7 @@ import '../../providers/passkey_provider.dart';
 import '../../providers/user_provider.dart';
 import '../../services/passkey_service.dart';
 import '../../widgets/conscia_app_bar.dart';
+import '../../widgets/conscia_bottom_sheet.dart';
 import '../../widgets/editorial_section_header.dart';
 import '../../widgets/floating_label_text_field.dart';
 
@@ -24,21 +25,12 @@ class SecurityScreen extends ConsumerStatefulWidget {
 
 class _SecurityScreenState extends ConsumerState<SecurityScreen> {
   final _appBarScrollProgress = ValueNotifier<double>(0);
-  final _passwordController = TextEditingController();
-  final _confirmPasswordController = TextEditingController();
 
-  bool _obscurePassword = true;
-  bool _obscureConfirm = true;
-  bool _isSavingPassword = false;
   bool _isRegisteringPasskey = false;
-  String? _passwordError;
-  String? _confirmPasswordError;
 
   @override
   void dispose() {
     _appBarScrollProgress.dispose();
-    _passwordController.dispose();
-    _confirmPasswordController.dispose();
     super.dispose();
   }
 
@@ -52,53 +44,19 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen> {
     return false;
   }
 
-  String? _validatePassword(String value) {
-    if (value.isEmpty) return 'Password is required';
-    if (value.length < 8) return 'At least 8 characters';
-    if (!RegExp(r'[A-Z]').hasMatch(value)) return 'Include 1 uppercase letter';
-    if (!RegExp(r'[0-9]').hasMatch(value)) return 'Include 1 number';
-    return null;
-  }
+  Future<void> _showPasswordSheet() async {
+    final updated = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      backgroundColor: Theme.of(context).appColors.paper,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      builder: (context) => const _PasswordSheet(),
+    );
 
-  String? _validateConfirmPassword(String value) {
-    if (value != _passwordController.text) return 'Passwords do not match';
-    return null;
-  }
-
-  void _clearPasswordErrors() {
-    if (_passwordError != null || _confirmPasswordError != null) {
-      setState(() {
-        _passwordError = null;
-        _confirmPasswordError = null;
-      });
-    }
-  }
-
-  Future<void> _savePassword() async {
-    final passwordError = _validatePassword(_passwordController.text);
-    final confirmError =
-        _validateConfirmPassword(_confirmPasswordController.text);
-    if (passwordError != null || confirmError != null) {
-      setState(() {
-        _passwordError = passwordError;
-        _confirmPasswordError = confirmError;
-      });
-      return;
-    }
-
-    setState(() {
-      _isSavingPassword = true;
-      _passwordError = null;
-      _confirmPasswordError = null;
-    });
-
-    try {
-      await ref.read(authServiceProvider).setPassword(
-            _passwordController.text,
-          );
-      _passwordController.clear();
-      _confirmPasswordController.clear();
-      if (!mounted) return;
+    if (updated == true && mounted) {
       ScaffoldMessenger.of(context)
         ..clearSnackBars()
         ..showSnackBar(
@@ -106,16 +64,6 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen> {
             content: Text('Password updated. You can now sign in with email.'),
           ),
         );
-    } catch (e, s) {
-      if (!mounted) return;
-      final error = AppError.from(e, stackTrace: s);
-      ScaffoldMessenger.of(context)
-        ..clearSnackBars()
-        ..showSnackBar(SnackBar(content: Text(error.userMessage)));
-    } finally {
-      if (mounted) {
-        setState(() => _isSavingPassword = false);
-      }
     }
   }
 
@@ -193,82 +141,15 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen> {
                       EditorialSectionHeader(
                         title: 'Password',
                         subtitle:
-                            'Add or replace the password for this account.',
+                            'Control email password sign-in for this account.',
                       ),
                       const SizedBox(height: 10),
-                      FloatingLabelTextField(
-                        controller: _passwordController,
-                        label: 'New password',
-                        prefix: AppIcons.icon(
-                          AppIconKey.password,
-                          color: colors.mutedInk,
-                          size: 20,
-                        ),
-                        obscureText: _obscurePassword,
-                        textInputAction: TextInputAction.next,
-                        onChanged: (_) => _clearPasswordErrors(),
-                        errorText: _passwordError,
-                        enableSuggestions: false,
-                        autocorrect: false,
-                        trailing: IconButton(
-                          icon: AppIcons.icon(
-                            _obscurePassword
-                                ? AppIconKey.visibility
-                                : AppIconKey.visibilityOff,
-                            color: _obscurePassword
-                                ? colors.mutedInk
-                                : colors.deepNavy,
-                          ),
-                          onPressed: () => setState(
-                            () => _obscurePassword = !_obscurePassword,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      FloatingLabelTextField(
-                        controller: _confirmPasswordController,
-                        label: 'Confirm password',
-                        prefix: AppIcons.icon(
-                          AppIconKey.password,
-                          color: colors.mutedInk,
-                          size: 20,
-                        ),
-                        obscureText: _obscureConfirm,
-                        textInputAction: TextInputAction.done,
-                        onSubmitted: (_) => _savePassword(),
-                        onChanged: (_) => _clearPasswordErrors(),
-                        errorText: _confirmPasswordError,
-                        enableSuggestions: false,
-                        autocorrect: false,
-                        trailing: IconButton(
-                          icon: AppIcons.icon(
-                            _obscureConfirm
-                                ? AppIconKey.visibility
-                                : AppIconKey.visibilityOff,
-                            color: _obscureConfirm
-                                ? colors.mutedInk
-                                : colors.deepNavy,
-                          ),
-                          onPressed: () => setState(
-                            () => _obscureConfirm = !_obscureConfirm,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      SizedBox(
-                        height: 48,
-                        child: FilledButton(
-                          onPressed: _isSavingPassword ? null : _savePassword,
-                          child: _isSavingPassword
-                              ? const SizedBox(
-                                  width: 20,
-                                  height: 20,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                  ),
-                                )
-                              : const Text('Save password'),
-                        ),
+                      _SecurityMethodRow(
+                        icon: AppIconKey.password,
+                        title: 'Change Password',
+                        subtitle:
+                            'Set or replace the password used for email sign-in',
+                        onTap: _showPasswordSheet,
                       ),
                       const SizedBox(height: 28),
                       EditorialSectionHeader(
@@ -377,6 +258,172 @@ class _SecurityHero extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _PasswordSheet extends ConsumerStatefulWidget {
+  const _PasswordSheet();
+
+  @override
+  ConsumerState<_PasswordSheet> createState() => _PasswordSheetState();
+}
+
+class _PasswordSheetState extends ConsumerState<_PasswordSheet> {
+  final _passwordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
+
+  bool _obscurePassword = true;
+  bool _obscureConfirm = true;
+  bool _isSaving = false;
+  String? _passwordError;
+  String? _confirmPasswordError;
+
+  @override
+  void dispose() {
+    _passwordController.dispose();
+    _confirmPasswordController.dispose();
+    super.dispose();
+  }
+
+  String? _validatePassword(String value) {
+    if (value.isEmpty) return 'Password is required';
+    if (value.length < 8) return 'At least 8 characters';
+    if (!RegExp(r'[A-Z]').hasMatch(value)) return 'Include 1 uppercase letter';
+    if (!RegExp(r'[0-9]').hasMatch(value)) return 'Include 1 number';
+    return null;
+  }
+
+  String? _validateConfirmPassword(String value) {
+    if (value != _passwordController.text) return 'Passwords do not match';
+    return null;
+  }
+
+  void _clearErrors() {
+    if (_passwordError != null || _confirmPasswordError != null) {
+      setState(() {
+        _passwordError = null;
+        _confirmPasswordError = null;
+      });
+    }
+  }
+
+  Future<void> _savePassword() async {
+    final passwordError = _validatePassword(_passwordController.text);
+    final confirmError =
+        _validateConfirmPassword(_confirmPasswordController.text);
+    if (passwordError != null || confirmError != null) {
+      setState(() {
+        _passwordError = passwordError;
+        _confirmPasswordError = confirmError;
+      });
+      return;
+    }
+
+    setState(() {
+      _isSaving = true;
+      _passwordError = null;
+      _confirmPasswordError = null;
+    });
+
+    try {
+      await ref.read(authServiceProvider).setPassword(
+            _passwordController.text,
+          );
+      if (!mounted) return;
+      Navigator.of(context).pop(true);
+    } catch (e, s) {
+      if (!mounted) return;
+      final error = AppError.from(e, stackTrace: s);
+      ScaffoldMessenger.of(context)
+        ..clearSnackBars()
+        ..showSnackBar(SnackBar(content: Text(error.userMessage)));
+    } finally {
+      if (mounted) {
+        setState(() => _isSaving = false);
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).appColors;
+
+    return ConsciaBottomSheetScaffold(
+      title: 'Change password',
+      subtitle:
+          'Choose the password this signed-in account should use for email sign-in.',
+      child: Column(
+        children: [
+          FloatingLabelTextField(
+            controller: _passwordController,
+            label: 'New password',
+            prefix: AppIcons.icon(
+              AppIconKey.password,
+              color: colors.mutedInk,
+              size: 20,
+            ),
+            obscureText: _obscurePassword,
+            textInputAction: TextInputAction.next,
+            onChanged: (_) => _clearErrors(),
+            errorText: _passwordError,
+            enableSuggestions: false,
+            autocorrect: false,
+            trailing: IconButton(
+              icon: AppIcons.icon(
+                _obscurePassword
+                    ? AppIconKey.visibility
+                    : AppIconKey.visibilityOff,
+                color: _obscurePassword ? colors.mutedInk : colors.deepNavy,
+              ),
+              onPressed: () => setState(
+                () => _obscurePassword = !_obscurePassword,
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          FloatingLabelTextField(
+            controller: _confirmPasswordController,
+            label: 'Confirm password',
+            prefix: AppIcons.icon(
+              AppIconKey.password,
+              color: colors.mutedInk,
+              size: 20,
+            ),
+            obscureText: _obscureConfirm,
+            textInputAction: TextInputAction.done,
+            onSubmitted: (_) => _savePassword(),
+            onChanged: (_) => _clearErrors(),
+            errorText: _confirmPasswordError,
+            enableSuggestions: false,
+            autocorrect: false,
+            trailing: IconButton(
+              icon: AppIcons.icon(
+                _obscureConfirm
+                    ? AppIconKey.visibility
+                    : AppIconKey.visibilityOff,
+                color: _obscureConfirm ? colors.mutedInk : colors.deepNavy,
+              ),
+              onPressed: () => setState(
+                () => _obscureConfirm = !_obscureConfirm,
+              ),
+            ),
+          ),
+        ],
+      ),
+      footer: SizedBox(
+        height: 48,
+        child: FilledButton(
+          onPressed: _isSaving ? null : _savePassword,
+          child: _isSaving
+              ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Text('Save password'),
+        ),
       ),
     );
   }
