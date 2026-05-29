@@ -36,6 +36,10 @@ class _FakeAuthService extends AuthService {
   String? lastConfirmedEmail;
   String? lastConfirmationCode;
   String? lastResentEmail;
+  String? lastPasswordResetEmail;
+  String? lastPasswordResetConfirmEmail;
+  String? lastPasswordResetCode;
+  String? lastPasswordResetPassword;
   String? lastRefreshToken;
   int registerCount = 0;
   int loginCount = 0;
@@ -73,6 +77,24 @@ class _FakeAuthService extends AuthService {
       requiresConfirmation: true,
       email: email,
     );
+  }
+
+  @override
+  Future<AuthConfirmationResult> startPasswordReset(String email) async {
+    lastPasswordResetEmail = email;
+    return AuthConfirmationResult(success: true, email: email);
+  }
+
+  @override
+  Future<AuthConfirmationResult> confirmPasswordReset(
+    String email,
+    String confirmationCode,
+    String password,
+  ) async {
+    lastPasswordResetConfirmEmail = email;
+    lastPasswordResetCode = confirmationCode;
+    lastPasswordResetPassword = password;
+    return AuthConfirmationResult(success: true, email: email);
   }
 
   @override
@@ -355,6 +377,59 @@ void main() {
     await notifier.resendConfirmation();
 
     expect(service.lastResentEmail, 'new@example.com');
+  });
+
+  test('startPasswordReset sends the reset email through auth service',
+      () async {
+    final service = _FakeAuthService(
+      const AuthTokens(
+        accessToken: 'verified.access.token',
+        refreshToken: 'verified-refresh-token',
+        userId: 'user-1',
+      ),
+    );
+    final notifier = AuthNotifier(
+      service,
+      _FakeSecureStorage(),
+      autoRestoreSession: false,
+    );
+
+    await notifier.startPasswordReset('Reset@Example.com ');
+
+    expect(service.lastPasswordResetEmail, 'reset@example.com');
+    expect(notifier.state.status, AuthStatus.unauthenticated);
+    expect(notifier.state.isLoading, isFalse);
+  });
+
+  test('confirmPasswordReset confirms reset then signs in with new password',
+      () async {
+    final service = _FakeAuthService(
+      const AuthTokens(
+        accessToken: 'reset.access.token',
+        refreshToken: 'reset-refresh-token',
+        userId: 'user-1',
+      ),
+    );
+    final storage = _FakeSecureStorage();
+    final notifier = AuthNotifier(
+      service,
+      storage,
+      autoRestoreSession: false,
+    );
+
+    await notifier.confirmPasswordReset(
+      'Reset@Example.com ',
+      '654321',
+      'FreshPass123',
+    );
+
+    expect(service.lastPasswordResetConfirmEmail, 'reset@example.com');
+    expect(service.lastPasswordResetCode, '654321');
+    expect(service.lastPasswordResetPassword, 'FreshPass123');
+    expect(service.loginCount, 1);
+    expect(notifier.state.status, AuthStatus.authenticated);
+    expect(notifier.state.accessToken, 'reset.access.token');
+    expect(await storage.read(key: 'access_token'), 'reset.access.token');
   });
 
   test('login requiring confirmation stores pending email without tokens',

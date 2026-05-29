@@ -290,6 +290,63 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
   }
 
+  Future<void> startPasswordReset(String email) async {
+    final normalizedEmail = _normalizeEmail(email);
+    if (normalizedEmail == null) {
+      throw Exception('Email is required');
+    }
+
+    state = state.copyWith(
+      isLoading: true,
+      isRestoringSession: false,
+      error: null,
+    );
+    try {
+      await _authService.startPasswordReset(normalizedEmail);
+      await saveLastEmail(normalizedEmail);
+      state = state.copyWith(
+        isLoading: false,
+        isRestoringSession: false,
+        error: null,
+      );
+    } catch (e, s) {
+      final error = AppError.from(e, stackTrace: s);
+      state = state.copyWith(isLoading: false, error: error.userMessage);
+      throw error;
+    }
+  }
+
+  Future<void> confirmPasswordReset(
+    String email,
+    String confirmationCode,
+    String password,
+  ) async {
+    final normalizedEmail = _normalizeEmail(email);
+    if (normalizedEmail == null) {
+      throw Exception('Email is required');
+    }
+
+    state = state.copyWith(
+      isLoading: true,
+      isRestoringSession: false,
+      error: null,
+    );
+    try {
+      await _authService.confirmPasswordReset(
+        normalizedEmail,
+        confirmationCode,
+        password,
+      );
+      final tokens = await _authService.login(normalizedEmail, password);
+      await saveLastEmail(normalizedEmail);
+      await _setAuthenticated(tokens);
+    } catch (e, s) {
+      final error = AppError.from(e, stackTrace: s);
+      state = state.copyWith(isLoading: false, error: error.userMessage);
+      throw error;
+    }
+  }
+
   void cancelPendingConfirmation() {
     _pendingPassword = null;
     state = const AuthState();
