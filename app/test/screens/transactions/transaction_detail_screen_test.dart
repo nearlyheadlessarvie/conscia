@@ -15,8 +15,10 @@ import 'package:conscia_app/screens/assistant/widgets/ai_message_bubble.dart';
 import 'package:conscia_app/services/auth_service.dart';
 import 'package:conscia_app/services/ai_service.dart';
 import 'package:conscia_app/services/budget_service.dart';
+import 'package:conscia_app/services/recurring_service.dart';
 import 'package:conscia_app/services/transaction_service.dart';
 import 'package:conscia_app/services/user_service.dart';
+import 'package:conscia_app/models/recurring_schedule.dart';
 import 'package:conscia_app/widgets/editorial_sticky_header.dart';
 import 'package:conscia_app/widgets/feeling_choice_button.dart';
 import 'package:conscia_app/widgets/thinking_cloud.dart';
@@ -33,11 +35,13 @@ class _RecordingTransactionService extends TransactionService {
   _RecordingTransactionService() : super(Dio());
 
   String? deletedId;
+  String? deletedRecurringSeriesId;
   Transaction? transaction;
   Transaction? updatedTransaction;
   CreateTransactionDto? updateDto;
   String? updatedRegretId;
   int? updatedRegretLevel;
+  Completer<void>? deleteCompleter;
 
   @override
   Future<Transaction> getById(String id) async {
@@ -57,12 +61,41 @@ class _RecordingTransactionService extends TransactionService {
   @override
   Future<void> delete(String id) async {
     deletedId = id;
+    await deleteCompleter?.future;
+  }
+
+  @override
+  Future<void> deleteRecurringSeries(String scheduleId) async {
+    deletedRecurringSeriesId = scheduleId;
+    await deleteCompleter?.future;
   }
 
   @override
   Future<void> updateRegret(String id, int regretLevel) async {
     updatedRegretId = id;
     updatedRegretLevel = regretLevel;
+  }
+}
+
+class _RecordingRecurringService extends RecurringService {
+  _RecordingRecurringService() : super(Dio());
+
+  String? stoppedFutureId;
+
+  @override
+  Future<RecurringSchedule> stopFuture(String id) async {
+    stoppedFutureId = id;
+    return RecurringSchedule(
+      id: id,
+      type: 'expense',
+      amount: 100,
+      currencyCode: 'PHP',
+      category: 'Bills',
+      cadence: 'Monthly',
+      startDate: DateTime(2026, 5, 1),
+      nextRunAt: DateTime(2026, 6, 1),
+      isActive: false,
+    );
   }
 }
 
@@ -715,6 +748,213 @@ void main() {
     expect(updatedBudget.spent, 20);
     expect(updatedBudget.percentage, 0.2);
     expect(transactionService.deletedId, 'tx-1');
+  });
+
+  testWidgets('recurring transaction delete opens recurrence choices', (
+    tester,
+  ) async {
+    final transaction = Transaction(
+      id: 'tx-recurring-delete',
+      amount: 2399,
+      currencyCode: 'PHP',
+      category: 'Bills',
+      description: 'PLDT',
+      type: 'expense',
+      date: DateTime(2026, 5, 25),
+      recurringScheduleId: 'schedule-1',
+      recurringOccurrenceDate: DateTime(2026, 5, 25),
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          transactionDetailProvider
+              .overrideWith((ref, id) async => transaction),
+          sharedPreferencesProvider.overrideWithValue(prefs),
+        ],
+        child: const MaterialApp(
+          home: TransactionDetailScreen(transactionId: 'tx-recurring-delete'),
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Transaction actions'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Delete transaction'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Recurring delete options'), findsOneWidget);
+    expect(find.text('Delete this instance'), findsOneWidget);
+    expect(find.text('Delete all instances'), findsOneWidget);
+    expect(find.text('Stop future recurrence'), findsOneWidget);
+  });
+
+  testWidgets('recurring delete all removes the whole series', (
+    tester,
+  ) async {
+    final transaction = Transaction(
+      id: 'tx-recurring-series',
+      amount: 2399,
+      currencyCode: 'PHP',
+      category: 'Bills',
+      description: 'PLDT',
+      type: 'expense',
+      date: DateTime(2026, 5, 25),
+      recurringScheduleId: 'schedule-1',
+      recurringOccurrenceDate: DateTime(2026, 5, 25),
+    );
+    final transactionService = _RecordingTransactionService();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          transactionServiceProvider.overrideWithValue(transactionService),
+          transactionDetailProvider
+              .overrideWith((ref, id) async => transaction),
+          sharedPreferencesProvider.overrideWithValue(prefs),
+        ],
+        child: MaterialApp.router(
+          routerConfig: GoRouter(
+            initialLocation: '/transactions/tx-recurring-series',
+            routes: [
+              GoRoute(
+                path: '/',
+                builder: (_, __) => const Scaffold(body: Text('Root')),
+                routes: [
+                  GoRoute(
+                    path: 'transactions/:id',
+                    builder: (_, state) => TransactionDetailScreen(
+                      transactionId: state.pathParameters['id']!,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Transaction actions'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Delete transaction'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Delete all instances'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, 'Delete all instances'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(transactionService.deletedRecurringSeriesId, 'schedule-1');
+  });
+
+  testWidgets('recurring stop future deactivates schedule without deleting row',
+      (
+    tester,
+  ) async {
+    final transaction = Transaction(
+      id: 'tx-recurring-stop',
+      amount: 2399,
+      currencyCode: 'PHP',
+      category: 'Bills',
+      description: 'PLDT',
+      type: 'expense',
+      date: DateTime(2026, 5, 25),
+      recurringScheduleId: 'schedule-1',
+      recurringOccurrenceDate: DateTime(2026, 5, 25),
+    );
+    final recurringService = _RecordingRecurringService();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          recurringServiceProvider.overrideWithValue(recurringService),
+          transactionDetailProvider
+              .overrideWith((ref, id) async => transaction),
+          sharedPreferencesProvider.overrideWithValue(prefs),
+        ],
+        child: const MaterialApp(
+          home: TransactionDetailScreen(transactionId: 'tx-recurring-stop'),
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Transaction actions'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Delete transaction'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Stop future recurrence'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, 'Stop recurrence'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(recurringService.stoppedFutureId, 'schedule-1');
+    expect(find.text('PLDT'), findsOneWidget);
+  });
+
+  testWidgets('pending transaction delete does not render inline loader', (
+    tester,
+  ) async {
+    final transaction = Transaction(
+      id: 'tx-slow-delete',
+      amount: 12.5,
+      currencyCode: 'USD',
+      category: 'Coffee',
+      description: 'Morning Brew',
+      type: 'expense',
+      date: DateTime(2026, 5, 7, 9, 0),
+    );
+    final deleteCompleter = Completer<void>();
+    final transactionService = _RecordingTransactionService()
+      ..deleteCompleter = deleteCompleter;
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          transactionServiceProvider.overrideWithValue(transactionService),
+          transactionDetailProvider
+              .overrideWith((ref, id) async => transaction),
+          sharedPreferencesProvider.overrideWithValue(prefs),
+        ],
+        child: MaterialApp.router(
+          routerConfig: GoRouter(
+            initialLocation: '/transactions/tx-slow-delete',
+            routes: [
+              GoRoute(
+                path: '/',
+                builder: (_, __) => const Scaffold(body: Text('Root')),
+                routes: [
+                  GoRoute(
+                    path: 'transactions/:id',
+                    builder: (_, state) => TransactionDetailScreen(
+                      transactionId: state.pathParameters['id']!,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Transaction actions'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Delete transaction'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, 'Delete transaction'));
+    await tester.pump();
+
+    expect(transactionService.deletedId, 'tx-slow-delete');
+    expect(find.byType(CircularProgressIndicator), findsNothing);
+
+    deleteCompleter.complete();
+    await tester.pumpAndSettle();
   });
 
   testWidgets('detail screen does not render matching in-app alerts',

@@ -19,6 +19,7 @@ import '../../providers/transaction_providers.dart';
 import '../../providers/usage_provider.dart';
 import '../../providers/user_provider.dart';
 import '../../services/ai_service.dart';
+import '../../services/recurring_service.dart';
 import '../../services/transaction_service.dart';
 import '../../core/constants/category_icons.dart';
 import '../budgets/widgets/budget_form_sheet.dart';
@@ -127,6 +128,10 @@ class _TransactionDetailScreenState
 
     if (!confirmed || !mounted) return;
 
+    await _deleteTransactionInstance(transaction);
+  }
+
+  Future<void> _deleteTransactionInstance(Transaction? transaction) async {
     setState(() => _deleting = true);
     try {
       final service = ref.read(transactionServiceProvider);
@@ -144,6 +149,91 @@ class _TransactionDetailScreenState
       context.pop();
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Transaction deleted')),
+      );
+    } catch (e, s) {
+      if (!mounted) return;
+      setState(() => _deleting = false);
+      final error = AppError.from(e, stackTrace: s);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error.userMessage)),
+      );
+    }
+  }
+
+  Future<void> _showRecurringDeleteOptions(Transaction tx) async {
+    final action = await showModalBottomSheet<_RecurringDeleteAction>(
+      context: context,
+      useRootNavigator: true,
+      useSafeArea: true,
+      isScrollControlled: true,
+      builder: (context) => const _RecurringDeleteOptionsSheet(),
+    );
+
+    if (action == null || !mounted) return;
+
+    switch (action) {
+      case _RecurringDeleteAction.deleteInstance:
+        await _confirmDelete(tx);
+      case _RecurringDeleteAction.deleteSeries:
+        await _confirmDeleteRecurringSeries(tx);
+      case _RecurringDeleteAction.stopFuture:
+        await _confirmStopFutureRecurrence(tx);
+    }
+  }
+
+  Future<void> _confirmDeleteRecurringSeries(Transaction tx) async {
+    final confirmed = await ConsciaConfirmSheet.show(
+      context,
+      title: 'Delete all recurring instances?',
+      message:
+          'This removes every transaction tied to this recurring schedule.',
+      confirmLabel: 'Delete all instances',
+    );
+
+    if (!confirmed || !mounted) return;
+
+    setState(() => _deleting = true);
+    try {
+      final scheduleId = tx.recurringScheduleId!;
+      await ref
+          .read(transactionServiceProvider)
+          .deleteRecurringSeries(scheduleId);
+      if (!mounted) return;
+      ref.invalidate(transactionListProvider);
+      ref.invalidate(filteredTransactionListProvider);
+      context.pop();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Recurring transactions deleted')),
+      );
+    } catch (e, s) {
+      if (!mounted) return;
+      setState(() => _deleting = false);
+      final error = AppError.from(e, stackTrace: s);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error.userMessage)),
+      );
+    }
+  }
+
+  Future<void> _confirmStopFutureRecurrence(Transaction tx) async {
+    final confirmed = await ConsciaConfirmSheet.show(
+      context,
+      title: 'Stop future recurrence?',
+      message: 'Existing transactions stay in your history.',
+      confirmLabel: 'Stop recurrence',
+      destructive: false,
+    );
+
+    if (!confirmed || !mounted) return;
+
+    setState(() => _deleting = true);
+    try {
+      final scheduleId = tx.recurringScheduleId!;
+      await ref.read(recurringServiceProvider).stopFuture(scheduleId);
+      if (!mounted) return;
+      setState(() => _deleting = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Future recurrence stopped')),
       );
     } catch (e, s) {
       if (!mounted) return;
@@ -382,7 +472,11 @@ class _TransactionDetailScreenState
       case _TransactionAction.edit:
         await _openEditScreen();
       case _TransactionAction.delete:
-        await _confirmDelete(tx);
+        if (tx.isRecurring) {
+          await _showRecurringDeleteOptions(tx);
+        } else {
+          await _confirmDelete(tx);
+        }
     }
   }
 
@@ -516,10 +610,6 @@ class _TransactionDetailScreenState
                 ),
                 const SizedBox(height: 24),
                 if (!isIncome) _buildRegretSection(textTheme),
-                if (_deleting) ...[
-                  const SizedBox(height: 16),
-                  const CircularProgressIndicator(),
-                ],
                 const SizedBox(height: 32),
               ],
             ),
@@ -814,6 +904,56 @@ class _TransactionActionsSheet extends StatelessWidget {
   }
 }
 
+class _RecurringDeleteOptionsSheet extends StatelessWidget {
+  const _RecurringDeleteOptionsSheet();
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const ConsciaSheetHandle(),
+            const SizedBox(height: 18),
+            const ConsciaSheetHeader(
+              title: 'Recurring delete options',
+              subtitle:
+                  'Choose whether this affects one transaction, the full series, or only future repeats.',
+            ),
+            const SizedBox(height: 18),
+            _TransactionActionRow(
+              icon: AppIconKey.delete,
+              title: 'Delete this instance',
+              subtitle: 'Remove only this transaction from your history.',
+              destructive: true,
+              onTap: () => Navigator.of(context)
+                  .pop(_RecurringDeleteAction.deleteInstance),
+            ),
+            _TransactionActionRow(
+              icon: AppIconKey.delete,
+              title: 'Delete all instances',
+              subtitle: 'Remove every transaction tied to this schedule.',
+              destructive: true,
+              onTap: () => Navigator.of(context)
+                  .pop(_RecurringDeleteAction.deleteSeries),
+            ),
+            _TransactionActionRow(
+              icon: AppIconKey.recurring,
+              title: 'Stop future recurrence',
+              subtitle: 'Keep history, but stop creating future transactions.',
+              onTap: () =>
+                  Navigator.of(context).pop(_RecurringDeleteAction.stopFuture),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _TransactionActionRow extends StatelessWidget {
   const _TransactionActionRow({
     required this.icon,
@@ -892,6 +1032,8 @@ class _TransactionActionRow extends StatelessWidget {
 }
 
 enum _TransactionAction { reflect, addBudget, edit, delete }
+
+enum _RecurringDeleteAction { deleteInstance, deleteSeries, stopFuture }
 
 class _TransactionDetailSkeleton extends StatelessWidget {
   const _TransactionDetailSkeleton({required this.topPadding});
