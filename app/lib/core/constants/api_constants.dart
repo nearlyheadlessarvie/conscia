@@ -26,6 +26,11 @@ class ApiConstants {
     defaultValue: 'conscia://auth/callback',
   );
 
+  static const String cognitoWebRedirectUri = String.fromEnvironment(
+    'COGNITO_WEB_REDIRECT_URI',
+    defaultValue: '',
+  );
+
   static const String cognitoAppRedirectUri = 'conscia://auth/callback';
 
   static const String cognitoLogoutUri = String.fromEnvironment(
