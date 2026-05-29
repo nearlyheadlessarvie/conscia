@@ -6,7 +6,6 @@ using Amazon.CDK.AWS.Lambda;
 using Amazon.CDK.AWS.Route53;
 using Amazon.CDK.AWS.Route53.Targets;
 using Constructs;
-using System.Text;
 
 namespace Conscia.Infra;
 
@@ -21,16 +20,6 @@ public class AuthStack : Stack
 {
     public IUserPool UserPool { get; }
     public IUserPoolClient UserPoolClient { get; }
-    private const string LightMuted = "655b63ff";
-    private const string LightSurface = "fffaf4ff";
-    private const string LightSurfaceBorder = "e5d9ceff";
-    private const string LightFocus = "c59e4bff";
-    private const string LightDivider = "e6ddd5ff";
-    private const string DarkMuted = "d3c6bcff";
-    private const string DarkSurface = "171a2cff";
-    private const string DarkSurfaceBorder = "353a5bff";
-    private const string DarkFocus = "f0d58cff";
-    private const string DarkDivider = "343a58ff";
 
     public AuthStack(Construct scope, string id, AuthStackProps? props = null)
         : base(scope, id, props)
@@ -272,16 +261,6 @@ public class AuthStack : Stack
                 ?? throw new InvalidOperationException("User pool domain CloudFormation resource was not created."));
             domainResource.ManagedLoginVersion = 2;
 
-            _ = new CfnManagedLoginBranding(this, "ManagedLoginBranding", new CfnManagedLoginBrandingProps
-            {
-                UserPoolId = UserPool.UserPoolId,
-                ClientId = UserPoolClient.UserPoolClientId,
-                UseCognitoProvidedValues = false,
-                ReturnMergedResources = false,
-                Assets = BuildManagedLoginBrandingAssets(),
-                Settings = BuildManagedLoginBrandingSettings()
-            });
-
             _ = new CfnResource(this, "ManagedLoginTermsOfUse", new CfnResourceProps
             {
                 Type = "AWS::Cognito::Terms",
@@ -327,179 +306,4 @@ public class AuthStack : Stack
         new CfnOutput(this, "UserPoolId", new CfnOutputProps { Value = UserPool.UserPoolId });
         new CfnOutput(this, "UserPoolClientId", new CfnOutputProps { Value = UserPoolClient.UserPoolClientId });
     }
-
-    private static CfnManagedLoginBranding.AssetTypeProperty[] BuildManagedLoginBrandingAssets()
-    {
-        return
-        [
-            new CfnManagedLoginBranding.AssetTypeProperty
-            {
-                Category = "FORM_LOGO",
-                ColorMode = "DYNAMIC",
-                Extension = "SVG",
-                Bytes = EncodeSvg(LoadManagedLoginLogoSvg())
-            },
-            new CfnManagedLoginBranding.AssetTypeProperty
-            {
-                Category = "PAGE_BACKGROUND",
-                ColorMode = "LIGHT",
-                Extension = "SVG",
-                Bytes = EncodeSvg(BuildPageBackgroundSvg(
-                    topColor: "#f8f2e9",
-                    bottomColor: "#f4eadc",
-                    glowColor: "#f0d58c",
-                    accentColor: "#24346f"))
-            },
-            new CfnManagedLoginBranding.AssetTypeProperty
-            {
-                Category = "PAGE_BACKGROUND",
-                ColorMode = "DARK",
-                Extension = "SVG",
-                Bytes = EncodeSvg(BuildPageBackgroundSvg(
-                    topColor: "#141827",
-                    bottomColor: "#0d1120",
-                    glowColor: "#6d5e2b",
-                    accentColor: "#f0d58c"))
-            }
-        ];
-    }
-
-    private static Dictionary<string, object> BuildManagedLoginBrandingSettings()
-    {
-        return new Dictionary<string, object>
-        {
-            ["categories"] = new Dictionary<string, object>
-            {
-                ["auth"] = new Dictionary<string, object>
-                {
-                    ["federation"] = new Dictionary<string, object>
-                    {
-                        ["interfaceStyle"] = "BUTTON_LIST"
-                    }
-                },
-                ["form"] = new Dictionary<string, object>
-                {
-                    ["displayGraphics"] = true,
-                    ["instructions"] = new Dictionary<string, object>
-                    {
-                        ["enabled"] = false
-                    },
-                    ["languageSelector"] = new Dictionary<string, object>
-                    {
-                        ["enabled"] = false
-                    },
-                    ["location"] = new Dictionary<string, object>
-                    {
-                        ["horizontal"] = "CENTER",
-                        ["vertical"] = "CENTER"
-                    }
-                },
-                ["global"] = new Dictionary<string, object>
-                {
-                    ["colorSchemeMode"] = "DYNAMIC",
-                    ["pageFooter"] = new Dictionary<string, object>
-                    {
-                        ["enabled"] = false
-                    },
-                    ["pageHeader"] = new Dictionary<string, object>
-                    {
-                        ["enabled"] = false
-                    },
-                    ["spacingDensity"] = "REGULAR"
-                }
-            },
-            ["componentClasses"] = new Dictionary<string, object>
-            {
-                ["buttons"] = new Dictionary<string, object>
-                {
-                    ["borderRadius"] = 28.0
-                },
-                ["divider"] = new Dictionary<string, object>
-                {
-                    ["lightMode"] = new Dictionary<string, object>
-                    {
-                        ["borderColor"] = LightDivider
-                    },
-                    ["darkMode"] = new Dictionary<string, object>
-                    {
-                        ["borderColor"] = DarkDivider
-                    }
-                },
-                ["focusState"] = new Dictionary<string, object>
-                {
-                    ["lightMode"] = new Dictionary<string, object>
-                    {
-                        ["borderColor"] = LightFocus
-                    },
-                    ["darkMode"] = new Dictionary<string, object>
-                    {
-                        ["borderColor"] = DarkFocus
-                    }
-                },
-                ["idpButtons"] = new Dictionary<string, object>
-                {
-                    ["icons"] = new Dictionary<string, object>
-                    {
-                        ["enabled"] = true
-                    }
-                },
-                ["input"] = new Dictionary<string, object>
-                {
-                    ["borderRadius"] = 18.0,
-                    ["lightMode"] = new Dictionary<string, object>
-                    {
-                        ["defaults"] = new Dictionary<string, object>
-                        {
-                            ["backgroundColor"] = LightSurface,
-                            ["borderColor"] = LightSurfaceBorder
-                        },
-                        ["placeholderColor"] = LightMuted
-                    },
-                    ["darkMode"] = new Dictionary<string, object>
-                    {
-                        ["defaults"] = new Dictionary<string, object>
-                        {
-                            ["backgroundColor"] = DarkSurface,
-                            ["borderColor"] = DarkSurfaceBorder
-                        },
-                        ["placeholderColor"] = DarkMuted
-                    }
-                }
-            }
-        };
-    }
-
-    private static string EncodeSvg(string svg) =>
-        Convert.ToBase64String(Encoding.UTF8.GetBytes(svg));
-
-    private static string LoadManagedLoginLogoSvg() =>
-        File.ReadAllText(AssetPathResolver.ResolveRepositoryFile("web/public/images/app_icon.svg"));
-
-    private static string BuildPageBackgroundSvg(
-        string topColor,
-        string bottomColor,
-        string glowColor,
-        string accentColor) =>
-        $$"""
-        <svg width="1440" height="1200" viewBox="0 0 1440 1200" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <defs>
-            <linearGradient id="bg" x1="0" y1="0" x2="1120" y2="1200" gradientUnits="userSpaceOnUse">
-              <stop stop-color="{{topColor}}"/>
-              <stop offset="1" stop-color="{{bottomColor}}"/>
-            </linearGradient>
-            <radialGradient id="glow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(1130 180) rotate(127) scale(410 360)">
-              <stop stop-color="{{glowColor}}" stop-opacity="0.55"/>
-              <stop offset="1" stop-color="{{glowColor}}" stop-opacity="0"/>
-            </radialGradient>
-            <radialGradient id="mist" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(260 1030) rotate(-34) scale(520 320)">
-              <stop stop-color="#FFFFFF" stop-opacity="0.24"/>
-              <stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/>
-            </radialGradient>
-          </defs>
-          <rect width="1440" height="1200" fill="url(#bg)"/>
-          <ellipse cx="1130" cy="180" rx="420" ry="320" fill="url(#glow)"/>
-          <ellipse cx="260" cy="1030" rx="470" ry="280" fill="url(#mist)"/>
-          <path d="M1034 104c96 34 180 118 216 214" stroke="{{accentColor}}" stroke-opacity="0.14" stroke-width="32" stroke-linecap="round"/>
-        </svg>
-        """;
 }
