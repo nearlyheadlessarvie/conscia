@@ -19,6 +19,7 @@ import '../../screens/onboarding/sign_in_screen.dart';
 import '../../screens/onboarding/sign_up_screen.dart';
 import '../../screens/onboarding/session_expired_screen.dart';
 import '../../screens/onboarding/verify_email_screen.dart';
+import '../../screens/onboarding/password_reset_screen.dart';
 import '../../screens/receipts/receipt_review_screen.dart';
 import '../../screens/receipts/receipt_scanner_screen.dart';
 import '../../screens/settings/service_status_screen.dart';
@@ -46,6 +47,7 @@ abstract class AppRoutes {
   static const onboarding = '/onboarding';
   static const signIn = '/onboarding/sign-in';
   static const signUp = '/onboarding/sign-up';
+  static const passwordReset = '/onboarding/password-reset';
   static const verifyEmail = '/onboarding/verify-email';
   static const sessionExpired = '/session-expired';
   static const setup = '/onboarding/setup';
@@ -283,6 +285,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: 'sign-up',
             builder: (context, state) => const SignUpScreen(),
+          ),
+          GoRoute(
+            path: 'password-reset',
+            builder: (context, state) => const PasswordResetScreen(),
           ),
           GoRoute(
             path: 'verify-email',

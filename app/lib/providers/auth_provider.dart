@@ -384,6 +384,13 @@ class AuthNotifier extends StateNotifier<AuthState> {
         provider: CognitoManagedLoginProvider.google,
       );
       await _setAuthenticated(tokens);
+    } on CognitoManagedLoginCancelledException {
+      state = state.copyWith(
+        isLoading: false,
+        isRestoringSession: false,
+        error: null,
+      );
+      return;
     } catch (e, s) {
       final error = AppError.from(e, stackTrace: s);
       state = state.copyWith(isLoading: false, error: error.userMessage);
@@ -408,6 +415,13 @@ class AuthNotifier extends StateNotifier<AuthState> {
         provider: CognitoManagedLoginProvider.apple,
       );
       await _setAuthenticated(tokens);
+    } on CognitoManagedLoginCancelledException {
+      state = state.copyWith(
+        isLoading: false,
+        isRestoringSession: false,
+        error: null,
+      );
+      return;
     } catch (e, s) {
       final error = AppError.from(e, stackTrace: s);
       state = state.copyWith(isLoading: false, error: error.userMessage);
@@ -836,8 +850,8 @@ final class _UnavailableManagedLoginService extends CognitoManagedLoginService {
           launchUrl: (uri, {mode = LaunchMode.platformDefault}) async => false,
           openAuthSession: (uri, {required appCallbackUri}) async =>
               throw const CognitoManagedLoginException(
-                'Managed login is not configured for this session.',
-              ),
+            'Managed login is not configured for this session.',
+          ),
           clientId: '',
           loginDomain: Uri.parse('https://login.getconscia.com'),
           redirectUri: Uri.parse(ApiConstants.cognitoAppRedirectUri),

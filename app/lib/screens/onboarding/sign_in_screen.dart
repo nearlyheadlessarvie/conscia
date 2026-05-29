@@ -10,6 +10,7 @@ import '../../core/network/api_exception.dart';
 import '../../core/routing/app_router.dart';
 import '../../core/utils/email_validator.dart';
 import '../../providers/auth_provider.dart';
+import '../../services/cognito_managed_login_service.dart';
 import '../../widgets/floating_label_text_field.dart';
 import '../../widgets/conscia_app_bar.dart';
 import '../../widgets/inline_notice.dart';
@@ -47,10 +48,13 @@ class SignInScreen extends ConsumerStatefulWidget {
 class _SignInScreenState extends ConsumerState<SignInScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
 
+  bool _obscurePassword = true;
   bool _isLoading = false;
   String? _errorMessage;
   String? _emailFieldError;
+  String? _passwordFieldError;
 
   @override
   void initState() {
@@ -68,30 +72,40 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
   @override
   void dispose() {
     _emailController.dispose();
+    _passwordController.dispose();
     super.dispose();
   }
 
   String? _validateEmail(String? value) {
-    if (value == null || value.isEmpty) return null;
+    if (value == null || value.isEmpty) return 'Email is required';
     if (!isValidEmailAddress(value)) return 'Enter a valid email';
     return null;
   }
 
+  String? _validatePassword(String? value) {
+    if (value == null || value.isEmpty) return 'Password is required';
+    return null;
+  }
+
   void _clearInlineErrors() {
-    if (_errorMessage != null || _emailFieldError != null) {
+    if (_errorMessage != null ||
+        _emailFieldError != null ||
+        _passwordFieldError != null) {
       setState(() {
         _errorMessage = null;
         _emailFieldError = null;
+        _passwordFieldError = null;
       });
     }
   }
 
   Future<void> _submit() async {
-    final email = _emailController.text.trim();
-    final emailError = _validateEmail(email);
-    if (emailError != null) {
+    final emailError = _validateEmail(_emailController.text.trim());
+    final passwordError = _validatePassword(_passwordController.text);
+    if (emailError != null || passwordError != null) {
       setState(() {
         _emailFieldError = emailError;
+        _passwordFieldError = passwordError;
         _errorMessage = null;
       });
       return;
@@ -101,11 +115,13 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
       _isLoading = true;
       _errorMessage = null;
       _emailFieldError = null;
+      _passwordFieldError = null;
     });
 
     try {
-      await ref.read(authProvider.notifier).continueWithManagedLogin(
-            emailHint: email.isEmpty ? null : email,
+      await ref.read(authProvider.notifier).login(
+            _emailController.text.trim(),
+            _passwordController.text,
           );
     } catch (e) {
       if (!mounted) return;
@@ -113,6 +129,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
         _isLoading = false;
         _errorMessage = friendlySignInErrorMessage(
           e,
+          isPasswordSignIn: true,
         );
       });
       return;
@@ -195,7 +212,55 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                             errorText: _emailFieldError,
                             autofillHints: const [AutofillHints.email],
                           ),
+                          const SizedBox(height: 16),
+                          FloatingLabelTextField(
+                            controller: _passwordController,
+                            label: 'Password',
+                            prefix: AppIcons.icon(
+                              AppIconKey.password,
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurfaceVariant,
+                              size: 20,
+                            ),
+                            obscureText: _obscurePassword,
+                            textInputAction: TextInputAction.done,
+                            onChanged: (_) => _clearInlineErrors(),
+                            onSubmitted: (_) {
+                              if (!_isLoading) {
+                                _submit();
+                              }
+                            },
+                            errorText: _passwordFieldError,
+                            enableSuggestions: false,
+                            autocorrect: false,
+                            autofillHints: const [AutofillHints.password],
+                            trailing: IconButton(
+                              icon: AppIcons.icon(
+                                _obscurePassword
+                                    ? AppIconKey.visibility
+                                    : AppIconKey.visibilityOff,
+                                color: _obscurePassword
+                                    ? Theme.of(context)
+                                        .colorScheme
+                                        .onSurfaceVariant
+                                    : Theme.of(context).colorScheme.primary,
+                              ),
+                              onPressed: () => setState(
+                                () => _obscurePassword = !_obscurePassword,
+                              ),
+                            ),
+                          ),
                         ],
+                      ),
+                    ),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: TextButton(
+                        onPressed: _isLoading
+                            ? null
+                            : () => context.go(AppRoutes.passwordReset),
+                        child: const Text('Forgot password?'),
                       ),
                     ),
                     const SizedBox(height: 32),
@@ -210,7 +275,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                                 child:
                                     CircularProgressIndicator(strokeWidth: 2),
                               )
-                            : const Text('Continue with Email'),
+                            : const Text('Sign In'),
                       ),
                     ),
                     const SizedBox(height: 24),
@@ -262,6 +327,8 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                                   await ref
                                       .read(authProvider.notifier)
                                       .signInWithApple();
+                                } on CognitoManagedLoginCancelledException {
+                                  // User intentionally closed the hosted auth sheet.
                                 } catch (e) {
                                   if (!mounted) return;
                                   setState(() {
@@ -288,6 +355,8 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                           await ref
                               .read(authProvider.notifier)
                               .signInWithGoogle();
+                        } on CognitoManagedLoginCancelledException {
+                          // User intentionally closed the hosted auth sheet.
                         } catch (e) {
                           if (!mounted) return;
                           setState(() {
