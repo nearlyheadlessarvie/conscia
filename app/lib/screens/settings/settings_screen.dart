@@ -32,6 +32,7 @@ import '../../widgets/conscia_confirm_sheet.dart';
 import '../../widgets/currency_picker_sheet.dart';
 import '../../widgets/editorial_section_header.dart';
 import '../../widgets/editorial_hero_chip.dart';
+import '../../widgets/hero_shortcut_card.dart';
 import '../../widgets/locale_picker_sheet.dart';
 import '../../widgets/single_select_list.dart';
 import 'widgets/subscription_sheet.dart';
@@ -929,22 +930,22 @@ class _SettingsEditorialHero extends StatelessWidget {
           Row(
             children: [
               Expanded(
-                child: _HeroShortcutPill(
+                child: HeroShortcutCard(
                   key: const ValueKey('settings-hero-profile-shortcut'),
                   icon: AppIconKey.person,
-                  title: 'Profile',
+                  label: 'Profile',
                   subtitle: 'Personal workspace',
-                  onTap: onProfileTap,
+                  onPressed: onProfileTap,
                 ),
               ),
               const SizedBox(width: 10),
               Expanded(
-                child: _HeroShortcutPill(
+                child: HeroShortcutCard(
                   key: const ValueKey('settings-hero-family-shortcut'),
                   icon: AppIconKey.family,
-                  title: 'Shared Conscia',
+                  label: 'Shared Conscia',
                   subtitle: workspaceLabel,
-                  onTap: onFamilyTap,
+                  onPressed: onFamilyTap,
                 ),
               ),
             ],
@@ -997,85 +998,6 @@ class _SettingsEditorialHeroFallback extends StatelessWidget {
       locale: 'en_US',
       onProfileTap: () {},
       onFamilyTap: () {},
-    );
-  }
-}
-
-class _HeroShortcutPill extends StatelessWidget {
-  const _HeroShortcutPill({
-    super.key,
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-    required this.onTap,
-  });
-
-  final AppIconKey icon;
-  final String title;
-  final String subtitle;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).appColors;
-    final textTheme = Theme.of(context).textTheme;
-    return Material(
-      color: colors.surfaceRaised.withValues(alpha: 0.92),
-      borderRadius: BorderRadius.circular(18),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(18),
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(12, 9, 10, 9),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              AppIcons.icon(
-                icon,
-                size: 17,
-                color: colors.deepNavy,
-              ),
-              const SizedBox(width: 8),
-              Flexible(
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 118),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: textTheme.labelSmall?.copyWith(
-                          color: colors.deepNavy,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                      Text(
-                        subtitle,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: textTheme.labelSmall?.copyWith(
-                          color: colors.mutedInk,
-                          fontSize: 10,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              AppIcons.icon(
-                AppIconKey.chevronRight,
-                size: 15,
-                color: colors.softInk,
-              ),
-            ],
-          ),
-        ),
-      ),
     );
   }
 }

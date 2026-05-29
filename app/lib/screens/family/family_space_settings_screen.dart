@@ -14,6 +14,7 @@ import '../../widgets/conscia_bottom_sheet.dart';
 import '../../widgets/editorial_hero_chip.dart';
 import '../../widgets/floating_label_text_field.dart';
 import '../../widgets/conscia_app_bar.dart';
+import '../../widgets/hero_shortcut_card.dart';
 import '../../widgets/screen_section.dart';
 import '../../widgets/skeleton_loader.dart';
 
@@ -619,74 +620,14 @@ class _HeroShortcutGrid extends StatelessWidget {
             width: shortcuts.length == 1
                 ? double.infinity
                 : (MediaQuery.sizeOf(context).width - 52) / 2,
-            child: _HeroShortcutCard(shortcut: shortcut),
+            child: HeroShortcutCard(
+              icon: shortcut.icon,
+              label: shortcut.title,
+              subtitle: shortcut.subtitle,
+              onPressed: shortcut.onTap,
+            ),
           ),
       ],
-    );
-  }
-}
-
-class _HeroShortcutCard extends StatelessWidget {
-  const _HeroShortcutCard({required this.shortcut});
-
-  final _HeroShortcutData shortcut;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).appColors;
-    final enabled = shortcut.onTap != null;
-
-    return Material(
-      color: colors.surfaceRaised.withValues(alpha: enabled ? 0.9 : 0.52),
-      borderRadius: BorderRadius.circular(16),
-      child: InkWell(
-        onTap: shortcut.onTap,
-        borderRadius: BorderRadius.circular(16),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-          child: Row(
-            children: [
-              AppIcons.icon(
-                shortcut.icon,
-                size: 18,
-                color: enabled ? colors.deepNavy : colors.softInk,
-              ),
-              const SizedBox(width: 9),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      shortcut.title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                            color: enabled ? colors.deepNavy : colors.mutedInk,
-                            fontWeight: FontWeight.w800,
-                          ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      shortcut.subtitle,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                            color: colors.mutedInk,
-                            fontWeight: FontWeight.w600,
-                          ),
-                    ),
-                  ],
-                ),
-              ),
-              AppIcons.icon(
-                AppIconKey.chevronRight,
-                size: 18,
-                color: enabled ? colors.softInk : Colors.transparent,
-              ),
-            ],
-          ),
-        ),
-      ),
     );
   }
 }

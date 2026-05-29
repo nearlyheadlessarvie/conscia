@@ -13,6 +13,7 @@ import 'package:conscia_app/services/passkey_service.dart';
 import 'package:conscia_app/services/subscription_service.dart';
 import 'package:conscia_app/services/transaction_service.dart';
 import 'package:conscia_app/services/user_service.dart';
+import 'package:conscia_app/widgets/hero_shortcut_card.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -1008,6 +1009,43 @@ void main() {
     expect(find.textContaining('Personal workspace'), findsOneWidget);
     expect(find.byTooltip('Sign out'), findsOneWidget);
     expect(find.widgetWithText(OutlinedButton, 'Sign Out'), findsNothing);
+  });
+
+  testWidgets('settings hero shortcuts use menu item text scale',
+      (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+    final locationService =
+        _RecordingLocationAssistanceService(permissionGranted: true);
+
+    await _pumpSettingsScreen(
+      tester,
+      prefs: prefs,
+      locationService: locationService,
+    );
+
+    await tester.pumpAndSettle();
+
+    expect(find.byType(HeroShortcutCard), findsNWidgets(2));
+
+    final profileTitle = tester.widget<Text>(
+      find.descendant(
+        of: find.byKey(const ValueKey('settings-hero-profile-shortcut')),
+        matching: find.text('Profile'),
+      ),
+    );
+    final profileSubtitle = tester.widget<Text>(
+      find.descendant(
+        of: find.byKey(const ValueKey('settings-hero-profile-shortcut')),
+        matching: find.text('Personal workspace'),
+      ),
+    );
+    final budgetsTitle = tester.widget<Text>(find.text('Budgets'));
+    final budgetsSubtitle =
+        tester.widget<Text>(find.text('Create and tune monthly caps'));
+
+    expect(profileTitle.style?.fontSize, budgetsTitle.style?.fontSize);
+    expect(profileSubtitle.style?.fontSize, budgetsSubtitle.style?.fontSize);
   });
 
   testWidgets('sign out confirmation uses a pull-up sheet', (tester) async {

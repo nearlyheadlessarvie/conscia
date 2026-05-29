@@ -10,7 +10,7 @@ class HeroShortcutCard extends StatelessWidget {
     required this.label,
     required this.onPressed,
     this.subtitle,
-    this.minHeight = 64,
+    this.minHeight = 54,
   });
 
   final AppIconKey icon;
@@ -23,9 +23,10 @@ class HeroShortcutCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).appColors;
     final radius = BorderRadius.circular(18);
+    final enabled = onPressed != null;
 
     return Material(
-      color: colors.surfaceRaised.withValues(alpha: 0.92),
+      color: colors.surfaceRaised.withValues(alpha: enabled ? 0.92 : 0.52),
       elevation: 0,
       shadowColor: Colors.transparent,
       shape: RoundedRectangleBorder(
@@ -39,15 +40,20 @@ class HeroShortcutCard extends StatelessWidget {
           constraints: BoxConstraints(minHeight: minHeight),
           child: Padding(
             padding: EdgeInsets.symmetric(
-              horizontal: subtitle == null ? 12 : 10,
+              horizontal: 12,
               vertical: subtitle == null ? 12 : 9,
             ),
             child: subtitle == null
-                ? _HeroShortcutCompactContent(icon: icon, label: label)
+                ? _HeroShortcutCompactContent(
+                    icon: icon,
+                    label: label,
+                    enabled: enabled,
+                  )
                 : _HeroShortcutActionContent(
                     icon: icon,
                     label: label,
                     subtitle: subtitle!,
+                    enabled: enabled,
                   ),
           ),
         ),
@@ -60,10 +66,12 @@ class _HeroShortcutCompactContent extends StatelessWidget {
   const _HeroShortcutCompactContent({
     required this.icon,
     required this.label,
+    required this.enabled,
   });
 
   final AppIconKey icon;
   final String label;
+  final bool enabled;
 
   @override
   Widget build(BuildContext context) {
@@ -75,7 +83,7 @@ class _HeroShortcutCompactContent extends StatelessWidget {
         AppIcons.icon(
           icon,
           size: 18,
-          color: colors.deepNavy,
+          color: enabled ? colors.deepNavy : colors.softInk,
         ),
         const SizedBox(height: 6),
         Text(
@@ -83,7 +91,7 @@ class _HeroShortcutCompactContent extends StatelessWidget {
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                color: colors.deepNavy,
+                color: enabled ? colors.deepNavy : colors.mutedInk,
                 fontWeight: FontWeight.w800,
               ),
         ),
@@ -97,11 +105,13 @@ class _HeroShortcutActionContent extends StatelessWidget {
     required this.icon,
     required this.label,
     required this.subtitle,
+    required this.enabled,
   });
 
   final AppIconKey icon;
   final String label;
   final String subtitle;
+  final bool enabled;
 
   @override
   Widget build(BuildContext context) {
@@ -112,8 +122,8 @@ class _HeroShortcutActionContent extends StatelessWidget {
       children: [
         AppIcons.icon(
           icon,
-          size: 16,
-          color: colors.deepNavy,
+          size: 17,
+          color: enabled ? colors.deepNavy : colors.softInk,
         ),
         const SizedBox(width: 8),
         Expanded(
@@ -125,20 +135,19 @@ class _HeroShortcutActionContent extends StatelessWidget {
                 label,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: textTheme.labelMedium?.copyWith(
-                  color: colors.deepNavy,
-                  fontWeight: FontWeight.w800,
+                style: textTheme.titleSmall?.copyWith(
+                  color: enabled ? colors.deepNavy : colors.mutedInk,
+                  fontWeight: FontWeight.w700,
                 ),
               ),
-              const SizedBox(height: 2),
+              const SizedBox(height: 3),
               Text(
                 subtitle,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: textTheme.labelSmall?.copyWith(
+                style: textTheme.bodySmall?.copyWith(
                   color: colors.mutedInk,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 0.2,
+                  height: 1.25,
                 ),
               ),
             ],
@@ -148,7 +157,7 @@ class _HeroShortcutActionContent extends StatelessWidget {
         AppIcons.icon(
           AppIconKey.chevronRight,
           size: 18,
-          color: colors.deepNavy.withValues(alpha: 0.55),
+          color: enabled ? colors.softInk : Colors.transparent,
         ),
       ],
     );
