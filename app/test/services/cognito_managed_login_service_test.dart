@@ -116,6 +116,7 @@ void main() {
       sheetUri!.queryParameters['identity_provider'],
       'Google',
     );
+    expect(sheetUri!.queryParameters['prompt'], 'select_account');
     expect(
       sheetUri!.queryParameters['scope'],
       contains('aws.cognito.signin.user.admin'),
@@ -313,6 +314,34 @@ void main() {
     await expectLater(
       service.signIn(provider: CognitoManagedLoginProvider.google),
       throwsA(isA<CognitoManagedLoginCancelledException>()),
+    );
+  });
+
+  test('signIn surfaces described Cognito access denied callbacks', () async {
+    final service = CognitoManagedLoginService(
+      dio: Dio(),
+      openAuthSession: (uri, {required appCallbackUri}) async => Uri.parse(
+        'conscia://auth/callback'
+        '?error=access_denied'
+        '&error_description=PreSignUp%20failed%20with%20error%20already%20found%20an%20entry'
+        '&state=${uri.queryParameters['state']}',
+      ),
+      clientId: 'managed-client-id',
+      loginDomain: Uri.parse('https://login.getconscia.com'),
+      redirectUri: Uri.parse('conscia://auth/callback'),
+      appRedirectUri: Uri.parse('conscia://auth/callback'),
+      logoutUri: Uri.parse('conscia://auth/logout'),
+    );
+
+    await expectLater(
+      service.signIn(provider: CognitoManagedLoginProvider.google),
+      throwsA(
+        isA<CognitoManagedLoginException>().having(
+          (e) => e.message,
+          'message',
+          contains('PreSignUp failed'),
+        ),
+      ),
     );
   });
 }

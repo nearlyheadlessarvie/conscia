@@ -201,10 +201,12 @@ class _FakeManagedLoginService extends CognitoManagedLoginService {
     userId: 'user-1',
   );
   Object? signInError;
+  final List<Object> signInErrors = <Object>[];
   Object? signUpError;
   CognitoManagedLoginProvider? lastProvider;
   String? lastEmailHint;
   String? lastRefreshToken;
+  int signInCount = 0;
   int logoutCount = 0;
 
   @override
@@ -212,6 +214,10 @@ class _FakeManagedLoginService extends CognitoManagedLoginService {
     CognitoManagedLoginProvider? provider,
     String? emailHint,
   }) async {
+    signInCount += 1;
+    if (signInErrors.isNotEmpty) {
+      throw signInErrors.removeAt(0);
+    }
     final error = signInError;
     if (error != null) {
       throw error;
@@ -690,6 +696,72 @@ void main() {
     expect(notifier.state.accessToken, 'managed.access.token');
     expect(await storage.read(key: 'access_token'), 'managed.access.token');
     expect(await storage.read(key: 'id_token'), 'managed.id.token');
+  });
+
+  test('signInWithGoogle retries a transient Cognito linker failure once',
+      () async {
+    final managedLogin = _FakeManagedLoginService()
+      ..signInErrors.add(
+        const CognitoManagedLoginException(
+          'PreSignUp failed with error already found an entry for username.',
+        ),
+      )
+      ..signInTokens = const AuthTokens(
+        accessToken: 'managed.access.token',
+        idToken: 'managed.id.token',
+        refreshToken: 'managed-refresh-token',
+        userId: 'managed-user',
+      );
+    final notifier = AuthNotifier(
+      _FakeAuthService(
+        const AuthTokens(
+          accessToken: 'unused.access.token',
+          refreshToken: 'unused-refresh-token',
+          userId: 'user-1',
+        ),
+      ),
+      _FakeSecureStorage(),
+      autoRestoreSession: false,
+      managedLoginService: managedLogin,
+      useManagedLogin: true,
+    );
+
+    await notifier.signInWithGoogle();
+
+    expect(managedLogin.signInCount, 2);
+    expect(managedLogin.lastProvider, CognitoManagedLoginProvider.google);
+    expect(notifier.state.status, AuthStatus.authenticated);
+    expect(notifier.state.userId, 'managed-user');
+  });
+
+  test('logout clears local managed session without opening Cognito logout',
+      () async {
+    final managedLogin = _FakeManagedLoginService();
+    final storage = _FakeSecureStorage();
+    final notifier = AuthNotifier(
+      _FakeAuthService(
+        const AuthTokens(
+          accessToken: 'unused.access.token',
+          refreshToken: 'unused-refresh-token',
+          userId: 'user-1',
+        ),
+      ),
+      storage,
+      autoRestoreSession: false,
+      managedLoginService: managedLogin,
+      useManagedLogin: true,
+    );
+
+    await notifier.signInWithGoogle();
+    await notifier.logout();
+
+    expect(managedLogin.logoutCount, 0);
+    expect(notifier.state.status, AuthStatus.unauthenticated);
+    expect(notifier.state.wasExplicitLogout, isTrue);
+    expect(await storage.read(key: 'access_token'), isNull);
+    expect(await storage.read(key: 'id_token'), isNull);
+    expect(await storage.read(key: 'refresh_token'), isNull);
+    expect(await storage.read(key: 'user_id'), isNull);
   });
 
   test('refreshSession uses managed login token refresh and stores id token',

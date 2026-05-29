@@ -176,6 +176,7 @@ class CognitoManagedLoginService {
         'code_challenge_method': 'S256',
         'code_challenge': _codeChallengeFor(codeVerifier),
         if (provider != null) 'identity_provider': provider.queryValue,
+        if (provider != null) 'prompt': 'select_account',
         if (emailHint != null && emailHint.trim().isNotEmpty)
           'login_hint': emailHint.trim(),
       },
@@ -185,13 +186,15 @@ class CognitoManagedLoginService {
 
     final error = callbackUri.queryParameters['error'];
     if (error != null && error.isNotEmpty) {
-      if (error == 'access_denied') {
+      final description =
+          callbackUri.queryParameters['error_description']?.trim();
+      if (error == 'access_denied' &&
+          (description == null || description.isEmpty)) {
         throw const CognitoManagedLoginCancelledException();
       }
 
-      final description = callbackUri.queryParameters['error_description'];
       throw CognitoManagedLoginException(
-        description?.trim().isNotEmpty == true
+        description?.isNotEmpty == true
             ? description!
             : 'Conscia sign-in could not finish right now.',
       );

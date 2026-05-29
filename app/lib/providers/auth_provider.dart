@@ -379,8 +379,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
         await _setAuthenticated(tokens);
         return;
       }
-      final tokens = await _managedLoginService.signIn(
-        provider: CognitoManagedLoginProvider.google,
+      final tokens = await _signInWithManagedProvider(
+        CognitoManagedLoginProvider.google,
       );
       await _setAuthenticated(tokens);
     } on CognitoManagedLoginCancelledException {
@@ -410,8 +410,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
         await _setAuthenticated(tokens);
         return;
       }
-      final tokens = await _managedLoginService.signIn(
-        provider: CognitoManagedLoginProvider.apple,
+      final tokens = await _signInWithManagedProvider(
+        CognitoManagedLoginProvider.apple,
       );
       await _setAuthenticated(tokens);
     } on CognitoManagedLoginCancelledException {
@@ -500,13 +500,6 @@ class AuthNotifier extends StateNotifier<AuthState> {
     await _storage.delete(key: _idTokenKey);
     await _storage.delete(key: _refreshTokenKey);
     await _storage.delete(key: _userIdKey);
-    if (_useManagedLogin) {
-      try {
-        await _managedLoginService.logout();
-      } catch (_) {
-        // Local sign-out already succeeded; don't trap the user on a browser failure.
-      }
-    }
   }
 
   Future<bool> refreshSession() async {
@@ -677,6 +670,29 @@ class AuthNotifier extends StateNotifier<AuthState> {
       error: null,
       wasExplicitLogout: false,
     );
+  }
+
+  Future<AuthTokens> _signInWithManagedProvider(
+    CognitoManagedLoginProvider provider,
+  ) async {
+    try {
+      return await _managedLoginService.signIn(provider: provider);
+    } on CognitoManagedLoginException catch (e) {
+      if (!_isTransientFederatedLinkerError(e)) {
+        rethrow;
+      }
+      return _managedLoginService.signIn(provider: provider);
+    }
+  }
+
+  bool _isTransientFederatedLinkerError(CognitoManagedLoginException error) {
+    final message = error.message.toLowerCase();
+    final isPreSignUpError =
+        message.contains('presignup') || message.contains('pre sign-up');
+    final isAlreadyLinkedError = message.contains('already found an entry') ||
+        message.contains('already linked') ||
+        message.contains('already exists');
+    return isPreSignUpError && isAlreadyLinkedError;
   }
 
   Future<bool> _resumePendingConfirmationIfCoolingDown(
