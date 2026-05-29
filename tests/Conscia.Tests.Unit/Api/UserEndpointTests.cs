@@ -121,6 +121,34 @@ public class UserEndpointTests : IClassFixture<TestWebAppFactory>
     }
 
     [Fact]
+    public async Task GetMe_FirstAuthenticatedRequest_StoresGoogleIdentityFromJsonObjectClaim()
+    {
+        var client = _factory.CreateClient();
+        var userId = Guid.Parse("c1b2c3d4-0001-4000-8000-000000000001");
+        var token = _factory.GenerateTestToken(
+            userId: userId.ToString(),
+            email: "social-object@example.com",
+            additionalClaims:
+            [
+                new Claim("identities", """
+                    {"providerName":"Google","userId":"google-sub-object","providerType":"Google"}
+                    """),
+                new Claim("email_verified", "true")
+            ]);
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        _factory.UserServiceMock
+            .Setup(s => s.GetByIdAsync(userId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(() => _factory.UserRepo.Users.SingleOrDefault(u => u.Id == userId));
+
+        var response = await client.GetAsync("/api/users/me");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var identity = Assert.Single(_factory.UserRepo.Identities.Where(i => i.UserId == userId));
+        Assert.Equal(AuthProvider.Google, identity.Provider);
+        Assert.Equal("google-sub-object", identity.ProviderSub);
+    }
+
+    [Fact]
     public async Task UpdateMe_ValidPayload_Returns200()
     {
         var userId = Guid.Parse("a1b2c3d4-0001-4000-8000-000000000001");
