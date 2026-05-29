@@ -123,6 +123,55 @@ public class MockAuthService : IAuthService
         };
     }
 
+    public Task<AuthResult> StartPasswordResetAsync(string email, CancellationToken ct = default)
+    {
+        email = NormalizeEmail(email);
+        return Task.FromResult(new AuthResult
+        {
+            Success = true,
+            Email = email
+        });
+    }
+
+    public async Task<AuthResult> ConfirmPasswordResetAsync(
+        string email,
+        string confirmationCode,
+        string password,
+        CancellationToken ct = default)
+    {
+        email = NormalizeEmail(email);
+        if (string.IsNullOrWhiteSpace(confirmationCode))
+        {
+            return new AuthResult
+            {
+                Success = false,
+                Email = email,
+                Error = "Confirmation code is required"
+            };
+        }
+
+        var user = await _repo.GetByEmailAsync(email, ct);
+        if (user is null)
+        {
+            return new AuthResult
+            {
+                Success = false,
+                Email = email,
+                Error = "Unable to reset password"
+            };
+        }
+
+        user.EmailConfirmed = true;
+        await _repo.UpdateAsync(user, ct);
+
+        return new AuthResult
+        {
+            Success = true,
+            Email = email,
+            UserId = user.Id.ToString()
+        };
+    }
+
     public async Task<AuthResult> LoginAsync(string email, string password, CancellationToken ct = default)
     {
         email = NormalizeEmail(email);

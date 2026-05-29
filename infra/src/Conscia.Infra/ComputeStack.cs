@@ -47,6 +47,47 @@ public class ComputeStack : Stack
         var apiAssetPath = props.ApiAssetPath
             ?? AssetPathResolver.ResolvePublishedAsset("../publish/api", "api");
 
+        var adminBootstrapEmails = new CfnParameter(this, "AdminBootstrapEmails", new CfnParameterProps
+        {
+            Type = "String",
+            Default = string.Empty,
+            NoEcho = true
+        });
+
+        var environment = new Dictionary<string, string>
+        {
+            ["ASPNETCORE_ENVIRONMENT"] = "Production",
+            ["Auth__Cognito__UserPoolId"] = props.UserPool.UserPoolId,
+            ["Auth__Cognito__ClientId"] = props.UserPoolClient.UserPoolClientId,
+            ["Auth__Google__ClientId"] = props.RuntimeSettings.AuthGoogleClientId ?? string.Empty,
+            ["Auth__Apple__ClientId"] = props.RuntimeSettings.AuthAppleClientId ?? string.Empty,
+            ["Apple__KeyId"] = props.RuntimeSettings.AppleKeyId ?? string.Empty,
+            ["Apple__IssuerId"] = props.RuntimeSettings.AppleIssuerId ?? string.Empty,
+            ["Apple__BundleId"] = props.RuntimeSettings.AppleBundleId ?? string.Empty,
+            ["Apple__PrivateKeySecretId"] = props.RuntimeSecretSettings.ApplePrivateKeySecretName,
+            ["GooglePlay__PackageName"] = props.RuntimeSettings.GooglePlayPackageName ?? string.Empty,
+            ["GooglePlay__ServiceAccountJsonSecretId"] = props.RuntimeSecretSettings.GooglePlayServiceAccountJsonSecretName,
+            ["Firebase__AdminServiceAccountJsonSecretId"] = props.RuntimeSecretSettings.FirebaseAdminServiceAccountJsonSecretName,
+            ["Firebase__ProjectId"] = props.RuntimeSettings.FirebaseProjectId ?? string.Empty,
+            ["AdminBootstrap__Emails"] = adminBootstrapEmails.ValueAsString,
+            ["InviteEmail__FromEmail"] = props.RuntimeSettings.InviteEmailFromEmail ?? string.Empty,
+            ["InviteEmail__ConfigurationSetName"] = props.RuntimeSettings.InviteEmailConfigurationSetName ?? string.Empty,
+            ["InviteEmail__DeepLinkBaseUri"] = props.RuntimeSettings.InviteEmailDeepLinkBaseUri,
+            ["AWS__S3__BucketName"] = props.ReceiptBucket.BucketName,
+            ["AWS__SQS__AiQueueUrl"] = props.AiQueue.QueueUrl,
+            ["AWS__DynamoDB__ControlPlaneTable"] = props.ControlPlaneTable.TableName,
+            ["AWS__DynamoDB__TransactionsTable"] = props.TransactionsTable.TableName,
+            ["AWS__DynamoDB__RecurringSchedulesTable"] = props.RecurringSchedulesTable.TableName,
+            ["AWS__DynamoDB__AiInteractionsTable"] = props.AiInteractionsTable.TableName,
+            ["AWS__DynamoDB__OutboxEventsTable"] = props.OutboxEventsTable.TableName,
+            ["AWS__DynamoDB__InAppAlertsTable"] = props.InAppAlertsTable.TableName,
+            ["AWS__DynamoDB__WeeklyInsightsTable"] = props.WeeklyInsightsTable.TableName,
+            ["AWS__DynamoDB__PurchasePatternsTable"] = props.PurchasePatternsTable.TableName,
+            ["AWS__DynamoDB__MonthlyCategorySpendsTable"] = props.MonthlyCategorySpendsTable.TableName,
+            ["AWS__DynamoDB__PushDeviceTokensTable"] = props.PushDeviceTokensTable.TableName,
+            ["AWS__DynamoDB__ConscienceJourneyTable"] = props.ConscienceJourneyTable.TableName
+        };
+
         ApiLambda = new Function(this, "ApiLambda", new FunctionProps
         {
             FunctionName = "conscia-api",
@@ -56,38 +97,7 @@ public class ComputeStack : Stack
             MemorySize = 1024,
             Timeout = Duration.Seconds(30),
             Architecture = Architecture.ARM_64,
-            Environment = new Dictionary<string, string>
-            {
-                ["ASPNETCORE_ENVIRONMENT"] = "Production",
-                ["Auth__Cognito__UserPoolId"] = props.UserPool.UserPoolId,
-                ["Auth__Cognito__ClientId"] = props.UserPoolClient.UserPoolClientId,
-                ["Auth__Google__ClientId"] = props.RuntimeSettings.AuthGoogleClientId ?? string.Empty,
-                ["Auth__Apple__ClientId"] = props.RuntimeSettings.AuthAppleClientId ?? string.Empty,
-                ["Apple__KeyId"] = props.RuntimeSettings.AppleKeyId ?? string.Empty,
-                ["Apple__IssuerId"] = props.RuntimeSettings.AppleIssuerId ?? string.Empty,
-                ["Apple__BundleId"] = props.RuntimeSettings.AppleBundleId ?? string.Empty,
-                ["Apple__PrivateKeySecretId"] = props.RuntimeSecretSettings.ApplePrivateKeySecretName,
-                ["GooglePlay__PackageName"] = props.RuntimeSettings.GooglePlayPackageName ?? string.Empty,
-                ["GooglePlay__ServiceAccountJsonSecretId"] = props.RuntimeSecretSettings.GooglePlayServiceAccountJsonSecretName,
-                ["Firebase__AdminServiceAccountJsonSecretId"] = props.RuntimeSecretSettings.FirebaseAdminServiceAccountJsonSecretName,
-                ["Firebase__ProjectId"] = props.RuntimeSettings.FirebaseProjectId ?? string.Empty,
-                ["InviteEmail__FromEmail"] = props.RuntimeSettings.InviteEmailFromEmail ?? string.Empty,
-                ["InviteEmail__ConfigurationSetName"] = props.RuntimeSettings.InviteEmailConfigurationSetName ?? string.Empty,
-                ["InviteEmail__DeepLinkBaseUri"] = props.RuntimeSettings.InviteEmailDeepLinkBaseUri,
-                ["AWS__S3__BucketName"] = props.ReceiptBucket.BucketName,
-                ["AWS__SQS__AiQueueUrl"] = props.AiQueue.QueueUrl,
-                ["AWS__DynamoDB__ControlPlaneTable"] = props.ControlPlaneTable.TableName,
-                ["AWS__DynamoDB__TransactionsTable"] = props.TransactionsTable.TableName,
-                ["AWS__DynamoDB__RecurringSchedulesTable"] = props.RecurringSchedulesTable.TableName,
-                ["AWS__DynamoDB__AiInteractionsTable"] = props.AiInteractionsTable.TableName,
-                ["AWS__DynamoDB__OutboxEventsTable"] = props.OutboxEventsTable.TableName,
-                ["AWS__DynamoDB__InAppAlertsTable"] = props.InAppAlertsTable.TableName,
-                ["AWS__DynamoDB__WeeklyInsightsTable"] = props.WeeklyInsightsTable.TableName,
-                ["AWS__DynamoDB__PurchasePatternsTable"] = props.PurchasePatternsTable.TableName,
-                ["AWS__DynamoDB__MonthlyCategorySpendsTable"] = props.MonthlyCategorySpendsTable.TableName,
-                ["AWS__DynamoDB__PushDeviceTokensTable"] = props.PushDeviceTokensTable.TableName,
-                ["AWS__DynamoDB__ConscienceJourneyTable"] = props.ConscienceJourneyTable.TableName
-            },
+            Environment = environment,
             Tracing = Tracing.ACTIVE
         });
 
@@ -166,6 +176,12 @@ public class ComputeStack : Stack
         {
             Actions = ["textract:DetectDocumentText"],
             Resources = ["*"]
+        }));
+
+        ApiLambda.AddToRolePolicy(new PolicyStatement(new PolicyStatementProps
+        {
+            Actions = ["cognito-idp:AdminDeleteUser"],
+            Resources = [props.UserPool.UserPoolArn]
         }));
 
         new CfnOutput(this, "ApiUrl", new CfnOutputProps { Value = Api.Url });

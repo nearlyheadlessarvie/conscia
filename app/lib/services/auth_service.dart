@@ -130,6 +130,42 @@ class AuthService {
     }
   }
 
+  Future<AuthConfirmationResult> startPasswordReset(String email) async {
+    try {
+      final response = await _dio.post(
+        ApiConstants.passwordResetStart,
+        data: {'email': email},
+      );
+      return AuthConfirmationResult.fromJson(
+        response.data as Map<String, dynamic>,
+      );
+    } on DioException {
+      rethrow;
+    }
+  }
+
+  Future<AuthConfirmationResult> confirmPasswordReset(
+    String email,
+    String confirmationCode,
+    String password,
+  ) async {
+    try {
+      final response = await _dio.post(
+        ApiConstants.passwordResetConfirm,
+        data: {
+          'email': email,
+          'confirmationCode': confirmationCode,
+          'password': password,
+        },
+      );
+      return AuthConfirmationResult.fromJson(
+        response.data as Map<String, dynamic>,
+      );
+    } on DioException {
+      rethrow;
+    }
+  }
+
   Future<AuthTokens> login(String email, String password) async {
     try {
       final response = await _dio.post(

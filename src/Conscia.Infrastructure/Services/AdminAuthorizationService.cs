@@ -15,15 +15,23 @@ public sealed class AdminAuthorizationService : IAdminAuthorizationService
         IConfiguration configuration)
     {
         _users = users;
-        _bootstrapEmails = configuration
+        var emailsSection = configuration
             .GetSection(AdminBootstrapOptions.SectionName)
-            .GetSection("Emails")
+            .GetSection("Emails");
+        _bootstrapEmails = emailsSection
             .GetChildren()
-            .Select(child => child.Value?.Trim().ToLowerInvariant())
+            .Select(child => child.Value)
+            .Concat(SplitCommaSeparated(emailsSection.Value))
+            .Select(value => value?.Trim().ToLowerInvariant())
             .Where(value => !string.IsNullOrWhiteSpace(value))
             .Cast<string>()
             .ToHashSet(StringComparer.Ordinal);
     }
+
+    private static IEnumerable<string> SplitCommaSeparated(string? value) =>
+        string.IsNullOrWhiteSpace(value)
+            ? []
+            : value.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
     public async Task<bool> IsAuthorizedAsync(Guid userId, string email, CancellationToken ct = default)
     {

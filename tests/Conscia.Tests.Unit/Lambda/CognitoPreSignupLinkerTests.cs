@@ -1,5 +1,6 @@
 using Amazon.CognitoIdentityProvider;
 using Amazon.CognitoIdentityProvider.Model;
+using System.Text.Json;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using CognitoPreSignupEvent = Conscia.CognitoPreSignupLinker.CognitoPreSignupEvent;
@@ -73,6 +74,56 @@ public class CognitoPreSignupLinkerTests
 
         _cognito.Verify(client => client.ListUsersAsync(It.IsAny<ListUsersRequest>(), It.IsAny<CancellationToken>()), Times.Never);
         _cognito.Verify(client => client.AdminLinkProviderForUserAsync(It.IsAny<AdminLinkProviderForUserRequest>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task HandleAsync_RoundTripsCognitoCommonEventFields()
+    {
+        const string json = """
+            {
+              "version": "1",
+              "triggerSource": "PreSignUp_SignUp",
+              "region": "ap-southeast-1",
+              "userPoolId": "ap-southeast-1_example",
+              "userName": "person@example.com",
+              "callerContext": {
+                "awsSdkVersion": "aws-sdk-unknown-unknown",
+                "clientId": "client-123"
+              },
+              "request": {
+                "clientMetadata": {
+                  "source": "local-test"
+                },
+                "validationData": null,
+                "userAttributes": {
+                  "email": "person@example.com",
+                  "email_verified": "true"
+                }
+              },
+              "response": {
+                "autoConfirmUser": false,
+                "autoVerifyEmail": false,
+                "autoVerifyPhone": false
+              }
+            }
+            """;
+        var request = JsonSerializer.Deserialize<CognitoPreSignupEvent>(json)
+            ?? throw new InvalidOperationException("Test event did not deserialize.");
+
+        var result = await _linker.HandleAsync(request, CancellationToken.None);
+        var responseJson = JsonSerializer.Serialize(result);
+        using var document = JsonDocument.Parse(responseJson);
+        var root = document.RootElement;
+
+        Assert.Equal("1", root.GetProperty("version").GetString());
+        Assert.Equal("ap-southeast-1", root.GetProperty("region").GetString());
+        Assert.Equal(
+            "client-123",
+            root.GetProperty("callerContext").GetProperty("clientId").GetString());
+        Assert.Equal(
+            "local-test",
+            root.GetProperty("request").GetProperty("clientMetadata").GetProperty("source").GetString());
+        Assert.True(root.GetProperty("request").TryGetProperty("validationData", out _));
     }
 
     private static CognitoPreSignupEvent CreateRequest(string triggerSource, string userName)

@@ -6,7 +6,6 @@ import 'package:conscia_app/services/cognito_managed_login_service.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 String _fakeJwt({
   required String sub,
@@ -75,16 +74,11 @@ void main() {
         'expires_in': 3600,
         'token_type': 'Bearer',
       });
-    Uri? launchedUri;
     Uri? sheetUri;
     String? callbackUrlScheme;
     final dio = Dio()..httpClientAdapter = adapter;
     final service = CognitoManagedLoginService(
       dio: dio,
-      launchUrl: (uri, {mode = LaunchMode.platformDefault}) async {
-        launchedUri = uri;
-        return true;
-      },
       openAuthSession: (uri, {required appCallbackUri}) async {
         sheetUri = uri;
         callbackUrlScheme = appCallbackUri.scheme;
@@ -110,7 +104,6 @@ void main() {
     expect(tokens.refreshToken, 'managed-refresh-token');
     expect(tokens.userId, '4dfd3d03-c1da-4dd8-8a63-c973d4d1f83a');
 
-    expect(launchedUri, isNull);
     expect(sheetUri, isNotNull);
     expect(sheetUri!.path, '/oauth2/authorize');
     expect(sheetUri!.queryParameters['client_id'], 'managed-client-id');
@@ -123,6 +116,7 @@ void main() {
       sheetUri!.queryParameters['identity_provider'],
       'Google',
     );
+    expect(sheetUri!.queryParameters['prompt'], 'select_account');
     expect(
       sheetUri!.queryParameters['scope'],
       contains('aws.cognito.signin.user.admin'),
@@ -138,8 +132,10 @@ void main() {
       'application/x-www-form-urlencoded',
     );
     expect(adapter.lastRequestBody, isA<String>());
-    expect(adapter.lastRequestBody as String, contains('grant_type=authorization_code'));
-    expect(adapter.lastRequestBody as String, contains('client_id=managed-client-id'));
+    expect(adapter.lastRequestBody as String,
+        contains('grant_type=authorization_code'));
+    expect(adapter.lastRequestBody as String,
+        contains('client_id=managed-client-id'));
     expect(adapter.lastRequestBody as String, contains('code=managed-code'));
     expect(
       adapter.lastRequestBody as String,
@@ -162,15 +158,10 @@ void main() {
         'expires_in': 3600,
         'token_type': 'Bearer',
       });
-    Uri? launchedUri;
     Uri? sheetUri;
     final dio = Dio()..httpClientAdapter = adapter;
     final service = CognitoManagedLoginService(
       dio: dio,
-      launchUrl: (uri, {mode = LaunchMode.platformDefault}) async {
-        launchedUri = uri;
-        return true;
-      },
       openAuthSession: (uri, {required appCallbackUri}) async {
         sheetUri = uri;
         return Uri.parse(
@@ -189,7 +180,6 @@ void main() {
     final tokens = await service.signUp(emailHint: 'story-demo@example.com');
 
     expect(tokens.userId, '4dfd3d03-c1da-4dd8-8a63-c973d4d1f83a');
-    expect(launchedUri, isNull);
     expect(sheetUri, isNotNull);
     expect(sheetUri!.path, '/signup');
     expect(
@@ -215,7 +205,6 @@ void main() {
     final dio = Dio()..httpClientAdapter = adapter;
     final service = CognitoManagedLoginService(
       dio: dio,
-      launchUrl: (uri, {mode = LaunchMode.platformDefault}) async => true,
       openAuthSession: (uri, {required appCallbackUri}) async => Uri.parse(
         'conscia://auth/callback'
         '?code=managed-code'
@@ -250,7 +239,6 @@ void main() {
     final dio = Dio()..httpClientAdapter = adapter;
     final service = CognitoManagedLoginService(
       dio: dio,
-      launchUrl: (uri, {mode = LaunchMode.platformDefault}) async => true,
       openAuthSession: (uri, {required appCallbackUri}) async =>
           throw UnimplementedError(),
       clientId: 'managed-client-id',
@@ -267,18 +255,49 @@ void main() {
     expect(tokens.userId, '4dfd3d03-c1da-4dd8-8a63-c973d4d1f83a');
     expect(adapter.lastRequestOptions?.path, '/oauth2/token');
     expect(adapter.lastRequestBody, isA<String>());
-    expect(adapter.lastRequestBody as String, contains('grant_type=refresh_token'));
+    expect(adapter.lastRequestBody as String,
+        contains('grant_type=refresh_token'));
     expect(
       adapter.lastRequestBody as String,
       contains('refresh_token=managed-refresh-token'),
     );
   });
 
-  test('signIn maps native auth-sheet cancellation to managed login cancellation',
+  test('logout uses managed auth session so the browser tab can close',
+      () async {
+    Uri? sheetUri;
+    Uri? callbackUri;
+    final service = CognitoManagedLoginService(
+      dio: Dio(),
+      openAuthSession: (uri, {required appCallbackUri}) async {
+        sheetUri = uri;
+        callbackUri = appCallbackUri;
+        return Uri.parse('conscia://auth/logout');
+      },
+      clientId: 'managed-client-id',
+      loginDomain: Uri.parse('https://login.getconscia.com'),
+      redirectUri: Uri.parse('conscia://auth/callback'),
+      appRedirectUri: Uri.parse('conscia://auth/callback'),
+      logoutUri: Uri.parse('conscia://auth/logout'),
+    );
+
+    await service.logout();
+
+    expect(sheetUri, isNotNull);
+    expect(sheetUri!.path, '/logout');
+    expect(sheetUri!.queryParameters['client_id'], 'managed-client-id');
+    expect(
+      sheetUri!.queryParameters['logout_uri'],
+      'conscia://auth/logout',
+    );
+    expect(callbackUri, Uri.parse('conscia://auth/logout'));
+  });
+
+  test(
+      'signIn maps native auth-sheet cancellation to managed login cancellation',
       () async {
     final service = CognitoManagedLoginService(
       dio: Dio(),
-      launchUrl: (uri, {mode = LaunchMode.platformDefault}) async => true,
       openAuthSession: (uri, {required appCallbackUri}) async {
         throw PlatformException(
           code: 'CANCELED',
@@ -295,6 +314,34 @@ void main() {
     await expectLater(
       service.signIn(provider: CognitoManagedLoginProvider.google),
       throwsA(isA<CognitoManagedLoginCancelledException>()),
+    );
+  });
+
+  test('signIn surfaces described Cognito access denied callbacks', () async {
+    final service = CognitoManagedLoginService(
+      dio: Dio(),
+      openAuthSession: (uri, {required appCallbackUri}) async => Uri.parse(
+        'conscia://auth/callback'
+        '?error=access_denied'
+        '&error_description=PreSignUp%20failed%20with%20error%20already%20found%20an%20entry'
+        '&state=${uri.queryParameters['state']}',
+      ),
+      clientId: 'managed-client-id',
+      loginDomain: Uri.parse('https://login.getconscia.com'),
+      redirectUri: Uri.parse('conscia://auth/callback'),
+      appRedirectUri: Uri.parse('conscia://auth/callback'),
+      logoutUri: Uri.parse('conscia://auth/logout'),
+    );
+
+    await expectLater(
+      service.signIn(provider: CognitoManagedLoginProvider.google),
+      throwsA(
+        isA<CognitoManagedLoginException>().having(
+          (e) => e.message,
+          'message',
+          contains('PreSignUp failed'),
+        ),
+      ),
     );
   });
 }

@@ -159,11 +159,15 @@ class _RecordingPasskeyService extends PasskeyService {
           authenticatedDio: Dio(),
         );
 
+  int registerCount = 0;
+
   @override
   Future<bool> isSupported() async => true;
 
   @override
-  Future<void> registerCurrentUserPasskey() async {}
+  Future<void> registerCurrentUserPasskey() async {
+    registerCount += 1;
+  }
 }
 
 Future<ProviderContainer> _pumpSettingsScreen(
@@ -500,6 +504,41 @@ void main() {
 
     expect(find.text('Set Up Passkey'), findsOneWidget);
     expect(find.text('Biometric Sign-In'), findsNothing);
+  });
+
+  testWidgets(
+      'passkey registration saves this account for passkey-first sign in',
+      (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+    final passkeyService = _RecordingPasskeyService();
+
+    await _pumpSettingsScreen(
+      tester,
+      prefs: prefs,
+      locationService:
+          _RecordingLocationAssistanceService(permissionGranted: true),
+      overrides: [
+        passkeyAvailabilityProvider.overrideWith((ref) async => true),
+        currentSessionSupportsPasskeysProvider.overrideWith((ref) => true),
+        passkeyServiceProvider.overrideWithValue(passkeyService),
+      ],
+    );
+
+    await tester.pumpAndSettle();
+
+    await tester.scrollUntilVisible(find.text('Set Up Passkey'), 200);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Set Up Passkey'));
+    await tester.pumpAndSettle();
+
+    expect(passkeyService.registerCount, 1);
+    expect(
+      prefs.getStringList(passkeyRegisteredEmailsPreferenceKey),
+      ['settings@example.com'],
+    );
+    expect(prefs.getBool(passkeyFirstSignInEnabledPreferenceKey), isTrue);
+    expect(find.text('Passkey First Sign-In'), findsOneWidget);
   });
 
   testWidgets('settings can change region format', (tester) async {

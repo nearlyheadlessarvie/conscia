@@ -10,7 +10,6 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 String _fakeJwt({
   required DateTime expiresAt,
@@ -36,6 +35,10 @@ class _FakeAuthService extends AuthService {
   String? lastConfirmedEmail;
   String? lastConfirmationCode;
   String? lastResentEmail;
+  String? lastPasswordResetEmail;
+  String? lastPasswordResetConfirmEmail;
+  String? lastPasswordResetCode;
+  String? lastPasswordResetPassword;
   String? lastRefreshToken;
   int registerCount = 0;
   int loginCount = 0;
@@ -73,6 +76,24 @@ class _FakeAuthService extends AuthService {
       requiresConfirmation: true,
       email: email,
     );
+  }
+
+  @override
+  Future<AuthConfirmationResult> startPasswordReset(String email) async {
+    lastPasswordResetEmail = email;
+    return AuthConfirmationResult(success: true, email: email);
+  }
+
+  @override
+  Future<AuthConfirmationResult> confirmPasswordReset(
+    String email,
+    String confirmationCode,
+    String password,
+  ) async {
+    lastPasswordResetConfirmEmail = email;
+    lastPasswordResetCode = confirmationCode;
+    lastPasswordResetPassword = password;
+    return AuthConfirmationResult(success: true, email: email);
   }
 
   @override
@@ -155,13 +176,11 @@ class _FakeManagedLoginService extends CognitoManagedLoginService {
   _FakeManagedLoginService()
       : super(
           dio: Dio(),
-          launchUrl: (uri, {mode = LaunchMode.platformDefault}) async => true,
-          openAuthSession: (uri, {required appCallbackUri}) async =>
-              Uri.parse(
-                'conscia://auth/callback'
-                '?code=test-code'
-                '&state=test-state',
-              ),
+          openAuthSession: (uri, {required appCallbackUri}) async => Uri.parse(
+            'conscia://auth/callback'
+            '?code=test-code'
+            '&state=test-state',
+          ),
           clientId: 'managed-client-id',
           loginDomain: Uri.parse('https://login.getconscia.com'),
           redirectUri: Uri.parse('conscia://auth/callback'),
@@ -182,10 +201,12 @@ class _FakeManagedLoginService extends CognitoManagedLoginService {
     userId: 'user-1',
   );
   Object? signInError;
+  final List<Object> signInErrors = <Object>[];
   Object? signUpError;
   CognitoManagedLoginProvider? lastProvider;
   String? lastEmailHint;
   String? lastRefreshToken;
+  int signInCount = 0;
   int logoutCount = 0;
 
   @override
@@ -193,6 +214,10 @@ class _FakeManagedLoginService extends CognitoManagedLoginService {
     CognitoManagedLoginProvider? provider,
     String? emailHint,
   }) async {
+    signInCount += 1;
+    if (signInErrors.isNotEmpty) {
+      throw signInErrors.removeAt(0);
+    }
     final error = signInError;
     if (error != null) {
       throw error;
@@ -355,6 +380,59 @@ void main() {
     await notifier.resendConfirmation();
 
     expect(service.lastResentEmail, 'new@example.com');
+  });
+
+  test('startPasswordReset sends the reset email through auth service',
+      () async {
+    final service = _FakeAuthService(
+      const AuthTokens(
+        accessToken: 'verified.access.token',
+        refreshToken: 'verified-refresh-token',
+        userId: 'user-1',
+      ),
+    );
+    final notifier = AuthNotifier(
+      service,
+      _FakeSecureStorage(),
+      autoRestoreSession: false,
+    );
+
+    await notifier.startPasswordReset('Reset@Example.com ');
+
+    expect(service.lastPasswordResetEmail, 'reset@example.com');
+    expect(notifier.state.status, AuthStatus.unauthenticated);
+    expect(notifier.state.isLoading, isFalse);
+  });
+
+  test('confirmPasswordReset confirms reset then signs in with new password',
+      () async {
+    final service = _FakeAuthService(
+      const AuthTokens(
+        accessToken: 'reset.access.token',
+        refreshToken: 'reset-refresh-token',
+        userId: 'user-1',
+      ),
+    );
+    final storage = _FakeSecureStorage();
+    final notifier = AuthNotifier(
+      service,
+      storage,
+      autoRestoreSession: false,
+    );
+
+    await notifier.confirmPasswordReset(
+      'Reset@Example.com ',
+      '654321',
+      'FreshPass123',
+    );
+
+    expect(service.lastPasswordResetConfirmEmail, 'reset@example.com');
+    expect(service.lastPasswordResetCode, '654321');
+    expect(service.lastPasswordResetPassword, 'FreshPass123');
+    expect(service.loginCount, 1);
+    expect(notifier.state.status, AuthStatus.authenticated);
+    expect(notifier.state.accessToken, 'reset.access.token');
+    expect(await storage.read(key: 'access_token'), 'reset.access.token');
   });
 
   test('login requiring confirmation stores pending email without tokens',
@@ -620,6 +698,72 @@ void main() {
     expect(await storage.read(key: 'id_token'), 'managed.id.token');
   });
 
+  test('signInWithGoogle retries a transient Cognito linker failure once',
+      () async {
+    final managedLogin = _FakeManagedLoginService()
+      ..signInErrors.add(
+        const CognitoManagedLoginException(
+          'PreSignUp failed with error already found an entry for username.',
+        ),
+      )
+      ..signInTokens = const AuthTokens(
+        accessToken: 'managed.access.token',
+        idToken: 'managed.id.token',
+        refreshToken: 'managed-refresh-token',
+        userId: 'managed-user',
+      );
+    final notifier = AuthNotifier(
+      _FakeAuthService(
+        const AuthTokens(
+          accessToken: 'unused.access.token',
+          refreshToken: 'unused-refresh-token',
+          userId: 'user-1',
+        ),
+      ),
+      _FakeSecureStorage(),
+      autoRestoreSession: false,
+      managedLoginService: managedLogin,
+      useManagedLogin: true,
+    );
+
+    await notifier.signInWithGoogle();
+
+    expect(managedLogin.signInCount, 2);
+    expect(managedLogin.lastProvider, CognitoManagedLoginProvider.google);
+    expect(notifier.state.status, AuthStatus.authenticated);
+    expect(notifier.state.userId, 'managed-user');
+  });
+
+  test('logout clears local managed session without opening Cognito logout',
+      () async {
+    final managedLogin = _FakeManagedLoginService();
+    final storage = _FakeSecureStorage();
+    final notifier = AuthNotifier(
+      _FakeAuthService(
+        const AuthTokens(
+          accessToken: 'unused.access.token',
+          refreshToken: 'unused-refresh-token',
+          userId: 'user-1',
+        ),
+      ),
+      storage,
+      autoRestoreSession: false,
+      managedLoginService: managedLogin,
+      useManagedLogin: true,
+    );
+
+    await notifier.signInWithGoogle();
+    await notifier.logout();
+
+    expect(managedLogin.logoutCount, 0);
+    expect(notifier.state.status, AuthStatus.unauthenticated);
+    expect(notifier.state.wasExplicitLogout, isTrue);
+    expect(await storage.read(key: 'access_token'), isNull);
+    expect(await storage.read(key: 'id_token'), isNull);
+    expect(await storage.read(key: 'refresh_token'), isNull);
+    expect(await storage.read(key: 'user_id'), isNull);
+  });
+
   test('refreshSession uses managed login token refresh and stores id token',
       () async {
     final storage = _FakeSecureStorage({
@@ -658,9 +802,11 @@ void main() {
 
     expect(refreshed, isTrue);
     expect(managedLogin.lastRefreshToken, 'managed-refresh-token');
-    expect(await storage.read(key: 'access_token'), 'managed.refreshed.access.token');
+    expect(await storage.read(key: 'access_token'),
+        'managed.refreshed.access.token');
     expect(await storage.read(key: 'id_token'), 'managed.refreshed.id.token');
-    expect(await storage.read(key: 'refresh_token'), 'managed.refreshed.refresh.token');
+    expect(await storage.read(key: 'refresh_token'),
+        'managed.refreshed.refresh.token');
   });
 
   test('continueWithManagedLogin ignores auth-sheet cancellation quietly',

@@ -75,6 +75,56 @@ public class AuthEndpointTests
     }
 
     [Fact]
+    public async Task StartPasswordReset_ExistingUser_Returns200()
+    {
+        await using var factory = new TestWebAppFactory();
+        using var client = factory.CreateClient();
+        var email = $"reset-start-{Guid.NewGuid()}@example.com";
+
+        await client.PostAsJsonAsync("/api/auth/register", new
+        {
+            email,
+            password = "SecureP@ss123"
+        });
+
+        var response = await client.PostAsJsonAsync("/api/auth/password-reset/start", new
+        {
+            email
+        });
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<Dictionary<string, object>>();
+        Assert.NotNull(body);
+        Assert.Equal("True", body!["success"].ToString());
+    }
+
+    [Fact]
+    public async Task ConfirmPasswordReset_ExistingUser_Returns200()
+    {
+        await using var factory = new TestWebAppFactory();
+        using var client = factory.CreateClient();
+        var email = $"reset-confirm-{Guid.NewGuid()}@example.com";
+
+        await client.PostAsJsonAsync("/api/auth/register", new
+        {
+            email,
+            password = "SecureP@ss123"
+        });
+
+        var response = await client.PostAsJsonAsync("/api/auth/password-reset/confirm", new
+        {
+            email,
+            confirmationCode = "123456",
+            password = "FreshPass123"
+        });
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<Dictionary<string, object>>();
+        Assert.NotNull(body);
+        Assert.Equal("True", body!["success"].ToString());
+    }
+
+    [Fact]
     public async Task Login_ValidCredentials_Returns200()
     {
         await using var factory = new TestWebAppFactory();

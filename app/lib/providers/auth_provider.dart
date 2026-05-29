@@ -5,7 +5,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../core/constants/api_constants.dart';
 import '../core/errors/app_error.dart';
@@ -290,6 +289,63 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
   }
 
+  Future<void> startPasswordReset(String email) async {
+    final normalizedEmail = _normalizeEmail(email);
+    if (normalizedEmail == null) {
+      throw Exception('Email is required');
+    }
+
+    state = state.copyWith(
+      isLoading: true,
+      isRestoringSession: false,
+      error: null,
+    );
+    try {
+      await _authService.startPasswordReset(normalizedEmail);
+      await saveLastEmail(normalizedEmail);
+      state = state.copyWith(
+        isLoading: false,
+        isRestoringSession: false,
+        error: null,
+      );
+    } catch (e, s) {
+      final error = AppError.from(e, stackTrace: s);
+      state = state.copyWith(isLoading: false, error: error.userMessage);
+      throw error;
+    }
+  }
+
+  Future<void> confirmPasswordReset(
+    String email,
+    String confirmationCode,
+    String password,
+  ) async {
+    final normalizedEmail = _normalizeEmail(email);
+    if (normalizedEmail == null) {
+      throw Exception('Email is required');
+    }
+
+    state = state.copyWith(
+      isLoading: true,
+      isRestoringSession: false,
+      error: null,
+    );
+    try {
+      await _authService.confirmPasswordReset(
+        normalizedEmail,
+        confirmationCode,
+        password,
+      );
+      final tokens = await _authService.login(normalizedEmail, password);
+      await saveLastEmail(normalizedEmail);
+      await _setAuthenticated(tokens);
+    } catch (e, s) {
+      final error = AppError.from(e, stackTrace: s);
+      state = state.copyWith(isLoading: false, error: error.userMessage);
+      throw error;
+    }
+  }
+
   void cancelPendingConfirmation() {
     _pendingPassword = null;
     state = const AuthState();
@@ -323,10 +379,17 @@ class AuthNotifier extends StateNotifier<AuthState> {
         await _setAuthenticated(tokens);
         return;
       }
-      final tokens = await _managedLoginService.signIn(
-        provider: CognitoManagedLoginProvider.google,
+      final tokens = await _signInWithManagedProvider(
+        CognitoManagedLoginProvider.google,
       );
       await _setAuthenticated(tokens);
+    } on CognitoManagedLoginCancelledException {
+      state = state.copyWith(
+        isLoading: false,
+        isRestoringSession: false,
+        error: null,
+      );
+      return;
     } catch (e, s) {
       final error = AppError.from(e, stackTrace: s);
       state = state.copyWith(isLoading: false, error: error.userMessage);
@@ -347,10 +410,17 @@ class AuthNotifier extends StateNotifier<AuthState> {
         await _setAuthenticated(tokens);
         return;
       }
-      final tokens = await _managedLoginService.signIn(
-        provider: CognitoManagedLoginProvider.apple,
+      final tokens = await _signInWithManagedProvider(
+        CognitoManagedLoginProvider.apple,
       );
       await _setAuthenticated(tokens);
+    } on CognitoManagedLoginCancelledException {
+      state = state.copyWith(
+        isLoading: false,
+        isRestoringSession: false,
+        error: null,
+      );
+      return;
     } catch (e, s) {
       final error = AppError.from(e, stackTrace: s);
       state = state.copyWith(isLoading: false, error: error.userMessage);
@@ -430,13 +500,6 @@ class AuthNotifier extends StateNotifier<AuthState> {
     await _storage.delete(key: _idTokenKey);
     await _storage.delete(key: _refreshTokenKey);
     await _storage.delete(key: _userIdKey);
-    if (_useManagedLogin) {
-      try {
-        await _managedLoginService.logout();
-      } catch (_) {
-        // Local sign-out already succeeded; don't trap the user on a browser failure.
-      }
-    }
   }
 
   Future<bool> refreshSession() async {
@@ -609,6 +672,29 @@ class AuthNotifier extends StateNotifier<AuthState> {
     );
   }
 
+  Future<AuthTokens> _signInWithManagedProvider(
+    CognitoManagedLoginProvider provider,
+  ) async {
+    try {
+      return await _managedLoginService.signIn(provider: provider);
+    } on CognitoManagedLoginException catch (e) {
+      if (!_isTransientFederatedLinkerError(e)) {
+        rethrow;
+      }
+      return _managedLoginService.signIn(provider: provider);
+    }
+  }
+
+  bool _isTransientFederatedLinkerError(CognitoManagedLoginException error) {
+    final message = error.message.toLowerCase();
+    final isPreSignUpError =
+        message.contains('presignup') || message.contains('pre sign-up');
+    final isAlreadyLinkedError = message.contains('already found an entry') ||
+        message.contains('already linked') ||
+        message.contains('already exists');
+    return isPreSignUpError && isAlreadyLinkedError;
+  }
+
   Future<bool> _resumePendingConfirmationIfCoolingDown(
     String email,
     String password,
@@ -745,7 +831,6 @@ final managedLoginServiceProvider = Provider<CognitoManagedLoginService>((ref) {
 
   return CognitoManagedLoginService(
     dio: dio,
-    launchUrl: launchUrl,
     openAuthSession: openManagedLoginAuthSheet,
     clientId: ApiConstants.cognitoClientId,
     loginDomain: Uri.parse(ApiConstants.cognitoLoginDomain),
@@ -776,11 +861,10 @@ final class _UnavailableManagedLoginService extends CognitoManagedLoginService {
   _UnavailableManagedLoginService._()
       : super(
           dio: Dio(),
-          launchUrl: (uri, {mode = LaunchMode.platformDefault}) async => false,
           openAuthSession: (uri, {required appCallbackUri}) async =>
               throw const CognitoManagedLoginException(
-                'Managed login is not configured for this session.',
-              ),
+            'Managed login is not configured for this session.',
+          ),
           clientId: '',
           loginDomain: Uri.parse('https://login.getconscia.com'),
           redirectUri: Uri.parse(ApiConstants.cognitoAppRedirectUri),

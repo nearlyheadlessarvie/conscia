@@ -1,9 +1,13 @@
+using System.Text.Json;
 using System.Text.Json.Serialization;
 
 namespace Conscia.CognitoPreSignupLinker;
 
 public sealed class CognitoPreSignupEvent
 {
+    [JsonPropertyName("version")]
+    public string Version { get; set; } = "1";
+
     [JsonPropertyName("triggerSource")]
     public string? TriggerSource { get; set; }
 
@@ -18,12 +22,18 @@ public sealed class CognitoPreSignupEvent
 
     [JsonPropertyName("response")]
     public CognitoPreSignupResponse Response { get; set; } = new();
+
+    [JsonExtensionData]
+    public Dictionary<string, JsonElement>? ExtensionData { get; set; }
 }
 
 public sealed class CognitoPreSignupRequest
 {
     [JsonPropertyName("userAttributes")]
     public Dictionary<string, string> UserAttributes { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+
+    [JsonExtensionData]
+    public Dictionary<string, JsonElement>? ExtensionData { get; set; }
 }
 
 public sealed class CognitoPreSignupResponse

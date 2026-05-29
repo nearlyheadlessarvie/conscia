@@ -204,6 +204,35 @@ void main() {
     await service.start();
   });
 
+  test('push service disables itself when firebase initialization throws',
+      () async {
+    var createdMessagingClient = false;
+    final service = PushNotificationService(
+      dio: Dio(),
+      pushNotificationsEnabled: true,
+      initializeFirebase: () async => throw StateError(
+        "Field '_instance' has not been initialized.",
+      ),
+      messagingClientFactory: () {
+        createdMessagingClient = true;
+        return _FakePushMessagingClient();
+      },
+    );
+
+    final initialized = await service.initialize();
+    await service.start();
+
+    expect(initialized, isFalse);
+    expect(createdMessagingClient, isFalse);
+  });
+
+  test('firebase push initialization skips web without firebase options',
+      () async {
+    final initialized = await initializePushNotificationFirebase(isWeb: true);
+
+    expect(initialized, isFalse);
+  });
+
   test('push service enables iOS foreground presentation after permission',
       () async {
     debugDefaultTargetPlatformOverride = TargetPlatform.iOS;

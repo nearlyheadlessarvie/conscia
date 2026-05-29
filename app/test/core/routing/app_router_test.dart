@@ -167,11 +167,13 @@ void main() {
       'has_completed_onboarding': false,
     });
     final fakeAuthNotifier = _TestAuthNotifier(const AuthState());
+    final prefs = await SharedPreferences.getInstance();
 
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
           authProvider.overrideWith((ref) => fakeAuthNotifier),
+          sharedPreferencesProvider.overrideWithValue(prefs),
         ],
         child: Consumer(
           builder: (context, ref, _) {
@@ -186,7 +188,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 100));
 
     expect(find.text('Welcome back'), findsOneWidget);
-    expect(find.text('Continue with Email'), findsOneWidget);
+    expect(find.text('Sign In'), findsOneWidget);
     expect(find.text('Build a calmer money rhythm'), findsNothing);
   });
 
@@ -195,11 +197,13 @@ void main() {
       'has_completed_onboarding': false,
     });
     final fakeAuthNotifier = _TestAuthNotifier(const AuthState());
+    final prefs = await SharedPreferences.getInstance();
 
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
           authProvider.overrideWith((ref) => fakeAuthNotifier),
+          sharedPreferencesProvider.overrideWithValue(prefs),
         ],
         child: Consumer(
           builder: (context, ref, _) {
@@ -260,11 +264,13 @@ void main() {
       'has_completed_onboarding': true,
     });
     final fakeAuthNotifier = _TestAuthNotifier(const AuthState());
+    final prefs = await SharedPreferences.getInstance();
 
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
           authProvider.overrideWith((ref) => fakeAuthNotifier),
+          sharedPreferencesProvider.overrideWithValue(prefs),
         ],
         child: Consumer(
           builder: (context, ref, _) {

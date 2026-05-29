@@ -118,7 +118,7 @@ public class StackTests
         template.ResourceCountIs("AWS::Cognito::UserPoolClient", 1);
         template.ResourceCountIs("AWS::Cognito::UserPoolDomain", 1);
         template.ResourceCountIs("AWS::Cognito::UserPoolIdentityProvider", 2);
-        template.ResourceCountIs("AWS::Cognito::ManagedLoginBranding", 1);
+        template.ResourceCountIs("AWS::Cognito::ManagedLoginBranding", 0);
         template.ResourceCountIs("AWS::Cognito::Terms", 2);
         template.HasResourceProperties("AWS::Cognito::UserPool", new Dictionary<string, object>
         {
@@ -198,48 +198,6 @@ public class StackTests
                 }
             })
         }));
-        template.HasResourceProperties("AWS::Cognito::ManagedLoginBranding", Match.ObjectLike(new Dictionary<string, object>
-        {
-            ["UseCognitoProvidedValues"] = false,
-            ["Assets"] = Match.ArrayWith([
-                Match.ObjectLike(new Dictionary<string, object>
-                {
-                    ["Category"] = "FORM_LOGO",
-                    ["ColorMode"] = "DYNAMIC",
-                    ["Extension"] = "SVG"
-                }),
-                Match.ObjectLike(new Dictionary<string, object>
-                {
-                    ["Category"] = "PAGE_BACKGROUND",
-                    ["ColorMode"] = "LIGHT",
-                    ["Extension"] = "SVG"
-                }),
-                Match.ObjectLike(new Dictionary<string, object>
-                {
-                    ["Category"] = "PAGE_BACKGROUND",
-                    ["ColorMode"] = "DARK",
-                    ["Extension"] = "SVG"
-                })
-            ]),
-            ["Settings"] = Match.ObjectLike(new Dictionary<string, object>
-            {
-                ["categories"] = Match.ObjectLike(new Dictionary<string, object>
-                {
-                    ["global"] = Match.ObjectLike(new Dictionary<string, object>
-                    {
-                        ["colorSchemeMode"] = "DYNAMIC"
-                    })
-                }),
-                ["componentClasses"] = Match.ObjectLike(new Dictionary<string, object>
-                {
-                    ["buttons"] = Match.ObjectLike(new Dictionary<string, object>
-                    {
-                        ["borderRadius"] = 28.0
-                    }),
-                    ["input"] = Match.AnyValue()
-                })
-            })
-        }));
         template.HasResourceProperties("AWS::Cognito::Terms", Match.ObjectLike(new Dictionary<string, object>
         {
             ["TermsName"] = "terms-of-use",
@@ -260,17 +218,6 @@ public class StackTests
                 ["cognito:default"] = "https://getconscia.com/privacy"
             })
         }));
-        var brandingResources = template.FindResources("AWS::Cognito::ManagedLoginBranding");
-        var branding = Assert.Single(brandingResources);
-        var brandingProperties = Assert.IsAssignableFrom<IDictionary<string, object>>(branding.Value["Properties"]);
-        var settings = Assert.IsAssignableFrom<IDictionary<string, object>>(brandingProperties["Settings"]);
-        var componentClasses = Assert.IsAssignableFrom<IDictionary<string, object>>(settings["componentClasses"]);
-        Assert.DoesNotContain("pageText", componentClasses.Keys);
-        var assets = Assert.IsAssignableFrom<object[]>(brandingProperties["Assets"]);
-        var formLogoAsset = assets
-            .Select(Assert.IsAssignableFrom<IDictionary<string, object>>)
-            .Single(asset => string.Equals(asset["Category"]?.ToString(), "FORM_LOGO", StringComparison.Ordinal));
-        Assert.Equal(LoadAppIconBase64(), formLogoAsset["Bytes"]?.ToString());
         template.HasResourceProperties("AWS::Lambda::Function", Match.ObjectLike(new Dictionary<string, object>
         {
             ["FunctionName"] = "conscia-cognito-pre-signup-linker"
@@ -388,6 +335,12 @@ public class StackTests
         Assert.NotNull(stack.ApiLambda);
 
         var template = Template.FromStack(stack);
+        template.HasParameter("AdminBootstrapEmails", new Dictionary<string, object>
+        {
+            ["Type"] = "String",
+            ["Default"] = string.Empty,
+            ["NoEcho"] = true
+        });
         template.ResourceCountIs("AWS::Lambda::Function", 1);
         template.ResourceCountIs("AWS::EC2::SecurityGroup", 0);
         template.HasResourceProperties("AWS::IAM::Policy", Match.ObjectLike(new Dictionary<string, object>
@@ -414,6 +367,7 @@ public class StackTests
                     ["AWS__DynamoDB__TransactionsTable"] = Match.AnyValue(),
                     ["Firebase__AdminServiceAccountJsonSecretId"] = "test/firebase-admin-service-account-json",
                     ["GooglePlay__ServiceAccountJsonSecretId"] = "test/google-play-service-account-json",
+                    ["AdminBootstrap__Emails"] = Match.AnyValue(),
                     ["InviteEmail__FromEmail"] = "invites@getconscia.com"
                 })
             }
@@ -424,6 +378,8 @@ public class StackTests
         var environment = (IDictionary<string, object>)properties["Environment"];
         var variables = (IDictionary<string, object>)environment["Variables"];
         Assert.DoesNotContain("Auth__AppJwtSigningKeySecretId", variables.Keys.Cast<string>());
+        Assert.DoesNotContain("AdminBootstrap__EmailsSecretId", variables.Keys.Cast<string>());
+        Assert.DoesNotContain("AdminBootstrap__Emails__0", variables.Keys.Cast<string>());
     }
 
     [Fact]
@@ -794,26 +750,4 @@ public class StackTests
         return path;
     }
 
-    private static string LoadAppIconBase64()
-    {
-        var repoRoot = FindRepoRoot();
-        var iconPath = Path.Combine(repoRoot, "web", "public", "images", "app_icon.svg");
-        return Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(File.ReadAllText(iconPath)));
-    }
-
-    private static string FindRepoRoot()
-    {
-        var current = new DirectoryInfo(AppContext.BaseDirectory);
-        while (current is not null)
-        {
-            if (File.Exists(Path.Combine(current.FullName, "AGENTS.md")))
-            {
-                return current.FullName;
-            }
-
-            current = current.Parent;
-        }
-
-        throw new InvalidOperationException("Could not locate the repository root from the test output directory.");
-    }
 }

@@ -5,6 +5,8 @@ public interface IAuthService
     Task<AuthResult> RegisterAsync(string email, string password, CancellationToken ct = default);
     Task<AuthResult> ConfirmRegistrationAsync(string email, string confirmationCode, CancellationToken ct = default);
     Task<AuthResult> ResendConfirmationAsync(string email, CancellationToken ct = default);
+    Task<AuthResult> StartPasswordResetAsync(string email, CancellationToken ct = default);
+    Task<AuthResult> ConfirmPasswordResetAsync(string email, string confirmationCode, string password, CancellationToken ct = default);
     Task<AuthResult> LoginAsync(string email, string password, CancellationToken ct = default);
     Task<AuthResult> RefreshAsync(string refreshToken, CancellationToken ct = default);
 }

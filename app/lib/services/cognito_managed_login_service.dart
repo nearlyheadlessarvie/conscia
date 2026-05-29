@@ -5,7 +5,6 @@ import 'package:crypto/crypto.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_web_auth_2/flutter_web_auth_2.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import 'auth_service.dart';
 
@@ -17,11 +16,6 @@ enum CognitoManagedLoginProvider {
 
   final String queryValue;
 }
-
-typedef LaunchExternalUrl = Future<bool> Function(
-  Uri uri, {
-  LaunchMode mode,
-});
 
 typedef OpenAuthSession = Future<Uri> Function(
   Uri uri, {
@@ -68,7 +62,6 @@ Future<Uri> openManagedLoginAuthSheet(
 class CognitoManagedLoginService {
   CognitoManagedLoginService({
     required Dio dio,
-    required LaunchExternalUrl launchUrl,
     required OpenAuthSession openAuthSession,
     required String clientId,
     required Uri loginDomain,
@@ -78,7 +71,6 @@ class CognitoManagedLoginService {
     this.scopes = _defaultScopes,
     math.Random? random,
   })  : _dio = dio,
-        _launchUrl = launchUrl,
         _openAuthSession = openAuthSession,
         _clientId = clientId,
         _loginDomain = _normalizeBaseUri(loginDomain),
@@ -93,7 +85,6 @@ class CognitoManagedLoginService {
       'openid email profile aws.cognito.signin.user.admin';
 
   final Dio _dio;
-  final LaunchExternalUrl _launchUrl;
   final OpenAuthSession _openAuthSession;
   final String _clientId;
   final Uri _loginDomain;
@@ -140,20 +131,29 @@ class CognitoManagedLoginService {
   }
 
   Future<void> logout() async {
-    final launched = await _launchUrl(
-      _loginDomain.replace(
-        path: '/logout',
-        queryParameters: {
-          'client_id': _clientId,
-          'logout_uri': _logoutUri.toString(),
-        },
-      ),
-      mode: LaunchMode.externalApplication,
+    final logoutUri = _loginDomain.replace(
+      path: '/logout',
+      queryParameters: {
+        'client_id': _clientId,
+        'logout_uri': _logoutUri.toString(),
+      },
     );
 
-    if (!launched) {
-      throw const CognitoManagedLoginException(
-        'Could not open Conscia sign-out in the browser.',
+    try {
+      await _openAuthSession(
+        logoutUri,
+        appCallbackUri: _logoutUri,
+      );
+    } on PlatformException catch (e) {
+      if (e.code == 'CANCELED') {
+        return;
+      }
+
+      final message = e.message?.trim();
+      throw CognitoManagedLoginException(
+        message?.isNotEmpty == true
+            ? message!
+            : 'Conscia sign-out could not finish right now.',
       );
     }
   }
@@ -176,6 +176,7 @@ class CognitoManagedLoginService {
         'code_challenge_method': 'S256',
         'code_challenge': _codeChallengeFor(codeVerifier),
         if (provider != null) 'identity_provider': provider.queryValue,
+        if (provider != null) 'prompt': 'select_account',
         if (emailHint != null && emailHint.trim().isNotEmpty)
           'login_hint': emailHint.trim(),
       },
@@ -185,13 +186,15 @@ class CognitoManagedLoginService {
 
     final error = callbackUri.queryParameters['error'];
     if (error != null && error.isNotEmpty) {
-      if (error == 'access_denied') {
+      final description =
+          callbackUri.queryParameters['error_description']?.trim();
+      if (error == 'access_denied' &&
+          (description == null || description.isEmpty)) {
         throw const CognitoManagedLoginCancelledException();
       }
 
-      final description = callbackUri.queryParameters['error_description'];
       throw CognitoManagedLoginException(
-        description?.trim().isNotEmpty == true
+        description?.isNotEmpty == true
             ? description!
             : 'Conscia sign-in could not finish right now.',
       );
@@ -348,8 +351,9 @@ class CognitoManagedLoginService {
   }
 
   static Uri _normalizeBaseUri(Uri uri) {
-    final path =
-        uri.path.endsWith('/') ? uri.path.substring(0, uri.path.length - 1) : uri.path;
+    final path = uri.path.endsWith('/')
+        ? uri.path.substring(0, uri.path.length - 1)
+        : uri.path;
     return uri.replace(path: path, query: null, fragment: null);
   }
 }

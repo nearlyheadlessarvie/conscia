@@ -200,6 +200,95 @@ public class CognitoAuthService : IAuthService
         }
     }
 
+    public async Task<AuthResult> StartPasswordResetAsync(string email, CancellationToken ct = default)
+    {
+        email = NormalizeEmail(email);
+
+        try
+        {
+            await _cognito.ForgotPasswordAsync(new ForgotPasswordRequest
+            {
+                ClientId = _clientId,
+                Username = email
+            }, ct);
+
+            return new AuthResult
+            {
+                Success = true,
+                Email = email
+            };
+        }
+        catch (UserNotFoundException)
+        {
+            return new AuthResult
+            {
+                Success = true,
+                Email = email
+            };
+        }
+        catch (AmazonCognitoIdentityProviderException ex)
+        {
+            _logger.LogError(ex, "Cognito password reset start failed for {Email}", email);
+            return new AuthResult
+            {
+                Success = false,
+                Email = email,
+                Error = "Unable to start password reset right now"
+            };
+        }
+    }
+
+    public async Task<AuthResult> ConfirmPasswordResetAsync(
+        string email,
+        string confirmationCode,
+        string password,
+        CancellationToken ct = default)
+    {
+        email = NormalizeEmail(email);
+
+        try
+        {
+            await _cognito.ConfirmForgotPasswordAsync(new ConfirmForgotPasswordRequest
+            {
+                ClientId = _clientId,
+                Username = email,
+                ConfirmationCode = confirmationCode.Trim(),
+                Password = password
+            }, ct);
+
+            var user = await _users.GetByEmailAsync(email, ct);
+            if (user is not null && !user.EmailConfirmed)
+            {
+                user.EmailConfirmed = true;
+                await _users.UpdateAsync(user, ct);
+            }
+
+            return new AuthResult
+            {
+                Success = true,
+                Email = email,
+                UserId = user?.Id.ToString()
+            };
+        }
+        catch (CodeMismatchException)
+        {
+            return PasswordResetError(email, "Invalid confirmation code");
+        }
+        catch (ExpiredCodeException)
+        {
+            return PasswordResetError(email, "Confirmation code expired");
+        }
+        catch (InvalidPasswordException ex)
+        {
+            return PasswordResetError(email, ex.Message);
+        }
+        catch (AmazonCognitoIdentityProviderException ex)
+        {
+            _logger.LogError(ex, "Cognito password reset confirmation failed for {Email}", email);
+            return PasswordResetError(email, "Unable to reset password right now");
+        }
+    }
+
     public async Task<AuthResult> LoginAsync(string email, string password, CancellationToken ct = default)
     {
         email = NormalizeEmail(email);
@@ -353,6 +442,14 @@ public class CognitoAuthService : IAuthService
         {
             Success = false,
             RequiresConfirmation = true,
+            Email = email,
+            Error = error
+        };
+
+    private static AuthResult PasswordResetError(string email, string error) =>
+        new()
+        {
+            Success = false,
             Email = email,
             Error = error
         };

@@ -53,6 +53,34 @@ public static class AuthEndpoints
                 : Results.BadRequest(new { result.Error });
         }).WithName("ResendConfirmation").RequireRateLimiting("auth");
 
+        group.MapPost("/password-reset/start", async (HttpContext ctx, StartPasswordResetRequest req, IAuthService auth) =>
+        {
+            if (string.IsNullOrWhiteSpace(req.Email))
+                return Results.BadRequest(new { error = "Email is required" });
+
+            var result = await auth.StartPasswordResetAsync(req.Email, ctx.RequestAborted);
+            return result.Success
+                ? Results.Ok(new { result.Success, result.Email })
+                : Results.BadRequest(new { result.Error });
+        }).WithName("StartPasswordReset").RequireRateLimiting("auth");
+
+        group.MapPost("/password-reset/confirm", async (HttpContext ctx, ConfirmPasswordResetRequest req, IAuthService auth) =>
+        {
+            if (string.IsNullOrWhiteSpace(req.Email) ||
+                string.IsNullOrWhiteSpace(req.ConfirmationCode) ||
+                string.IsNullOrWhiteSpace(req.Password))
+                return Results.BadRequest(new { error = "Email, confirmation code, and password are required" });
+
+            var result = await auth.ConfirmPasswordResetAsync(
+                req.Email,
+                req.ConfirmationCode,
+                req.Password,
+                ctx.RequestAborted);
+            return result.Success
+                ? Results.Ok(new { result.Success, result.Email })
+                : Results.BadRequest(new { result.Error });
+        }).WithName("ConfirmPasswordReset").RequireRateLimiting("auth");
+
         group.MapPost("/login", async (HttpContext ctx, LoginRequest req, IAuthService auth) =>
         {
             if (string.IsNullOrWhiteSpace(req.Email) || string.IsNullOrWhiteSpace(req.Password))
@@ -208,6 +236,8 @@ public static class AuthEndpoints
 public record RegisterRequest(string Email, string Password);
 public record ConfirmRegistrationRequest(string Email, string ConfirmationCode);
 public record ResendConfirmationRequest(string Email);
+public record StartPasswordResetRequest(string Email);
+public record ConfirmPasswordResetRequest(string Email, string ConfirmationCode, string Password);
 public record LoginRequest(string Email, string Password);
 public record RefreshRequest(string RefreshToken);
 public record SetPasswordRequest(string Password);

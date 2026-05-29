@@ -100,7 +100,14 @@ class FirebasePushMessagingClient implements PushMessagingClient {
   }
 }
 
-Future<bool> initializePushNotificationFirebase() async {
+Future<bool> initializePushNotificationFirebase({bool isWeb = kIsWeb}) async {
+  if (isWeb) {
+    debugPrint(
+      'Push notifications disabled: Firebase web options are not configured.',
+    );
+    return false;
+  }
+
   try {
     if (Firebase.apps.isEmpty) {
       await Firebase.initializeApp();
@@ -180,7 +187,7 @@ class PushNotificationService {
       return _initialized;
     }
 
-    final initialized = await _initializeFirebase();
+    final initialized = await _tryInitializeFirebase();
     if (!initialized) return false;
 
     try {
@@ -258,6 +265,15 @@ class PushNotificationService {
       badge: true,
       sound: true,
     );
+  }
+
+  Future<bool> _tryInitializeFirebase() async {
+    try {
+      return await _initializeFirebase();
+    } catch (error) {
+      debugPrint('Push notifications disabled: $error');
+      return false;
+    }
   }
 
   Future<void> _registerToken(String? token) async {

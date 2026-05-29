@@ -9,7 +9,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 class _FakeAuthService extends AuthService {
   _FakeAuthService() : super(Dio());
@@ -34,13 +33,11 @@ class _FakeManagedLoginService extends CognitoManagedLoginService {
   _FakeManagedLoginService()
       : super(
           dio: Dio(),
-          launchUrl: (uri, {mode = LaunchMode.platformDefault}) async => true,
-          openAuthSession: (uri, {required appCallbackUri}) async =>
-              Uri.parse(
-                'conscia://auth/callback'
-                '?code=test-code'
-                '&state=test-state',
-              ),
+          openAuthSession: (uri, {required appCallbackUri}) async => Uri.parse(
+            'conscia://auth/callback'
+            '?code=test-code'
+            '&state=test-state',
+          ),
           clientId: 'managed-client-id',
           loginDomain: Uri.parse('https://login.getconscia.com'),
           redirectUri: Uri.parse('conscia://auth/callback'),
@@ -60,16 +57,19 @@ class _RecordingAuthNotifier extends AuthNotifier {
         );
 
   String? lastEmailHint;
+  String? lastRegisteredEmail;
+  String? lastRegisteredPassword;
   Object? signUpError;
 
   @override
-  Future<void> signUpWithManagedLogin({String? emailHint}) async {
+  Future<void> register(String email, String password) async {
     final error = signUpError;
     if (error != null) {
       throw error;
     }
 
-    lastEmailHint = emailHint;
+    lastRegisteredEmail = email;
+    lastRegisteredPassword = password;
   }
 }
 
@@ -80,7 +80,7 @@ void main() {
 
   tearDown(AppError.resetForTests);
 
-  testWidgets('sign up screen keeps email-first managed login entry only', (
+  testWidgets('sign up screen shows email, password, and confirm fields', (
     tester,
   ) async {
     await tester.pumpWidget(
@@ -96,18 +96,13 @@ void main() {
 
     expect(find.text('Sign up with Google'), findsNothing);
     expect(find.text('Sign up with Apple'), findsNothing);
-    expect(find.byType(TextField), findsOneWidget);
-    expect(find.text('Password'), findsNothing);
+    expect(find.byType(TextField), findsNWidgets(3));
+    expect(find.text('Password'), findsOneWidget);
+    expect(find.text('Confirm Password'), findsOneWidget);
     expect(find.text('Create Account'), findsOneWidget);
-    expect(
-      find.text(
-        'We will create your account securely in your browser, where email, social sign-in, and passkeys stay on the same Cognito session.',
-      ),
-      findsNothing,
-    );
   });
 
-  testWidgets('create account launches managed signup with email hint', (
+  testWidgets('create account registers with email and password', (
     tester,
   ) async {
     final authNotifier = _RecordingAuthNotifier();
@@ -123,20 +118,22 @@ void main() {
       ),
     );
 
-    await tester.enterText(find.byType(TextField), 'story-demo@example.com');
+    final fields = find.byType(TextField);
+    await tester.enterText(fields.at(0), 'story-demo@example.com');
+    await tester.enterText(fields.at(1), 'SecurePass123');
+    await tester.enterText(fields.at(2), 'SecurePass123');
     await tester.tap(find.widgetWithText(FilledButton, 'Create Account'));
     await tester.pump();
 
-    expect(authNotifier.lastEmailHint, 'story-demo@example.com');
+    expect(authNotifier.lastRegisteredEmail, 'story-demo@example.com');
+    expect(authNotifier.lastRegisteredPassword, 'SecurePass123');
   });
 
-  testWidgets('sign up shows friendly managed login errors', (
+  testWidgets('sign up shows friendly registration errors', (
     tester,
   ) async {
     final authNotifier = _RecordingAuthNotifier()
-      ..signUpError = const CognitoManagedLoginException(
-        'Managed signup is temporarily unavailable.',
-      );
+      ..signUpError = Exception('Registration unavailable');
     AppError.configure(
       referenceIdFactory: () => 'SIGNUPML',
       logger: (_) {},
@@ -153,12 +150,17 @@ void main() {
       ),
     );
 
-    await tester.enterText(find.byType(TextField), 'story-demo@example.com');
+    final fields = find.byType(TextField);
+    await tester.enterText(fields.at(0), 'story-demo@example.com');
+    await tester.enterText(fields.at(1), 'SecurePass123');
+    await tester.enterText(fields.at(2), 'SecurePass123');
     await tester.tap(find.widgetWithText(FilledButton, 'Create Account'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
 
-    expect(find.text('Managed signup is temporarily unavailable.'), findsOneWidget);
-    expect(find.textContaining('Reference: SIGNUPML'), findsNothing);
+    expect(
+      find.text('Something went wrong. Please try again. Reference: SIGNUPML'),
+      findsOneWidget,
+    );
   });
 }

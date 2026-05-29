@@ -91,7 +91,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       _syncAppBarProgressFromController();
       ref.invalidate(subscriptionProvider);
       unawaited(
-        ref.read(locationAssistanceProvider.notifier).reconcileWithSystemState(),
+        ref
+            .read(locationAssistanceProvider.notifier)
+            .reconcileWithSystemState(),
       );
     });
   }
@@ -143,6 +145,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     setState(() => _isRegisteringPasskey = true);
     try {
       await ref.read(passkeyServiceProvider).registerCurrentUserPasskey();
+      final email = ref.read(currentUserProvider).valueOrNull?.email;
+      if (email != null && email.trim().isNotEmpty) {
+        final notifier = ref.read(passkeySignInPreferenceProvider.notifier);
+        await notifier.registerEmail(email);
+        await notifier.setPasskeyFirstEnabled(true);
+      }
       if (!mounted || !context.mounted) return;
       ScaffoldMessenger.of(context)
         ..clearSnackBars()
@@ -174,10 +182,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final locationAssistance = ref.watch(locationAssistanceProvider);
     final passkeysAvailable =
         ref.watch(passkeyAvailabilityProvider).valueOrNull ?? false;
+    final passkeyPreference = ref.watch(passkeySignInPreferenceProvider);
     final adminEntitlementAccess =
         ref.watch(adminEntitlementAccessProvider).valueOrNull ?? false;
     final sessionSupportsPasskeys =
         ref.watch(currentSessionSupportsPasskeysProvider);
+    final currentEmail = userAsync.valueOrNull?.email;
+    final hasRegisteredCurrentPasskey = currentEmail != null &&
+        passkeyPreference.hasRegisteredEmail(currentEmail);
     final userPreferences = ref.watch(userPreferencesProvider);
     final hasTransactionHistory =
         ref.watch(transactionListProvider).transactions.isNotEmpty;
@@ -352,7 +364,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                                 : () => _showCurrencyPicker(context, ref),
                             showChevron: !hasTransactionHistory,
                           ),
-                          if (passkeysAvailable && sessionSupportsPasskeys)
+                          if (passkeysAvailable && sessionSupportsPasskeys) ...[
                             _SettingsActionRow(
                               leading: _SettingsIconBox(
                                 icon: AppIconKey.fingerprint,
@@ -360,14 +372,39 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                               ),
                               title: _isRegisteringPasskey
                                   ? 'Setting Up Passkey...'
-                                  : 'Set Up Passkey',
-                              subtitle:
-                                  'Use Face ID, fingerprint, or device unlock next time',
+                                  : hasRegisteredCurrentPasskey
+                                      ? 'Passkey Ready'
+                                      : 'Set Up Passkey',
+                              subtitle: hasRegisteredCurrentPasskey
+                                  ? 'Registered for this account on this device'
+                                  : 'Use Face ID, fingerprint, or device unlock next time',
                               onTap: _isRegisteringPasskey
                                   ? null
                                   : () => _registerPasskey(context),
                               showChevron: !_isRegisteringPasskey,
                             ),
+                            if (passkeyPreference.registeredEmails.isNotEmpty)
+                              _SettingsSwitchRow(
+                                leading: _SettingsIconBox(
+                                  icon: AppIconKey.passkey,
+                                  backgroundColor: theme.appColors.navySoft,
+                                ),
+                                title: 'Passkey First Sign-In',
+                                subtitle:
+                                    'Show saved passkey accounts before email sign-in',
+                                value: passkeyPreference.isPasskeyFirstEnabled,
+                                onChanged: (value) {
+                                  unawaited(
+                                    ref
+                                        .read(
+                                          passkeySignInPreferenceProvider
+                                              .notifier,
+                                        )
+                                        .setPasskeyFirstEnabled(value),
+                                  );
+                                },
+                              ),
+                          ],
                         ],
                       ),
                       _SettingsGroup(
