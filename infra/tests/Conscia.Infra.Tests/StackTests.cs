@@ -350,7 +350,11 @@ public class StackTests
                 ["Statement"] = Match.ArrayWith([
                     Match.ObjectLike(new Dictionary<string, object>
                     {
-                        ["Action"] = Match.ArrayWith(["aws-marketplace:ViewSubscriptions", "aws-marketplace:Subscribe"]),
+                        ["Action"] = Match.ArrayWith([
+                            "aws-marketplace:ViewSubscriptions",
+                            "aws-marketplace:Subscribe",
+                            "aws-marketplace:Unsubscribe"
+                        ]),
                         ["Effect"] = "Allow",
                         ["Resource"] = "*"
                     })
