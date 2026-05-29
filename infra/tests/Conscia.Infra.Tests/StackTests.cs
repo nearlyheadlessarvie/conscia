@@ -51,6 +51,21 @@ public class StackTests
     }
 
     [Fact]
+    public void DatabaseStack_KeepsLegacyTransactionsStreamExportDuringOutboxMigration()
+    {
+        var template = CreateDatabaseTemplate();
+
+        template.HasOutput("ExportsOutputFnGetAttTransactions098C5767StreamArn0D21F37C", new Dictionary<string, object>
+        {
+            ["Value"] = Match.AnyValue(),
+            ["Export"] = new Dictionary<string, object>
+            {
+                ["Name"] = "Conscia-Database:ExportsOutputFnGetAttTransactions098C5767StreamArn0D21F37C"
+            }
+        });
+    }
+
+    [Fact]
     public void DatabaseStack_OutboxEventsTable_HasStream()
     {
         var template = CreateDatabaseTemplate();

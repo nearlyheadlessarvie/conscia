@@ -7,6 +7,9 @@ namespace Conscia.Infra;
 
 public class DatabaseStack : Stack
 {
+    private const string LegacyTransactionsStreamExportId = "ExportsOutputFnGetAttTransactions098C5767StreamArn0D21F37C";
+    private const string LegacyTransactionsStreamExportName = $"Conscia-Database:{LegacyTransactionsStreamExportId}";
+
     public ITable ControlPlaneTable { get; }
     public ITable TransactionsTable { get; }
     public ITable RecurringSchedulesTable { get; }
@@ -110,6 +113,13 @@ public class DatabaseStack : Stack
         MonthlyCategorySpendsTable = CreateTable("MonthlyCategorySpends", "PK", "SK");
         PushDeviceTokensTable = CreateTable("PushDeviceTokens", "PK", "SK");
         ConscienceJourneyTable = CreateTable("ConscienceJourney", "PK", "SK");
+
+        var legacyTransactionsStreamExport = new CfnOutput(this, "LegacyTransactionsStreamArnExport", new CfnOutputProps
+        {
+            Value = TransactionsTable.TableStreamArn!,
+            ExportName = LegacyTransactionsStreamExportName
+        });
+        legacyTransactionsStreamExport.OverrideLogicalId(LegacyTransactionsStreamExportId);
     }
 
     private Table CreateTable(
