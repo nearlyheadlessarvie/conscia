@@ -66,27 +66,30 @@ public class TransactionService : ITransactionService
             };
         }
 
-        var result = await _repo.AddWithOutboxAsync(
-            transaction,
-            CreateTransactionCreatedEvent(transaction),
-            ct);
-
         if (dto.Recurring is not null && _recurringScheduleService is not null)
         {
-            await _recurringScheduleService.CreateAsync(userId, new CreateRecurringScheduleDto
+            var seedOccurrenceDate = dto.Recurring.StartDate ?? dto.Date;
+            var schedule = await _recurringScheduleService.CreateSeededAsync(userId, new CreateRecurringScheduleDto
             {
                 Type = dto.Type,
                 Amount = dto.Amount,
                 CurrencyCode = dto.CurrencyCode,
                 Category = dto.Category,
                 Counterparty = dto.Counterparty,
-                StartDate = dto.Recurring.StartDate ?? dto.Date,
+                StartDate = seedOccurrenceDate,
                 Cadence = dto.Recurring.Cadence,
                 EndDate = dto.Recurring.EndDate,
                 Scope = dto.Scope,
                 FamilySpaceId = dto.FamilySpaceId,
-            }, ct);
+            }, seedOccurrenceDate, ct);
+            transaction.RecurringScheduleId = schedule.Id;
+            transaction.RecurringOccurrenceDate = seedOccurrenceDate;
         }
+
+        var result = await _repo.AddWithOutboxAsync(
+            transaction,
+            CreateTransactionCreatedEvent(transaction),
+            ct);
 
         _logger.LogInformation("Creating transaction {TransactionId} for user {UserId}, amount {Amount} {Currency}",
             transaction.Id, userId, dto.Amount, dto.CurrencyCode);

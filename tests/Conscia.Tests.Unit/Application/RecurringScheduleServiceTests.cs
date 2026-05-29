@@ -48,6 +48,34 @@ public class RecurringScheduleServiceTests
     }
 
     [Fact]
+    public async Task CreateSeededAsync_SetsNextRunAfterSeedOccurrence()
+    {
+        var service = CreateService();
+        var userId = Guid.NewGuid();
+        var seedDate = new DateTime(2026, 05, 31, 0, 0, 0, DateTimeKind.Utc);
+        var dto = new CreateRecurringScheduleDto
+        {
+            Type = TransactionType.Expense,
+            Amount = 999m,
+            CurrencyCode = "PHP",
+            Category = "Subscriptions",
+            Counterparty = "Spotify",
+            StartDate = seedDate,
+            Cadence = RecurringCadence.Monthly,
+        };
+
+        _repoMock
+            .Setup(r => r.AddAsync(It.IsAny<RecurringSchedule>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((RecurringSchedule schedule, CancellationToken _) => schedule);
+
+        var created = await service.CreateSeededAsync(userId, dto, seedDate, CancellationToken.None);
+
+        Assert.Equal(seedDate, created.LastGeneratedAt);
+        Assert.Equal(new DateTime(2026, 06, 30, 0, 0, 0, DateTimeKind.Utc), created.NextRunAt);
+        Assert.True(created.IsActive);
+    }
+
+    [Fact]
     public async Task CreateAsync_FamilyScope_AddsFamilyMetadataToSchedule()
     {
         var service = CreateService();
