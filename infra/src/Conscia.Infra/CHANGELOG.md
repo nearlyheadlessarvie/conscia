@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.6.2](https://github.com/nearlyheadlessarvie/conscia/compare/infra/v1.6.1...infra/v1.6.2) (2026-05-29)
+
+
+### Bug Fixes
+
+* harden auth bootstrap, receipts, passkeys, recurrence, and infra ([#152](https://github.com/nearlyheadlessarvie/conscia/issues/152)) ([1e47a91](https://github.com/nearlyheadlessarvie/conscia/commit/1e47a91871ea0c804378b78b338de895d7f977e4))
+
 ## [1.6.1](https://github.com/nearlyheadlessarvie/conscia/compare/infra/v1.6.0...infra/v1.6.1) (2026-05-29)
 
 
