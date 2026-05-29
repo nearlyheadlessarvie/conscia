@@ -39,6 +39,7 @@
 - Allowed types: `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `chore`, `build`, `ci`, `revert`.
 - Limit each commit to one logical change.
 - Commit after completing a task or coherent file-change set.
+- Default to a normal git branch from `main`; do not use git worktrees unless the user explicitly asks.
 - Use `git commit -m`; do not use interactive commit editors.
 - Use GitHub CLI (`gh`) for PR lookup, creation, editing, and status checks.
 - Never stage unrelated user changes silently. Inspect `git status -sb` and stage explicit paths when the worktree is mixed.
