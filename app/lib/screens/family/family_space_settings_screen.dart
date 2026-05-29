@@ -6,6 +6,7 @@ import '../../core/constants/app_icons.dart';
 import '../../core/routing/app_router.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_layout.dart';
+import '../../models/family_invite.dart';
 import '../../models/family_space.dart';
 import '../../providers/app_availability_provider.dart';
 import '../../providers/family_space_provider.dart';
@@ -145,11 +146,18 @@ class _SharedConsciaScrollView extends StatelessWidget {
   }
 }
 
-class _NoFamilySpaceSettingsView extends StatelessWidget {
+class _NoFamilySpaceSettingsView extends ConsumerWidget {
   const _NoFamilySpaceSettingsView();
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final pendingInvites =
+        ref.watch(familyInvitesProvider).valueOrNull ?? const <FamilyInvite>[];
+
+    if (pendingInvites.isNotEmpty) {
+      return _PendingFamilyInvitesSettingsView(invites: pendingInvites);
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -185,6 +193,64 @@ class _NoFamilySpaceSettingsView extends StatelessWidget {
                   title: 'Shared planning',
                   subtitle: 'Family budgets and household activity live here.',
                 ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _PendingFamilyInvitesSettingsView extends StatelessWidget {
+  const _PendingFamilyInvitesSettingsView({required this.invites});
+
+  final List<FamilyInvite> invites;
+
+  @override
+  Widget build(BuildContext context) {
+    final inviteCount = invites.length;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _SharedConsciaHero(
+          eyebrow: 'SHARED HOUSEHOLD',
+          title: 'Review your household invites',
+          body: inviteCount == 1
+              ? 'You have an invite waiting for this email. Review it before creating a new household space.'
+              : 'You have $inviteCount invites waiting for this email. Review them before creating a new household space.',
+          pills: const ['Invite waiting', 'Choose safely'],
+          shortcuts: [
+            _HeroShortcutData(
+              icon: AppIconKey.familyInvite,
+              title: 'Review invites',
+              subtitle: inviteCount == 1 ? '1 waiting' : '$inviteCount waiting',
+              onTap: () => context.push(AppRoutes.familyInvites),
+            ),
+            _HeroShortcutData(
+              icon: AppIconKey.family,
+              title: 'Create space',
+              subtitle: 'Start your own',
+              onTap: () => context.push(AppRoutes.familySetup),
+            ),
+          ],
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 24, 20, 28),
+          child: ScreenSection(
+            title: 'Invites waiting',
+            subtitle: 'These were sent to your sign-in email.',
+            child: _SettingsGroup(
+              rows: [
+                for (final invite in invites.take(3))
+                  _SettingsRowData(
+                    icon: AppIconKey.familyInvite,
+                    title: invite.familySpaceName,
+                    subtitle: '${invite.role} invite',
+                    status: 'Review',
+                    onTap: () => context.push(AppRoutes.familyInvites),
+                  ),
               ],
             ),
           ),
