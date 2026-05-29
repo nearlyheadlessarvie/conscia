@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
+import 'package:conscia_app/core/routing/app_router.dart';
 import 'package:conscia_app/providers/auth_provider.dart';
 import 'package:conscia_app/services/auth_service.dart';
 import 'package:conscia_app/services/cognito_managed_login_service.dart';
@@ -732,6 +733,37 @@ void main() {
     expect(managedLogin.lastProvider, CognitoManagedLoginProvider.google);
     expect(notifier.state.status, AuthStatus.authenticated);
     expect(notifier.state.userId, 'managed-user');
+  });
+
+  test('signInWithGoogle clears stale local onboarding completion', () async {
+    SharedPreferences.setMockInitialValues({
+      'has_completed_onboarding': true,
+    });
+    final managedLogin = _FakeManagedLoginService()
+      ..signInTokens = const AuthTokens(
+        accessToken: 'managed.access.token',
+        idToken: 'managed.id.token',
+        refreshToken: 'managed-refresh-token',
+        userId: 'managed-user',
+      );
+    final notifier = AuthNotifier(
+      _FakeAuthService(
+        const AuthTokens(
+          accessToken: 'unused.access.token',
+          refreshToken: 'unused-refresh-token',
+          userId: 'user-1',
+        ),
+      ),
+      _FakeSecureStorage(),
+      autoRestoreSession: false,
+      managedLoginService: managedLogin,
+      useManagedLogin: true,
+    );
+
+    await notifier.signInWithGoogle();
+
+    expect(await hasCompletedOnboarding(), isFalse);
+    expect(notifier.state.status, AuthStatus.authenticated);
   });
 
   test('logout clears local managed session without opening Cognito logout',
