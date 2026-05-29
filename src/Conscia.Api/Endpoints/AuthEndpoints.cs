@@ -118,7 +118,13 @@ public static class AuthEndpoints
 
             try
             {
-                await passwordService.SetPasswordAsync(ctx.User, req.Password, ctx.RequestAborted);
+                var accessToken = ReadBearerToken(ctx.Request.Headers.Authorization.ToString());
+                await passwordService.SetPasswordAsync(
+                    ctx.User,
+                    req.Password,
+                    req.CurrentPassword,
+                    accessToken,
+                    ctx.RequestAborted);
                 return Results.NoContent();
             }
             catch (InvalidOperationException ex)
@@ -240,4 +246,4 @@ public record StartPasswordResetRequest(string Email);
 public record ConfirmPasswordResetRequest(string Email, string ConfirmationCode, string Password);
 public record LoginRequest(string Email, string Password);
 public record RefreshRequest(string RefreshToken);
-public record SetPasswordRequest(string Password);
+public record SetPasswordRequest(string Password, string? CurrentPassword);

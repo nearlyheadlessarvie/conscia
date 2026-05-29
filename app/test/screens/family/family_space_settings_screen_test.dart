@@ -1,3 +1,4 @@
+import 'package:conscia_app/models/family_invite.dart';
 import 'package:conscia_app/models/family_space.dart';
 import 'package:conscia_app/providers/app_availability_provider.dart';
 import 'package:conscia_app/providers/family_space_provider.dart';
@@ -7,11 +8,46 @@ import 'package:conscia_app/services/app_update_service.dart';
 import 'package:conscia_app/services/connectivity_service.dart';
 import 'package:conscia_app/widgets/feed_card.dart';
 import 'package:conscia_app/widgets/floating_label_text_field.dart';
+import 'package:conscia_app/widgets/hero_shortcut_card.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  testWidgets('family settings surfaces pending invites without a household', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          familySpaceProvider.overrideWith((ref) async => null),
+          familyInvitesProvider.overrideWith(
+            (ref) async => [
+              FamilyInvite(
+                id: 'invite-1',
+                familySpaceId: 'family-1',
+                familySpaceName: 'Santos Household',
+                email: 'alice@example.com',
+                role: 'Contributor',
+                createdAt: DateTime(2026, 5),
+                expiresAt: DateTime(2026, 5, 15),
+              ),
+            ],
+          ),
+        ],
+        child: const MaterialApp(home: FamilySpaceSettingsScreen()),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    expect(find.text('Review your household invites'), findsOneWidget);
+    expect(find.text('Santos Household'), findsOneWidget);
+    expect(find.text('Review invites'), findsWidgets);
+    expect(find.byType(HeroShortcutCard), findsNWidgets(2));
+    expect(find.text('Create your household space'), findsNothing);
+  });
+
   testWidgets('family settings focuses on household management', (
     tester,
   ) async {

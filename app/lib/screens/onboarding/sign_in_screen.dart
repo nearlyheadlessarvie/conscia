@@ -170,6 +170,10 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
     }
   }
 
+  void _dismissKeyboard() {
+    FocusManager.instance.primaryFocus?.unfocus();
+  }
+
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
@@ -370,6 +374,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                           onPressed: _isLoading
                               ? null
                               : () async {
+                                  _dismissKeyboard();
                                   setState(() {
                                     _isLoading = true;
                                     _errorMessage = null;
@@ -398,6 +403,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                       _GoogleSignInButton(
                         isLoading: _isLoading,
                         onPressed: () async {
+                          _dismissKeyboard();
                           setState(() {
                             _isLoading = true;
                             _errorMessage = null;

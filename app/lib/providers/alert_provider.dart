@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -58,11 +60,35 @@ class AppAlert {
     );
   }
 
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'type': type,
+        'title': title,
+        'message': message,
+        'priority': priority,
+        if (actionLabel != null) 'actionLabel': actionLabel,
+        if (actionRoute != null) 'actionRoute': actionRoute,
+        if (transactionId != null) 'transactionId': transactionId,
+        if (category != null) 'category': category,
+        if (counterparty != null) 'counterparty': counterparty,
+        'createdAt': createdAt.toUtc().toIso8601String(),
+      };
+
   bool get isRecurringReminder => type == 'recurring_transaction_created';
 }
 
 final alertsDioProvider = Provider<Dio>((ref) {
   return ref.watch(dioProvider);
+});
+
+final alertActionsProvider = Provider<AlertActions>((ref) {
+  final dio = ref.watch(alertsDioProvider);
+  final authState = ref.watch(authProvider);
+  return AlertActions(
+    dio: dio,
+    enabled: authState.isAuthenticated,
+    onRemoteChanged: () => ref.invalidate(alertsProvider),
+  );
 });
 
 final alertsProvider = FutureProvider<List<AppAlert>>((ref) async {
@@ -80,8 +106,50 @@ final alertsProvider = FutureProvider<List<AppAlert>>((ref) async {
   }
 });
 
+class AlertActions {
+  AlertActions({
+    required Dio dio,
+    required bool enabled,
+    required void Function() onRemoteChanged,
+  })  : _dio = dio,
+        _enabled = enabled,
+        _onRemoteChanged = onRemoteChanged;
+
+  final Dio _dio;
+  final bool _enabled;
+  final void Function() _onRemoteChanged;
+
+  Future<void> sync(AppAlert alert) async {
+    if (!_enabled) return;
+    try {
+      await _dio.post(ApiConstants.alerts, data: alert.toJson());
+      _onRemoteChanged();
+    } catch (_) {
+      // Local alerts remain useful even if the network is briefly unavailable.
+    }
+  }
+
+  Future<void> dismiss(String id) async {
+    if (!_enabled) return;
+    try {
+      await _dio.post(ApiConstants.alertDismiss(Uri.encodeComponent(id)));
+      _onRemoteChanged();
+    } catch (_) {
+      // Dismiss locally first; the next successful call can refresh server state.
+    }
+  }
+}
+
 class LocalAlertsNotifier extends StateNotifier<List<AppAlert>> {
-  LocalAlertsNotifier() : super(const []);
+  LocalAlertsNotifier({
+    Future<void> Function(AppAlert alert)? syncAlert,
+    Future<void> Function(String id)? dismissRemote,
+  })  : _syncAlert = syncAlert,
+        _dismissRemote = dismissRemote,
+        super(const []);
+
+  final Future<void> Function(AppAlert alert)? _syncAlert;
+  final Future<void> Function(String id)? _dismissRemote;
 
   void addBudgetNudge({required String category}) {
     final normalizedCategory = category.trim().toLowerCase();
@@ -91,22 +159,21 @@ class LocalAlertsNotifier extends StateNotifier<List<AppAlert>> {
     }
 
     final now = DateTime.now();
-    state = [
-      AppAlert(
-        id: alertId,
-        type: 'budget_nudge',
-        title: 'No budget for $category yet',
-        message:
-            'You logged an expense in $category without a matching budget. Add one in Settings whenever you are ready.',
-        priority: 20,
-        actionLabel: 'Add budget',
-        actionRoute: '/settings/budgets',
-        category: category,
-        isDismissed: false,
-        createdAt: now,
-      ),
-      ...state,
-    ];
+    final alert = AppAlert(
+      id: alertId,
+      type: 'budget_nudge',
+      title: 'No budget for $category yet',
+      message:
+          'You logged an expense in $category without a matching budget. Add one in Settings whenever you are ready.',
+      priority: 20,
+      actionLabel: 'Add budget',
+      actionRoute: '/settings/budgets',
+      category: category,
+      isDismissed: false,
+      createdAt: now,
+    );
+    state = [alert, ...state];
+    _sync(alert);
   }
 
   void addJourneyUpdate(ConscienceJourneyUpdate update) {
@@ -179,6 +246,9 @@ class LocalAlertsNotifier extends StateNotifier<List<AppAlert>> {
     if (newAlerts.isEmpty) return;
 
     state = [...newAlerts, ...state];
+    for (final alert in newAlerts) {
+      _sync(alert);
+    }
   }
 
   void dismiss(String id) {
@@ -202,6 +272,19 @@ class LocalAlertsNotifier extends StateNotifier<List<AppAlert>> {
         else
           alert,
     ];
+    _dismiss(id);
+  }
+
+  void _sync(AppAlert alert) {
+    final syncAlert = _syncAlert;
+    if (syncAlert == null) return;
+    unawaited(syncAlert(alert).catchError((_) {}));
+  }
+
+  void _dismiss(String id) {
+    final dismissRemote = _dismissRemote;
+    if (dismissRemote == null) return;
+    unawaited(dismissRemote(id).catchError((_) {}));
   }
 
   ConscienceBadge? _findBadge(List<ConscienceBadge> badges, String key) {
@@ -223,15 +306,27 @@ final localAlertsProvider =
     StateNotifierProvider<LocalAlertsNotifier, List<AppAlert>>(
   (ref) {
     ref.watch(authCacheScopeProvider);
-    return LocalAlertsNotifier();
+    final actions = ref.watch(alertActionsProvider);
+    return LocalAlertsNotifier(
+      syncAlert: actions.sync,
+      dismissRemote: actions.dismiss,
+    );
   },
 );
 
 class DismissedAlertIdsNotifier extends StateNotifier<Set<String>> {
-  DismissedAlertIdsNotifier() : super(const {});
+  DismissedAlertIdsNotifier({
+    Future<void> Function(String id)? dismissRemote,
+  })  : _dismissRemote = dismissRemote,
+        super(const {});
+
+  final Future<void> Function(String id)? _dismissRemote;
 
   void dismiss(String id) {
     state = {...state, id};
+    final dismissRemote = _dismissRemote;
+    if (dismissRemote == null) return;
+    unawaited(dismissRemote(id).catchError((_) {}));
   }
 }
 
@@ -239,7 +334,8 @@ final dismissedAlertIdsProvider =
     StateNotifierProvider<DismissedAlertIdsNotifier, Set<String>>(
   (ref) {
     ref.watch(authCacheScopeProvider);
-    return DismissedAlertIdsNotifier();
+    final actions = ref.watch(alertActionsProvider);
+    return DismissedAlertIdsNotifier(dismissRemote: actions.dismiss);
   },
 );
 
@@ -253,7 +349,11 @@ final activeAlertsProvider = Provider<List<AppAlert>>((ref) {
       .map((budget) => budget.category.trim().toLowerCase())
       .toSet();
 
-  final alerts = [...remoteAlerts, ...localAlerts];
+  final seenIds = <String>{};
+  final alerts = [
+    for (final alert in [...remoteAlerts, ...localAlerts])
+      if (seenIds.add(alert.id)) alert,
+  ];
   final visibleAlerts = alerts.where((alert) {
     if (alert.isDismissed || dismissedIds.contains(alert.id)) return false;
     if (alert.type != 'budget_nudge') return true;

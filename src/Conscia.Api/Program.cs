@@ -35,14 +35,12 @@ using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
-using OpenTelemetry.Metrics;
-using OpenTelemetry.Trace;
 using Serilog;
 using Serilog.Events;
-using Serilog.Formatting.Compact;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddAWSLambdaHosting(LambdaEventSource.RestApi);
+var versionMetadata = VersionMetadataResolver.Resolve();
 var runtimeSecretOverrides = await RuntimeSecretConfigurationLoader.LoadAsync(
     builder.Configuration,
     builder.Environment.IsProduction());
@@ -53,47 +51,20 @@ if (runtimeSecretOverrides.Count > 0)
 
 builder.Host.UseSerilog((context, config) =>
 {
+    var logProperties = ApiLogEnrichment.BuildProperties(
+        versionMetadata,
+        context.HostingEnvironment.EnvironmentName);
+
     config
         .ReadFrom.Configuration(context.Configuration)
         .Enrich.FromLogContext()
-        .Enrich.WithCorrelationId()
-        .Enrich.WithProperty("ServiceName", "conscia-api")
-        .Enrich.WithProperty("Environment", context.HostingEnvironment.EnvironmentName);
+        .Enrich.WithCorrelationId();
 
-    if (context.HostingEnvironment.IsDevelopment())
-        config.WriteTo.Console();
-    else
-        config.WriteTo.Console(new CompactJsonFormatter());
+    foreach (var (name, value) in logProperties)
+    {
+        config.Enrich.WithProperty(name, value);
+    }
 });
-
-// --- OpenTelemetry ---
-builder.Services.AddOpenTelemetry()
-    .WithTracing(tracing =>
-    {
-        tracing
-            .AddAspNetCoreInstrumentation()
-            .AddHttpClientInstrumentation()
-            .AddSource("Conscia.AI")
-            .AddSource("Conscia.Transactions")
-            .AddSource("Conscia.Budgets");
-
-        if (builder.Environment.IsDevelopment())
-            tracing.AddConsoleExporter();
-        else
-            tracing.AddOtlpExporter();
-    })
-    .WithMetrics(metrics =>
-    {
-        metrics
-            .AddAspNetCoreInstrumentation()
-            .AddHttpClientInstrumentation()
-            .AddMeter("Conscia.Api");
-
-        if (builder.Environment.IsDevelopment())
-            metrics.AddConsoleExporter();
-        else
-            metrics.AddOtlpExporter();
-    });
 
 // --- AWS SDK clients ---
 var useLocalAwsEmulators = LocalAwsModeResolver.ShouldUseLocalAwsEmulators(

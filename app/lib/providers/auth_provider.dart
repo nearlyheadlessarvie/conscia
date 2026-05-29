@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:package_info_plus/package_info_plus.dart';
@@ -822,6 +823,36 @@ final authServiceProvider = Provider<AuthService>((ref) {
   return AuthService(ref.watch(authDioProvider));
 });
 
+@visibleForTesting
+Uri resolveManagedLoginRedirectUri({
+  bool? isWebOverride,
+  Uri? webBaseUri,
+  String? webRedirectUriOverride,
+}) {
+  final isWeb = isWebOverride ?? kIsWeb;
+  if (!isWeb) {
+    return Uri.parse(ApiConstants.cognitoRedirectUri);
+  }
+
+  final configured =
+      (webRedirectUriOverride ?? ApiConstants.cognitoWebRedirectUri).trim();
+  if (configured.isNotEmpty) {
+    return Uri.parse(configured);
+  }
+
+  final baseUri = webBaseUri ?? Uri.base;
+  return baseUri.replace(path: '/auth.html', query: null, fragment: null);
+}
+
+@visibleForTesting
+Uri resolveManagedLoginAppCallbackUri({
+  bool? isWebOverride,
+  required Uri redirectUri,
+}) {
+  final isWeb = isWebOverride ?? kIsWeb;
+  return isWeb ? redirectUri : Uri.parse(ApiConstants.cognitoAppRedirectUri);
+}
+
 final managedLoginServiceProvider = Provider<CognitoManagedLoginService>((ref) {
   final dio = Dio(
     BaseOptions(
@@ -829,14 +860,17 @@ final managedLoginServiceProvider = Provider<CognitoManagedLoginService>((ref) {
       receiveTimeout: ApiConstants.receiveTimeout,
     ),
   );
+  final redirectUri = resolveManagedLoginRedirectUri();
 
   return CognitoManagedLoginService(
     dio: dio,
     openAuthSession: openManagedLoginAuthSheet,
     clientId: ApiConstants.cognitoClientId,
     loginDomain: Uri.parse(ApiConstants.cognitoLoginDomain),
-    redirectUri: Uri.parse(ApiConstants.cognitoRedirectUri),
-    appRedirectUri: Uri.parse(ApiConstants.cognitoAppRedirectUri),
+    redirectUri: redirectUri,
+    appRedirectUri: resolveManagedLoginAppCallbackUri(
+      redirectUri: redirectUri,
+    ),
     logoutUri: Uri.parse(ApiConstants.cognitoLogoutUri),
   );
 });

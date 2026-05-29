@@ -22,6 +22,46 @@ void main() {
     expect(find.text('PHP 350'), findsOneWidget);
   });
 
+  testWidgets('FloatingLabelTextField balances compact height and text scale',
+      (tester) async {
+    final controller = TextEditingController(text: 'very cramped?');
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: FloatingLabelTextField(
+            controller: controller,
+            label: 'What are you thinking of buying?',
+          ),
+        ),
+      ),
+    );
+
+    final container = tester.widget<AnimatedContainer>(
+      find.descendant(
+        of: find.byType(FloatingLabelTextField),
+        matching: find.byType(AnimatedContainer),
+      ),
+    );
+    expect(container.constraints?.minHeight, 58);
+
+    final textFieldPaddings = tester
+        .widgetList<Padding>(
+          find.ancestor(
+            of: find.byType(TextField),
+            matching: find.byType(Padding),
+          ),
+        )
+        .map((padding) => padding.padding);
+    expect(
+      textFieldPaddings,
+      contains(const EdgeInsets.fromLTRB(14, 25, 14, 8)),
+    );
+
+    final textField = tester.widget<TextField>(find.byType(TextField));
+    expect(textField.style?.fontSize, 15);
+  });
+
   testWidgets(
       'FloatingLabelTextField keeps the idle label clear of a leading icon',
       (tester) async {

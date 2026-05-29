@@ -185,7 +185,11 @@ public class ComputeStack : Stack
 
         ApiLambda.AddToRolePolicy(new PolicyStatement(new PolicyStatementProps
         {
-            Actions = ["cognito-idp:AdminDeleteUser"],
+            Actions =
+            [
+                "cognito-idp:AdminDeleteUser",
+                "cognito-idp:AdminSetUserPassword"
+            ],
             Resources = [props.UserPool.UserPoolArn]
         }));
 

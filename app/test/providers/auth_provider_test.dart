@@ -276,6 +276,46 @@ class _CapturingOkAdapter implements HttpClientAdapter {
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
+  group('managed login redirect resolution', () {
+    test('uses same-origin auth bridge for web callbacks', () {
+      final redirectUri = resolveManagedLoginRedirectUri(
+        isWebOverride: true,
+        webBaseUri: Uri.parse('http://localhost:3000/onboarding/sign-in'),
+      );
+
+      expect(redirectUri, Uri.parse('http://localhost:3000/auth.html'));
+      expect(
+        resolveManagedLoginAppCallbackUri(
+          isWebOverride: true,
+          redirectUri: redirectUri,
+        ),
+        redirectUri,
+      );
+    });
+
+    test('keeps native app callback off web', () {
+      final redirectUri = resolveManagedLoginRedirectUri(isWebOverride: false);
+
+      expect(redirectUri, Uri.parse('conscia://auth/callback'));
+      expect(
+        resolveManagedLoginAppCallbackUri(
+          isWebOverride: false,
+          redirectUri: redirectUri,
+        ),
+        Uri.parse('conscia://auth/callback'),
+      );
+    });
+
+    test('uses configured web callback when supplied', () {
+      final redirectUri = resolveManagedLoginRedirectUri(
+        isWebOverride: true,
+        webRedirectUriOverride: 'https://debug.example.com/auth.html',
+      );
+
+      expect(redirectUri, Uri.parse('https://debug.example.com/auth.html'));
+    });
+  });
+
   setUp(() {
     SharedPreferences.setMockInitialValues({});
     PackageInfo.setMockInitialValues(
@@ -661,6 +701,39 @@ void main() {
     expect(
       adapter.lastRequestOptions?.headers['X-Conscia-App-Version'],
       isNotNull,
+    );
+  });
+
+  test('setPassword posts the new account password', () async {
+    final adapter = _CapturingOkAdapter();
+    final dio = Dio()..httpClientAdapter = adapter;
+    final service = AuthService(dio);
+
+    await service.setPassword('StrongPass123');
+
+    expect(adapter.lastRequestOptions?.path, 'auth/password');
+    expect(adapter.lastRequestOptions?.method, 'POST');
+    expect(
+      adapter.lastRequestOptions?.data,
+      {'password': 'StrongPass123'},
+    );
+  });
+
+  test('setPassword includes current password when changing an existing one',
+      () async {
+    final adapter = _CapturingOkAdapter();
+    final dio = Dio()..httpClientAdapter = adapter;
+    final service = AuthService(dio);
+
+    await service.setPassword(
+      'StrongPass123',
+      currentPassword: 'OldPass123',
+    );
+
+    expect(adapter.lastRequestOptions?.path, 'auth/password');
+    expect(
+      adapter.lastRequestOptions?.data,
+      {'password': 'StrongPass123', 'currentPassword': 'OldPass123'},
     );
   });
 

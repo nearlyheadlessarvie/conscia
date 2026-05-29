@@ -101,6 +101,7 @@ public class AuthStack : Stack
             {
                 Actions =
                 [
+                    "cognito-idp:AdminCreateUser",
                     "cognito-idp:AdminLinkProviderForUser",
                     "cognito-idp:ListUsers"
                 ],

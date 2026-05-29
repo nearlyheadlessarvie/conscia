@@ -46,23 +46,33 @@ public sealed class CurrentUserBootstrapMiddleware
             ?? principal.FindFirstValue("sub");
         var emailValue = principal.FindFirstValue(ClaimTypes.Email)
             ?? principal.FindFirstValue("email");
-        if (!Guid.TryParse(userIdValue, out var userId) || string.IsNullOrWhiteSpace(emailValue))
+        if (!Guid.TryParse(userIdValue, out var userId))
         {
             return;
         }
 
-        var email = emailValue.Trim().ToLowerInvariant();
+        var email = string.IsNullOrWhiteSpace(emailValue)
+            ? null
+            : emailValue.Trim().ToLowerInvariant();
         var emailConfirmed = bool.TryParse(principal.FindFirstValue("email_verified"), out var verified) && verified;
-        var (provider, providerSub) = ResolveIdentity(principal, email);
+        var (provider, providerSub) = ResolveIdentity(principal, email ?? string.Empty);
 
-        var user = await users.GetByIdAsync(userId, ct);
+        var user = await users.GetByProviderAsync(provider, providerSub, ct);
+        user ??= await users.GetByIdAsync(userId, ct);
         if (user is null)
         {
-            user = await users.GetByEmailAsync(email, ct);
+            user = email is null
+                ? null
+                : await users.GetByEmailAsync(email, ct);
         }
 
         if (user is null)
         {
+            if (email is null)
+            {
+                return;
+            }
+
             user = new User
             {
                 Id = userId,
@@ -75,7 +85,8 @@ public sealed class CurrentUserBootstrapMiddleware
         else
         {
             var changed = false;
-            if (!string.Equals(user.Email, email, StringComparison.OrdinalIgnoreCase))
+            if (email is not null &&
+                !string.Equals(user.Email, email, StringComparison.OrdinalIgnoreCase))
             {
                 user.Email = email;
                 changed = true;

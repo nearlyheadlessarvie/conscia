@@ -3,6 +3,7 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
@@ -44,7 +45,6 @@ import 'package:conscia_app/widgets/premium_upgrade_dialog.dart';
 import 'package:conscia_app/widgets/horizontal_edge_fade.dart';
 import 'package:conscia_app/widgets/scope_pill_switch.dart';
 import 'package:conscia_app/widgets/skeleton_loader.dart';
-import 'package:conscia_app/widgets/swipe_action_tile.dart';
 
 class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
@@ -372,27 +372,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                                 });
                               }
 
-                              return Dismissible(
-                                key: ValueKey(alert.id),
-                                direction: DismissDirection.endToStart,
-                                onDismissed: (_) => dismiss(),
-                                secondaryBackground: SwipeActionBackground(
-                                  alignment: Alignment.centerRight,
-                                  padding: const EdgeInsets.only(right: 12),
-                                  children: [
-                                    SwipeActionTile(
-                                      icon: AppIconKey.delete,
-                                      label: 'Dismiss',
-                                      foregroundColor:
-                                          Theme.of(context).appColors.expense,
-                                      backgroundColor: Theme.of(context)
-                                          .appColors
-                                          .expenseSoft,
-                                      onTap: () {},
-                                    ),
-                                  ],
-                                ),
-                                background: const SizedBox.shrink(),
+                              return _SwipeableNotificationActionRow(
+                                key: ValueKey('notification-row-${alert.id}'),
+                                onDismiss: dismiss,
                                 child: ColoredBox(
                                   color: Theme.of(context).appColors.paper,
                                   child: _NotificationListTile(
@@ -2312,6 +2294,196 @@ class _NotificationsSheetHeaderDelegate extends SliverPersistentHeaderDelegate {
   bool shouldRebuild(covariant _NotificationsSheetHeaderDelegate oldDelegate) {
     return subtitle != oldDelegate.subtitle ||
         backgroundColor != oldDelegate.backgroundColor;
+  }
+}
+
+class _SwipeableNotificationActionRow extends StatefulWidget {
+  const _SwipeableNotificationActionRow({
+    super.key,
+    required this.child,
+    required this.onDismiss,
+  });
+
+  final Widget child;
+  final VoidCallback onDismiss;
+
+  @override
+  State<_SwipeableNotificationActionRow> createState() =>
+      _SwipeableNotificationActionRowState();
+}
+
+class _SwipeableNotificationActionRowState
+    extends State<_SwipeableNotificationActionRow>
+    with SingleTickerProviderStateMixin {
+  static const _dismissExtent = 0.28;
+  static const _commitThreshold = 0.58;
+
+  late final SlidableController _controller;
+  bool _handlingCommittedSwipe = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = SlidableController(this)
+      ..endGesture.addListener(_handleCommittedSwipe);
+  }
+
+  @override
+  void dispose() {
+    _controller.endGesture.removeListener(_handleCommittedSwipe);
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _handleCommittedSwipe() {
+    if (_handlingCommittedSwipe || _controller.ratio > -_commitThreshold) {
+      return;
+    }
+
+    _handlingCommittedSwipe = true;
+    _controller.close(duration: Duration.zero);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _handlingCommittedSwipe = false;
+      widget.onDismiss();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).appColors;
+
+    return Slidable(
+      key: widget.key,
+      controller: _controller,
+      groupTag: 'notifications',
+      closeOnScroll: true,
+      endActionPane: ActionPane(
+        motion: const BehindMotion(),
+        extentRatio: _dismissExtent,
+        dismissible: _NotificationSlidablePreview(
+          label: 'Dismiss',
+          icon: AppIconKey.delete,
+          foregroundColor: colors.expense,
+          backgroundColor: colors.expenseSoft,
+          alignment: Alignment.centerRight,
+        ),
+        children: [
+          _NotificationSlidableAction(
+            label: 'Dismiss',
+            icon: AppIconKey.delete,
+            foregroundColor: colors.expense,
+            backgroundColor: colors.expenseSoft,
+            onPressed: widget.onDismiss,
+          ),
+        ],
+      ),
+      child: widget.child,
+    );
+  }
+}
+
+class _NotificationSlidablePreview extends StatelessWidget {
+  const _NotificationSlidablePreview({
+    required this.label,
+    required this.icon,
+    required this.foregroundColor,
+    required this.backgroundColor,
+    required this.alignment,
+  });
+
+  final String label;
+  final AppIconKey icon;
+  final Color foregroundColor;
+  final Color backgroundColor;
+  final Alignment alignment;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).appColors;
+
+    return ColoredBox(
+      color: backgroundColor.withValues(alpha: 0.38),
+      child: Align(
+        alignment: alignment,
+        child: SizedBox(
+          width: 92,
+          height: double.infinity,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              AppIcons.icon(
+                icon,
+                color: foregroundColor,
+                size: 20,
+              ),
+              const SizedBox(height: 4),
+              Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      color: colors.ink,
+                      fontWeight: FontWeight.w800,
+                    ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _NotificationSlidableAction extends StatelessWidget {
+  const _NotificationSlidableAction({
+    required this.label,
+    required this.icon,
+    required this.foregroundColor,
+    required this.backgroundColor,
+    required this.onPressed,
+  });
+
+  final String label;
+  final AppIconKey icon;
+  final Color foregroundColor;
+  final Color backgroundColor;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).appColors;
+
+    return CustomSlidableAction(
+      key: ValueKey('notification-swipe-action-$label'),
+      backgroundColor: backgroundColor.withValues(alpha: 0.38),
+      padding: EdgeInsets.zero,
+      onPressed: (_) => onPressed(),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          AppIcons.icon(
+            icon,
+            color: foregroundColor,
+            size: 20,
+          ),
+          const SizedBox(height: 4),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: colors.ink,
+                    fontWeight: FontWeight.w800,
+                  ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 

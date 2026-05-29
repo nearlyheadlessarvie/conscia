@@ -9,5 +9,6 @@ public class UserIdentity
     public AuthProvider Provider { get; set; }
     public string ProviderSub { get; set; } = string.Empty;
     public UserIdentityRole Role { get; set; } = UserIdentityRole.Member;
+    public bool HasPassword { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }

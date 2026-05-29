@@ -73,4 +73,54 @@ public class CurrentUserBootstrapMiddlewareTests
                 identity.ProviderSub == "alice@example.com"),
             It.IsAny<CancellationToken>()), Times.Once);
     }
+
+    [Fact]
+    public async Task InvokeAsync_ReusesExistingSocialIdentity_WhenEmailClaimIsMissing()
+    {
+        var tokenUserId = Guid.Parse("aaaaaaaa-0000-4000-8000-000000000002");
+        var existingUserId = Guid.Parse("bbbbbbbb-0000-4000-8000-000000000002");
+        var existingUser = new User
+        {
+            Id = existingUserId,
+            Email = "social@example.com",
+            EmailConfirmed = true,
+            HasCompletedOnboarding = true
+        };
+        var middleware = new CurrentUserBootstrapMiddleware(
+            httpContext =>
+            {
+                Assert.Equal(
+                    existingUserId.ToString(),
+                    httpContext.User.FindFirstValue(ClaimTypes.NameIdentifier));
+                return Task.CompletedTask;
+            },
+            NullLogger<CurrentUserBootstrapMiddleware>.Instance);
+        var users = new Mock<IUserRepository>();
+        users
+            .Setup(repo => repo.GetByProviderAsync(
+                AuthProvider.Google,
+                "google-sub-123",
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(existingUser);
+        users
+            .Setup(repo => repo.GetByIdAsync(tokenUserId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((User?)null);
+        var context = new DefaultHttpContext
+        {
+            User = new ClaimsPrincipal(new ClaimsIdentity(
+                [
+                    new Claim(ClaimTypes.NameIdentifier, tokenUserId.ToString()),
+                    new Claim("identities", """
+                        {"providerName":"Google","userId":"google-sub-123"}
+                        """)
+                ],
+                "Test"))
+        };
+
+        await middleware.InvokeAsync(context, users.Object);
+
+        users.Verify(repo => repo.GetByEmailAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+        users.Verify(repo => repo.AddAsync(It.IsAny<User>(), It.IsAny<CancellationToken>()), Times.Never);
+        users.Verify(repo => repo.AddIdentityAsync(It.IsAny<UserIdentity>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
 }

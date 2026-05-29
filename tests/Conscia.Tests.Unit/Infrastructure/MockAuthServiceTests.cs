@@ -75,6 +75,7 @@ public class MockAuthServiceTests
         var identity = _repo.Identities.FirstOrDefault(i => i.ProviderSub == "identity@test.com");
         Assert.NotNull(identity);
         Assert.Equal(AuthProvider.Email, identity.Provider);
+        Assert.True(identity.HasPassword);
     }
 
     [Fact]

@@ -66,6 +66,7 @@ class AppAvailabilityNotifier extends StateNotifier<AppAvailabilityState> {
     required AppUpdateService appUpdateService,
     this.autoRefresh = true,
     this.refreshOnInit = true,
+    this.resumeRefreshDelay = foregroundResumeRefreshDelay,
   })  : _connectivityService = connectivityService,
         _apiAvailabilityService = apiAvailabilityService,
         _appUpdateService = appUpdateService,
@@ -80,22 +81,28 @@ class AppAvailabilityNotifier extends StateNotifier<AppAvailabilityState> {
 
   static const autoRetryInterval = Duration(seconds: 10);
   static const offlineConfirmationDelay = Duration(milliseconds: 350);
+  static const foregroundResumeRefreshDelay = Duration(seconds: 2);
 
   final ConnectivityService _connectivityService;
   final ApiAvailabilityService _apiAvailabilityService;
   final AppUpdateService _appUpdateService;
   final bool autoRefresh;
   final bool refreshOnInit;
+  final Duration resumeRefreshDelay;
 
   Timer? _timer;
+  Timer? _resumeRefreshTimer;
   bool _foregrounded = true;
+  int _refreshToken = 0;
 
   Future<void> refresh() async {
     if (!_foregrounded) return;
+    final refreshToken = ++_refreshToken;
     state = state.copyWith(isLoading: true, errorMessage: null);
 
     final checkedAt = DateTime.now();
     final hasConnection = await _confirmNetworkConnection();
+    if (!_canApplyRefresh(refreshToken)) return;
     if (!hasConnection) {
       state = state.copyWith(
         issue: AvailabilityIssue.deviceOffline,
@@ -108,7 +115,9 @@ class AppAvailabilityNotifier extends StateNotifier<AppAvailabilityState> {
 
     try {
       await _apiAvailabilityService.checkLiveness();
+      if (!_canApplyRefresh(refreshToken)) return;
     } on ApiUpgradeRequiredException catch (error) {
+      if (!_canApplyRefresh(refreshToken)) return;
       state = state.copyWith(
         issue: AvailabilityIssue.updateRequired,
         isLoading: false,
@@ -117,6 +126,7 @@ class AppAvailabilityNotifier extends StateNotifier<AppAvailabilityState> {
       );
       return;
     } on ApiUnavailableException catch (error) {
+      if (!_canApplyRefresh(refreshToken)) return;
       state = state.copyWith(
         issue: AvailabilityIssue.apiUnavailable,
         isLoading: false,
@@ -125,6 +135,7 @@ class AppAvailabilityNotifier extends StateNotifier<AppAvailabilityState> {
       );
       return;
     } catch (_) {
+      if (!_canApplyRefresh(refreshToken)) return;
       state = state.copyWith(
         issue: AvailabilityIssue.apiUnavailable,
         isLoading: false,
@@ -136,6 +147,7 @@ class AppAvailabilityNotifier extends StateNotifier<AppAvailabilityState> {
 
     try {
       final update = await _appUpdateService.checkForUpdate();
+      if (!_canApplyRefresh(refreshToken)) return;
       state = state.copyWith(
         issue: update.isUpdateRequired
             ? AvailabilityIssue.updateRequired
@@ -148,6 +160,7 @@ class AppAvailabilityNotifier extends StateNotifier<AppAvailabilityState> {
         availableVersion: update.availableVersion,
       );
     } catch (_) {
+      if (!_canApplyRefresh(refreshToken)) return;
       state = state.copyWith(
         issue: AvailabilityIssue.none,
         isLoading: false,
@@ -167,24 +180,37 @@ class AppAvailabilityNotifier extends StateNotifier<AppAvailabilityState> {
     return _connectivityService.hasNetworkConnection();
   }
 
+  bool _canApplyRefresh(int refreshToken) {
+    return _foregrounded && refreshToken == _refreshToken;
+  }
+
   Future<void> setForegrounded(bool value) async {
     if (_foregrounded == value) return;
     _foregrounded = value;
     if (!_foregrounded) {
+      _refreshToken += 1;
       _timer?.cancel();
       _timer = null;
+      _resumeRefreshTimer?.cancel();
+      _resumeRefreshTimer = null;
+      state = state.copyWith(isLoading: false);
       return;
     }
 
     if (autoRefresh && _timer == null) {
       _timer = Timer.periodic(autoRetryInterval, (_) => refresh());
     }
-    await refresh();
+    _resumeRefreshTimer?.cancel();
+    _resumeRefreshTimer = Timer(resumeRefreshDelay, () {
+      _resumeRefreshTimer = null;
+      unawaited(refresh());
+    });
   }
 
   @override
   void dispose() {
     _timer?.cancel();
+    _resumeRefreshTimer?.cancel();
     super.dispose();
   }
 }

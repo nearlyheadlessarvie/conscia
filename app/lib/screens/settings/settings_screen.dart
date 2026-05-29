@@ -20,11 +20,9 @@ import '../../providers/auth_provider.dart';
 import '../../providers/admin_entitlement_provider.dart';
 import '../../providers/family_space_provider.dart';
 import '../../providers/location_assistance_provider.dart';
-import '../../providers/passkey_provider.dart';
 import '../../providers/subscription_provider.dart';
 import '../../providers/transaction_providers.dart';
 import '../../providers/user_provider.dart';
-import '../../services/passkey_service.dart';
 import '../../services/user_service.dart';
 import '../../widgets/conscia_app_bar.dart';
 import '../../widgets/conscia_bottom_sheet.dart';
@@ -32,6 +30,7 @@ import '../../widgets/conscia_confirm_sheet.dart';
 import '../../widgets/currency_picker_sheet.dart';
 import '../../widgets/editorial_section_header.dart';
 import '../../widgets/editorial_hero_chip.dart';
+import '../../widgets/hero_shortcut_card.dart';
 import '../../widgets/locale_picker_sheet.dart';
 import '../../widgets/single_select_list.dart';
 import 'widgets/subscription_sheet.dart';
@@ -79,7 +78,6 @@ class SettingsScreen extends ConsumerStatefulWidget {
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   final _appBarScrollProgress = ValueNotifier<double>(0);
   final _scrollController = ScrollController();
-  bool _isRegisteringPasskey = false;
 
   @override
   void initState() {
@@ -139,40 +137,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     }
   }
 
-  Future<void> _registerPasskey(BuildContext context) async {
-    if (_isRegisteringPasskey) return;
-
-    setState(() => _isRegisteringPasskey = true);
-    try {
-      await ref.read(passkeyServiceProvider).registerCurrentUserPasskey();
-      final email = ref.read(currentUserProvider).valueOrNull?.email;
-      if (email != null && email.trim().isNotEmpty) {
-        final notifier = ref.read(passkeySignInPreferenceProvider.notifier);
-        await notifier.registerEmail(email);
-        await notifier.setPasskeyFirstEnabled(true);
-      }
-      if (!mounted || !context.mounted) return;
-      ScaffoldMessenger.of(context)
-        ..clearSnackBars()
-        ..showSnackBar(
-          const SnackBar(content: Text('Passkey ready on this device.')),
-        );
-    } catch (error) {
-      if (!mounted || !context.mounted) return;
-      if (!isPasskeyCancellation(error)) {
-        ScaffoldMessenger.of(context)
-          ..clearSnackBars()
-          ..showSnackBar(
-            SnackBar(content: Text(friendlyPasskeyErrorMessage(error))),
-          );
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _isRegisteringPasskey = false);
-      }
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -180,16 +144,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final familySpaceAsync = ref.watch(familySpaceProvider);
     final subAsync = ref.watch(subscriptionProvider);
     final locationAssistance = ref.watch(locationAssistanceProvider);
-    final passkeysAvailable =
-        ref.watch(passkeyAvailabilityProvider).valueOrNull ?? false;
-    final passkeyPreference = ref.watch(passkeySignInPreferenceProvider);
     final adminEntitlementAccess =
         ref.watch(adminEntitlementAccessProvider).valueOrNull ?? false;
-    final sessionSupportsPasskeys =
-        ref.watch(currentSessionSupportsPasskeysProvider);
-    final currentEmail = userAsync.valueOrNull?.email;
-    final hasRegisteredCurrentPasskey = currentEmail != null &&
-        passkeyPreference.hasRegisteredEmail(currentEmail);
     final userPreferences = ref.watch(userPreferencesProvider);
     final hasTransactionHistory =
         ref.watch(transactionListProvider).transactions.isNotEmpty;
@@ -279,6 +235,16 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         children: [
                           _SettingsActionRow(
                             leading: _SettingsIconBox(
+                              icon: AppIconKey.lock,
+                              backgroundColor: theme.appColors.navySoft,
+                            ),
+                            title: 'Security',
+                            subtitle: 'Password and passkey sign-in',
+                            onTap: () =>
+                                context.push(AppRoutes.settingsSecurity),
+                          ),
+                          _SettingsActionRow(
+                            leading: _SettingsIconBox(
                               icon: AppIconKey.brain,
                               backgroundColor: theme.appColors.amberSoft,
                             ),
@@ -364,47 +330,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                                 : () => _showCurrencyPicker(context, ref),
                             showChevron: !hasTransactionHistory,
                           ),
-                          if (passkeysAvailable && sessionSupportsPasskeys) ...[
-                            _SettingsActionRow(
-                              leading: _SettingsIconBox(
-                                icon: AppIconKey.fingerprint,
-                                backgroundColor: theme.appColors.navySoft,
-                              ),
-                              title: _isRegisteringPasskey
-                                  ? 'Setting Up Passkey...'
-                                  : hasRegisteredCurrentPasskey
-                                      ? 'Passkey Ready'
-                                      : 'Set Up Passkey',
-                              subtitle: hasRegisteredCurrentPasskey
-                                  ? 'Registered for this account on this device'
-                                  : 'Use Face ID, fingerprint, or device unlock next time',
-                              onTap: _isRegisteringPasskey
-                                  ? null
-                                  : () => _registerPasskey(context),
-                              showChevron: !_isRegisteringPasskey,
-                            ),
-                            if (passkeyPreference.registeredEmails.isNotEmpty)
-                              _SettingsSwitchRow(
-                                leading: _SettingsIconBox(
-                                  icon: AppIconKey.passkey,
-                                  backgroundColor: theme.appColors.navySoft,
-                                ),
-                                title: 'Passkey First Sign-In',
-                                subtitle:
-                                    'Show saved passkey accounts before email sign-in',
-                                value: passkeyPreference.isPasskeyFirstEnabled,
-                                onChanged: (value) {
-                                  unawaited(
-                                    ref
-                                        .read(
-                                          passkeySignInPreferenceProvider
-                                              .notifier,
-                                        )
-                                        .setPasskeyFirstEnabled(value),
-                                  );
-                                },
-                              ),
-                          ],
                         ],
                       ),
                       _SettingsGroup(
@@ -929,22 +854,22 @@ class _SettingsEditorialHero extends StatelessWidget {
           Row(
             children: [
               Expanded(
-                child: _HeroShortcutPill(
+                child: HeroShortcutCard(
                   key: const ValueKey('settings-hero-profile-shortcut'),
                   icon: AppIconKey.person,
-                  title: 'Profile',
+                  label: 'Profile',
                   subtitle: 'Personal workspace',
-                  onTap: onProfileTap,
+                  onPressed: onProfileTap,
                 ),
               ),
               const SizedBox(width: 10),
               Expanded(
-                child: _HeroShortcutPill(
+                child: HeroShortcutCard(
                   key: const ValueKey('settings-hero-family-shortcut'),
                   icon: AppIconKey.family,
-                  title: 'Shared Conscia',
+                  label: 'Shared Conscia',
                   subtitle: workspaceLabel,
-                  onTap: onFamilyTap,
+                  onPressed: onFamilyTap,
                 ),
               ),
             ],
@@ -997,85 +922,6 @@ class _SettingsEditorialHeroFallback extends StatelessWidget {
       locale: 'en_US',
       onProfileTap: () {},
       onFamilyTap: () {},
-    );
-  }
-}
-
-class _HeroShortcutPill extends StatelessWidget {
-  const _HeroShortcutPill({
-    super.key,
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-    required this.onTap,
-  });
-
-  final AppIconKey icon;
-  final String title;
-  final String subtitle;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).appColors;
-    final textTheme = Theme.of(context).textTheme;
-    return Material(
-      color: colors.surfaceRaised.withValues(alpha: 0.92),
-      borderRadius: BorderRadius.circular(18),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(18),
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(12, 9, 10, 9),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              AppIcons.icon(
-                icon,
-                size: 17,
-                color: colors.deepNavy,
-              ),
-              const SizedBox(width: 8),
-              Flexible(
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 118),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: textTheme.labelSmall?.copyWith(
-                          color: colors.deepNavy,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                      Text(
-                        subtitle,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: textTheme.labelSmall?.copyWith(
-                          color: colors.mutedInk,
-                          fontSize: 10,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              AppIcons.icon(
-                AppIconKey.chevronRight,
-                size: 15,
-                color: colors.softInk,
-              ),
-            ],
-          ),
-        ),
-      ),
     );
   }
 }

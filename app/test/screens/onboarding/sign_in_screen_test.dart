@@ -235,6 +235,29 @@ void main() {
     expect(authNotifier.googleCount, 1);
   });
 
+  testWidgets('google sign in dismisses the focused keyboard', (tester) async {
+    final authNotifier = _RecordingAuthNotifier();
+
+    await _pumpSignInScreen(
+      tester,
+      authNotifier: authNotifier,
+    );
+
+    await tester.tap(find.byType(TextField).first);
+    await tester.pump();
+
+    expect(tester.testTextInput.isVisible, isTrue);
+
+    final googleButton =
+        find.widgetWithText(OutlinedButton, 'Sign in with Google');
+    await tester.ensureVisible(googleButton);
+    await tester.tap(googleButton);
+    await tester.pump();
+
+    expect(authNotifier.googleCount, 1);
+    expect(tester.testTextInput.isVisible, isFalse);
+  });
+
   testWidgets('forgot password opens password reset route', (tester) async {
     final authNotifier = _RecordingAuthNotifier();
     final router = GoRouter(

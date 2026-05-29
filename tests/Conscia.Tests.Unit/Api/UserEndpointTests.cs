@@ -47,7 +47,6 @@ public class UserEndpointTests : IClassFixture<TestWebAppFactory>
                 It.IsAny<int>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync("https://cdn.example.com/alice-avatar.jpg");
-
         var response = await _client.GetAsync("/api/users/me");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -55,6 +54,40 @@ public class UserEndpointTests : IClassFixture<TestWebAppFactory>
         Assert.Contains("alice@example.com", body);
         Assert.Contains("Alice Money", body);
         Assert.Contains("https://cdn.example.com/alice-avatar.jpg", body);
+    }
+
+    [Fact]
+    public async Task GetMe_IncludesHasPasswordFromEmailIdentity()
+    {
+        await using var factory = new TestWebAppFactory();
+        using var client = factory.CreateClient();
+        var userId = Guid.Parse("d1b2c3d4-0001-4000-8000-000000000001");
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+            "Bearer",
+            factory.GenerateTestToken(userId: userId.ToString(), email: "passworded@example.com"));
+        factory.UserServiceMock
+            .Setup(s => s.GetByIdAsync(userId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new User
+            {
+                Id = userId,
+                Email = "passworded@example.com",
+                PreferredCurrency = "USD",
+                Locale = "en-US"
+            });
+        await factory.UserRepo.AddIdentityAsync(new UserIdentity
+        {
+            Id = Guid.NewGuid(),
+            UserId = userId,
+            Provider = AuthProvider.Email,
+            ProviderSub = "passworded@example.com",
+            HasPassword = true
+        });
+
+        var response = await client.GetAsync("/api/users/me");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var body = await response.Content.ReadAsStringAsync();
+        Assert.Contains("\"hasPassword\":true", body);
     }
 
     [Fact]

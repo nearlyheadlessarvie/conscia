@@ -21,6 +21,7 @@ void main() {
         _authenticatedAuthOverride(),
         familySpaceProvider.overrideWith((ref) async => null),
         conscienceJourneyServiceProvider.overrideWithValue(service),
+        _disabledRemoteAlertSyncOverride(),
       ],
     );
     addTearDown(container.dispose);
@@ -45,6 +46,7 @@ void main() {
         _authenticatedAuthOverride(),
         familySpaceProvider.overrideWith((ref) async => null),
         conscienceJourneyServiceProvider.overrideWithValue(service),
+        _disabledRemoteAlertSyncOverride(),
         budgetServiceProvider.overrideWithValue(_StaticBudgetService()),
         alertsProvider.overrideWith((ref) async => const []),
       ],
@@ -203,6 +205,16 @@ Override _authenticatedAuthOverride([String userId = 'test-user']) {
         status: AuthStatus.authenticated,
         userId: userId,
       ),
+    ),
+  );
+}
+
+Override _disabledRemoteAlertSyncOverride() {
+  return alertActionsProvider.overrideWith(
+    (ref) => AlertActions(
+      dio: Dio(),
+      enabled: false,
+      onRemoteChanged: () {},
     ),
   );
 }

@@ -13,6 +13,7 @@ import 'package:conscia_app/services/passkey_service.dart';
 import 'package:conscia_app/services/subscription_service.dart';
 import 'package:conscia_app/services/transaction_service.dart';
 import 'package:conscia_app/services/user_service.dart';
+import 'package:conscia_app/widgets/hero_shortcut_card.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -482,7 +483,7 @@ void main() {
     expect(find.text('Biometric Sign-In'), findsNothing);
   });
 
-  testWidgets('settings shows passkey setup for cognito sessions', (
+  testWidgets('settings links sign-in methods to security', (
     tester,
   ) async {
     SharedPreferences.setMockInitialValues({});
@@ -502,12 +503,13 @@ void main() {
 
     await tester.pumpAndSettle();
 
-    expect(find.text('Set Up Passkey'), findsOneWidget);
+    expect(find.text('Security'), findsOneWidget);
+    expect(find.text('Password and passkey sign-in'), findsOneWidget);
+    expect(find.text('Set Up Passkey'), findsNothing);
     expect(find.text('Biometric Sign-In'), findsNothing);
   });
 
-  testWidgets(
-      'passkey registration saves this account for passkey-first sign in',
+  testWidgets('settings keeps passkey registration inside security',
       (tester) async {
     SharedPreferences.setMockInitialValues({});
     final prefs = await SharedPreferences.getInstance();
@@ -527,18 +529,10 @@ void main() {
 
     await tester.pumpAndSettle();
 
-    await tester.scrollUntilVisible(find.text('Set Up Passkey'), 200);
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Set Up Passkey'));
-    await tester.pumpAndSettle();
-
-    expect(passkeyService.registerCount, 1);
-    expect(
-      prefs.getStringList(passkeyRegisteredEmailsPreferenceKey),
-      ['settings@example.com'],
-    );
-    expect(prefs.getBool(passkeyFirstSignInEnabledPreferenceKey), isTrue);
-    expect(find.text('Passkey First Sign-In'), findsOneWidget);
+    expect(find.text('Set Up Passkey'), findsNothing);
+    expect(passkeyService.registerCount, 0);
+    expect(prefs.getStringList(passkeyRegisteredEmailsPreferenceKey), isNull);
+    expect(prefs.getBool(passkeyFirstSignInEnabledPreferenceKey), isNull);
   });
 
   testWidgets('settings can change region format', (tester) async {
@@ -1008,6 +1002,43 @@ void main() {
     expect(find.textContaining('Personal workspace'), findsOneWidget);
     expect(find.byTooltip('Sign out'), findsOneWidget);
     expect(find.widgetWithText(OutlinedButton, 'Sign Out'), findsNothing);
+  });
+
+  testWidgets('settings hero shortcuts use menu item text scale',
+      (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+    final locationService =
+        _RecordingLocationAssistanceService(permissionGranted: true);
+
+    await _pumpSettingsScreen(
+      tester,
+      prefs: prefs,
+      locationService: locationService,
+    );
+
+    await tester.pumpAndSettle();
+
+    expect(find.byType(HeroShortcutCard), findsNWidgets(2));
+
+    final profileTitle = tester.widget<Text>(
+      find.descendant(
+        of: find.byKey(const ValueKey('settings-hero-profile-shortcut')),
+        matching: find.text('Profile'),
+      ),
+    );
+    final profileSubtitle = tester.widget<Text>(
+      find.descendant(
+        of: find.byKey(const ValueKey('settings-hero-profile-shortcut')),
+        matching: find.text('Personal workspace'),
+      ),
+    );
+    final budgetsTitle = tester.widget<Text>(find.text('Budgets'));
+    final budgetsSubtitle =
+        tester.widget<Text>(find.text('Create and tune monthly caps'));
+
+    expect(profileTitle.style?.fontSize, budgetsTitle.style?.fontSize);
+    expect(profileSubtitle.style?.fontSize, budgetsSubtitle.style?.fontSize);
   });
 
   testWidgets('sign out confirmation uses a pull-up sheet', (tester) async {

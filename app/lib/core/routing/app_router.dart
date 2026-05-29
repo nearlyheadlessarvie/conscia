@@ -26,6 +26,7 @@ import '../../screens/settings/service_status_screen.dart';
 import '../../screens/settings/category_management_screen.dart';
 import '../../screens/settings/admin_entitlements_screen.dart';
 import '../../screens/settings/profile_screen.dart';
+import '../../screens/settings/security_screen.dart';
 import '../../screens/settings/settings_screen.dart';
 import '../../screens/family/family_invites_screen.dart';
 import '../../screens/family/family_members_screen.dart';
@@ -69,6 +70,7 @@ abstract class AppRoutes {
 
   static const settings = '/settings';
   static const settingsProfile = '/settings/profile';
+  static const settingsSecurity = '/settings/security';
   static const settingsAdminEntitlements = '/settings/admin-entitlements';
   static const categories = '/settings/categories';
   static const serviceStatus = '/settings/status';
@@ -401,6 +403,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/settings/profile',
         builder: (context, state) => const ProfileScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.settingsSecurity,
+        builder: (context, state) => const SecurityScreen(),
       ),
       GoRoute(
         path: AppRoutes.settingsAdminEntitlements,

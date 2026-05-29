@@ -328,6 +328,7 @@ public class UserRepository : DynamoRepository, IUserRepository
         ["Provider"] = new(identity.Provider.ToString()),
         ["ProviderSub"] = new(identity.ProviderSub),
         ["Role"] = new(identity.Role.ToString()),
+        ["HasPassword"] = BoolValue(identity.HasPassword),
         ["CreatedAt"] = new(identity.CreatedAt.ToString("O", CultureInfo.InvariantCulture))
     };
 
@@ -340,6 +341,7 @@ public class UserRepository : DynamoRepository, IUserRepository
         Role = item.TryGetValue("Role", out var role)
             ? Enum.Parse<UserIdentityRole>(role.S)
             : UserIdentityRole.Member,
+        HasPassword = GetBool(item, "HasPassword"),
         CreatedAt = DateTime.Parse(item["CreatedAt"].S, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind)
     };
 

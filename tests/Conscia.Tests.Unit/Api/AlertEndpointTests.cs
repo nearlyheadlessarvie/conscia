@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Headers;
+using System.Net.Http.Json;
 using Conscia.Application.Models;
 using Moq;
 
@@ -56,5 +57,66 @@ public class AlertEndpointTests : IClassFixture<TestWebAppFactory>
         var response = await client.GetAsync("/api/alerts");
 
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task CreateAlert_PersistsCurrentUserAlert()
+    {
+        _factory.AlertServiceMock
+            .Setup(s => s.CreateAlertAsync(
+                UserId,
+                It.Is<InAppAlert>(a =>
+                    a.AlertKey == "budget-nudge-dining"
+                    && a.TriggerName == "budget_nudge"
+                    && a.Title == "No budget for Dining yet"
+                    && a.Category == "Dining"),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Guid userId, InAppAlert alert, CancellationToken _) =>
+            {
+                alert.UserId = userId;
+                return alert;
+            });
+
+        var response = await _client.PostAsJsonAsync("/api/alerts", new
+        {
+            id = "budget-nudge-dining",
+            type = "budget_nudge",
+            title = "No budget for Dining yet",
+            message = "You logged an expense in Dining without a matching budget.",
+            priority = 20,
+            actionLabel = "Add budget",
+            actionRoute = "/settings/budgets",
+            category = "Dining",
+            createdAt = DateTime.UtcNow
+        });
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        _factory.AlertServiceMock.Verify(s => s.CreateAlertAsync(
+            UserId,
+            It.Is<InAppAlert>(a =>
+                a.AlertKey == "budget-nudge-dining"
+                && a.TriggerName == "budget_nudge"
+                && a.Title == "No budget for Dining yet"
+                && a.Category == "Dining"),
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task DismissAlert_PersistsCurrentUserDismissal()
+    {
+        _factory.AlertServiceMock
+            .Setup(s => s.DismissAlertAsync(
+                UserId,
+                "budget-nudge-dining",
+                It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        var response = await _client.PostAsync("/api/alerts/budget-nudge-dining/dismiss", null);
+
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+        _factory.AlertServiceMock.Verify(s => s.DismissAlertAsync(
+            UserId,
+            "budget-nudge-dining",
+            It.IsAny<CancellationToken>()), Times.Once);
     }
 }

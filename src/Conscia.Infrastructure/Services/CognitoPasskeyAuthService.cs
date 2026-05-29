@@ -192,7 +192,8 @@ public sealed class CognitoPasskeyAuthService : IPasskeyAuthService
                 Id = Guid.NewGuid(),
                 UserId = user.Id,
                 Provider = AuthProvider.Email,
-                ProviderSub = email
+                ProviderSub = email,
+                HasPassword = false
             }, ct);
         }
     }

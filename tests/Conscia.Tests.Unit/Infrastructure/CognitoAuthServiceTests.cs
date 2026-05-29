@@ -67,6 +67,7 @@ public class CognitoAuthServiceTests
         Assert.Equal(AuthProvider.Email, identity.Provider);
         Assert.Equal("new@example.com", identity.ProviderSub);
         Assert.Equal(userSub, identity.UserId);
+        Assert.True(identity.HasPassword);
     }
 
     [Fact]
@@ -93,6 +94,28 @@ public class CognitoAuthServiceTests
         Assert.True(result.Success);
         Assert.True(result.RequiresConfirmation);
         Assert.Equal("new@example.com", result.Email);
+    }
+
+    [Fact]
+    public async Task RegisterAsync_ExistingSocialIdentity_ReturnsSignInWithSocialError()
+    {
+        _cognito
+            .Setup(c => c.SignUpAsync(
+                It.Is<SignUpRequest>(r =>
+                    r.ClientId == "client-123" &&
+                    r.Username == "new@example.com"),
+                It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new UserLambdaValidationException(
+                "PreSignUp failed with error An account already exists for this email. Sign in with Google or Apple."));
+
+        var result = await _auth.RegisterAsync(" New@Example.com ", "SecureP@ss123");
+
+        Assert.False(result.Success);
+        Assert.False(result.RequiresConfirmation);
+        Assert.Equal("new@example.com", result.Email);
+        Assert.Equal(
+            "An account already exists for this email. Sign in with Google or Apple.",
+            result.Error);
     }
 
     [Fact]
@@ -180,6 +203,7 @@ public class CognitoAuthServiceTests
         var identity = _repo.Identities.Single();
         Assert.Equal(AuthProvider.Email, identity.Provider);
         Assert.Equal("login@example.com", identity.ProviderSub);
+        Assert.True(identity.HasPassword);
     }
 
     [Fact]

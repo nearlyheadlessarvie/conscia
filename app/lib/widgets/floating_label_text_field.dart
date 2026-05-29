@@ -154,7 +154,7 @@ class _FloatingLabelTextFieldState extends State<FloatingLabelTextField> {
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 160),
         curve: Curves.easeOut,
-        constraints: const BoxConstraints(minHeight: 52),
+        constraints: const BoxConstraints(minHeight: 58),
         decoration: BoxDecoration(
           color: backgroundColor,
           borderRadius: BorderRadius.circular(14),
@@ -169,20 +169,21 @@ class _FloatingLabelTextFieldState extends State<FloatingLabelTextField> {
               duration: const Duration(milliseconds: 160),
               curve: Curves.easeOut,
               left: leadingInset,
-              top: _isRaised ? 8 : 15,
+              top: _isRaised ? 8 : 18,
               child: AnimatedDefaultTextStyle(
                 duration: const Duration(milliseconds: 160),
                 curve: Curves.easeOut,
                 style: (_isRaised
-                            ? theme.textTheme.labelSmall
+                            ? theme.textTheme.labelMedium
                             : theme.textTheme.bodyMedium)
                         ?.copyWith(
-                      fontWeight: _isRaised ? FontWeight.w600 : FontWeight.w400,
+                      fontSize: _isRaised ? 12 : 15,
+                      fontWeight: _isRaised ? FontWeight.w700 : FontWeight.w500,
                       color: labelColor,
                     ) ??
                     TextStyle(
-                      fontSize: _isRaised ? 11 : 14,
-                      fontWeight: _isRaised ? FontWeight.w600 : FontWeight.w400,
+                      fontSize: _isRaised ? 12 : 15,
+                      fontWeight: _isRaised ? FontWeight.w700 : FontWeight.w500,
                       color: labelColor,
                     ),
                 child: Text(widget.label),
@@ -191,7 +192,7 @@ class _FloatingLabelTextFieldState extends State<FloatingLabelTextField> {
             Padding(
               padding: EdgeInsets.fromLTRB(
                 leadingInset,
-                22,
+                25,
                 widget.trailing == null ? 14 : 48,
                 8,
               ),
@@ -217,8 +218,10 @@ class _FloatingLabelTextFieldState extends State<FloatingLabelTextField> {
                 enableSuggestions: widget.enableSuggestions,
                 autocorrect: widget.autocorrect,
                 style: theme.textTheme.bodyMedium?.copyWith(
+                  fontSize: 15,
+                  height: 1.28,
                   color: colors.ink,
-                  fontWeight: FontWeight.w500,
+                  fontWeight: FontWeight.w600,
                 ),
                 decoration: InputDecoration(
                   isDense: true,
