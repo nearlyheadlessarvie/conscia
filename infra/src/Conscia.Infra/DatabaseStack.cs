@@ -87,7 +87,8 @@ public class DatabaseStack : Stack
                     ProjectionType = ProjectionType.ALL
                 }
             ],
-            ttl: "TTL");
+            ttl: "TTL",
+            stream: StreamViewType.NEW_AND_OLD_IMAGES);
 
         InAppAlertsTable = CreateTable(
             "InAppAlerts",

@@ -51,6 +51,20 @@ public class StackTests
     }
 
     [Fact]
+    public void DatabaseStack_OutboxEventsTable_HasStream()
+    {
+        var template = CreateDatabaseTemplate();
+        template.HasResourceProperties("AWS::DynamoDB::Table", new Dictionary<string, object>
+        {
+            ["TableName"] = "OutboxEvents",
+            ["StreamSpecification"] = new Dictionary<string, object>
+            {
+                ["StreamViewType"] = "NEW_AND_OLD_IMAGES"
+            }
+        });
+    }
+
+    [Fact]
     public void DatabaseStack_AllTables_UsePayPerRequest()
     {
         var template = CreateDatabaseTemplate();
@@ -429,6 +443,10 @@ public class StackTests
         template.ResourceCountIs("AWS::EC2::SecurityGroup", 0);
         template.HasResourceProperties("AWS::Lambda::EventSourceMapping", new Dictionary<string, object>
         {
+            ["EventSourceArn"] = new Dictionary<string, object>
+            {
+                ["Fn::ImportValue"] = Match.StringLikeRegexp("OutboxEvents.*StreamArn")
+            },
             ["StartingPosition"] = "TRIM_HORIZON"
         });
         template.HasResourceProperties("AWS::Lambda::Function", new Dictionary<string, object>
