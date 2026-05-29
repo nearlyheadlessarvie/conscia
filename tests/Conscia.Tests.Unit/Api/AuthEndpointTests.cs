@@ -29,6 +29,29 @@ public class AuthEndpointTests
     }
 
     [Fact]
+    public async Task Register_WithBearerToken_DoesNotBootstrapTokenUser()
+    {
+        await using var factory = new TestWebAppFactory();
+        using var client = factory.CreateClient();
+        var email = $"stale-token-register-{Guid.NewGuid()}@example.com";
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+            "Bearer",
+            factory.GenerateTestToken(
+                userId: "aaaaaaaa-0000-4000-8000-000000000001",
+                email: "stale-token@example.com"));
+
+        var response = await client.PostAsJsonAsync("/api/auth/register", new
+        {
+            email,
+            password = "SecureP@ss123"
+        });
+
+        Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
+        Assert.Contains(factory.UserRepo.Users, user => user.Email == email);
+        Assert.DoesNotContain(factory.UserRepo.Users, user => user.Email == "stale-token@example.com");
+    }
+
+    [Fact]
     public async Task Confirm_ValidCode_Returns200()
     {
         await using var factory = new TestWebAppFactory();

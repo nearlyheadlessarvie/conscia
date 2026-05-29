@@ -3,6 +3,7 @@ using System.Text.Json;
 using Conscia.Application.Interfaces;
 using Conscia.Domain.Entities;
 using Conscia.Domain.Enums;
+using Microsoft.AspNetCore.Authorization;
 
 namespace Conscia.Api.Middleware;
 
@@ -26,19 +27,21 @@ public sealed class CurrentUserBootstrapMiddleware
 
     public async Task InvokeAsync(HttpContext context, IUserRepository users)
     {
-        if (context.User.Identity?.IsAuthenticated == true)
+        if (context.User.Identity?.IsAuthenticated == true &&
+            ShouldBootstrapCurrentUser(context))
         {
-            await EnsureLocalUserAsync(context.User, users, context.RequestAborted);
+            await EnsureLocalUserAsync(context, users, context.RequestAborted);
         }
 
         await _next(context);
     }
 
     private async Task EnsureLocalUserAsync(
-        ClaimsPrincipal principal,
+        HttpContext context,
         IUserRepository users,
         CancellationToken ct)
     {
+        var principal = context.User;
         var userIdValue = principal.FindFirstValue(ClaimTypes.NameIdentifier)
             ?? principal.FindFirstValue("sub");
         var emailValue = principal.FindFirstValue(ClaimTypes.Email)
@@ -53,6 +56,11 @@ public sealed class CurrentUserBootstrapMiddleware
         var (provider, providerSub) = ResolveIdentity(principal, email);
 
         var user = await users.GetByIdAsync(userId, ct);
+        if (user is null)
+        {
+            user = await users.GetByEmailAsync(email, ct);
+        }
+
         if (user is null)
         {
             user = new User
@@ -85,13 +93,18 @@ public sealed class CurrentUserBootstrapMiddleware
             }
         }
 
+        if (user.Id != userId)
+        {
+            UseLocalUserId(context, user.Id);
+        }
+
         var existingIdentity = await users.GetByProviderAsync(provider, providerSub, ct);
         if (existingIdentity is null)
         {
             await users.AddIdentityAsync(new UserIdentity
             {
                 Id = Guid.NewGuid(),
-                UserId = userId,
+                UserId = user.Id,
                 Provider = provider,
                 ProviderSub = providerSub,
                 Role = UserIdentityRole.Member,
@@ -159,6 +172,32 @@ public sealed class CurrentUserBootstrapMiddleware
         }
 
         return [];
+    }
+
+    private static bool ShouldBootstrapCurrentUser(HttpContext context)
+    {
+        var endpoint = context.GetEndpoint();
+        if (endpoint?.Metadata.GetMetadata<IAllowAnonymous>() is not null)
+        {
+            return false;
+        }
+
+        return endpoint is null ||
+            endpoint.Metadata.GetOrderedMetadata<IAuthorizeData>().Count > 0;
+    }
+
+    private static void UseLocalUserId(HttpContext context, Guid userId)
+    {
+        var localUserId = userId.ToString();
+        foreach (var identity in context.User.Identities)
+        {
+            foreach (var claim in identity.FindAll(ClaimTypes.NameIdentifier).ToList())
+            {
+                identity.TryRemoveClaim(claim);
+            }
+
+            identity.AddClaim(new Claim(ClaimTypes.NameIdentifier, localUserId));
+        }
     }
 
     private sealed record CognitoIdentityClaim(string? ProviderName, string? UserId);
