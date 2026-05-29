@@ -154,7 +154,7 @@ class _FloatingLabelTextFieldState extends State<FloatingLabelTextField> {
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 160),
         curve: Curves.easeOut,
-        constraints: const BoxConstraints(minHeight: 52),
+        constraints: const BoxConstraints(minHeight: 64),
         decoration: BoxDecoration(
           color: backgroundColor,
           borderRadius: BorderRadius.circular(14),
@@ -169,7 +169,7 @@ class _FloatingLabelTextFieldState extends State<FloatingLabelTextField> {
               duration: const Duration(milliseconds: 160),
               curve: Curves.easeOut,
               left: leadingInset,
-              top: _isRaised ? 8 : 15,
+              top: _isRaised ? 10 : 21,
               child: AnimatedDefaultTextStyle(
                 duration: const Duration(milliseconds: 160),
                 curve: Curves.easeOut,
@@ -191,9 +191,9 @@ class _FloatingLabelTextFieldState extends State<FloatingLabelTextField> {
             Padding(
               padding: EdgeInsets.fromLTRB(
                 leadingInset,
-                22,
+                28,
                 widget.trailing == null ? 14 : 48,
-                8,
+                10,
               ),
               child: TextField(
                 controller: widget.controller,
