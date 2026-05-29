@@ -657,6 +657,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
   Future<void> _setAuthenticated(AuthTokens tokens) async {
     await _persistTokens(tokens);
+    await clearOnboardingComplete();
     await _clearPendingConfirmation();
     state = state.copyWith(
       status: AuthStatus.authenticated,

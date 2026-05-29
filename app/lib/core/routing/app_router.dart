@@ -95,6 +95,11 @@ Future<void> markOnboardingComplete() async {
   await prefs.setBool(_hasOnboardedKey, true);
 }
 
+Future<void> clearOnboardingComplete() async {
+  final prefs = await SharedPreferences.getInstance();
+  await prefs.remove(_hasOnboardedKey);
+}
+
 Future<void> saveLastEmail(String email) async {
   final prefs = await SharedPreferences.getInstance();
   await prefs.setString(_lastEmailKey, email);
