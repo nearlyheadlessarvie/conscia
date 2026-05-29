@@ -96,9 +96,9 @@ void main() {
       },
       clientId: 'managed-client-id',
       loginDomain: Uri.parse('https://login.getconscia.com'),
-      redirectUri: Uri.parse('https://auth.getconscia.com/open/auth/callback'),
+      redirectUri: Uri.parse('conscia://auth/callback'),
       appRedirectUri: Uri.parse('conscia://auth/callback'),
-      logoutUri: Uri.parse('https://auth.getconscia.com/open/auth/logout'),
+      logoutUri: Uri.parse('conscia://auth/logout'),
     );
 
     final tokens = await service.signIn(
@@ -116,7 +116,7 @@ void main() {
     expect(sheetUri!.queryParameters['client_id'], 'managed-client-id');
     expect(
       sheetUri!.queryParameters['redirect_uri'],
-      'https://auth.getconscia.com/open/auth/callback',
+      'conscia://auth/callback',
     );
     expect(sheetUri!.queryParameters['response_type'], 'code');
     expect(
@@ -144,7 +144,7 @@ void main() {
     expect(
       adapter.lastRequestBody as String,
       contains(
-        'redirect_uri=${Uri.encodeQueryComponent('https://auth.getconscia.com/open/auth/callback')}',
+        'redirect_uri=${Uri.encodeQueryComponent('conscia://auth/callback')}',
       ),
     );
     expect(adapter.lastRequestBody as String, contains('code_verifier='));
@@ -181,9 +181,9 @@ void main() {
       },
       clientId: 'managed-client-id',
       loginDomain: Uri.parse('https://login.getconscia.com'),
-      redirectUri: Uri.parse('https://auth.getconscia.com/open/auth/callback'),
+      redirectUri: Uri.parse('conscia://auth/callback'),
       appRedirectUri: Uri.parse('conscia://auth/callback'),
-      logoutUri: Uri.parse('https://auth.getconscia.com/open/auth/logout'),
+      logoutUri: Uri.parse('conscia://auth/logout'),
     );
 
     final tokens = await service.signUp(emailHint: 'story-demo@example.com');
@@ -223,9 +223,9 @@ void main() {
       ),
       clientId: 'managed-client-id',
       loginDomain: Uri.parse('https://login.getconscia.com'),
-      redirectUri: Uri.parse('https://auth.getconscia.com/open/auth/callback'),
+      redirectUri: Uri.parse('conscia://auth/callback'),
       appRedirectUri: Uri.parse('conscia://auth/callback'),
-      logoutUri: Uri.parse('https://auth.getconscia.com/open/auth/logout'),
+      logoutUri: Uri.parse('conscia://auth/logout'),
     );
 
     final tokens =
@@ -255,9 +255,9 @@ void main() {
           throw UnimplementedError(),
       clientId: 'managed-client-id',
       loginDomain: Uri.parse('https://login.getconscia.com'),
-      redirectUri: Uri.parse('https://auth.getconscia.com/open/auth/callback'),
+      redirectUri: Uri.parse('conscia://auth/callback'),
       appRedirectUri: Uri.parse('conscia://auth/callback'),
-      logoutUri: Uri.parse('https://auth.getconscia.com/open/auth/logout'),
+      logoutUri: Uri.parse('conscia://auth/logout'),
     );
 
     final tokens = await service.refreshSession('managed-refresh-token');
@@ -287,9 +287,9 @@ void main() {
       },
       clientId: 'managed-client-id',
       loginDomain: Uri.parse('https://login.getconscia.com'),
-      redirectUri: Uri.parse('https://auth.getconscia.com/open/auth/callback'),
+      redirectUri: Uri.parse('conscia://auth/callback'),
       appRedirectUri: Uri.parse('conscia://auth/callback'),
-      logoutUri: Uri.parse('https://auth.getconscia.com/open/auth/logout'),
+      logoutUri: Uri.parse('conscia://auth/logout'),
     );
 
     await expectLater(

@@ -37,12 +37,11 @@ public class AuthStack : Stack
         : base(scope, id, props)
     {
         var rootDomainName = props?.DomainSettings?.RootDomainName ?? "getconscia.com";
-        var authDomainName = props?.DomainSettings?.ResolvedAuthDomainName ?? $"auth.{rootDomainName}";
         var cognitoDomainName = props?.DomainSettings?.ResolvedCognitoDomainName ?? $"login.{rootDomainName}";
-        var redirectUri = props?.DomainSettings?.ResolvedManagedLoginRedirectUri ?? $"https://{authDomainName}/open/auth/callback";
-        var logoutUri = props?.DomainSettings?.ResolvedManagedLoginLogoutUri ?? $"https://{authDomainName}/open/auth/logout";
         var devRedirectUri = props?.DomainSettings?.DevManagedLoginRedirectUri ?? "conscia://auth/callback";
         var devLogoutUri = props?.DomainSettings?.DevManagedLoginLogoutUri ?? "conscia://auth/logout";
+        var redirectUri = props?.DomainSettings?.ResolvedManagedLoginRedirectUri ?? devRedirectUri;
+        var logoutUri = props?.DomainSettings?.ResolvedManagedLoginLogoutUri ?? devLogoutUri;
         var hasFederatedProviders = props?.ManagedLoginProviderSettings?.HasGoogle == true
             || props?.ManagedLoginProviderSettings?.HasApple == true;
         var cognitoEmail = props?.DomainSettings is null

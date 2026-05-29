@@ -10,10 +10,8 @@
 	</array>
 	<key>com.apple.developer.associated-domains</key>
 	<array>
-		<string>applinks:auth.getconscia.com</string>
 		<string>applinks:getconscia.com</string>
 		<string>applinks:www.getconscia.com</string>
-		<string>webcredentials:auth.getconscia.com</string>
 		<string>webcredentials:getconscia.com</string>
 		<string>webcredentials:www.getconscia.com</string>
 	</array>
