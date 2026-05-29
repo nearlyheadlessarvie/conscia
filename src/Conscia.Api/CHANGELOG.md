@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.1](https://github.com/nearlyheadlessarvie/conscia/compare/api/v1.3.0...api/v1.3.1) (2026-05-29)
+
+
+### Bug Fixes
+
+* **api:** parse cognito identities object claims ([#147](https://github.com/nearlyheadlessarvie/conscia/issues/147)) ([9e63ed2](https://github.com/nearlyheadlessarvie/conscia/commit/9e63ed2a4357b4f2ca2a591086e6643521cf0692))
+
 ## [1.3.0](https://github.com/nearlyheadlessarvie/conscia/compare/api/v1.2.0...api/v1.3.0) (2026-05-29)
 
 
