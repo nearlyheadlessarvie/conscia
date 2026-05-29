@@ -9,9 +9,11 @@ namespace Conscia.Infra;
 
 public class PatternAggregatorStackProps : StackProps
 {
+    public required ITable ControlPlaneTable { get; set; }
     public required ITable TransactionsTable { get; set; }
     public required ITable WeeklyInsightsTable { get; set; }
     public required ITable PurchasePatternsTable { get; set; }
+    public required ITable MonthlyCategorySpendsTable { get; set; }
     public string? AssetPath { get; set; }
 }
 
@@ -32,12 +34,22 @@ public class PatternAggregatorStack : Stack
             MemorySize = 512,
             Timeout = Duration.Minutes(5),
             Architecture = Architecture.ARM_64,
-            Tracing = Tracing.ACTIVE
+            Tracing = Tracing.ACTIVE,
+            Environment = new Dictionary<string, string>
+            {
+                ["AWS__DynamoDB__ControlPlaneTable"] = props.ControlPlaneTable.TableName,
+                ["AWS__DynamoDB__TransactionsTable"] = props.TransactionsTable.TableName,
+                ["AWS__DynamoDB__WeeklyInsightsTable"] = props.WeeklyInsightsTable.TableName,
+                ["AWS__DynamoDB__PurchasePatternsTable"] = props.PurchasePatternsTable.TableName,
+                ["AWS__DynamoDB__MonthlyCategorySpendsTable"] = props.MonthlyCategorySpendsTable.TableName
+            }
         });
 
+        props.ControlPlaneTable.GrantReadData(lambda);
         props.TransactionsTable.GrantReadData(lambda);
         props.WeeklyInsightsTable.GrantReadWriteData(lambda);
         props.PurchasePatternsTable.GrantReadWriteData(lambda);
+        props.MonthlyCategorySpendsTable.GrantReadData(lambda);
 
         var rule = new Rule(this, "NightlySchedule", new RuleProps
         {
