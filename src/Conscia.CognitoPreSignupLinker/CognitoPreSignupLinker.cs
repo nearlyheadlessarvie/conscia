@@ -20,7 +20,7 @@ public sealed class CognitoPreSignupLinker(
             return request;
         }
 
-        var email = GetAttribute(request, "email");
+        var email = GetAttribute(request, "email")?.Trim().ToLowerInvariant();
         if (string.IsNullOrWhiteSpace(email) || !IsTrue(GetAttribute(request, "email_verified")))
         {
             return request;
@@ -32,11 +32,8 @@ public sealed class CognitoPreSignupLinker(
             throw new InvalidOperationException("Pre-sign-up event did not include a userPoolId.");
         }
 
-        var existingUser = await FindLocalUserByEmailAsync(userPoolId, email!, ct);
-        if (existingUser is null)
-        {
-            return request;
-        }
+        var existingUser = await FindLocalUserByEmailAsync(userPoolId, email, ct)
+            ?? await CreateLocalAnchorUserAsync(userPoolId, email, ct);
 
         logger.LogInformation(
             "Linking {ProviderName} identity for {Email} to local Cognito user {Username}.",
@@ -72,6 +69,28 @@ public sealed class CognitoPreSignupLinker(
         }, ct);
 
         return response.Users.FirstOrDefault(IsLocalCognitoUser);
+    }
+
+    private async Task<UserType> CreateLocalAnchorUserAsync(string userPoolId, string email, CancellationToken ct)
+    {
+        var response = await cognito.AdminCreateUserAsync(new AdminCreateUserRequest
+        {
+            UserPoolId = userPoolId,
+            Username = email,
+            MessageAction = MessageActionType.SUPPRESS,
+            UserAttributes =
+            [
+                new AttributeType { Name = "email", Value = email },
+                new AttributeType { Name = "email_verified", Value = "true" }
+            ]
+        }, ct);
+
+        if (response.User is null)
+        {
+            throw new InvalidOperationException("Cognito did not return the linked-user anchor.");
+        }
+
+        return response.User;
     }
 
     private static bool IsLocalCognitoUser(UserType user)

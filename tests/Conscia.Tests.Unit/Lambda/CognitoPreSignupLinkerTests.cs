@@ -54,6 +54,45 @@ public class CognitoPreSignupLinkerTests
     }
 
     [Fact]
+    public async Task HandleAsync_NoLocalUser_CreatesSuppressedAnchorAndLinksProvider()
+    {
+        var request = CreateRequest("PreSignUp_ExternalProvider", "SignInWithApple_000644.989a6e2a48");
+
+        _cognito
+            .Setup(client => client.ListUsersAsync(
+                It.Is<ListUsersRequest>(r =>
+                    r.UserPoolId == "ap-southeast-1_example" &&
+                    r.Filter == "email = \"person@example.com\""),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ListUsersResponse { Users = [] });
+        _cognito
+            .Setup(client => client.AdminCreateUserAsync(
+                It.Is<AdminCreateUserRequest>(r =>
+                    r.UserPoolId == "ap-southeast-1_example" &&
+                    r.Username == "person@example.com" &&
+                    r.MessageAction == MessageActionType.SUPPRESS &&
+                    r.UserAttributes.Any(a => a.Name == "email" && a.Value == "person@example.com") &&
+                    r.UserAttributes.Any(a => a.Name == "email_verified" && a.Value == "true")),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new AdminCreateUserResponse
+            {
+                User = new UserType { Username = "person@example.com" }
+            });
+
+        await _linker.HandleAsync(request, CancellationToken.None);
+
+        _cognito.Verify(client => client.AdminLinkProviderForUserAsync(
+            It.Is<AdminLinkProviderForUserRequest>(r =>
+                r.UserPoolId == "ap-southeast-1_example" &&
+                r.DestinationUser.ProviderName == "Cognito" &&
+                r.DestinationUser.ProviderAttributeValue == "person@example.com" &&
+                r.SourceUser.ProviderName == "SignInWithApple" &&
+                r.SourceUser.ProviderAttributeName == "Cognito_Subject" &&
+                r.SourceUser.ProviderAttributeValue == "000644.989a6e2a48"),
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
     public async Task HandleAsync_UnverifiedEmail_DoesNotAttemptLinking()
     {
         var request = CreateRequest("PreSignUp_ExternalProvider", "Google_103448169750402666663");
