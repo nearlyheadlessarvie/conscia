@@ -162,6 +162,37 @@ public class TransactionRepository : DynamoRepository, ITransactionRepository
                               t.RecurringOccurrenceDate == occurrenceDate);
     }
 
+    public async Task<IReadOnlyList<Transaction>> ListByRecurringScheduleAsync(
+        Guid userId,
+        Guid recurringScheduleId,
+        CancellationToken ct = default)
+    {
+        var transactions = new List<Transaction>();
+        Dictionary<string, AttributeValue>? lastEvaluatedKey = null;
+
+        do
+        {
+            var response = await Dynamo.QueryAsync(new QueryRequest
+            {
+                TableName = TableName,
+                KeyConditionExpression = "PK = :pk",
+                FilterExpression = "RecurringScheduleId = :recurringScheduleId",
+                ExpressionAttributeValues = new Dictionary<string, AttributeValue>
+                {
+                    [":pk"] = new(DynamoKeys.User(userId)),
+                    [":recurringScheduleId"] = new(recurringScheduleId.ToString())
+                },
+                ExclusiveStartKey = lastEvaluatedKey
+            }, ct);
+
+            transactions.AddRange(Items(response).Select(FromItem));
+            lastEvaluatedKey = response.LastEvaluatedKey;
+        }
+        while (lastEvaluatedKey is { Count: > 0 });
+
+        return transactions;
+    }
+
     // Primary timeline query (FAST)
     public async Task<(IReadOnlyList<Transaction> Items, string? NextToken)> QueryByUserAsync(
         Guid userId,

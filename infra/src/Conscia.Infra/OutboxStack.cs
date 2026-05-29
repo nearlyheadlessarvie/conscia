@@ -64,7 +64,7 @@ public class OutboxStack : Stack
             Tracing = Tracing.ACTIVE
         });
 
-        OutboxLambda.AddEventSource(new DynamoEventSource(props.TransactionsTable, new DynamoEventSourceProps
+        OutboxLambda.AddEventSource(new DynamoEventSource(props.OutboxEventsTable, new DynamoEventSourceProps
         {
             StartingPosition = StartingPosition.TRIM_HORIZON,
             BatchSize = 10,

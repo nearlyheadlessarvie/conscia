@@ -59,4 +59,21 @@ public class RecurringEndpointTests : IClassFixture<TestWebAppFactory>
 
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
     }
+
+    [Fact]
+    public async Task DeleteRecurringTransactions_CallsTransactionService()
+    {
+        var scheduleId = Guid.NewGuid();
+        _factory.TransactionServiceMock
+            .Setup(s => s.DeleteRecurringSeriesAsync(UserId, scheduleId, It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        var response = await _client.DeleteAsync($"/api/recurring/{scheduleId}/transactions");
+
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+        _factory.TransactionServiceMock.Verify(s => s.DeleteRecurringSeriesAsync(
+            UserId,
+            scheduleId,
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
 }

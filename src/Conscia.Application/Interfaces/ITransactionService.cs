@@ -27,5 +27,6 @@ public interface ITransactionService
         CancellationToken ct = default);
     Task<Transaction> UpdateAsync(Guid userId, Guid id, UpdateTransactionDto dto, CancellationToken ct = default);
     Task DeleteAsync(Guid userId, Guid id, CancellationToken ct = default);
+    Task DeleteRecurringSeriesAsync(Guid userId, Guid recurringScheduleId, CancellationToken ct = default);
     Task UpdateRegretLevelAsync(Guid userId, Guid id, RegretLevel level, CancellationToken ct = default);
 }

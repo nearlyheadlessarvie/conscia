@@ -1,5 +1,7 @@
+using System.Text.Json;
 using Amazon.CognitoIdentityProvider;
 using Amazon.CognitoIdentityProvider.Model;
+using Amazon.Runtime.Documents;
 using Conscia.Application.Exceptions;
 using Conscia.Infrastructure.Services;
 using Microsoft.Extensions.Configuration;
@@ -27,6 +29,44 @@ public class CognitoPasskeyAuthServiceTests
             _cognito.Object,
             new InMemoryUserRepository(),
             NullLogger<CognitoPasskeyAuthService>.Instance);
+    }
+
+    [Fact]
+    public async Task StartRegistrationAsync_ReturnsJsonCredentialCreationOptions()
+    {
+        _cognito
+            .Setup(c => c.StartWebAuthnRegistrationAsync(
+                It.Is<StartWebAuthnRegistrationRequest>(r => r.AccessToken == "access-token"),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new StartWebAuthnRegistrationResponse
+            {
+                CredentialCreationOptions = Document.FromObject(new
+                {
+                    challenge = "wxvbDicyqQqvF2EXAMPLE",
+                    rp = new
+                    {
+                        id = "getconscia.com",
+                        name = "getconscia.com"
+                    },
+                    user = new
+                    {
+                        displayName = "demo@example.com",
+                        id = "ZGVtby11c2VyLWlk",
+                        name = "demo@example.com"
+                    },
+                    pubKeyCredParams = new[]
+                    {
+                        new { alg = -7, type = "public-key" }
+                    }
+                })
+            });
+
+        var result = await _passkeys.StartRegistrationAsync("access-token");
+
+        using var payload = JsonDocument.Parse(result.CredentialCreationOptions);
+        Assert.Equal("wxvbDicyqQqvF2EXAMPLE", payload.RootElement.GetProperty("challenge").GetString());
+        Assert.Equal("getconscia.com", payload.RootElement.GetProperty("rp").GetProperty("id").GetString());
+        Assert.Equal("demo@example.com", payload.RootElement.GetProperty("user").GetProperty("name").GetString());
     }
 
     [Fact]

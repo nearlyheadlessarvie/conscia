@@ -251,6 +251,14 @@ class TransactionService {
     }
   }
 
+  Future<void> deleteRecurringSeries(String scheduleId) async {
+    try {
+      await _dio.delete(ApiConstants.recurringTransactions(scheduleId));
+    } on DioException {
+      rethrow;
+    }
+  }
+
   Future<void> updateRegret(String id, int level) async {
     try {
       await _dio.post(

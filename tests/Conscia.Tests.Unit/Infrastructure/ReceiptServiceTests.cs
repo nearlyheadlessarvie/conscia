@@ -96,6 +96,25 @@ public class ReceiptServiceTests
     }
 
     [Fact]
+    public async Task ScanAsync_RejectsUnsupportedContentTypeBeforeUpload()
+    {
+        _ocr.SetupGet(o => o.IsConfigured).Returns(true);
+
+        var service = CreateService();
+
+        var ex = await Assert.ThrowsAsync<ArgumentException>(() =>
+            service.ScanAsync(Guid.NewGuid(), new MemoryStream([1, 2, 3]), "image/heic"));
+
+        Assert.Equal("Receipt file format is not supported. Upload a JPEG, PNG, PDF, or TIFF receipt.", ex.Message);
+        _storage.Verify(
+            s => s.UploadAsync(It.IsAny<string>(), It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        _ocr.Verify(
+            o => o.ExtractTextAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
     public async Task ConfirmAsync_CreatesExpenseTransactionAndMarksReceiptConfirmed()
     {
         var userId = Guid.NewGuid();

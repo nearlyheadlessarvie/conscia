@@ -68,6 +68,9 @@ class ApiConstants {
   static String receipt(String id) => 'receipts/$id';
   static String receiptConfirm(String id) => 'receipts/$id/confirm';
   static const String recurring = 'recurring';
+  static String recurringSchedule(String id) => 'recurring/$id';
+  static String recurringTransactions(String id) =>
+      'recurring/$id/transactions';
 
   // Insights
   static const String behavioralInsights = 'insights/behavioral';

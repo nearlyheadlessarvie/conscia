@@ -66,27 +66,30 @@ public class TransactionService : ITransactionService
             };
         }
 
-        var result = await _repo.AddWithOutboxAsync(
-            transaction,
-            CreateTransactionCreatedEvent(transaction),
-            ct);
-
         if (dto.Recurring is not null && _recurringScheduleService is not null)
         {
-            await _recurringScheduleService.CreateAsync(userId, new CreateRecurringScheduleDto
+            var seedOccurrenceDate = dto.Recurring.StartDate ?? dto.Date;
+            var schedule = await _recurringScheduleService.CreateSeededAsync(userId, new CreateRecurringScheduleDto
             {
                 Type = dto.Type,
                 Amount = dto.Amount,
                 CurrencyCode = dto.CurrencyCode,
                 Category = dto.Category,
                 Counterparty = dto.Counterparty,
-                StartDate = dto.Recurring.StartDate ?? dto.Date,
+                StartDate = seedOccurrenceDate,
                 Cadence = dto.Recurring.Cadence,
                 EndDate = dto.Recurring.EndDate,
                 Scope = dto.Scope,
                 FamilySpaceId = dto.FamilySpaceId,
-            }, ct);
+            }, seedOccurrenceDate, ct);
+            transaction.RecurringScheduleId = schedule.Id;
+            transaction.RecurringOccurrenceDate = seedOccurrenceDate;
         }
+
+        var result = await _repo.AddWithOutboxAsync(
+            transaction,
+            CreateTransactionCreatedEvent(transaction),
+            ct);
 
         _logger.LogInformation("Creating transaction {TransactionId} for user {UserId}, amount {Amount} {Currency}",
             transaction.Id, userId, dto.Amount, dto.CurrencyCode);
@@ -209,6 +212,27 @@ public class TransactionService : ITransactionService
 
         await _repo.DeleteWithOutboxAsync(userId, id, CreateTransactionDeletedEvent(existing), ct);
         _logger.LogInformation("Deleting transaction {TransactionId} for user {UserId}", id, userId);
+    }
+
+    public async Task DeleteRecurringSeriesAsync(Guid userId, Guid recurringScheduleId, CancellationToken ct = default)
+    {
+        var transactions = await _repo.ListByRecurringScheduleAsync(userId, recurringScheduleId, ct);
+        foreach (var transaction in transactions)
+        {
+            await _repo.DeleteWithOutboxAsync(
+                userId,
+                transaction.Id,
+                CreateTransactionDeletedEvent(transaction),
+                ct);
+        }
+
+        if (_recurringScheduleService is not null)
+        {
+            await _recurringScheduleService.DeleteAsync(userId, recurringScheduleId, ct);
+        }
+
+        _logger.LogInformation("Deleting recurring series {RecurringScheduleId} for user {UserId}",
+            recurringScheduleId, userId);
     }
 
     public Task UpdateRegretLevelAsync(Guid userId, Guid id, RegretLevel level, CancellationToken ct = default) =>

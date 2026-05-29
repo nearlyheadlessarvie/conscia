@@ -168,7 +168,12 @@ public class ComputeStack : Stack
 
         ApiLambda.AddToRolePolicy(new PolicyStatement(new PolicyStatementProps
         {
-            Actions = ["aws-marketplace:ViewSubscriptions", "aws-marketplace:Subscribe"],
+            Actions =
+            [
+                "aws-marketplace:ViewSubscriptions",
+                "aws-marketplace:Subscribe",
+                "aws-marketplace:Unsubscribe"
+            ],
             Resources = ["*"]
         }));
 

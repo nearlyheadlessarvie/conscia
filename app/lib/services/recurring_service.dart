@@ -22,10 +22,21 @@ class RecurringService {
         .toList(growable: false);
   }
 
-  Future<RecurringSchedule> create(CreateRecurringScheduleRequest request) async {
+  Future<RecurringSchedule> create(
+      CreateRecurringScheduleRequest request) async {
     final response = await _dio.post(
       ApiConstants.recurring,
       data: request.toJson(),
+    );
+    return RecurringSchedule.fromJson(
+      Map<String, dynamic>.from(response.data as Map),
+    );
+  }
+
+  Future<RecurringSchedule> stopFuture(String id) async {
+    final response = await _dio.put(
+      ApiConstants.recurringSchedule(id),
+      data: {'isActive': false},
     );
     return RecurringSchedule.fromJson(
       Map<String, dynamic>.from(response.data as Map),

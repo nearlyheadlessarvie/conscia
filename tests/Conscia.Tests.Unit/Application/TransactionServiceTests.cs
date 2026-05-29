@@ -279,6 +279,69 @@ public class TransactionServiceTests
     }
 
     [Fact]
+    public async Task DeleteRecurringSeriesAsync_DeletesInstancesAndSchedule()
+    {
+        var userId = Guid.NewGuid();
+        var scheduleId = Guid.NewGuid();
+        var firstTransaction = new Transaction
+        {
+            Id = Guid.NewGuid(),
+            UserId = userId,
+            Type = TransactionType.Expense,
+            Amount = new Money(50, "USD"),
+            Category = "Bills",
+            Date = new DateTime(2026, 05, 01, 0, 0, 0, DateTimeKind.Utc),
+            RecurringScheduleId = scheduleId,
+            RecurringOccurrenceDate = new DateTime(2026, 05, 01, 0, 0, 0, DateTimeKind.Utc)
+        };
+        var secondTransaction = new Transaction
+        {
+            Id = Guid.NewGuid(),
+            UserId = userId,
+            Type = TransactionType.Expense,
+            Amount = new Money(50, "USD"),
+            Category = "Bills",
+            Date = new DateTime(2026, 06, 01, 0, 0, 0, DateTimeKind.Utc),
+            RecurringScheduleId = scheduleId,
+            RecurringOccurrenceDate = new DateTime(2026, 06, 01, 0, 0, 0, DateTimeKind.Utc)
+        };
+
+        _repoMock.Setup(r => r.ListByRecurringScheduleAsync(
+                userId,
+                scheduleId,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync([firstTransaction, secondTransaction]);
+        _repoMock.Setup(r => r.DeleteWithOutboxAsync(
+                userId,
+                It.IsAny<Guid>(),
+                It.IsAny<OutboxEvent>(),
+                It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+        _recurringScheduleServiceMock
+            .Setup(s => s.DeleteAsync(userId, scheduleId, It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        await _svc.DeleteRecurringSeriesAsync(userId, scheduleId);
+
+        _repoMock.Verify(r => r.DeleteWithOutboxAsync(
+            userId,
+            firstTransaction.Id,
+            It.Is<OutboxEvent>(e =>
+                e.EventType == OutboxEventType.TransactionDeleted &&
+                e.Payload.Contains("\"PreviousCategory\":\"Bills\"")),
+            It.IsAny<CancellationToken>()), Times.Once);
+        _repoMock.Verify(r => r.DeleteWithOutboxAsync(
+            userId,
+            secondTransaction.Id,
+            It.IsAny<OutboxEvent>(),
+            It.IsAny<CancellationToken>()), Times.Once);
+        _recurringScheduleServiceMock.Verify(s => s.DeleteAsync(
+            userId,
+            scheduleId,
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
     public async Task UpdateRegretLevelAsync_DelegatesToRepo()
     {
         var txnId = Guid.NewGuid();
@@ -441,6 +504,7 @@ public class TransactionServiceTests
     {
         var userId = Guid.NewGuid();
         var transactionDate = new DateTime(2026, 05, 31, 0, 0, 0, DateTimeKind.Utc);
+        var scheduleId = Guid.NewGuid();
         var dto = new CreateTransactionDto
         {
             Type = TransactionType.Expense,
@@ -462,10 +526,14 @@ public class TransactionServiceTests
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync((Transaction t, OutboxEvent _, CancellationToken __) => t);
         _recurringScheduleServiceMock
-            .Setup(s => s.CreateAsync(userId, It.IsAny<CreateRecurringScheduleDto>(), It.IsAny<CancellationToken>()))
+            .Setup(s => s.CreateSeededAsync(
+                userId,
+                It.IsAny<CreateRecurringScheduleDto>(),
+                transactionDate,
+                It.IsAny<CancellationToken>()))
             .ReturnsAsync(new RecurringSchedule
             {
-                Id = Guid.NewGuid(),
+                Id = scheduleId,
                 UserId = userId,
                 Type = TransactionType.Expense,
                 Amount = new Money(1000m, "PHP"),
@@ -473,20 +541,30 @@ public class TransactionServiceTests
                 Counterparty = "Netflix",
                 StartDate = transactionDate,
                 Cadence = RecurringCadence.Monthly,
-                NextRunAt = transactionDate,
+                NextRunAt = new DateTime(2026, 06, 30, 0, 0, 0, DateTimeKind.Utc),
                 EndDate = transactionDate.AddMonths(6),
                 IsActive = true,
+                LastGeneratedAt = transactionDate,
             });
 
-        await _svc.CreateAsync(userId, dto);
+        var result = await _svc.CreateAsync(userId, dto);
 
-        _recurringScheduleServiceMock.Verify(s => s.CreateAsync(
+        Assert.Equal(scheduleId, result.RecurringScheduleId);
+        Assert.Equal(transactionDate, result.RecurringOccurrenceDate);
+        _recurringScheduleServiceMock.Verify(s => s.CreateSeededAsync(
             userId,
             It.Is<CreateRecurringScheduleDto>(r =>
                 r.Cadence == RecurringCadence.Monthly &&
                 r.StartDate == transactionDate &&
                 r.EndDate == transactionDate.AddMonths(6) &&
                 r.Counterparty == "Netflix"),
+            transactionDate,
+            It.IsAny<CancellationToken>()), Times.Once);
+        _repoMock.Verify(r => r.AddWithOutboxAsync(
+            It.Is<Transaction>(t =>
+                t.RecurringScheduleId == scheduleId &&
+                t.RecurringOccurrenceDate == transactionDate),
+            It.IsAny<OutboxEvent>(),
             It.IsAny<CancellationToken>()), Times.Once);
     }
 
