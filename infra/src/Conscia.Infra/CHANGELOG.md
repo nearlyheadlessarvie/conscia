@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.6.1](https://github.com/nearlyheadlessarvie/conscia/compare/infra/v1.6.0...infra/v1.6.1) (2026-05-29)
+
+
+### Bug Fixes
+
+* **infra:** register pattern aggregator dependencies ([#146](https://github.com/nearlyheadlessarvie/conscia/issues/146)) ([b126de3](https://github.com/nearlyheadlessarvie/conscia/commit/b126de33204de688883cfc26969788dbbb60b5e4))
+
 ## [1.6.0](https://github.com/nearlyheadlessarvie/conscia/compare/infra/v1.5.4...infra/v1.6.0) (2026-05-29)
 
 
