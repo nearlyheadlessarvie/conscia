@@ -22,7 +22,7 @@ void main() {
     expect(find.text('PHP 350'), findsOneWidget);
   });
 
-  testWidgets('FloatingLabelTextField gives raised labels more breathing room',
+  testWidgets('FloatingLabelTextField balances compact height and text scale',
       (tester) async {
     final controller = TextEditingController(text: 'very cramped?');
 
@@ -43,7 +43,7 @@ void main() {
         matching: find.byType(AnimatedContainer),
       ),
     );
-    expect(container.constraints?.minHeight, 64);
+    expect(container.constraints?.minHeight, 58);
 
     final textFieldPaddings = tester
         .widgetList<Padding>(
@@ -55,8 +55,11 @@ void main() {
         .map((padding) => padding.padding);
     expect(
       textFieldPaddings,
-      contains(const EdgeInsets.fromLTRB(14, 28, 14, 10)),
+      contains(const EdgeInsets.fromLTRB(14, 25, 14, 8)),
     );
+
+    final textField = tester.widget<TextField>(find.byType(TextField));
+    expect(textField.style?.fontSize, 15);
   });
 
   testWidgets(
