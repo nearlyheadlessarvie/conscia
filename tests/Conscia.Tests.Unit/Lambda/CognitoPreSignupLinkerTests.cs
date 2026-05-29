@@ -105,9 +105,57 @@ public class CognitoPreSignupLinkerTests
     }
 
     [Fact]
-    public async Task HandleAsync_NonExternalTrigger_DoesNotAttemptLinking()
+    public async Task HandleAsync_EmailSignUpWithExistingSocialIdentity_RejectsDuplicateAccount()
     {
         var request = CreateRequest("PreSignUp_SignUp", "person@example.com");
+
+        _cognito
+            .Setup(client => client.ListUsersAsync(
+                It.Is<ListUsersRequest>(r =>
+                    r.UserPoolId == "ap-southeast-1_example" &&
+                    r.Filter == "email = \"person@example.com\""),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ListUsersResponse
+            {
+                Users =
+                [
+                    new UserType
+                    {
+                        Username = "Google_103448169750402666663",
+                        UserStatus = UserStatusType.EXTERNAL_PROVIDER
+                    }
+                ]
+            });
+
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => _linker.HandleAsync(request, CancellationToken.None));
+
+        Assert.Contains("Sign in with Google or Apple", ex.Message);
+        _cognito.Verify(client => client.AdminLinkProviderForUserAsync(
+            It.IsAny<AdminLinkProviderForUserRequest>(),
+            It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task HandleAsync_EmailSignUpWithoutExistingSocialIdentity_AllowsSignup()
+    {
+        var request = CreateRequest("PreSignUp_SignUp", "person@example.com");
+
+        _cognito
+            .Setup(client => client.ListUsersAsync(
+                It.IsAny<ListUsersRequest>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ListUsersResponse { Users = [] });
+
+        await _linker.HandleAsync(request, CancellationToken.None);
+
+        _cognito.Verify(client => client.AdminLinkProviderForUserAsync(It.IsAny<AdminLinkProviderForUserRequest>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task HandleAsync_AdminCreateUser_DoesNotAttemptLinking()
+    {
+        var request = CreateRequest("PreSignUp_AdminCreateUser", "person@example.com");
 
         await _linker.HandleAsync(request, CancellationToken.None);
 
@@ -148,6 +196,11 @@ public class CognitoPreSignupLinkerTests
             """;
         var request = JsonSerializer.Deserialize<CognitoPreSignupEvent>(json)
             ?? throw new InvalidOperationException("Test event did not deserialize.");
+        _cognito
+            .Setup(client => client.ListUsersAsync(
+                It.IsAny<ListUsersRequest>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ListUsersResponse { Users = [] });
 
         var result = await _linker.HandleAsync(request, CancellationToken.None);
         var responseJson = JsonSerializer.Serialize(result);

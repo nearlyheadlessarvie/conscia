@@ -10,6 +10,12 @@ public sealed class CognitoPreSignupLinker(
 {
     public async Task<CognitoPreSignupEvent> HandleAsync(CognitoPreSignupEvent request, CancellationToken ct)
     {
+        if (string.Equals(request.TriggerSource, "PreSignUp_SignUp", StringComparison.Ordinal))
+        {
+            await RejectEmailSignupForExistingSocialIdentityAsync(request, ct);
+            return request;
+        }
+
         if (!string.Equals(request.TriggerSource, "PreSignUp_ExternalProvider", StringComparison.Ordinal))
         {
             return request;
@@ -60,7 +66,36 @@ public sealed class CognitoPreSignupLinker(
         return request;
     }
 
+    private async Task RejectEmailSignupForExistingSocialIdentityAsync(CognitoPreSignupEvent request, CancellationToken ct)
+    {
+        var email = GetAttribute(request, "email")?.Trim().ToLowerInvariant();
+        if (string.IsNullOrWhiteSpace(email))
+        {
+            return;
+        }
+
+        var userPoolId = request.UserPoolId;
+        if (string.IsNullOrWhiteSpace(userPoolId))
+        {
+            throw new InvalidOperationException("Pre-sign-up event did not include a userPoolId.");
+        }
+
+        var users = await ListUsersByEmailAsync(userPoolId, email, ct);
+        if (users.Any(IsExternalProviderUser))
+        {
+            throw new InvalidOperationException(
+                "An account already exists for this email. Sign in with Google or Apple.");
+        }
+    }
+
     private async Task<UserType?> FindLocalUserByEmailAsync(string userPoolId, string email, CancellationToken ct)
+    {
+        var users = await ListUsersByEmailAsync(userPoolId, email, ct);
+
+        return users.FirstOrDefault(IsLocalCognitoUser);
+    }
+
+    private async Task<IReadOnlyList<UserType>> ListUsersByEmailAsync(string userPoolId, string email, CancellationToken ct)
     {
         var response = await cognito.ListUsersAsync(new ListUsersRequest
         {
@@ -68,7 +103,7 @@ public sealed class CognitoPreSignupLinker(
             Filter = $"email = \"{EscapeFilterValue(email)}\""
         }, ct);
 
-        return response.Users.FirstOrDefault(IsLocalCognitoUser);
+        return response.Users;
     }
 
     private async Task<UserType> CreateLocalAnchorUserAsync(string userPoolId, string email, CancellationToken ct)
@@ -96,6 +131,17 @@ public sealed class CognitoPreSignupLinker(
     private static bool IsLocalCognitoUser(UserType user)
     {
         return !string.Equals(user.UserStatus?.ToString(), "EXTERNAL_PROVIDER", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsExternalProviderUser(UserType user)
+    {
+        if (string.Equals(user.UserStatus?.ToString(), "EXTERNAL_PROVIDER", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        return user.Username?.StartsWith("Google_", StringComparison.Ordinal) == true ||
+            user.Username?.StartsWith("SignInWithApple_", StringComparison.Ordinal) == true;
     }
 
     private static bool TryGetTrustedSource(

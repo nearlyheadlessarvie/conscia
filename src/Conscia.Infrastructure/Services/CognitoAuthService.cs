@@ -15,6 +15,9 @@ namespace Conscia.Infrastructure.Services;
 /// </summary>
 public class CognitoAuthService : IAuthService
 {
+    private const string ExistingSocialAccountMessage =
+        "An account already exists for this email. Sign in with Google or Apple.";
+
     private readonly IAmazonCognitoIdentityProvider _cognito;
     private readonly IUserRepository _users;
     private readonly ILogger<CognitoAuthService> _logger;
@@ -75,6 +78,16 @@ public class CognitoAuthService : IAuthService
                 RequiresConfirmation = response.UserConfirmed != true,
                 UserId = userId.ToString(),
                 Email = email
+            };
+        }
+        catch (UserLambdaValidationException ex) when (IsExistingSocialAccountValidation(ex))
+        {
+            return new AuthResult
+            {
+                Success = false,
+                RequiresConfirmation = false,
+                Email = email,
+                Error = ExistingSocialAccountMessage
             };
         }
         catch (UsernameExistsException)
@@ -445,6 +458,11 @@ public class CognitoAuthService : IAuthService
             Email = email,
             Error = error
         };
+
+    private static bool IsExistingSocialAccountValidation(UserLambdaValidationException ex)
+    {
+        return ex.Message.Contains(ExistingSocialAccountMessage, StringComparison.OrdinalIgnoreCase);
+    }
 
     private static AuthResult PasswordResetError(string email, string error) =>
         new()
