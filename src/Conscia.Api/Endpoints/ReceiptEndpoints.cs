@@ -37,6 +37,10 @@ public static class ReceiptEndpoints
 
                 return Results.Ok(result);
             }
+            catch (ArgumentException ex)
+            {
+                return Results.BadRequest(new { error = ex.Message });
+            }
             catch (InvalidOperationException ex)
             {
                 return Results.Json(

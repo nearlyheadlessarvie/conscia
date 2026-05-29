@@ -47,6 +47,25 @@ public class AwsReceiptOcrServiceTests
     }
 
     [Fact]
+    public async Task ExtractTextAsync_ThrowsArgumentException_WhenTextractRejectsDocumentFormat()
+    {
+        var textract = new Mock<IAmazonTextract>();
+        var bedrock = new Mock<IAmazonBedrockRuntime>();
+        textract
+            .Setup(t => t.DetectDocumentTextAsync(
+                It.IsAny<DetectDocumentTextRequest>(),
+                It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new UnsupportedDocumentException("Request has unsupported document format"));
+
+        var service = CreateService(textract.Object, bedrock.Object);
+
+        var ex = await Assert.ThrowsAsync<ArgumentException>(() =>
+            service.ExtractTextAsync("receipts/user/receipt.heic"));
+
+        Assert.Equal("Receipt file format is not supported. Upload a JPEG, PNG, PDF, or TIFF receipt.", ex.Message);
+    }
+
+    [Fact]
     public async Task ParseReceiptTextAsync_ParsesBedrockJsonWithoutInventingCurrency()
     {
         var textract = new Mock<IAmazonTextract>();

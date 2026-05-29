@@ -16,6 +16,8 @@ namespace Conscia.AI.Services;
 public sealed class AwsReceiptOcrService : IOcrService
 {
     private const double DeterministicConfidenceThreshold = 0.89;
+    private const string UnsupportedReceiptFormatMessage =
+        "Receipt file format is not supported. Upload a JPEG, PNG, PDF, or TIFF receipt.";
     private static readonly Regex MoneyRegex = new(
         @"(?:(?<currency>PHP|USD|EUR|GBP|SGD|AUD|CAD)\s*)?(?<symbol>[₱$€£])?\s*(?<amount>\d{1,3}(?:,\d{3})*(?:\.\d{2})|\d+(?:\.\d{2}))",
         RegexOptions.IgnoreCase | RegexOptions.Compiled);
@@ -53,19 +55,28 @@ public sealed class AwsReceiptOcrService : IOcrService
     {
         EnsureConfigured();
 
-        var response = await _textract.DetectDocumentTextAsync(
-            new DetectDocumentTextRequest
-            {
-                Document = new Document
+        DetectDocumentTextResponse response;
+        try
+        {
+            response = await _textract.DetectDocumentTextAsync(
+                new DetectDocumentTextRequest
                 {
-                    S3Object = new S3Object
+                    Document = new Document
                     {
-                        Bucket = _bucketName,
-                        Name = s3Key
+                        S3Object = new S3Object
+                        {
+                            Bucket = _bucketName,
+                            Name = s3Key
+                        }
                     }
-                }
-            },
-            ct);
+                },
+                ct);
+        }
+        catch (UnsupportedDocumentException ex)
+        {
+            _logger.LogWarning(ex, "Textract rejected unsupported receipt document {S3Key}", s3Key);
+            throw new ArgumentException(UnsupportedReceiptFormatMessage, ex);
+        }
 
         var lines = response.Blocks
             .Where(block => block.BlockType == BlockType.LINE)

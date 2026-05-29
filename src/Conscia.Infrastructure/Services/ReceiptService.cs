@@ -9,6 +9,9 @@ namespace Conscia.Infrastructure.Services;
 
 public class ReceiptService : IReceiptService
 {
+    private const string UnsupportedReceiptFormatMessage =
+        "Receipt file format is not supported. Upload a JPEG, PNG, PDF, or TIFF receipt.";
+
     private readonly IReceiptRepository _receipts;
     private readonly ITransactionService _transactions;
     private readonly IS3StorageService _storage;
@@ -42,9 +45,10 @@ public class ReceiptService : IReceiptService
         }
 
         var receiptId = Guid.NewGuid();
-        var s3Key = $"receipts/{userId}/{receiptId}{ExtensionFor(contentType)}";
+        var normalizedContentType = NormalizeSupportedContentType(contentType);
+        var s3Key = $"receipts/{userId}/{receiptId}{ExtensionFor(normalizedContentType)}";
 
-        await _storage.UploadAsync(s3Key, imageStream, contentType, ct);
+        await _storage.UploadAsync(s3Key, imageStream, normalizedContentType, ct);
 
         var rawText = await _ocr.ExtractTextAsync(s3Key, ct);
         var parsed = await _ocr.ParseReceiptTextAsync(rawText, ct);
@@ -197,13 +201,25 @@ public class ReceiptService : IReceiptService
         });
     }
 
-    private static string ExtensionFor(string contentType) =>
-        contentType.ToLowerInvariant() switch
+    private static string NormalizeSupportedContentType(string contentType)
+    {
+        var normalized = contentType.Split(';', 2)[0].Trim().ToLowerInvariant();
+        return normalized switch
         {
+            "image/jpeg" or "image/jpg" => "image/jpeg",
+            "image/png" => "image/png",
+            "application/pdf" => "application/pdf",
+            "image/tiff" or "image/tif" => "image/tiff",
+            _ => throw new ArgumentException(UnsupportedReceiptFormatMessage)
+        };
+    }
+
+    private static string ExtensionFor(string contentType) =>
+        contentType switch
+        {
+            "application/pdf" => ".pdf",
             "image/png" => ".png",
-            "image/webp" => ".webp",
-            "image/heic" => ".heic",
-            "image/heif" => ".heif",
+            "image/tiff" => ".tiff",
             _ => ".jpg"
         };
 }
