@@ -387,6 +387,14 @@ public class StackTests
                         ]),
                         ["Effect"] = "Allow",
                         ["Resource"] = "*"
+                    }),
+                    Match.ObjectLike(new Dictionary<string, object>
+                    {
+                        ["Action"] = Match.ArrayWith([
+                            "cognito-idp:AdminDeleteUser",
+                            "cognito-idp:AdminSetUserPassword"
+                        ]),
+                        ["Effect"] = "Allow"
                     })
                 ])
             })
