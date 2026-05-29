@@ -232,6 +232,91 @@ public class RegretAlertEvaluatorTests
             second => Assert.Equal("computed-alert", second.AlertKey));
     }
 
+    [Fact]
+    public async Task AlertService_FiltersAlertsWithDismissalMarkers()
+    {
+        var userId = Guid.NewGuid();
+        var evaluator = new Mock<ITriggerEvaluator>();
+        evaluator.SetupGet(x => x.TriggerName).Returns("Computed");
+        evaluator.Setup(x => x.EvaluateAsync(userId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<InAppAlert>
+            {
+                new()
+                {
+                    AlertKey = "computed-alert",
+                    TriggerName = "Computed",
+                    Title = "Computed",
+                    Message = "Computed",
+                    Priority = 20,
+                    CreatedAt = new DateTime(2026, 5, 8, 10, 0, 0, DateTimeKind.Utc)
+                }
+            });
+
+        var alertRepo = new Mock<IInAppAlertRepository>();
+        alertRepo.Setup(x => x.GetByUserAsync(userId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<InAppAlert>
+            {
+                new()
+                {
+                    AlertKey = "dismissed:computed-alert",
+                    TriggerName = "dismissed",
+                    Title = "Dismissed",
+                    Message = "computed-alert",
+                    CreatedAt = new DateTime(2026, 5, 8, 11, 0, 0, DateTimeKind.Utc)
+                }
+            });
+
+        var service = new AlertService(new[] { evaluator.Object }, alertRepo.Object);
+
+        var alerts = await service.ListAlertsAsync(userId);
+
+        Assert.Empty(alerts);
+    }
+
+    [Fact]
+    public async Task CreateAlertAsync_PersistsUserAlertWithDefaultTtl()
+    {
+        var userId = Guid.NewGuid();
+        var alertRepo = new Mock<IInAppAlertRepository>();
+        var service = new AlertService(Array.Empty<ITriggerEvaluator>(), alertRepo.Object);
+
+        var alert = new InAppAlert
+        {
+            AlertKey = "budget-nudge-dining",
+            TriggerName = "budget_nudge",
+            Title = "No budget",
+            Message = "Add one when ready",
+            CreatedAt = new DateTime(2026, 5, 8, 10, 0, 0, DateTimeKind.Utc)
+        };
+
+        await service.CreateAlertAsync(userId, alert);
+
+        alertRepo.Verify(r => r.AddAsync(
+            It.Is<InAppAlert>(a =>
+                a.UserId == userId
+                && a.AlertKey == "budget-nudge-dining"
+                && a.TTL > 0),
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task DismissAlertAsync_PersistsDismissalMarker()
+    {
+        var userId = Guid.NewGuid();
+        var alertRepo = new Mock<IInAppAlertRepository>();
+        var service = new AlertService(Array.Empty<ITriggerEvaluator>(), alertRepo.Object);
+
+        await service.DismissAlertAsync(userId, "budget-nudge-dining");
+
+        alertRepo.Verify(r => r.AddAsync(
+            It.Is<InAppAlert>(a =>
+                a.UserId == userId
+                && a.AlertKey == "dismissed:budget-nudge-dining"
+                && a.TriggerName == "dismissed"
+                && a.TTL > 0),
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
     private static Transaction Expense(string category, string counterparty, RegretLevel? regretLevel) =>
         new()
         {
