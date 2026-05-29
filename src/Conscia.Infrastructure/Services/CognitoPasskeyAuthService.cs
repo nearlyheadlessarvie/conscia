@@ -1,7 +1,9 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
+using System.Text.Json;
 using Amazon.CognitoIdentityProvider;
 using Amazon.CognitoIdentityProvider.Model;
+using Amazon.Runtime.Documents;
 using Conscia.Application.DTOs;
 using Conscia.Application.Exceptions;
 using Conscia.Application.Interfaces;
@@ -213,8 +215,36 @@ public sealed class CognitoPasskeyAuthService : IPasskeyAuthService
 
     private static string NormalizeEmail(string email) => email.Trim().ToLowerInvariant();
 
-    private static string? SerializeDocument(Amazon.Runtime.Documents.Document? document)
-        => document?.ToString();
+    private static string? SerializeDocument(Document? document)
+    {
+        if (!document.HasValue || document.Value.IsNull())
+        {
+            return null;
+        }
+
+        var value = document.Value;
+        return value.IsString()
+            ? value.AsString()
+            : JsonSerializer.Serialize(ToJsonValue(value));
+    }
+
+    private static string? SerializeDocument(string? documentJson)
+        => documentJson;
+
+    private static object? ToJsonValue(Document document)
+        => document switch
+        {
+            _ when document.IsNull() => null,
+            _ when document.IsBool() => document.AsBool(),
+            _ when document.IsDouble() => document.AsDouble(),
+            _ when document.IsInt() => document.AsInt(),
+            _ when document.IsLong() => document.AsLong(),
+            _ when document.IsString() => document.AsString(),
+            _ when document.IsList() => document.AsList().Select(ToJsonValue).ToList(),
+            _ when document.IsDictionary() => document.AsDictionary()
+                .ToDictionary(pair => pair.Key, pair => ToJsonValue(pair.Value)),
+            _ => throw new InvalidOperationException("Unsupported Cognito passkey document value.")
+        };
 
     private PasskeyAuthenticationUnavailableException CreatePasskeyUnavailable(
         string email,
