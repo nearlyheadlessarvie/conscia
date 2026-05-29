@@ -15,36 +15,116 @@ final pushNotificationServiceProvider =
     Provider<PushNotificationService>((ref) {
   final service = PushNotificationService(
     dio: ref.watch(dioProvider),
-    messagingFactory: () => FirebaseMessaging.instance,
+    pushNotificationsEnabled: ApiConstants.pushNotificationsEnabled,
+    initializeFirebase: initializePushNotificationFirebase,
+    messagingClientFactory: FirebasePushMessagingClient.new,
   );
   ref.onDispose(service.dispose);
   return service;
 });
 
-typedef FirebaseMessagingFactory = FirebaseMessaging Function();
+typedef PushFirebaseInitializer = Future<bool> Function();
+typedef PushMessagingClientFactory = PushMessagingClient Function();
+
+abstract interface class PushMessagingClient {
+  Future<NotificationSettings> requestPermission({
+    bool alert = true,
+    bool badge = true,
+    bool sound = true,
+  });
+
+  Future<void> setForegroundNotificationPresentationOptions({
+    required bool alert,
+    required bool badge,
+    required bool sound,
+  });
+
+  Future<String?> getToken();
+
+  Stream<String> get onTokenRefresh;
+}
+
+class FirebasePushMessagingClient implements PushMessagingClient {
+  FirebasePushMessagingClient() : _messaging = FirebaseMessaging.instance;
+
+  final FirebaseMessaging _messaging;
+
+  @override
+  Future<String?> getToken() => _messaging.getToken();
+
+  @override
+  Stream<String> get onTokenRefresh => _messaging.onTokenRefresh;
+
+  @override
+  Future<NotificationSettings> requestPermission({
+    bool alert = true,
+    bool badge = true,
+    bool sound = true,
+  }) {
+    return _messaging.requestPermission(
+      alert: alert,
+      badge: badge,
+      sound: sound,
+    );
+  }
+
+  @override
+  Future<void> setForegroundNotificationPresentationOptions({
+    required bool alert,
+    required bool badge,
+    required bool sound,
+  }) {
+    return _messaging.setForegroundNotificationPresentationOptions(
+      alert: alert,
+      badge: badge,
+      sound: sound,
+    );
+  }
+}
+
+Future<bool> initializePushNotificationFirebase() async {
+  try {
+    if (Firebase.apps.isEmpty) {
+      await Firebase.initializeApp();
+    }
+    return true;
+  } on FirebaseException catch (error) {
+    debugPrint('Push notifications disabled: ${error.message}');
+    return false;
+  } catch (error) {
+    debugPrint('Push notifications disabled: $error');
+    return false;
+  }
+}
 
 class PushNotificationService {
   PushNotificationService({
     required Dio dio,
-    required FirebaseMessagingFactory messagingFactory,
+    required bool pushNotificationsEnabled,
+    required PushFirebaseInitializer initializeFirebase,
+    required PushMessagingClientFactory messagingClientFactory,
   })  : _dio = dio,
-        _messagingFactory = messagingFactory;
+        _pushNotificationsEnabled = pushNotificationsEnabled,
+        _initializeFirebase = initializeFirebase,
+        _messagingClientFactory = messagingClientFactory;
 
   final Dio _dio;
-  final FirebaseMessagingFactory _messagingFactory;
-  FirebaseMessaging? _messaging;
+  final bool _pushNotificationsEnabled;
+  final PushFirebaseInitializer _initializeFirebase;
+  final PushMessagingClientFactory _messagingClientFactory;
+  PushMessagingClient? _messaging;
   StreamSubscription<String>? _tokenRefreshSubscription;
   bool _started = false;
 
   Future<void> start() async {
-    if (_started || !ApiConstants.pushNotificationsEnabled) return;
+    if (_started || !_pushNotificationsEnabled) return;
     _started = true;
 
-    final initialized = await _tryInitializeFirebase();
+    final initialized = await _initializeFirebase();
     if (!initialized) return;
 
     try {
-      final messaging = _messaging ??= _messagingFactory();
+      final messaging = _messaging ??= _messagingClientFactory();
       final settings = await messaging.requestPermission(
         alert: true,
         badge: true,
@@ -52,6 +132,8 @@ class PushNotificationService {
       );
 
       if (settings.authorizationStatus == AuthorizationStatus.denied) return;
+
+      await _enableForegroundPresentationOnIos(messaging);
 
       final token = await messaging.getToken();
       await _registerToken(token);
@@ -70,19 +152,18 @@ class PushNotificationService {
     _started = false;
   }
 
-  Future<bool> _tryInitializeFirebase() async {
-    try {
-      if (Firebase.apps.isEmpty) {
-        await Firebase.initializeApp();
-      }
-      return true;
-    } on FirebaseException catch (error) {
-      debugPrint('Push notifications disabled: ${error.message}');
-      return false;
-    } catch (error) {
-      debugPrint('Push notifications disabled: $error');
-      return false;
+  Future<void> _enableForegroundPresentationOnIos(
+    PushMessagingClient messaging,
+  ) async {
+    if (defaultTargetPlatform != TargetPlatform.iOS) {
+      return;
     }
+
+    await messaging.setForegroundNotificationPresentationOptions(
+      alert: true,
+      badge: true,
+      sound: true,
+    );
   }
 
   Future<void> _registerToken(String? token) async {
