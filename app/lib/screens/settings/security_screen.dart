@@ -141,7 +141,7 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen> {
                   padding: const EdgeInsets.fromLTRB(20, 22, 20, 36),
                   sliver: SliverList.list(
                     children: [
-                      EditorialSectionHeader(
+                      const EditorialSectionHeader(
                         title: 'Password',
                         subtitle:
                             'Control email password sign-in for this account.',
@@ -156,7 +156,7 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen> {
                         onTap: () => _showPasswordSheet(hasPassword),
                       ),
                       const SizedBox(height: 28),
-                      EditorialSectionHeader(
+                      const EditorialSectionHeader(
                         title: 'Passkeys',
                         subtitle:
                             'Use device unlock for faster sign-in when Cognito supports this session.',
@@ -378,6 +378,19 @@ class _PasswordSheetState extends ConsumerState<_PasswordSheet> {
       subtitle: widget.hasPassword
           ? 'Enter your current password, then choose a new one.'
           : 'Choose the password this signed-in account should use for email sign-in.',
+      footer: SizedBox(
+        height: 48,
+        child: FilledButton(
+          onPressed: _isSaving ? null : _savePassword,
+          child: _isSaving
+              ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Text('Save password'),
+        ),
+      ),
       child: Column(
         children: [
           if (widget.hasPassword) ...[
@@ -464,19 +477,6 @@ class _PasswordSheetState extends ConsumerState<_PasswordSheet> {
             ),
           ),
         ],
-      ),
-      footer: SizedBox(
-        height: 48,
-        child: FilledButton(
-          onPressed: _isSaving ? null : _savePassword,
-          child: _isSaving
-              ? const SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              : const Text('Save password'),
-        ),
       ),
     );
   }
