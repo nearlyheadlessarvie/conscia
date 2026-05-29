@@ -110,10 +110,7 @@ public class StackTests
                 "google-web-client-id.apps.googleusercontent.com",
                 "com.getconscia.auth",
                 "ABCDE12345",
-                "1A2B3C4D5E"),
-            ManagedLoginSecretSettings = new ManagedLoginSecretSettings(
-                "test/cognito-google-client-secret",
-                "test/apple-private-key")
+                "1A2B3C4D5E")
         });
         var template = Template.FromStack(stack);
 
@@ -180,12 +177,26 @@ public class StackTests
         template.HasResourceProperties("AWS::Cognito::UserPoolIdentityProvider", Match.ObjectLike(new Dictionary<string, object>
         {
             ["ProviderName"] = "Google",
-            ["ProviderType"] = "Google"
+            ["ProviderType"] = "Google",
+            ["ProviderDetails"] = Match.ObjectLike(new Dictionary<string, object>
+            {
+                ["client_secret"] = new Dictionary<string, object>
+                {
+                    ["Ref"] = "ManagedLoginGoogleClientSecret"
+                }
+            })
         }));
         template.HasResourceProperties("AWS::Cognito::UserPoolIdentityProvider", Match.ObjectLike(new Dictionary<string, object>
         {
             ["ProviderName"] = "SignInWithApple",
-            ["ProviderType"] = "SignInWithApple"
+            ["ProviderType"] = "SignInWithApple",
+            ["ProviderDetails"] = Match.ObjectLike(new Dictionary<string, object>
+            {
+                ["private_key"] = new Dictionary<string, object>
+                {
+                    ["Ref"] = "ManagedLoginApplePrivateKey"
+                }
+            })
         }));
         template.HasResourceProperties("AWS::Cognito::ManagedLoginBranding", Match.ObjectLike(new Dictionary<string, object>
         {
@@ -310,28 +321,6 @@ public class StackTests
             System.Environment.SetEnvironmentVariable("COGNITO_APPLE_SERVICES_ID", previousAppleServicesId);
             System.Environment.SetEnvironmentVariable("APPLE_TEAM_ID", previousAppleTeamId);
             System.Environment.SetEnvironmentVariable("COGNITO_APPLE_KEY_ID", previousAppleKeyId);
-        }
-    }
-
-    [Fact]
-    public void ManagedLoginSecretSettings_FromEnvironment_RequiresDedicatedApplePrivateKeySecretName()
-    {
-        var previousDedicatedAppleSecret = System.Environment.GetEnvironmentVariable("COGNITO_APPLE_PRIVATE_KEY_SECRET_NAME");
-        var previousSharedAppleSecret = System.Environment.GetEnvironmentVariable("APPLE_PRIVATE_KEY_SECRET_NAME");
-
-        try
-        {
-            System.Environment.SetEnvironmentVariable("COGNITO_APPLE_PRIVATE_KEY_SECRET_NAME", null);
-            System.Environment.SetEnvironmentVariable("APPLE_PRIVATE_KEY_SECRET_NAME", "conscia/prod/apple-private-key");
-
-            var settings = ManagedLoginSecretSettings.FromEnvironment();
-
-            Assert.Equal("conscia/prod/cognito-apple-private-key", settings.ApplePrivateKeySecretName);
-        }
-        finally
-        {
-            System.Environment.SetEnvironmentVariable("COGNITO_APPLE_PRIVATE_KEY_SECRET_NAME", previousDedicatedAppleSecret);
-            System.Environment.SetEnvironmentVariable("APPLE_PRIVATE_KEY_SECRET_NAME", previousSharedAppleSecret);
         }
     }
 
