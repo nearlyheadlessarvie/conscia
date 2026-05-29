@@ -28,6 +28,7 @@ class ConsciaApp extends ConsumerWidget {
     return DeepLinkBootstrapper(
       router: router,
       child: PushNotificationBootstrapper(
+        router: router,
         child: MaterialApp.router(
           title: 'Conscia',
           debugShowCheckedModeBanner: false,
@@ -39,6 +40,7 @@ class ConsciaApp extends ConsumerWidget {
             return Stack(
               children: [
                 child ?? const SizedBox.shrink(),
+                PushNotificationOverlay(router: router),
                 const _AuthRestoreBlocker(),
                 const _OfflineBlocker(),
               ],
