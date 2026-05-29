@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.5.4](https://github.com/nearlyheadlessarvie/conscia/compare/infra/v1.5.3...infra/v1.5.4) (2026-05-29)
+
+
+### Bug Fixes
+
+* **infra:** stop storing cognito provider secrets in secrets manager ([#138](https://github.com/nearlyheadlessarvie/conscia/issues/138)) ([b6b5e20](https://github.com/nearlyheadlessarvie/conscia/commit/b6b5e209f4be322f592a2c3dd9e460b76df6582e))
+
 ## [1.5.3](https://github.com/nearlyheadlessarvie/conscia/compare/infra/v1.5.2...infra/v1.5.3) (2026-05-29)
 
 
