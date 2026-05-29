@@ -46,6 +46,17 @@ jobs:
       SES_CONFIGURATION_SET: ${{ vars.SES_CONFIGURATION_SET }}
       INVITE_EMAIL_DEEP_LINK_BASE_URI: ${{ vars.INVITE_EMAIL_DEEP_LINK_BASE_URI }}
     steps:
+      - name: Validate release ref
+        shell: bash
+        run: |
+          case "${GITHUB_REF}" in
+            refs/heads/main|refs/tags/infra/v*) ;;
+            *)
+              echo "::error::Release Infrastructure must run from main or an infra/v* tag. Current ref: ${GITHUB_REF}"
+              exit 1
+              ;;
+          esac
+
       - uses: actions/checkout@v4
 
       - uses: actions/setup-dotnet@v4

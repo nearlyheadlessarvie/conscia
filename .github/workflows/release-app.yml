@@ -33,7 +33,22 @@ env:
   FIREBASE_OPTIONS_DART_BASE64: ${{ secrets.FIREBASE_OPTIONS_DART_BASE64 }}
 
 jobs:
+  validate-ref:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate release ref
+        shell: bash
+        run: |
+          case "${GITHUB_REF}" in
+            refs/heads/main|refs/tags/app/v*) ;;
+            *)
+              echo "::error::Release Flutter App must run from main or an app/v* tag. Current ref: ${GITHUB_REF}"
+              exit 1
+              ;;
+          esac
+
   build-android:
+    needs: validate-ref
     if: github.event_name != 'workflow_dispatch' || inputs.platform == 'both' || inputs.platform == 'android'
     runs-on: ubuntu-latest
     env:
@@ -176,6 +191,7 @@ jobs:
           status: completed
 
   build-ios:
+    needs: validate-ref
     if: github.event_name != 'workflow_dispatch' || inputs.platform == 'both' || inputs.platform == 'ios'
     runs-on: macos-latest
     env:
