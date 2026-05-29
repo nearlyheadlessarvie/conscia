@@ -2447,10 +2447,15 @@ void main() {
     await tester.tap(find.byTooltip('Notifications').hitTestable().first);
     await tester.pumpAndSettle();
 
-    expect(find.byTooltip('Dismiss notification'), findsNothing);
-
     await tester.drag(
-        find.text('No budget for Dining yet'), const Offset(-500, 0));
+        find.text('No budget for Dining yet'), const Offset(-160, 0));
+    await tester.pumpAndSettle();
+
+    final dismissAction =
+        find.byKey(const ValueKey('notification-swipe-action-Dismiss'));
+    expect(dismissAction, findsOneWidget);
+
+    await tester.tap(dismissAction);
     await tester.pumpAndSettle();
 
     expect(find.text('No budget for Dining yet'), findsNothing);

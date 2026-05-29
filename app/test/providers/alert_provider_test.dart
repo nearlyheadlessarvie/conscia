@@ -51,6 +51,12 @@ class _StaticBudgetService extends BudgetService {
   Future<List<Budget>> list() async => budgets;
 }
 
+class _SeededLocalAlertsNotifier extends LocalAlertsNotifier {
+  _SeededLocalAlertsNotifier(List<AppAlert> alerts) {
+    state = alerts;
+  }
+}
+
 void main() {
   test('local alert state resets when the authenticated user changes', () {
     final authNotifier = _TestAuthNotifier(
@@ -62,6 +68,13 @@ void main() {
     final container = ProviderContainer(
       overrides: [
         authProvider.overrideWith((ref) => authNotifier),
+        alertActionsProvider.overrideWith(
+          (ref) => AlertActions(
+            dio: Dio(),
+            enabled: false,
+            onRemoteChanged: () {},
+          ),
+        ),
       ],
     );
     addTearDown(container.dispose);
@@ -117,5 +130,63 @@ void main() {
     expect(alerts, hasLength(1));
     expect(container.read(activeAlertsProvider).single.type,
         'recurring_transaction_created');
+  });
+
+  test('local budget nudges are synced for account-wide bell state', () async {
+    final syncedAlerts = <AppAlert>[];
+    final notifier = LocalAlertsNotifier(syncAlert: (alert) async {
+      syncedAlerts.add(alert);
+    });
+
+    notifier.addBudgetNudge(category: 'Dining');
+    await Future<void>.delayed(Duration.zero);
+
+    expect(syncedAlerts.single.id, 'budget-nudge-dining');
+    expect(syncedAlerts.single.category, 'Dining');
+  });
+
+  test('dismissed alert ids are synced for account-wide bell state', () async {
+    final dismissedIds = <String>[];
+    final notifier = DismissedAlertIdsNotifier(dismissRemote: (id) async {
+      dismissedIds.add(id);
+    });
+
+    notifier.dismiss('budget-nudge-dining');
+    await Future<void>.delayed(Duration.zero);
+
+    expect(dismissedIds, ['budget-nudge-dining']);
+  });
+
+  test('active alerts deduplicates local alerts after remote sync', () async {
+    final authNotifier = _TestAuthNotifier(
+      const AuthState(
+        status: AuthStatus.authenticated,
+        userId: 'user-1',
+      ),
+    );
+    final alert = AppAlert(
+      id: 'budget-nudge-dining',
+      type: 'budget_nudge',
+      title: 'No budget for Dining yet',
+      message: 'You logged an expense in Dining without a budget.',
+      priority: 20,
+      isDismissed: false,
+      createdAt: DateTime.utc(2026, 5, 8),
+    );
+    final container = ProviderContainer(
+      overrides: [
+        authProvider.overrideWith((ref) => authNotifier),
+        budgetServiceProvider.overrideWithValue(_StaticBudgetService(const [])),
+        alertsProvider.overrideWith((ref) async => [alert]),
+        localAlertsProvider.overrideWith(
+          (ref) => _SeededLocalAlertsNotifier([alert]),
+        ),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    await container.read(alertsProvider.future);
+
+    expect(container.read(activeAlertsProvider), hasLength(1));
   });
 }
