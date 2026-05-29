@@ -263,6 +263,7 @@ if (useMockAuth)
 {
     builder.Services.AddScoped<IAuthService, MockAuthService>();
     builder.Services.AddScoped<IPasskeyAuthService, UnavailablePasskeyAuthService>();
+    builder.Services.AddScoped<IUserIdentityDeletionService, NoOpUserIdentityDeletionService>();
 
     var signingKey = builder.Configuration["Auth:MockSigningKey"]!;
     builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -285,6 +286,7 @@ else
 {
     builder.Services.AddScoped<IAuthService, CognitoAuthService>();
     builder.Services.AddScoped<IPasskeyAuthService, CognitoPasskeyAuthService>();
+    builder.Services.AddScoped<IUserIdentityDeletionService, CognitoUserIdentityDeletionService>();
 
     builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         .AddJwtBearer(options =>
