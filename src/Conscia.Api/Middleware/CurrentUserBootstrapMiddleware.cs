@@ -8,6 +8,11 @@ namespace Conscia.Api.Middleware;
 
 public sealed class CurrentUserBootstrapMiddleware
 {
+    private static readonly JsonSerializerOptions CognitoIdentityJsonOptions = new()
+    {
+        PropertyNameCaseInsensitive = true
+    };
+
     private readonly RequestDelegate _next;
     private readonly ILogger<CurrentUserBootstrapMiddleware> _logger;
 
@@ -97,35 +102,55 @@ public sealed class CurrentUserBootstrapMiddleware
 
     private (AuthProvider Provider, string ProviderSub) ResolveIdentity(ClaimsPrincipal principal, string email)
     {
-        var identitiesJson = principal.FindFirstValue("identities");
-        if (string.IsNullOrWhiteSpace(identitiesJson))
+        var identity = principal
+            .FindAll("identities")
+            .SelectMany(claim => ParseIdentityClaims(claim.Value))
+            .FirstOrDefault(i =>
+                !string.IsNullOrWhiteSpace(i.ProviderName) &&
+                !string.IsNullOrWhiteSpace(i.UserId));
+        if (identity is null)
         {
             return (AuthProvider.Email, email);
         }
 
+        if (string.Equals(identity.ProviderName, "Google", StringComparison.OrdinalIgnoreCase))
+        {
+            return (AuthProvider.Google, identity.UserId!);
+        }
+
+        if (string.Equals(identity.ProviderName, "SignInWithApple", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(identity.ProviderName, "Apple", StringComparison.OrdinalIgnoreCase))
+        {
+            return (AuthProvider.Apple, identity.UserId!);
+        }
+
+        return (AuthProvider.Email, email);
+    }
+
+    private IReadOnlyList<CognitoIdentityClaim> ParseIdentityClaims(string? identitiesJson)
+    {
+        if (string.IsNullOrWhiteSpace(identitiesJson))
+        {
+            return [];
+        }
+
         try
         {
-            var identities = JsonSerializer.Deserialize<List<CognitoIdentityClaim>>(identitiesJson, new JsonSerializerOptions
+            using var document = JsonDocument.Parse(identitiesJson);
+            if (document.RootElement.ValueKind == JsonValueKind.Array)
             {
-                PropertyNameCaseInsensitive = true
-            });
-            var identity = identities?.FirstOrDefault(i =>
-                !string.IsNullOrWhiteSpace(i.ProviderName) &&
-                !string.IsNullOrWhiteSpace(i.UserId));
-            if (identity is null)
-            {
-                return (AuthProvider.Email, email);
+                return document.RootElement
+                    .EnumerateArray()
+                    .Select(element => element.Deserialize<CognitoIdentityClaim>(CognitoIdentityJsonOptions))
+                    .Where(identity => identity is not null)
+                    .Cast<CognitoIdentityClaim>()
+                    .ToList();
             }
 
-            if (string.Equals(identity.ProviderName, "Google", StringComparison.OrdinalIgnoreCase))
+            if (document.RootElement.ValueKind == JsonValueKind.Object)
             {
-                return (AuthProvider.Google, identity.UserId!);
-            }
-
-            if (string.Equals(identity.ProviderName, "SignInWithApple", StringComparison.OrdinalIgnoreCase) ||
-                string.Equals(identity.ProviderName, "Apple", StringComparison.OrdinalIgnoreCase))
-            {
-                return (AuthProvider.Apple, identity.UserId!);
+                var identity = document.RootElement.Deserialize<CognitoIdentityClaim>(CognitoIdentityJsonOptions);
+                return identity is null ? [] : [identity];
             }
         }
         catch (JsonException ex)
@@ -133,7 +158,7 @@ public sealed class CurrentUserBootstrapMiddleware
             _logger.LogWarning(ex, "Unable to parse Cognito identities claim");
         }
 
-        return (AuthProvider.Email, email);
+        return [];
     }
 
     private sealed record CognitoIdentityClaim(string? ProviderName, string? UserId);
