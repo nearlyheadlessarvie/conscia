@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.3](https://github.com/nearlyheadlessarvie/conscia/compare/api/v1.3.2...api/v1.3.3) (2026-05-29)
+
+
+### Bug Fixes
+
+* harden family invites, auth, and API observability ([#158](https://github.com/nearlyheadlessarvie/conscia/issues/158)) ([d56f3c2](https://github.com/nearlyheadlessarvie/conscia/commit/d56f3c2fbc6595277209e47b4d4bb7fcaa7cc2fb))
+
 ## [1.3.2](https://github.com/nearlyheadlessarvie/conscia/compare/api/v1.3.1...api/v1.3.2) (2026-05-29)
 
 
