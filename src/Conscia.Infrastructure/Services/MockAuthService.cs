@@ -50,7 +50,8 @@ public class MockAuthService : IAuthService
             Id = Guid.NewGuid(),
             UserId = user.Id,
             Provider = AuthProvider.Email,
-            ProviderSub = email
+            ProviderSub = email,
+            HasPassword = true
         }, ct);
 
         return new AuthResult
@@ -89,6 +90,7 @@ public class MockAuthService : IAuthService
         }
         user.EmailConfirmed = true;
         await _repo.UpdateAsync(user, ct);
+        await MarkEmailIdentityHasPasswordAsync(user, email, ct);
 
         return new AuthResult
         {
@@ -163,6 +165,7 @@ public class MockAuthService : IAuthService
 
         user.EmailConfirmed = true;
         await _repo.UpdateAsync(user, ct);
+        await MarkEmailIdentityHasPasswordAsync(user, email, ct);
 
         return new AuthResult
         {
@@ -294,8 +297,35 @@ public class MockAuthService : IAuthService
             Id = Guid.NewGuid(),
             UserId = user.Id,
             Provider = AuthProvider.Email,
-            ProviderSub = email
+            ProviderSub = email,
+            HasPassword = true
         }, ct);
+    }
+
+    private async Task MarkEmailIdentityHasPasswordAsync(User user, string email, CancellationToken ct)
+    {
+        var identities = await _repo.GetIdentitiesByUserAsync(user.Id, ct);
+        var identity = identities.FirstOrDefault(candidate =>
+            candidate.Provider == AuthProvider.Email &&
+            string.Equals(candidate.ProviderSub, email, StringComparison.OrdinalIgnoreCase));
+        if (identity is null)
+        {
+            await _repo.AddIdentityAsync(new UserIdentity
+            {
+                Id = Guid.NewGuid(),
+                UserId = user.Id,
+                Provider = AuthProvider.Email,
+                ProviderSub = email,
+                HasPassword = true
+            }, ct);
+            return;
+        }
+
+        if (!identity.HasPassword)
+        {
+            identity.HasPassword = true;
+            await _repo.UpdateIdentityAsync(identity, ct);
+        }
     }
 
     private static string NormalizeEmail(string email) => email.Trim().ToLowerInvariant();

@@ -69,8 +69,9 @@ public class CognitoAuthService : IAuthService
                 email,
                 AuthProvider.Email,
                 email,
-                response.UserConfirmed == true,
-                ct);
+                emailConfirmed: response.UserConfirmed == true,
+                hasPassword: true,
+                ct: ct);
 
             return new AuthResult
             {
@@ -145,6 +146,10 @@ public class CognitoAuthService : IAuthService
             {
                 user.EmailConfirmed = true;
                 await _users.UpdateAsync(user, ct);
+            }
+            if (user is not null)
+            {
+                await EnsureEmailIdentityHasPasswordAsync(user, email, ct);
             }
 
             return new AuthResult
@@ -275,6 +280,10 @@ public class CognitoAuthService : IAuthService
                 user.EmailConfirmed = true;
                 await _users.UpdateAsync(user, ct);
             }
+            if (user is not null)
+            {
+                await EnsureEmailIdentityHasPasswordAsync(user, email, ct);
+            }
 
             return new AuthResult
             {
@@ -381,7 +390,14 @@ public class CognitoAuthService : IAuthService
 
         if (userId is not null && email is not null)
         {
-            await EnsureLocalUserAsync(userId.Value, email, AuthProvider.Email, email, true, ct);
+            await EnsureLocalUserAsync(
+                userId.Value,
+                email,
+                AuthProvider.Email,
+                email,
+                emailConfirmed: true,
+                hasPassword: true,
+                ct: ct);
         }
 
         return new AuthResult
@@ -400,6 +416,7 @@ public class CognitoAuthService : IAuthService
         AuthProvider provider,
         string providerSub,
         bool emailConfirmed,
+        bool hasPassword,
         CancellationToken ct)
     {
         var user = await _users.GetByIdAsync(userId, ct) ??
@@ -421,7 +438,10 @@ public class CognitoAuthService : IAuthService
             await _users.UpdateAsync(user, ct);
         }
 
-        var existingIdentity = await _users.GetByProviderAsync(provider, providerSub, ct);
+        var identities = await _users.GetIdentitiesByUserAsync(user.Id, ct);
+        var existingIdentity = identities.FirstOrDefault(identity =>
+            identity.Provider == provider &&
+            string.Equals(identity.ProviderSub, providerSub, StringComparison.OrdinalIgnoreCase));
         if (existingIdentity is null)
         {
             await _users.AddIdentityAsync(new UserIdentity
@@ -429,8 +449,14 @@ public class CognitoAuthService : IAuthService
                 Id = Guid.NewGuid(),
                 UserId = user.Id,
                 Provider = provider,
-                ProviderSub = providerSub
+                ProviderSub = providerSub,
+                HasPassword = hasPassword
             }, ct);
+        }
+        else if (hasPassword && !existingIdentity.HasPassword)
+        {
+            existingIdentity.HasPassword = true;
+            await _users.UpdateIdentityAsync(existingIdentity, ct);
         }
     }
 
@@ -486,6 +512,32 @@ public class CognitoAuthService : IAuthService
         }
 
         return resend;
+    }
+
+    private async Task EnsureEmailIdentityHasPasswordAsync(User user, string email, CancellationToken ct)
+    {
+        var identities = await _users.GetIdentitiesByUserAsync(user.Id, ct);
+        var identity = identities.FirstOrDefault(candidate =>
+            candidate.Provider == AuthProvider.Email &&
+            string.Equals(candidate.ProviderSub, email, StringComparison.OrdinalIgnoreCase));
+        if (identity is null)
+        {
+            await _users.AddIdentityAsync(new UserIdentity
+            {
+                Id = Guid.NewGuid(),
+                UserId = user.Id,
+                Provider = AuthProvider.Email,
+                ProviderSub = email,
+                HasPassword = true
+            }, ct);
+            return;
+        }
+
+        if (!identity.HasPassword)
+        {
+            identity.HasPassword = true;
+            await _users.UpdateIdentityAsync(identity, ct);
+        }
     }
 
     private static string NormalizeEmail(string email) => email.Trim().ToLowerInvariant();

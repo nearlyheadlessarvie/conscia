@@ -67,6 +67,7 @@ public class CognitoAuthServiceTests
         Assert.Equal(AuthProvider.Email, identity.Provider);
         Assert.Equal("new@example.com", identity.ProviderSub);
         Assert.Equal(userSub, identity.UserId);
+        Assert.True(identity.HasPassword);
     }
 
     [Fact]
@@ -202,6 +203,7 @@ public class CognitoAuthServiceTests
         var identity = _repo.Identities.Single();
         Assert.Equal(AuthProvider.Email, identity.Provider);
         Assert.Equal("login@example.com", identity.ProviderSub);
+        Assert.True(identity.HasPassword);
     }
 
     [Fact]

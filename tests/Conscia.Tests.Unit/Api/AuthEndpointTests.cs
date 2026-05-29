@@ -328,12 +328,14 @@ public class AuthEndpointTests
     {
         await using var factory = new TestWebAppFactory();
         using var client = factory.CreateClient();
+        var token = factory.GenerateTestToken();
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
             "Bearer",
-            factory.GenerateTestToken());
+            token);
 
         var response = await client.PostAsJsonAsync("/api/auth/password", new
         {
+            currentPassword = "OldPass123",
             password = "StrongPass123"
         });
 
@@ -342,6 +344,8 @@ public class AuthEndpointTests
             s => s.SetPasswordAsync(
                 It.IsAny<System.Security.Claims.ClaimsPrincipal>(),
                 "StrongPass123",
+                "OldPass123",
+                token,
                 It.IsAny<CancellationToken>()),
             Times.Once);
     }

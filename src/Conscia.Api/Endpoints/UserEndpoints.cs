@@ -3,6 +3,7 @@ using Conscia.Api.Extensions;
 using Conscia.Application.DTOs;
 using Conscia.Application.Interfaces;
 using Conscia.Domain.Entities;
+using Conscia.Domain.Enums;
 using FluentValidation;
 
 namespace Conscia.Api.Endpoints;
@@ -20,6 +21,7 @@ public static class UserEndpoints
         group.MapGet("/me", async (
             HttpContext ctx,
             IUserService svc,
+            IUserRepository users,
             IS3StorageService storage) =>
         {
             var userId = ctx.User.GetUserId();
@@ -28,6 +30,7 @@ public static class UserEndpoints
                 ? Results.NotFound()
                 : Results.Ok(await ToProfileResponseAsync(
                     user,
+                    users,
                     storage,
                     ctx.RequestAborted));
         }).WithName("GetCurrentUser");
@@ -117,6 +120,7 @@ public static class UserEndpoints
             HttpContext ctx,
             UserProfileUpdateDto dto,
             IUserService svc,
+            IUserRepository users,
             IValidator<UserProfileUpdateDto> validator,
             IS3StorageService storage) =>
         {
@@ -126,7 +130,7 @@ public static class UserEndpoints
 
             var userId = ctx.User.GetUserId();
             var user = await svc.UpdateProfileAsync(userId, dto, ctx.RequestAborted);
-            return Results.Ok(await ToProfileResponseAsync(user, storage, ctx.RequestAborted));
+            return Results.Ok(await ToProfileResponseAsync(user, users, storage, ctx.RequestAborted));
         }).WithName("UpdateCurrentUser");
 
         group.MapGet("/me/export", async (
@@ -234,6 +238,7 @@ public static class UserEndpoints
 
     private static async Task<object> ToProfileResponseAsync(
         User user,
+        IUserRepository users,
         IS3StorageService storage,
         CancellationToken ct)
     {
@@ -243,6 +248,10 @@ public static class UserEndpoints
                 user.ProfilePictureKey,
                 60,
                 ct);
+        var identities = await users.GetIdentitiesByUserAsync(user.Id, ct);
+        var hasPassword = identities.Any(identity =>
+            identity.Provider == AuthProvider.Email &&
+            identity.HasPassword);
 
         return new
         {
@@ -259,6 +268,7 @@ public static class UserEndpoints
             user.OccupationType,
             user.HouseholdSize,
             user.HasCompletedOnboarding,
+            HasPassword = hasPassword,
             user.AiPersonalityIntensity,
         };
     }
