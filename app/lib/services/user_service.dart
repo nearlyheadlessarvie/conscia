@@ -18,6 +18,7 @@ class UserProfile {
   final String? occupationType;
   final String? householdSize;
   final bool hasCompletedOnboarding;
+  final bool hasPassword;
   final String aiPersonalityIntensity;
 
   const UserProfile({
@@ -27,6 +28,7 @@ class UserProfile {
     required this.locale,
     required this.createdAt,
     required this.hasCompletedOnboarding,
+    this.hasPassword = false,
     this.aiPersonalityIntensity = 'balanced',
     this.displayName,
     this.profilePictureKey,
@@ -52,6 +54,7 @@ class UserProfile {
           ? DateTime.parse(json['createdAt'] as String)
           : DateTime.now(),
       hasCompletedOnboarding: json['hasCompletedOnboarding'] as bool? ?? false,
+      hasPassword: json['hasPassword'] as bool? ?? false,
       aiPersonalityIntensity:
           json['aiPersonalityIntensity'] as String? ?? 'balanced',
       spendingPersonality: json['spendingPersonality'] as String?,
@@ -117,8 +120,7 @@ class UserService {
           if (preferredCurrency != null) 'preferredCurrency': preferredCurrency,
           if (locale != null) 'locale': locale,
           if (displayName != null) 'displayName': displayName,
-          if (profilePictureKey != null)
-            'profilePictureKey': profilePictureKey,
+          if (profilePictureKey != null) 'profilePictureKey': profilePictureKey,
           if (spendingPersonality != null)
             'spendingPersonality': spendingPersonality,
           if (incomeRange != null) 'incomeRange': incomeRange,

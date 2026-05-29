@@ -16,10 +16,12 @@ class _RecordingAuthService extends AuthService {
   _RecordingAuthService() : super(Dio());
 
   String? lastPassword;
+  String? lastCurrentPassword;
 
   @override
-  Future<void> setPassword(String password) async {
+  Future<void> setPassword(String password, {String? currentPassword}) async {
     lastPassword = password;
+    lastCurrentPassword = currentPassword;
   }
 }
 
@@ -46,6 +48,7 @@ Future<void> _pumpSecurityScreen(
   required SharedPreferences prefs,
   AuthService? authService,
   PasskeyService? passkeyService,
+  bool hasPassword = false,
 }) async {
   final container = ProviderContainer(
     overrides: [
@@ -57,6 +60,7 @@ Future<void> _pumpSecurityScreen(
           locale: 'en_US',
           createdAt: DateTime(2026),
           hasCompletedOnboarding: true,
+          hasPassword: hasPassword,
         ),
       ),
       sharedPreferencesProvider.overrideWithValue(prefs),
@@ -79,7 +83,7 @@ Future<void> _pumpSecurityScreen(
 }
 
 void main() {
-  testWidgets('security screen opens a password sheet before saving', (
+  testWidgets('security screen adds a password without current password', (
     tester,
   ) async {
     SharedPreferences.setMockInitialValues({});
@@ -90,12 +94,12 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(TextField), findsNothing);
-    expect(find.text('Change Password'), findsOneWidget);
+    expect(find.text('Add Password'), findsOneWidget);
 
-    await tester.tap(find.text('Change Password'));
+    await tester.tap(find.text('Add Password'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Change password'), findsOneWidget);
+    expect(find.text('Add password'), findsOneWidget);
     expect(find.byType(TextField), findsNWidgets(2));
 
     await tester.enterText(find.byType(TextField).at(0), 'StrongPass123');
@@ -104,10 +108,44 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(auth.lastPassword, 'StrongPass123');
+    expect(auth.lastCurrentPassword, isNull);
     expect(
       find.text('Password updated. You can now sign in with email.'),
       findsOneWidget,
     );
+  });
+
+  testWidgets('security screen changes a password with current password', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+    final auth = _RecordingAuthService();
+
+    await _pumpSecurityScreen(
+      tester,
+      prefs: prefs,
+      authService: auth,
+      hasPassword: true,
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Change Password'), findsOneWidget);
+
+    await tester.tap(find.text('Change Password'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Change password'), findsOneWidget);
+    expect(find.byType(TextField), findsNWidgets(3));
+
+    await tester.enterText(find.byType(TextField).at(0), 'OldPass123');
+    await tester.enterText(find.byType(TextField).at(1), 'StrongPass123');
+    await tester.enterText(find.byType(TextField).at(2), 'StrongPass123');
+    await tester.tap(find.text('Save password'));
+    await tester.pumpAndSettle();
+
+    expect(auth.lastPassword, 'StrongPass123');
+    expect(auth.lastCurrentPassword, 'OldPass123');
   });
 
   testWidgets('security screen registers passkeys and enables passkey first',

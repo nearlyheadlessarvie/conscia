@@ -44,7 +44,7 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen> {
     return false;
   }
 
-  Future<void> _showPasswordSheet() async {
+  Future<void> _showPasswordSheet(bool hasPassword) async {
     final updated = await showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
@@ -53,10 +53,11 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
-      builder: (context) => const _PasswordSheet(),
+      builder: (context) => _PasswordSheet(hasPassword: hasPassword),
     );
 
     if (updated == true && mounted) {
+      ref.invalidate(currentUserProvider);
       ScaffoldMessenger.of(context)
         ..clearSnackBars()
         ..showSnackBar(
@@ -110,7 +111,9 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen> {
     final sessionSupportsPasskeys =
         ref.watch(currentSessionSupportsPasskeysProvider);
     final passkeyPreference = ref.watch(passkeySignInPreferenceProvider);
-    final currentEmail = ref.watch(currentUserProvider).valueOrNull?.email;
+    final currentUser = ref.watch(currentUserProvider).valueOrNull;
+    final currentEmail = currentUser?.email;
+    final hasPassword = currentUser?.hasPassword ?? false;
     final hasRegisteredCurrentPasskey = currentEmail != null &&
         passkeyPreference.hasRegisteredEmail(currentEmail);
     final canUsePasskeys = passkeysAvailable && sessionSupportsPasskeys;
@@ -146,10 +149,11 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen> {
                       const SizedBox(height: 10),
                       _SecurityMethodRow(
                         icon: AppIconKey.password,
-                        title: 'Change Password',
-                        subtitle:
-                            'Set or replace the password used for email sign-in',
-                        onTap: _showPasswordSheet,
+                        title: hasPassword ? 'Change Password' : 'Add Password',
+                        subtitle: hasPassword
+                            ? 'Update the password used for email sign-in'
+                            : 'Add email password sign-in to this account',
+                        onTap: () => _showPasswordSheet(hasPassword),
                       ),
                       const SizedBox(height: 28),
                       EditorialSectionHeader(
@@ -264,24 +268,30 @@ class _SecurityHero extends StatelessWidget {
 }
 
 class _PasswordSheet extends ConsumerStatefulWidget {
-  const _PasswordSheet();
+  const _PasswordSheet({required this.hasPassword});
+
+  final bool hasPassword;
 
   @override
   ConsumerState<_PasswordSheet> createState() => _PasswordSheetState();
 }
 
 class _PasswordSheetState extends ConsumerState<_PasswordSheet> {
+  final _currentPasswordController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
 
+  bool _obscureCurrent = true;
   bool _obscurePassword = true;
   bool _obscureConfirm = true;
   bool _isSaving = false;
+  String? _currentPasswordError;
   String? _passwordError;
   String? _confirmPasswordError;
 
   @override
   void dispose() {
+    _currentPasswordController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
     super.dispose();
@@ -301,8 +311,11 @@ class _PasswordSheetState extends ConsumerState<_PasswordSheet> {
   }
 
   void _clearErrors() {
-    if (_passwordError != null || _confirmPasswordError != null) {
+    if (_currentPasswordError != null ||
+        _passwordError != null ||
+        _confirmPasswordError != null) {
       setState(() {
+        _currentPasswordError = null;
         _passwordError = null;
         _confirmPasswordError = null;
       });
@@ -310,11 +323,18 @@ class _PasswordSheetState extends ConsumerState<_PasswordSheet> {
   }
 
   Future<void> _savePassword() async {
+    final currentPasswordError =
+        widget.hasPassword && _currentPasswordController.text.isEmpty
+            ? 'Current password is required'
+            : null;
     final passwordError = _validatePassword(_passwordController.text);
     final confirmError =
         _validateConfirmPassword(_confirmPasswordController.text);
-    if (passwordError != null || confirmError != null) {
+    if (currentPasswordError != null ||
+        passwordError != null ||
+        confirmError != null) {
       setState(() {
+        _currentPasswordError = currentPasswordError;
         _passwordError = passwordError;
         _confirmPasswordError = confirmError;
       });
@@ -323,6 +343,7 @@ class _PasswordSheetState extends ConsumerState<_PasswordSheet> {
 
     setState(() {
       _isSaving = true;
+      _currentPasswordError = null;
       _passwordError = null;
       _confirmPasswordError = null;
     });
@@ -330,6 +351,8 @@ class _PasswordSheetState extends ConsumerState<_PasswordSheet> {
     try {
       await ref.read(authServiceProvider).setPassword(
             _passwordController.text,
+            currentPassword:
+                widget.hasPassword ? _currentPasswordController.text : null,
           );
       if (!mounted) return;
       Navigator.of(context).pop(true);
@@ -351,11 +374,41 @@ class _PasswordSheetState extends ConsumerState<_PasswordSheet> {
     final colors = Theme.of(context).appColors;
 
     return ConsciaBottomSheetScaffold(
-      title: 'Change password',
-      subtitle:
-          'Choose the password this signed-in account should use for email sign-in.',
+      title: widget.hasPassword ? 'Change password' : 'Add password',
+      subtitle: widget.hasPassword
+          ? 'Enter your current password, then choose a new one.'
+          : 'Choose the password this signed-in account should use for email sign-in.',
       child: Column(
         children: [
+          if (widget.hasPassword) ...[
+            FloatingLabelTextField(
+              controller: _currentPasswordController,
+              label: 'Current password',
+              prefix: AppIcons.icon(
+                AppIconKey.password,
+                color: colors.mutedInk,
+                size: 20,
+              ),
+              obscureText: _obscureCurrent,
+              textInputAction: TextInputAction.next,
+              onChanged: (_) => _clearErrors(),
+              errorText: _currentPasswordError,
+              enableSuggestions: false,
+              autocorrect: false,
+              trailing: IconButton(
+                icon: AppIcons.icon(
+                  _obscureCurrent
+                      ? AppIconKey.visibility
+                      : AppIconKey.visibilityOff,
+                  color: _obscureCurrent ? colors.mutedInk : colors.deepNavy,
+                ),
+                onPressed: () => setState(
+                  () => _obscureCurrent = !_obscureCurrent,
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+          ],
           FloatingLabelTextField(
             controller: _passwordController,
             label: 'New password',

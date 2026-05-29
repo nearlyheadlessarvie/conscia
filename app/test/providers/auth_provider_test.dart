@@ -719,6 +719,24 @@ void main() {
     );
   });
 
+  test('setPassword includes current password when changing an existing one',
+      () async {
+    final adapter = _CapturingOkAdapter();
+    final dio = Dio()..httpClientAdapter = adapter;
+    final service = AuthService(dio);
+
+    await service.setPassword(
+      'StrongPass123',
+      currentPassword: 'OldPass123',
+    );
+
+    expect(adapter.lastRequestOptions?.path, 'auth/password');
+    expect(
+      adapter.lastRequestOptions?.data,
+      {'password': 'StrongPass123', 'currentPassword': 'OldPass123'},
+    );
+  });
+
   test('signInWithGoogle persists managed login tokens including id token',
       () async {
     final service = _FakeAuthService(
