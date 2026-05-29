@@ -5,7 +5,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../core/constants/api_constants.dart';
 import '../core/errors/app_error.dart';
@@ -816,7 +815,6 @@ final managedLoginServiceProvider = Provider<CognitoManagedLoginService>((ref) {
 
   return CognitoManagedLoginService(
     dio: dio,
-    launchUrl: launchUrl,
     openAuthSession: openManagedLoginAuthSheet,
     clientId: ApiConstants.cognitoClientId,
     loginDomain: Uri.parse(ApiConstants.cognitoLoginDomain),
@@ -847,7 +845,6 @@ final class _UnavailableManagedLoginService extends CognitoManagedLoginService {
   _UnavailableManagedLoginService._()
       : super(
           dio: Dio(),
-          launchUrl: (uri, {mode = LaunchMode.platformDefault}) async => false,
           openAuthSession: (uri, {required appCallbackUri}) async =>
               throw const CognitoManagedLoginException(
             'Managed login is not configured for this session.',

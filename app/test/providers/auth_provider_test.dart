@@ -10,7 +10,6 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 String _fakeJwt({
   required DateTime expiresAt,
@@ -177,13 +176,11 @@ class _FakeManagedLoginService extends CognitoManagedLoginService {
   _FakeManagedLoginService()
       : super(
           dio: Dio(),
-          launchUrl: (uri, {mode = LaunchMode.platformDefault}) async => true,
-          openAuthSession: (uri, {required appCallbackUri}) async =>
-              Uri.parse(
-                'conscia://auth/callback'
-                '?code=test-code'
-                '&state=test-state',
-              ),
+          openAuthSession: (uri, {required appCallbackUri}) async => Uri.parse(
+            'conscia://auth/callback'
+            '?code=test-code'
+            '&state=test-state',
+          ),
           clientId: 'managed-client-id',
           loginDomain: Uri.parse('https://login.getconscia.com'),
           redirectUri: Uri.parse('conscia://auth/callback'),
@@ -733,9 +730,11 @@ void main() {
 
     expect(refreshed, isTrue);
     expect(managedLogin.lastRefreshToken, 'managed-refresh-token');
-    expect(await storage.read(key: 'access_token'), 'managed.refreshed.access.token');
+    expect(await storage.read(key: 'access_token'),
+        'managed.refreshed.access.token');
     expect(await storage.read(key: 'id_token'), 'managed.refreshed.id.token');
-    expect(await storage.read(key: 'refresh_token'), 'managed.refreshed.refresh.token');
+    expect(await storage.read(key: 'refresh_token'),
+        'managed.refreshed.refresh.token');
   });
 
   test('continueWithManagedLogin ignores auth-sheet cancellation quietly',

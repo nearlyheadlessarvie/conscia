@@ -14,7 +14,6 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 class _FakeAuthService extends AuthService {
   _FakeAuthService() : super(Dio());
@@ -64,7 +63,6 @@ class _FakeManagedLoginService extends CognitoManagedLoginService {
   _FakeManagedLoginService()
       : super(
           dio: Dio(),
-          launchUrl: (uri, {mode = LaunchMode.platformDefault}) async => true,
           openAuthSession: (uri, {required appCallbackUri}) async => Uri.parse(
             'conscia://auth/callback'
             '?code=test-code'
