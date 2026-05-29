@@ -680,6 +680,10 @@ class _InviteCardState extends ConsumerState<_InviteCard> {
             primaryLabel: _isSubmitting ? 'Saving...' : 'Accept',
             onPrimaryPressed: _isSubmitting ? null : () => _accept(context),
             gap: 10,
+            height: 44,
+            textStyle: theme.textTheme.labelMedium?.copyWith(
+              fontWeight: FontWeight.w800,
+            ),
           ),
         ],
       ),

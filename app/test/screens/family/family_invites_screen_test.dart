@@ -42,6 +42,13 @@ void main() {
     expect(find.text('Contributor'), findsOneWidget);
     expect(find.widgetWithText(FilledButton, 'Accept'), findsOneWidget);
     expect(find.widgetWithText(OutlinedButton, 'Decline'), findsOneWidget);
+
+    final accept = tester
+        .widget<FilledButton>(find.widgetWithText(FilledButton, 'Accept'));
+    final decline = tester
+        .widget<OutlinedButton>(find.widgetWithText(OutlinedButton, 'Decline'));
+    expect(accept.style?.minimumSize?.resolve({})?.height, 44);
+    expect(decline.style?.minimumSize?.resolve({})?.height, 44);
   });
 
   testWidgets('family invites screen shows owner send-invite form', (
