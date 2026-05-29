@@ -195,4 +195,15 @@ class AuthService {
       rethrow;
     }
   }
+
+  Future<void> setPassword(String password) async {
+    try {
+      await _dio.post(
+        ApiConstants.password,
+        data: {'password': password},
+      );
+    } on DioException {
+      rethrow;
+    }
+  }
 }

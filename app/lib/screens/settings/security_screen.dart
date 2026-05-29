@@ -1,0 +1,538 @@
+import 'dart:async';
+
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../core/constants/app_icons.dart';
+import '../../core/errors/app_error.dart';
+import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_layout.dart';
+import '../../providers/auth_provider.dart';
+import '../../providers/passkey_provider.dart';
+import '../../providers/user_provider.dart';
+import '../../services/passkey_service.dart';
+import '../../widgets/conscia_app_bar.dart';
+import '../../widgets/editorial_section_header.dart';
+import '../../widgets/floating_label_text_field.dart';
+
+class SecurityScreen extends ConsumerStatefulWidget {
+  const SecurityScreen({super.key});
+
+  @override
+  ConsumerState<SecurityScreen> createState() => _SecurityScreenState();
+}
+
+class _SecurityScreenState extends ConsumerState<SecurityScreen> {
+  final _appBarScrollProgress = ValueNotifier<double>(0);
+  final _passwordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
+
+  bool _obscurePassword = true;
+  bool _obscureConfirm = true;
+  bool _isSavingPassword = false;
+  bool _isRegisteringPasskey = false;
+  String? _passwordError;
+  String? _confirmPasswordError;
+
+  @override
+  void dispose() {
+    _appBarScrollProgress.dispose();
+    _passwordController.dispose();
+    _confirmPasswordController.dispose();
+    super.dispose();
+  }
+
+  bool _handleScrollNotification(ScrollNotification notification) {
+    if (notification.metrics.axis == Axis.vertical) {
+      final nextProgress = (notification.metrics.pixels / 10).clamp(0.0, 1.0);
+      if (_appBarScrollProgress.value != nextProgress) {
+        _appBarScrollProgress.value = nextProgress;
+      }
+    }
+    return false;
+  }
+
+  String? _validatePassword(String value) {
+    if (value.isEmpty) return 'Password is required';
+    if (value.length < 8) return 'At least 8 characters';
+    if (!RegExp(r'[A-Z]').hasMatch(value)) return 'Include 1 uppercase letter';
+    if (!RegExp(r'[0-9]').hasMatch(value)) return 'Include 1 number';
+    return null;
+  }
+
+  String? _validateConfirmPassword(String value) {
+    if (value != _passwordController.text) return 'Passwords do not match';
+    return null;
+  }
+
+  void _clearPasswordErrors() {
+    if (_passwordError != null || _confirmPasswordError != null) {
+      setState(() {
+        _passwordError = null;
+        _confirmPasswordError = null;
+      });
+    }
+  }
+
+  Future<void> _savePassword() async {
+    final passwordError = _validatePassword(_passwordController.text);
+    final confirmError =
+        _validateConfirmPassword(_confirmPasswordController.text);
+    if (passwordError != null || confirmError != null) {
+      setState(() {
+        _passwordError = passwordError;
+        _confirmPasswordError = confirmError;
+      });
+      return;
+    }
+
+    setState(() {
+      _isSavingPassword = true;
+      _passwordError = null;
+      _confirmPasswordError = null;
+    });
+
+    try {
+      await ref.read(authServiceProvider).setPassword(
+            _passwordController.text,
+          );
+      _passwordController.clear();
+      _confirmPasswordController.clear();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+        ..clearSnackBars()
+        ..showSnackBar(
+          const SnackBar(
+            content: Text('Password updated. You can now sign in with email.'),
+          ),
+        );
+    } catch (e, s) {
+      if (!mounted) return;
+      final error = AppError.from(e, stackTrace: s);
+      ScaffoldMessenger.of(context)
+        ..clearSnackBars()
+        ..showSnackBar(SnackBar(content: Text(error.userMessage)));
+    } finally {
+      if (mounted) {
+        setState(() => _isSavingPassword = false);
+      }
+    }
+  }
+
+  Future<void> _registerPasskey() async {
+    if (_isRegisteringPasskey) return;
+
+    setState(() => _isRegisteringPasskey = true);
+    try {
+      await ref.read(passkeyServiceProvider).registerCurrentUserPasskey();
+      final email = ref.read(currentUserProvider).valueOrNull?.email;
+      if (email != null && email.trim().isNotEmpty) {
+        final notifier = ref.read(passkeySignInPreferenceProvider.notifier);
+        await notifier.registerEmail(email);
+        await notifier.setPasskeyFirstEnabled(true);
+      }
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+        ..clearSnackBars()
+        ..showSnackBar(
+          const SnackBar(content: Text('Passkey ready on this device.')),
+        );
+    } catch (error) {
+      if (!mounted) return;
+      if (!isPasskeyCancellation(error)) {
+        ScaffoldMessenger.of(context)
+          ..clearSnackBars()
+          ..showSnackBar(
+            SnackBar(content: Text(friendlyPasskeyErrorMessage(error))),
+          );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isRegisteringPasskey = false);
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.appColors;
+    final passkeysAvailable =
+        ref.watch(passkeyAvailabilityProvider).valueOrNull ?? false;
+    final sessionSupportsPasskeys =
+        ref.watch(currentSessionSupportsPasskeysProvider);
+    final passkeyPreference = ref.watch(passkeySignInPreferenceProvider);
+    final currentEmail = ref.watch(currentUserProvider).valueOrNull?.email;
+    final hasRegisteredCurrentPasskey = currentEmail != null &&
+        passkeyPreference.hasRegisteredEmail(currentEmail);
+    final canUsePasskeys = passkeysAvailable && sessionSupportsPasskeys;
+
+    return ConsciaAppBarScrollScope(
+      scrollProgress: _appBarScrollProgress,
+      child: Scaffold(
+        extendBodyBehindAppBar: true,
+        appBar: const ConsciaAppBar(title: Text('Security')),
+        body: NotificationListener<ScrollNotification>(
+          onNotification: _handleScrollNotification,
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [colors.pageTop, colors.pageBottom],
+              ),
+            ),
+            child: CustomScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              slivers: [
+                const SliverToBoxAdapter(child: _SecurityHero()),
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(20, 22, 20, 36),
+                  sliver: SliverList.list(
+                    children: [
+                      EditorialSectionHeader(
+                        title: 'Password',
+                        subtitle:
+                            'Add or replace the password for this account.',
+                      ),
+                      const SizedBox(height: 10),
+                      FloatingLabelTextField(
+                        controller: _passwordController,
+                        label: 'New password',
+                        prefix: AppIcons.icon(
+                          AppIconKey.password,
+                          color: colors.mutedInk,
+                          size: 20,
+                        ),
+                        obscureText: _obscurePassword,
+                        textInputAction: TextInputAction.next,
+                        onChanged: (_) => _clearPasswordErrors(),
+                        errorText: _passwordError,
+                        enableSuggestions: false,
+                        autocorrect: false,
+                        trailing: IconButton(
+                          icon: AppIcons.icon(
+                            _obscurePassword
+                                ? AppIconKey.visibility
+                                : AppIconKey.visibilityOff,
+                            color: _obscurePassword
+                                ? colors.mutedInk
+                                : colors.deepNavy,
+                          ),
+                          onPressed: () => setState(
+                            () => _obscurePassword = !_obscurePassword,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      FloatingLabelTextField(
+                        controller: _confirmPasswordController,
+                        label: 'Confirm password',
+                        prefix: AppIcons.icon(
+                          AppIconKey.password,
+                          color: colors.mutedInk,
+                          size: 20,
+                        ),
+                        obscureText: _obscureConfirm,
+                        textInputAction: TextInputAction.done,
+                        onSubmitted: (_) => _savePassword(),
+                        onChanged: (_) => _clearPasswordErrors(),
+                        errorText: _confirmPasswordError,
+                        enableSuggestions: false,
+                        autocorrect: false,
+                        trailing: IconButton(
+                          icon: AppIcons.icon(
+                            _obscureConfirm
+                                ? AppIconKey.visibility
+                                : AppIconKey.visibilityOff,
+                            color: _obscureConfirm
+                                ? colors.mutedInk
+                                : colors.deepNavy,
+                          ),
+                          onPressed: () => setState(
+                            () => _obscureConfirm = !_obscureConfirm,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      SizedBox(
+                        height: 48,
+                        child: FilledButton(
+                          onPressed: _isSavingPassword ? null : _savePassword,
+                          child: _isSavingPassword
+                              ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : const Text('Save password'),
+                        ),
+                      ),
+                      const SizedBox(height: 28),
+                      EditorialSectionHeader(
+                        title: 'Passkeys',
+                        subtitle:
+                            'Use device unlock for faster sign-in when Cognito supports this session.',
+                      ),
+                      const SizedBox(height: 10),
+                      _SecurityMethodRow(
+                        icon: AppIconKey.fingerprint,
+                        title: _isRegisteringPasskey
+                            ? 'Setting Up Passkey...'
+                            : hasRegisteredCurrentPasskey
+                                ? 'Passkey Ready'
+                                : 'Set Up Passkey',
+                        subtitle: canUsePasskeys
+                            ? hasRegisteredCurrentPasskey
+                                ? 'Registered for this account on this device'
+                                : 'Use Face ID, fingerprint, or device unlock next time'
+                            : 'Passkeys are unavailable for this sign-in session',
+                        onTap: canUsePasskeys && !_isRegisteringPasskey
+                            ? _registerPasskey
+                            : null,
+                      ),
+                      if (passkeyPreference.registeredEmails.isNotEmpty) ...[
+                        const SizedBox(height: 10),
+                        _SecuritySwitchRow(
+                          icon: AppIconKey.passkey,
+                          title: 'Passkey First Sign-In',
+                          subtitle:
+                              'Show saved passkey accounts before email sign-in',
+                          value: passkeyPreference.isPasskeyFirstEnabled,
+                          onChanged: (value) {
+                            unawaited(
+                              ref
+                                  .read(
+                                    passkeySignInPreferenceProvider.notifier,
+                                  )
+                                  .setPasskeyFirstEnabled(value),
+                            );
+                          },
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SecurityHero extends StatelessWidget {
+  const _SecurityHero();
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).appColors;
+    final textTheme = Theme.of(context).textTheme;
+
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.fromLTRB(
+        AppLayout.screenPadding,
+        AppLayout.bleedingHeroTop(context),
+        AppLayout.screenPadding,
+        AppLayout.heroBottomPadding,
+      ),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [colors.navySoft, colors.amberSoft],
+        ),
+        borderRadius: const BorderRadius.vertical(bottom: Radius.circular(32)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'SECURITY',
+            style: textTheme.labelSmall?.copyWith(
+              color: colors.deepNavy,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 0.8,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Keep sign-in yours',
+            style: textTheme.headlineSmall?.copyWith(
+              color: colors.deepNavy,
+              fontWeight: FontWeight.w800,
+              height: 1.05,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Manage the password and device passkeys that can bring you back into Conscia.',
+            style: textTheme.bodyMedium?.copyWith(
+              color: colors.ink,
+              height: 1.35,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SecurityMethodRow extends StatelessWidget {
+  const _SecurityMethodRow({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+  });
+
+  final AppIconKey icon;
+  final String title;
+  final String subtitle;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).appColors;
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(18),
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: colors.surfaceRaised,
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: colors.border),
+          ),
+          child: Row(
+            children: [
+              _SecurityIconBox(icon: icon),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.w800,
+                          ),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      subtitle,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: colors.mutedInk,
+                            height: 1.25,
+                          ),
+                    ),
+                  ],
+                ),
+              ),
+              if (onTap != null)
+                AppIcons.icon(
+                  AppIconKey.chevronRight,
+                  color: colors.border,
+                  size: 20,
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SecuritySwitchRow extends StatelessWidget {
+  const _SecuritySwitchRow({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.value,
+    required this.onChanged,
+  });
+
+  final AppIconKey icon;
+  final String title;
+  final String subtitle;
+  final bool value;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).appColors;
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: colors.surfaceRaised,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: colors.border),
+      ),
+      child: Row(
+        children: [
+          _SecurityIconBox(icon: icon),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w800,
+                      ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  subtitle,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: colors.mutedInk,
+                        height: 1.25,
+                      ),
+                ),
+              ],
+            ),
+          ),
+          Switch(value: value, onChanged: onChanged),
+        ],
+      ),
+    );
+  }
+}
+
+class _SecurityIconBox extends StatelessWidget {
+  const _SecurityIconBox({required this.icon});
+
+  final AppIconKey icon;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).appColors;
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: colors.navySoft,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: SizedBox(
+        width: 46,
+        height: 46,
+        child: Center(
+          child: AppIcons.icon(
+            icon,
+            color: colors.deepNavy,
+            size: 24,
+          ),
+        ),
+      ),
+    );
+  }
+}

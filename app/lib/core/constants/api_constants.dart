@@ -49,6 +49,7 @@ class ApiConstants {
   static const String resendConfirmation = 'auth/resend-confirmation';
   static const String passwordResetStart = 'auth/password-reset/start';
   static const String passwordResetConfirm = 'auth/password-reset/confirm';
+  static const String password = 'auth/password';
   static const String login = 'auth/login';
   static const String refreshToken = 'auth/refresh';
   static const String logout = 'auth/logout';

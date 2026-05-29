@@ -483,7 +483,7 @@ void main() {
     expect(find.text('Biometric Sign-In'), findsNothing);
   });
 
-  testWidgets('settings shows passkey setup for cognito sessions', (
+  testWidgets('settings links sign-in methods to security', (
     tester,
   ) async {
     SharedPreferences.setMockInitialValues({});
@@ -503,12 +503,13 @@ void main() {
 
     await tester.pumpAndSettle();
 
-    expect(find.text('Set Up Passkey'), findsOneWidget);
+    expect(find.text('Security'), findsOneWidget);
+    expect(find.text('Password and passkey sign-in'), findsOneWidget);
+    expect(find.text('Set Up Passkey'), findsNothing);
     expect(find.text('Biometric Sign-In'), findsNothing);
   });
 
-  testWidgets(
-      'passkey registration saves this account for passkey-first sign in',
+  testWidgets('settings keeps passkey registration inside security',
       (tester) async {
     SharedPreferences.setMockInitialValues({});
     final prefs = await SharedPreferences.getInstance();
@@ -528,18 +529,10 @@ void main() {
 
     await tester.pumpAndSettle();
 
-    await tester.scrollUntilVisible(find.text('Set Up Passkey'), 200);
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Set Up Passkey'));
-    await tester.pumpAndSettle();
-
-    expect(passkeyService.registerCount, 1);
-    expect(
-      prefs.getStringList(passkeyRegisteredEmailsPreferenceKey),
-      ['settings@example.com'],
-    );
-    expect(prefs.getBool(passkeyFirstSignInEnabledPreferenceKey), isTrue);
-    expect(find.text('Passkey First Sign-In'), findsOneWidget);
+    expect(find.text('Set Up Passkey'), findsNothing);
+    expect(passkeyService.registerCount, 0);
+    expect(prefs.getStringList(passkeyRegisteredEmailsPreferenceKey), isNull);
+    expect(prefs.getBool(passkeyFirstSignInEnabledPreferenceKey), isNull);
   });
 
   testWidgets('settings can change region format', (tester) async {
