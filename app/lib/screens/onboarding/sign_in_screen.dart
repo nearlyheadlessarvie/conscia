@@ -10,7 +10,9 @@ import '../../core/network/api_exception.dart';
 import '../../core/routing/app_router.dart';
 import '../../core/utils/email_validator.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/passkey_provider.dart';
 import '../../services/cognito_managed_login_service.dart';
+import '../../services/passkey_service.dart';
 import '../../widgets/floating_label_text_field.dart';
 import '../../widgets/conscia_app_bar.dart';
 import '../../widgets/inline_notice.dart';
@@ -51,10 +53,12 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
   final _passwordController = TextEditingController();
 
   bool _obscurePassword = true;
+  bool _showEmailSignIn = false;
   bool _isLoading = false;
   String? _errorMessage;
   String? _emailFieldError;
   String? _passwordFieldError;
+  String? _passkeyEmailInProgress;
 
   @override
   void initState() {
@@ -139,9 +143,42 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
     setState(() => _isLoading = false);
   }
 
+  Future<void> _signInWithPasskey(String email) async {
+    setState(() {
+      _isLoading = true;
+      _passkeyEmailInProgress = email;
+      _errorMessage = null;
+    });
+
+    try {
+      final tokens = await ref.read(passkeyServiceProvider).signIn(email);
+      await ref
+          .read(authProvider.notifier)
+          .completeExternalSignIn(tokens, email: email);
+    } catch (e) {
+      if (!mounted) return;
+      if (!isPasskeyCancellation(e)) {
+        setState(() => _errorMessage = friendlyPasskeyErrorMessage(e));
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _passkeyEmailInProgress = null;
+        });
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
+    final passkeyPreference = ref.watch(passkeySignInPreferenceProvider);
+    final passkeysAvailable =
+        ref.watch(passkeyAvailabilityProvider).valueOrNull ?? false;
+    final showPasskeyFirst = !_showEmailSignIn &&
+        passkeysAvailable &&
+        passkeyPreference.canUsePasskeyFirst;
 
     return Scaffold(
       extendBodyBehindAppBar: true,
@@ -192,193 +229,424 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                       ),
                       const SizedBox(height: 16),
                     ],
-                    Form(
-                      key: _formKey,
-                      child: Column(
-                        children: [
-                          FloatingLabelTextField(
-                            controller: _emailController,
-                            label: 'Email',
-                            prefix: AppIcons.icon(
-                              AppIconKey.email,
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .onSurfaceVariant,
-                              size: 20,
-                            ),
-                            keyboardType: TextInputType.emailAddress,
-                            textInputAction: TextInputAction.next,
-                            onChanged: (_) => _clearInlineErrors(),
-                            errorText: _emailFieldError,
-                            autofillHints: const [AutofillHints.email],
-                          ),
-                          const SizedBox(height: 16),
-                          FloatingLabelTextField(
-                            controller: _passwordController,
-                            label: 'Password',
-                            prefix: AppIcons.icon(
-                              AppIconKey.password,
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .onSurfaceVariant,
-                              size: 20,
-                            ),
-                            obscureText: _obscurePassword,
-                            textInputAction: TextInputAction.done,
-                            onChanged: (_) => _clearInlineErrors(),
-                            onSubmitted: (_) {
-                              if (!_isLoading) {
-                                _submit();
-                              }
-                            },
-                            errorText: _passwordFieldError,
-                            enableSuggestions: false,
-                            autocorrect: false,
-                            autofillHints: const [AutofillHints.password],
-                            trailing: IconButton(
-                              icon: AppIcons.icon(
-                                _obscurePassword
-                                    ? AppIconKey.visibility
-                                    : AppIconKey.visibilityOff,
-                                color: _obscurePassword
-                                    ? Theme.of(context)
-                                        .colorScheme
-                                        .onSurfaceVariant
-                                    : Theme.of(context).colorScheme.primary,
+                    if (showPasskeyFirst)
+                      _PasskeyFirstSignIn(
+                        emails: passkeyPreference.registeredEmails,
+                        isLoading: _isLoading,
+                        loadingEmail: _passkeyEmailInProgress,
+                        onPasskeySignIn: _signInWithPasskey,
+                        onEmailSignIn: () {
+                          setState(() {
+                            _showEmailSignIn = true;
+                            _errorMessage = null;
+                          });
+                        },
+                      )
+                    else ...[
+                      Form(
+                        key: _formKey,
+                        child: Column(
+                          children: [
+                            FloatingLabelTextField(
+                              controller: _emailController,
+                              label: 'Email',
+                              prefix: AppIcons.icon(
+                                AppIconKey.email,
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onSurfaceVariant,
+                                size: 20,
                               ),
-                              onPressed: () => setState(
-                                () => _obscurePassword = !_obscurePassword,
-                              ),
+                              keyboardType: TextInputType.emailAddress,
+                              textInputAction: TextInputAction.next,
+                              onChanged: (_) => _clearInlineErrors(),
+                              errorText: _emailFieldError,
+                              autofillHints: const [AutofillHints.email],
                             ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Align(
-                      alignment: Alignment.centerRight,
-                      child: TextButton(
-                        onPressed: _isLoading
-                            ? null
-                            : () => context.go(AppRoutes.passwordReset),
-                        child: const Text('Forgot password?'),
-                      ),
-                    ),
-                    const SizedBox(height: 32),
-                    SizedBox(
-                      height: 48,
-                      child: FilledButton(
-                        onPressed: _isLoading ? null : _submit,
-                        child: _isLoading
-                            ? const SizedBox(
-                                width: 20,
-                                height: 20,
-                                child:
-                                    CircularProgressIndicator(strokeWidth: 2),
-                              )
-                            : const Text('Sign In'),
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                    Row(
-                      children: [
-                        const Expanded(child: Divider()),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          child: Text(
-                            'or',
-                            style: Theme.of(context)
-                                .textTheme
-                                .bodyMedium
-                                ?.copyWith(
-                                  color: colors.onSurfaceVariant,
-                                ),
-                          ),
-                        ),
-                        const Expanded(child: Divider()),
-                      ],
-                    ),
-                    const SizedBox(height: 24),
-                    SizedBox(
-                      height: 48,
-                      width: double.infinity,
-                      child: ElevatedButton.icon(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.black,
-                          foregroundColor: Colors.white,
-                          elevation: 0,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(24),
-                          ),
-                        ),
-                        icon: AppIcons.icon(
-                          AppIconKey.appleBrand,
-                          color: Colors.white,
-                          size: 24,
-                        ),
-                        label: const Text('Sign in with Apple'),
-                        onPressed: _isLoading
-                            ? null
-                            : () async {
-                                setState(() {
-                                  _isLoading = true;
-                                  _errorMessage = null;
-                                });
-                                try {
-                                  await ref
-                                      .read(authProvider.notifier)
-                                      .signInWithApple();
-                                } on CognitoManagedLoginCancelledException {
-                                  // User intentionally closed the hosted auth sheet.
-                                } catch (e) {
-                                  if (!mounted) return;
-                                  setState(() {
-                                    _errorMessage =
-                                        friendlySignInErrorMessage(e);
-                                  });
-                                } finally {
-                                  if (mounted) {
-                                    setState(() => _isLoading = false);
-                                  }
+                            const SizedBox(height: 16),
+                            FloatingLabelTextField(
+                              controller: _passwordController,
+                              label: 'Password',
+                              prefix: AppIcons.icon(
+                                AppIconKey.password,
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onSurfaceVariant,
+                                size: 20,
+                              ),
+                              obscureText: _obscurePassword,
+                              textInputAction: TextInputAction.done,
+                              onChanged: (_) => _clearInlineErrors(),
+                              onSubmitted: (_) {
+                                if (!_isLoading) {
+                                  _submit();
                                 }
                               },
+                              errorText: _passwordFieldError,
+                              enableSuggestions: false,
+                              autocorrect: false,
+                              autofillHints: const [AutofillHints.password],
+                              trailing: IconButton(
+                                icon: AppIcons.icon(
+                                  _obscurePassword
+                                      ? AppIconKey.visibility
+                                      : AppIconKey.visibilityOff,
+                                  color: _obscurePassword
+                                      ? Theme.of(context)
+                                          .colorScheme
+                                          .onSurfaceVariant
+                                      : Theme.of(context).colorScheme.primary,
+                                ),
+                                onPressed: () => setState(
+                                  () => _obscurePassword = !_obscurePassword,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 12),
-                    _GoogleSignInButton(
-                      isLoading: _isLoading,
-                      onPressed: () async {
-                        setState(() {
-                          _isLoading = true;
-                          _errorMessage = null;
-                        });
-                        try {
-                          await ref
-                              .read(authProvider.notifier)
-                              .signInWithGoogle();
-                        } on CognitoManagedLoginCancelledException {
-                          // User intentionally closed the hosted auth sheet.
-                        } catch (e) {
-                          if (!mounted) return;
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: TextButton(
+                          onPressed: _isLoading
+                              ? null
+                              : () => context.go(AppRoutes.passwordReset),
+                          child: const Text('Forgot password?'),
+                        ),
+                      ),
+                      const SizedBox(height: 32),
+                      SizedBox(
+                        height: 48,
+                        child: FilledButton(
+                          onPressed: _isLoading ? null : _submit,
+                          child: _isLoading
+                              ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child:
+                                      CircularProgressIndicator(strokeWidth: 2),
+                                )
+                              : const Text('Sign In'),
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      Row(
+                        children: [
+                          const Expanded(child: Divider()),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            child: Text(
+                              'or',
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodyMedium
+                                  ?.copyWith(
+                                    color: colors.onSurfaceVariant,
+                                  ),
+                            ),
+                          ),
+                          const Expanded(child: Divider()),
+                        ],
+                      ),
+                      const SizedBox(height: 24),
+                      SizedBox(
+                        height: 48,
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.black,
+                            foregroundColor: Colors.white,
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(24),
+                            ),
+                          ),
+                          icon: AppIcons.icon(
+                            AppIconKey.appleBrand,
+                            color: Colors.white,
+                            size: 24,
+                          ),
+                          label: const Text('Sign in with Apple'),
+                          onPressed: _isLoading
+                              ? null
+                              : () async {
+                                  setState(() {
+                                    _isLoading = true;
+                                    _errorMessage = null;
+                                  });
+                                  try {
+                                    await ref
+                                        .read(authProvider.notifier)
+                                        .signInWithApple();
+                                  } on CognitoManagedLoginCancelledException {
+                                    // User intentionally closed the hosted auth sheet.
+                                  } catch (e) {
+                                    if (!mounted) return;
+                                    setState(() {
+                                      _errorMessage =
+                                          friendlySignInErrorMessage(e);
+                                    });
+                                  } finally {
+                                    if (mounted) {
+                                      setState(() => _isLoading = false);
+                                    }
+                                  }
+                                },
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      _GoogleSignInButton(
+                        isLoading: _isLoading,
+                        onPressed: () async {
                           setState(() {
-                            _errorMessage = friendlySignInErrorMessage(e);
+                            _isLoading = true;
+                            _errorMessage = null;
                           });
-                        } finally {
-                          if (mounted) setState(() => _isLoading = false);
-                        }
-                      },
-                    ),
-                    const SizedBox(height: 16),
-                    Center(
-                      child: TextButton(
-                        onPressed: () => context.go('/onboarding/sign-up'),
-                        child: const Text("Don't have an account? Sign Up"),
+                          try {
+                            await ref
+                                .read(authProvider.notifier)
+                                .signInWithGoogle();
+                          } on CognitoManagedLoginCancelledException {
+                            // User intentionally closed the hosted auth sheet.
+                          } catch (e) {
+                            if (!mounted) return;
+                            setState(() {
+                              _errorMessage = friendlySignInErrorMessage(e);
+                            });
+                          } finally {
+                            if (mounted) setState(() => _isLoading = false);
+                          }
+                        },
                       ),
-                    ),
+                      const SizedBox(height: 16),
+                      Center(
+                        child: TextButton(
+                          onPressed: () => context.go('/onboarding/sign-up'),
+                          child: const Text("Don't have an account? Sign Up"),
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _PasskeyFirstSignIn extends StatelessWidget {
+  const _PasskeyFirstSignIn({
+    required this.emails,
+    required this.isLoading,
+    required this.loadingEmail,
+    required this.onPasskeySignIn,
+    required this.onEmailSignIn,
+  });
+
+  final List<String> emails;
+  final bool isLoading;
+  final String? loadingEmail;
+  final ValueChanged<String> onPasskeySignIn;
+  final VoidCallback onEmailSignIn;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+    final hasOneAccount = emails.length == 1;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        DecoratedBox(
+          decoration: BoxDecoration(
+            color: colors.surface.withValues(alpha: 0.92),
+            border: Border.all(color: colors.outlineVariant),
+            borderRadius: BorderRadius.circular(24),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: colors.primaryContainer.withValues(alpha: 0.45),
+                      borderRadius: BorderRadius.circular(18),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: AppIcons.icon(
+                        AppIconKey.passkey,
+                        color: colors.primary,
+                        size: 26,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 18),
+                Text(
+                  hasOneAccount ? 'Sign in with passkey' : 'Choose an account',
+                  style: textTheme.headlineSmall?.copyWith(
+                    color: colors.primary,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  hasOneAccount
+                      ? 'Use the passkey saved for ${emails.single}.'
+                      : 'Select a passkey account saved on this device.',
+                  style: textTheme.bodyMedium?.copyWith(
+                    color: colors.onSurfaceVariant,
+                    height: 1.35,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                if (hasOneAccount) ...[
+                  _PasskeyAccountPill(email: emails.single),
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    height: 48,
+                    child: FilledButton.icon(
+                      onPressed: isLoading
+                          ? null
+                          : () => onPasskeySignIn(emails.single),
+                      icon: isLoading
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : AppIcons.icon(
+                              AppIconKey.passkey,
+                              color: colors.onPrimary,
+                              size: 20,
+                            ),
+                      label: const Text('Continue with Passkey'),
+                    ),
+                  ),
+                ] else ...[
+                  for (final email in emails) ...[
+                    _PasskeyAccountButton(
+                      email: email,
+                      isLoading: isLoading && loadingEmail == email,
+                      onPressed:
+                          isLoading ? null : () => onPasskeySignIn(email),
+                    ),
+                    if (email != emails.last) const SizedBox(height: 10),
+                  ],
+                ],
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
+        Center(
+          child: TextButton(
+            onPressed: isLoading ? null : onEmailSignIn,
+            child: const Text('Sign in with email'),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _PasskeyAccountPill extends StatelessWidget {
+  const _PasskeyAccountPill({required this.email});
+
+  final String email;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: colors.secondaryContainer.withValues(alpha: 0.35),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        child: Row(
+          children: [
+            AppIcons.icon(
+              AppIconKey.email,
+              color: colors.onSecondaryContainer,
+              size: 18,
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                email,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                      color: colors.onSecondaryContainer,
+                      fontWeight: FontWeight.w700,
+                    ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PasskeyAccountButton extends StatelessWidget {
+  const _PasskeyAccountButton({
+    required this.email,
+    required this.isLoading,
+    required this.onPressed,
+  });
+
+  final String email;
+  final bool isLoading;
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return SizedBox(
+      height: 52,
+      child: OutlinedButton(
+        onPressed: onPressed,
+        style: OutlinedButton.styleFrom(
+          alignment: Alignment.centerLeft,
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(18),
+          ),
+        ),
+        child: Row(
+          children: [
+            if (isLoading)
+              const SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+            else
+              AppIcons.icon(
+                AppIconKey.passkey,
+                color: colors.primary,
+                size: 20,
+              ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                email,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
         ),
       ),
     );

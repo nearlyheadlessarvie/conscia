@@ -1,9 +1,12 @@
 import 'package:conscia_app/core/errors/app_error.dart';
 import 'package:conscia_app/core/routing/app_router.dart';
 import 'package:conscia_app/providers/auth_provider.dart';
+import 'package:conscia_app/providers/passkey_provider.dart';
+import 'package:conscia_app/providers/usage_provider.dart';
 import 'package:conscia_app/screens/onboarding/sign_in_screen.dart';
 import 'package:conscia_app/services/auth_service.dart';
 import 'package:conscia_app/services/cognito_managed_login_service.dart';
+import 'package:conscia_app/services/passkey_service.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -91,6 +94,8 @@ class _RecordingAuthNotifier extends AuthNotifier {
   int googleCount = 0;
   Object? googleError;
   Object? appleError;
+  AuthTokens? completedExternalTokens;
+  String? completedExternalEmail;
 
   @override
   Future<void> login(String email, String password) async {
@@ -114,6 +119,64 @@ class _RecordingAuthNotifier extends AuthNotifier {
       throw error;
     }
   }
+
+  @override
+  Future<void> completeExternalSignIn(
+    AuthTokens tokens, {
+    String? email,
+  }) async {
+    completedExternalTokens = tokens;
+    completedExternalEmail = email;
+  }
+}
+
+class _RecordingPasskeyService extends PasskeyService {
+  _RecordingPasskeyService()
+      : super(
+          publicDio: Dio(),
+          authenticatedDio: Dio(),
+        );
+
+  String? lastSignInEmail;
+
+  @override
+  Future<bool> isSupported() async => true;
+
+  @override
+  Future<AuthTokens> signIn(String email) async {
+    lastSignInEmail = email;
+    return const AuthTokens(
+      accessToken: 'passkey-access-token',
+      refreshToken: 'passkey-refresh-token',
+      userId: 'passkey-user-id',
+    );
+  }
+}
+
+Future<void> _pumpSignInScreen(
+  WidgetTester tester, {
+  required AuthNotifier authNotifier,
+  Widget child = const MaterialApp(home: SignInScreen()),
+  bool passkeysAvailable = false,
+  PasskeyService? passkeyService,
+}) async {
+  final prefs = await SharedPreferences.getInstance();
+
+  await tester.pumpWidget(
+    ProviderScope(
+      overrides: [
+        sharedPreferencesProvider.overrideWithValue(prefs),
+        authProvider.overrideWith((ref) => authNotifier),
+        passkeyAvailabilityProvider.overrideWith(
+          (ref) async => passkeysAvailable,
+        ),
+        if (passkeyService != null)
+          passkeyServiceProvider.overrideWithValue(passkeyService),
+      ],
+      child: child,
+    ),
+  );
+  await tester.pumpAndSettle();
 }
 
 void main() {
@@ -124,17 +187,10 @@ void main() {
   tearDown(AppError.resetForTests);
 
   testWidgets('sign in screen shows email and password fields', (tester) async {
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          authProvider.overrideWith((ref) => _RecordingAuthNotifier()),
-        ],
-        child: const MaterialApp(
-          home: SignInScreen(),
-        ),
-      ),
+    await _pumpSignInScreen(
+      tester,
+      authNotifier: _RecordingAuthNotifier(),
     );
-    await tester.pumpAndSettle();
 
     expect(find.byType(TextField), findsNWidgets(2));
     expect(find.text('Password'), findsOneWidget);
@@ -146,17 +202,10 @@ void main() {
   testWidgets('sign in submits typed email and password', (tester) async {
     final authNotifier = _RecordingAuthNotifier();
 
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          authProvider.overrideWith((ref) => authNotifier),
-        ],
-        child: const MaterialApp(
-          home: SignInScreen(),
-        ),
-      ),
+    await _pumpSignInScreen(
+      tester,
+      authNotifier: authNotifier,
     );
-    await tester.pumpAndSettle();
 
     final fields = find.byType(TextField);
     await tester.enterText(fields.at(0), 'story-demo@example.com');
@@ -174,17 +223,10 @@ void main() {
       (tester) async {
     final authNotifier = _RecordingAuthNotifier();
 
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          authProvider.overrideWith((ref) => authNotifier),
-        ],
-        child: const MaterialApp(
-          home: SignInScreen(),
-        ),
-      ),
+    await _pumpSignInScreen(
+      tester,
+      authNotifier: authNotifier,
     );
-    await tester.pumpAndSettle();
 
     final googleButton =
         find.widgetWithText(OutlinedButton, 'Sign in with Google');
@@ -213,15 +255,11 @@ void main() {
       ],
     );
 
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          authProvider.overrideWith((ref) => authNotifier),
-        ],
-        child: MaterialApp.router(routerConfig: router),
-      ),
+    await _pumpSignInScreen(
+      tester,
+      authNotifier: authNotifier,
+      child: MaterialApp.router(routerConfig: router),
     );
-    await tester.pumpAndSettle();
 
     await tester.tap(find.text('Forgot password?'));
     await tester.pumpAndSettle();
@@ -238,17 +276,10 @@ void main() {
       logger: (_) {},
     );
 
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          authProvider.overrideWith((ref) => authNotifier),
-        ],
-        child: const MaterialApp(
-          home: SignInScreen(),
-        ),
-      ),
+    await _pumpSignInScreen(
+      tester,
+      authNotifier: authNotifier,
     );
-    await tester.pumpAndSettle();
 
     final googleButton =
         find.widgetWithText(OutlinedButton, 'Sign in with Google');
@@ -259,5 +290,63 @@ void main() {
 
     expect(find.text('Conscia sign-in was cancelled.'), findsNothing);
     expect(find.text('Dismiss'), findsNothing);
+  });
+
+  testWidgets('passkey-first sign in uses the saved single account',
+      (tester) async {
+    SharedPreferences.setMockInitialValues({
+      passkeyRegisteredEmailsPreferenceKey: ['story-demo@example.com'],
+      passkeyFirstSignInEnabledPreferenceKey: true,
+    });
+    final authNotifier = _RecordingAuthNotifier();
+    final passkeyService = _RecordingPasskeyService();
+
+    await _pumpSignInScreen(
+      tester,
+      authNotifier: authNotifier,
+      passkeysAvailable: true,
+      passkeyService: passkeyService,
+    );
+
+    expect(find.text('Sign in with passkey'), findsOneWidget);
+    expect(find.text('story-demo@example.com'), findsOneWidget);
+    expect(find.text('Sign in with email'), findsOneWidget);
+    expect(find.byType(TextField), findsNothing);
+
+    await tester.tap(find.text('Continue with Passkey'));
+    await tester.pump();
+
+    expect(passkeyService.lastSignInEmail, 'story-demo@example.com');
+    expect(authNotifier.completedExternalEmail, 'story-demo@example.com');
+  });
+
+  testWidgets('passkey-first sign in prompts for multiple saved accounts',
+      (tester) async {
+    SharedPreferences.setMockInitialValues({
+      passkeyRegisteredEmailsPreferenceKey: [
+        'one@example.com',
+        'two@example.com',
+      ],
+      passkeyFirstSignInEnabledPreferenceKey: true,
+    });
+    final authNotifier = _RecordingAuthNotifier();
+    final passkeyService = _RecordingPasskeyService();
+
+    await _pumpSignInScreen(
+      tester,
+      authNotifier: authNotifier,
+      passkeysAvailable: true,
+      passkeyService: passkeyService,
+    );
+
+    expect(find.text('Choose an account'), findsOneWidget);
+    expect(find.text('one@example.com'), findsOneWidget);
+    expect(find.text('two@example.com'), findsOneWidget);
+
+    await tester.tap(find.text('two@example.com'));
+    await tester.pump();
+
+    expect(passkeyService.lastSignInEmail, 'two@example.com');
+    expect(authNotifier.completedExternalEmail, 'two@example.com');
   });
 }

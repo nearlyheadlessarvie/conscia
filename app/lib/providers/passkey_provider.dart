@@ -1,11 +1,96 @@
 import 'dart:convert';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../core/constants/api_constants.dart';
 import '../core/network/dio_client.dart';
 import '../services/passkey_service.dart';
 import 'auth_provider.dart';
+import 'usage_provider.dart';
+
+const passkeyRegisteredEmailsPreferenceKey = 'passkey_registered_emails';
+const passkeyFirstSignInEnabledPreferenceKey = 'passkey_first_sign_in_enabled';
+
+class PasskeySignInPreference {
+  const PasskeySignInPreference({
+    required this.registeredEmails,
+    required this.isPasskeyFirstEnabled,
+  });
+
+  final List<String> registeredEmails;
+  final bool isPasskeyFirstEnabled;
+
+  bool get canUsePasskeyFirst =>
+      isPasskeyFirstEnabled && registeredEmails.isNotEmpty;
+
+  bool hasRegisteredEmail(String email) {
+    return registeredEmails.contains(_normalizePasskeyEmail(email));
+  }
+
+  PasskeySignInPreference copyWith({
+    List<String>? registeredEmails,
+    bool? isPasskeyFirstEnabled,
+  }) {
+    return PasskeySignInPreference(
+      registeredEmails: registeredEmails ?? this.registeredEmails,
+      isPasskeyFirstEnabled:
+          isPasskeyFirstEnabled ?? this.isPasskeyFirstEnabled,
+    );
+  }
+}
+
+class PasskeySignInPreferenceNotifier
+    extends StateNotifier<PasskeySignInPreference> {
+  PasskeySignInPreferenceNotifier(this._prefs)
+      : super(
+          PasskeySignInPreference(
+            registeredEmails: _loadRegisteredEmails(_prefs),
+            isPasskeyFirstEnabled:
+                _prefs.getBool(passkeyFirstSignInEnabledPreferenceKey) ?? false,
+          ),
+        );
+
+  final SharedPreferences _prefs;
+
+  Future<void> registerEmail(String email) async {
+    final normalized = _normalizePasskeyEmail(email);
+    if (normalized.isEmpty) return;
+
+    final emails = [...state.registeredEmails];
+    if (!emails.contains(normalized)) {
+      emails.add(normalized);
+    }
+
+    state = state.copyWith(registeredEmails: List.unmodifiable(emails));
+    await _prefs.setStringList(passkeyRegisteredEmailsPreferenceKey, emails);
+  }
+
+  Future<void> setPasskeyFirstEnabled(bool value) async {
+    state = state.copyWith(isPasskeyFirstEnabled: value);
+    await _prefs.setBool(passkeyFirstSignInEnabledPreferenceKey, value);
+  }
+}
+
+final passkeySignInPreferenceProvider = StateNotifierProvider<
+    PasskeySignInPreferenceNotifier, PasskeySignInPreference>((ref) {
+  return PasskeySignInPreferenceNotifier(ref.watch(sharedPreferencesProvider));
+});
+
+List<String> _loadRegisteredEmails(SharedPreferences prefs) {
+  final normalizedEmails = <String>[];
+  for (final email
+      in prefs.getStringList(passkeyRegisteredEmailsPreferenceKey) ??
+          const <String>[]) {
+    final normalized = _normalizePasskeyEmail(email);
+    if (normalized.isNotEmpty && !normalizedEmails.contains(normalized)) {
+      normalizedEmails.add(normalized);
+    }
+  }
+  return List.unmodifiable(normalizedEmails);
+}
+
+String _normalizePasskeyEmail(String email) => email.trim().toLowerCase();
 
 final passkeyServiceProvider = Provider<PasskeyService>((ref) {
   return PasskeyService(
