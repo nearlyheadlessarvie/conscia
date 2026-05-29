@@ -18,11 +18,17 @@ public static class VersionMetadataResolver
         var metadataPath = Path.Combine(AppContext.BaseDirectory, "version.json");
         if (File.Exists(metadataPath))
         {
-            using var stream = File.OpenRead(metadataPath);
-            var metadata = JsonSerializer.Deserialize<VersionMetadata>(stream, JsonOptions);
-            if (metadata is not null)
+            try
             {
-                return metadata;
+                using var stream = File.OpenRead(metadataPath);
+                var metadata = JsonSerializer.Deserialize<VersionMetadata>(stream, JsonOptions);
+                if (metadata is not null)
+                {
+                    return metadata;
+                }
+            }
+            catch (IOException)
+            {
             }
         }
 
