@@ -15,7 +15,6 @@ public sealed class AuthStackProps : StackProps
     public string? CognitoPreSignupLinkerAssetPath { get; init; }
     public DomainSettings? DomainSettings { get; init; }
     public ManagedLoginProviderSettings? ManagedLoginProviderSettings { get; init; }
-    public ManagedLoginSecretSettings? ManagedLoginSecretSettings { get; init; }
 }
 
 public class AuthStack : Stack
@@ -128,18 +127,23 @@ public class AuthStack : Stack
             UserPoolClientIdentityProvider.COGNITO
         };
         var identityProviderResources = new List<CfnResource>();
+        CfnParameter? managedLoginGoogleClientSecretParameter = null;
+        CfnParameter? managedLoginApplePrivateKeyParameter = null;
 
         if (props?.ManagedLoginProviderSettings?.HasGoogle == true)
         {
             supportedIdentityProviders.Add(UserPoolClientIdentityProvider.GOOGLE);
+            managedLoginGoogleClientSecretParameter = new CfnParameter(this, "ManagedLoginGoogleClientSecret", new CfnParameterProps
+            {
+                Type = "String",
+                NoEcho = true
+            });
 
             var googleProvider = new UserPoolIdentityProviderGoogle(this, "ManagedLoginGoogleProvider", new UserPoolIdentityProviderGoogleProps
             {
                 UserPool = UserPool,
                 ClientId = props.ManagedLoginProviderSettings.GoogleClientId!,
-                ClientSecretValue = SecretValue.SecretsManager(
-                    props.ManagedLoginSecretSettings?.GoogleClientSecretSecretName
-                    ?? "conscia/prod/cognito-google-client-secret"),
+                ClientSecretValue = SecretValue.UnsafePlainText(managedLoginGoogleClientSecretParameter.ValueAsString),
                 Scopes = ["openid", "email", "profile"],
                 AttributeMapping = new AttributeMapping
                 {
@@ -158,6 +162,11 @@ public class AuthStack : Stack
         if (props?.ManagedLoginProviderSettings?.HasApple == true)
         {
             supportedIdentityProviders.Add(UserPoolClientIdentityProvider.APPLE);
+            managedLoginApplePrivateKeyParameter = new CfnParameter(this, "ManagedLoginApplePrivateKey", new CfnParameterProps
+            {
+                Type = "String",
+                NoEcho = true
+            });
 
             var appleProvider = new UserPoolIdentityProviderApple(this, "ManagedLoginAppleProvider", new UserPoolIdentityProviderAppleProps
             {
@@ -165,9 +174,7 @@ public class AuthStack : Stack
                 ClientId = props.ManagedLoginProviderSettings.AppleServicesId!,
                 TeamId = props.ManagedLoginProviderSettings.AppleTeamId!,
                 KeyId = props.ManagedLoginProviderSettings.AppleKeyId!,
-                PrivateKeyValue = SecretValue.SecretsManager(
-                    props.ManagedLoginSecretSettings?.ApplePrivateKeySecretName
-                    ?? "conscia/prod/apple-private-key"),
+                PrivateKeyValue = SecretValue.UnsafePlainText(managedLoginApplePrivateKeyParameter.ValueAsString),
                 Scopes = ["email", "name"],
                 AttributeMapping = new AttributeMapping
                 {

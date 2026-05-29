@@ -27,8 +27,6 @@ jobs:
       ICLOUD_INBOX_TXT_RECORDS_JSON: ${{ vars.ICLOUD_INBOX_TXT_RECORDS_JSON }}
       ICLOUD_INBOX_CNAME_RECORDS_JSON: ${{ vars.ICLOUD_INBOX_CNAME_RECORDS_JSON }}
       APPLE_PRIVATE_KEY_SECRET_NAME: conscia/prod/apple-private-key
-      COGNITO_APPLE_PRIVATE_KEY_SECRET_NAME: conscia/prod/cognito-apple-private-key
-      COGNITO_GOOGLE_CLIENT_SECRET_SECRET_NAME: conscia/prod/cognito-google-client-secret
       GOOGLE_PLAY_SERVICE_ACCOUNT_JSON_SECRET_NAME: conscia/prod/google-play-service-account-json
       FIREBASE_ADMIN_SERVICE_ACCOUNT_JSON_SECRET_NAME: conscia/prod/firebase-admin-service-account-json
       AUTH_GOOGLE_CLIENT_ID: ${{ secrets.AUTH_GOOGLE_CLIENT_ID }}
@@ -98,19 +96,23 @@ jobs:
             fi
           }
 
-          upsert_secret "$COGNITO_GOOGLE_CLIENT_SECRET_SECRET_NAME" "$COGNITO_GOOGLE_CLIENT_SECRET"
-          upsert_secret "$COGNITO_APPLE_PRIVATE_KEY_SECRET_NAME" "$COGNITO_APPLE_PRIVATE_KEY"
           upsert_secret "$APPLE_PRIVATE_KEY_SECRET_NAME" "$APPLE_PRIVATE_KEY"
           upsert_secret "$GOOGLE_PLAY_SERVICE_ACCOUNT_JSON_SECRET_NAME" "$GOOGLE_PLAY_SERVICE_ACCOUNT_JSON"
           upsert_secret "$FIREBASE_ADMIN_SERVICE_ACCOUNT_JSON_SECRET_NAME" "$FIREBASE_ADMIN_SERVICE_ACCOUNT_JSON"
 
       - name: CDK diff (dry run)
         working-directory: infra
-        run: cdk diff
+        run: >
+          cdk diff
+          --parameters "Conscia-Auth:ManagedLoginGoogleClientSecret=$COGNITO_GOOGLE_CLIENT_SECRET"
+          --parameters "Conscia-Auth:ManagedLoginApplePrivateKey=$COGNITO_APPLE_PRIVATE_KEY"
 
       - name: Deploy all stacks
         working-directory: infra
-        run: cdk deploy --all --require-approval never
+        run: >
+          cdk deploy --all --require-approval never
+          --parameters "Conscia-Auth:ManagedLoginGoogleClientSecret=$COGNITO_GOOGLE_CLIENT_SECRET"
+          --parameters "Conscia-Auth:ManagedLoginApplePrivateKey=$COGNITO_APPLE_PRIVATE_KEY"
 
       - name: Extract version
         id: version

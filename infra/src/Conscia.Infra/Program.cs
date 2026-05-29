@@ -15,7 +15,6 @@ sealed class Program
         };
         var domainSettings = DomainSettings.FromEnvironment();
         var managedLoginProviderSettings = ManagedLoginProviderSettings.FromEnvironment();
-        var managedLoginSecretSettings = ManagedLoginSecretSettings.FromEnvironment();
         var runtimeSettings = ProductionRuntimeSettings.FromEnvironment();
         var runtimeSecretSettings = RuntimeSecretSettings.FromEnvironment();
 
@@ -33,8 +32,7 @@ sealed class Program
                 "../publish/cognito-pre-signup-linker",
                 "cognito-pre-signup-linker"),
             DomainSettings = domainSettings,
-            ManagedLoginProviderSettings = managedLoginProviderSettings,
-            ManagedLoginSecretSettings = managedLoginSecretSettings
+            ManagedLoginProviderSettings = managedLoginProviderSettings
         });
 
         var ai = new AIStack(app, "Conscia-AI", new StackProps { Env = env });
