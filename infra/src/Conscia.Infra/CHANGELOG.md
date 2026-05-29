@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.6.3](https://github.com/nearlyheadlessarvie/conscia/compare/infra/v1.6.2...infra/v1.6.3) (2026-05-29)
+
+
+### Bug Fixes
+
+* **infra:** retain legacy transaction stream export ([#156](https://github.com/nearlyheadlessarvie/conscia/issues/156)) ([4d56dcd](https://github.com/nearlyheadlessarvie/conscia/commit/4d56dcdd54a6b007436010741fa0dc942e5eebcb))
+
 ## [1.6.2](https://github.com/nearlyheadlessarvie/conscia/compare/infra/v1.6.1...infra/v1.6.2) (2026-05-29)
 
 
