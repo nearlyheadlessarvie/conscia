@@ -616,7 +616,8 @@ void main() {
       find.text('A small pause can show whether this moment fit your rhythm.'),
       findsOneWidget,
     );
-    expect(find.byKey(const ValueKey('dashboard-reflect-feature-card')), findsOneWidget);
+    expect(find.byKey(const ValueKey('dashboard-reflect-feature-card')),
+        findsOneWidget);
     expect(
       find.descendant(
         of: find.byKey(const ValueKey('dashboard-reflect-feature-card')),
@@ -624,6 +625,16 @@ void main() {
       ),
       findsOneWidget,
     );
+    final dynamic reflectCategoryBadge = tester.widget<Widget>(
+      find.descendant(
+        of: find.byKey(const ValueKey('dashboard-reflect-feature-card')),
+        matching: find.byWidgetPredicate(
+          (widget) => widget.runtimeType.toString() == '_CategoryBadge',
+        ),
+      ),
+    );
+    expect(reflectCategoryBadge.filled, isTrue);
+    expect(reflectCategoryBadge.size, 32);
     expect(find.text('2 more moments waiting'), findsNothing);
     expect(
       find.byKey(const ValueKey('dashboard-reflect-preview-card-0')),

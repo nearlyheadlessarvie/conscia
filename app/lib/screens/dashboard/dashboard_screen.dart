@@ -966,10 +966,10 @@ class _DashboardReflectQueueState extends State<_DashboardReflectQueue> {
     final displayCounterparty =
         prompt.description.isNotEmpty ? prompt.description : 'Unknown';
     return RegretPromptCard(
-      categoryBadge: TransactionTile.badgeFor(
-        prompt.category,
-        size: 30,
-        filled: false,
+      categoryBadge: CategoryIcons.badge(
+        displayCategoryForTransaction(prompt),
+        size: 32,
+        type: prompt.type == 'income' ? 'Income' : 'Expense',
       ),
       counterparty: displayCounterparty,
       amount: prompt.amount.abs(),
