@@ -12,7 +12,6 @@ import 'package:conscia_app/core/theme/app_theme.dart';
 import 'package:conscia_app/core/utils/currency_formatter.dart';
 import 'package:conscia_app/screens/assistant/pre_purchase_screen.dart';
 import 'package:conscia_app/screens/transactions/transaction_form_screen.dart';
-import 'package:conscia_app/screens/transactions/widgets/transaction_style_category_selector.dart';
 import 'package:conscia_app/screens/transactions/widgets/voice_input_button.dart';
 import 'package:conscia_app/services/ai_service.dart';
 import 'package:conscia_app/widgets/editorial_sticky_header.dart';
@@ -725,15 +724,9 @@ void main() {
 
     expect(find.text('Travel'), findsNothing);
 
-    final categoryRail = find.descendant(
-      of: find.byType(TransactionStyleCategorySelector),
-      matching: find.byWidgetPredicate(
-        (widget) => widget is ListView && widget.scrollDirection == Axis.horizontal,
-      ),
-    );
-    await tester.drag(categoryRail, const Offset(-260, 0), warnIfMissed: false);
+    await tester.ensureVisible(find.text('More'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('More'), warnIfMissed: false);
+    await tester.tap(find.text('More'));
     await tester.pumpAndSettle();
 
     expect(find.text('Travel'), findsWidgets);

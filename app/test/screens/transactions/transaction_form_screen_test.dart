@@ -265,6 +265,7 @@ Future<ProviderContainer> _pumpTransactionForm(
       recurringServiceProvider.overrideWithValue(_FakeRecurringService()),
       budgetServiceProvider.overrideWithValue(_StaticBudgetService(budgets)),
       budgetReconciliationEnabledProvider.overrideWithValue(false),
+      _disabledRemoteAlertSyncOverride(),
       exchangeRateProvider.overrideWith((ref, pair) async => null),
       managedCategoriesProvider.overrideWith((ref, query) async => const []),
       familySpaceProvider.overrideWith((ref) async => familySpace),
@@ -315,6 +316,14 @@ Finder _amountInput() {
   );
 }
 
+Future<void> _tapVisibleText(WidgetTester tester, String text) async {
+  final finder = find.text(text).first;
+  await tester.ensureVisible(finder);
+  await tester.pumpAndSettle();
+  await tester.tap(finder);
+  await tester.pumpAndSettle();
+}
+
 Future<Widget> buildTransactionFormApp(
   WidgetTester tester, {
   Map<String, Object> initialPrefs = const {
@@ -358,6 +367,7 @@ Future<Widget> buildTransactionFormApp(
       recurringServiceProvider.overrideWithValue(_FakeRecurringService()),
       budgetServiceProvider.overrideWithValue(_StaticBudgetService(const [])),
       budgetReconciliationEnabledProvider.overrideWithValue(false),
+      _disabledRemoteAlertSyncOverride(),
       exchangeRateProvider.overrideWith((ref, pair) async => null),
       managedCategoriesProvider.overrideWith((ref, query) async => const []),
       familySpaceProvider.overrideWith((ref) async => null),
@@ -617,8 +627,7 @@ void main() {
     expect(find.text('More'), findsNothing);
     expect(find.text('Premium categories'), findsOneWidget);
 
-    await tester.tap(find.text('Premium categories'));
-    await tester.pumpAndSettle();
+    await _tapVisibleText(tester, 'Premium categories');
 
     expect(find.byType(BottomSheet), findsAtLeastNWidgets(1));
     expect(find.text('Premium Feature'), findsOneWidget);
@@ -1061,13 +1070,7 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.enterText(_amountInput(), '12.50');
-    await tester.tap(
-      find.ancestor(
-        of: find.text('Dining'),
-        matching: find.byType(GestureDetector),
-      ),
-    );
-    await tester.pumpAndSettle();
+    await _tapVisibleText(tester, 'Dining');
     await tester.tap(find.text('Save Transaction'));
     await tester.pumpAndSettle();
 
@@ -1103,13 +1106,7 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.enterText(_amountInput(), '1.234,56');
-    await tester.tap(
-      find.ancestor(
-        of: find.text('Dining'),
-        matching: find.byType(GestureDetector),
-      ),
-    );
-    await tester.pumpAndSettle();
+    await _tapVisibleText(tester, 'Dining');
     await tester.tap(find.text('Save Transaction'));
     await tester.pumpAndSettle();
 
@@ -1165,8 +1162,7 @@ void main() {
     await tester.tap(find.text('Family'));
     await tester.pumpAndSettle();
     await tester.enterText(_amountInput(), '1500');
-    await tester.tap(find.text('Groceries'));
-    await tester.pumpAndSettle();
+    await _tapVisibleText(tester, 'Groceries');
     await tester.tap(find.text('Save Transaction'));
     await tester.pumpAndSettle();
 
@@ -1240,8 +1236,7 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.enterText(_amountInput(), '12.50');
-    await tester.tap(find.text('Groceries'));
-    await tester.pumpAndSettle();
+    await _tapVisibleText(tester, 'Groceries');
     await tester.tap(find.text('Save Transaction'));
     await tester.pumpAndSettle();
 
@@ -1477,4 +1472,14 @@ void main() {
     expect(updatedBudget.spent, 23.5);
     expect(updatedBudget.percentage, 0.235);
   });
+}
+
+Override _disabledRemoteAlertSyncOverride() {
+  return alertActionsProvider.overrideWith(
+    (ref) => AlertActions(
+      dio: Dio(),
+      enabled: false,
+      onRemoteChanged: () {},
+    ),
+  );
 }

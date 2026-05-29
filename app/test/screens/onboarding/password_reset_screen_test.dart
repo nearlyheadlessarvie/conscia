@@ -105,6 +105,8 @@ void main() {
     await tester.enterText(fields.at(0), '123456');
     await tester.enterText(fields.at(1), 'FreshPass123');
     await tester.enterText(fields.at(2), 'FreshPass123');
+    await tester
+        .ensureVisible(find.widgetWithText(FilledButton, 'Reset password'));
     await tester.tap(find.widgetWithText(FilledButton, 'Reset password'));
     await tester.pump();
 
