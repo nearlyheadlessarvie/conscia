@@ -70,6 +70,13 @@ public static class RecurringEndpoints
             return Results.NoContent();
         }).WithName("DeleteRecurring");
 
+        group.MapDelete("/{id:guid}/transactions", async (HttpContext ctx, Guid id, ITransactionService transactionSvc) =>
+        {
+            var userId = ctx.User.GetUserId();
+            await transactionSvc.DeleteRecurringSeriesAsync(userId, id, ctx.RequestAborted);
+            return Results.NoContent();
+        }).WithName("DeleteRecurringTransactions");
+
         return group;
     }
 }

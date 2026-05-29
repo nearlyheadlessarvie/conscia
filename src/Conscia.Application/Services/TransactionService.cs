@@ -214,6 +214,27 @@ public class TransactionService : ITransactionService
         _logger.LogInformation("Deleting transaction {TransactionId} for user {UserId}", id, userId);
     }
 
+    public async Task DeleteRecurringSeriesAsync(Guid userId, Guid recurringScheduleId, CancellationToken ct = default)
+    {
+        var transactions = await _repo.ListByRecurringScheduleAsync(userId, recurringScheduleId, ct);
+        foreach (var transaction in transactions)
+        {
+            await _repo.DeleteWithOutboxAsync(
+                userId,
+                transaction.Id,
+                CreateTransactionDeletedEvent(transaction),
+                ct);
+        }
+
+        if (_recurringScheduleService is not null)
+        {
+            await _recurringScheduleService.DeleteAsync(userId, recurringScheduleId, ct);
+        }
+
+        _logger.LogInformation("Deleting recurring series {RecurringScheduleId} for user {UserId}",
+            recurringScheduleId, userId);
+    }
+
     public Task UpdateRegretLevelAsync(Guid userId, Guid id, RegretLevel level, CancellationToken ct = default) =>
         _repo.UpdateRegretLevelAsync(userId, id, level, ct);
 

@@ -279,6 +279,69 @@ public class TransactionServiceTests
     }
 
     [Fact]
+    public async Task DeleteRecurringSeriesAsync_DeletesInstancesAndSchedule()
+    {
+        var userId = Guid.NewGuid();
+        var scheduleId = Guid.NewGuid();
+        var firstTransaction = new Transaction
+        {
+            Id = Guid.NewGuid(),
+            UserId = userId,
+            Type = TransactionType.Expense,
+            Amount = new Money(50, "USD"),
+            Category = "Bills",
+            Date = new DateTime(2026, 05, 01, 0, 0, 0, DateTimeKind.Utc),
+            RecurringScheduleId = scheduleId,
+            RecurringOccurrenceDate = new DateTime(2026, 05, 01, 0, 0, 0, DateTimeKind.Utc)
+        };
+        var secondTransaction = new Transaction
+        {
+            Id = Guid.NewGuid(),
+            UserId = userId,
+            Type = TransactionType.Expense,
+            Amount = new Money(50, "USD"),
+            Category = "Bills",
+            Date = new DateTime(2026, 06, 01, 0, 0, 0, DateTimeKind.Utc),
+            RecurringScheduleId = scheduleId,
+            RecurringOccurrenceDate = new DateTime(2026, 06, 01, 0, 0, 0, DateTimeKind.Utc)
+        };
+
+        _repoMock.Setup(r => r.ListByRecurringScheduleAsync(
+                userId,
+                scheduleId,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync([firstTransaction, secondTransaction]);
+        _repoMock.Setup(r => r.DeleteWithOutboxAsync(
+                userId,
+                It.IsAny<Guid>(),
+                It.IsAny<OutboxEvent>(),
+                It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+        _recurringScheduleServiceMock
+            .Setup(s => s.DeleteAsync(userId, scheduleId, It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        await _svc.DeleteRecurringSeriesAsync(userId, scheduleId);
+
+        _repoMock.Verify(r => r.DeleteWithOutboxAsync(
+            userId,
+            firstTransaction.Id,
+            It.Is<OutboxEvent>(e =>
+                e.EventType == OutboxEventType.TransactionDeleted &&
+                e.Payload.Contains("\"PreviousCategory\":\"Bills\"")),
+            It.IsAny<CancellationToken>()), Times.Once);
+        _repoMock.Verify(r => r.DeleteWithOutboxAsync(
+            userId,
+            secondTransaction.Id,
+            It.IsAny<OutboxEvent>(),
+            It.IsAny<CancellationToken>()), Times.Once);
+        _recurringScheduleServiceMock.Verify(s => s.DeleteAsync(
+            userId,
+            scheduleId,
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
     public async Task UpdateRegretLevelAsync_DelegatesToRepo()
     {
         var txnId = Guid.NewGuid();
