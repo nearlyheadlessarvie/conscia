@@ -7,6 +7,7 @@ import '../../core/constants/app_icons.dart';
 import '../../core/errors/app_error.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_layout.dart';
+import '../../core/utils/password_policy.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/passkey_provider.dart';
 import '../../providers/user_provider.dart';
@@ -297,14 +298,6 @@ class _PasswordSheetState extends ConsumerState<_PasswordSheet> {
     super.dispose();
   }
 
-  String? _validatePassword(String value) {
-    if (value.isEmpty) return 'Password is required';
-    if (value.length < 8) return 'At least 8 characters';
-    if (!RegExp(r'[A-Z]').hasMatch(value)) return 'Include 1 uppercase letter';
-    if (!RegExp(r'[0-9]').hasMatch(value)) return 'Include 1 number';
-    return null;
-  }
-
   String? _validateConfirmPassword(String value) {
     if (value != _passwordController.text) return 'Passwords do not match';
     return null;
@@ -327,7 +320,9 @@ class _PasswordSheetState extends ConsumerState<_PasswordSheet> {
         widget.hasPassword && _currentPasswordController.text.isEmpty
             ? 'Current password is required'
             : null;
-    final passwordError = _validatePassword(_passwordController.text);
+    final passwordError = validatePasswordForCognito(
+      _passwordController.text,
+    );
     final confirmError =
         _validateConfirmPassword(_confirmPasswordController.text);
     if (currentPasswordError != null ||

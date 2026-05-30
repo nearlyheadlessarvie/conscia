@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/constants/app_icons.dart';
 import '../../core/errors/app_error.dart';
 import '../../core/utils/email_validator.dart';
+import '../../core/utils/password_policy.dart';
 import '../../providers/auth_provider.dart';
 import '../../widgets/floating_label_text_field.dart';
 import '../../widgets/conscia_app_bar.dart';
@@ -46,14 +47,6 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
     return null;
   }
 
-  String? _validatePassword(String? value) {
-    if (value == null || value.isEmpty) return 'Password is required';
-    if (value.length < 8) return 'At least 8 characters';
-    if (!RegExp(r'[A-Z]').hasMatch(value)) return 'Include 1 uppercase letter';
-    if (!RegExp(r'[0-9]').hasMatch(value)) return 'Include 1 number';
-    return null;
-  }
-
   String? _validateConfirmPassword(String? value) {
     if (value != _passwordController.text) return 'Passwords do not match';
     return null;
@@ -75,7 +68,9 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
 
   Future<void> _submit() async {
     final emailError = _validateEmail(_emailController.text.trim());
-    final passwordError = _validatePassword(_passwordController.text);
+    final passwordError = validatePasswordForCognito(
+      _passwordController.text,
+    );
     final confirmPasswordError =
         _validateConfirmPassword(_confirmPasswordController.text);
     if (emailError != null ||

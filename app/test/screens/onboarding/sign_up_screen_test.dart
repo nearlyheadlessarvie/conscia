@@ -129,6 +129,33 @@ void main() {
     expect(authNotifier.lastRegisteredPassword, 'SecurePass123');
   });
 
+  testWidgets('create account rejects passwords outside Cognito policy', (
+    tester,
+  ) async {
+    final authNotifier = _RecordingAuthNotifier();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          authProvider.overrideWith((ref) => authNotifier),
+        ],
+        child: const MaterialApp(
+          home: SignUpScreen(),
+        ),
+      ),
+    );
+
+    final fields = find.byType(TextField);
+    await tester.enterText(fields.at(0), 'story-demo@example.com');
+    await tester.enterText(fields.at(1), 'SECUREPASS123');
+    await tester.enterText(fields.at(2), 'SECUREPASS123');
+    await tester.tap(find.widgetWithText(FilledButton, 'Create Account'));
+    await tester.pump();
+
+    expect(find.textContaining('Include 1 lowercase letter'), findsOneWidget);
+    expect(authNotifier.lastRegisteredEmail, isNull);
+  });
+
   testWidgets('sign up shows friendly registration errors', (
     tester,
   ) async {

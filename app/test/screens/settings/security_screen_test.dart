@@ -148,6 +148,28 @@ void main() {
     expect(auth.lastCurrentPassword, 'OldPass123');
   });
 
+  testWidgets('security screen rejects passwords outside Cognito policy', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+    final auth = _RecordingAuthService();
+
+    await _pumpSecurityScreen(tester, prefs: prefs, authService: auth);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Add Password'));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextField).at(0), 'STRONGPASS123');
+    await tester.enterText(find.byType(TextField).at(1), 'STRONGPASS123');
+    await tester.tap(find.text('Save password'));
+    await tester.pump();
+
+    expect(find.textContaining('Include 1 lowercase letter'), findsOneWidget);
+    expect(auth.lastPassword, isNull);
+  });
+
   testWidgets('security screen registers passkeys and enables passkey first',
       (tester) async {
     SharedPreferences.setMockInitialValues({});
