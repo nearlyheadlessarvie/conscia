@@ -207,6 +207,48 @@ public class CognitoAuthServiceTests
     }
 
     [Fact]
+    public async Task LoginAsync_ExistingLocalUserWithSameEmail_ReturnsResolvedLocalUserId()
+    {
+        var cognitoSub = Guid.NewGuid();
+        var localUserId = Guid.NewGuid();
+        await _repo.AddAsync(new User
+        {
+            Id = localUserId,
+            Email = "login@example.com",
+            EmailConfirmed = true
+        });
+
+        _cognito
+            .Setup(c => c.InitiateAuthAsync(
+                It.Is<InitiateAuthRequest>(r =>
+                    r.ClientId == "client-123" &&
+                    r.AuthFlow == AuthFlowType.USER_PASSWORD_AUTH &&
+                    r.AuthParameters["USERNAME"] == "login@example.com" &&
+                    r.AuthParameters["PASSWORD"] == "password123"),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new InitiateAuthResponse
+            {
+                AuthenticationResult = new AuthenticationResultType
+                {
+                    AccessToken = CreateJwt(cognitoSub, "login@example.com"),
+                    IdToken = CreateJwt(cognitoSub, "login@example.com"),
+                    RefreshToken = "refresh-token-123"
+                }
+            });
+
+        var result = await _auth.LoginAsync(" Login@Example.com ", "password123");
+
+        Assert.True(result.Success);
+        Assert.Equal(localUserId.ToString(), result.UserId);
+
+        var identity = Assert.Single(_repo.Identities);
+        Assert.Equal(localUserId, identity.UserId);
+        Assert.Equal(AuthProvider.Email, identity.Provider);
+        Assert.Equal("login@example.com", identity.ProviderSub);
+        Assert.True(identity.HasPassword);
+    }
+
+    [Fact]
     public async Task LoginAsync_NewPasswordRequired_ReturnsPasswordChangeChallenge()
     {
         _cognito

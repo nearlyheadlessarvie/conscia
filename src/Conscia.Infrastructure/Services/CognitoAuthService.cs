@@ -64,7 +64,7 @@ public class CognitoAuthService : IAuthService
                 };
             }
 
-            await EnsureLocalUserAsync(
+            var user = await EnsureLocalUserAsync(
                 userId,
                 email,
                 AuthProvider.Email,
@@ -77,7 +77,7 @@ public class CognitoAuthService : IAuthService
             {
                 Success = true,
                 RequiresConfirmation = response.UserConfirmed != true,
-                UserId = userId.ToString(),
+                UserId = user.Id.ToString(),
                 Email = email
             };
         }
@@ -439,9 +439,10 @@ public class CognitoAuthService : IAuthService
         var (userId, email) = ReadClaims(tokenForClaims);
         email ??= emailFallback;
 
+        User? user = null;
         if (userId is not null && email is not null)
         {
-            await EnsureLocalUserAsync(
+            user = await EnsureLocalUserAsync(
                 userId.Value,
                 email,
                 AuthProvider.Email,
@@ -456,12 +457,12 @@ public class CognitoAuthService : IAuthService
             Success = true,
             AccessToken = tokens.AccessToken,
             RefreshToken = tokens.RefreshToken,
-            UserId = userId?.ToString(),
+            UserId = user?.Id.ToString() ?? userId?.ToString(),
             Email = email
         };
     }
 
-    private async Task EnsureLocalUserAsync(
+    private async Task<User> EnsureLocalUserAsync(
         Guid userId,
         string email,
         AuthProvider provider,
@@ -509,6 +510,8 @@ public class CognitoAuthService : IAuthService
             existingIdentity.HasPassword = true;
             await _users.UpdateIdentityAsync(existingIdentity, ct);
         }
+
+        return user;
     }
 
     private static (Guid? UserId, string? Email) ReadClaims(string? token)

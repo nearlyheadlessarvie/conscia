@@ -1,8 +1,12 @@
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
 using System.Text.Json;
 using Amazon.CognitoIdentityProvider;
 using Amazon.CognitoIdentityProvider.Model;
 using Amazon.Runtime.Documents;
 using Conscia.Application.Exceptions;
+using Conscia.Domain.Entities;
+using Conscia.Domain.Enums;
 using Conscia.Infrastructure.Services;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -13,6 +17,7 @@ namespace Conscia.Tests.Unit.Infrastructure;
 public class CognitoPasskeyAuthServiceTests
 {
     private readonly Mock<IAmazonCognitoIdentityProvider> _cognito = new();
+    private readonly InMemoryUserRepository _repo = new();
     private readonly CognitoPasskeyAuthService _passkeys;
 
     public CognitoPasskeyAuthServiceTests()
@@ -27,7 +32,7 @@ public class CognitoPasskeyAuthServiceTests
         _passkeys = new CognitoPasskeyAuthService(
             config,
             _cognito.Object,
-            new InMemoryUserRepository(),
+            _repo,
             NullLogger<CognitoPasskeyAuthService>.Instance);
     }
 
@@ -120,5 +125,64 @@ public class CognitoPasskeyAuthServiceTests
         await _passkeys.CompleteRegistrationAsync("access-token", credentialJson);
 
         _cognito.VerifyAll();
+    }
+
+    [Fact]
+    public async Task CompleteAuthenticationAsync_ExistingLocalUserWithSameEmail_ReturnsResolvedLocalUserId()
+    {
+        var cognitoSub = Guid.NewGuid();
+        var localUserId = Guid.NewGuid();
+        await _repo.AddAsync(new User
+        {
+            Id = localUserId,
+            Email = "demo@example.com",
+            EmailConfirmed = true
+        });
+
+        _cognito
+            .Setup(c => c.RespondToAuthChallengeAsync(
+                It.Is<RespondToAuthChallengeRequest>(r =>
+                    r.ClientId == "client-123" &&
+                    r.Session == "session-token" &&
+                    r.ChallengeName == ChallengeNameType.WEB_AUTHN &&
+                    r.ChallengeResponses["USERNAME"] == "demo@example.com" &&
+                    r.ChallengeResponses["CREDENTIAL"] == "{}"),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new RespondToAuthChallengeResponse
+            {
+                AuthenticationResult = new AuthenticationResultType
+                {
+                    AccessToken = CreateJwt(cognitoSub, "demo@example.com"),
+                    IdToken = CreateJwt(cognitoSub, "demo@example.com"),
+                    RefreshToken = "refresh-token-123"
+                }
+            });
+
+        var result = await _passkeys.CompleteAuthenticationAsync(
+            " Demo@Example.com ",
+            "session-token",
+            ChallengeNameType.WEB_AUTHN.Value,
+            "{}");
+
+        Assert.True(result.Success);
+        Assert.Equal(localUserId.ToString(), result.UserId);
+
+        var identity = Assert.Single(_repo.Identities);
+        Assert.Equal(localUserId, identity.UserId);
+        Assert.Equal(AuthProvider.Email, identity.Provider);
+        Assert.Equal("demo@example.com", identity.ProviderSub);
+    }
+
+    private static string CreateJwt(Guid userId, string email)
+    {
+        var token = new JwtSecurityToken(
+            issuer: "https://cognito-idp.ap-southeast-1.amazonaws.com/ap-southeast-1_example",
+            claims:
+            [
+                new Claim("sub", userId.ToString()),
+                new Claim("email", email)
+            ]);
+
+        return new JwtSecurityTokenHandler().WriteToken(token);
     }
 }
