@@ -34,6 +34,19 @@ class AuthConfirmationRequiredException implements Exception {
   String toString() => 'Email confirmation required';
 }
 
+class AuthPasswordChangeRequiredException implements Exception {
+  final String email;
+  final String session;
+
+  const AuthPasswordChangeRequiredException({
+    required this.email,
+    required this.session,
+  });
+
+  @override
+  String toString() => 'Password change required';
+}
+
 class AuthRegistrationResult {
   final bool success;
   final bool requiresConfirmation;
@@ -180,6 +193,35 @@ class AuthService {
           email: (data['email'] as String?) ?? email,
         );
       }
+      if (data is Map && data['requiresPasswordChange'] == true) {
+        final session = data['session'] as String?;
+        if (session != null && session.isNotEmpty) {
+          throw AuthPasswordChangeRequiredException(
+            email: (data['email'] as String?) ?? email,
+            session: session,
+          );
+        }
+      }
+      rethrow;
+    }
+  }
+
+  Future<AuthTokens> completePasswordChange(
+    String email,
+    String session,
+    String password,
+  ) async {
+    try {
+      final response = await _dio.post(
+        ApiConstants.passwordChangeRequired,
+        data: {
+          'email': email,
+          'session': session,
+          'password': password,
+        },
+      );
+      return AuthTokens.fromJson(response.data as Map<String, dynamic>);
+    } on DioException {
       rethrow;
     }
   }

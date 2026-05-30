@@ -16,6 +16,7 @@ import '../services/cognito_managed_login_service.dart';
 enum AuthStatus {
   unauthenticated,
   pendingConfirmation,
+  pendingPasswordChange,
   authenticated,
   sessionExpired,
 }
@@ -29,6 +30,7 @@ class AuthState {
   final String? refreshToken;
   final String? userId;
   final String? pendingEmail;
+  final String? passwordChangeSession;
   final bool isLoading;
   final bool isRestoringSession;
   final String? error;
@@ -41,6 +43,7 @@ class AuthState {
     this.refreshToken,
     this.userId,
     this.pendingEmail,
+    this.passwordChangeSession,
     this.isLoading = false,
     this.isRestoringSession = false,
     this.error,
@@ -57,6 +60,7 @@ class AuthState {
     Object? refreshToken = _unset,
     Object? userId = _unset,
     Object? pendingEmail = _unset,
+    Object? passwordChangeSession = _unset,
     bool? isLoading,
     bool? isRestoringSession,
     Object? error = _unset,
@@ -75,6 +79,9 @@ class AuthState {
       pendingEmail: identical(pendingEmail, _unset)
           ? this.pendingEmail
           : pendingEmail as String?,
+      passwordChangeSession: identical(passwordChangeSession, _unset)
+          ? this.passwordChangeSession
+          : passwordChangeSession as String?,
       isLoading: isLoading ?? this.isLoading,
       isRestoringSession: isRestoringSession ?? this.isRestoringSession,
       error: identical(error, _unset) ? this.error : error as String?,
@@ -191,6 +198,36 @@ class AuthNotifier extends StateNotifier<AuthState> {
     } on AuthConfirmationRequiredException catch (e) {
       saveLastEmail(email);
       await _rememberPendingConfirmation(e.email, password: password);
+    } on AuthPasswordChangeRequiredException catch (e) {
+      saveLastEmail(e.email);
+      _rememberPendingPasswordChange(e.email, e.session);
+    } catch (e, s) {
+      final error = AppError.from(e, stackTrace: s);
+      state = state.copyWith(isLoading: false, error: error.userMessage);
+      throw error;
+    }
+  }
+
+  Future<void> completePasswordChange(String password) async {
+    final email = state.pendingEmail;
+    final session = state.passwordChangeSession;
+    if (email == null || email.isEmpty || session == null || session.isEmpty) {
+      throw Exception('No pending password change');
+    }
+
+    state = state.copyWith(
+      isLoading: true,
+      isRestoringSession: false,
+      error: null,
+    );
+    try {
+      final tokens = await _authService.completePasswordChange(
+        email,
+        session,
+        password,
+      );
+      await saveLastEmail(email);
+      await _setAuthenticated(tokens);
     } catch (e, s) {
       final error = AppError.from(e, stackTrace: s);
       state = state.copyWith(isLoading: false, error: error.userMessage);
@@ -349,6 +386,10 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
   void cancelPendingConfirmation() {
     _pendingPassword = null;
+    state = const AuthState();
+  }
+
+  void cancelPendingPasswordChange() {
     state = const AuthState();
   }
 
@@ -667,6 +708,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       refreshToken: tokens.refreshToken,
       userId: tokens.userId,
       pendingEmail: null,
+      passwordChangeSession: null,
       isLoading: false,
       isRestoringSession: false,
       error: null,
@@ -717,6 +759,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       idToken: null,
       refreshToken: null,
       userId: null,
+      passwordChangeSession: null,
       isLoading: false,
       isRestoringSession: false,
       error: null,
@@ -745,6 +788,23 @@ class AuthNotifier extends StateNotifier<AuthState> {
       idToken: null,
       refreshToken: null,
       userId: userId,
+      passwordChangeSession: null,
+      isLoading: false,
+      isRestoringSession: false,
+      error: null,
+      wasExplicitLogout: false,
+    );
+  }
+
+  void _rememberPendingPasswordChange(String email, String session) {
+    state = state.copyWith(
+      status: AuthStatus.pendingPasswordChange,
+      pendingEmail: email,
+      passwordChangeSession: session,
+      accessToken: null,
+      idToken: null,
+      refreshToken: null,
+      userId: null,
       isLoading: false,
       isRestoringSession: false,
       error: null,
