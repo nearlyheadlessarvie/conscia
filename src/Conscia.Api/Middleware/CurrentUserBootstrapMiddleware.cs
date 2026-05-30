@@ -55,9 +55,14 @@ public sealed class CurrentUserBootstrapMiddleware
             ? null
             : emailValue.Trim().ToLowerInvariant();
         var emailConfirmed = bool.TryParse(principal.FindFirstValue("email_verified"), out var verified) && verified;
-        var (provider, providerSub) = ResolveIdentity(principal, email ?? string.Empty);
+        var resolvedIdentity = ResolveIdentity(principal, email);
 
-        var user = await users.GetByProviderAsync(provider, providerSub, ct);
+        User? user = null;
+        if (resolvedIdentity is { } identity)
+        {
+            user = await users.GetByProviderAsync(identity.Provider, identity.ProviderSub, ct);
+        }
+
         user ??= await users.GetByIdAsync(userId, ct);
         if (user is null)
         {
@@ -109,22 +114,30 @@ public sealed class CurrentUserBootstrapMiddleware
             UseLocalUserId(context, user.Id);
         }
 
-        var existingIdentity = await users.GetByProviderAsync(provider, providerSub, ct);
+        if (resolvedIdentity is null)
+        {
+            return;
+        }
+
+        var existingIdentity = await users.GetByProviderAsync(
+            resolvedIdentity.Value.Provider,
+            resolvedIdentity.Value.ProviderSub,
+            ct);
         if (existingIdentity is null)
         {
             await users.AddIdentityAsync(new UserIdentity
             {
                 Id = Guid.NewGuid(),
                 UserId = user.Id,
-                Provider = provider,
-                ProviderSub = providerSub,
+                Provider = resolvedIdentity.Value.Provider,
+                ProviderSub = resolvedIdentity.Value.ProviderSub,
                 Role = UserIdentityRole.Member,
                 CreatedAt = DateTime.UtcNow
             }, ct);
         }
     }
 
-    private (AuthProvider Provider, string ProviderSub) ResolveIdentity(ClaimsPrincipal principal, string email)
+    private (AuthProvider Provider, string ProviderSub)? ResolveIdentity(ClaimsPrincipal principal, string? email)
     {
         var identity = principal
             .FindAll("identities")
@@ -134,7 +147,9 @@ public sealed class CurrentUserBootstrapMiddleware
                 !string.IsNullOrWhiteSpace(i.UserId));
         if (identity is null)
         {
-            return (AuthProvider.Email, email);
+            return string.IsNullOrWhiteSpace(email)
+                ? null
+                : (AuthProvider.Email, email);
         }
 
         if (string.Equals(identity.ProviderName, "Google", StringComparison.OrdinalIgnoreCase))
@@ -148,7 +163,9 @@ public sealed class CurrentUserBootstrapMiddleware
             return (AuthProvider.Apple, identity.UserId!);
         }
 
-        return (AuthProvider.Email, email);
+        return string.IsNullOrWhiteSpace(email)
+            ? null
+            : (AuthProvider.Email, email);
     }
 
     private IReadOnlyList<CognitoIdentityClaim> ParseIdentityClaims(string? identitiesJson)

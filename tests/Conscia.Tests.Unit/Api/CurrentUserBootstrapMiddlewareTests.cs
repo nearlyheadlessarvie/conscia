@@ -123,4 +123,55 @@ public class CurrentUserBootstrapMiddlewareTests
         users.Verify(repo => repo.AddAsync(It.IsAny<User>(), It.IsAny<CancellationToken>()), Times.Never);
         users.Verify(repo => repo.AddIdentityAsync(It.IsAny<UserIdentity>(), It.IsAny<CancellationToken>()), Times.Never);
     }
+
+    [Fact]
+    public async Task InvokeAsync_UsesTokenUserId_WhenEmailClaimIsMissingAndEmptyEmailIdentityExists()
+    {
+        var tokenUserId = Guid.Parse("59ca55dc-40b1-705a-e401-896fec9c84d6");
+        var staleUserId = Guid.Parse("093a85ec-e0d1-7005-8c21-41c3341e273c");
+        var tokenUser = new User
+        {
+            Id = tokenUserId,
+            Email = "story-demo@example.com",
+            EmailConfirmed = true
+        };
+        var staleUser = new User
+        {
+            Id = staleUserId,
+            Email = "nearlyheadlessarvie@gmail.com",
+            EmailConfirmed = true
+        };
+        var middleware = new CurrentUserBootstrapMiddleware(
+            httpContext =>
+            {
+                Assert.Equal(
+                    tokenUserId.ToString(),
+                    httpContext.User.FindFirstValue(ClaimTypes.NameIdentifier));
+                return Task.CompletedTask;
+            },
+            NullLogger<CurrentUserBootstrapMiddleware>.Instance);
+        var users = new Mock<IUserRepository>();
+        users
+            .Setup(repo => repo.GetByProviderAsync(AuthProvider.Email, string.Empty, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(staleUser);
+        users
+            .Setup(repo => repo.GetByIdAsync(tokenUserId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(tokenUser);
+        var context = new DefaultHttpContext
+        {
+            User = new ClaimsPrincipal(new ClaimsIdentity(
+                [
+                    new Claim(ClaimTypes.NameIdentifier, tokenUserId.ToString())
+                ],
+                "Test"))
+        };
+
+        await middleware.InvokeAsync(context, users.Object);
+
+        users.Verify(
+            repo => repo.GetByProviderAsync(AuthProvider.Email, string.Empty, It.IsAny<CancellationToken>()),
+            Times.Never);
+        users.Verify(repo => repo.GetByEmailAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+        users.Verify(repo => repo.AddIdentityAsync(It.IsAny<UserIdentity>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
 }
