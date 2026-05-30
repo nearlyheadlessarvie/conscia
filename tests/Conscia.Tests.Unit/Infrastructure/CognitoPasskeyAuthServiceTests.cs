@@ -91,4 +91,34 @@ public class CognitoPasskeyAuthServiceTests
 
         Assert.Equal("No passkey is registered for this account yet. Sign in with your password, then set up a passkey in Settings.", ex.Message);
     }
+
+    [Fact]
+    public async Task CompleteRegistrationAsync_SendsCredentialAsJsonDocument()
+    {
+        const string credentialJson = """
+            {
+              "id": "credential-id",
+              "rawId": "credential-id",
+              "type": "public-key",
+              "response": {
+                "clientDataJSON": "client-data",
+                "attestationObject": "attestation-object"
+              },
+              "clientExtensionResults": {}
+            }
+            """;
+
+        _cognito
+            .Setup(c => c.CompleteWebAuthnRegistrationAsync(
+                It.Is<CompleteWebAuthnRegistrationRequest>(r =>
+                    r.AccessToken == "access-token" &&
+                    r.Credential.IsDictionary() &&
+                    r.Credential.AsDictionary().ContainsKey("response")),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CompleteWebAuthnRegistrationResponse());
+
+        await _passkeys.CompleteRegistrationAsync("access-token", credentialJson);
+
+        _cognito.VerifyAll();
+    }
 }
