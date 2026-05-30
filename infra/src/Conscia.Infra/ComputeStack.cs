@@ -59,6 +59,9 @@ public class ComputeStack : Stack
             ["ASPNETCORE_ENVIRONMENT"] = "Production",
             ["Auth__Cognito__UserPoolId"] = props.UserPool.UserPoolId,
             ["Auth__Cognito__ClientId"] = props.UserPoolClient.UserPoolClientId,
+            ["Auth__Cognito__LoginDomain"] = props.DomainSettings is null
+                ? string.Empty
+                : $"https://{props.DomainSettings.ResolvedCognitoDomainName}",
             ["Auth__Google__ClientId"] = props.RuntimeSettings.AuthGoogleClientId ?? string.Empty,
             ["Auth__Apple__ClientId"] = props.RuntimeSettings.AuthAppleClientId ?? string.Empty,
             ["Apple__KeyId"] = props.RuntimeSettings.AppleKeyId ?? string.Empty,
