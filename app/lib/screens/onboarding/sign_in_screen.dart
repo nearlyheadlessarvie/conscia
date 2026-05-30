@@ -139,8 +139,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
       return;
     }
 
-    if (!mounted) return;
-    setState(() => _isLoading = false);
+    _clearLoadingUnlessAuthenticated();
   }
 
   Future<void> _signInWithPasskey(String email) async {
@@ -160,14 +159,18 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
         setState(() => _errorMessage = friendlyPasskeyErrorMessage(e));
       }
     } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
+      _clearLoadingUnlessAuthenticated();
     }
   }
 
   void _dismissKeyboard() {
     FocusManager.instance.primaryFocus?.unfocus();
+  }
+
+  void _clearLoadingUnlessAuthenticated() {
+    if (!mounted) return;
+    if (ref.read(authProvider).isAuthenticated) return;
+    setState(() => _isLoading = false);
   }
 
   @override
@@ -386,11 +389,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                                                 friendlySignInErrorMessage(e);
                                           });
                                         } finally {
-                                          if (mounted) {
-                                            setState(
-                                              () => _isLoading = false,
-                                            );
-                                          }
+                                          _clearLoadingUnlessAuthenticated();
                                         }
                                       },
                               ),
@@ -417,9 +416,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                                         friendlySignInErrorMessage(e);
                                   });
                                 } finally {
-                                  if (mounted) {
-                                    setState(() => _isLoading = false);
-                                  }
+                                  _clearLoadingUnlessAuthenticated();
                                 }
                               },
                             ),
