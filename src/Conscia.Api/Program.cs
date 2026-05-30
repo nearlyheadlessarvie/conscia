@@ -381,6 +381,7 @@ builder.Services.ConfigureHttpJsonOptions(options =>
 
 // --- Health Checks ---
 builder.Services.AddHttpClient();
+builder.Services.AddHttpClient<ICognitoUserInfoClaimsProvider, CognitoUserInfoClaimsProvider>();
 var healthChecks = builder.Services.AddHealthChecks()
     .AddCheck("self", () => HealthCheckResult.Healthy(), tags: new[] { "live" })
     .AddCheck<DynamoDbHealthCheck>("dynamodb", tags: new[] { "ready", "db" })
@@ -433,6 +434,7 @@ if (app.Environment.IsDevelopment())
 
 app.UseMiddleware<AppCompatibilityMiddleware>();
 app.UseAuthentication();
+app.UseMiddleware<CognitoUserInfoClaimsMiddleware>();
 app.UseMiddleware<CurrentUserBootstrapMiddleware>();
 app.UseAuthorization();
 app.UseRateLimiter();
