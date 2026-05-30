@@ -328,6 +328,18 @@ public class CognitoAuthService : IAuthService
                 }
             }, ct);
 
+            if (response.ChallengeName == ChallengeNameType.NEW_PASSWORD_REQUIRED)
+            {
+                return new AuthResult
+                {
+                    Success = false,
+                    RequiresPasswordChange = true,
+                    Email = email,
+                    Session = response.Session,
+                    Error = "Password change required"
+                };
+            }
+
             return await TokensToAuthResultAsync(response.AuthenticationResult, email, ct);
         }
         catch (UserNotConfirmedException)
@@ -352,6 +364,45 @@ public class CognitoAuthService : IAuthService
         {
             _logger.LogError(ex, "Cognito login failed for {Email}", email);
             return new AuthResult { Success = false, Email = email, Error = "Unable to sign in right now" };
+        }
+    }
+
+    public async Task<AuthResult> CompletePasswordChangeAsync(
+        string email,
+        string session,
+        string password,
+        CancellationToken ct = default)
+    {
+        email = NormalizeEmail(email);
+
+        try
+        {
+            var response = await _cognito.RespondToAuthChallengeAsync(new RespondToAuthChallengeRequest
+            {
+                ClientId = _clientId,
+                ChallengeName = ChallengeNameType.NEW_PASSWORD_REQUIRED,
+                Session = session,
+                ChallengeResponses = new Dictionary<string, string>
+                {
+                    ["USERNAME"] = email,
+                    ["NEW_PASSWORD"] = password
+                }
+            }, ct);
+
+            return await TokensToAuthResultAsync(response.AuthenticationResult, email, ct);
+        }
+        catch (InvalidPasswordException ex)
+        {
+            return new AuthResult { Success = false, Email = email, Error = ex.Message };
+        }
+        catch (NotAuthorizedException)
+        {
+            return new AuthResult { Success = false, Email = email, Error = "Password change session expired" };
+        }
+        catch (AmazonCognitoIdentityProviderException ex)
+        {
+            _logger.LogError(ex, "Cognito password change challenge failed for {Email}", email);
+            return new AuthResult { Success = false, Email = email, Error = "Unable to change password right now" };
         }
     }
 
