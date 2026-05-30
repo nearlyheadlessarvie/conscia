@@ -93,6 +93,9 @@ class AuthConfirmationResult {
   }
 }
 
+// Public auth flows: sign-in, sign-up, verification, reset, and temporary
+// password challenges. Authenticated account password changes live in
+// AccountPasswordService.
 class AuthService {
   final Dio _dio;
 
@@ -233,20 +236,6 @@ class AuthService {
         data: {'refreshToken': refreshToken},
       );
       return AuthTokens.fromJson(response.data as Map<String, dynamic>);
-    } on DioException {
-      rethrow;
-    }
-  }
-
-  Future<void> setPassword(String password, {String? currentPassword}) async {
-    try {
-      await _dio.post(
-        ApiConstants.password,
-        data: {
-          'password': password,
-          if (currentPassword != null) 'currentPassword': currentPassword,
-        },
-      );
     } on DioException {
       rethrow;
     }

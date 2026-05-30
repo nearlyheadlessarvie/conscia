@@ -8,9 +8,9 @@ import '../../core/errors/app_error.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_layout.dart';
 import '../../core/utils/password_policy.dart';
-import '../../providers/auth_provider.dart';
 import '../../providers/passkey_provider.dart';
 import '../../providers/user_provider.dart';
+import '../../services/account_password_service.dart';
 import '../../services/passkey_service.dart';
 import '../../widgets/conscia_app_bar.dart';
 import '../../widgets/conscia_bottom_sheet.dart';
@@ -351,7 +351,7 @@ class _PasswordSheetState extends ConsumerState<_PasswordSheet> {
     });
 
     try {
-      await ref.read(authServiceProvider).setPassword(
+      await ref.read(accountPasswordServiceProvider).setPassword(
             _passwordController.text,
             currentPassword:
                 widget.hasPassword ? _currentPasswordController.text : null,

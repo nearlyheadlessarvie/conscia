@@ -1,10 +1,9 @@
 import 'package:conscia_app/core/errors/app_error.dart';
-import 'package:conscia_app/providers/auth_provider.dart';
 import 'package:conscia_app/providers/passkey_provider.dart';
 import 'package:conscia_app/providers/usage_provider.dart';
 import 'package:conscia_app/providers/user_provider.dart';
 import 'package:conscia_app/screens/settings/security_screen.dart';
-import 'package:conscia_app/services/auth_service.dart';
+import 'package:conscia_app/services/account_password_service.dart';
 import 'package:conscia_app/services/passkey_service.dart';
 import 'package:conscia_app/services/user_service.dart';
 import 'package:dio/dio.dart';
@@ -13,8 +12,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-class _RecordingAuthService extends AuthService {
-  _RecordingAuthService() : super(Dio());
+class _RecordingAccountPasswordService extends AccountPasswordService {
+  _RecordingAccountPasswordService() : super(Dio());
 
   String? lastPassword;
   String? lastCurrentPassword;
@@ -52,7 +51,7 @@ class _RecordingPasskeyService extends PasskeyService {
 Future<void> _pumpSecurityScreen(
   WidgetTester tester, {
   required SharedPreferences prefs,
-  AuthService? authService,
+  AccountPasswordService? accountPasswordService,
   PasskeyService? passkeyService,
   bool hasPassword = false,
 }) async {
@@ -70,7 +69,9 @@ Future<void> _pumpSecurityScreen(
         ),
       ),
       sharedPreferencesProvider.overrideWithValue(prefs),
-      authServiceProvider.overrideWithValue(authService ?? AuthService(Dio())),
+      accountPasswordServiceProvider.overrideWithValue(
+        accountPasswordService ?? _RecordingAccountPasswordService(),
+      ),
       passkeyAvailabilityProvider.overrideWith((ref) async => true),
       currentSessionSupportsPasskeysProvider.overrideWith((ref) => true),
       passkeyServiceProvider.overrideWithValue(
@@ -96,9 +97,13 @@ void main() {
   ) async {
     SharedPreferences.setMockInitialValues({});
     final prefs = await SharedPreferences.getInstance();
-    final auth = _RecordingAuthService();
+    final auth = _RecordingAccountPasswordService();
 
-    await _pumpSecurityScreen(tester, prefs: prefs, authService: auth);
+    await _pumpSecurityScreen(
+      tester,
+      prefs: prefs,
+      accountPasswordService: auth,
+    );
     await tester.pumpAndSettle();
 
     expect(find.byType(TextField), findsNothing);
@@ -128,12 +133,12 @@ void main() {
   ) async {
     SharedPreferences.setMockInitialValues({});
     final prefs = await SharedPreferences.getInstance();
-    final auth = _RecordingAuthService();
+    final auth = _RecordingAccountPasswordService();
 
     await _pumpSecurityScreen(
       tester,
       prefs: prefs,
-      authService: auth,
+      accountPasswordService: auth,
       hasPassword: true,
     );
     await tester.pumpAndSettle();
@@ -161,9 +166,13 @@ void main() {
   ) async {
     SharedPreferences.setMockInitialValues({});
     final prefs = await SharedPreferences.getInstance();
-    final auth = _RecordingAuthService();
+    final auth = _RecordingAccountPasswordService();
 
-    await _pumpSecurityScreen(tester, prefs: prefs, authService: auth);
+    await _pumpSecurityScreen(
+      tester,
+      prefs: prefs,
+      accountPasswordService: auth,
+    );
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('Add Password'));
@@ -183,14 +192,18 @@ void main() {
   ) async {
     SharedPreferences.setMockInitialValues({});
     final prefs = await SharedPreferences.getInstance();
-    final auth = _RecordingAuthService()
+    final auth = _RecordingAccountPasswordService()
       ..setPasswordError = Exception('Password update failed');
     AppError.configure(
       referenceIdFactory: () => 'SECURITY',
       logger: (_) {},
     );
 
-    await _pumpSecurityScreen(tester, prefs: prefs, authService: auth);
+    await _pumpSecurityScreen(
+      tester,
+      prefs: prefs,
+      accountPasswordService: auth,
+    );
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('Add Password'));
