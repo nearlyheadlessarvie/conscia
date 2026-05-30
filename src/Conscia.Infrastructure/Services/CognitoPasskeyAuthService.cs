@@ -244,9 +244,7 @@ public sealed class CognitoPasskeyAuthService : IPasskeyAuthService
     private static Document ToDocument(JsonElement element)
         => element.ValueKind switch
         {
-            JsonValueKind.Object => new Document(element
-                .EnumerateObject()
-                .ToDictionary(property => property.Name, property => ToDocument(property.Value))),
+            JsonValueKind.Object => new Document(ToDocumentDictionary(element)),
             JsonValueKind.Array => new Document(element
                 .EnumerateArray()
                 .Select(ToDocument)
@@ -259,6 +257,58 @@ public sealed class CognitoPasskeyAuthService : IPasskeyAuthService
             JsonValueKind.False => new Document(false),
             _ => Document.FromObject(null)
         };
+
+    private static Dictionary<string, Document> ToDocumentDictionary(JsonElement element)
+    {
+        var values = new Dictionary<string, Document>();
+        foreach (var property in element.EnumerateObject())
+        {
+            var value = ToDocumentProperty(property);
+            if (value.HasValue)
+            {
+                values[property.Name] = value.Value;
+            }
+        }
+
+        return values;
+    }
+
+    private static Document? ToDocumentProperty(JsonProperty property)
+    {
+        if (property.NameEquals("transports") &&
+            property.Value.ValueKind == JsonValueKind.Array)
+        {
+            var transports = property.Value
+                .EnumerateArray()
+                .Select(element => element.ValueKind == JsonValueKind.String
+                    ? NormalizeWebAuthnTransport(element.GetString())
+                    : null)
+                .Where(transport => transport is not null)
+                .Select(transport => new Document(transport!))
+                .ToArray();
+
+            return transports.Length == 0
+                ? (Document?)null
+                : new Document(transports);
+        }
+
+        return ToDocument(property.Value);
+    }
+
+    private static string? NormalizeWebAuthnTransport(string? transport)
+    {
+        return transport?.Trim().ToLowerInvariant() switch
+        {
+            "usb" => "usb",
+            "nfc" => "nfc",
+            "ble" => "ble",
+            "bluetooth" => "ble",
+            "smart-card" => "smart-card",
+            "hybrid" => "hybrid",
+            "internal" => "internal",
+            _ => null
+        };
+    }
 
     private static object? ToJsonValue(Document document)
         => document switch
