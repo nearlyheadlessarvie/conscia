@@ -1,3 +1,4 @@
+using Conscia.Api.Configuration;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Text.Json;
@@ -67,6 +68,34 @@ public class ApiVersioningTests : IClassFixture<TestWebAppFactory>
             Assert.Equal("1.2.3", payload.RootElement.GetProperty("version").GetString());
             Assert.Equal("abc123def456", payload.RootElement.GetProperty("commitSha").GetString());
             Assert.Equal("2026-05-27T12:34:56Z", payload.RootElement.GetProperty("deployedAt").GetString());
+        }
+        finally
+        {
+            if (hadOriginal)
+            {
+                await File.WriteAllTextAsync(metadataPath, originalContents!);
+            }
+            else if (File.Exists(metadataPath))
+            {
+                File.Delete(metadataPath);
+            }
+        }
+    }
+
+    [Fact]
+    public async Task VersionMetadataResolver_FallsBack_WhenMetadataFileIsEmpty()
+    {
+        var metadataPath = Path.Combine(AppContext.BaseDirectory, "version.json");
+        var hadOriginal = File.Exists(metadataPath);
+        var originalContents = hadOriginal ? await File.ReadAllTextAsync(metadataPath) : null;
+        await File.WriteAllTextAsync(metadataPath, string.Empty);
+
+        try
+        {
+            var metadata = VersionMetadataResolver.Resolve();
+
+            Assert.Equal("conscia-api", metadata.Service);
+            Assert.NotEmpty(metadata.Version);
         }
         finally
         {
