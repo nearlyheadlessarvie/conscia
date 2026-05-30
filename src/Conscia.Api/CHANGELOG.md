@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.4](https://github.com/nearlyheadlessarvie/conscia/compare/api/v1.3.3...api/v1.3.4) (2026-05-30)
+
+
+### Bug Fixes
+
+* complete passkey registration and reviewer provisioning ([#162](https://github.com/nearlyheadlessarvie/conscia/issues/162)) ([c91e85c](https://github.com/nearlyheadlessarvie/conscia/commit/c91e85ce01b8cd922626d7fb603da81d3b2fa67a))
+
 ## [1.3.3](https://github.com/nearlyheadlessarvie/conscia/compare/api/v1.3.2...api/v1.3.3) (2026-05-29)
 
 
