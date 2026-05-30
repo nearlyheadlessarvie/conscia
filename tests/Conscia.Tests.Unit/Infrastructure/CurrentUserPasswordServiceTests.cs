@@ -56,6 +56,30 @@ public class CurrentUserPasswordServiceTests
     }
 
     [Fact]
+    public async Task SetPasswordAsync_AccessTokenWithoutEmail_UsesLocalUserEmail()
+    {
+        var user = await SeedUserAsync(hasPassword: true);
+        _cognito
+            .Setup(c => c.ChangePasswordAsync(
+                It.Is<ChangePasswordRequest>(r =>
+                    r.AccessToken == "access-token" &&
+                    r.PreviousPassword == "OldPass123" &&
+                    r.ProposedPassword == "NewPass123"),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ChangePasswordResponse());
+
+        await _service.SetPasswordAsync(
+            AccessTokenPrincipal(user.Id),
+            "NewPass123",
+            "OldPass123",
+            "access-token");
+
+        _cognito.Verify(c => c.ChangePasswordAsync(
+            It.IsAny<ChangePasswordRequest>(),
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
     public async Task SetPasswordAsync_NoPassword_UsesAdminSetPasswordAndMarksIdentity()
     {
         var user = await SeedUserAsync(hasPassword: false);
@@ -117,6 +141,14 @@ public class CurrentUserPasswordServiceTests
         [
             new Claim("cognito:username", "cognito-user"),
             new Claim(ClaimTypes.Email, email)
+        ],
+        "Test"));
+
+    private static ClaimsPrincipal AccessTokenPrincipal(Guid userId) => new(
+        new ClaimsIdentity(
+        [
+            new Claim("cognito:username", "cognito-user"),
+            new Claim("sub", userId.ToString())
         ],
         "Test"));
 }

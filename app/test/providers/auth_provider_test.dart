@@ -40,6 +40,9 @@ class _FakeAuthService extends AuthService {
   String? lastPasswordResetConfirmEmail;
   String? lastPasswordResetCode;
   String? lastPasswordResetPassword;
+  String? lastPasswordChangeEmail;
+  String? lastPasswordChangeSession;
+  String? lastPasswordChangePassword;
   String? lastRefreshToken;
   int registerCount = 0;
   int loginCount = 0;
@@ -104,6 +107,18 @@ class _FakeAuthService extends AuthService {
     if (error != null) {
       throw error;
     }
+    return _tokens;
+  }
+
+  @override
+  Future<AuthTokens> completePasswordChange(
+    String email,
+    String session,
+    String password,
+  ) async {
+    lastPasswordChangeEmail = email;
+    lastPasswordChangeSession = session;
+    lastPasswordChangePassword = password;
     return _tokens;
   }
 
@@ -263,6 +278,26 @@ class _CapturingOkAdapter implements HttpClientAdapter {
     return ResponseBody.fromString(
       '{"accessToken":"header.payload.signature","refreshToken":"refresh-token","userId":"user-1"}',
       200,
+      headers: {
+        Headers.contentTypeHeader: [Headers.jsonContentType],
+      },
+    );
+  }
+
+  @override
+  void close({bool force = false}) {}
+}
+
+class _PasswordChangeRequiredAdapter implements HttpClientAdapter {
+  @override
+  Future<ResponseBody> fetch(
+    RequestOptions options,
+    Stream<Uint8List>? requestStream,
+    Future<void>? cancelFuture,
+  ) async {
+    return ResponseBody.fromString(
+      '{"requiresPasswordChange":true,"email":"reviewer@example.com","session":"challenge-session"}',
+      409,
       headers: {
         Headers.contentTypeHeader: [Headers.jsonContentType],
       },
@@ -498,6 +533,89 @@ void main() {
     expect(await storage.read(key: 'access_token'), isNull);
   });
 
+  test('login requiring password change stores challenge without tokens',
+      () async {
+    final service = _FakeAuthService(
+      const AuthTokens(
+        accessToken: 'verified.access.token',
+        refreshToken: 'verified-refresh-token',
+        userId: 'user-1',
+      ),
+    )..loginError = const AuthPasswordChangeRequiredException(
+        email: 'reviewer@example.com',
+        session: 'challenge-session',
+      );
+    final storage = _FakeSecureStorage();
+    final notifier = AuthNotifier(service, storage);
+
+    await notifier.login('reviewer@example.com', 'TempPass123');
+
+    expect(notifier.state.status, AuthStatus.pendingPasswordChange);
+    expect(notifier.state.pendingEmail, 'reviewer@example.com');
+    expect(notifier.state.passwordChangeSession, 'challenge-session');
+    expect(notifier.state.accessToken, isNull);
+    expect(await storage.read(key: 'access_token'), isNull);
+  });
+
+  test('completePasswordChange signs in with returned tokens', () async {
+    final service = _FakeAuthService(
+      const AuthTokens(
+        accessToken: 'fresh.access.token',
+        refreshToken: 'fresh-refresh-token',
+        userId: 'user-1',
+      ),
+    )..loginError = const AuthPasswordChangeRequiredException(
+        email: 'reviewer@example.com',
+        session: 'challenge-session',
+      );
+    final storage = _FakeSecureStorage();
+    final notifier = AuthNotifier(service, storage);
+
+    await notifier.login('reviewer@example.com', 'TempPass123');
+    await notifier.completePasswordChange('FreshPass123');
+
+    expect(service.lastPasswordChangeEmail, 'reviewer@example.com');
+    expect(service.lastPasswordChangeSession, 'challenge-session');
+    expect(service.lastPasswordChangePassword, 'FreshPass123');
+    expect(notifier.state.status, AuthStatus.authenticated);
+    expect(notifier.state.accessToken, 'fresh.access.token');
+    expect(await storage.read(key: 'access_token'), 'fresh.access.token');
+  });
+
+  test('auth service surfaces password change challenge from login', () async {
+    final adapter = _PasswordChangeRequiredAdapter();
+    final dio = Dio()..httpClientAdapter = adapter;
+    final service = AuthService(dio);
+
+    await expectLater(
+      service.login('reviewer@example.com', 'TempPass123'),
+      throwsA(
+        isA<AuthPasswordChangeRequiredException>()
+            .having((e) => e.email, 'email', 'reviewer@example.com')
+            .having((e) => e.session, 'session', 'challenge-session'),
+      ),
+    );
+  });
+
+  test('auth service posts password change challenge response', () async {
+    final adapter = _CapturingOkAdapter();
+    final dio = Dio()..httpClientAdapter = adapter;
+    final service = AuthService(dio);
+
+    await service.completePasswordChange(
+      'reviewer@example.com',
+      'challenge-session',
+      'FreshPass123',
+    );
+
+    expect(adapter.lastRequestOptions?.path, 'auth/password/change-required');
+    expect(adapter.lastRequestOptions?.data, {
+      'email': 'reviewer@example.com',
+      'session': 'challenge-session',
+      'password': 'FreshPass123',
+    });
+  });
+
   test('register reopens pending confirmation locally during resend cooldown',
       () async {
     final service = _FakeAuthService(
@@ -701,39 +819,6 @@ void main() {
     expect(
       adapter.lastRequestOptions?.headers['X-Conscia-App-Version'],
       isNotNull,
-    );
-  });
-
-  test('setPassword posts the new account password', () async {
-    final adapter = _CapturingOkAdapter();
-    final dio = Dio()..httpClientAdapter = adapter;
-    final service = AuthService(dio);
-
-    await service.setPassword('StrongPass123');
-
-    expect(adapter.lastRequestOptions?.path, 'auth/password');
-    expect(adapter.lastRequestOptions?.method, 'POST');
-    expect(
-      adapter.lastRequestOptions?.data,
-      {'password': 'StrongPass123'},
-    );
-  });
-
-  test('setPassword includes current password when changing an existing one',
-      () async {
-    final adapter = _CapturingOkAdapter();
-    final dio = Dio()..httpClientAdapter = adapter;
-    final service = AuthService(dio);
-
-    await service.setPassword(
-      'StrongPass123',
-      currentPassword: 'OldPass123',
-    );
-
-    expect(adapter.lastRequestOptions?.path, 'auth/password');
-    expect(
-      adapter.lastRequestOptions?.data,
-      {'password': 'StrongPass123', 'currentPassword': 'OldPass123'},
     );
   });
 

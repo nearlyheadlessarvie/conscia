@@ -203,6 +203,32 @@ public class MockAuthService : IAuthService
         };
     }
 
+    public async Task<AuthResult> CompletePasswordChangeAsync(
+        string email,
+        string session,
+        string password,
+        CancellationToken ct = default)
+    {
+        email = NormalizeEmail(email);
+        var user = await _repo.GetByEmailAsync(email, ct);
+        if (user is null)
+        {
+            return new AuthResult { Success = false, Email = email, Error = "Invalid password change session" };
+        }
+
+        await MarkEmailIdentityHasPasswordAsync(user, email, ct);
+
+        var token = GenerateToken(user.Id.ToString(), email, "Free");
+        return new AuthResult
+        {
+            Success = true,
+            AccessToken = token,
+            RefreshToken = $"mock-refresh-{user.Id}",
+            UserId = user.Id.ToString(),
+            Email = email
+        };
+    }
+
     public async Task<AuthResult> RefreshAsync(string refreshToken, CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(refreshToken) ||

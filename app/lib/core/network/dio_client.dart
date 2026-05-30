@@ -4,11 +4,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../providers/auth_provider.dart';
 import '../constants/api_constants.dart';
+import 'request_options.dart';
 
 const _tokenKey = 'access_token';
 const _idTokenKey = 'id_token';
 const _apiVersion = '1';
-const useAccessTokenRequestExtraKey = 'useAccessToken';
 
 final appVersionProvider = FutureProvider<String>((ref) async {
   final info = await PackageInfo.fromPlatform();

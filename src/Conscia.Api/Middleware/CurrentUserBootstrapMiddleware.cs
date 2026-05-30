@@ -16,13 +16,16 @@ public sealed class CurrentUserBootstrapMiddleware
 
     private readonly RequestDelegate _next;
     private readonly ILogger<CurrentUserBootstrapMiddleware> _logger;
+    private readonly ICognitoUserInfoEmailResolver _userInfoEmailResolver;
 
     public CurrentUserBootstrapMiddleware(
         RequestDelegate next,
-        ILogger<CurrentUserBootstrapMiddleware> logger)
+        ILogger<CurrentUserBootstrapMiddleware> logger,
+        ICognitoUserInfoEmailResolver userInfoEmailResolver)
     {
         _next = next;
         _logger = logger;
+        _userInfoEmailResolver = userInfoEmailResolver;
     }
 
     public async Task InvokeAsync(HttpContext context, IUserRepository users)
@@ -51,14 +54,37 @@ public sealed class CurrentUserBootstrapMiddleware
             return;
         }
 
-        var email = string.IsNullOrWhiteSpace(emailValue)
-            ? null
-            : emailValue.Trim().ToLowerInvariant();
+        var email = NormalizeEmail(emailValue);
         var emailConfirmed = bool.TryParse(principal.FindFirstValue("email_verified"), out var verified) && verified;
-        var (provider, providerSub) = ResolveIdentity(principal, email ?? string.Empty);
+        var resolvedIdentity = ResolveIdentity(principal, email);
 
-        var user = await users.GetByProviderAsync(provider, providerSub, ct);
+        User? user = null;
+        if (resolvedIdentity is { } identity)
+        {
+            user = await users.GetByProviderAsync(identity.Provider, identity.ProviderSub, ct);
+        }
+
         user ??= await users.GetByIdAsync(userId, ct);
+        if (email is null && !string.IsNullOrWhiteSpace(user?.Email))
+        {
+            email = NormalizeEmail(user.Email);
+            emailConfirmed = user.EmailConfirmed;
+            AddResolvedEmailClaims(context, email, emailConfirmed);
+            resolvedIdentity ??= ResolveIdentity(principal, email);
+        }
+
+        if (email is null && TryGetBearerToken(context, out var accessToken))
+        {
+            var userInfo = await _userInfoEmailResolver.ResolveAsync(accessToken, ct);
+            if (userInfo is not null)
+            {
+                email = userInfo.Email;
+                emailConfirmed = userInfo.EmailVerified;
+                AddResolvedEmailClaims(context, email, emailConfirmed);
+                resolvedIdentity ??= ResolveIdentity(principal, email);
+            }
+        }
+
         if (user is null)
         {
             user = email is null
@@ -109,22 +135,30 @@ public sealed class CurrentUserBootstrapMiddleware
             UseLocalUserId(context, user.Id);
         }
 
-        var existingIdentity = await users.GetByProviderAsync(provider, providerSub, ct);
+        if (resolvedIdentity is null)
+        {
+            return;
+        }
+
+        var existingIdentity = await users.GetByProviderAsync(
+            resolvedIdentity.Value.Provider,
+            resolvedIdentity.Value.ProviderSub,
+            ct);
         if (existingIdentity is null)
         {
             await users.AddIdentityAsync(new UserIdentity
             {
                 Id = Guid.NewGuid(),
                 UserId = user.Id,
-                Provider = provider,
-                ProviderSub = providerSub,
+                Provider = resolvedIdentity.Value.Provider,
+                ProviderSub = resolvedIdentity.Value.ProviderSub,
                 Role = UserIdentityRole.Member,
                 CreatedAt = DateTime.UtcNow
             }, ct);
         }
     }
 
-    private (AuthProvider Provider, string ProviderSub) ResolveIdentity(ClaimsPrincipal principal, string email)
+    private (AuthProvider Provider, string ProviderSub)? ResolveIdentity(ClaimsPrincipal principal, string? email)
     {
         var identity = principal
             .FindAll("identities")
@@ -134,7 +168,9 @@ public sealed class CurrentUserBootstrapMiddleware
                 !string.IsNullOrWhiteSpace(i.UserId));
         if (identity is null)
         {
-            return (AuthProvider.Email, email);
+            return string.IsNullOrWhiteSpace(email)
+                ? null
+                : (AuthProvider.Email, email);
         }
 
         if (string.Equals(identity.ProviderName, "Google", StringComparison.OrdinalIgnoreCase))
@@ -148,7 +184,9 @@ public sealed class CurrentUserBootstrapMiddleware
             return (AuthProvider.Apple, identity.UserId!);
         }
 
-        return (AuthProvider.Email, email);
+        return string.IsNullOrWhiteSpace(email)
+            ? null
+            : (AuthProvider.Email, email);
     }
 
     private IReadOnlyList<CognitoIdentityClaim> ParseIdentityClaims(string? identitiesJson)
@@ -209,6 +247,51 @@ public sealed class CurrentUserBootstrapMiddleware
 
             identity.AddClaim(new Claim(ClaimTypes.NameIdentifier, localUserId));
         }
+    }
+
+    private static string? NormalizeEmail(string? email) =>
+        string.IsNullOrWhiteSpace(email)
+            ? null
+            : email.Trim().ToLowerInvariant();
+
+    private static void AddResolvedEmailClaims(HttpContext context, string? email, bool emailConfirmed)
+    {
+        if (string.IsNullOrWhiteSpace(email))
+        {
+            return;
+        }
+
+        foreach (var identity in context.User.Identities)
+        {
+            if (!identity.HasClaim(claim => claim.Type == ClaimTypes.Email))
+            {
+                identity.AddClaim(new Claim(ClaimTypes.Email, email));
+            }
+
+            if (!identity.HasClaim(claim => claim.Type == "email"))
+            {
+                identity.AddClaim(new Claim("email", email));
+            }
+
+            if (emailConfirmed && !identity.HasClaim(claim => claim.Type == "email_verified"))
+            {
+                identity.AddClaim(new Claim("email_verified", "true"));
+            }
+        }
+    }
+
+    private static bool TryGetBearerToken(HttpContext context, out string token)
+    {
+        var authorization = context.Request.Headers.Authorization.ToString();
+        const string prefix = "Bearer ";
+        if (authorization.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+        {
+            token = authorization[prefix.Length..].Trim();
+            return !string.IsNullOrWhiteSpace(token);
+        }
+
+        token = string.Empty;
+        return false;
     }
 
     private sealed record CognitoIdentityClaim(string? ProviderName, string? UserId);

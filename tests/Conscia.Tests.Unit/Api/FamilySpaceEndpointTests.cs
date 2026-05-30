@@ -253,6 +253,40 @@ public class FamilySpaceEndpointTests
     }
 
     [Fact]
+    public async Task ListInvites_UsesLocalUserEmail_WhenTokenEmailClaimIsMissing()
+    {
+        await using var factory = new TestWebAppFactory();
+        var inviteId = Guid.Parse("cccccccc-cccc-cccc-cccc-cccccccccccc");
+        factory.UserServiceMock
+            .Setup(s => s.GetByIdAsync(UserId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new User
+            {
+                Id = UserId,
+                Email = "alice@example.com"
+            });
+        factory.FamilySpaceServiceMock
+            .Setup(s => s.GetPendingInvitesAsync("alice@example.com", It.IsAny<CancellationToken>()))
+            .ReturnsAsync([
+                new FamilyInviteDto(
+                    inviteId,
+                    Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"),
+                    "Santos Household",
+                    "alice@example.com",
+                    "Contributor",
+                    DateTime.UtcNow.AddDays(-1),
+                    DateTime.UtcNow.AddDays(13))
+            ]);
+
+        var client = CreateAuthorizedClient(factory, email: string.Empty);
+        var response = await client.GetAsync("/api/family-space/invites");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var json = await response.Content.ReadFromJsonAsync<JsonElement>();
+        var invite = Assert.Single(json.EnumerateArray());
+        Assert.Equal(inviteId, invite.GetProperty("id").GetGuid());
+    }
+
+    [Fact]
     public async Task ListOutgoingInvites_OwnerRequest_ReturnsOutstandingInvites()
     {
         await using var factory = new TestWebAppFactory();

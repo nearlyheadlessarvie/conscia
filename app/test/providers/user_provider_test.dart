@@ -65,7 +65,8 @@ class _FakeUserService extends UserService {
 }
 
 void main() {
-  test('currentUserProvider refreshes when authenticated user changes', () async {
+  test('currentUserProvider refreshes when authenticated user changes',
+      () async {
     final fakeAuthNotifier = _TestAuthNotifier(
       const AuthState(
         status: AuthStatus.authenticated,
@@ -114,5 +115,55 @@ void main() {
     final second = await container.read(currentUserProvider.future);
     expect(second.id, 'user-2');
     expect(fakeUserService.requestedUserIds, ['user-1', 'user-2']);
+  });
+
+  test('currentSessionUserProvider hides stale profile while switching users',
+      () async {
+    final fakeAuthNotifier = _TestAuthNotifier(
+      const AuthState(
+        status: AuthStatus.authenticated,
+        userId: 'user-1',
+      ),
+    );
+    final fakeUserService = _FakeUserService({
+      'user-1': UserProfile(
+        id: 'user-1',
+        email: 'first@example.com',
+        currencyCode: 'USD',
+        locale: 'en_US',
+        createdAt: DateTime(2026),
+        hasCompletedOnboarding: true,
+      ),
+      'user-2': UserProfile(
+        id: 'user-2',
+        email: 'second@example.com',
+        currencyCode: 'PHP',
+        locale: 'en_PH',
+        createdAt: DateTime(2026),
+        hasCompletedOnboarding: true,
+      ),
+    });
+
+    final container = ProviderContainer(
+      overrides: [
+        authProvider.overrideWith((ref) => fakeAuthNotifier),
+        userServiceProvider.overrideWithValue(fakeUserService),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    fakeUserService.activeUserId = 'user-1';
+    await container.read(currentUserProvider.future);
+    expect(container.read(currentSessionUserProvider), isNotNull);
+
+    fakeUserService.activeUserId = 'user-2';
+    fakeAuthNotifier.setAuthState(
+      const AuthState(
+        status: AuthStatus.authenticated,
+        userId: 'user-2',
+      ),
+    );
+
+    expect(container.read(currentSessionUserProvider), isNull);
   });
 }

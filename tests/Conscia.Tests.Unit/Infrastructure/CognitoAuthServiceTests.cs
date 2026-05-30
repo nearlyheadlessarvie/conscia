@@ -207,6 +207,111 @@ public class CognitoAuthServiceTests
     }
 
     [Fact]
+    public async Task LoginAsync_ExistingLocalUserWithSameEmail_ReturnsResolvedLocalUserId()
+    {
+        var cognitoSub = Guid.NewGuid();
+        var localUserId = Guid.NewGuid();
+        await _repo.AddAsync(new User
+        {
+            Id = localUserId,
+            Email = "login@example.com",
+            EmailConfirmed = true
+        });
+
+        _cognito
+            .Setup(c => c.InitiateAuthAsync(
+                It.Is<InitiateAuthRequest>(r =>
+                    r.ClientId == "client-123" &&
+                    r.AuthFlow == AuthFlowType.USER_PASSWORD_AUTH &&
+                    r.AuthParameters["USERNAME"] == "login@example.com" &&
+                    r.AuthParameters["PASSWORD"] == "password123"),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new InitiateAuthResponse
+            {
+                AuthenticationResult = new AuthenticationResultType
+                {
+                    AccessToken = CreateJwt(cognitoSub, "login@example.com"),
+                    IdToken = CreateJwt(cognitoSub, "login@example.com"),
+                    RefreshToken = "refresh-token-123"
+                }
+            });
+
+        var result = await _auth.LoginAsync(" Login@Example.com ", "password123");
+
+        Assert.True(result.Success);
+        Assert.Equal(localUserId.ToString(), result.UserId);
+
+        var identity = Assert.Single(_repo.Identities);
+        Assert.Equal(localUserId, identity.UserId);
+        Assert.Equal(AuthProvider.Email, identity.Provider);
+        Assert.Equal("login@example.com", identity.ProviderSub);
+        Assert.True(identity.HasPassword);
+    }
+
+    [Fact]
+    public async Task LoginAsync_NewPasswordRequired_ReturnsPasswordChangeChallenge()
+    {
+        _cognito
+            .Setup(c => c.InitiateAuthAsync(
+                It.Is<InitiateAuthRequest>(r =>
+                    r.ClientId == "client-123" &&
+                    r.AuthFlow == AuthFlowType.USER_PASSWORD_AUTH &&
+                    r.AuthParameters["USERNAME"] == "reviewer@example.com" &&
+                    r.AuthParameters["PASSWORD"] == "TempPass123"),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new InitiateAuthResponse
+            {
+                ChallengeName = ChallengeNameType.NEW_PASSWORD_REQUIRED,
+                Session = "challenge-session-token"
+            });
+
+        var result = await _auth.LoginAsync(" Reviewer@Example.com ", "TempPass123");
+
+        Assert.False(result.Success);
+        Assert.True(result.RequiresPasswordChange);
+        Assert.Equal("reviewer@example.com", result.Email);
+        Assert.Equal("challenge-session-token", result.Session);
+    }
+
+    [Fact]
+    public async Task CompletePasswordChangeAsync_NewPasswordChallenge_ReturnsTokens()
+    {
+        var userId = Guid.NewGuid();
+        _cognito
+            .Setup(c => c.RespondToAuthChallengeAsync(
+                It.Is<RespondToAuthChallengeRequest>(r =>
+                    r.ClientId == "client-123" &&
+                    r.ChallengeName == ChallengeNameType.NEW_PASSWORD_REQUIRED &&
+                    r.Session == "challenge-session-token" &&
+                    r.ChallengeResponses["USERNAME"] == "reviewer@example.com" &&
+                    r.ChallengeResponses["NEW_PASSWORD"] == "FreshPass123"),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new RespondToAuthChallengeResponse
+            {
+                AuthenticationResult = new AuthenticationResultType
+                {
+                    AccessToken = CreateJwt(userId, "reviewer@example.com"),
+                    IdToken = CreateJwt(userId, "reviewer@example.com"),
+                    RefreshToken = "refresh-token-123"
+                }
+            });
+
+        var result = await _auth.CompletePasswordChangeAsync(
+            " Reviewer@Example.com ",
+            "challenge-session-token",
+            "FreshPass123");
+
+        Assert.True(result.Success);
+        Assert.Equal(userId.ToString(), result.UserId);
+        Assert.Equal("reviewer@example.com", result.Email);
+        Assert.Equal("refresh-token-123", result.RefreshToken);
+
+        var identity = _repo.Identities.Single();
+        Assert.Equal(AuthProvider.Email, identity.Provider);
+        Assert.True(identity.HasPassword);
+    }
+
+    [Fact]
     public async Task RefreshAsync_CognitoRefreshToken_UsesRefreshFlowAndPreservesRefreshToken()
     {
         var userId = Guid.NewGuid();

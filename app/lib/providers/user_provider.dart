@@ -21,6 +21,29 @@ final currentUserProvider = FutureProvider<UserProfile>((ref) async {
   return service.getProfile();
 });
 
+final currentSessionUserAsyncProvider =
+    Provider<AsyncValue<UserProfile>>((ref) {
+  final authState = ref.watch(authProvider);
+  final userAsync = ref.watch(currentUserProvider);
+  if (userAsync.isLoading) return const AsyncLoading();
+  if (userAsync.hasError) {
+    return AsyncError(
+      userAsync.error!,
+      userAsync.stackTrace ?? StackTrace.current,
+    );
+  }
+  final user = userAsync.valueOrNull;
+  final expectedUserId = authState.isAuthenticated ? authState.userId : null;
+  if (user == null || (expectedUserId != null && user.id != expectedUserId)) {
+    return const AsyncLoading();
+  }
+  return AsyncData(user);
+});
+
+final currentSessionUserProvider = Provider<UserProfile?>((ref) {
+  return ref.watch(currentSessionUserAsyncProvider).valueOrNull;
+});
+
 ({String currency, String locale}) deviceDefaults() {
   final deviceLocale = _bestDeviceLocale();
   final country = _resolveCountryCode(deviceLocale);
@@ -84,10 +107,8 @@ String _resolveCountryCode(ui.Locale locale) {
 
 final userPreferencesProvider =
     Provider<({String currency, String locale})>((ref) {
-  final user = ref.watch(currentUserProvider);
+  final user = ref.watch(currentSessionUserProvider);
   final defaults = deviceDefaults();
-  return user.maybeWhen(
-    data: (profile) => (currency: profile.currencyCode, locale: profile.locale),
-    orElse: () => defaults,
-  );
+  if (user == null) return defaults;
+  return (currency: user.currencyCode, locale: user.locale);
 });

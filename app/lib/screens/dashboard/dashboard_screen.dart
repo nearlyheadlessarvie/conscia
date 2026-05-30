@@ -440,7 +440,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     final budgetState = ref.watch(budgetListProvider);
     final txState = ref.watch(transactionListProvider);
     final journeyState = ref.watch(conscienceJourneyProvider);
-    final profile = ref.watch(currentUserProvider).valueOrNull;
+    final profile = ref.watch(currentSessionUserProvider);
     final userPreferences = ref.watch(userPreferencesProvider);
     final alerts =
         _visibleAlerts(ref.watch(activeAlertsProvider), budgetState.budgets);
@@ -463,10 +463,15 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     final journey = journeyState.valueOrNull;
     final journeyLoadingWithoutData = journeyState.isLoading && journey == null;
     final journeyHome = buildJourneyHomePresentation(journey);
-    final dashboardInsightSummary =
-        ref.watch(dashboardInsightSummaryProvider).valueOrNull;
-    final behavioralInsights =
-        ref.watch(behavioralInsightsProvider).valueOrNull;
+    final dashboardInsightSummaryState =
+        ref.watch(dashboardInsightSummaryProvider);
+    final behavioralInsightsState = ref.watch(behavioralInsightsProvider);
+    final dashboardInsightSummary = dashboardInsightSummaryState.isLoading
+        ? null
+        : dashboardInsightSummaryState.valueOrNull;
+    final behavioralInsights = behavioralInsightsState.isLoading
+        ? null
+        : behavioralInsightsState.valueOrNull;
     final dashboardInsightTrend =
         _graphableBudgetTrend(behavioralInsights?.budgetTrends);
     final nextJourneyQuest = _nextOutstandingQuest(journey);

@@ -7,14 +7,16 @@ import '../../core/constants/app_icons.dart';
 import '../../core/errors/app_error.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_layout.dart';
-import '../../providers/auth_provider.dart';
+import '../../core/utils/password_policy.dart';
 import '../../providers/passkey_provider.dart';
 import '../../providers/user_provider.dart';
+import '../../services/account_password_service.dart';
 import '../../services/passkey_service.dart';
 import '../../widgets/conscia_app_bar.dart';
 import '../../widgets/conscia_bottom_sheet.dart';
 import '../../widgets/editorial_section_header.dart';
 import '../../widgets/floating_label_text_field.dart';
+import '../../widgets/inline_notice.dart';
 
 class SecurityScreen extends ConsumerStatefulWidget {
   const SecurityScreen({super.key});
@@ -58,11 +60,13 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen> {
 
     if (updated == true && mounted) {
       ref.invalidate(currentUserProvider);
+      await Future<void>.delayed(const Duration(milliseconds: 250));
+      if (!mounted) return;
       ScaffoldMessenger.of(context)
         ..clearSnackBars()
         ..showSnackBar(
           const SnackBar(
-            content: Text('Password updated. You can now sign in with email.'),
+            content: Text('Password updated.'),
           ),
         );
     }
@@ -74,7 +78,7 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen> {
     setState(() => _isRegisteringPasskey = true);
     try {
       await ref.read(passkeyServiceProvider).registerCurrentUserPasskey();
-      final email = ref.read(currentUserProvider).valueOrNull?.email;
+      final email = ref.read(currentSessionUserProvider)?.email;
       if (email != null && email.trim().isNotEmpty) {
         final notifier = ref.read(passkeySignInPreferenceProvider.notifier);
         await notifier.registerEmail(email);
@@ -111,7 +115,7 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen> {
     final sessionSupportsPasskeys =
         ref.watch(currentSessionSupportsPasskeysProvider);
     final passkeyPreference = ref.watch(passkeySignInPreferenceProvider);
-    final currentUser = ref.watch(currentUserProvider).valueOrNull;
+    final currentUser = ref.watch(currentSessionUserProvider);
     final currentEmail = currentUser?.email;
     final hasPassword = currentUser?.hasPassword ?? false;
     final hasRegisteredCurrentPasskey = currentEmail != null &&
@@ -288,6 +292,7 @@ class _PasswordSheetState extends ConsumerState<_PasswordSheet> {
   String? _currentPasswordError;
   String? _passwordError;
   String? _confirmPasswordError;
+  String? _formError;
 
   @override
   void dispose() {
@@ -295,14 +300,6 @@ class _PasswordSheetState extends ConsumerState<_PasswordSheet> {
     _passwordController.dispose();
     _confirmPasswordController.dispose();
     super.dispose();
-  }
-
-  String? _validatePassword(String value) {
-    if (value.isEmpty) return 'Password is required';
-    if (value.length < 8) return 'At least 8 characters';
-    if (!RegExp(r'[A-Z]').hasMatch(value)) return 'Include 1 uppercase letter';
-    if (!RegExp(r'[0-9]').hasMatch(value)) return 'Include 1 number';
-    return null;
   }
 
   String? _validateConfirmPassword(String value) {
@@ -313,11 +310,13 @@ class _PasswordSheetState extends ConsumerState<_PasswordSheet> {
   void _clearErrors() {
     if (_currentPasswordError != null ||
         _passwordError != null ||
-        _confirmPasswordError != null) {
+        _confirmPasswordError != null ||
+        _formError != null) {
       setState(() {
         _currentPasswordError = null;
         _passwordError = null;
         _confirmPasswordError = null;
+        _formError = null;
       });
     }
   }
@@ -327,7 +326,9 @@ class _PasswordSheetState extends ConsumerState<_PasswordSheet> {
         widget.hasPassword && _currentPasswordController.text.isEmpty
             ? 'Current password is required'
             : null;
-    final passwordError = _validatePassword(_passwordController.text);
+    final passwordError = validatePasswordForCognito(
+      _passwordController.text,
+    );
     final confirmError =
         _validateConfirmPassword(_confirmPasswordController.text);
     if (currentPasswordError != null ||
@@ -346,10 +347,11 @@ class _PasswordSheetState extends ConsumerState<_PasswordSheet> {
       _currentPasswordError = null;
       _passwordError = null;
       _confirmPasswordError = null;
+      _formError = null;
     });
 
     try {
-      await ref.read(authServiceProvider).setPassword(
+      await ref.read(accountPasswordServiceProvider).setPassword(
             _passwordController.text,
             currentPassword:
                 widget.hasPassword ? _currentPasswordController.text : null,
@@ -359,9 +361,7 @@ class _PasswordSheetState extends ConsumerState<_PasswordSheet> {
     } catch (e, s) {
       if (!mounted) return;
       final error = AppError.from(e, stackTrace: s);
-      ScaffoldMessenger.of(context)
-        ..clearSnackBars()
-        ..showSnackBar(SnackBar(content: Text(error.userMessage)));
+      setState(() => _formError = error.userMessage);
     } finally {
       if (mounted) {
         setState(() => _isSaving = false);
@@ -393,6 +393,18 @@ class _PasswordSheetState extends ConsumerState<_PasswordSheet> {
       ),
       child: Column(
         children: [
+          if (_formError != null) ...[
+            InlineNotice(
+              message: _formError!,
+              tone: InlineNoticeTone.error,
+              icon: AppIcons.icon(
+                AppIconKey.lock,
+                color: Theme.of(context).colorScheme.error,
+                size: 16,
+              ),
+            ),
+            const SizedBox(height: 12),
+          ],
           if (widget.hasPassword) ...[
             FloatingLabelTextField(
               controller: _currentPasswordController,

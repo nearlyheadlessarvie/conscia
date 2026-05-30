@@ -232,7 +232,7 @@ void main() {
     expect(userService.lastUpdate, isNull);
   });
 
-  testWidgets('profile save action is a keyboard-safe bottom CTA', (
+  testWidgets('profile save action enables only after form changes', (
     tester,
   ) async {
     final userService = _RecordingUserService();
@@ -268,6 +268,15 @@ void main() {
     final ctaFinder = find.byKey(const ValueKey('profile-save-cta'));
 
     expect(ctaFinder, findsOneWidget);
+    expect(tester.widget<FilledButton>(find.byType(FilledButton)).onPressed,
+        isNull);
+
+    await tester.enterText(
+      find.byType(TextField).first,
+      'Arvie Updated',
+    );
+    await tester.pump();
+
     expect(tester.widget<FilledButton>(find.byType(FilledButton)).onPressed,
         isNotNull);
 

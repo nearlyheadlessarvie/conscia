@@ -24,14 +24,13 @@ public class CurrentUserBootstrapMiddlewareTests
             EmailConfirmed = false
         };
         var nextCalled = false;
-        var middleware = new CurrentUserBootstrapMiddleware(
+        var middleware = CreateMiddleware(
             httpContext =>
             {
                 nextCalled = true;
                 Assert.Equal(existingUserId.ToString(), httpContext.User.FindFirstValue(ClaimTypes.NameIdentifier));
                 return Task.CompletedTask;
-            },
-            NullLogger<CurrentUserBootstrapMiddleware>.Instance);
+            });
         var users = new Mock<IUserRepository>();
         users
             .Setup(repo => repo.GetByIdAsync(tokenUserId, It.IsAny<CancellationToken>()))
@@ -86,15 +85,17 @@ public class CurrentUserBootstrapMiddlewareTests
             EmailConfirmed = true,
             HasCompletedOnboarding = true
         };
-        var middleware = new CurrentUserBootstrapMiddleware(
+        var resolver = new FakeUserInfoEmailResolver();
+        var middleware = CreateMiddleware(
             httpContext =>
             {
                 Assert.Equal(
                     existingUserId.ToString(),
                     httpContext.User.FindFirstValue(ClaimTypes.NameIdentifier));
+                Assert.Equal("social@example.com", httpContext.User.FindFirstValue(ClaimTypes.Email));
                 return Task.CompletedTask;
             },
-            NullLogger<CurrentUserBootstrapMiddleware>.Instance);
+            resolver);
         var users = new Mock<IUserRepository>();
         users
             .Setup(repo => repo.GetByProviderAsync(
@@ -122,5 +123,142 @@ public class CurrentUserBootstrapMiddlewareTests
         users.Verify(repo => repo.GetByEmailAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
         users.Verify(repo => repo.AddAsync(It.IsAny<User>(), It.IsAny<CancellationToken>()), Times.Never);
         users.Verify(repo => repo.AddIdentityAsync(It.IsAny<UserIdentity>(), It.IsAny<CancellationToken>()), Times.Never);
+        Assert.Equal(0, resolver.CallCount);
+    }
+
+    [Fact]
+    public async Task InvokeAsync_UsesTokenUserId_WhenEmailClaimIsMissingAndEmptyEmailIdentityExists()
+    {
+        var tokenUserId = Guid.Parse("59ca55dc-40b1-705a-e401-896fec9c84d6");
+        var staleUserId = Guid.Parse("093a85ec-e0d1-7005-8c21-41c3341e273c");
+        var tokenUser = new User
+        {
+            Id = tokenUserId,
+            Email = "story-demo@example.com",
+            EmailConfirmed = true
+        };
+        var staleUser = new User
+        {
+            Id = staleUserId,
+            Email = "nearlyheadlessarvie@gmail.com",
+            EmailConfirmed = true
+        };
+        var resolver = new FakeUserInfoEmailResolver();
+        var middleware = CreateMiddleware(
+            httpContext =>
+            {
+                Assert.Equal(
+                    tokenUserId.ToString(),
+                    httpContext.User.FindFirstValue(ClaimTypes.NameIdentifier));
+                Assert.Equal("story-demo@example.com", httpContext.User.FindFirstValue(ClaimTypes.Email));
+                return Task.CompletedTask;
+            },
+            resolver);
+        var users = new Mock<IUserRepository>();
+        users
+            .Setup(repo => repo.GetByProviderAsync(AuthProvider.Email, string.Empty, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(staleUser);
+        users
+            .Setup(repo => repo.GetByIdAsync(tokenUserId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(tokenUser);
+        users
+            .Setup(repo => repo.AddIdentityAsync(It.IsAny<UserIdentity>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((UserIdentity identity, CancellationToken _) => identity);
+        var context = new DefaultHttpContext
+        {
+            User = new ClaimsPrincipal(new ClaimsIdentity(
+                [
+                    new Claim(ClaimTypes.NameIdentifier, tokenUserId.ToString())
+                ],
+                "Test"))
+        };
+
+        await middleware.InvokeAsync(context, users.Object);
+
+        users.Verify(
+            repo => repo.GetByProviderAsync(AuthProvider.Email, string.Empty, It.IsAny<CancellationToken>()),
+            Times.Never);
+        users.Verify(repo => repo.GetByEmailAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+        users.Verify(repo => repo.AddIdentityAsync(
+            It.Is<UserIdentity>(identity =>
+                identity.UserId == tokenUserId &&
+                identity.Provider == AuthProvider.Email &&
+                identity.ProviderSub == "story-demo@example.com"),
+            It.IsAny<CancellationToken>()), Times.Once);
+        Assert.Equal(0, resolver.CallCount);
+    }
+
+    [Fact]
+    public async Task InvokeAsync_HydratesMissingEmailFromCognitoUserInfo_WhenLocalUserDoesNotExist()
+    {
+        var tokenUserId = Guid.Parse("aaaaaaaa-0000-4000-8000-000000000003");
+        var resolver = new FakeUserInfoEmailResolver(new CognitoUserInfoEmail("social@example.com", true));
+        var middleware = CreateMiddleware(
+            httpContext =>
+            {
+                Assert.Equal(tokenUserId.ToString(), httpContext.User.FindFirstValue(ClaimTypes.NameIdentifier));
+                Assert.Equal("social@example.com", httpContext.User.FindFirstValue(ClaimTypes.Email));
+                Assert.Equal("true", httpContext.User.FindFirstValue("email_verified"));
+                return Task.CompletedTask;
+            },
+            resolver);
+        var users = new Mock<IUserRepository>();
+        users
+            .Setup(repo => repo.GetByIdAsync(tokenUserId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((User?)null);
+        users
+            .Setup(repo => repo.GetByEmailAsync("social@example.com", It.IsAny<CancellationToken>()))
+            .ReturnsAsync((User?)null);
+        users
+            .Setup(repo => repo.AddAsync(It.IsAny<User>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((User user, CancellationToken _) => user);
+        users
+            .Setup(repo => repo.AddIdentityAsync(It.IsAny<UserIdentity>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((UserIdentity identity, CancellationToken _) => identity);
+        var context = new DefaultHttpContext
+        {
+            User = new ClaimsPrincipal(new ClaimsIdentity(
+                [
+                    new Claim(ClaimTypes.NameIdentifier, tokenUserId.ToString())
+                ],
+                "Test"))
+        };
+        context.Request.Headers.Authorization = "Bearer access-token";
+
+        await middleware.InvokeAsync(context, users.Object);
+
+        Assert.Equal(1, resolver.CallCount);
+        users.Verify(repo => repo.AddAsync(
+            It.Is<User>(user =>
+                user.Id == tokenUserId &&
+                user.Email == "social@example.com" &&
+                user.EmailConfirmed),
+            It.IsAny<CancellationToken>()), Times.Once);
+        users.Verify(repo => repo.AddIdentityAsync(
+            It.Is<UserIdentity>(identity =>
+                identity.UserId == tokenUserId &&
+                identity.Provider == AuthProvider.Email &&
+                identity.ProviderSub == "social@example.com"),
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    private static CurrentUserBootstrapMiddleware CreateMiddleware(
+        RequestDelegate next,
+        ICognitoUserInfoEmailResolver? resolver = null) =>
+        new(
+            next,
+            NullLogger<CurrentUserBootstrapMiddleware>.Instance,
+            resolver ?? new FakeUserInfoEmailResolver());
+
+    private sealed class FakeUserInfoEmailResolver(CognitoUserInfoEmail? result = null)
+        : ICognitoUserInfoEmailResolver
+    {
+        public int CallCount { get; private set; }
+
+        public Task<CognitoUserInfoEmail?> ResolveAsync(string accessToken, CancellationToken ct)
+        {
+            CallCount++;
+            return Task.FromResult(result);
+        }
     }
 }

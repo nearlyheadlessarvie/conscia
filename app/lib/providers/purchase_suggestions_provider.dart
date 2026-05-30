@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/constants/api_constants.dart';
 import '../core/network/dio_client.dart';
+import 'auth_provider.dart';
 import 'transaction_providers.dart';
 
 class PurchaseSuggestion {
@@ -33,12 +34,15 @@ class PurchaseSuggestion {
 
 final purchaseSuggestionsProvider =
     FutureProvider<List<PurchaseSuggestion>>((ref) async {
+  final authState = ref.watch(authProvider);
+  if (!authState.isAuthenticated) return const [];
   // Re-fetches whenever the transaction list changes (new purchase → fresh suggestions)
   ref.watch(transactionListProvider);
 
   try {
     final dio = ref.watch(dioProvider);
-    final response = await dio.get<List<dynamic>>(ApiConstants.purchaseSuggestions);
+    final response =
+        await dio.get<List<dynamic>>(ApiConstants.purchaseSuggestions);
     final data = response.data ?? [];
     return data
         .map((e) => PurchaseSuggestion.fromJson(e as Map<String, dynamic>))

@@ -90,9 +90,9 @@ public static class FamilySpaceEndpoints
             }
         }).WithName("CreateFamilyInvite");
 
-        group.MapGet("/invites", async (HttpContext ctx, IFamilySpaceService svc) =>
+        group.MapGet("/invites", async (HttpContext ctx, IFamilySpaceService svc, IUserService users) =>
         {
-            var email = ctx.User.GetEmail();
+            var email = await ResolveCurrentUserEmailAsync(ctx, users);
             if (string.IsNullOrWhiteSpace(email))
                 return Results.BadRequest(new { error = "Email claim is required to find Family Space invites." });
 
@@ -130,13 +130,21 @@ public static class FamilySpaceEndpoints
             }
         }).WithName("CancelFamilyInvite");
 
-        group.MapPost("/invites/{inviteId:guid}/accept", async (HttpContext ctx, Guid inviteId, IFamilySpaceService svc) =>
+        group.MapPost("/invites/{inviteId:guid}/accept", async (
+            HttpContext ctx,
+            Guid inviteId,
+            IFamilySpaceService svc,
+            IUserService users) =>
         {
             try
             {
+                var email = await ResolveCurrentUserEmailAsync(ctx, users);
+                if (string.IsNullOrWhiteSpace(email))
+                    return Results.BadRequest(new { error = "Email claim is required to accept Family Space invites." });
+
                 var member = await svc.AcceptInviteAsync(
                     ctx.User.GetUserId(),
-                    ctx.User.GetEmail(),
+                    email,
                     inviteId,
                     ctx.RequestAborted);
 
@@ -158,13 +166,21 @@ public static class FamilySpaceEndpoints
             }
         }).WithName("AcceptFamilyInvite");
 
-        group.MapPost("/invites/{inviteId:guid}/decline", async (HttpContext ctx, Guid inviteId, IFamilySpaceService svc) =>
+        group.MapPost("/invites/{inviteId:guid}/decline", async (
+            HttpContext ctx,
+            Guid inviteId,
+            IFamilySpaceService svc,
+            IUserService users) =>
         {
             try
             {
+                var email = await ResolveCurrentUserEmailAsync(ctx, users);
+                if (string.IsNullOrWhiteSpace(email))
+                    return Results.BadRequest(new { error = "Email claim is required to decline Family Space invites." });
+
                 await svc.DeclineInviteAsync(
                     ctx.User.GetUserId(),
-                    ctx.User.GetEmail(),
+                    email,
                     inviteId,
                     ctx.RequestAborted);
 
@@ -278,6 +294,18 @@ public static class FamilySpaceEndpoints
         }).WithName("LeaveFamilySpace");
 
         return group;
+    }
+
+    private static async Task<string> ResolveCurrentUserEmailAsync(HttpContext ctx, IUserService users)
+    {
+        var email = ctx.User.GetEmail();
+        if (!string.IsNullOrWhiteSpace(email))
+        {
+            return email;
+        }
+
+        var user = await users.GetByIdAsync(ctx.User.GetUserId(), ctx.RequestAborted);
+        return user?.Email ?? string.Empty;
     }
 
     private static async Task<IResult> UpdateFamilySpaceAsync(

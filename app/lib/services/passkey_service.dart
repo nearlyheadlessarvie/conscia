@@ -6,7 +6,7 @@ import 'package:passkeys/types.dart';
 
 import '../core/constants/api_constants.dart';
 import '../core/errors/app_error.dart';
-import '../core/network/dio_client.dart';
+import '../core/network/request_options.dart';
 import 'auth_service.dart';
 
 class PasskeyService {

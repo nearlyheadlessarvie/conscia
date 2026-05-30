@@ -20,6 +20,7 @@ import '../../screens/onboarding/sign_up_screen.dart';
 import '../../screens/onboarding/session_expired_screen.dart';
 import '../../screens/onboarding/verify_email_screen.dart';
 import '../../screens/onboarding/password_reset_screen.dart';
+import '../../screens/onboarding/new_password_required_screen.dart';
 import '../../screens/receipts/receipt_review_screen.dart';
 import '../../screens/receipts/receipt_scanner_screen.dart';
 import '../../screens/settings/service_status_screen.dart';
@@ -49,6 +50,7 @@ abstract class AppRoutes {
   static const signIn = '/onboarding/sign-in';
   static const signUp = '/onboarding/sign-up';
   static const passwordReset = '/onboarding/password-reset';
+  static const newPasswordRequired = '/onboarding/new-password';
   static const verifyEmail = '/onboarding/verify-email';
   static const sessionExpired = '/session-expired';
   static const setup = '/onboarding/setup';
@@ -210,6 +212,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       final isOnboarding = state.uri.path.startsWith('/onboarding');
       final isOnboardingLanding = state.uri.path == AppRoutes.onboarding;
       final isVerifyEmailRoute = state.uri.path == AppRoutes.verifyEmail;
+      final isNewPasswordRoute =
+          state.uri.path == AppRoutes.newPasswordRequired;
       final isSignInRoute = state.uri.path == AppRoutes.signIn;
       final isSessionExpiredRoute = state.uri.path == AppRoutes.sessionExpired;
       final isHealthCheck = state.uri.path.startsWith('/health');
@@ -227,6 +231,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
 
       if (authState.status == AuthStatus.pendingConfirmation) {
         return isVerifyEmailRoute ? null : AppRoutes.verifyEmail;
+      }
+
+      if (authState.status == AuthStatus.pendingPasswordChange) {
+        return isNewPasswordRoute ? null : AppRoutes.newPasswordRequired;
       }
 
       if (!isAuthenticated && (!isOnboarding || isOnboardingLanding)) {
@@ -296,6 +304,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: 'password-reset',
             builder: (context, state) => const PasswordResetScreen(),
+          ),
+          GoRoute(
+            path: 'new-password',
+            builder: (context, state) => const NewPasswordRequiredScreen(),
           ),
           GoRoute(
             path: 'verify-email',

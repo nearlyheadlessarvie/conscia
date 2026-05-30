@@ -114,4 +114,36 @@ void main() {
     expect(authNotifier.lastConfirmCode, '123456');
     expect(authNotifier.lastConfirmPassword, 'FreshPass123');
   });
+
+  testWidgets('password reset rejects passwords outside Cognito policy',
+      (tester) async {
+    final authNotifier = _RecordingAuthNotifier();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          authProvider.overrideWith((ref) => authNotifier),
+        ],
+        child: const MaterialApp(
+          home: PasswordResetScreen(),
+        ),
+      ),
+    );
+
+    await tester.enterText(find.byType(TextField), 'reset@example.com');
+    await tester.tap(find.widgetWithText(FilledButton, 'Send reset code'));
+    await tester.pump();
+
+    final fields = find.byType(TextField);
+    await tester.enterText(fields.at(0), '123456');
+    await tester.enterText(fields.at(1), 'FRESHPASS123');
+    await tester.enterText(fields.at(2), 'FRESHPASS123');
+    await tester
+        .ensureVisible(find.widgetWithText(FilledButton, 'Reset password'));
+    await tester.tap(find.widgetWithText(FilledButton, 'Reset password'));
+    await tester.pump();
+
+    expect(find.textContaining('Include 1 lowercase letter'), findsOneWidget);
+    expect(authNotifier.lastConfirmEmail, isNull);
+  });
 }

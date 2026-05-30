@@ -32,6 +32,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   String? _occupationType;
   String? _householdSize;
   String? _profilePictureKey;
+  _ProfileFormSnapshot? _initialSnapshot;
 
   static const _spendingOptions = [
     _ProfileOption(
@@ -67,10 +68,23 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   ];
 
   @override
+  void initState() {
+    super.initState();
+    _nameController.addListener(_handleFormChanged);
+  }
+
+  @override
   void dispose() {
     _appBarScrollProgress.dispose();
+    _nameController.removeListener(_handleFormChanged);
     _nameController.dispose();
     super.dispose();
+  }
+
+  void _handleFormChanged() {
+    if (_loaded && mounted) {
+      setState(() {});
+    }
   }
 
   bool _handleScrollNotification(ScrollNotification notification) {
@@ -93,10 +107,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     _occupationType = profile.occupationType;
     _householdSize = profile.householdSize;
     _profilePictureKey = profile.profilePictureKey;
+    _initialSnapshot = _currentSnapshot();
     _loaded = true;
   }
 
   Future<void> _save({bool showSuccess = true}) async {
+    if (!_hasUnsavedChanges) return;
+
     setState(() => _saving = true);
     try {
       await ref.read(userServiceProvider).updateProfile(
@@ -109,6 +126,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           );
       ref.invalidate(currentUserProvider);
       if (!mounted) return;
+      _initialSnapshot = _currentSnapshot();
       if (showSuccess) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Profile saved')),
@@ -198,7 +216,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).appColors;
-    final userAsync = ref.watch(currentUserProvider);
+    final userAsync = ref.watch(currentSessionUserAsyncProvider);
 
     return ConsciaAppBarScrollScope(
       scrollProgress: _appBarScrollProgress,
@@ -332,7 +350,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     ),
                     _ProfileSaveCta(
                       saving: _saving,
-                      onPressed: _saving ? null : _save,
+                      onPressed: _saving || !_hasUnsavedChanges ? null : _save,
                     ),
                   ],
                 );
@@ -399,6 +417,61 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     if (lower.endsWith('.webp')) return 'image/webp';
     return 'image/jpeg';
   }
+
+  bool get _hasUnsavedChanges {
+    final initial = _initialSnapshot;
+    return initial != null && _currentSnapshot() != initial;
+  }
+
+  _ProfileFormSnapshot _currentSnapshot() {
+    return _ProfileFormSnapshot(
+      displayName: _nameController.text.trim(),
+      spendingPersonality: _spendingPersonality,
+      incomeRange: _incomeRange,
+      occupationType: _occupationType,
+      householdSize: _householdSize,
+      profilePictureKey: _profilePictureKey,
+    );
+  }
+}
+
+class _ProfileFormSnapshot {
+  const _ProfileFormSnapshot({
+    required this.displayName,
+    required this.spendingPersonality,
+    required this.incomeRange,
+    required this.occupationType,
+    required this.householdSize,
+    required this.profilePictureKey,
+  });
+
+  final String displayName;
+  final String? spendingPersonality;
+  final String? incomeRange;
+  final String? occupationType;
+  final String? householdSize;
+  final String? profilePictureKey;
+
+  @override
+  bool operator ==(Object other) {
+    return other is _ProfileFormSnapshot &&
+        other.displayName == displayName &&
+        other.spendingPersonality == spendingPersonality &&
+        other.incomeRange == incomeRange &&
+        other.occupationType == occupationType &&
+        other.householdSize == householdSize &&
+        other.profilePictureKey == profilePictureKey;
+  }
+
+  @override
+  int get hashCode => Object.hash(
+        displayName,
+        spendingPersonality,
+        incomeRange,
+        occupationType,
+        householdSize,
+        profilePictureKey,
+      );
 }
 
 class _ProfileSaveCta extends StatelessWidget {

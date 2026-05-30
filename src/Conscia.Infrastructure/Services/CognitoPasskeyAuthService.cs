@@ -150,9 +150,10 @@ public sealed class CognitoPasskeyAuthService : IPasskeyAuthService
         var (userId, email) = ReadClaims(tokenForClaims);
         email ??= emailFallback;
 
+        User? user = null;
         if (userId is not null && email is not null)
         {
-            await EnsureLocalUserAsync(userId.Value, email, ct);
+            user = await EnsureLocalUserAsync(userId.Value, email, ct);
         }
 
         return new AuthResult
@@ -160,12 +161,12 @@ public sealed class CognitoPasskeyAuthService : IPasskeyAuthService
             Success = true,
             AccessToken = tokens.AccessToken,
             RefreshToken = tokens.RefreshToken,
-            UserId = userId?.ToString(),
+            UserId = user?.Id.ToString() ?? userId?.ToString(),
             Email = email
         };
     }
 
-    private async Task EnsureLocalUserAsync(Guid userId, string email, CancellationToken ct)
+    private async Task<User> EnsureLocalUserAsync(Guid userId, string email, CancellationToken ct)
     {
         var user = await _users.GetByIdAsync(userId, ct) ?? await _users.GetByEmailAsync(email, ct);
         if (user is null)
@@ -196,6 +197,8 @@ public sealed class CognitoPasskeyAuthService : IPasskeyAuthService
                 HasPassword = false
             }, ct);
         }
+
+        return user;
     }
 
     private static (Guid? UserId, string? Email) ReadClaims(string? token)

@@ -339,7 +339,7 @@ class _PrePurchaseScreenState extends ConsumerState<PrePurchaseScreen> {
                 }
 
                 final locale = ref.watch(userPreferencesProvider).locale;
-                final profile = ref.watch(currentUserProvider).valueOrNull;
+                final profile = ref.watch(currentSessionUserProvider);
                 return _VerdictSheetContent(
                   scrollController: scrollController,
                   response: snapshot.data!,

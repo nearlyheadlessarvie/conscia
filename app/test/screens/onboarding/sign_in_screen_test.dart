@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:conscia_app/core/errors/app_error.dart';
 import 'package:conscia_app/core/routing/app_router.dart';
 import 'package:conscia_app/providers/auth_provider.dart';
@@ -92,6 +94,8 @@ class _RecordingAuthNotifier extends AuthNotifier {
   int googleCount = 0;
   Object? googleError;
   Object? appleError;
+  Completer<void>? loginCompleter;
+  Completer<void>? googleCompleter;
   AuthTokens? completedExternalTokens;
   String? completedExternalEmail;
 
@@ -99,6 +103,13 @@ class _RecordingAuthNotifier extends AuthNotifier {
   Future<void> login(String email, String password) async {
     lastLoginEmail = email;
     lastLoginPassword = password;
+    await loginCompleter?.future;
+    state = state.copyWith(
+      status: AuthStatus.authenticated,
+      accessToken: 'access-token',
+      refreshToken: 'refresh-token',
+      userId: 'user-id',
+    );
   }
 
   @override
@@ -108,6 +119,13 @@ class _RecordingAuthNotifier extends AuthNotifier {
       throw error;
     }
     googleCount += 1;
+    await googleCompleter?.future;
+    state = state.copyWith(
+      status: AuthStatus.authenticated,
+      accessToken: 'access-token',
+      refreshToken: 'refresh-token',
+      userId: 'user-id',
+    );
   }
 
   @override
@@ -125,6 +143,12 @@ class _RecordingAuthNotifier extends AuthNotifier {
   }) async {
     completedExternalTokens = tokens;
     completedExternalEmail = email;
+    state = state.copyWith(
+      status: AuthStatus.authenticated,
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken,
+      userId: tokens.userId,
+    );
   }
 }
 
@@ -217,6 +241,60 @@ void main() {
     expect(authNotifier.lastLoginPassword, 'SecurePass123');
   });
 
+  testWidgets('email sign in shows the page loading overlay', (tester) async {
+    final authNotifier = _RecordingAuthNotifier()
+      ..loginCompleter = Completer<void>();
+
+    await _pumpSignInScreen(
+      tester,
+      authNotifier: authNotifier,
+    );
+
+    final fields = find.byType(TextField);
+    await tester.enterText(fields.at(0), 'story-demo@example.com');
+    await tester.enterText(fields.at(1), 'SecurePass123');
+    await tester.tap(
+      find.widgetWithText(FilledButton, 'Sign In'),
+    );
+    await tester.pump();
+
+    expect(
+      find.byKey(const ValueKey('conscia-loading-overlay')),
+      findsOneWidget,
+    );
+    expect(find.byType(CircularProgressIndicator), findsNothing);
+
+    authNotifier.loginCompleter!.complete();
+    await tester.pump();
+  });
+
+  testWidgets('email sign in keeps the loading overlay after auth succeeds',
+      (tester) async {
+    final authNotifier = _RecordingAuthNotifier()
+      ..loginCompleter = Completer<void>();
+
+    await _pumpSignInScreen(
+      tester,
+      authNotifier: authNotifier,
+    );
+
+    final fields = find.byType(TextField);
+    await tester.enterText(fields.at(0), 'story-demo@example.com');
+    await tester.enterText(fields.at(1), 'SecurePass123');
+    await tester.tap(
+      find.widgetWithText(FilledButton, 'Sign In'),
+    );
+    await tester.pump();
+
+    authNotifier.loginCompleter!.complete();
+    await tester.pump();
+
+    expect(
+      find.byKey(const ValueKey('conscia-loading-overlay')),
+      findsOneWidget,
+    );
+  });
+
   testWidgets('google button still routes through auth notifier',
       (tester) async {
     final authNotifier = _RecordingAuthNotifier();
@@ -233,6 +311,56 @@ void main() {
     await tester.pump();
 
     expect(authNotifier.googleCount, 1);
+  });
+
+  testWidgets('google sign in shows the page loading overlay', (tester) async {
+    final authNotifier = _RecordingAuthNotifier()
+      ..googleCompleter = Completer<void>();
+
+    await _pumpSignInScreen(
+      tester,
+      authNotifier: authNotifier,
+    );
+
+    final googleButton =
+        find.widgetWithText(OutlinedButton, 'Sign in with Google');
+    await tester.ensureVisible(googleButton);
+    await tester.tap(googleButton);
+    await tester.pump();
+
+    expect(authNotifier.googleCount, 1);
+    expect(
+      find.byKey(const ValueKey('conscia-loading-overlay')),
+      findsOneWidget,
+    );
+
+    authNotifier.googleCompleter!.complete();
+    await tester.pump();
+  });
+
+  testWidgets('google sign in keeps the loading overlay after auth succeeds',
+      (tester) async {
+    final authNotifier = _RecordingAuthNotifier()
+      ..googleCompleter = Completer<void>();
+
+    await _pumpSignInScreen(
+      tester,
+      authNotifier: authNotifier,
+    );
+
+    final googleButton =
+        find.widgetWithText(OutlinedButton, 'Sign in with Google');
+    await tester.ensureVisible(googleButton);
+    await tester.tap(googleButton);
+    await tester.pump();
+
+    authNotifier.googleCompleter!.complete();
+    await tester.pump();
+
+    expect(
+      find.byKey(const ValueKey('conscia-loading-overlay')),
+      findsOneWidget,
+    );
   });
 
   testWidgets('google sign in dismisses the focused keyboard', (tester) async {
@@ -339,6 +467,31 @@ void main() {
 
     expect(passkeyService.lastSignInEmail, 'story-demo@example.com');
     expect(authNotifier.completedExternalEmail, 'story-demo@example.com');
+  });
+
+  testWidgets('passkey sign in keeps the loading overlay after auth succeeds',
+      (tester) async {
+    SharedPreferences.setMockInitialValues({
+      passkeyRegisteredEmailsPreferenceKey: ['story-demo@example.com'],
+      passkeyFirstSignInEnabledPreferenceKey: true,
+    });
+    final authNotifier = _RecordingAuthNotifier();
+    final passkeyService = _RecordingPasskeyService();
+
+    await _pumpSignInScreen(
+      tester,
+      authNotifier: authNotifier,
+      passkeysAvailable: true,
+      passkeyService: passkeyService,
+    );
+
+    await tester.tap(find.text('Continue with Passkey'));
+    await tester.pump();
+
+    expect(
+      find.byKey(const ValueKey('conscia-loading-overlay')),
+      findsOneWidget,
+    );
   });
 
   testWidgets('passkey-first sign in prompts for multiple saved accounts',

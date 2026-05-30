@@ -1359,7 +1359,7 @@ class _ReflectionSheetState extends ConsumerState<_ReflectionSheet> {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
-    final profile = ref.watch(currentUserProvider).valueOrNull;
+    final profile = ref.watch(currentSessionUserProvider);
 
     if (_loading) {
       return AiGuidanceLoadingSheet(

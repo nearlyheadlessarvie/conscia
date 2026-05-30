@@ -90,12 +90,36 @@ public static class AuthEndpoints
             if (result.Success)
                 return Results.Ok(new { result.AccessToken, result.RefreshToken, result.UserId });
 
-            return result.RequiresConfirmation
-                ? Results.Json(
+            if (result.RequiresConfirmation)
+                return Results.Json(
                     new { result.Error, result.RequiresConfirmation, result.Email },
-                    statusCode: StatusCodes.Status409Conflict)
-                : Results.Json(new { error = "Invalid email or password" }, statusCode: 401);
+                    statusCode: StatusCodes.Status409Conflict);
+
+            if (result.RequiresPasswordChange)
+                return Results.Json(
+                    new { result.Error, result.RequiresPasswordChange, result.Email, result.Session },
+                    statusCode: StatusCodes.Status409Conflict);
+
+            return Results.Json(new { error = "Invalid email or password" }, statusCode: 401);
         }).WithName("Login").RequireRateLimiting("auth");
+
+        group.MapPost("/password/change-required", async (HttpContext ctx, CompletePasswordChangeRequest req, IAuthService auth) =>
+        {
+            if (string.IsNullOrWhiteSpace(req.Email) ||
+                string.IsNullOrWhiteSpace(req.Session) ||
+                string.IsNullOrWhiteSpace(req.Password))
+                return Results.BadRequest(new { error = "Email, session, and password are required" });
+
+            var result = await auth.CompletePasswordChangeAsync(
+                req.Email,
+                req.Session,
+                req.Password,
+                ctx.RequestAborted);
+
+            return result.Success
+                ? Results.Ok(new { result.AccessToken, result.RefreshToken, result.UserId })
+                : Results.BadRequest(new { result.Error });
+        }).WithName("CompletePasswordChange").RequireRateLimiting("auth");
 
         group.MapPost("/refresh", async (HttpContext ctx, RefreshRequest req, IAuthService auth) =>
         {
@@ -245,5 +269,6 @@ public record ResendConfirmationRequest(string Email);
 public record StartPasswordResetRequest(string Email);
 public record ConfirmPasswordResetRequest(string Email, string ConfirmationCode, string Password);
 public record LoginRequest(string Email, string Password);
+public record CompletePasswordChangeRequest(string Email, string Session, string Password);
 public record RefreshRequest(string RefreshToken);
 public record SetPasswordRequest(string Password, string? CurrentPassword);

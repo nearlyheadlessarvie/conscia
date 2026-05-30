@@ -8,6 +8,7 @@ public interface IAuthService
     Task<AuthResult> StartPasswordResetAsync(string email, CancellationToken ct = default);
     Task<AuthResult> ConfirmPasswordResetAsync(string email, string confirmationCode, string password, CancellationToken ct = default);
     Task<AuthResult> LoginAsync(string email, string password, CancellationToken ct = default);
+    Task<AuthResult> CompletePasswordChangeAsync(string email, string session, string password, CancellationToken ct = default);
     Task<AuthResult> RefreshAsync(string refreshToken, CancellationToken ct = default);
 }
 
@@ -19,5 +20,7 @@ public class AuthResult
     public string? UserId { get; set; }
     public string? Email { get; set; }
     public bool RequiresConfirmation { get; set; }
+    public bool RequiresPasswordChange { get; set; }
+    public string? Session { get; set; }
     public string? Error { get; set; }
 }

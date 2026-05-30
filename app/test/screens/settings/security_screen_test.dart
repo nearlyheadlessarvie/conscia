@@ -1,9 +1,9 @@
-import 'package:conscia_app/providers/auth_provider.dart';
+import 'package:conscia_app/core/errors/app_error.dart';
 import 'package:conscia_app/providers/passkey_provider.dart';
 import 'package:conscia_app/providers/usage_provider.dart';
 import 'package:conscia_app/providers/user_provider.dart';
 import 'package:conscia_app/screens/settings/security_screen.dart';
-import 'package:conscia_app/services/auth_service.dart';
+import 'package:conscia_app/services/account_password_service.dart';
 import 'package:conscia_app/services/passkey_service.dart';
 import 'package:conscia_app/services/user_service.dart';
 import 'package:dio/dio.dart';
@@ -12,14 +12,19 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-class _RecordingAuthService extends AuthService {
-  _RecordingAuthService() : super(Dio());
+class _RecordingAccountPasswordService extends AccountPasswordService {
+  _RecordingAccountPasswordService() : super(Dio());
 
   String? lastPassword;
   String? lastCurrentPassword;
+  Object? setPasswordError;
 
   @override
   Future<void> setPassword(String password, {String? currentPassword}) async {
+    final error = setPasswordError;
+    if (error != null) {
+      throw error;
+    }
     lastPassword = password;
     lastCurrentPassword = currentPassword;
   }
@@ -46,7 +51,7 @@ class _RecordingPasskeyService extends PasskeyService {
 Future<void> _pumpSecurityScreen(
   WidgetTester tester, {
   required SharedPreferences prefs,
-  AuthService? authService,
+  AccountPasswordService? accountPasswordService,
   PasskeyService? passkeyService,
   bool hasPassword = false,
 }) async {
@@ -64,7 +69,9 @@ Future<void> _pumpSecurityScreen(
         ),
       ),
       sharedPreferencesProvider.overrideWithValue(prefs),
-      authServiceProvider.overrideWithValue(authService ?? AuthService(Dio())),
+      accountPasswordServiceProvider.overrideWithValue(
+        accountPasswordService ?? _RecordingAccountPasswordService(),
+      ),
       passkeyAvailabilityProvider.overrideWith((ref) async => true),
       currentSessionSupportsPasskeysProvider.overrideWith((ref) => true),
       passkeyServiceProvider.overrideWithValue(
@@ -83,14 +90,20 @@ Future<void> _pumpSecurityScreen(
 }
 
 void main() {
+  tearDown(AppError.resetForTests);
+
   testWidgets('security screen adds a password without current password', (
     tester,
   ) async {
     SharedPreferences.setMockInitialValues({});
     final prefs = await SharedPreferences.getInstance();
-    final auth = _RecordingAuthService();
+    final auth = _RecordingAccountPasswordService();
 
-    await _pumpSecurityScreen(tester, prefs: prefs, authService: auth);
+    await _pumpSecurityScreen(
+      tester,
+      prefs: prefs,
+      accountPasswordService: auth,
+    );
     await tester.pumpAndSettle();
 
     expect(find.byType(TextField), findsNothing);
@@ -110,7 +123,7 @@ void main() {
     expect(auth.lastPassword, 'StrongPass123');
     expect(auth.lastCurrentPassword, isNull);
     expect(
-      find.text('Password updated. You can now sign in with email.'),
+      find.text('Password updated.'),
       findsOneWidget,
     );
   });
@@ -120,12 +133,12 @@ void main() {
   ) async {
     SharedPreferences.setMockInitialValues({});
     final prefs = await SharedPreferences.getInstance();
-    final auth = _RecordingAuthService();
+    final auth = _RecordingAccountPasswordService();
 
     await _pumpSecurityScreen(
       tester,
       prefs: prefs,
-      authService: auth,
+      accountPasswordService: auth,
       hasPassword: true,
     );
     await tester.pumpAndSettle();
@@ -146,6 +159,68 @@ void main() {
 
     expect(auth.lastPassword, 'StrongPass123');
     expect(auth.lastCurrentPassword, 'OldPass123');
+  });
+
+  testWidgets('security screen rejects passwords outside Cognito policy', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+    final auth = _RecordingAccountPasswordService();
+
+    await _pumpSecurityScreen(
+      tester,
+      prefs: prefs,
+      accountPasswordService: auth,
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Add Password'));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextField).at(0), 'STRONGPASS123');
+    await tester.enterText(find.byType(TextField).at(1), 'STRONGPASS123');
+    await tester.tap(find.text('Save password'));
+    await tester.pump();
+
+    expect(find.textContaining('Include 1 lowercase letter'), findsOneWidget);
+    expect(auth.lastPassword, isNull);
+  });
+
+  testWidgets('security screen shows password save errors inline', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+    final auth = _RecordingAccountPasswordService()
+      ..setPasswordError = Exception('Password update failed');
+    AppError.configure(
+      referenceIdFactory: () => 'SECURITY',
+      logger: (_) {},
+    );
+
+    await _pumpSecurityScreen(
+      tester,
+      prefs: prefs,
+      accountPasswordService: auth,
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Add Password'));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextField).at(0), 'StrongPass123');
+    await tester.enterText(find.byType(TextField).at(1), 'StrongPass123');
+    await tester.tap(find.text('Save password'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(find.text('Add password'), findsOneWidget);
+    expect(
+      find.textContaining('Something went wrong. Please try again.'),
+      findsOneWidget,
+    );
+    expect(find.byType(SnackBar), findsNothing);
   });
 
   testWidgets('security screen registers passkeys and enables passkey first',

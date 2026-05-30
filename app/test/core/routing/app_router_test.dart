@@ -507,6 +507,43 @@ void main() {
     );
   });
 
+  testWidgets(
+      'pending password change auth state routes to new password screen',
+      (tester) async {
+    final fakeAuthNotifier = _TestAuthNotifier(
+      const AuthState(
+        status: AuthStatus.pendingPasswordChange,
+        pendingEmail: 'reviewer@example.com',
+        passwordChangeSession: 'challenge-session',
+      ),
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          authProvider.overrideWith((ref) => fakeAuthNotifier),
+        ],
+        child: Consumer(
+          builder: (context, ref, _) {
+            final router = ref.watch(appRouterProvider);
+            return MaterialApp.router(routerConfig: router);
+          },
+        ),
+      ),
+    );
+
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+
+    expect(find.text('Choose a new password'), findsOneWidget);
+    expect(
+      find.text(
+        'Set a new password for reviewer@example.com to finish signing in.',
+      ),
+      findsOneWidget,
+    );
+  });
+
   testWidgets('authenticated shell routes keep visible content in the viewport',
       (tester) async {
     final fakeAuthNotifier = _TestAuthNotifier(

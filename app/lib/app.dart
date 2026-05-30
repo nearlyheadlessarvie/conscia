@@ -10,9 +10,9 @@ import 'core/theme/app_theme.dart';
 import 'providers/auth_provider.dart';
 import 'providers/app_availability_provider.dart';
 import 'providers/iap_provider.dart';
-import 'providers/user_provider.dart';
 import 'services/deep_link_service.dart';
 import 'services/push_notification_service.dart';
+import 'widgets/conscia_loading_overlay.dart';
 
 class ConsciaApp extends ConsumerWidget {
   const ConsciaApp({super.key});
@@ -213,37 +213,11 @@ class _AuthRestoreBlocker extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final authState = ref.watch(authProvider);
-    final userAsync = authState.isAuthenticated
-        ? ref.watch(currentUserProvider)
-        : null;
-    final shouldBlock =
-        authState.isRestoringSession || (authState.isAuthenticated && userAsync?.isLoading == true);
-    if (!shouldBlock) {
+    if (!authState.isRestoringSession) {
       return const SizedBox.shrink();
     }
 
-    final theme = Theme.of(context);
-    return Positioned.fill(
-      child: ColoredBox(
-        color: theme.scaffoldBackgroundColor,
-        child: Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                'Conscia',
-                style: theme.textTheme.headlineMedium?.copyWith(
-                  color: theme.colorScheme.onSurface,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-              const SizedBox(height: 16),
-              const CircularProgressIndicator(),
-            ],
-          ),
-        ),
-      ),
-    );
+    return const ConsciaLoadingOverlay(opacity: 0.96);
   }
 }
 
