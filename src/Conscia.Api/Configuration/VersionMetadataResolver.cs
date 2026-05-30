@@ -27,7 +27,7 @@ public static class VersionMetadataResolver
                     return metadata;
                 }
             }
-            catch (IOException)
+            catch (Exception ex) when (ex is IOException or JsonException)
             {
             }
         }

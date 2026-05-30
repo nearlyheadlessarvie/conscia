@@ -61,7 +61,7 @@ public sealed class CognitoPasskeyAuthService : IPasskeyAuthService
             new CompleteWebAuthnRegistrationRequest
             {
                 AccessToken = accessToken,
-                Credential = credential
+                Credential = ParseJsonDocument(credential)
             },
             ct);
     }
@@ -231,6 +231,31 @@ public sealed class CognitoPasskeyAuthService : IPasskeyAuthService
 
     private static string? SerializeDocument(string? documentJson)
         => documentJson;
+
+    private static Document ParseJsonDocument(string json)
+    {
+        using var payload = JsonDocument.Parse(json);
+        return ToDocument(payload.RootElement);
+    }
+
+    private static Document ToDocument(JsonElement element)
+        => element.ValueKind switch
+        {
+            JsonValueKind.Object => new Document(element
+                .EnumerateObject()
+                .ToDictionary(property => property.Name, property => ToDocument(property.Value))),
+            JsonValueKind.Array => new Document(element
+                .EnumerateArray()
+                .Select(ToDocument)
+                .ToArray()),
+            JsonValueKind.String => new Document(element.GetString() ?? string.Empty),
+            JsonValueKind.Number when element.TryGetInt32(out var intValue) => new Document(intValue),
+            JsonValueKind.Number when element.TryGetInt64(out var longValue) => new Document(longValue),
+            JsonValueKind.Number => new Document(element.GetDouble()),
+            JsonValueKind.True => new Document(true),
+            JsonValueKind.False => new Document(false),
+            _ => Document.FromObject(null)
+        };
 
     private static object? ToJsonValue(Document document)
         => document switch

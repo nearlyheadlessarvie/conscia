@@ -187,6 +187,7 @@ public class ComputeStack : Stack
         {
             Actions =
             [
+                "cognito-idp:AdminCreateUser",
                 "cognito-idp:AdminDeleteUser",
                 "cognito-idp:AdminSetUserPassword"
             ],
