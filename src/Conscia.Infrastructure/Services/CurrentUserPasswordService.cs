@@ -43,13 +43,16 @@ public sealed class CurrentUserPasswordService : ICurrentUserPasswordService
 
         var email = principal.FindFirst(ClaimTypes.Email)?.Value
             ?? principal.FindFirst("email")?.Value;
+        var user = await ResolveLocalUserAsync(principal, email, ct);
+        email ??= user?.Email;
         if (string.IsNullOrWhiteSpace(email))
         {
             throw new InvalidOperationException("Authenticated user is missing an email.");
         }
 
         email = NormalizeEmail(email);
-        var identity = await GetEmailIdentityAsync(email, ct);
+        user ??= await _users.GetByEmailAsync(email, ct);
+        var identity = user is null ? null : await GetEmailIdentityAsync(user, email, ct);
         if (identity?.HasPassword == true)
         {
             if (string.IsNullOrWhiteSpace(currentPassword))
@@ -69,7 +72,7 @@ public sealed class CurrentUserPasswordService : ICurrentUserPasswordService
             await SetInitialPasswordAsync(username, password, ct);
         }
 
-        await MarkEmailIdentityHasPasswordAsync(email, identity, ct);
+        await MarkEmailIdentityHasPasswordAsync(email, identity, user, ct);
     }
 
     private async Task ChangeExistingPasswordAsync(
@@ -115,14 +118,29 @@ public sealed class CurrentUserPasswordService : ICurrentUserPasswordService
         }
     }
 
-    private async Task<UserIdentity?> GetEmailIdentityAsync(string email, CancellationToken ct)
+    private async Task<User?> ResolveLocalUserAsync(ClaimsPrincipal principal, string? email, CancellationToken ct)
     {
-        var user = await _users.GetByEmailAsync(email, ct);
-        if (user is null)
+        if (!string.IsNullOrWhiteSpace(email))
         {
-            return null;
+            var user = await _users.GetByEmailAsync(NormalizeEmail(email), ct);
+            if (user is not null)
+            {
+                return user;
+            }
         }
 
+        var userIdValue = principal.FindFirst(ClaimTypes.NameIdentifier)?.Value
+            ?? principal.FindFirst("sub")?.Value;
+        if (Guid.TryParse(userIdValue, out var userId))
+        {
+            return await _users.GetByIdAsync(userId, ct);
+        }
+
+        return null;
+    }
+
+    private async Task<UserIdentity?> GetEmailIdentityAsync(User user, string email, CancellationToken ct)
+    {
         var identities = await _users.GetIdentitiesByUserAsync(user.Id, ct);
         return identities.FirstOrDefault(identity =>
             identity.Provider == AuthProvider.Email &&
@@ -132,6 +150,7 @@ public sealed class CurrentUserPasswordService : ICurrentUserPasswordService
     private async Task MarkEmailIdentityHasPasswordAsync(
         string email,
         UserIdentity? identity,
+        User? user,
         CancellationToken ct)
     {
         if (identity is not null)
@@ -145,7 +164,7 @@ public sealed class CurrentUserPasswordService : ICurrentUserPasswordService
             return;
         }
 
-        var user = await _users.GetByEmailAsync(email, ct);
+        user ??= await _users.GetByEmailAsync(email, ct);
         if (user is null)
         {
             return;
