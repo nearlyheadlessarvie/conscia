@@ -359,8 +359,7 @@ public class StackTests
                 "test/apple-private-key",
                 "test/google-play-service-account-json",
                 "test/firebase-admin-service-account-json"),
-            ApiAssetPath = CreateAssetStub("api"),
-            DomainSettings = TestDomainSettings
+            ApiAssetPath = CreateAssetStub("api")
         });
 
         Assert.NotNull(stack.ApiLambda);
@@ -412,8 +411,7 @@ public class StackTests
                     ["Firebase__AdminServiceAccountJsonSecretId"] = "test/firebase-admin-service-account-json",
                     ["GooglePlay__ServiceAccountJsonSecretId"] = "test/google-play-service-account-json",
                     ["AdminBootstrap__Emails"] = Match.AnyValue(),
-                    ["InviteEmail__FromEmail"] = "invites@getconscia.com",
-                    ["Auth__Cognito__LoginDomain"] = "https://login.getconscia.com"
+                    ["InviteEmail__FromEmail"] = "invites@getconscia.com"
                 })
             }
         });
