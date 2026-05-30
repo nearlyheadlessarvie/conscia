@@ -1,5 +1,3 @@
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
 
 class ConsciaLoadingOverlay extends StatelessWidget {
@@ -31,7 +29,10 @@ class ConsciaLoadingOverlay extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 18),
-                ConsciaStaggeredDotsWave(color: colors.primary),
+                ConsciaStaggeredDotsWave(
+                  color: colors.primary,
+                  size: 38,
+                ),
               ],
             ),
           ),
@@ -45,13 +46,11 @@ class ConsciaStaggeredDotsWave extends StatefulWidget {
   const ConsciaStaggeredDotsWave({
     required this.color,
     super.key,
-    this.dotCount = 5,
-    this.dotSize = 8,
+    this.size = 38,
   });
 
   final Color color;
-  final int dotCount;
-  final double dotSize;
+  final double size;
 
   @override
   State<ConsciaStaggeredDotsWave> createState() =>
@@ -66,7 +65,7 @@ class _ConsciaStaggeredDotsWaveState extends State<ConsciaStaggeredDotsWave>
   void initState() {
     super.initState();
     _controller = AnimationController(
-      duration: const Duration(milliseconds: 900),
+      duration: const Duration(milliseconds: 1600),
       vsync: this,
     )..repeat();
   }
@@ -82,59 +81,129 @@ class _ConsciaStaggeredDotsWaveState extends State<ConsciaStaggeredDotsWave>
     return AnimatedBuilder(
       animation: _controller,
       builder: (context, _) {
-        return Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            for (var index = 0; index < widget.dotCount; index++) ...[
-              _AnimatedWaveDot(
+        final oddHeight = widget.size * 0.4;
+        final evenHeight = widget.size * 0.7;
+
+        return SizedBox.square(
+          dimension: widget.size,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              _WaveBar(
+                controllerValue: _controller.value,
                 color: widget.color,
-                progress: _dotProgress(index),
-                size: widget.dotSize,
+                size: widget.size,
+                maxHeight: oddHeight,
+                heightInterval: const Interval(0.0, 0.1),
+                offsetInterval: const Interval(0.18, 0.28),
+                reverseHeightInterval: const Interval(0.28, 0.38),
+                reverseOffsetInterval: const Interval(0.47, 0.57),
               ),
-              if (index != widget.dotCount - 1)
-                SizedBox(width: widget.dotSize * 0.7),
+              _WaveBar(
+                controllerValue: _controller.value,
+                color: widget.color,
+                size: widget.size,
+                maxHeight: evenHeight,
+                heightInterval: const Interval(0.09, 0.19),
+                offsetInterval: const Interval(0.27, 0.37),
+                reverseHeightInterval: const Interval(0.37, 0.47),
+                reverseOffsetInterval: const Interval(0.56, 0.66),
+              ),
+              _WaveBar(
+                controllerValue: _controller.value,
+                color: widget.color,
+                size: widget.size,
+                maxHeight: oddHeight,
+                heightInterval: const Interval(0.18, 0.28),
+                offsetInterval: const Interval(0.36, 0.46),
+                reverseHeightInterval: const Interval(0.46, 0.56),
+                reverseOffsetInterval: const Interval(0.65, 0.75),
+              ),
+              _WaveBar(
+                controllerValue: _controller.value,
+                color: widget.color,
+                size: widget.size,
+                maxHeight: evenHeight,
+                heightInterval: const Interval(0.27, 0.37),
+                offsetInterval: const Interval(0.45, 0.55),
+                reverseHeightInterval: const Interval(0.55, 0.65),
+                reverseOffsetInterval: const Interval(0.74, 0.84),
+              ),
+              _WaveBar(
+                controllerValue: _controller.value,
+                color: widget.color,
+                size: widget.size,
+                maxHeight: oddHeight,
+                heightInterval: const Interval(0.36, 0.46),
+                offsetInterval: const Interval(0.54, 0.64),
+                reverseHeightInterval: const Interval(0.64, 0.74),
+                reverseOffsetInterval: const Interval(0.83, 0.93),
+              ),
             ],
-          ],
+          ),
         );
       },
     );
   }
-
-  double _dotProgress(int index) {
-    final phase = (_controller.value * math.pi * 2) - (index * 0.55);
-    return (math.sin(phase) + 1) / 2;
-  }
 }
 
-class _AnimatedWaveDot extends StatelessWidget {
-  const _AnimatedWaveDot({
+class _WaveBar extends StatelessWidget {
+  const _WaveBar({
     required this.color,
-    required this.progress,
     required this.size,
+    required this.controllerValue,
+    required this.maxHeight,
+    required this.heightInterval,
+    required this.offsetInterval,
+    required this.reverseHeightInterval,
+    required this.reverseOffsetInterval,
   });
 
   final Color color;
-  final double progress;
   final double size;
+  final double controllerValue;
+  final double maxHeight;
+  final Interval heightInterval;
+  final Interval offsetInterval;
+  final Interval reverseHeightInterval;
+  final Interval reverseOffsetInterval;
 
   @override
   Widget build(BuildContext context) {
-    final scale = 0.65 + (progress * 0.45);
-    return Opacity(
-      opacity: 0.45 + (progress * 0.55),
-      child: Transform.translate(
-        offset: Offset(0, -6 * progress),
-        child: Transform.scale(
-          scale: scale,
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              color: color,
-              shape: BoxShape.circle,
-            ),
-            child: SizedBox.square(dimension: size),
-          ),
+    final baseHeight = size * 0.13;
+    final maxOffset = -(size * 0.20);
+    final isRising = controllerValue <= offsetInterval.end;
+    final height = isRising
+        ? _lerp(baseHeight, maxHeight, _intervalValue(heightInterval))
+        : _lerp(maxHeight, baseHeight, _intervalValue(reverseHeightInterval));
+    final offsetY = isRising
+        ? _lerp(0, maxOffset, _intervalValue(offsetInterval))
+        : _lerp(maxOffset, 0, _intervalValue(reverseOffsetInterval));
+
+    return Transform.translate(
+      offset: Offset(0, offsetY),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: color,
+          borderRadius: BorderRadius.circular(size),
+        ),
+        child: SizedBox(
+          width: baseHeight,
+          height: height,
         ),
       ),
     );
   }
+
+  double _intervalValue(Interval interval) {
+    if (controllerValue <= interval.begin) return 0;
+    if (controllerValue >= interval.end) return 1;
+
+    final progress =
+        (controllerValue - interval.begin) / (interval.end - interval.begin);
+    return Curves.easeInOut.transform(progress);
+  }
+
+  static double _lerp(double start, double end, double value) =>
+      start + ((end - start) * value);
 }
