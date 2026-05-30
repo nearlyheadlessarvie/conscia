@@ -36,7 +36,7 @@ public sealed class StoryDemoScenario
     {
         nowUtc = DateTime.SpecifyKind(nowUtc, DateTimeKind.Utc);
 
-        var userId = Guid.Parse("7aa7aa7a-1111-4444-8888-111111111111");
+        var userId = Guid.Parse("59ca55dc-40b1-705a-e401-896fec9c84d6");
         var spouseId = Guid.Parse("7aa7aa7a-1111-4444-8888-111111111112");
         var viewerId = Guid.Parse("7aa7aa7a-1111-4444-8888-111111111113");
         var adminId = Guid.Parse("7aa7aa7a-1111-4444-8888-111111111114");

@@ -66,7 +66,7 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen> {
         ..clearSnackBars()
         ..showSnackBar(
           const SnackBar(
-            content: Text('Password updated. You can now sign in with email.'),
+            content: Text('Password updated.'),
           ),
         );
     }

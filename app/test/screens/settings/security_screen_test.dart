@@ -123,7 +123,7 @@ void main() {
     expect(auth.lastPassword, 'StrongPass123');
     expect(auth.lastCurrentPassword, isNull);
     expect(
-      find.text('Password updated. You can now sign in with email.'),
+      find.text('Password updated.'),
       findsOneWidget,
     );
   });
