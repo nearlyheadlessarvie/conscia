@@ -216,7 +216,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).appColors;
-    final userAsync = ref.watch(currentUserProvider);
+    final userAsync = ref.watch(currentSessionUserAsyncProvider);
 
     return ConsciaAppBarScrollScope(
       scrollProgress: _appBarScrollProgress,

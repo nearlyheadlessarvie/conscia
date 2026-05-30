@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/constants/api_constants.dart';
 import '../core/network/dio_client.dart';
 import '../models/managed_category.dart';
+import 'auth_provider.dart';
 
 class CategoryQuery {
   const CategoryQuery({
@@ -30,6 +31,8 @@ class CategoryQuery {
 final managedCategoriesProvider =
     FutureProvider.family<List<ManagedCategory>, CategoryQuery>(
   (ref, query) async {
+    final authState = ref.watch(authProvider);
+    if (!authState.isAuthenticated) return const [];
     final dio = ref.watch(dioProvider);
     final response = await dio.get(
       ApiConstants.categories,

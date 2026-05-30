@@ -140,7 +140,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final userAsync = ref.watch(currentUserProvider);
+    final userAsync = ref.watch(currentSessionUserAsyncProvider);
     final familySpaceAsync = ref.watch(familySpaceProvider);
     final subAsync = ref.watch(subscriptionProvider);
     final locationAssistance = ref.watch(locationAssistanceProvider);
@@ -468,7 +468,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   }
 
   void _showAiIntensityPicker(BuildContext context, WidgetRef ref) {
-    final current = ref.read(currentUserProvider).valueOrNull;
+    final current = ref.read(currentSessionUserProvider);
     if (current == null) return;
 
     showModalBottomSheet<void>(

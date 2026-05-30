@@ -101,9 +101,9 @@ class _BudgetFormSheetState extends ConsumerState<BudgetFormSheet> {
       if (mounted) setState(() => _submitting = false);
       return;
     }
-    final user = ref.read(currentUserProvider);
+    final user = ref.read(currentSessionUserProvider);
     final currency =
-        widget.existing?.currencyCode ?? user.value?.currencyCode ?? 'USD';
+        widget.existing?.currencyCode ?? user?.currencyCode ?? 'USD';
     final familySpace = ref.read(familySpaceProvider).valueOrNull;
     final isFamilyScope =
         !_isEditing && _scope == 'family' && familySpace != null;
@@ -185,9 +185,9 @@ class _BudgetFormSheetState extends ConsumerState<BudgetFormSheet> {
   @override
   Widget build(BuildContext context) {
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
-    final user = ref.read(currentUserProvider);
+    final user = ref.read(currentSessionUserProvider);
     final currency =
-        widget.existing?.currencyCode ?? user.value?.currencyCode ?? 'USD';
+        widget.existing?.currencyCode ?? user?.currencyCode ?? 'USD';
     final isPremium =
         ref.watch(subscriptionProvider).valueOrNull?.isPremium ?? false;
     final familySpace = ref.watch(familySpaceProvider).valueOrNull;

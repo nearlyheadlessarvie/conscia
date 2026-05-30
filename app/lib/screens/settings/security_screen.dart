@@ -78,7 +78,7 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen> {
     setState(() => _isRegisteringPasskey = true);
     try {
       await ref.read(passkeyServiceProvider).registerCurrentUserPasskey();
-      final email = ref.read(currentUserProvider).valueOrNull?.email;
+      final email = ref.read(currentSessionUserProvider)?.email;
       if (email != null && email.trim().isNotEmpty) {
         final notifier = ref.read(passkeySignInPreferenceProvider.notifier);
         await notifier.registerEmail(email);
@@ -115,7 +115,7 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen> {
     final sessionSupportsPasskeys =
         ref.watch(currentSessionSupportsPasskeysProvider);
     final passkeyPreference = ref.watch(passkeySignInPreferenceProvider);
-    final currentUser = ref.watch(currentUserProvider).valueOrNull;
+    final currentUser = ref.watch(currentSessionUserProvider);
     final currentEmail = currentUser?.email;
     final hasPassword = currentUser?.hasPassword ?? false;
     final hasRegisteredCurrentPasskey = currentEmail != null &&

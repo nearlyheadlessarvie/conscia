@@ -4,6 +4,7 @@ import 'package:dio/dio.dart';
 import '../core/network/dio_client.dart';
 import '../models/behavioral_insights.dart';
 import '../core/constants/api_constants.dart';
+import 'auth_provider.dart';
 
 final behavioralInsightsServiceProvider =
     Provider<BehavioralInsightsService>((ref) {
@@ -30,6 +31,8 @@ class BehavioralInsightsService {
 
 final behavioralInsightsProvider =
     FutureProvider<BehavioralInsights?>((ref) async {
+  final authState = ref.watch(authProvider);
+  if (!authState.isAuthenticated) return null;
   final service = ref.watch(behavioralInsightsServiceProvider);
   return service.getBehavioralInsights();
 });
