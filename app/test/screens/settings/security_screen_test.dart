@@ -1,3 +1,4 @@
+import 'package:conscia_app/core/errors/app_error.dart';
 import 'package:conscia_app/providers/auth_provider.dart';
 import 'package:conscia_app/providers/passkey_provider.dart';
 import 'package:conscia_app/providers/usage_provider.dart';
@@ -17,9 +18,14 @@ class _RecordingAuthService extends AuthService {
 
   String? lastPassword;
   String? lastCurrentPassword;
+  Object? setPasswordError;
 
   @override
   Future<void> setPassword(String password, {String? currentPassword}) async {
+    final error = setPasswordError;
+    if (error != null) {
+      throw error;
+    }
     lastPassword = password;
     lastCurrentPassword = currentPassword;
   }
@@ -83,6 +89,8 @@ Future<void> _pumpSecurityScreen(
 }
 
 void main() {
+  tearDown(AppError.resetForTests);
+
   testWidgets('security screen adds a password without current password', (
     tester,
   ) async {
@@ -168,6 +176,38 @@ void main() {
 
     expect(find.textContaining('Include 1 lowercase letter'), findsOneWidget);
     expect(auth.lastPassword, isNull);
+  });
+
+  testWidgets('security screen shows password save errors inline', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+    final auth = _RecordingAuthService()
+      ..setPasswordError = Exception('Password update failed');
+    AppError.configure(
+      referenceIdFactory: () => 'SECURITY',
+      logger: (_) {},
+    );
+
+    await _pumpSecurityScreen(tester, prefs: prefs, authService: auth);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Add Password'));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextField).at(0), 'StrongPass123');
+    await tester.enterText(find.byType(TextField).at(1), 'StrongPass123');
+    await tester.tap(find.text('Save password'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(find.text('Add password'), findsOneWidget);
+    expect(
+      find.textContaining('Something went wrong. Please try again.'),
+      findsOneWidget,
+    );
+    expect(find.byType(SnackBar), findsNothing);
   });
 
   testWidgets('security screen registers passkeys and enables passkey first',

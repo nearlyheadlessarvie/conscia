@@ -16,6 +16,7 @@ import '../../widgets/conscia_app_bar.dart';
 import '../../widgets/conscia_bottom_sheet.dart';
 import '../../widgets/editorial_section_header.dart';
 import '../../widgets/floating_label_text_field.dart';
+import '../../widgets/inline_notice.dart';
 
 class SecurityScreen extends ConsumerStatefulWidget {
   const SecurityScreen({super.key});
@@ -59,6 +60,8 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen> {
 
     if (updated == true && mounted) {
       ref.invalidate(currentUserProvider);
+      await Future<void>.delayed(const Duration(milliseconds: 250));
+      if (!mounted) return;
       ScaffoldMessenger.of(context)
         ..clearSnackBars()
         ..showSnackBar(
@@ -289,6 +292,7 @@ class _PasswordSheetState extends ConsumerState<_PasswordSheet> {
   String? _currentPasswordError;
   String? _passwordError;
   String? _confirmPasswordError;
+  String? _formError;
 
   @override
   void dispose() {
@@ -306,11 +310,13 @@ class _PasswordSheetState extends ConsumerState<_PasswordSheet> {
   void _clearErrors() {
     if (_currentPasswordError != null ||
         _passwordError != null ||
-        _confirmPasswordError != null) {
+        _confirmPasswordError != null ||
+        _formError != null) {
       setState(() {
         _currentPasswordError = null;
         _passwordError = null;
         _confirmPasswordError = null;
+        _formError = null;
       });
     }
   }
@@ -341,6 +347,7 @@ class _PasswordSheetState extends ConsumerState<_PasswordSheet> {
       _currentPasswordError = null;
       _passwordError = null;
       _confirmPasswordError = null;
+      _formError = null;
     });
 
     try {
@@ -354,9 +361,7 @@ class _PasswordSheetState extends ConsumerState<_PasswordSheet> {
     } catch (e, s) {
       if (!mounted) return;
       final error = AppError.from(e, stackTrace: s);
-      ScaffoldMessenger.of(context)
-        ..clearSnackBars()
-        ..showSnackBar(SnackBar(content: Text(error.userMessage)));
+      setState(() => _formError = error.userMessage);
     } finally {
       if (mounted) {
         setState(() => _isSaving = false);
@@ -388,6 +393,18 @@ class _PasswordSheetState extends ConsumerState<_PasswordSheet> {
       ),
       child: Column(
         children: [
+          if (_formError != null) ...[
+            InlineNotice(
+              message: _formError!,
+              tone: InlineNoticeTone.error,
+              icon: AppIcons.icon(
+                AppIconKey.lock,
+                color: Theme.of(context).colorScheme.error,
+                size: 16,
+              ),
+            ),
+            const SizedBox(height: 12),
+          ],
           if (widget.hasPassword) ...[
             FloatingLabelTextField(
               controller: _currentPasswordController,
