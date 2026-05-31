@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
@@ -41,6 +43,14 @@ class PasskeyCredential {
   final String? relyingPartyId;
   final String? authenticatorAttachment;
   final List<String> transports;
+}
+
+enum PasskeyOperation { signIn, register }
+
+class ExistingPasskeyRegistrationException implements Exception {
+  const ExistingPasskeyRegistrationException(this.source);
+
+  final Object source;
 }
 
 class PasskeyService {
@@ -111,31 +121,46 @@ class PasskeyService {
   }
 
   Future<void> registerCurrentUserPasskey() async {
-    final startResponse = await _authenticatedDio.post(
-      ApiConstants.passkeyRegisterStart,
-      options: Options(
-        extra: {
-          useAccessTokenRequestExtraKey: true,
-        },
-      ),
-    );
-    final startData = startResponse.data as Map<String, dynamic>;
-    final request = RegisterRequestType.fromJsonString(
-      startData['credentialCreationOptions'] as String,
-    );
-    final platformResponse = await _authenticator.register(request);
+    RegisterRequestType? request;
+    try {
+      final startResponse = await _authenticatedDio.post(
+        ApiConstants.passkeyRegisterStart,
+        options: Options(
+          extra: {
+            useAccessTokenRequestExtraKey: true,
+          },
+        ),
+      );
+      final startData = startResponse.data as Map<String, dynamic>;
+      request = _registerRequestFromJsonString(
+        startData['credentialCreationOptions'] as String,
+      );
+      final platformResponse = await _authenticator.register(request);
 
-    await _authenticatedDio.post(
-      ApiConstants.passkeyRegisterComplete,
-      data: {
-        'credential': platformResponse.toJsonString(),
-      },
-      options: Options(
-        extra: {
-          useAccessTokenRequestExtraKey: true,
+      await _authenticatedDio.post(
+        ApiConstants.passkeyRegisterComplete,
+        data: {
+          'credential': platformResponse.toJsonString(),
         },
-      ),
-    );
+        options: Options(
+          extra: {
+            useAccessTokenRequestExtraKey: true,
+          },
+        ),
+      );
+    } catch (error, stackTrace) {
+      await _recordPasskeyRegistrationFailure(error, request);
+      if (request != null &&
+          request.excludeCredentials.isNotEmpty &&
+          _isExistingCredentialRegistrationFailure(error)) {
+        Error.throwWithStackTrace(
+          ExistingPasskeyRegistrationException(error),
+          stackTrace,
+        );
+      }
+
+      Error.throwWithStackTrace(error, stackTrace);
+    }
   }
 
   Future<List<PasskeyCredential>> listCurrentUserPasskeys() async {
@@ -170,6 +195,34 @@ class PasskeyService {
         },
       ),
     );
+  }
+
+  Future<void> _recordPasskeyRegistrationFailure(
+    Object error,
+    RegisterRequestType? request,
+  ) async {
+    try {
+      await _authenticatedDio.post(
+        ApiConstants.clientDiagnostics,
+        data: {
+          'eventName': 'passkey.register.failed',
+          'level': 'warning',
+          'operation': 'register',
+          'platform': _platformLabel(),
+          'errorType': error.runtimeType.toString(),
+          if (_errorCode(error) case final code?) 'errorCode': code,
+          if (_errorMessage(error) case final message?) 'errorMessage': message,
+          'context': _registrationContext(request),
+        },
+        options: Options(
+          extra: {
+            useAccessTokenRequestExtraKey: true,
+          },
+        ),
+      );
+    } catch (_) {
+      // Diagnostics must never mask the original passkey setup failure.
+    }
   }
 }
 
@@ -220,9 +273,87 @@ bool isPasskeyCredentialUnavailable(Object error) {
   return false;
 }
 
-String friendlyPasskeyErrorMessage(Object error) {
+bool _isExistingCredentialRegistrationFailure(Object error) =>
+    error is PlatformException ||
+    error is ExcludeCredentialsCanNotBeRegisteredException ||
+    error is NoCreateOptionException;
+
+String _platformLabel() {
+  if (kIsWeb) {
+    return 'web';
+  }
+
+  return switch (defaultTargetPlatform) {
+    TargetPlatform.android => 'android',
+    TargetPlatform.iOS => 'ios',
+    TargetPlatform.macOS => 'macos',
+    TargetPlatform.windows => 'windows',
+    TargetPlatform.linux => 'linux',
+    TargetPlatform.fuchsia => 'fuchsia',
+  };
+}
+
+String? _errorCode(Object error) => switch (error) {
+      PlatformException() => error.code,
+      UnhandledAuthenticatorException() => error.code,
+      DioException() => error.response?.statusCode?.toString(),
+      _ => null,
+    };
+
+String? _errorMessage(Object error) => switch (error) {
+      PlatformException() => error.message,
+      UnhandledAuthenticatorException() => error.message,
+      DioException() => error.message,
+      _ => null,
+    };
+
+Map<String, String> _registrationContext(RegisterRequestType? request) {
+  if (request == null) {
+    return const {};
+  }
+
+  return {
+    'rpId': request.relyingParty.id,
+    'excludeCredentialsCount': request.excludeCredentials.length.toString(),
+    if (request.authSelectionType case final selection?) ...{
+      'residentKey': selection.residentKey,
+      'userVerification': selection.userVerification,
+    },
+  };
+}
+
+RegisterRequestType _registerRequestFromJsonString(String jsonString) {
+  final decoded = jsonDecode(jsonString);
+  if (decoded is! Map<String, dynamic>) {
+    throw FormatException('Expected JSON object, got ${decoded.runtimeType}');
+  }
+
+  final excludeCredentials = decoded['excludeCredentials'];
+  if (excludeCredentials is List) {
+    decoded['excludeCredentials'] = excludeCredentials.map((credential) {
+      if (credential is! Map) {
+        return credential;
+      }
+
+      final normalized = Map<String, dynamic>.from(credential);
+      normalized.putIfAbsent('transports', () => <String>[]);
+      return normalized;
+    }).toList(growable: false);
+  }
+
+  return RegisterRequestType.fromJson(decoded);
+}
+
+String friendlyPasskeyErrorMessage(
+  Object error, {
+  PasskeyOperation operation = PasskeyOperation.signIn,
+}) {
   if (error is AppError || error is DioException) {
     return AppError.from(error, log: false).userMessage;
+  }
+
+  if (error is ExistingPasskeyRegistrationException) {
+    return 'A passkey is already registered for this account. Remove it from Security settings and from this device before setting it up again.';
   }
 
   if (error is PlatformException) {
@@ -232,7 +363,8 @@ String friendlyPasskeyErrorMessage(Object error) {
       'deviceNotSupported' => 'This device does not support passkeys yet.',
       'ios-security-key-timeout' =>
         'Passkey verification timed out. Please try again.',
-      _ => 'Passkey sign-in is unavailable right now.',
+      _ =>
+        'Passkey ${operation == PasskeyOperation.register ? 'setup' : 'sign-in'} is unavailable right now. Code: ${error.code}',
     };
   }
 
