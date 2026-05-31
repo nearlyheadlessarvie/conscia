@@ -78,9 +78,24 @@ public class CognitoPreSignupLinkerTests
             {
                 User = new UserType { Username = "person@example.com" }
             });
+        _cognito
+            .Setup(client => client.AdminSetUserPasswordAsync(
+                It.Is<AdminSetUserPasswordRequest>(r =>
+                    r.UserPoolId == "ap-southeast-1_example" &&
+                    r.Username == "person@example.com" &&
+                    r.Permanent == true),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new AdminSetUserPasswordResponse());
 
         await _linker.HandleAsync(request, CancellationToken.None);
 
+        _cognito.Verify(client => client.AdminSetUserPasswordAsync(
+            It.Is<AdminSetUserPasswordRequest>(r =>
+                r.Password.Length >= 32 &&
+                r.Password.Any(char.IsUpper) &&
+                r.Password.Any(char.IsLower) &&
+                r.Password.Any(char.IsDigit)),
+            It.IsAny<CancellationToken>()), Times.Once);
         _cognito.Verify(client => client.AdminLinkProviderForUserAsync(
             It.Is<AdminLinkProviderForUserRequest>(r =>
                 r.UserPoolId == "ap-southeast-1_example" &&
