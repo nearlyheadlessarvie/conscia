@@ -74,7 +74,7 @@ public class TransactionEndpointTests : IClassFixture<TestWebAppFactory>
     public async Task ListTransactions_ReturnsPagedResult()
     {
         _factory.TransactionServiceMock
-            .Setup(s => s.ListAsync(UserId, 1, 20, null, null, null, It.IsAny<CancellationToken>()))
+            .Setup(s => s.ListAsync(UserId, 1, 20, null, null, null, It.IsAny<CancellationToken>(), null))
             .ReturnsAsync(new PagedResult<Transaction>
             {
                 Items = new List<Transaction>
@@ -100,6 +100,38 @@ public class TransactionEndpointTests : IClassFixture<TestWebAppFactory>
         var firstItem = body.RootElement.GetProperty("items")[0];
         Assert.Equal("Corner Cafe", firstItem.GetProperty("counterparty").GetString());
         Assert.False(firstItem.TryGetProperty("merchant", out _));
+    }
+
+    [Fact]
+    public async Task ListTransactions_WithNextToken_PassesCursorToServiceAndReturnsNextToken()
+    {
+        _factory.TransactionServiceMock
+            .Setup(s => s.ListAsync(UserId, 1, 20, null, null, null, It.IsAny<CancellationToken>(), "cursor-1"))
+            .ReturnsAsync(new PagedResult<Transaction>
+            {
+                Items = [],
+                Page = 1,
+                PageSize = 20,
+                TotalCount = 0,
+                NextToken = "cursor-2"
+            });
+
+        var response = await _client.GetAsync("/api/transactions?nextToken=cursor-1");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        _factory.TransactionServiceMock.Verify(s => s.ListAsync(
+            UserId,
+            1,
+            20,
+            null,
+            null,
+            null,
+            It.IsAny<CancellationToken>(),
+            "cursor-1"), Times.Once);
+
+        using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        Assert.Equal("cursor-2", body.RootElement.GetProperty("nextToken").GetString());
+        Assert.True(body.RootElement.GetProperty("hasMore").GetBoolean());
     }
 
     [Fact]
@@ -329,14 +361,14 @@ public class TransactionEndpointTests : IClassFixture<TestWebAppFactory>
         var to = new DateTime(2026, 05, 31, 23, 59, 59, DateTimeKind.Utc);
 
         _factory.TransactionServiceMock
-            .Setup(s => s.ListAsync(UserId, 1, 20, null, from, to, It.IsAny<CancellationToken>()))
+            .Setup(s => s.ListAsync(UserId, 1, 20, null, from, to, It.IsAny<CancellationToken>(), null))
             .ReturnsAsync(new PagedResult<Transaction>());
 
         var response = await _client.GetAsync($"/api/transactions?from={Uri.EscapeDataString(from.ToString("O"))}&to={Uri.EscapeDataString(to.ToString("O"))}");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         _factory.TransactionServiceMock.Verify(
-            s => s.ListAsync(UserId, 1, 20, null, from, to, It.IsAny<CancellationToken>()),
+            s => s.ListAsync(UserId, 1, 20, null, from, to, It.IsAny<CancellationToken>(), null),
             Times.Once);
     }
 

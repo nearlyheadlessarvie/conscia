@@ -6,5 +6,6 @@ public class PagedResult<T>
     public int TotalCount { get; set; }
     public int Page { get; set; }
     public int PageSize { get; set; }
-    public bool HasMore => Page * PageSize < TotalCount;
+    public string? NextToken { get; set; }
+    public bool HasMore => !string.IsNullOrEmpty(NextToken) || Page * PageSize < TotalCount;
 }

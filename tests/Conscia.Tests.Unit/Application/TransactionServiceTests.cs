@@ -376,6 +376,27 @@ public class TransactionServiceTests
     }
 
     [Fact]
+    public async Task ListAsync_UsesPaginationTokenAndExposesNextToken()
+    {
+        var userId = Guid.NewGuid();
+        var paginationToken = "cursor-1";
+        var nextToken = "cursor-2";
+        var items = new List<Transaction>
+        {
+            new() { Id = Guid.NewGuid(), UserId = userId, Amount = new Money(10, "USD"), Category = "Food" }
+        };
+
+        _repoMock.Setup(r => r.QueryByUserAsync(userId, null, null, null, 10, paginationToken, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((items.AsReadOnly(), nextToken));
+
+        var result = await _svc.ListAsync(userId, 1, 10, paginationToken: paginationToken);
+
+        Assert.Equal(nextToken, result.NextToken);
+        Assert.True(result.HasMore);
+        _repoMock.Verify(r => r.QueryByUserAsync(userId, null, null, null, 10, paginationToken, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
     public async Task ListFamilyAsync_ReturnsFamilySpaceTransactions()
     {
         var userId = Guid.NewGuid();

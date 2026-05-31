@@ -270,6 +270,62 @@ public class TransactionRepositoryReadTests
     }
 
     [Fact]
+    public async Task QueryByUserAsync_WithCategoryContinuesUntilPageContainsMatches()
+    {
+        var dynamoMock = new Mock<IAmazonDynamoDB>();
+        var userId = Guid.NewGuid();
+        var diningTransactionId = Guid.NewGuid();
+        var requests = new List<QueryRequest>();
+        var callCount = 0;
+
+        dynamoMock
+            .Setup(d => d.QueryAsync(It.IsAny<QueryRequest>(), It.IsAny<CancellationToken>()))
+            .Callback<QueryRequest, CancellationToken>((request, _) => requests.Add(request))
+            .ReturnsAsync(() =>
+            {
+                callCount++;
+                return callCount == 1
+                    ? new QueryResponse
+                    {
+                        Items =
+                        [
+                            CreateTransactionItem(
+                                userId,
+                                Guid.NewGuid(),
+                                new DateTime(2026, 5, 10, 0, 0, 0, DateTimeKind.Utc),
+                                category: "Groceries")
+                        ],
+                        LastEvaluatedKey = new Dictionary<string, AttributeValue>
+                        {
+                            ["PK"] = new($"USER#{userId}"),
+                            ["SK"] = new("DATE#2026-05-10T00:00:00.0000000Z#TX#first-page")
+                        }
+                    }
+                    : new QueryResponse
+                    {
+                        Items =
+                        [
+                            CreateTransactionItem(
+                                userId,
+                                diningTransactionId,
+                                new DateTime(2026, 5, 9, 0, 0, 0, DateTimeKind.Utc),
+                                category: "Dining")
+                        ]
+                    };
+            });
+
+        var (transactions, nextToken) = await new TransactionRepository(dynamoMock.Object)
+            .QueryByUserAsync(userId, null, null, "Dining", 1, null, CancellationToken.None);
+
+        var transaction = Assert.Single(transactions);
+        Assert.Equal(diningTransactionId, transaction.Id);
+        Assert.Equal("Dining", transaction.Category);
+        Assert.Null(nextToken);
+        Assert.Equal(2, requests.Count);
+        Assert.NotNull(requests[1].ExclusiveStartKey);
+    }
+
+    [Fact]
     public async Task GetByFamilySpaceAndDateRangeAsync_ScansFamilyTransactionsForTheSpaceAndRange()
     {
         var dynamoMock = new Mock<IAmazonDynamoDB>();
@@ -330,7 +386,8 @@ public class TransactionRepositoryReadTests
         Guid transactionId,
         DateTime date,
         Guid? recurringScheduleId = null,
-        DateTime? recurringOccurrenceDate = null)
+        DateTime? recurringOccurrenceDate = null,
+        string category = "Groceries")
     {
         var item = new Dictionary<string, AttributeValue>
         {
@@ -341,7 +398,7 @@ public class TransactionRepositoryReadTests
             ["Type"] = new("Expense"),
             ["Amount"] = new() { N = "3840" },
             ["CurrencyCode"] = new("PHP"),
-            ["Category"] = new("Groceries"),
+            ["Category"] = new(category),
             ["Counterparty"] = new("Landers"),
             ["Date"] = new(date.ToString("O")),
             ["CreatedAt"] = new(date.ToString("O"))

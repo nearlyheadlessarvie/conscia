@@ -263,31 +263,31 @@ public class TransactionRepository : DynamoRepository, ITransactionRepository
             ScanIndexForward = false
         };
 
-        if (!string.IsNullOrEmpty(paginationToken))
+        var hasCategoryFilter = !string.IsNullOrEmpty(category);
+        var list = new List<Transaction>();
+        var lastEvaluatedKey = DecodePaginationToken(paginationToken);
+
+        do
         {
-            request.ExclusiveStartKey =
-                JsonSerializer.Deserialize<Dictionary<string, AttributeValue>>(
-                    Convert.FromBase64String(paginationToken));
+            request.ExclusiveStartKey = lastEvaluatedKey;
+            var response = await Dynamo.QueryAsync(request, ct);
+
+            var items = Items(response).Select(FromItem);
+            if (hasCategoryFilter)
+                items = items.Where(t => t.Category == category);
+
+            foreach (var item in items)
+            {
+                list.Add(item);
+                if (list.Count >= limit)
+                    break;
+            }
+
+            lastEvaluatedKey = response.LastEvaluatedKey;
         }
+        while (hasCategoryFilter && list.Count < limit && lastEvaluatedKey is { Count: > 0 });
 
-        var response = await Dynamo.QueryAsync(request, ct);
-
-        var items = Items(response).Select(FromItem);
-
-        // small-set filter only (UI case)
-        if (!string.IsNullOrEmpty(category))
-            items = items.Where(t => t.Category == category);
-
-        var list = items.ToList();
-
-        string? nextToken = null;
-        if (response.LastEvaluatedKey?.Count > 0)
-        {
-            nextToken = Convert.ToBase64String(
-                JsonSerializer.SerializeToUtf8Bytes(response.LastEvaluatedKey));
-        }
-
-        return (list, nextToken);
+        return (list, EncodePaginationToken(lastEvaluatedKey));
     }
 
     // GSI-backed category query (scalable)
@@ -480,6 +480,17 @@ public class TransactionRepository : DynamoRepository, ITransactionRepository
         Dictionary<string, AttributeValue> left,
         Dictionary<string, AttributeValue> right) =>
         left["PK"].S == right["PK"].S && left["SK"].S == right["SK"].S;
+
+    private static Dictionary<string, AttributeValue>? DecodePaginationToken(string? paginationToken) =>
+        string.IsNullOrEmpty(paginationToken)
+            ? null
+            : JsonSerializer.Deserialize<Dictionary<string, AttributeValue>>(
+                Convert.FromBase64String(paginationToken));
+
+    private static string? EncodePaginationToken(Dictionary<string, AttributeValue>? lastEvaluatedKey) =>
+        lastEvaluatedKey is { Count: > 0 }
+            ? Convert.ToBase64String(JsonSerializer.SerializeToUtf8Bytes(lastEvaluatedKey))
+            : null;
 
     private static Dictionary<string, AttributeValue> ToItem(Transaction t)
     {

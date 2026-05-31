@@ -48,7 +48,7 @@ public class UserExportEndpointTests : IClassFixture<TestWebAppFactory>
             });
 
         _factory.TransactionServiceMock
-            .Setup(s => s.ListAsync(UserId, 1, 10000, null, null, null, It.IsAny<CancellationToken>()))
+            .Setup(s => s.ListAsync(UserId, 1, 10000, null, null, null, It.IsAny<CancellationToken>(), null))
             .ReturnsAsync(new PagedResult<Transaction>
             {
                 Items =
@@ -280,6 +280,125 @@ public class UserExportEndpointTests : IClassFixture<TestWebAppFactory>
         var device = root.GetProperty("pushNotificationDevices").EnumerateArray().Single();
         Assert.Equal("android", device.GetProperty("platform").GetString());
         Assert.False(device.TryGetProperty("token", out _));
+    }
+
+    [Fact]
+    public async Task ExportUserData_IncludesEveryTransactionPage()
+    {
+        var firstTransactionId = Guid.NewGuid();
+        var secondTransactionId = Guid.NewGuid();
+        var now = new DateTime(2026, 5, 11, 8, 0, 0, DateTimeKind.Utc);
+
+        _factory.UserServiceMock
+            .Setup(s => s.GetByIdAsync(UserId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new User
+            {
+                Id = UserId,
+                Email = "alice@example.com",
+                PreferredCurrency = "PHP",
+                Locale = "en-PH",
+                CreatedAt = now
+            });
+
+        _factory.TransactionServiceMock
+            .Setup(s => s.ListAsync(UserId, 1, 10000, null, null, null, It.IsAny<CancellationToken>(), null))
+            .ReturnsAsync(new PagedResult<Transaction>
+            {
+                Items =
+                [
+                    new()
+                    {
+                        Id = firstTransactionId,
+                        UserId = UserId,
+                        Type = TransactionType.Expense,
+                        Amount = new Money(280, "PHP"),
+                        Category = "Dining",
+                        Date = now
+                    }
+                ],
+                Page = 1,
+                PageSize = 10000,
+                TotalCount = 1,
+                NextToken = "cursor-2"
+            });
+        _factory.TransactionServiceMock
+            .Setup(s => s.ListAsync(UserId, 1, 10000, null, null, null, It.IsAny<CancellationToken>(), "cursor-2"))
+            .ReturnsAsync(new PagedResult<Transaction>
+            {
+                Items =
+                [
+                    new()
+                    {
+                        Id = secondTransactionId,
+                        UserId = UserId,
+                        Type = TransactionType.Expense,
+                        Amount = new Money(420, "PHP"),
+                        Category = "Groceries",
+                        Date = now.AddDays(-1)
+                    }
+                ],
+                Page = 1,
+                PageSize = 10000,
+                TotalCount = 1
+            });
+        _factory.BudgetServiceMock
+            .Setup(s => s.ListStatusesByUserAsync(UserId, null, It.IsAny<CancellationToken>()))
+            .ReturnsAsync([]);
+        _factory.RecurringScheduleServiceMock
+            .Setup(s => s.ListAsync(UserId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync([]);
+        _factory.AlertServiceMock
+            .Setup(s => s.ListAlertsAsync(UserId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync([]);
+        _factory.WeeklyInsightsRepoMock
+            .Setup(r => r.GetByUserIdAsync(UserId, 1000, It.IsAny<CancellationToken>()))
+            .ReturnsAsync([]);
+        _factory.PurchasePatternRepoMock
+            .Setup(r => r.GetSummaryAsync(UserId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((PurchasePatternSummary?)null);
+        _factory.PurchasePatternRepoMock
+            .Setup(r => r.GetCategoriesAsync(UserId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync([]);
+        _factory.PurchasePatternRepoMock
+            .Setup(r => r.GetMerchantsAsync(UserId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync([]);
+        _factory.MonthlyCategorySpendRepoMock
+            .Setup(r => r.ListByUserAsync(UserId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync([]);
+        _factory.AIInteractionRepoMock
+            .Setup(r => r.ListByUserAsync(UserId, null, null, 1000, It.IsAny<CancellationToken>()))
+            .ReturnsAsync([]);
+        _factory.ConscienceJourneyRepoMock
+            .Setup(r => r.GetProgressAsync(UserId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((ConscienceJourneyProgress?)null);
+        _factory.ConscienceJourneyRepoMock
+            .Setup(r => r.GetBadgeProgressAsync(UserId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync([]);
+        _factory.ConscienceJourneyRepoMock
+            .Setup(r => r.ListQuestProgressAsync(UserId, 1000, It.IsAny<CancellationToken>()))
+            .ReturnsAsync([]);
+        _factory.ConscienceJourneyRepoMock
+            .Setup(r => r.ListEventsAsync(UserId, 1000, It.IsAny<CancellationToken>()))
+            .ReturnsAsync([]);
+        _factory.ConscienceJourneyRepoMock
+            .Setup(r => r.ListMascotMomentsAsync(UserId, 100, It.IsAny<CancellationToken>()))
+            .ReturnsAsync([]);
+        _factory.PushDeviceTokenRepoMock
+            .Setup(r => r.GetActiveByUserAsync(UserId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync([]);
+
+        var response = await _client.GetAsync("/api/users/me/export");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        await using var stream = await response.Content.ReadAsStreamAsync();
+        using var document = await JsonDocument.ParseAsync(stream);
+        var transactionIds = document.RootElement
+            .GetProperty("transactions")
+            .EnumerateArray()
+            .Select(item => item.GetProperty("id").GetGuid())
+            .ToList();
+
+        Assert.Equal([firstTransactionId, secondTransactionId], transactionIds);
     }
 
     [Fact]

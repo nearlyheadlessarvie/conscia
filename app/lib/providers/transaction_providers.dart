@@ -26,11 +26,14 @@ final transactionDateFilterProvider = StateProvider<TransactionDateFilter?>((
   return null;
 });
 
+const Object _nextTokenUnset = Object();
+
 class TransactionListState {
   final List<Transaction> transactions;
   final bool isLoading;
   final bool hasMore;
   final int currentPage;
+  final String? nextToken;
   final String? error;
 
   const TransactionListState({
@@ -38,6 +41,7 @@ class TransactionListState {
     this.isLoading = false,
     this.hasMore = true,
     this.currentPage = 0,
+    this.nextToken,
     this.error,
   });
 
@@ -46,6 +50,7 @@ class TransactionListState {
     bool? isLoading,
     bool? hasMore,
     int? currentPage,
+    Object? nextToken = _nextTokenUnset,
     String? error,
   }) {
     return TransactionListState(
@@ -53,6 +58,9 @@ class TransactionListState {
       isLoading: isLoading ?? this.isLoading,
       hasMore: hasMore ?? this.hasMore,
       currentPage: currentPage ?? this.currentPage,
+      nextToken: identical(nextToken, _nextTokenUnset)
+          ? this.nextToken
+          : nextToken as String?,
       error: error,
     );
   }
@@ -112,6 +120,7 @@ class TransactionListNotifier extends StateNotifier<TransactionListState> {
         scope: _scopeFilter,
         from: _dateFilter?.from,
         to: _dateFilter?.to,
+        nextToken: state.nextToken,
       );
       if (!mounted) return;
       final current = state;
@@ -120,6 +129,7 @@ class TransactionListNotifier extends StateNotifier<TransactionListState> {
         isLoading: false,
         hasMore: result.hasMore,
         currentPage: nextPage,
+        nextToken: result.nextToken,
       );
     } catch (e, s) {
       if (!mounted) return;

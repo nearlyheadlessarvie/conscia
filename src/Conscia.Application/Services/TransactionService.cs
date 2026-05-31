@@ -106,17 +106,19 @@ public class TransactionService : ITransactionService
         string? category = null,
         DateTime? from = null,
         DateTime? to = null,
-        CancellationToken ct = default)
+        CancellationToken ct = default,
+        string? paginationToken = null)
     {
         var (items, nextToken) = await _repo.QueryByUserAsync(
-            userId, from, to, category, pageSize, null, ct);
+            userId, from, to, category, pageSize, paginationToken, ct);
 
         return new PagedResult<Transaction>
         {
             Items = items,
             Page = page,
             PageSize = pageSize,
-            TotalCount = items.Count
+            TotalCount = items.Count,
+            NextToken = nextToken
         };
     }
 

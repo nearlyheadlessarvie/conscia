@@ -10,6 +10,8 @@ namespace Conscia.Api.Endpoints;
 
 public static class UserEndpoints
 {
+    private const int ExportTransactionPageSize = 10000;
+
     public static RouteGroupBuilder MapUserEndpoints(this IEndpointRouteBuilder routes, ApiVersionSet apiVersionSet)
     {
         var group = routes.MapGroup("/api/users")
@@ -162,7 +164,7 @@ public static class UserEndpoints
             var user = await svc.GetByIdAsync(userId, ct);
             if (user is null) return Results.NotFound();
 
-            var transactions = await txnSvc.ListAsync(userId, 1, 10000, null, ct: ct);
+            var transactions = await ListAllTransactionsForExportAsync(txnSvc, userId, ct);
             var budgets = await budgetSvc.ListStatusesByUserAsync(userId, ct: ct);
             var recurringSchedules = await recurringScheduleSvc.ListAsync(userId, ct);
             var alerts = await alertSvc.ListAlertsAsync(userId, ct);
@@ -198,7 +200,7 @@ public static class UserEndpoints
                     user.HasCompletedOnboarding,
                     user.AiPersonalityIntensity
                 },
-                Transactions = transactions.Items,
+                Transactions = transactions,
                 Budgets = budgets,
                 RecurringSchedules = recurringSchedules,
                 Alerts = alerts,
@@ -243,6 +245,31 @@ public static class UserEndpoints
         }).WithName("DeleteCurrentUser");
 
         return group;
+    }
+
+    private static async Task<IReadOnlyList<Transaction>> ListAllTransactionsForExportAsync(
+        ITransactionService txnSvc,
+        Guid userId,
+        CancellationToken ct)
+    {
+        var transactions = new List<Transaction>();
+        string? nextToken = null;
+
+        do
+        {
+            var page = await txnSvc.ListAsync(
+                userId,
+                1,
+                ExportTransactionPageSize,
+                null,
+                ct: ct,
+                paginationToken: nextToken);
+            transactions.AddRange(page.Items);
+            nextToken = page.NextToken;
+        }
+        while (!string.IsNullOrEmpty(nextToken));
+
+        return transactions;
     }
 
     private static async Task<object> ToProfileResponseAsync(
