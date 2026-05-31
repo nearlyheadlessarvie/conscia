@@ -129,6 +129,15 @@ public static class UserEndpoints
                 return Results.ValidationProblem(validation.ToDictionary());
 
             var userId = ctx.User.GetUserId();
+            if (dto.ProfilePictureKey is not null &&
+                !dto.ProfilePictureKey.StartsWith($"profile-pictures/{userId}/", StringComparison.Ordinal))
+            {
+                return Results.BadRequest(new
+                {
+                    error = "Profile picture key must belong to the current user"
+                });
+            }
+
             var user = await svc.UpdateProfileAsync(userId, dto, ctx.RequestAborted);
             return Results.Ok(await ToProfileResponseAsync(user, users, storage, ctx.RequestAborted));
         }).WithName("UpdateCurrentUser");

@@ -161,6 +161,26 @@ public class UserServiceTests
     }
 
     [Fact]
+    public async Task UpdateProfileAsync_RejectsProfilePictureKeyForAnotherUser()
+    {
+        var id = Guid.NewGuid();
+        var otherUserId = Guid.NewGuid();
+        var user = new User { Id = id, Email = "story@example.com" };
+        _repoMock.Setup(r => r.GetByIdAsync(id, It.IsAny<CancellationToken>())).ReturnsAsync(user);
+
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            _svc.UpdateProfileAsync(
+                id,
+                new UserProfileUpdateDto
+                {
+                    ProfilePictureKey = $"profile-pictures/{otherUserId}/avatar.jpg"
+                }));
+
+        Assert.Equal("Profile picture key must belong to the current user.", ex.Message);
+        _repoMock.Verify(r => r.UpdateAsync(It.IsAny<User>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
     public async Task UpdateProfileAsync_UpdatesOnboardingCompletion()
     {
         var id = Guid.NewGuid();

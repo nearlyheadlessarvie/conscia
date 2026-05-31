@@ -50,6 +50,12 @@ public class UserService : IUserService
 
             user.PreferredCurrency = dto.PreferredCurrency;
         }
+        if (dto.ProfilePictureKey is not null &&
+            !dto.ProfilePictureKey.StartsWith($"profile-pictures/{id}/", StringComparison.Ordinal))
+        {
+            throw new InvalidOperationException("Profile picture key must belong to the current user.");
+        }
+
         if (dto.DisplayName is not null) user.DisplayName = dto.DisplayName.Trim();
         if (dto.ProfilePictureKey is not null) user.ProfilePictureKey = dto.ProfilePictureKey;
         if (dto.Locale is not null) user.Locale = dto.Locale;
