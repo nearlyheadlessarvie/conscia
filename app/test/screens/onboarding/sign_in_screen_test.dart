@@ -15,6 +15,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:passkeys/exceptions.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class _FakeAuthService extends AuthService {
@@ -160,12 +161,17 @@ class _RecordingPasskeyService extends PasskeyService {
         );
 
   String? lastSignInEmail;
+  Object? signInError;
 
   @override
   Future<bool> isSupported() async => true;
 
   @override
   Future<AuthTokens> signIn(String email) async {
+    final error = signInError;
+    if (error != null) {
+      throw error;
+    }
     lastSignInEmail = email;
     return const AuthTokens(
       accessToken: 'passkey-access-token',
@@ -522,5 +528,34 @@ void main() {
 
     expect(passkeyService.lastSignInEmail, 'two@example.com');
     expect(authNotifier.completedExternalEmail, 'two@example.com');
+  });
+
+  testWidgets('passkey-first sign in forgets stale local credentials',
+      (tester) async {
+    SharedPreferences.setMockInitialValues({
+      passkeyRegisteredEmailsPreferenceKey: ['story-demo@example.com'],
+      passkeyFirstSignInEnabledPreferenceKey: true,
+    });
+    final prefs = await SharedPreferences.getInstance();
+    final authNotifier = _RecordingAuthNotifier();
+    final passkeyService = _RecordingPasskeyService()
+      ..signInError = NoCredentialsAvailableException();
+
+    await _pumpSignInScreen(
+      tester,
+      authNotifier: authNotifier,
+      passkeysAvailable: true,
+      passkeyService: passkeyService,
+    );
+
+    await tester.tap(find.text('Continue with Passkey'));
+    await tester.pump();
+
+    expect(prefs.getStringList(passkeyRegisteredEmailsPreferenceKey), isEmpty);
+    expect(prefs.getBool(passkeyFirstSignInEnabledPreferenceKey), isFalse);
+    expect(
+      find.text('No passkey was found for this account on this device.'),
+      findsOneWidget,
+    );
   });
 }

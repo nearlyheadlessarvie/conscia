@@ -9,6 +9,40 @@ import '../core/errors/app_error.dart';
 import '../core/network/request_options.dart';
 import 'auth_service.dart';
 
+class PasskeyCredential {
+  const PasskeyCredential({
+    required this.credentialId,
+    this.friendlyName,
+    this.createdAt,
+    this.relyingPartyId,
+    this.authenticatorAttachment,
+    this.transports = const [],
+  });
+
+  factory PasskeyCredential.fromJson(Map<String, dynamic> json) {
+    final createdAt = json['createdAt'] as String?;
+    final transports = json['transports'];
+
+    return PasskeyCredential(
+      credentialId: json['credentialId'] as String,
+      friendlyName: json['friendlyName'] as String?,
+      createdAt: createdAt == null ? null : DateTime.tryParse(createdAt),
+      relyingPartyId: json['relyingPartyId'] as String?,
+      authenticatorAttachment: json['authenticatorAttachment'] as String?,
+      transports: transports is List
+          ? transports.whereType<String>().toList(growable: false)
+          : const [],
+    );
+  }
+
+  final String credentialId;
+  final String? friendlyName;
+  final DateTime? createdAt;
+  final String? relyingPartyId;
+  final String? authenticatorAttachment;
+  final List<String> transports;
+}
+
 class PasskeyService {
   PasskeyService({
     required Dio publicDio,
@@ -103,10 +137,65 @@ class PasskeyService {
       ),
     );
   }
+
+  Future<List<PasskeyCredential>> listCurrentUserPasskeys() async {
+    final response = await _authenticatedDio.get(
+      ApiConstants.passkeys,
+      options: Options(
+        extra: {
+          useAccessTokenRequestExtraKey: true,
+        },
+      ),
+    );
+
+    final data = response.data;
+    if (data is! List) {
+      return const [];
+    }
+
+    return data
+        .whereType<Map>()
+        .map((item) => PasskeyCredential.fromJson(
+              Map<String, dynamic>.from(item),
+            ))
+        .toList(growable: false);
+  }
+
+  Future<void> deleteCurrentUserPasskey(String credentialId) async {
+    await _authenticatedDio.delete(
+      ApiConstants.passkeyCredential(credentialId),
+      options: Options(
+        extra: {
+          useAccessTokenRequestExtraKey: true,
+        },
+      ),
+    );
+  }
 }
 
 bool isPasskeyCancellation(Object error) =>
     error is PasskeyAuthCancelledException;
+
+bool isPasskeyCredentialUnavailable(Object error) {
+  if (error is NoCredentialsAvailableException) {
+    return true;
+  }
+
+  if (error is UnhandledAuthenticatorException) {
+    final details = [
+      error.code,
+      error.message,
+      error.details?.toString(),
+    ].whereType<String>().join(' ').toLowerCase();
+
+    return details.contains('no credential') ||
+        details.contains('no credentials') ||
+        details.contains('credential') ||
+        details.contains('android-unhandled');
+  }
+
+  return false;
+}
 
 String friendlyPasskeyErrorMessage(Object error) {
   if (error is AppError || error is DioException) {
@@ -117,8 +206,7 @@ String friendlyPasskeyErrorMessage(Object error) {
     return switch (error.code) {
       'domain-not-associated' =>
         'Passkeys are not fully configured for this app yet.',
-      'deviceNotSupported' =>
-        'This device does not support passkeys yet.',
+      'deviceNotSupported' => 'This device does not support passkeys yet.',
       'ios-security-key-timeout' =>
         'Passkey verification timed out. Please try again.',
       _ => 'Passkey sign-in is unavailable right now.',
@@ -141,6 +229,8 @@ String friendlyPasskeyErrorMessage(Object error) {
       'This device is not ready to create a passkey yet.',
     TimeoutException() => 'Passkey verification timed out. Please try again.',
     PasskeyAuthCancelledException() => 'Passkey sign-in was cancelled.',
+    UnhandledAuthenticatorException() =>
+      'Passkey sign-in could not use the saved credential on this device. Sign in with email, then remove and set up the passkey again.',
     _ => 'Passkey sign-in is unavailable right now.',
   };
 }
