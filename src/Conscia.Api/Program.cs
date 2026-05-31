@@ -475,6 +475,7 @@ app.MapCategoryEndpoints(apiVersionSet).RequireRateLimiting("standard");
 app.MapSubscriptionEndpoints(apiVersionSet).RequireRateLimiting("standard");
 app.MapAdminEntitlementEndpoints(apiVersionSet).RequireRateLimiting("standard");
 app.MapAlertEndpoints(apiVersionSet).RequireRateLimiting("standard");
+app.MapClientDiagnosticEndpoints(apiVersionSet).RequireRateLimiting("standard");
 app.MapPushNotificationEndpoints(apiVersionSet).RequireRateLimiting("standard");
 app.MapReceiptEndpoints(apiVersionSet).RequireRateLimiting("standard");
 app.MapAIEndpoints(apiVersionSet).RequireRateLimiting("ai");
