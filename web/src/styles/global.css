@@ -266,6 +266,19 @@ body {
   background: rgba(11, 17, 36, 0.14);
 }
 
+.device-shot-frame-raw {
+  overflow: visible;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  padding: 0;
+  box-shadow: none;
+}
+
+.device-shot-frame-raw::before {
+  display: none;
+}
+
 .device-shot-image {
   display: block;
   width: calc(100% + 16px);
@@ -274,10 +287,18 @@ body {
   border-radius: 27px;
 }
 
+.device-shot-frame-raw .device-shot-image {
+  width: 100%;
+  margin: 0;
+  border-radius: 0;
+  filter: drop-shadow(0 28px 45px rgba(23, 36, 79, 0.2));
+}
+
 .hero-shots {
   position: relative;
-  width: min(100%, 620px);
-  min-height: 470px;
+  width: min(100%, 660px);
+  min-height: 540px;
+  isolation: isolate;
 }
 
 .hero-shots-panel {
@@ -290,17 +311,17 @@ body {
 }
 
 .hero-shots-panel-left {
-  left: 4%;
-  top: 22%;
-  width: 34%;
-  height: 44%;
+  left: 5%;
+  top: 30%;
+  width: 36%;
+  height: 42%;
 }
 
 .hero-shots-panel-right {
-  right: 8%;
-  top: 10%;
-  width: 28%;
-  height: 40%;
+  right: 5%;
+  top: 22%;
+  width: 36%;
+  height: 42%;
 }
 
 .hero-shot {
@@ -309,29 +330,23 @@ body {
 }
 
 .hero-shot-left {
-  left: 5%;
-  top: 18%;
-  transform: rotate(-8deg);
+  left: 0;
+  top: 24%;
+  transform: rotate(-6deg);
 }
 
 .hero-shot-center {
-  left: 34%;
-  top: 2%;
+  left: 50%;
+  top: 0;
   z-index: 4;
+  transform: translateX(-50%);
 }
 
 .hero-shot-right {
-  right: 2%;
-  top: 12%;
-  transform: rotate(7deg);
-}
-
-.hero-shot-back {
-  right: 18%;
-  bottom: 0;
-  z-index: 1;
+  right: -3%;
+  top: 21%;
+  z-index: 3;
   transform: rotate(6deg);
-  opacity: 0.96;
 }
 
 
@@ -345,27 +360,36 @@ body {
   }
 
   .hero-shots {
-    min-height: 390px;
+    min-height: 430px;
+  }
+
+  .hero-shots-panel-left {
+    left: 0;
+    top: 35%;
+    width: 38%;
+    height: 34%;
+  }
+
+  .hero-shots-panel-right {
+    right: 0;
+    top: 28%;
+    width: 38%;
+    height: 34%;
   }
 
   .hero-shot-left {
-    left: 0;
-    top: 24%;
+    left: -10%;
+    top: 33%;
   }
 
   .hero-shot-center {
-    left: 26%;
-    top: 4%;
+    left: 50%;
+    top: 2%;
   }
 
   .hero-shot-right {
-    right: -1%;
-    top: 17%;
-  }
-
-  .hero-shot-back {
-    right: 11%;
-    bottom: 3%;
+    right: -11%;
+    top: 30%;
   }
 
   .story-shot-shell {

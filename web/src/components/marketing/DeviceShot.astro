@@ -5,6 +5,7 @@ interface Props {
   widthClass?: string;
   class?: string;
   eager?: boolean;
+  framed?: boolean;
 }
 
 const {
@@ -13,11 +14,12 @@ const {
   widthClass = 'w-[220px]',
   class: className = '',
   eager = false,
+  framed = true,
 } = Astro.props;
 ---
 
 <div class:list={['device-shot', widthClass, className]}>
-  <div class="device-shot-frame">
+  <div class:list={['device-shot-frame', !framed && 'device-shot-frame-raw']}>
     <img
       src={src}
       alt={alt}

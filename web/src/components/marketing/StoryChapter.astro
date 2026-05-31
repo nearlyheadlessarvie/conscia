@@ -22,7 +22,12 @@ const { chapter, reverse = false } = Astro.props;
       </div>
 
       <div class="story-shot-shell">
-        <DeviceShot src={chapter.image} alt={chapter.imageAlt} widthClass="w-[210px] md:w-[232px]" />
+        <DeviceShot
+          src={chapter.image}
+          alt={chapter.imageAlt}
+          widthClass={chapter.imageWidthClass ?? 'w-[210px] md:w-[232px]'}
+          framed={chapter.framed ?? false}
+        />
       </div>
     </div>
   </div>
