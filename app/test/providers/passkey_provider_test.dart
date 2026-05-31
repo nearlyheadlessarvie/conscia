@@ -16,17 +16,31 @@ void main() {
     addTearDown(container.dispose);
 
     final notifier = container.read(passkeySignInPreferenceProvider.notifier);
-    await notifier.registerEmail(' Story-Demo@Example.COM ');
-    await notifier.registerEmail('story-demo@example.com');
+    await notifier.registerCredential(
+      ' Story-Demo@Example.COM ',
+      'credential-id',
+    );
+    await notifier.registerCredential(
+      'story-demo@example.com',
+      'credential-id',
+    );
     await notifier.setPasskeyFirstEnabled(true);
 
     final preference = container.read(passkeySignInPreferenceProvider);
     expect(preference.registeredEmails, ['story-demo@example.com']);
+    expect(
+      preference.credentialIdForEmail('STORY-DEMO@example.com'),
+      'credential-id',
+    );
     expect(preference.isPasskeyFirstEnabled, isTrue);
     expect(preference.canUsePasskeyFirst, isTrue);
     expect(
       prefs.getStringList(passkeyRegisteredEmailsPreferenceKey),
       ['story-demo@example.com'],
+    );
+    expect(
+      prefs.getString(passkeyRegisteredCredentialIdsPreferenceKey),
+      '{"story-demo@example.com":"credential-id"}',
     );
     expect(prefs.getBool(passkeyFirstSignInEnabledPreferenceKey), isTrue);
   });
@@ -38,6 +52,8 @@ void main() {
         'one@example.com',
         'two@example.com',
       ],
+      passkeyRegisteredCredentialIdsPreferenceKey:
+          '{"one@example.com":"credential-one","two@example.com":"credential-two"}',
       passkeyFirstSignInEnabledPreferenceKey: true,
     });
     final prefs = await SharedPreferences.getInstance();
@@ -55,12 +71,19 @@ void main() {
       container.read(passkeySignInPreferenceProvider).registeredEmails,
       ['two@example.com'],
     );
+    expect(
+      container
+          .read(passkeySignInPreferenceProvider)
+          .credentialIdForEmail('two@example.com'),
+      'credential-two',
+    );
     expect(prefs.getBool(passkeyFirstSignInEnabledPreferenceKey), isTrue);
 
     await notifier.forgetEmail('two@example.com');
 
     final preference = container.read(passkeySignInPreferenceProvider);
     expect(preference.registeredEmails, isEmpty);
+    expect(preference.credentialIdsByEmail, isEmpty);
     expect(preference.isPasskeyFirstEnabled, isFalse);
     expect(prefs.getBool(passkeyFirstSignInEnabledPreferenceKey), isFalse);
   });

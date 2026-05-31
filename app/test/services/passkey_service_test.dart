@@ -43,6 +43,19 @@ class _ThrowingRegisterAuthenticator extends PasskeyAuthenticator {
   }
 }
 
+class _SuccessfulRegisterAuthenticator extends PasskeyAuthenticator {
+  @override
+  Future<RegisterResponseType> register(RegisterRequestType request) async {
+    return const RegisterResponseType(
+      id: 'device-credential-id',
+      rawId: 'raw-device-credential-id',
+      clientDataJSON: 'client-data',
+      attestationObject: 'attestation',
+      transports: ['internal'],
+    );
+  }
+}
+
 void main() {
   tearDown(() {
     AppError.resetForTests();
@@ -211,6 +224,65 @@ void main() {
 
     expect(adapter.lastRequestOptions?.path, 'auth/passkeys/credential%2Fid');
     expect(adapter.lastRequestOptions?.method, 'DELETE');
+    expect(
+      adapter.lastRequestOptions?.extra[useAccessTokenRequestExtraKey],
+      isTrue,
+    );
+  });
+
+  test('registerCurrentUserPasskey returns the device credential id', () async {
+    final adapter = _JsonAdapter(
+      (options) {
+        if (options.path == 'auth/passkeys/register/start') {
+          return ResponseBody.fromString(
+            jsonEncode({
+              'credentialCreationOptions': jsonEncode({
+                'rp': {'id': 'getconscia.com', 'name': 'getconscia.com'},
+                'user': {
+                  'id': 'dXNlci0x',
+                  'name': 'debug@example.com',
+                  'displayName': 'debug@example.com',
+                },
+                'challenge': 'Y2hhbGxlbmdl',
+                'pubKeyCredParams': [
+                  {'type': 'public-key', 'alg': -7}
+                ],
+                'timeout': 60000,
+                'excludeCredentials': <Map<String, dynamic>>[],
+                'authenticatorSelection': {
+                  'requireResidentKey': true,
+                  'residentKey': 'required',
+                  'userVerification': 'preferred',
+                },
+              }),
+            }),
+            200,
+            headers: {
+              Headers.contentTypeHeader: [Headers.jsonContentType],
+            },
+          );
+        }
+
+        if (options.path == 'auth/passkeys/register/complete') {
+          return ResponseBody.fromString('', 204);
+        }
+
+        throw StateError('Unexpected request to ${options.path}');
+      },
+    );
+    final service = PasskeyService(
+      publicDio: Dio(),
+      authenticatedDio: Dio()..httpClientAdapter = adapter,
+      authenticator: _SuccessfulRegisterAuthenticator(),
+    );
+
+    final credentialId = await service.registerCurrentUserPasskey();
+
+    expect(credentialId, 'device-credential-id');
+    expect(adapter.requests.map((request) => request.path), [
+      'auth/passkeys/register/start',
+      'auth/passkeys/register/complete',
+    ]);
     expect(
       adapter.lastRequestOptions?.extra[useAccessTokenRequestExtraKey],
       isTrue,

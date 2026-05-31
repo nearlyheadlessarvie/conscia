@@ -47,8 +47,9 @@ class _RecordingPasskeyService extends PasskeyService {
   Future<bool> isSupported() async => true;
 
   @override
-  Future<void> registerCurrentUserPasskey() async {
+  Future<String?> registerCurrentUserPasskey() async {
     registerCount += 1;
+    return 'device-credential-id';
   }
 
   @override
