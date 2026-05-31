@@ -286,6 +286,7 @@ public class StackTests
                         ["Action"] = Match.ArrayWith([
                             "cognito-idp:AdminCreateUser",
                             "cognito-idp:AdminLinkProviderForUser",
+                            "cognito-idp:AdminSetUserPassword",
                             "cognito-idp:ListUsers"
                         ])
                     })

@@ -57,13 +57,102 @@ public sealed class CognitoPasskeyAuthService : IPasskeyAuthService
 
     public async Task CompleteRegistrationAsync(string accessToken, string credential, CancellationToken ct = default)
     {
-        await _cognito.CompleteWebAuthnRegistrationAsync(
-            new CompleteWebAuthnRegistrationRequest
+        try
+        {
+            await _cognito.CompleteWebAuthnRegistrationAsync(
+                new CompleteWebAuthnRegistrationRequest
+                {
+                    AccessToken = accessToken,
+                    Credential = ParseJsonDocument(credential)
+                },
+                ct);
+        }
+        catch (InvalidParameterException ex) when (IsCredentialDataInvalid(ex))
+        {
+            _logger.LogWarning(
+                ex,
+                "Cognito rejected passkey registration credential. Summary: {@CredentialSummary}",
+                SummarizeCredential(credential));
+
+            throw new PasskeyRegistrationFailedException(
+                "Passkey setup could not be completed on this device. Remove the saved passkey from this device, then try again.");
+        }
+    }
+
+    private static bool IsCredentialDataInvalid(InvalidParameterException ex)
+        => ex.Message.Contains("Credential data is not valid", StringComparison.OrdinalIgnoreCase);
+
+    private static Dictionary<string, object?> SummarizeCredential(string credential)
+    {
+        try
+        {
+            using var payload = JsonDocument.Parse(credential);
+            if (payload.RootElement.ValueKind != JsonValueKind.Object)
             {
-                AccessToken = accessToken,
-                Credential = ParseJsonDocument(credential)
-            },
-            ct);
+                return new Dictionary<string, object?>
+                {
+                    ["rootKind"] = payload.RootElement.ValueKind.ToString()
+                };
+            }
+
+            var root = payload.RootElement;
+            var summary = new Dictionary<string, object?>
+            {
+                ["topLevelKeys"] = root.EnumerateObject().Select(p => p.Name).Order().ToArray(),
+                ["type"] = GetString(root, "type"),
+                ["idLength"] = GetString(root, "id")?.Length,
+                ["rawIdLength"] = GetString(root, "rawId")?.Length,
+                ["idMatchesRawId"] = GetString(root, "id") == GetString(root, "rawId"),
+                ["authenticatorAttachment"] = GetString(root, "authenticatorAttachment")
+            };
+
+            if (root.TryGetProperty("clientExtensionResults", out var extensions) &&
+                extensions.ValueKind == JsonValueKind.Object)
+            {
+                summary["clientExtensionResultKeys"] = extensions
+                    .EnumerateObject()
+                    .Select(p => p.Name)
+                    .Order()
+                    .ToArray();
+            }
+
+            if (root.TryGetProperty("response", out var response) &&
+                response.ValueKind == JsonValueKind.Object)
+            {
+                summary["responseKeys"] = response.EnumerateObject().Select(p => p.Name).Order().ToArray();
+                summary["clientDataJSONLength"] = GetString(response, "clientDataJSON")?.Length;
+                summary["attestationObjectLength"] = GetString(response, "attestationObject")?.Length;
+                summary["authenticatorDataLength"] = GetString(response, "authenticatorData")?.Length;
+                summary["publicKeyLength"] = GetString(response, "publicKey")?.Length;
+                summary["publicKeyAlgorithm"] = GetInt(response, "publicKeyAlgorithm");
+
+                if (response.TryGetProperty("transports", out var transports) &&
+                    transports.ValueKind == JsonValueKind.Array)
+                {
+                    summary["transportValues"] = transports
+                        .EnumerateArray()
+                        .Where(t => t.ValueKind == JsonValueKind.String)
+                        .Select(t => t.GetString())
+                        .Where(t => !string.IsNullOrWhiteSpace(t))
+                        .Order()
+                        .ToArray();
+                }
+
+                if (GetString(response, "clientDataJSON") is { } clientDataJson)
+                {
+                    AddClientDataSummary(summary, clientDataJson);
+                }
+            }
+
+            return summary;
+        }
+        catch (Exception ex) when (ex is JsonException or FormatException)
+        {
+            return new Dictionary<string, object?>
+            {
+                ["parseError"] = ex.GetType().Name
+            };
+        }
     }
 
     public async Task<IReadOnlyList<PasskeyCredentialResponse>> ListCredentialsAsync(
@@ -266,6 +355,56 @@ public sealed class CognitoPasskeyAuthService : IPasskeyAuthService
     }
 
     private static string NormalizeEmail(string email) => email.Trim().ToLowerInvariant();
+
+    private static string? GetString(JsonElement element, string propertyName)
+        => element.TryGetProperty(propertyName, out var value) && value.ValueKind == JsonValueKind.String
+            ? value.GetString()
+            : null;
+
+    private static int? GetInt(JsonElement element, string propertyName)
+        => element.TryGetProperty(propertyName, out var value) && value.TryGetInt32(out var intValue)
+            ? intValue
+            : null;
+
+    private static void AddClientDataSummary(Dictionary<string, object?> summary, string encodedClientData)
+    {
+        try
+        {
+            var decoded = DecodeBase64Url(encodedClientData);
+            using var clientData = JsonDocument.Parse(decoded);
+            if (clientData.RootElement.ValueKind != JsonValueKind.Object)
+            {
+                summary["clientDataRootKind"] = clientData.RootElement.ValueKind.ToString();
+                return;
+            }
+
+            var root = clientData.RootElement;
+            summary["clientDataType"] = GetString(root, "type");
+            summary["clientDataOrigin"] = GetString(root, "origin");
+            summary["clientDataChallengeLength"] = GetString(root, "challenge")?.Length;
+            if (root.TryGetProperty("crossOrigin", out var crossOrigin) &&
+                crossOrigin.ValueKind is JsonValueKind.True or JsonValueKind.False)
+            {
+                summary["clientDataCrossOrigin"] = crossOrigin.GetBoolean();
+            }
+        }
+        catch (Exception ex) when (ex is JsonException or FormatException)
+        {
+            summary["clientDataParseError"] = ex.GetType().Name;
+        }
+    }
+
+    private static byte[] DecodeBase64Url(string value)
+    {
+        var base64 = value.Replace('-', '+').Replace('_', '/');
+        var padding = base64.Length % 4;
+        if (padding > 0)
+        {
+            base64 = base64.PadRight(base64.Length + 4 - padding, '=');
+        }
+
+        return Convert.FromBase64String(base64);
+    }
 
     private static DateTimeOffset? ToDateTimeOffset(DateTime? createdAt)
         => createdAt is null || createdAt.Value == default

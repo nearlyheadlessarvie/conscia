@@ -103,6 +103,7 @@ public class AuthStack : Stack
                 [
                     "cognito-idp:AdminCreateUser",
                     "cognito-idp:AdminLinkProviderForUser",
+                    "cognito-idp:AdminSetUserPassword",
                     "cognito-idp:ListUsers"
                 ],
                 Resources =

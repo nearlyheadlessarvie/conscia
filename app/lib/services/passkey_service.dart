@@ -120,7 +120,7 @@ class PasskeyService {
     return AuthTokens.fromJson(completeResponse.data as Map<String, dynamic>);
   }
 
-  Future<void> registerCurrentUserPasskey() async {
+  Future<String?> registerCurrentUserPasskey() async {
     RegisterRequestType? request;
     try {
       final startResponse = await _authenticatedDio.post(
@@ -136,6 +136,9 @@ class PasskeyService {
         startData['credentialCreationOptions'] as String,
       );
       final platformResponse = await _authenticator.register(request);
+      final credentialId = platformResponse.id.trim().isNotEmpty
+          ? platformResponse.id.trim()
+          : platformResponse.rawId.trim();
 
       await _authenticatedDio.post(
         ApiConstants.passkeyRegisterComplete,
@@ -148,6 +151,7 @@ class PasskeyService {
           },
         ),
       );
+      return credentialId.isEmpty ? null : credentialId;
     } catch (error, stackTrace) {
       await _recordPasskeyRegistrationFailure(error, request);
       if (request != null &&

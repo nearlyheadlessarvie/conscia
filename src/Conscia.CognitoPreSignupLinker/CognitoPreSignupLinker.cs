@@ -1,6 +1,7 @@
 using Amazon.CognitoIdentityProvider;
 using Amazon.CognitoIdentityProvider.Model;
 using Microsoft.Extensions.Logging;
+using System.Security.Cryptography;
 
 namespace Conscia.CognitoPreSignupLinker;
 
@@ -125,7 +126,27 @@ public sealed class CognitoPreSignupLinker(
             throw new InvalidOperationException("Cognito did not return the linked-user anchor.");
         }
 
+        var username = string.IsNullOrWhiteSpace(response.User.Username)
+            ? email
+            : response.User.Username;
+        response.User.Username = username;
+
+        await cognito.AdminSetUserPasswordAsync(new AdminSetUserPasswordRequest
+        {
+            UserPoolId = userPoolId,
+            Username = username,
+            Password = GenerateAnchorPassword(),
+            Permanent = true
+        }, ct);
+
         return response.User;
+    }
+
+    private static string GenerateAnchorPassword()
+    {
+        Span<byte> bytes = stackalloc byte[32];
+        RandomNumberGenerator.Fill(bytes);
+        return $"A1a-{Convert.ToBase64String(bytes)}";
     }
 
     private static bool IsLocalCognitoUser(UserType user)

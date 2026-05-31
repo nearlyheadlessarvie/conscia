@@ -6,7 +6,7 @@ namespace Conscia.Infrastructure.Services;
 public sealed class UnavailablePasskeyAuthService : IPasskeyAuthService
 {
     private const string Message =
-        "Passkeys are unavailable in this environment. Use Cognito-backed auth to enable them.";
+        "Passkeys are unavailable in this environment.";
 
     public Task<StartPasskeyRegistrationResponse> StartRegistrationAsync(
         string accessToken,

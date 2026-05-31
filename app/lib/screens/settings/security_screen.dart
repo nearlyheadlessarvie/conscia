@@ -77,11 +77,12 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen> {
 
     setState(() => _isRegisteringPasskey = true);
     try {
-      await ref.read(passkeyServiceProvider).registerCurrentUserPasskey();
+      final credentialId =
+          await ref.read(passkeyServiceProvider).registerCurrentUserPasskey();
       final email = ref.read(currentSessionUserProvider)?.email;
       if (email != null && email.trim().isNotEmpty) {
         final notifier = ref.read(passkeySignInPreferenceProvider.notifier);
-        await notifier.registerEmail(email);
+        await notifier.registerCredential(email, credentialId);
         await notifier.setPasskeyFirstEnabled(true);
       }
       if (!mounted) return;
@@ -183,7 +184,7 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen> {
                       const EditorialSectionHeader(
                         title: 'Passkeys',
                         subtitle:
-                            'Use device unlock for faster sign-in when Cognito supports this session.',
+                            'Use device unlock for faster sign-in when this session supports passkeys.',
                       ),
                       const SizedBox(height: 10),
                       _SecurityMethodRow(
@@ -530,6 +531,7 @@ class _PasskeyManagementSheetState
     extends ConsumerState<_PasskeyManagementSheet> {
   bool _isLoading = true;
   String? _deletingCredentialId;
+  bool _isForgettingThisDevice = false;
   String? _error;
   List<PasskeyCredential> _credentials = const [];
 
@@ -560,13 +562,6 @@ class _PasskeyManagementSheetState
         _isLoading = false;
       });
     }
-  }
-
-  Future<void> _forgetLocalPreference() async {
-    await ref
-        .read(passkeySignInPreferenceProvider.notifier)
-        .forgetEmail(widget.email);
-    if (mounted) Navigator.of(context).pop();
   }
 
   Future<void> _deleteCredential(PasskeyCredential credential) async {
@@ -602,7 +597,11 @@ class _PasskeyManagementSheetState
           .deleteCurrentUserPasskey(credential.credentialId);
       final nextCredentials =
           await ref.read(passkeyServiceProvider).listCurrentUserPasskeys();
-      if (nextCredentials.isEmpty) {
+      final localCredentialId = ref
+          .read(passkeySignInPreferenceProvider)
+          .credentialIdForEmail(widget.email);
+      if (nextCredentials.isEmpty ||
+          localCredentialId == credential.credentialId) {
         await ref
             .read(passkeySignInPreferenceProvider.notifier)
             .forgetEmail(widget.email);
@@ -621,12 +620,76 @@ class _PasskeyManagementSheetState
     }
   }
 
+  Future<void> _forgetThisDevice() async {
+    final credentialId = ref
+        .read(passkeySignInPreferenceProvider)
+        .credentialIdForEmail(widget.email);
+    if (credentialId == null || credentialId.isEmpty) {
+      setState(() {
+        _error =
+            'This app cannot match the saved passkey for this device yet. Remove the matching account passkey above, then remove the saved passkey from this device.';
+      });
+      return;
+    }
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Forget this device?'),
+        content: const Text(
+          'This removes this device passkey from your Conscia account and clears passkey-first sign-in here. You still need to remove the saved passkey from this device too.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Forget device'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    setState(() {
+      _isForgettingThisDevice = true;
+      _deletingCredentialId = credentialId;
+      _error = null;
+    });
+
+    try {
+      await ref
+          .read(passkeyServiceProvider)
+          .deleteCurrentUserPasskey(credentialId);
+      final nextCredentials =
+          await ref.read(passkeyServiceProvider).listCurrentUserPasskeys();
+      await ref
+          .read(passkeySignInPreferenceProvider.notifier)
+          .forgetEmail(widget.email);
+      if (!mounted) return;
+      setState(() {
+        _credentials = nextCredentials;
+        _isForgettingThisDevice = false;
+        _deletingCredentialId = null;
+      });
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _error = AppError.from(error, log: false).userMessage;
+        _isForgettingThisDevice = false;
+        _deletingCredentialId = null;
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return ConsciaBottomSheetScaffold(
       title: 'Manage passkeys',
       subtitle:
-          'Remove account passkeys from Cognito, then clear the saved passkey from your device too.',
+          'Remove account passkeys, then clear the matching saved passkey from your device too.',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -651,18 +714,20 @@ class _PasskeyManagementSheetState
             )
           else if (_credentials.isEmpty)
             Text(
-              'No Cognito passkeys are registered for this account.',
+              'No account passkeys are registered for this account.',
               style: Theme.of(context).textTheme.bodyMedium,
             )
-          else
+          else ...[
             for (final credential in _credentials) ...[
               _PasskeyCredentialRow(
                 credential: credential,
-                isDeleting: _deletingCredentialId == credential.credentialId,
+                isDeleting: _isForgettingThisDevice ||
+                    _deletingCredentialId == credential.credentialId,
                 onRemove: () => _deleteCredential(credential),
               ),
               const SizedBox(height: 10),
             ],
+          ],
           InlineNotice(
             message: passkeyDeviceRemovalInstructions(),
             tone: InlineNoticeTone.info,
@@ -674,8 +739,12 @@ class _PasskeyManagementSheetState
           ),
           const SizedBox(height: 12),
           OutlinedButton(
-            onPressed: _forgetLocalPreference,
-            child: const Text('Forget on this device'),
+            onPressed: _isForgettingThisDevice ? null : _forgetThisDevice,
+            child: Text(
+              _isForgettingThisDevice
+                  ? 'Forgetting this device...'
+                  : 'Forget this device',
+            ),
           ),
         ],
       ),
