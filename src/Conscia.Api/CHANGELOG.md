@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.4.3](https://github.com/nearlyheadlessarvie/conscia/compare/api/v1.4.2...api/v1.4.3) (2026-05-31)
+
+
+### Bug Fixes
+
+* harden passkey device removal and social linker ([#186](https://github.com/nearlyheadlessarvie/conscia/issues/186)) ([9383d16](https://github.com/nearlyheadlessarvie/conscia/commit/9383d16d1e63514df320768b799e5609dcb78716))
+
 ## [1.4.2](https://github.com/nearlyheadlessarvie/conscia/compare/api/v1.4.1...api/v1.4.2) (2026-05-31)
 
 
