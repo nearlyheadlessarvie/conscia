@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.4.1](https://github.com/nearlyheadlessarvie/conscia/compare/api/v1.4.0...api/v1.4.1) (2026-05-31)
+
+
+### Bug Fixes
+
+* remediate whole-project audit findings ([b9806f5](https://github.com/nearlyheadlessarvie/conscia/commit/b9806f510ec04ebe658cb573c25f798ad2cec23f))
+
 ## [1.4.0](https://github.com/nearlyheadlessarvie/conscia/compare/api/v1.3.5...api/v1.4.0) (2026-05-31)
 
 
