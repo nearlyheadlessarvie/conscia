@@ -156,7 +156,11 @@ public static class UserEndpoints
             IMonthlyCategorySpendRepository monthlyCategorySpendRepo,
             IAIInteractionRepository aiInteractionRepo,
             IConscienceJourneyRepository conscienceJourneyRepo,
-            IPushDeviceTokenRepository pushDeviceTokenRepo) =>
+            IPushDeviceTokenRepository pushDeviceTokenRepo,
+            ICategoryService categorySvc,
+            IFamilySpaceService familySpaceSvc,
+            ISubscriptionService subscriptionSvc,
+            IReceiptRepository receiptRepo) =>
         {
             var userId = ctx.User.GetUserId();
             var ct = ctx.RequestAborted;
@@ -166,6 +170,27 @@ public static class UserEndpoints
 
             var transactions = await ListAllTransactionsForExportAsync(txnSvc, userId, ct);
             var budgets = await budgetSvc.ListStatusesByUserAsync(userId, ct: ct);
+            var personalCategories = await categorySvc.ListAsync(
+                userId,
+                RecordScope.Personal,
+                includeArchived: true,
+                ct: ct);
+            var familySpace = await familySpaceSvc.GetCurrentAsync(userId, ct);
+            IReadOnlyList<CategoryDto> familyCategories = [];
+            IReadOnlyList<FamilyMemberDto> familyMembers = [];
+            IReadOnlyList<FamilyInviteDto> outgoingInvites = [];
+            if (familySpace is not null)
+            {
+                familyCategories = await categorySvc.ListAsync(
+                    userId,
+                    RecordScope.Family,
+                    familySpace.Id,
+                    true,
+                    ct);
+                familyMembers = await familySpaceSvc.GetMembersAsync(userId, ct);
+                if (string.Equals(familySpace.Role, FamilyMemberRole.Owner.ToString(), StringComparison.Ordinal))
+                    outgoingInvites = await familySpaceSvc.GetOutgoingInvitesAsync(userId, ct);
+            }
             var recurringSchedules = await recurringScheduleSvc.ListAsync(userId, ct);
             var alerts = await alertSvc.ListAlertsAsync(userId, ct);
             var weeklyInsights = await weeklyInsightsRepo.GetByUserIdAsync(userId, 1000, ct);
@@ -180,6 +205,8 @@ public static class UserEndpoints
             var journeyEvents = await conscienceJourneyRepo.ListEventsAsync(userId, 1000, ct);
             var journeyMoments = await conscienceJourneyRepo.ListMascotMomentsAsync(userId, 100, ct);
             var pushDevices = await pushDeviceTokenRepo.GetActiveByUserAsync(userId, ct);
+            var subscription = await subscriptionSvc.GetStatusAsync(userId, ct);
+            var receipts = await receiptRepo.ListByUserAsync(userId, ct);
 
             return Results.Ok(new
             {
@@ -202,6 +229,17 @@ public static class UserEndpoints
                 },
                 Transactions = transactions,
                 Budgets = budgets,
+                Categories = new
+                {
+                    Personal = personalCategories,
+                    Family = familyCategories
+                },
+                FamilySpace = new
+                {
+                    Current = familySpace,
+                    Members = familyMembers,
+                    OutgoingInvites = outgoingInvites
+                },
                 RecurringSchedules = recurringSchedules,
                 Alerts = alerts,
                 Insights = new
@@ -216,6 +254,8 @@ public static class UserEndpoints
                     MonthlyCategorySpends = monthlyCategorySpends
                 },
                 AIInteractions = aiInteractions,
+                Subscription = subscription,
+                Receipts = receipts,
                 ConscienceJourney = new
                 {
                     Progress = journeyProgress,

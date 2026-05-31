@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Text.Json;
+using Conscia.Application.DTOs;
 using Conscia.Application.Models;
 using Conscia.Domain.Entities;
 using Conscia.Domain.Enums;
@@ -28,6 +29,7 @@ public class UserExportEndpointTests : IClassFixture<TestWebAppFactory>
     public async Task ExportUserData_IncludesCurrentUserOwnedDatasets()
     {
         var transactionId = Guid.NewGuid();
+        var familySpaceId = Guid.NewGuid();
         var now = new DateTime(2026, 5, 11, 8, 0, 0, DateTimeKind.Utc);
 
         _factory.UserServiceMock
@@ -81,6 +83,68 @@ public class UserExportEndpointTests : IClassFixture<TestWebAppFactory>
                 CurrentSpend = 280,
                 CurrencyCode = "PHP"
             }]);
+
+        _factory.CategoryServiceMock
+            .Setup(s => s.ListAsync(UserId, RecordScope.Personal, null, true, It.IsAny<CancellationToken>()))
+            .ReturnsAsync([new CategoryDto(
+                Guid.NewGuid(),
+                "Coffee",
+                "coffee",
+                TransactionType.Expense.ToString(),
+                RecordScope.Personal.ToString(),
+                null,
+                "coffee",
+                "amber",
+                false,
+                false,
+                now,
+                now)]);
+
+        _factory.CategoryServiceMock
+            .Setup(s => s.ListAsync(UserId, RecordScope.Family, familySpaceId, true, It.IsAny<CancellationToken>()))
+            .ReturnsAsync([new CategoryDto(
+                Guid.NewGuid(),
+                "Shared Groceries",
+                "shared groceries",
+                TransactionType.Expense.ToString(),
+                RecordScope.Family.ToString(),
+                familySpaceId,
+                "shopping-cart",
+                "green",
+                false,
+                false,
+                now,
+                now)]);
+
+        _factory.FamilySpaceServiceMock
+            .Setup(s => s.GetCurrentAsync(UserId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new FamilySpaceDto(
+                familySpaceId,
+                "Santos Household",
+                "PHP",
+                false,
+                FamilyMemberRole.Owner.ToString()));
+
+        _factory.FamilySpaceServiceMock
+            .Setup(s => s.GetMembersAsync(UserId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync([new FamilyMemberDto(
+                Guid.NewGuid(),
+                UserId,
+                "alice@example.com",
+                FamilyMemberRole.Owner.ToString(),
+                now,
+                true)]);
+
+        _factory.FamilySpaceServiceMock
+            .Setup(s => s.GetOutgoingInvitesAsync(UserId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync([new FamilyInviteDto(
+                Guid.NewGuid(),
+                familySpaceId,
+                "Santos Household",
+                "bob@example.com",
+                FamilyMemberRole.Contributor.ToString(),
+                now,
+                now.AddDays(7))]);
 
         _factory.RecurringScheduleServiceMock
             .Setup(s => s.ListAsync(UserId, It.IsAny<CancellationToken>()))
@@ -258,6 +322,34 @@ public class UserExportEndpointTests : IClassFixture<TestWebAppFactory>
                 IsActive = true
             }]);
 
+        _factory.SubscriptionServiceMock
+            .Setup(s => s.GetStatusAsync(UserId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new UserSubscription
+            {
+                Id = Guid.NewGuid(),
+                UserId = UserId,
+                Tier = SubscriptionTier.Premium,
+                Status = SubscriptionStatus.Active,
+                Platform = Platform.iOS,
+                ExpiresAt = now.AddMonths(1),
+                OriginalTransactionId = "store-original-transaction"
+            });
+
+        _factory.ReceiptRepoMock
+            .Setup(r => r.ListByUserAsync(UserId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync([new Receipt
+            {
+                Id = Guid.NewGuid(),
+                UserId = UserId,
+                TransactionId = transactionId,
+                S3Key = $"receipts/{UserId}/scan.jpg",
+                ExtractedData = "{\"merchant\":\"Starbucks\"}",
+                OcrConfidence = 0.92,
+                NeedsReview = false,
+                Status = ReceiptStatus.Confirmed,
+                CreatedAt = now
+            }]);
+
         var response = await _client.GetAsync("/api/users/me/export");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -268,12 +360,19 @@ public class UserExportEndpointTests : IClassFixture<TestWebAppFactory>
         Assert.Equal("balanced", root.GetProperty("profile").GetProperty("spendingPersonality").GetString());
         Assert.NotEmpty(root.GetProperty("transactions").EnumerateArray());
         Assert.NotEmpty(root.GetProperty("budgets").EnumerateArray());
+        Assert.NotEmpty(root.GetProperty("categories").GetProperty("personal").EnumerateArray());
+        Assert.NotEmpty(root.GetProperty("categories").GetProperty("family").EnumerateArray());
+        Assert.Equal("Santos Household", root.GetProperty("familySpace").GetProperty("current").GetProperty("name").GetString());
+        Assert.NotEmpty(root.GetProperty("familySpace").GetProperty("members").EnumerateArray());
+        Assert.NotEmpty(root.GetProperty("familySpace").GetProperty("outgoingInvites").EnumerateArray());
         Assert.NotEmpty(root.GetProperty("recurringSchedules").EnumerateArray());
         Assert.NotEmpty(root.GetProperty("alerts").EnumerateArray());
         Assert.NotEmpty(root.GetProperty("insights").GetProperty("weekly").EnumerateArray());
         Assert.NotEmpty(root.GetProperty("insights").GetProperty("purchasePatterns").GetProperty("categories").EnumerateArray());
         Assert.NotEmpty(root.GetProperty("insights").GetProperty("monthlyCategorySpends").EnumerateArray());
         Assert.NotEmpty(root.GetProperty("aiInteractions").EnumerateArray());
+        Assert.Equal("premium", root.GetProperty("subscription").GetProperty("tier").GetString());
+        Assert.NotEmpty(root.GetProperty("receipts").EnumerateArray());
         Assert.Equal(125, root.GetProperty("conscienceJourney").GetProperty("progress").GetProperty("xpTotal").GetInt32());
         Assert.NotEmpty(root.GetProperty("conscienceJourney").GetProperty("events").EnumerateArray());
 
@@ -344,6 +443,12 @@ public class UserExportEndpointTests : IClassFixture<TestWebAppFactory>
         _factory.BudgetServiceMock
             .Setup(s => s.ListStatusesByUserAsync(UserId, null, It.IsAny<CancellationToken>()))
             .ReturnsAsync([]);
+        _factory.CategoryServiceMock
+            .Setup(s => s.ListAsync(UserId, RecordScope.Personal, null, true, It.IsAny<CancellationToken>()))
+            .ReturnsAsync([]);
+        _factory.FamilySpaceServiceMock
+            .Setup(s => s.GetCurrentAsync(UserId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((FamilySpaceDto?)null);
         _factory.RecurringScheduleServiceMock
             .Setup(s => s.ListAsync(UserId, It.IsAny<CancellationToken>()))
             .ReturnsAsync([]);
@@ -385,6 +490,12 @@ public class UserExportEndpointTests : IClassFixture<TestWebAppFactory>
             .ReturnsAsync([]);
         _factory.PushDeviceTokenRepoMock
             .Setup(r => r.GetActiveByUserAsync(UserId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync([]);
+        _factory.SubscriptionServiceMock
+            .Setup(s => s.GetStatusAsync(UserId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((UserSubscription?)null);
+        _factory.ReceiptRepoMock
+            .Setup(r => r.ListByUserAsync(UserId, It.IsAny<CancellationToken>()))
             .ReturnsAsync([]);
 
         var response = await _client.GetAsync("/api/users/me/export");
