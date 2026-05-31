@@ -12,6 +12,7 @@
     <PackageReference Include="AWSSDK.SimpleEmailV2" Version="4.0.1" />
     <PackageReference Include="AWSSDK.SQS" Version="4.0.2.27" />
     <PackageReference Include="Google.Apis.Auth" Version="1.68.0" />
+    <PackageReference Include="Microsoft.Bcl.Memory" Version="9.0.16" />
     <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="8.0.1" />
     <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="8.0.1" />
     <PackageReference Include="Microsoft.IdentityModel.Tokens" Version="8.7.0" />
