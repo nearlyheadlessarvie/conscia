@@ -212,6 +212,26 @@ public class AuthEndpointTests
     }
 
     [Fact]
+    public async Task Login_RateLimit_IsPartitionedByAnonymousIp()
+    {
+        await using var factory = new TestWebAppFactory();
+        using var client = factory.CreateClient();
+
+        for (var i = 0; i < 5; i++)
+        {
+            var response = await PostLoginAsync(client, "203.0.113.10");
+
+            Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        }
+
+        var limitedResponse = await PostLoginAsync(client, "203.0.113.10");
+        var otherIpResponse = await PostLoginAsync(client, "203.0.113.11");
+
+        Assert.Equal(HttpStatusCode.TooManyRequests, limitedResponse.StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, otherIpResponse.StatusCode);
+    }
+
+    [Fact]
     public async Task Register_EmptyEmail_Returns400()
     {
         await using var factory = new TestWebAppFactory();
@@ -362,5 +382,20 @@ public class AuthEndpointTests
         });
 
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    private static Task<HttpResponseMessage> PostLoginAsync(HttpClient client, string forwardedFor)
+    {
+        var request = new HttpRequestMessage(HttpMethod.Post, "/api/auth/login")
+        {
+            Content = JsonContent.Create(new
+            {
+                email = "nonexistent@example.com",
+                password = "wrong"
+            })
+        };
+        request.Headers.TryAddWithoutValidation("X-Forwarded-For", forwardedFor);
+
+        return client.SendAsync(request);
     }
 }
