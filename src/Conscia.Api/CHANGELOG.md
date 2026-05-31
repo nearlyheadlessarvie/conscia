@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.4.2](https://github.com/nearlyheadlessarvie/conscia/compare/api/v1.4.1...api/v1.4.2) (2026-05-31)
+
+
+### Bug Fixes
+
+* handle Cognito passkey setup diagnostics ([#183](https://github.com/nearlyheadlessarvie/conscia/issues/183)) ([3c625a3](https://github.com/nearlyheadlessarvie/conscia/commit/3c625a30432db89609d3602b0dccf77193841fe1))
+
 ## [1.4.1](https://github.com/nearlyheadlessarvie/conscia/compare/api/v1.4.0...api/v1.4.1) (2026-05-31)
 
 
