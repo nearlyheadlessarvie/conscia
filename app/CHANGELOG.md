@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.2.0](https://github.com/nearlyheadlessarvie/conscia/compare/app/v2.1.3...app/v2.2.0) (2026-05-31)
+
+
+### Features
+
+* manage Cognito passkeys ([#170](https://github.com/nearlyheadlessarvie/conscia/issues/170)) ([83c1505](https://github.com/nearlyheadlessarvie/conscia/commit/83c1505d1d2ee41a65d347a8cdfcb30cdde71568))
+
 ## [2.1.3](https://github.com/nearlyheadlessarvie/conscia/compare/app/v2.1.2...app/v2.1.3) (2026-05-30)
 
 
