@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.2.3](https://github.com/nearlyheadlessarvie/conscia/compare/app/v2.2.2...app/v2.2.3) (2026-05-31)
+
+
+### Bug Fixes
+
+* harden passkey device removal and social linker ([#186](https://github.com/nearlyheadlessarvie/conscia/issues/186)) ([9383d16](https://github.com/nearlyheadlessarvie/conscia/commit/9383d16d1e63514df320768b799e5609dcb78716))
+
 ## [2.2.2](https://github.com/nearlyheadlessarvie/conscia/compare/app/v2.2.1...app/v2.2.2) (2026-05-31)
 
 
