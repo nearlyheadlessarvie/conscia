@@ -703,7 +703,7 @@ class _PasskeyCredentialRow extends StatelessWidget {
       ),
       child: Row(
         children: [
-          _SecurityIconBox(icon: AppIconKey.passkey),
+          const _SecurityIconBox(icon: AppIconKey.passkey),
           const SizedBox(width: 14),
           Expanded(
             child: Column(

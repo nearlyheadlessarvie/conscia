@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:typed_data';
 
 import 'package:conscia_app/core/errors/app_error.dart';
 import 'package:conscia_app/core/network/request_options.dart';
