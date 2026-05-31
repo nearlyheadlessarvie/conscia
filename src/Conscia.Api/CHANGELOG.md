@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.4.5](https://github.com/nearlyheadlessarvie/conscia/compare/api/v1.4.4...api/v1.4.5) (2026-05-31)
+
+
+### Bug Fixes
+
+* **api:** send ios passkey transports ([#192](https://github.com/nearlyheadlessarvie/conscia/issues/192)) ([d7c5d0b](https://github.com/nearlyheadlessarvie/conscia/commit/d7c5d0b28034bf2805a83dd76bacbc93661eb1df))
+
 ## [1.4.4](https://github.com/nearlyheadlessarvie/conscia/compare/api/v1.4.3...api/v1.4.4) (2026-05-31)
 
 
