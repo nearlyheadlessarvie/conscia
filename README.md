@@ -129,7 +129,6 @@ cd web && npm install && npm run dev
 
 ```bash
 dotnet test tests/Conscia.Tests.Unit
-dotnet test tests/Conscia.Tests.Integration
 dotnet test infra/tests/Conscia.Infra.Tests
 cd app && flutter test
 cd web && npm test
