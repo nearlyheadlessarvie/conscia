@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.4.4](https://github.com/nearlyheadlessarvie/conscia/compare/api/v1.4.3...api/v1.4.4) (2026-05-31)
+
+
+### Bug Fixes
+
+* **api:** enrich ios passkey registration payloads ([#190](https://github.com/nearlyheadlessarvie/conscia/issues/190)) ([03d4cc0](https://github.com/nearlyheadlessarvie/conscia/commit/03d4cc0a1944799657aedd86991969d8a0cf4598))
+
 ## [1.4.3](https://github.com/nearlyheadlessarvie/conscia/compare/api/v1.4.2...api/v1.4.3) (2026-05-31)
 
 
