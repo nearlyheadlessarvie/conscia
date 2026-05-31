@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.6.9](https://github.com/nearlyheadlessarvie/conscia/compare/infra/v1.6.8...infra/v1.6.9) (2026-05-31)
+
+
+### Bug Fixes
+
+* harden passkey device removal and social linker ([#186](https://github.com/nearlyheadlessarvie/conscia/issues/186)) ([9383d16](https://github.com/nearlyheadlessarvie/conscia/commit/9383d16d1e63514df320768b799e5609dcb78716))
+
 ## [1.6.8](https://github.com/nearlyheadlessarvie/conscia/compare/infra/v1.6.7...infra/v1.6.8) (2026-05-31)
 
 
