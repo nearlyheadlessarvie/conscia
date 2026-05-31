@@ -139,6 +139,7 @@ class ApiConstants {
   static const String alerts = 'alerts';
   static String alert(String id) => 'alerts/$id';
   static String alertDismiss(String id) => 'alerts/$id/dismiss';
+  static const String clientDiagnostics = 'client-diagnostics';
 
   // Device push notifications
   static const String pushDeviceTokens = 'push/device-tokens';

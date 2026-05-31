@@ -96,7 +96,14 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen> {
         ScaffoldMessenger.of(context)
           ..clearSnackBars()
           ..showSnackBar(
-            SnackBar(content: Text(friendlyPasskeyErrorMessage(error))),
+            SnackBar(
+              content: Text(
+                friendlyPasskeyErrorMessage(
+                  error,
+                  operation: PasskeyOperation.register,
+                ),
+              ),
+            ),
           );
       }
     } finally {

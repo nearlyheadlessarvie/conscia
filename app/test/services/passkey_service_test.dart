@@ -6,14 +6,16 @@ import 'package:conscia_app/services/passkey_service.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
+import 'package:passkeys/authenticator.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:passkeys/exceptions.dart';
+import 'package:passkeys/types.dart';
 
 class _JsonAdapter implements HttpClientAdapter {
   _JsonAdapter(this._handler);
 
   final ResponseBody Function(RequestOptions options) _handler;
   RequestOptions? lastRequestOptions;
+  final List<RequestOptions> requests = [];
 
   @override
   Future<ResponseBody> fetch(
@@ -22,11 +24,23 @@ class _JsonAdapter implements HttpClientAdapter {
     Future<void>? cancelFuture,
   ) async {
     lastRequestOptions = options;
+    requests.add(options);
     return _handler(options);
   }
 
   @override
   void close({bool force = false}) {}
+}
+
+class _ThrowingRegisterAuthenticator extends PasskeyAuthenticator {
+  _ThrowingRegisterAuthenticator(this.error);
+
+  final Object error;
+
+  @override
+  Future<RegisterResponseType> register(RegisterRequestType request) async {
+    throw error;
+  }
 }
 
 void main() {
@@ -81,6 +95,34 @@ void main() {
         ),
       ),
       'Passkey sign-in could not use the saved credential on this device. Sign in with email, then remove and set up the passkey again.',
+    );
+  });
+
+  test('friendlyPasskeyErrorMessage includes native setup error codes', () {
+    debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+
+    expect(
+      friendlyPasskeyErrorMessage(
+        PlatformException(
+          code: 'failed',
+          message: 'The operation could not be completed.',
+        ),
+        operation: PasskeyOperation.register,
+      ),
+      'Passkey setup is unavailable right now. Code: failed',
+    );
+  });
+
+  test('friendlyPasskeyErrorMessage explains existing passkey setup blocks',
+      () {
+    expect(
+      friendlyPasskeyErrorMessage(
+        ExistingPasskeyRegistrationException(
+          PlatformException(code: 'failed'),
+        ),
+        operation: PasskeyOperation.register,
+      ),
+      'A passkey is already registered for this account. Remove it from Security settings and from this device before setting it up again.',
     );
   });
 
@@ -173,5 +215,88 @@ void main() {
       adapter.lastRequestOptions?.extra[useAccessTokenRequestExtraKey],
       isTrue,
     );
+  });
+
+  test('registerCurrentUserPasskey reports sanitized diagnostics on failure',
+      () async {
+    final adapter = _JsonAdapter(
+      (options) {
+        if (options.path == 'auth/passkeys/register/start') {
+          return ResponseBody.fromString(
+            jsonEncode({
+              'credentialCreationOptions': jsonEncode({
+                'rp': {'id': 'getconscia.com', 'name': 'getconscia.com'},
+                'user': {
+                  'id': 'dXNlci0x',
+                  'name': 'debug@example.com',
+                  'displayName': 'debug@example.com',
+                },
+                'challenge': 'Y2hhbGxlbmdl',
+                'pubKeyCredParams': [
+                  {'type': 'public-key', 'alg': -7}
+                ],
+                'timeout': 60000,
+                'excludeCredentials': [
+                  {'type': 'public-key', 'id': 'PHgRKawUSV-hOj2g_THPdw'}
+                ],
+                'authenticatorSelection': {
+                  'requireResidentKey': true,
+                  'residentKey': 'required',
+                  'userVerification': 'preferred',
+                },
+              }),
+            }),
+            200,
+            headers: {
+              Headers.contentTypeHeader: [Headers.jsonContentType],
+            },
+          );
+        }
+
+        if (options.path == 'client-diagnostics') {
+          return ResponseBody.fromString('', 202);
+        }
+
+        throw StateError('Unexpected request to ${options.path}');
+      },
+    );
+    final service = PasskeyService(
+      publicDio: Dio(),
+      authenticatedDio: Dio()..httpClientAdapter = adapter,
+      authenticator: _ThrowingRegisterAuthenticator(
+        PlatformException(
+          code: 'failed',
+          message: 'The operation could not be completed.',
+          details: 'native details should be sanitized',
+        ),
+      ),
+    );
+
+    await expectLater(
+      service.registerCurrentUserPasskey(),
+      throwsA(isA<ExistingPasskeyRegistrationException>()),
+    );
+
+    final diagnosticRequest = adapter.requests
+        .singleWhere((request) => request.path == 'client-diagnostics');
+    expect(diagnosticRequest.method, 'POST');
+    expect(diagnosticRequest.extra[useAccessTokenRequestExtraKey], isTrue);
+    final payload = diagnosticRequest.data as Map<String, dynamic>;
+    expect(payload['eventName'], 'passkey.register.failed');
+    expect(payload['operation'], 'register');
+    expect(payload['errorType'], 'PlatformException');
+    expect(payload['errorCode'], 'failed');
+    expect(payload['errorMessage'], 'The operation could not be completed.');
+    expect(payload['context'], {
+      'rpId': 'getconscia.com',
+      'excludeCredentialsCount': '1',
+      'residentKey': 'required',
+      'userVerification': 'preferred',
+    });
+    final serializedPayload = jsonEncode(payload);
+    expect(serializedPayload, isNot(contains('debug@example.com')));
+    expect(serializedPayload, isNot(contains('Y2hhbGxlbmdl')));
+    expect(serializedPayload,
+        isNot(contains('native details should be sanitized')));
   });
 }
