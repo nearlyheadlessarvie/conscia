@@ -7,6 +7,8 @@ import { dirname, resolve } from 'node:path';
 const testDir = dirname(fileURLToPath(import.meta.url));
 const html = readFileSync(resolve(testDir, '../dist/index.html'), 'utf8');
 const underDevelopmentHtml = readFileSync(resolve(testDir, '../dist/under-development/index.html'), 'utf8');
+const notFoundHtml = readFileSync(resolve(testDir, '../dist/404.html'), 'utf8');
+const robotsTxt = readFileSync(resolve(testDir, '../dist/robots.txt'), 'utf8');
 
 test('homepage follows the approved all-in-one money system story', () => {
   assert.match(html, /Your all-in-one money system\./);
@@ -81,4 +83,16 @@ test('app store placeholder keeps visitors in the Conscia experience', () => {
   assert.match(underDevelopmentHtml, /Back to Conscia/);
   assert.doesNotMatch(underDevelopmentHtml, /aria-label="Conscia home"/);
   assert.doesNotMatch(underDevelopmentHtml, /404/);
+});
+
+test('missing pages render a branded 404 instead of S3 access denied XML', () => {
+  assert.match(notFoundHtml, /Page not found/);
+  assert.match(notFoundHtml, /Back to Conscia/);
+  assert.doesNotMatch(notFoundHtml, /AccessDenied/);
+});
+
+test('robots file allows crawlers to inspect the marketing site', () => {
+  assert.match(robotsTxt, /^User-agent: \*/m);
+  assert.match(robotsTxt, /^Allow: \/$/m);
+  assert.doesNotMatch(robotsTxt, /Disallow: \//);
 });
