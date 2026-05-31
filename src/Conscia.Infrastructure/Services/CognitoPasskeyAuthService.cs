@@ -475,6 +475,13 @@ public sealed class CognitoPasskeyAuthService : IPasskeyAuthService
 
         response["authenticatorData"] ??= Base64UrlEncode(extracted.AuthenticatorData);
         response["publicKeyAlgorithm"] ??= extracted.PublicKeyAlgorithm;
+
+        if (response["transports"] is not JsonArray { Count: > 0 })
+        {
+            root["authenticatorAttachment"] ??= "platform";
+            response["transports"] = new JsonArray("internal");
+        }
+
         if (extracted.PublicKey is { Length: > 0 })
         {
             response["publicKey"] ??= Base64UrlEncode(extracted.PublicKey);
