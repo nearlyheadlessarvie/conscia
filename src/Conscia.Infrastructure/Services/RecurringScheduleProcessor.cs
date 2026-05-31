@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Amazon.DynamoDBv2.Model;
 using Conscia.Application.Interfaces;
 using Conscia.Application.Models;
 using Conscia.Domain.Entities;
@@ -66,7 +67,10 @@ public class RecurringScheduleProcessor : BackgroundService
                     ct);
 
                 if (exists)
+                {
+                    schedule.LastGeneratedAt = occurrence.OccurrenceDate;
                     continue;
+                }
 
                 var transaction = new Transaction
                 {
@@ -82,10 +86,19 @@ public class RecurringScheduleProcessor : BackgroundService
                     CreatedAt = nowUtc,
                 };
 
-                await transactionRepository.AddWithOutboxAsync(
-                    transaction,
-                    CreateTransactionCreatedEvent(transaction, nowUtc),
-                    ct);
+                try
+                {
+                    await transactionRepository.AddWithOutboxAsync(
+                        transaction,
+                        CreateTransactionCreatedEvent(transaction, nowUtc),
+                        ct);
+                }
+                catch (TransactionCanceledException)
+                {
+                    schedule.LastGeneratedAt = occurrence.OccurrenceDate;
+                    continue;
+                }
+
                 await alertRepository.AddAsync(BuildReminderAlert(schedule, transaction, nowUtc), ct);
                 schedule.LastGeneratedAt = occurrence.OccurrenceDate;
             }

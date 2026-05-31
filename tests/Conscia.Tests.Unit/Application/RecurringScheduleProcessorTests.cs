@@ -1,3 +1,4 @@
+using Amazon.DynamoDBv2.Model;
 using Conscia.Application.Interfaces;
 using Conscia.Application.Models;
 using Conscia.Domain.Entities;
@@ -128,6 +129,59 @@ public class RecurringScheduleProcessorTests
             It.IsAny<OutboxEvent>(),
             It.IsAny<CancellationToken>()), Times.Never);
         _alertRepoMock.Verify(r => r.AddAsync(It.IsAny<InAppAlert>(), It.IsAny<CancellationToken>()), Times.Never);
+        _scheduleRepoMock.Verify(r => r.UpdateAsync(
+            It.Is<RecurringSchedule>(s => s.LastGeneratedAt == occurrenceDate && s.NextRunAt > now),
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task ProcessOnceAsync_SkipsAlert_WhenConditionalOccurrenceWriteAlreadyExists()
+    {
+        var userId = Guid.NewGuid();
+        var scheduleId = Guid.NewGuid();
+        var now = new DateTime(2026, 05, 31, 12, 0, 0, DateTimeKind.Utc);
+        var occurrenceDate = new DateTime(2026, 05, 31, 0, 0, 0, DateTimeKind.Utc);
+        var schedule = new RecurringSchedule
+        {
+            Id = scheduleId,
+            UserId = userId,
+            Type = TransactionType.Expense,
+            Amount = new Money(800m, "PHP"),
+            Category = "Bills",
+            Counterparty = "Rent",
+            StartDate = occurrenceDate,
+            Cadence = RecurringCadence.Monthly,
+            NextRunAt = occurrenceDate,
+            IsActive = true,
+        };
+
+        _scheduleRepoMock
+            .Setup(r => r.ListDueAsync(now, It.IsAny<CancellationToken>()))
+            .ReturnsAsync([schedule]);
+        _generatorMock
+            .Setup(g => g.CalculateOccurrencesAsync(schedule, now, It.IsAny<CancellationToken>()))
+            .ReturnsAsync([new GeneratedOccurrence(occurrenceDate, $"{scheduleId:N}:{occurrenceDate:O}")]);
+        _transactionRepoMock
+            .Setup(r => r.ExistsRecurringOccurrenceAsync(userId, scheduleId, occurrenceDate, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
+        _transactionRepoMock
+            .Setup(r => r.AddWithOutboxAsync(
+                It.IsAny<Transaction>(),
+                It.IsAny<OutboxEvent>(),
+                It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new TransactionCanceledException("Recurring occurrence already exists."));
+        _scheduleRepoMock
+            .Setup(r => r.UpdateAsync(It.IsAny<RecurringSchedule>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        var processor = CreateProcessor(now);
+
+        await processor.ProcessOnceAsync(CancellationToken.None);
+
+        _alertRepoMock.Verify(r => r.AddAsync(It.IsAny<InAppAlert>(), It.IsAny<CancellationToken>()), Times.Never);
+        _scheduleRepoMock.Verify(r => r.UpdateAsync(
+            It.Is<RecurringSchedule>(s => s.LastGeneratedAt == occurrenceDate && s.NextRunAt > now),
+            It.IsAny<CancellationToken>()), Times.Once);
     }
 
     private RecurringScheduleProcessor CreateProcessor(DateTime nowUtc)
