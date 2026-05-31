@@ -45,7 +45,7 @@ class PasskeyCredential {
   final List<String> transports;
 }
 
-enum PasskeyOperation { signIn, register }
+enum PasskeyOperation { signIn, register, delete }
 
 class ExistingPasskeyRegistrationException implements Exception {
   const ExistingPasskeyRegistrationException(this.source);
@@ -353,6 +353,12 @@ String friendlyPasskeyErrorMessage(
   PasskeyOperation operation = PasskeyOperation.signIn,
 }) {
   if (error is AppError || error is DioException) {
+    final originalError = error is AppError ? error.originalError : error;
+    final genericPasskeyMessage =
+        _genericPasskeyApiFailureMessage(originalError, operation);
+    if (genericPasskeyMessage != null) {
+      return genericPasskeyMessage;
+    }
     return AppError.from(error, log: false).userMessage;
   }
 
@@ -368,7 +374,7 @@ String friendlyPasskeyErrorMessage(
       'ios-security-key-timeout' =>
         'Passkey verification timed out. Please try again.',
       _ =>
-        'Passkey ${operation == PasskeyOperation.register ? 'setup' : 'sign-in'} is unavailable right now. Code: ${error.code}',
+        'Passkey ${_passkeyOperationLabel(operation)} is unavailable right now. Code: ${error.code}',
     };
   }
 
@@ -395,3 +401,40 @@ String friendlyPasskeyErrorMessage(
     _ => 'Passkey sign-in is unavailable right now.',
   };
 }
+
+String _passkeyOperationLabel(PasskeyOperation operation) {
+  return switch (operation) {
+    PasskeyOperation.register => 'setup',
+    PasskeyOperation.delete => 'removal',
+    PasskeyOperation.signIn => 'sign-in',
+  };
+}
+
+String? _genericPasskeyApiFailureMessage(
+  Object error,
+  PasskeyOperation operation,
+) {
+  final hasNoServerMessage = switch (error) {
+    DioException() => _dioHasNoServerMessage(error),
+    _ => false,
+  };
+  if (!hasNoServerMessage) return null;
+
+  return switch (operation) {
+    PasskeyOperation.register => 'Passkey setup failed. Please try again.',
+    PasskeyOperation.delete =>
+      'Passkey removal failed. Please refresh and try again.',
+    PasskeyOperation.signIn => 'Passkey sign-in failed. Please try again.',
+  };
+}
+
+bool _dioHasNoServerMessage(DioException error) {
+  final data = error.response?.data;
+  if (data is! Map) {
+    return error.response != null;
+  }
+
+  return !_hasText(data['message']) && !_hasText(data['error']);
+}
+
+bool _hasText(Object? value) => value is String && value.trim().isNotEmpty;

@@ -245,7 +245,7 @@ void main() {
     expect(find.byType(SnackBar), findsNothing);
   });
 
-  testWidgets('security screen registers passkeys and enables passkey first',
+  testWidgets('security screen registers passkeys and shows management',
       (tester) async {
     SharedPreferences.setMockInitialValues({});
     final prefs = await SharedPreferences.getInstance();
@@ -262,12 +262,43 @@ void main() {
       prefs.getStringList(passkeyRegisteredEmailsPreferenceKey),
       ['security@example.com'],
     );
-    expect(prefs.getBool(passkeyFirstSignInEnabledPreferenceKey), isTrue);
 
     await tester.drag(find.byType(CustomScrollView), const Offset(0, -280));
     await tester.pumpAndSettle();
 
-    expect(find.text('Passkey First Sign-In'), findsOneWidget);
+    expect(find.text('Passkey Ready'), findsOneWidget);
+    expect(find.text('Manage Passkeys'), findsOneWidget);
+    expect(find.text('Passkey First Sign-In'), findsNothing);
+  });
+
+  testWidgets('security screen manages account passkeys without local passkey',
+      (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+    final passkeys = _RecordingPasskeyService()
+      ..credentials = const [
+        PasskeyCredential(
+          credentialId: 'other-device-credential-id',
+          friendlyName: 'Arvie iPhone',
+          relyingPartyId: 'getconscia.com',
+          transports: ['internal'],
+        ),
+      ];
+
+    await _pumpSecurityScreen(tester, prefs: prefs, passkeyService: passkeys);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Set Up Passkey'), findsOneWidget);
+    expect(find.text('Manage Passkeys'), findsOneWidget);
+    expect(find.text('Passkey First Sign-In'), findsNothing);
+
+    await tester.tap(find.text('Manage Passkeys'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Manage passkeys'), findsOneWidget);
+    expect(find.text('Other account passkeys'), findsOneWidget);
+    expect(find.text('Arvie iPhone'), findsOneWidget);
+    expect(find.text('No account passkeys'), findsNothing);
   });
 
   testWidgets('security screen removes saved passkeys from settings',
@@ -276,6 +307,8 @@ void main() {
       debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
       SharedPreferences.setMockInitialValues({
         passkeyRegisteredEmailsPreferenceKey: ['security@example.com'],
+        passkeyRegisteredCredentialIdsPreferenceKey:
+            '{"security@example.com":"credential-id"}',
         passkeyFirstSignInEnabledPreferenceKey: true,
       });
       final prefs = await SharedPreferences.getInstance();
@@ -292,22 +325,27 @@ void main() {
       await _pumpSecurityScreen(tester, prefs: prefs, passkeyService: passkeys);
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('Passkey Ready'));
+      await tester.tap(find.text('Manage Passkeys'));
       await tester.pumpAndSettle();
 
       expect(find.text('Manage passkeys'), findsOneWidget);
+      expect(find.text('This device'), findsOneWidget);
       expect(find.text('Android'), findsOneWidget);
       expect(
         find.textContaining('iOS Settings > Passwords > getconscia.com'),
         findsOneWidget,
       );
+      expect(find.text('Remove'), findsNothing);
 
-      await tester.tap(find.text('Remove'));
+      await tester.drag(find.text('Android'), const Offset(-320, 0));
       await tester.pumpAndSettle();
 
-      expect(find.text('Remove this passkey?'), findsOneWidget);
+      await tester.tap(find.text('Forget'));
+      await tester.pumpAndSettle();
 
-      await tester.tap(find.widgetWithText(FilledButton, 'Remove'));
+      expect(find.text('Forget this passkey?'), findsOneWidget);
+
+      await tester.tap(find.widgetWithText(FilledButton, 'Forget'));
       await tester.pumpAndSettle();
 
       expect(passkeys.deletedCredentialIds, ['credential-id']);
@@ -317,5 +355,65 @@ void main() {
     } finally {
       debugDefaultTargetPlatformOverride = null;
     }
+  });
+
+  testWidgets('security screen removes other account passkeys', (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+    final passkeys = _RecordingPasskeyService()
+      ..credentials = const [
+        PasskeyCredential(
+          credentialId: 'other-device-credential-id',
+          friendlyName: 'Arvie iPhone',
+          relyingPartyId: 'getconscia.com',
+          transports: ['internal'],
+        ),
+      ];
+
+    await _pumpSecurityScreen(tester, prefs: prefs, passkeyService: passkeys);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Manage Passkeys'));
+    await tester.pumpAndSettle();
+
+    await tester.drag(find.text('Arvie iPhone'), const Offset(-320, 0));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Remove'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Remove this passkey?'), findsOneWidget);
+    expect(
+      find.text(
+        'This removes the passkey from your Conscia account. If it still exists on another device, remove it from that device\'s password manager too.',
+      ),
+      findsOneWidget,
+    );
+
+    await tester.tap(find.widgetWithText(FilledButton, 'Remove'));
+    await tester.pumpAndSettle();
+
+    expect(passkeys.deletedCredentialIds, ['other-device-credential-id']);
+  });
+
+  testWidgets('security screen shows one clean empty passkey state',
+      (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+    final passkeys = _RecordingPasskeyService();
+
+    await _pumpSecurityScreen(tester, prefs: prefs, passkeyService: passkeys);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Manage Passkeys'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('No account passkeys'), findsOneWidget);
+    expect(
+      find.text('No account passkeys are registered for this account.'),
+      findsNothing,
+    );
+    expect(find.textContaining('Settings > Passwords'), findsNothing);
+    expect(find.text('Forget this device'), findsNothing);
   });
 }

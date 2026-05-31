@@ -168,6 +168,26 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
     }
   }
 
+  Future<void> _signInWithTypedPasskey() async {
+    final email = _emailController.text.trim();
+    final emailError = email.isEmpty
+        ? 'Enter your email to use a passkey'
+        : !isValidEmailAddress(email)
+            ? 'Enter a valid email to use a passkey'
+            : null;
+    if (emailError != null) {
+      setState(() {
+        _emailFieldError = emailError;
+        _passwordFieldError = null;
+        _errorMessage = null;
+      });
+      return;
+    }
+
+    _dismissKeyboard();
+    await _signInWithPasskey(email);
+  }
+
   void _dismissKeyboard() {
     FocusManager.instance.primaryFocus?.unfocus();
   }
@@ -272,6 +292,24 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                                     autofillHints: const [
                                       AutofillHints.email,
                                     ],
+                                    trailing: passkeysAvailable
+                                        ? IconButton(
+                                            key: const ValueKey(
+                                              'email-passkey-sign-in-button',
+                                            ),
+                                            tooltip: 'Sign in with passkey',
+                                            visualDensity:
+                                                VisualDensity.compact,
+                                            onPressed: _isLoading
+                                                ? null
+                                                : _signInWithTypedPasskey,
+                                            icon: AppIcons.icon(
+                                              AppIconKey.passkey,
+                                              color: colors.primary,
+                                              size: 20,
+                                            ),
+                                          )
+                                        : null,
                                   ),
                                   const SizedBox(height: 16),
                                   FloatingLabelTextField(

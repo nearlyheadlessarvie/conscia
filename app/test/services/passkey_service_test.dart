@@ -85,6 +85,28 @@ void main() {
     );
   });
 
+  test('friendlyPasskeyErrorMessage replaces generic passkey removal failures',
+      () {
+    final error = DioException(
+      requestOptions: RequestOptions(path: '/api/auth/passkeys/credential-id'),
+      response: Response(
+        requestOptions:
+            RequestOptions(path: '/api/auth/passkeys/credential-id'),
+        statusCode: 400,
+        data: const {},
+      ),
+      type: DioExceptionType.badResponse,
+    );
+
+    expect(
+      friendlyPasskeyErrorMessage(
+        error,
+        operation: PasskeyOperation.delete,
+      ),
+      'Passkey removal failed. Please refresh and try again.',
+    );
+  });
+
   test('friendlyPasskeyErrorMessage maps domain association platform errors',
       () {
     expect(

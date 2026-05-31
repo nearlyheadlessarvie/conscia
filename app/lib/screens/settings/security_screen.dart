@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_slidable/flutter_slidable.dart';
 
 import '../../core/constants/app_icons.dart';
 import '../../core/errors/app_error.dart';
@@ -83,7 +84,6 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen> {
       if (email != null && email.trim().isNotEmpty) {
         final notifier = ref.read(passkeySignInPreferenceProvider.notifier);
         await notifier.registerCredential(email, credentialId);
-        await notifier.setPasskeyFirstEnabled(true);
       }
       if (!mounted) return;
       ScaffoldMessenger.of(context)
@@ -139,9 +139,15 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen> {
     final currentUser = ref.watch(currentSessionUserProvider);
     final currentEmail = currentUser?.email;
     final hasPassword = currentUser?.hasPassword ?? false;
-    final hasRegisteredCurrentPasskey = currentEmail != null &&
-        passkeyPreference.hasRegisteredEmail(currentEmail);
+    final currentCredentialId = currentEmail == null
+        ? null
+        : passkeyPreference.credentialIdForEmail(currentEmail);
+    final hasRegisteredCurrentPasskey =
+        currentCredentialId != null && currentCredentialId.isNotEmpty;
     final canUsePasskeys = passkeysAvailable && sessionSupportsPasskeys;
+    final canManagePasskeys = currentEmail != null &&
+        currentEmail.trim().isNotEmpty &&
+        sessionSupportsPasskeys;
 
     return ConsciaAppBarScrollScope(
       scrollProgress: _appBarScrollProgress,
@@ -201,27 +207,17 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen> {
                             : 'Passkeys are unavailable for this sign-in session',
                         onTap: canUsePasskeys && !_isRegisteringPasskey
                             ? hasRegisteredCurrentPasskey
-                                ? () => _showPasskeySheet(currentEmail)
+                                ? null
                                 : _registerPasskey
                             : null,
                       ),
-                      if (passkeyPreference.registeredEmails.isNotEmpty) ...[
+                      if (canManagePasskeys) ...[
                         const SizedBox(height: 10),
-                        _SecuritySwitchRow(
+                        _SecurityMethodRow(
                           icon: AppIconKey.passkey,
-                          title: 'Passkey First Sign-In',
-                          subtitle:
-                              'Show saved passkey accounts before email sign-in',
-                          value: passkeyPreference.isPasskeyFirstEnabled,
-                          onChanged: (value) {
-                            unawaited(
-                              ref
-                                  .read(
-                                    passkeySignInPreferenceProvider.notifier,
-                                  )
-                                  .setPasskeyFirstEnabled(value),
-                            );
-                          },
+                          title: 'Manage Passkeys',
+                          subtitle: 'View and remove passkeys for this account',
+                          onTap: () => _showPasskeySheet(currentEmail),
                         ),
                       ],
                     ],
@@ -531,7 +527,6 @@ class _PasskeyManagementSheetState
     extends ConsumerState<_PasskeyManagementSheet> {
   bool _isLoading = true;
   String? _deletingCredentialId;
-  bool _isForgettingThisDevice = false;
   String? _error;
   List<PasskeyCredential> _credentials = const [];
 
@@ -564,13 +559,20 @@ class _PasskeyManagementSheetState
     }
   }
 
-  Future<void> _deleteCredential(PasskeyCredential credential) async {
+  Future<void> _deleteCredential(
+    PasskeyCredential credential, {
+    required bool isThisDevice,
+  }) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Remove this passkey?'),
-        content: const Text(
-          'This removes the selected passkey from your Conscia account.',
+        title: Text(
+          isThisDevice ? 'Forget this passkey?' : 'Remove this passkey?',
+        ),
+        content: Text(
+          isThisDevice
+              ? 'This removes this device passkey from your Conscia account and clears passkey sign-in here. You still need to remove the saved passkey from this device too.'
+              : 'This removes the passkey from your Conscia account. If it still exists on another device, remove it from that device\'s password manager too.',
         ),
         actions: [
           TextButton(
@@ -579,7 +581,7 @@ class _PasskeyManagementSheetState
           ),
           FilledButton(
             onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Remove'),
+            child: Text(isThisDevice ? 'Forget' : 'Remove'),
           ),
         ],
       ),
@@ -601,6 +603,7 @@ class _PasskeyManagementSheetState
           .read(passkeySignInPreferenceProvider)
           .credentialIdForEmail(widget.email);
       if (nextCredentials.isEmpty ||
+          isThisDevice ||
           localCredentialId == credential.credentialId) {
         await ref
             .read(passkeySignInPreferenceProvider.notifier)
@@ -614,71 +617,10 @@ class _PasskeyManagementSheetState
     } catch (error) {
       if (!mounted) return;
       setState(() {
-        _error = AppError.from(error, log: false).userMessage;
-        _deletingCredentialId = null;
-      });
-    }
-  }
-
-  Future<void> _forgetThisDevice() async {
-    final credentialId = ref
-        .read(passkeySignInPreferenceProvider)
-        .credentialIdForEmail(widget.email);
-    if (credentialId == null || credentialId.isEmpty) {
-      setState(() {
-        _error =
-            'This app cannot match the saved passkey for this device yet. Remove the matching account passkey above, then remove the saved passkey from this device.';
-      });
-      return;
-    }
-
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Forget this device?'),
-        content: const Text(
-          'This removes this device passkey from your Conscia account and clears passkey-first sign-in here. You still need to remove the saved passkey from this device too.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Forget device'),
-          ),
-        ],
-      ),
-    );
-    if (confirmed != true || !mounted) return;
-
-    setState(() {
-      _isForgettingThisDevice = true;
-      _deletingCredentialId = credentialId;
-      _error = null;
-    });
-
-    try {
-      await ref
-          .read(passkeyServiceProvider)
-          .deleteCurrentUserPasskey(credentialId);
-      final nextCredentials =
-          await ref.read(passkeyServiceProvider).listCurrentUserPasskeys();
-      await ref
-          .read(passkeySignInPreferenceProvider.notifier)
-          .forgetEmail(widget.email);
-      if (!mounted) return;
-      setState(() {
-        _credentials = nextCredentials;
-        _isForgettingThisDevice = false;
-        _deletingCredentialId = null;
-      });
-    } catch (error) {
-      if (!mounted) return;
-      setState(() {
-        _error = AppError.from(error, log: false).userMessage;
-        _isForgettingThisDevice = false;
+        _error = friendlyPasskeyErrorMessage(
+          error,
+          operation: PasskeyOperation.delete,
+        );
         _deletingCredentialId = null;
       });
     }
@@ -686,10 +628,20 @@ class _PasskeyManagementSheetState
 
   @override
   Widget build(BuildContext context) {
+    final localCredentialId =
+        ref.watch(passkeySignInPreferenceProvider).credentialIdForEmail(
+              widget.email,
+            );
+    final thisDeviceCredentials = _credentials
+        .where((credential) => credential.credentialId == localCredentialId)
+        .toList(growable: false);
+    final otherCredentials = _credentials
+        .where((credential) => credential.credentialId != localCredentialId)
+        .toList(growable: false);
+
     return ConsciaBottomSheetScaffold(
       title: 'Manage passkeys',
-      subtitle:
-          'Remove account passkeys, then clear the matching saved passkey from your device too.',
+      subtitle: 'View passkeys registered to this Conscia account.',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -713,37 +665,110 @@ class _PasskeyManagementSheetState
               ),
             )
           else if (_credentials.isEmpty)
-            Text(
-              'No account passkeys are registered for this account.',
-              style: Theme.of(context).textTheme.bodyMedium,
-            )
+            const _PasskeyEmptyState()
           else ...[
-            for (final credential in _credentials) ...[
-              _PasskeyCredentialRow(
-                credential: credential,
-                isDeleting: _isForgettingThisDevice ||
-                    _deletingCredentialId == credential.credentialId,
-                onRemove: () => _deleteCredential(credential),
-              ),
+            if (thisDeviceCredentials.isNotEmpty) ...[
+              const _PasskeySectionTitle('This device'),
               const SizedBox(height: 10),
+              for (final credential in thisDeviceCredentials) ...[
+                _PasskeyCredentialRow(
+                  credential: credential,
+                  actionLabel: 'Forget',
+                  isDeleting: _deletingCredentialId == credential.credentialId,
+                  onRemove: () => _deleteCredential(
+                    credential,
+                    isThisDevice: true,
+                  ),
+                ),
+                const SizedBox(height: 10),
+              ],
+              InlineNotice(
+                message: passkeyDeviceRemovalInstructions(),
+                tone: InlineNoticeTone.info,
+                icon: AppIcons.icon(
+                  AppIconKey.passkey,
+                  color: Theme.of(context).appColors.angelAccent,
+                  size: 16,
+                ),
+              ),
+              if (otherCredentials.isNotEmpty) const SizedBox(height: 18),
+            ],
+            if (otherCredentials.isNotEmpty) ...[
+              const _PasskeySectionTitle('Other account passkeys'),
+              const SizedBox(height: 10),
+              for (final credential in otherCredentials) ...[
+                _PasskeyCredentialRow(
+                  credential: credential,
+                  actionLabel: 'Remove',
+                  isDeleting: _deletingCredentialId == credential.credentialId,
+                  onRemove: () => _deleteCredential(
+                    credential,
+                    isThisDevice: false,
+                  ),
+                ),
+                const SizedBox(height: 10),
+              ],
             ],
           ],
-          InlineNotice(
-            message: passkeyDeviceRemovalInstructions(),
-            tone: InlineNoticeTone.info,
-            icon: AppIcons.icon(
-              AppIconKey.passkey,
-              color: Theme.of(context).appColors.angelAccent,
-              size: 16,
+        ],
+      ),
+    );
+  }
+}
+
+class _PasskeySectionTitle extends StatelessWidget {
+  const _PasskeySectionTitle(this.title);
+
+  final String title;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      title,
+      style: Theme.of(context).textTheme.labelLarge?.copyWith(
+            color: Theme.of(context).appColors.deepNavy,
+            fontWeight: FontWeight.w800,
+          ),
+    );
+  }
+}
+
+class _PasskeyEmptyState extends StatelessWidget {
+  const _PasskeyEmptyState();
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).appColors;
+    final textTheme = Theme.of(context).textTheme;
+
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: colors.surfaceRaised,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: colors.border),
+      ),
+      child: Column(
+        children: [
+          AppIcons.icon(
+            AppIconKey.passkey,
+            color: colors.mutedInk,
+            size: 32,
+          ),
+          const SizedBox(height: 10),
+          Text(
+            'No account passkeys',
+            style: textTheme.titleSmall?.copyWith(
+              fontWeight: FontWeight.w800,
             ),
           ),
-          const SizedBox(height: 12),
-          OutlinedButton(
-            onPressed: _isForgettingThisDevice ? null : _forgetThisDevice,
-            child: Text(
-              _isForgettingThisDevice
-                  ? 'Forgetting this device...'
-                  : 'Forget this device',
+          const SizedBox(height: 4),
+          Text(
+            'Set up a passkey on this device to use device unlock next time.',
+            textAlign: TextAlign.center,
+            style: textTheme.bodySmall?.copyWith(
+              color: colors.mutedInk,
+              height: 1.3,
             ),
           ),
         ],
@@ -755,13 +780,86 @@ class _PasskeyManagementSheetState
 class _PasskeyCredentialRow extends StatelessWidget {
   const _PasskeyCredentialRow({
     required this.credential,
+    required this.actionLabel,
     required this.isDeleting,
     required this.onRemove,
   });
 
   final PasskeyCredential credential;
+  final String actionLabel;
   final bool isDeleting;
   final VoidCallback onRemove;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).appColors;
+    final radius = BorderRadius.circular(18);
+
+    if (isDeleting) {
+      return DecoratedBox(
+        decoration: BoxDecoration(
+          color: colors.surfaceRaised,
+          borderRadius: radius,
+          border: Border.all(color: colors.border),
+        ),
+        child: _PasskeyCredentialRowContent(
+          credential: credential,
+          trailing: const SizedBox(
+            width: 18,
+            height: 18,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          ),
+        ),
+      );
+    }
+
+    return ClipRRect(
+      borderRadius: radius,
+      child: Slidable(
+        key: ValueKey('passkey-row-${credential.credentialId}'),
+        groupTag: 'passkeys',
+        closeOnScroll: true,
+        endActionPane: ActionPane(
+          motion: const BehindMotion(),
+          extentRatio: 0.24,
+          dismissible: _PasskeySlidablePreview(
+            label: actionLabel,
+            icon: AppIconKey.delete,
+            foregroundColor: colors.expense,
+            backgroundColor: colors.expenseSoft,
+            alignment: Alignment.centerRight,
+          ),
+          children: [
+            _PasskeySlidableAction(
+              label: actionLabel,
+              icon: AppIconKey.delete,
+              foregroundColor: colors.expense,
+              backgroundColor: colors.expenseSoft,
+              onPressed: onRemove,
+            ),
+          ],
+        ),
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: colors.surfaceRaised,
+            borderRadius: radius,
+            border: Border.all(color: colors.border),
+          ),
+          child: _PasskeyCredentialRowContent(credential: credential),
+        ),
+      ),
+    );
+  }
+}
+
+class _PasskeyCredentialRowContent extends StatelessWidget {
+  const _PasskeyCredentialRowContent({
+    required this.credential,
+    this.trailing,
+  });
+
+  final PasskeyCredential credential;
+  final Widget? trailing;
 
   @override
   Widget build(BuildContext context) {
@@ -770,13 +868,8 @@ class _PasskeyCredentialRow extends StatelessWidget {
         ? credential.friendlyName!.trim()
         : 'Passkey';
 
-    return Container(
+    return Padding(
       padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: colors.surfaceRaised,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: colors.border),
-      ),
       child: Row(
         children: [
           const _SecurityIconBox(icon: AppIconKey.passkey),
@@ -803,9 +896,110 @@ class _PasskeyCredentialRow extends StatelessWidget {
               ],
             ),
           ),
-          TextButton(
-            onPressed: isDeleting ? null : onRemove,
-            child: Text(isDeleting ? 'Removing...' : 'Remove'),
+          if (trailing != null) trailing!,
+        ],
+      ),
+    );
+  }
+}
+
+class _PasskeySlidablePreview extends StatelessWidget {
+  const _PasskeySlidablePreview({
+    required this.label,
+    required this.icon,
+    required this.foregroundColor,
+    required this.backgroundColor,
+    required this.alignment,
+  });
+
+  final String label;
+  final AppIconKey icon;
+  final Color foregroundColor;
+  final Color backgroundColor;
+  final Alignment alignment;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).appColors;
+
+    return ColoredBox(
+      color: backgroundColor.withValues(alpha: 0.38),
+      child: Align(
+        alignment: alignment,
+        child: SizedBox(
+          width: 92,
+          height: double.infinity,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              AppIcons.icon(
+                icon,
+                color: foregroundColor,
+                size: 20,
+              ),
+              const SizedBox(height: 4),
+              Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      color: colors.ink,
+                      fontWeight: FontWeight.w800,
+                    ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _PasskeySlidableAction extends StatelessWidget {
+  const _PasskeySlidableAction({
+    required this.label,
+    required this.icon,
+    required this.foregroundColor,
+    required this.backgroundColor,
+    required this.onPressed,
+  });
+
+  final String label;
+  final AppIconKey icon;
+  final Color foregroundColor;
+  final Color backgroundColor;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).appColors;
+
+    return CustomSlidableAction(
+      key: ValueKey('swipe-action-tile-$label'),
+      backgroundColor: backgroundColor.withValues(alpha: 0.38),
+      padding: EdgeInsets.zero,
+      onPressed: (_) => onPressed(),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          AppIcons.icon(
+            icon,
+            color: foregroundColor,
+            size: 20,
+          ),
+          const SizedBox(height: 4),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: colors.ink,
+                    fontWeight: FontWeight.w800,
+                  ),
+            ),
           ),
         ],
       ),
@@ -876,64 +1070,6 @@ class _SecurityMethodRow extends StatelessWidget {
             ],
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _SecuritySwitchRow extends StatelessWidget {
-  const _SecuritySwitchRow({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-    required this.value,
-    required this.onChanged,
-  });
-
-  final AppIconKey icon;
-  final String title;
-  final String subtitle;
-  final bool value;
-  final ValueChanged<bool> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).appColors;
-
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: colors.surfaceRaised,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: colors.border),
-      ),
-      child: Row(
-        children: [
-          _SecurityIconBox(icon: icon),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w800,
-                      ),
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  subtitle,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: colors.mutedInk,
-                        height: 1.25,
-                      ),
-                ),
-              ],
-            ),
-          ),
-          Switch(value: value, onChanged: onChanged),
-        ],
       ),
     );
   }
