@@ -1,5 +1,6 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
+using System.Formats.Cbor;
 using System.Text.Json;
 using Amazon.CognitoIdentityProvider;
 using Amazon.CognitoIdentityProvider.Model;
@@ -148,6 +149,34 @@ public class CognitoPasskeyAuthServiceTests
             .Setup(c => c.CompleteWebAuthnRegistrationAsync(
                 It.Is<CompleteWebAuthnRegistrationRequest>(r =>
                     HasWebAuthnTransports(r, "ble", "internal")),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CompleteWebAuthnRegistrationResponse());
+
+        await _passkeys.CompleteRegistrationAsync("access-token", credentialJson);
+
+        _cognito.VerifyAll();
+    }
+
+    [Fact]
+    public async Task CompleteRegistrationAsync_EnrichesMinimalIosCredentialResponse()
+    {
+        var credentialJson = $$"""
+            {
+              "id": "credential-id",
+              "rawId": "credential-id",
+              "type": "public-key",
+              "response": {
+                "clientDataJSON": "client-data",
+                "attestationObject": "{{CreateAttestationObject()}}"
+              },
+              "clientExtensionResults": {}
+            }
+            """;
+
+        _cognito
+            .Setup(c => c.CompleteWebAuthnRegistrationAsync(
+                It.Is<CompleteWebAuthnRegistrationRequest>(r =>
+                    HasEnrichedWebAuthnFields(r)),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(new CompleteWebAuthnRegistrationResponse());
 
@@ -307,4 +336,67 @@ public class CognitoPasskeyAuthServiceTests
 
         return transports.SequenceEqual(expected);
     }
+
+    private static bool HasEnrichedWebAuthnFields(CompleteWebAuthnRegistrationRequest request)
+    {
+        var response = request.Credential.AsDictionary()["response"].AsDictionary();
+
+        return response.TryGetValue("authenticatorData", out var authenticatorData) &&
+            !string.IsNullOrWhiteSpace(authenticatorData.AsString()) &&
+            response.TryGetValue("publicKeyAlgorithm", out var publicKeyAlgorithm) &&
+            publicKeyAlgorithm.AsInt() == -7 &&
+            response.TryGetValue("publicKey", out var publicKey) &&
+            !string.IsNullOrWhiteSpace(publicKey.AsString());
+    }
+
+    private static string CreateAttestationObject()
+    {
+        var publicKeyWriter = new CborWriter();
+        publicKeyWriter.WriteStartMap(5);
+        publicKeyWriter.WriteInt32(1);
+        publicKeyWriter.WriteInt32(2);
+        publicKeyWriter.WriteInt32(3);
+        publicKeyWriter.WriteInt32(-7);
+        publicKeyWriter.WriteInt32(-1);
+        publicKeyWriter.WriteInt32(1);
+        publicKeyWriter.WriteInt32(-2);
+        publicKeyWriter.WriteByteString(Convert.FromHexString("6B17D1F2E12C4247F8BCE6E563A440F277037D812DEB33A0F4A13945D898C296"));
+        publicKeyWriter.WriteInt32(-3);
+        publicKeyWriter.WriteByteString(Convert.FromHexString("4FE342E2FE1A7F9B8EE7EB4A7C0F9E162BCE33576B315ECECBB6406837BF51F5"));
+        publicKeyWriter.WriteEndMap();
+
+        var authData = BuildAuthData(publicKeyWriter.Encode());
+
+        var writer = new CborWriter();
+        writer.WriteStartMap(3);
+        writer.WriteTextString("fmt");
+        writer.WriteTextString("none");
+        writer.WriteTextString("authData");
+        writer.WriteByteString(authData);
+        writer.WriteTextString("attStmt");
+        writer.WriteStartMap(0);
+        writer.WriteEndMap();
+        writer.WriteEndMap();
+
+        return Base64UrlEncode(writer.Encode());
+    }
+
+    private static byte[] BuildAuthData(byte[] credentialPublicKey)
+    {
+        var authData = new List<byte>();
+        authData.AddRange(Enumerable.Repeat((byte)1, 32));
+        authData.Add(0x41);
+        authData.AddRange([0, 0, 0, 0]);
+        authData.AddRange(Enumerable.Repeat((byte)0, 16));
+        authData.AddRange([0, 4]);
+        authData.AddRange([1, 2, 3, 4]);
+        authData.AddRange(credentialPublicKey);
+        return authData.ToArray();
+    }
+
+    private static string Base64UrlEncode(byte[] value)
+        => Convert.ToBase64String(value)
+            .TrimEnd('=')
+            .Replace('+', '-')
+            .Replace('/', '_');
 }

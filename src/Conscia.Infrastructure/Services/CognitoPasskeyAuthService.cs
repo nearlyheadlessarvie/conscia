@@ -1,6 +1,9 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
+using System.Formats.Cbor;
+using System.Security.Cryptography;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using Amazon.CognitoIdentityProvider;
 using Amazon.CognitoIdentityProvider.Model;
 using Amazon.Runtime.Documents;
@@ -57,13 +60,14 @@ public sealed class CognitoPasskeyAuthService : IPasskeyAuthService
 
     public async Task CompleteRegistrationAsync(string accessToken, string credential, CancellationToken ct = default)
     {
+        var cognitoCredential = EnrichRegistrationCredentialJson(credential);
         try
         {
             await _cognito.CompleteWebAuthnRegistrationAsync(
                 new CompleteWebAuthnRegistrationRequest
                 {
                     AccessToken = accessToken,
-                    Credential = ParseJsonDocument(credential)
+                    Credential = ParseJsonDocument(cognitoCredential)
                 },
                 ct);
         }
@@ -72,7 +76,7 @@ public sealed class CognitoPasskeyAuthService : IPasskeyAuthService
             _logger.LogWarning(
                 ex,
                 "Cognito rejected passkey registration credential. Summary: {@CredentialSummary}",
-                SummarizeCredential(credential));
+                SummarizeCredential(cognitoCredential));
 
             throw new PasskeyRegistrationFailedException(
                 "Passkey setup could not be completed on this device. Remove the saved passkey from this device, then try again.");
@@ -406,6 +410,26 @@ public sealed class CognitoPasskeyAuthService : IPasskeyAuthService
         return Convert.FromBase64String(base64);
     }
 
+    private static string Base64UrlEncode(byte[] value)
+        => Convert.ToBase64String(value)
+            .TrimEnd('=')
+            .Replace('+', '-')
+            .Replace('/', '_');
+
+    private sealed record WebAuthnAttestationData(
+        byte[] AuthenticatorData,
+        int PublicKeyAlgorithm,
+        byte[]? PublicKey);
+
+    private sealed record CosePublicKey(
+        int? KeyType,
+        int Algorithm,
+        int? Curve,
+        byte[]? X,
+        byte[]? Y,
+        byte[]? Modulus,
+        byte[]? Exponent);
+
     private static DateTimeOffset? ToDateTimeOffset(DateTime? createdAt)
         => createdAt is null || createdAt.Value == default
             ? null
@@ -431,6 +455,188 @@ public sealed class CognitoPasskeyAuthService : IPasskeyAuthService
     {
         using var payload = JsonDocument.Parse(json);
         return ToDocument(payload.RootElement);
+    }
+
+    private static string EnrichRegistrationCredentialJson(string json)
+    {
+        var node = JsonNode.Parse(json);
+        if (node is not JsonObject root ||
+            root["response"] is not JsonObject response ||
+            response["attestationObject"]?.GetValue<string>() is not { Length: > 0 } attestationObject)
+        {
+            return json;
+        }
+
+        var extracted = TryExtractWebAuthnAttestation(attestationObject);
+        if (extracted is null)
+        {
+            return json;
+        }
+
+        response["authenticatorData"] ??= Base64UrlEncode(extracted.AuthenticatorData);
+        response["publicKeyAlgorithm"] ??= extracted.PublicKeyAlgorithm;
+        if (extracted.PublicKey is { Length: > 0 })
+        {
+            response["publicKey"] ??= Base64UrlEncode(extracted.PublicKey);
+        }
+
+        return root.ToJsonString();
+    }
+
+    private static WebAuthnAttestationData? TryExtractWebAuthnAttestation(string attestationObject)
+    {
+        try
+        {
+            var attestationBytes = DecodeBase64Url(attestationObject);
+            var reader = new CborReader(attestationBytes, CborConformanceMode.Lax);
+            var mapLength = reader.ReadStartMap();
+            byte[]? authData = null;
+
+            for (var i = 0; i < mapLength; i++)
+            {
+                var key = reader.ReadTextString();
+                if (key == "authData")
+                {
+                    authData = reader.ReadByteString();
+                }
+                else
+                {
+                    reader.SkipValue();
+                }
+            }
+
+            if (authData is null)
+            {
+                return null;
+            }
+
+            var coseKey = TryReadCredentialPublicKey(authData);
+            return coseKey is null
+                ? null
+                : new WebAuthnAttestationData(
+                    authData,
+                    coseKey.Algorithm,
+                    TryExportPublicKey(coseKey));
+        }
+        catch (Exception ex) when (ex is CborContentException or FormatException or CryptographicException or InvalidOperationException)
+        {
+            return null;
+        }
+    }
+
+    private static CosePublicKey? TryReadCredentialPublicKey(byte[] authData)
+    {
+        const byte attestedCredentialDataFlag = 0x40;
+        const int fixedAuthDataLength = 37;
+        const int aaguidLength = 16;
+        const int credentialIdLengthBytes = 2;
+
+        if (authData.Length < fixedAuthDataLength ||
+            (authData[32] & attestedCredentialDataFlag) == 0)
+        {
+            return null;
+        }
+
+        var offset = fixedAuthDataLength + aaguidLength;
+        if (authData.Length < offset + credentialIdLengthBytes)
+        {
+            return null;
+        }
+
+        var credentialIdLength = (authData[offset] << 8) | authData[offset + 1];
+        offset += credentialIdLengthBytes + credentialIdLength;
+        if (authData.Length <= offset)
+        {
+            return null;
+        }
+
+        var reader = new CborReader(authData[offset..], CborConformanceMode.Lax);
+        var mapLength = reader.ReadStartMap();
+        int? keyType = null;
+        int? algorithm = null;
+        int? curve = null;
+        byte[]? x = null;
+        byte[]? y = null;
+        byte[]? modulus = null;
+        byte[]? exponent = null;
+
+        for (var i = 0; i < mapLength; i++)
+        {
+            var key = reader.ReadInt32();
+            switch (key)
+            {
+                case 1:
+                    keyType = reader.ReadInt32();
+                    break;
+                case 3:
+                    algorithm = reader.ReadInt32();
+                    break;
+                case -1 when keyType == 2:
+                    curve = reader.ReadInt32();
+                    break;
+                case -2 when keyType == 2:
+                    x = reader.ReadByteString();
+                    break;
+                case -3 when keyType == 2:
+                    y = reader.ReadByteString();
+                    break;
+                case -1 when keyType == 3:
+                    modulus = reader.ReadByteString();
+                    break;
+                case -2 when keyType == 3:
+                    exponent = reader.ReadByteString();
+                    break;
+                default:
+                    reader.SkipValue();
+                    break;
+            }
+        }
+
+        return algorithm is null
+            ? null
+            : new CosePublicKey(
+                keyType,
+                algorithm.Value,
+                curve,
+                x,
+                y,
+                modulus,
+                exponent);
+    }
+
+    private static byte[]? TryExportPublicKey(CosePublicKey key)
+    {
+        if (key.KeyType == 2 &&
+            key.Curve == 1 &&
+            key.X is { Length: 32 } x &&
+            key.Y is { Length: 32 } y)
+        {
+            using var ecdsa = ECDsa.Create(new ECParameters
+            {
+                Curve = ECCurve.NamedCurves.nistP256,
+                Q = new ECPoint
+                {
+                    X = x,
+                    Y = y
+                }
+            });
+            return ecdsa.ExportSubjectPublicKeyInfo();
+        }
+
+        if (key.KeyType == 3 &&
+            key.Modulus is { Length: > 0 } modulus &&
+            key.Exponent is { Length: > 0 } exponent)
+        {
+            using var rsa = RSA.Create();
+            rsa.ImportParameters(new RSAParameters
+            {
+                Modulus = modulus,
+                Exponent = exponent
+            });
+            return rsa.ExportSubjectPublicKeyInfo();
+        }
+
+        return null;
     }
 
     private static Document ToDocument(JsonElement element)
