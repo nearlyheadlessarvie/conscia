@@ -176,7 +176,7 @@ public class CognitoPasskeyAuthServiceTests
         _cognito
             .Setup(c => c.CompleteWebAuthnRegistrationAsync(
                 It.Is<CompleteWebAuthnRegistrationRequest>(r =>
-                    HasEnrichedWebAuthnFields(r)),
+                    HasEnrichedIosPlatformWebAuthnFields(r)),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(new CompleteWebAuthnRegistrationResponse());
 
@@ -347,6 +347,18 @@ public class CognitoPasskeyAuthServiceTests
             publicKeyAlgorithm.AsInt() == -7 &&
             response.TryGetValue("publicKey", out var publicKey) &&
             !string.IsNullOrWhiteSpace(publicKey.AsString());
+    }
+
+    private static bool HasEnrichedIosPlatformWebAuthnFields(CompleteWebAuthnRegistrationRequest request)
+    {
+        var root = request.Credential.AsDictionary();
+        var response = root["response"].AsDictionary();
+
+        return HasEnrichedWebAuthnFields(request) &&
+            root.TryGetValue("authenticatorAttachment", out var attachment) &&
+            attachment.AsString() == "platform" &&
+            response.TryGetValue("transports", out var transports) &&
+            transports.AsList().Select(transport => transport.AsString()).SequenceEqual(["internal"]);
     }
 
     private static string CreateAttestationObject()
