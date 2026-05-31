@@ -128,6 +128,35 @@ public class CognitoPasskeyAuthServiceTests
     }
 
     [Fact]
+    public async Task CompleteRegistrationAsync_NormalizesInvalidRegistrationTransports()
+    {
+        const string credentialJson = """
+            {
+              "id": "credential-id",
+              "rawId": "credential-id",
+              "type": "public-key",
+              "response": {
+                "clientDataJSON": "client-data",
+                "attestationObject": "attestation-object",
+                "transports": ["", "bluetooth", "unknown", "internal"]
+              },
+              "clientExtensionResults": {}
+            }
+            """;
+
+        _cognito
+            .Setup(c => c.CompleteWebAuthnRegistrationAsync(
+                It.Is<CompleteWebAuthnRegistrationRequest>(r =>
+                    HasWebAuthnTransports(r, "ble", "internal")),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CompleteWebAuthnRegistrationResponse());
+
+        await _passkeys.CompleteRegistrationAsync("access-token", credentialJson);
+
+        _cognito.VerifyAll();
+    }
+
+    [Fact]
     public async Task CompleteAuthenticationAsync_ExistingLocalUserWithSameEmail_ReturnsResolvedLocalUserId()
     {
         var cognitoSub = Guid.NewGuid();
@@ -184,5 +213,18 @@ public class CognitoPasskeyAuthServiceTests
             ]);
 
         return new JwtSecurityTokenHandler().WriteToken(token);
+    }
+
+    private static bool HasWebAuthnTransports(
+        CompleteWebAuthnRegistrationRequest request,
+        params string[] expected)
+    {
+        var response = request.Credential.AsDictionary()["response"].AsDictionary();
+        var transports = response["transports"]
+            .AsList()
+            .Select(transport => transport.AsString())
+            .ToArray();
+
+        return transports.SequenceEqual(expected);
     }
 }
