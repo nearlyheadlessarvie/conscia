@@ -45,6 +45,7 @@ public class TestWebAppFactory : WebApplicationFactory<Program>
     public Mock<IWeeklyInsightsRepository> WeeklyInsightsRepoMock { get; } = new();
     public Mock<IPurchasePatternRepository> PurchasePatternRepoMock { get; } = new();
     public Mock<IMonthlyCategorySpendRepository> MonthlyCategorySpendRepoMock { get; } = new();
+    public Mock<IReceiptRepository> ReceiptRepoMock { get; } = new();
     public Mock<IS3StorageService> S3StorageServiceMock { get; } = new();
     public Mock<IPasskeyAuthService> PasskeyAuthServiceMock { get; } = new();
     public InMemoryUserRepository UserRepo { get; } = new();
@@ -96,6 +97,7 @@ public class TestWebAppFactory : WebApplicationFactory<Program>
             ReplaceService<IWeeklyInsightsRepository>(services, WeeklyInsightsRepoMock.Object);
             ReplaceService<IPurchasePatternRepository>(services, PurchasePatternRepoMock.Object);
             ReplaceService<IMonthlyCategorySpendRepository>(services, MonthlyCategorySpendRepoMock.Object);
+            ReplaceService<IReceiptRepository>(services, ReceiptRepoMock.Object);
             ReplaceService<IS3StorageService>(services, S3StorageServiceMock.Object);
             ReplaceService<IPasskeyAuthService>(services, PasskeyAuthServiceMock.Object);
         });

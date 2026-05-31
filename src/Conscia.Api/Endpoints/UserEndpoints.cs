@@ -10,6 +10,8 @@ namespace Conscia.Api.Endpoints;
 
 public static class UserEndpoints
 {
+    private const int ExportTransactionPageSize = 10000;
+
     public static RouteGroupBuilder MapUserEndpoints(this IEndpointRouteBuilder routes, ApiVersionSet apiVersionSet)
     {
         var group = routes.MapGroup("/api/users")
@@ -129,6 +131,15 @@ public static class UserEndpoints
                 return Results.ValidationProblem(validation.ToDictionary());
 
             var userId = ctx.User.GetUserId();
+            if (dto.ProfilePictureKey is not null &&
+                !dto.ProfilePictureKey.StartsWith($"profile-pictures/{userId}/", StringComparison.Ordinal))
+            {
+                return Results.BadRequest(new
+                {
+                    error = "Profile picture key must belong to the current user"
+                });
+            }
+
             var user = await svc.UpdateProfileAsync(userId, dto, ctx.RequestAborted);
             return Results.Ok(await ToProfileResponseAsync(user, users, storage, ctx.RequestAborted));
         }).WithName("UpdateCurrentUser");
@@ -145,7 +156,11 @@ public static class UserEndpoints
             IMonthlyCategorySpendRepository monthlyCategorySpendRepo,
             IAIInteractionRepository aiInteractionRepo,
             IConscienceJourneyRepository conscienceJourneyRepo,
-            IPushDeviceTokenRepository pushDeviceTokenRepo) =>
+            IPushDeviceTokenRepository pushDeviceTokenRepo,
+            ICategoryService categorySvc,
+            IFamilySpaceService familySpaceSvc,
+            ISubscriptionService subscriptionSvc,
+            IReceiptRepository receiptRepo) =>
         {
             var userId = ctx.User.GetUserId();
             var ct = ctx.RequestAborted;
@@ -153,8 +168,29 @@ public static class UserEndpoints
             var user = await svc.GetByIdAsync(userId, ct);
             if (user is null) return Results.NotFound();
 
-            var transactions = await txnSvc.ListAsync(userId, 1, 10000, null, ct: ct);
+            var transactions = await ListAllTransactionsForExportAsync(txnSvc, userId, ct);
             var budgets = await budgetSvc.ListStatusesByUserAsync(userId, ct: ct);
+            var personalCategories = await categorySvc.ListAsync(
+                userId,
+                RecordScope.Personal,
+                includeArchived: true,
+                ct: ct);
+            var familySpace = await familySpaceSvc.GetCurrentAsync(userId, ct);
+            IReadOnlyList<CategoryDto> familyCategories = [];
+            IReadOnlyList<FamilyMemberDto> familyMembers = [];
+            IReadOnlyList<FamilyInviteDto> outgoingInvites = [];
+            if (familySpace is not null)
+            {
+                familyCategories = await categorySvc.ListAsync(
+                    userId,
+                    RecordScope.Family,
+                    familySpace.Id,
+                    true,
+                    ct);
+                familyMembers = await familySpaceSvc.GetMembersAsync(userId, ct);
+                if (string.Equals(familySpace.Role, FamilyMemberRole.Owner.ToString(), StringComparison.Ordinal))
+                    outgoingInvites = await familySpaceSvc.GetOutgoingInvitesAsync(userId, ct);
+            }
             var recurringSchedules = await recurringScheduleSvc.ListAsync(userId, ct);
             var alerts = await alertSvc.ListAlertsAsync(userId, ct);
             var weeklyInsights = await weeklyInsightsRepo.GetByUserIdAsync(userId, 1000, ct);
@@ -169,6 +205,8 @@ public static class UserEndpoints
             var journeyEvents = await conscienceJourneyRepo.ListEventsAsync(userId, 1000, ct);
             var journeyMoments = await conscienceJourneyRepo.ListMascotMomentsAsync(userId, 100, ct);
             var pushDevices = await pushDeviceTokenRepo.GetActiveByUserAsync(userId, ct);
+            var subscription = await subscriptionSvc.GetStatusAsync(userId, ct);
+            var receipts = await receiptRepo.ListByUserAsync(userId, ct);
 
             return Results.Ok(new
             {
@@ -189,8 +227,19 @@ public static class UserEndpoints
                     user.HasCompletedOnboarding,
                     user.AiPersonalityIntensity
                 },
-                Transactions = transactions.Items,
+                Transactions = transactions,
                 Budgets = budgets,
+                Categories = new
+                {
+                    Personal = personalCategories,
+                    Family = familyCategories
+                },
+                FamilySpace = new
+                {
+                    Current = familySpace,
+                    Members = familyMembers,
+                    OutgoingInvites = outgoingInvites
+                },
                 RecurringSchedules = recurringSchedules,
                 Alerts = alerts,
                 Insights = new
@@ -205,6 +254,8 @@ public static class UserEndpoints
                     MonthlyCategorySpends = monthlyCategorySpends
                 },
                 AIInteractions = aiInteractions,
+                Subscription = subscription,
+                Receipts = receipts,
                 ConscienceJourney = new
                 {
                     Progress = journeyProgress,
@@ -234,6 +285,31 @@ public static class UserEndpoints
         }).WithName("DeleteCurrentUser");
 
         return group;
+    }
+
+    private static async Task<IReadOnlyList<Transaction>> ListAllTransactionsForExportAsync(
+        ITransactionService txnSvc,
+        Guid userId,
+        CancellationToken ct)
+    {
+        var transactions = new List<Transaction>();
+        string? nextToken = null;
+
+        do
+        {
+            var page = await txnSvc.ListAsync(
+                userId,
+                1,
+                ExportTransactionPageSize,
+                null,
+                ct: ct,
+                paginationToken: nextToken);
+            transactions.AddRange(page.Items);
+            nextToken = page.NextToken;
+        }
+        while (!string.IsNullOrEmpty(nextToken));
+
+        return transactions;
     }
 
     private static async Task<object> ToProfileResponseAsync(

@@ -268,6 +268,28 @@ public class UserEndpointTests : IClassFixture<TestWebAppFactory>
     }
 
     [Fact]
+    public async Task UpdateMe_ProfilePictureKeyForOtherUser_Returns400()
+    {
+        await using var factory = new TestWebAppFactory();
+        using var client = factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+            "Bearer",
+            factory.GenerateTestToken());
+        var key = "profile-pictures/ffffffff-ffff-ffff-ffff-ffffffffffff/avatar.jpg";
+
+        var response = await client.PutAsJsonAsync("/api/users/me", new
+        {
+            profilePictureKey = key
+        });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        factory.UserServiceMock.Verify(s => s.UpdateProfileAsync(
+            It.IsAny<Guid>(),
+            It.IsAny<UserProfileUpdateDto>(),
+            It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
     public async Task CreateProfilePictureUploadUrl_ReturnsPresignedUrlAndKey()
     {
         var userId = Guid.Parse("a1b2c3d4-0001-4000-8000-000000000001");

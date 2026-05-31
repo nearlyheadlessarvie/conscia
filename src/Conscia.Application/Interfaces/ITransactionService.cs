@@ -16,7 +16,8 @@ public interface ITransactionService
         string? category = null,
         DateTime? from = null,
         DateTime? to = null,
-        CancellationToken ct = default);
+        CancellationToken ct = default,
+        string? paginationToken = null);
     Task<PagedResult<Transaction>> ListFamilyAsync(
         Guid userId,
         int page,

@@ -12,11 +12,12 @@
       "component": "app",
       "package-name": "app"
     },
-    "src/Conscia.Api": {
+    "src": {
       "release-type": "simple",
       "component": "api",
       "package-name": "api",
-      "version-file": "src/Conscia.Api/Conscia.Api.csproj"
+      "version-file": "src/Conscia.Api/Conscia.Api.csproj",
+      "changelog-path": "Conscia.Api/CHANGELOG.md"
     },
     "infra/src/Conscia.Infra": {
       "release-type": "simple",

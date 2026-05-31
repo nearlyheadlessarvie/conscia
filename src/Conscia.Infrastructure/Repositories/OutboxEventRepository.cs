@@ -8,7 +8,10 @@ namespace Conscia.Infrastructure.Repositories;
 
 public class OutboxEventRepository : DynamoRepository, IOutboxEventRepository
 {
-    private const string TableName = "OutboxEvents";    
+    private const string TableName = "OutboxEvents";
+    private const string PendingStatus = "PENDING";
+    private const string ProcessingStatus = "PROCESSING";
+    private static readonly TimeSpan ProcessingLease = TimeSpan.FromMinutes(15);
 
     public OutboxEventRepository(IAmazonDynamoDB dynamo) : base(dynamo)
     {}
@@ -26,16 +29,47 @@ public class OutboxEventRepository : DynamoRepository, IOutboxEventRepository
 
     public async Task<IReadOnlyList<OutboxEvent>> GetPendingAsync(int limit = 50, CancellationToken ct = default)
     {
+        var pending = await QueryByStatusAsync(PendingStatus, limit, ct);
+        if (pending.Count >= limit)
+            return pending;
+
+        var staleProcessing = await QueryByStatusAsync(
+            ProcessingStatus,
+            limit - pending.Count,
+            ct,
+            DateTime.UtcNow.Subtract(ProcessingLease));
+
+        return pending.Concat(staleProcessing).ToList();
+    }
+
+    private async Task<IReadOnlyList<OutboxEvent>> QueryByStatusAsync(
+        string status,
+        int limit,
+        CancellationToken ct,
+        DateTime? processingStartedBefore = null)
+    {
+        if (limit <= 0)
+            return [];
+
+        var expressionAttributeNames = new Dictionary<string, string> { ["#s"] = "Status" };
+        var expressionAttributeValues = new Dictionary<string, AttributeValue>
+        {
+            [":status"] = new(status)
+        };
+
+        if (processingStartedBefore.HasValue)
+            expressionAttributeValues[":leaseExpiredBefore"] = new(processingStartedBefore.Value.ToString("O"));
+
         var response = await Dynamo.QueryAsync(new QueryRequest
         {
             TableName = TableName,
             IndexName = "GSI-Status-CreatedAt",
-            KeyConditionExpression = "#s = :pending",
-            ExpressionAttributeNames = new Dictionary<string, string> { ["#s"] = "Status" },
-            ExpressionAttributeValues = new Dictionary<string, AttributeValue>
-            {
-                [":pending"] = new("PENDING")
-            },
+            KeyConditionExpression = "#s = :status",
+            FilterExpression = processingStartedBefore.HasValue
+                ? "attribute_exists(ProcessingStartedAt) AND ProcessingStartedAt <= :leaseExpiredBefore"
+                : null,
+            ExpressionAttributeNames = expressionAttributeNames,
+            ExpressionAttributeValues = expressionAttributeValues,
             Limit = limit
         }, ct);
 
@@ -59,13 +93,14 @@ public class OutboxEventRepository : DynamoRepository, IOutboxEventRepository
             {
                 TableName = TableName,
                 Key = Key(DynamoKeys.Outbox(id), DynamoKeys.EventCreatedAt(createdAt)),
-                ConditionExpression = "attribute_exists(#s) AND #s = :pending",
+                ConditionExpression = "attribute_exists(#s) AND (#s = :pending OR (#s = :processing AND attribute_exists(ProcessingStartedAt) AND ProcessingStartedAt <= :leaseExpiredBefore))",
                 UpdateExpression = "SET #s = :processing, ProcessingStartedAt = :now",
                 ExpressionAttributeNames = new() { ["#s"] = "Status" },
                 ExpressionAttributeValues = new()
                 {
-                    [":pending"] = new("PENDING"),
-                    [":processing"] = new("PROCESSING"),
+                    [":pending"] = new(PendingStatus),
+                    [":processing"] = new(ProcessingStatus),
+                    [":leaseExpiredBefore"] = new(DateTime.UtcNow.Subtract(ProcessingLease).ToString("O")),
                     [":now"] = new(DateTime.UtcNow.ToString("O"))
                 }
             }, ct);
@@ -89,7 +124,7 @@ public class OutboxEventRepository : DynamoRepository, IOutboxEventRepository
             ExpressionAttributeNames = new() { ["#s"] = "Status" },
             ExpressionAttributeValues = new()
             {
-                [":processing"] = new("PROCESSING"),
+                [":processing"] = new(ProcessingStatus),
                 [":now"] = new(DateTime.UtcNow.ToString("O"))
             }
         }, ct);
@@ -106,8 +141,8 @@ public class OutboxEventRepository : DynamoRepository, IOutboxEventRepository
             ExpressionAttributeNames = new() { ["#s"] = "Status" },
             ExpressionAttributeValues = new()
             {
-                [":processing"] = new("PROCESSING"),
-                [":pending"] = new("PENDING")
+                [":processing"] = new(ProcessingStatus),
+                [":pending"] = new(PendingStatus)
             }
         }, ct);
     }
@@ -129,7 +164,7 @@ public class OutboxEventRepository : DynamoRepository, IOutboxEventRepository
         if (e.ProcessedAt.HasValue)
             item["ProcessedAt"] = new(e.ProcessedAt.Value.ToString("O"));
         else
-            item["Status"] = new("PENDING");
+            item["Status"] = new(PendingStatus);
 
         return item;
     }

@@ -51,6 +51,7 @@ class _DeferredTransactionService extends TransactionService {
     String? scope,
     DateTime? from,
     DateTime? to,
+    String? nextToken,
   }) {
     return completer.future;
   }
@@ -69,6 +70,7 @@ class _DuplicatePageTransactionService extends TransactionService {
     String? scope,
     DateTime? from,
     DateTime? to,
+    String? nextToken,
   }) async {
     return PaginatedTransactions(
       items: transactions,
@@ -76,6 +78,47 @@ class _DuplicatePageTransactionService extends TransactionService {
       page: page,
       pageSize: pageSize,
       hasMore: page == 1,
+    );
+  }
+}
+
+class _CursorTransactionService extends TransactionService {
+  _CursorTransactionService() : super(Dio());
+
+  final seenTokens = <String?>[];
+
+  @override
+  Future<PaginatedTransactions> list({
+    int page = 1,
+    int pageSize = 20,
+    String? category,
+    String? scope,
+    DateTime? from,
+    DateTime? to,
+    String? nextToken,
+  }) async {
+    seenTokens.add(nextToken);
+    final transactionNumber = seenTokens.length;
+
+    return PaginatedTransactions(
+      items: [
+        Transaction(
+          id: 'tx-$transactionNumber',
+          amount: 24,
+          currencyCode: 'PHP',
+          category: 'Dining',
+          description: 'Lunch $transactionNumber',
+          type: 'expense',
+          date: DateTime(2026, 5, 22).subtract(
+            Duration(days: transactionNumber),
+          ),
+        ),
+      ],
+      totalCount: transactionNumber,
+      page: page,
+      pageSize: pageSize,
+      hasMore: transactionNumber == 1,
+      nextToken: transactionNumber == 1 ? 'cursor-2' : null,
     );
   }
 }
@@ -145,5 +188,36 @@ void main() {
     await container.read(transactionListProvider.notifier).loadMore();
 
     expect(container.read(transactionListProvider).transactions, hasLength(1));
+  });
+
+  test('uses the returned cursor when loading the next transaction page',
+      () async {
+    final service = _CursorTransactionService();
+    final container = ProviderContainer(
+      overrides: [
+        authProvider.overrideWith(
+          (ref) => _TestAuthNotifier(
+            const AuthState(
+              status: AuthStatus.authenticated,
+              userId: 'user-1',
+            ),
+          ),
+        ),
+        transactionServiceProvider.overrideWithValue(service),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    container.read(transactionListProvider);
+    await Future<void>.delayed(Duration.zero);
+
+    await container.read(transactionListProvider.notifier).loadMore();
+
+    expect(service.seenTokens, [null, 'cursor-2']);
+    expect(container.read(transactionListProvider).nextToken, isNull);
+    expect(
+      container.read(transactionListProvider).transactions.map((tx) => tx.id),
+      ['tx-1', 'tx-2'],
+    );
   });
 }

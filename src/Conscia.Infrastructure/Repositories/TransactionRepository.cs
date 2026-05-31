@@ -35,27 +35,42 @@ public class TransactionRepository : DynamoRepository, ITransactionRepository
         OutboxEvent outboxEvent,
         CancellationToken ct = default)
     {
+        var transactItems = new List<TransactWriteItem>();
+
+        if (RecurringOccurrenceSentinelToItem(transaction) is { } sentinelItem)
+        {
+            transactItems.Add(new TransactWriteItem
+            {
+                Put = new Put
+                {
+                    TableName = TableName,
+                    Item = sentinelItem,
+                    ConditionExpression = "attribute_not_exists(PK)"
+                }
+            });
+        }
+
+        transactItems.Add(new TransactWriteItem
+        {
+            Put = new Put
+            {
+                TableName = TableName,
+                Item = ToItem(transaction)
+            }
+        });
+
+        transactItems.Add(new TransactWriteItem
+        {
+            Put = new Put
+            {
+                TableName = "OutboxEvents",
+                Item = OutboxToItem(outboxEvent)
+            }
+        });
+
         await Dynamo.TransactWriteItemsAsync(new TransactWriteItemsRequest
         {
-            TransactItems =
-            [
-                new()
-                {
-                    Put = new Put
-                    {
-                        TableName = TableName,
-                        Item = ToItem(transaction)
-                    }
-                },
-                new()
-                {
-                    Put = new Put
-                    {
-                        TableName = "OutboxEvents",
-                        Item = OutboxToItem(outboxEvent)
-                    }
-                }
-            ]
+            TransactItems = transactItems
         }, ct);
 
         return transaction;
@@ -157,9 +172,32 @@ public class TransactionRepository : DynamoRepository, ITransactionRepository
         DateTime occurrenceDate,
         CancellationToken ct = default)
     {
-        var (items, _) = await QueryByUserAsync(userId, null, null, null, 200, null, ct);
-        return items.Any(t => t.RecurringScheduleId == recurringScheduleId &&
-                              t.RecurringOccurrenceDate == occurrenceDate);
+        Dictionary<string, AttributeValue>? lastEvaluatedKey = null;
+
+        do
+        {
+            var response = await Dynamo.QueryAsync(new QueryRequest
+            {
+                TableName = TableName,
+                KeyConditionExpression = "PK = :pk",
+                FilterExpression = "RecurringScheduleId = :recurringScheduleId AND RecurringOccurrenceDate = :occurrenceDate",
+                ExpressionAttributeValues = new Dictionary<string, AttributeValue>
+                {
+                    [":pk"] = new(DynamoKeys.User(userId)),
+                    [":recurringScheduleId"] = new(recurringScheduleId.ToString()),
+                    [":occurrenceDate"] = new(occurrenceDate.ToString("O"))
+                },
+                ExclusiveStartKey = lastEvaluatedKey
+            }, ct);
+
+            if (response.Items.Count > 0)
+                return true;
+
+            lastEvaluatedKey = response.LastEvaluatedKey;
+        }
+        while (lastEvaluatedKey is { Count: > 0 });
+
+        return false;
     }
 
     public async Task<IReadOnlyList<Transaction>> ListByRecurringScheduleAsync(
@@ -225,31 +263,31 @@ public class TransactionRepository : DynamoRepository, ITransactionRepository
             ScanIndexForward = false
         };
 
-        if (!string.IsNullOrEmpty(paginationToken))
+        var hasCategoryFilter = !string.IsNullOrEmpty(category);
+        var list = new List<Transaction>();
+        var lastEvaluatedKey = DecodePaginationToken(paginationToken);
+
+        do
         {
-            request.ExclusiveStartKey =
-                JsonSerializer.Deserialize<Dictionary<string, AttributeValue>>(
-                    Convert.FromBase64String(paginationToken));
+            request.ExclusiveStartKey = lastEvaluatedKey;
+            var response = await Dynamo.QueryAsync(request, ct);
+
+            var items = Items(response).Select(FromItem);
+            if (hasCategoryFilter)
+                items = items.Where(t => t.Category == category);
+
+            foreach (var item in items)
+            {
+                list.Add(item);
+                if (list.Count >= limit)
+                    break;
+            }
+
+            lastEvaluatedKey = response.LastEvaluatedKey;
         }
+        while (hasCategoryFilter && list.Count < limit && lastEvaluatedKey is { Count: > 0 });
 
-        var response = await Dynamo.QueryAsync(request, ct);
-
-        var items = Items(response).Select(FromItem);
-
-        // small-set filter only (UI case)
-        if (!string.IsNullOrEmpty(category))
-            items = items.Where(t => t.Category == category);
-
-        var list = items.ToList();
-
-        string? nextToken = null;
-        if (response.LastEvaluatedKey?.Count > 0)
-        {
-            nextToken = Convert.ToBase64String(
-                JsonSerializer.SerializeToUtf8Bytes(response.LastEvaluatedKey));
-        }
-
-        return (list, nextToken);
+        return (list, EncodePaginationToken(lastEvaluatedKey));
     }
 
     // GSI-backed category query (scalable)
@@ -443,6 +481,17 @@ public class TransactionRepository : DynamoRepository, ITransactionRepository
         Dictionary<string, AttributeValue> right) =>
         left["PK"].S == right["PK"].S && left["SK"].S == right["SK"].S;
 
+    private static Dictionary<string, AttributeValue>? DecodePaginationToken(string? paginationToken) =>
+        string.IsNullOrEmpty(paginationToken)
+            ? null
+            : JsonSerializer.Deserialize<Dictionary<string, AttributeValue>>(
+                Convert.FromBase64String(paginationToken));
+
+    private static string? EncodePaginationToken(Dictionary<string, AttributeValue>? lastEvaluatedKey) =>
+        lastEvaluatedKey is { Count: > 0 }
+            ? Convert.ToBase64String(JsonSerializer.SerializeToUtf8Bytes(lastEvaluatedKey))
+            : null;
+
     private static Dictionary<string, AttributeValue> ToItem(Transaction t)
     {
         var item = new Dictionary<string, AttributeValue>
@@ -498,6 +547,23 @@ public class TransactionRepository : DynamoRepository, ITransactionRepository
             item["SharedByUserId"] = new(t.SharedByUserId.Value.ToString());
 
         return item;
+    }
+
+    private static Dictionary<string, AttributeValue>? RecurringOccurrenceSentinelToItem(Transaction t)
+    {
+        if (!t.RecurringScheduleId.HasValue || !t.RecurringOccurrenceDate.HasValue)
+            return null;
+
+        return new Dictionary<string, AttributeValue>
+        {
+            ["PK"] = new(DynamoKeys.RecurringSchedule(t.RecurringScheduleId.Value)),
+            ["SK"] = new($"OCCURRENCE#{t.RecurringOccurrenceDate.Value:O}"),
+            ["UserId"] = new(t.UserId.ToString()),
+            ["RecurringScheduleId"] = new(t.RecurringScheduleId.Value.ToString()),
+            ["RecurringOccurrenceDate"] = new(t.RecurringOccurrenceDate.Value.ToString("O")),
+            ["TransactionId"] = new(t.Id.ToString()),
+            ["CreatedAt"] = new(t.CreatedAt.ToString("O"))
+        };
     }
 
     private static Transaction FromItem(Dictionary<string, AttributeValue> item)

@@ -88,6 +88,7 @@ class PaginatedTransactions {
   final int page;
   final int pageSize;
   final bool hasMore;
+  final String? nextToken;
 
   const PaginatedTransactions({
     required this.items,
@@ -95,6 +96,7 @@ class PaginatedTransactions {
     required this.page,
     required this.pageSize,
     required this.hasMore,
+    this.nextToken,
   });
 }
 
@@ -181,6 +183,7 @@ class TransactionService {
     String? scope,
     DateTime? from,
     DateTime? to,
+    String? nextToken,
   }) async {
     try {
       final response = await _dio.get(
@@ -192,6 +195,7 @@ class TransactionService {
           if (scope != null) 'scope': scope,
           if (from != null && to != null) 'from': from.toIso8601String(),
           if (from != null && to != null) 'to': to.toIso8601String(),
+          if (nextToken != null) 'nextToken': nextToken,
         },
       );
       final data = response.data as Map<String, dynamic>;
@@ -204,6 +208,7 @@ class TransactionService {
         page: page,
         pageSize: pageSize,
         hasMore: data['hasMore'] as bool? ?? false,
+        nextToken: data['nextToken'] as String?,
       );
     } on DioException {
       rethrow;

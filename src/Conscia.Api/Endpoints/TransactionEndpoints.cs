@@ -81,7 +81,8 @@ public static class TransactionEndpoints
             string? category = null,
             string? scope = null,
             DateTime? from = null,
-            DateTime? to = null) =>
+            DateTime? to = null,
+            string? nextToken = null) =>
         {
             if (from.HasValue ^ to.HasValue)
             {
@@ -96,13 +97,14 @@ public static class TransactionEndpoints
             var userId = ctx.User.GetUserId();
             var result = string.Equals(scope, "family", StringComparison.OrdinalIgnoreCase)
                 ? await svc.ListFamilyAsync(userId, page, pageSize, category, from, to, ctx.RequestAborted)
-                : await svc.ListAsync(userId, page, pageSize, category, from, to, ctx.RequestAborted);
+                : await svc.ListAsync(userId, page, pageSize, category, from, to, ctx.RequestAborted, nextToken);
             return Results.Ok(new
             {
                 result.Page,
                 result.PageSize,
                 result.TotalCount,
                 result.HasMore,
+                result.NextToken,
                 Items = result.Items.Select(t => new
                 {
                     t.Id,

@@ -142,6 +142,7 @@ builder.Services.AddScoped<IAppleServerNotificationVerifier, AppleServerNotifica
 // --- Services ---
 builder.Services.AddSingleton<IS3StorageService, S3StorageService>();
 builder.Services.AddSingleton<ISqsQueueService, SqsQueueService>();
+builder.Services.AddScoped<IUserDataErasureService, DynamoUserDataErasureService>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IBudgetService, BudgetService>();
 builder.Services.AddScoped<ITransactionService, TransactionService>();
@@ -265,13 +266,17 @@ else
         {
             var issuer = CognitoRegionResolver.ResolveIssuer(builder.Configuration);
             options.Authority = issuer;
-            options.TokenValidationParameters = new TokenValidationParameters
-            {
-                ValidateIssuerSigningKey = true,
-                ValidateAudience = false,
-                ValidIssuer = issuer
-            };
+            options.TokenValidationParameters = CognitoJwtBearerConfiguration.CreateTokenValidationParameters(builder.Configuration);
             options.Events = CreateJwtBearerDiagnostics("Cognito");
+            options.Events.OnTokenValidated = context =>
+            {
+                if (!CognitoJwtBearerConfiguration.HasAcceptedTokenUse(context.Principal))
+                {
+                    context.Fail("Cognito JWT token_use must be access or id.");
+                }
+
+                return Task.CompletedTask;
+            };
         });
 }
 
@@ -304,33 +309,17 @@ builder.Services.AddRateLimiter(options =>
 {
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
 
-    options.AddFixedWindowLimiter("standard", opt =>
-    {
-        opt.PermitLimit = 60;
-        opt.Window = TimeSpan.FromMinutes(1);
-        opt.QueueLimit = 0;
-    });
+    options.AddPolicy<string>("standard", context =>
+        CreateFixedWindowPartition(context, "standard", 60, TimeSpan.FromMinutes(1)));
 
-    options.AddFixedWindowLimiter("ai", opt =>
-    {
-        opt.PermitLimit = 10;
-        opt.Window = TimeSpan.FromMinutes(1);
-        opt.QueueLimit = 0;
-    });
+    options.AddPolicy<string>("ai", context =>
+        CreateFixedWindowPartition(context, "ai", 10, TimeSpan.FromMinutes(1)));
 
-    options.AddFixedWindowLimiter("iap-verify", opt =>
-    {
-        opt.PermitLimit = 5;
-        opt.Window = TimeSpan.FromMinutes(5);
-        opt.QueueLimit = 0;
-    });
+    options.AddPolicy<string>("iap-verify", context =>
+        CreateFixedWindowPartition(context, "iap-verify", 5, TimeSpan.FromMinutes(5)));
 
-    options.AddFixedWindowLimiter("auth", opt =>
-    {
-        opt.PermitLimit = 5;
-        opt.Window = TimeSpan.FromMinutes(1);
-        opt.QueueLimit = 0;
-    });
+    options.AddPolicy<string>("auth", context =>
+        CreateFixedWindowPartition(context, "auth", 5, TimeSpan.FromMinutes(1)));
 });
 
 builder.Services.AddEndpointsApiExplorer();
@@ -371,6 +360,22 @@ JwtBearerEvents CreateJwtBearerDiagnostics(string schemeName) => new()
         return Task.CompletedTask;
     }
 };
+
+RateLimitPartition<string> CreateFixedWindowPartition(
+    HttpContext context,
+    string policyName,
+    int permitLimit,
+    TimeSpan window)
+{
+    return RateLimitPartition.GetFixedWindowLimiter(
+        RateLimitPartitionKey.ForRequest(context, policyName),
+        _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = permitLimit,
+            Window = window,
+            QueueLimit = 0
+        });
+}
 
 // --- JSON Serialization ---
 builder.Services.ConfigureHttpJsonOptions(options =>

@@ -76,6 +76,7 @@ class _StaticTransactionService extends TransactionService {
     String? scope,
     DateTime? from,
     DateTime? to,
+    String? nextToken,
   }) async {
     lastScope = scope;
     lastCategory = category;

@@ -10,15 +10,18 @@ public class UserService : IUserService
     private readonly IUserRepository _repo;
     private readonly ITransactionRepository _transactions;
     private readonly IUserIdentityDeletionService _identityDeletion;
+    private readonly IUserDataErasureService _dataErasure;
 
     public UserService(
         IUserRepository repo,
         ITransactionRepository transactions,
-        IUserIdentityDeletionService identityDeletion)
+        IUserIdentityDeletionService identityDeletion,
+        IUserDataErasureService dataErasure)
     {
         _repo = repo;
         _transactions = transactions;
         _identityDeletion = identityDeletion;
+        _dataErasure = dataErasure;
     }
 
     public Task<User?> GetByIdAsync(Guid id, CancellationToken ct = default) =>
@@ -50,6 +53,12 @@ public class UserService : IUserService
 
             user.PreferredCurrency = dto.PreferredCurrency;
         }
+        if (dto.ProfilePictureKey is not null &&
+            !dto.ProfilePictureKey.StartsWith($"profile-pictures/{id}/", StringComparison.Ordinal))
+        {
+            throw new InvalidOperationException("Profile picture key must belong to the current user.");
+        }
+
         if (dto.DisplayName is not null) user.DisplayName = dto.DisplayName.Trim();
         if (dto.ProfilePictureKey is not null) user.ProfilePictureKey = dto.ProfilePictureKey;
         if (dto.Locale is not null) user.Locale = dto.Locale;
@@ -72,6 +81,7 @@ public class UserService : IUserService
         }
 
         await _identityDeletion.DeleteUserAsync(user, ct);
+        await _dataErasure.EraseUserDataAsync(id, ct);
         await _repo.DeleteAsync(id, ct);
     }
 }

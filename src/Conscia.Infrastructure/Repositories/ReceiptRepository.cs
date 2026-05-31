@@ -43,6 +43,33 @@ public class ReceiptRepository : DynamoRepository, IReceiptRepository
         return FirstItem(response) is { } item ? FromItem(item) : null;
     }
 
+    public async Task<IReadOnlyList<Receipt>> ListByUserAsync(Guid userId, CancellationToken ct = default)
+    {
+        var receipts = new List<Receipt>();
+        Dictionary<string, AttributeValue>? lastEvaluatedKey = null;
+
+        do
+        {
+            var response = await Dynamo.ScanAsync(new ScanRequest
+            {
+                TableName = TableName,
+                FilterExpression = "EntityType = :type AND UserId = :userId",
+                ExpressionAttributeValues = new Dictionary<string, AttributeValue>
+                {
+                    [":type"] = new("Receipt"),
+                    [":userId"] = new(userId.ToString())
+                },
+                ExclusiveStartKey = lastEvaluatedKey
+            }, ct);
+
+            receipts.AddRange(Items(response).Select(FromItem));
+            lastEvaluatedKey = response.LastEvaluatedKey;
+        }
+        while (lastEvaluatedKey is { Count: > 0 });
+
+        return receipts;
+    }
+
     public async Task<Receipt> AddAsync(Receipt receipt, CancellationToken ct = default)
     {
         await Dynamo.PutItemAsync(new PutItemRequest
