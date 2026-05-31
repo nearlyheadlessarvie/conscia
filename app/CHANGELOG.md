@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.2.1](https://github.com/nearlyheadlessarvie/conscia/compare/app/v2.2.0...app/v2.2.1) (2026-05-31)
+
+
+### Bug Fixes
+
+* remediate whole-project audit findings ([b9806f5](https://github.com/nearlyheadlessarvie/conscia/commit/b9806f510ec04ebe658cb573c25f798ad2cec23f))
+
 ## [2.2.0](https://github.com/nearlyheadlessarvie/conscia/compare/app/v2.1.3...app/v2.2.0) (2026-05-31)
 
 
