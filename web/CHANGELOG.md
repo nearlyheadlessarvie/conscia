@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.3](https://github.com/nearlyheadlessarvie/conscia/compare/web/v1.2.2...web/v1.2.3) (2026-05-31)
+
+
+### Bug Fixes
+
+* **web:** update marketing screenshots and app links ([#178](https://github.com/nearlyheadlessarvie/conscia/issues/178)) ([c8a9033](https://github.com/nearlyheadlessarvie/conscia/commit/c8a9033c6045fa0dae4573cea7db2bd99a7bd376))
+
 ## [1.2.2](https://github.com/nearlyheadlessarvie/conscia/compare/web/v1.2.1...web/v1.2.2) (2026-05-31)
 
 
