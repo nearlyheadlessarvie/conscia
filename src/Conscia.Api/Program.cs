@@ -265,13 +265,17 @@ else
         {
             var issuer = CognitoRegionResolver.ResolveIssuer(builder.Configuration);
             options.Authority = issuer;
-            options.TokenValidationParameters = new TokenValidationParameters
-            {
-                ValidateIssuerSigningKey = true,
-                ValidateAudience = false,
-                ValidIssuer = issuer
-            };
+            options.TokenValidationParameters = CognitoJwtBearerConfiguration.CreateTokenValidationParameters(builder.Configuration);
             options.Events = CreateJwtBearerDiagnostics("Cognito");
+            options.Events.OnTokenValidated = context =>
+            {
+                if (!CognitoJwtBearerConfiguration.HasAcceptedTokenUse(context.Principal))
+                {
+                    context.Fail("Cognito JWT token_use must be access or id.");
+                }
+
+                return Task.CompletedTask;
+            };
         });
 }
 
