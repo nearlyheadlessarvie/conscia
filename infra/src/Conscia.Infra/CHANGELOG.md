@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.6.6](https://github.com/nearlyheadlessarvie/conscia/compare/infra/v1.6.5...infra/v1.6.6) (2026-05-30)
+
+
+### Bug Fixes
+
+* harden Cognito auth bootstrap and password flows ([#165](https://github.com/nearlyheadlessarvie/conscia/issues/165)) ([30b301c](https://github.com/nearlyheadlessarvie/conscia/commit/30b301ccd3c418ebc854460bbdad5caeb31c10ab))
+
 ## [1.6.5](https://github.com/nearlyheadlessarvie/conscia/compare/infra/v1.6.4...infra/v1.6.5) (2026-05-30)
 
 
