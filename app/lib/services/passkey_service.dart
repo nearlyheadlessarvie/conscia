@@ -176,6 +176,29 @@ class PasskeyService {
 bool isPasskeyCancellation(Object error) =>
     error is PasskeyAuthCancelledException;
 
+String passkeyDeviceRemovalInstructions({
+  TargetPlatform? platform,
+  bool isWeb = kIsWeb,
+}) {
+  if (isWeb) {
+    return 'Also remove the saved passkey from your browser or password manager for getconscia.com before setting it up again.';
+  }
+
+  return switch (platform ?? defaultTargetPlatform) {
+    TargetPlatform.android =>
+      'Also remove the saved passkey in Google Password Manager > Passwords & passkeys > getconscia.com before setting it up again.',
+    TargetPlatform.iOS =>
+      'Also remove the saved passkey in iOS Settings > Passwords > getconscia.com before setting it up again.',
+    TargetPlatform.macOS =>
+      'Also remove the saved passkey in macOS System Settings > Passwords > getconscia.com before setting it up again.',
+    TargetPlatform.windows =>
+      'Also remove the saved passkey from Windows passkey settings or your browser password manager before setting it up again.',
+    TargetPlatform.linux ||
+    TargetPlatform.fuchsia =>
+      'Also remove the saved passkey from this device or password manager before setting it up again.',
+  };
+}
+
 bool isPasskeyCredentialUnavailable(Object error) {
   if (error is NoCredentialsAvailableException) {
     return true;
@@ -225,8 +248,10 @@ String friendlyPasskeyErrorMessage(Object error) {
       'Sign in to a Google account on this device to use passkeys.',
     SyncAccountNotAvailableException() =>
       'This device is not ready for passkeys yet. Try again after restarting it.',
+    ExcludeCredentialsCanNotBeRegisteredException() =>
+      'A passkey may already be saved on this device. ${passkeyDeviceRemovalInstructions()}',
     NoCreateOptionException() =>
-      'This device is not ready to create a passkey yet.',
+      'A passkey may already be saved on this device. ${passkeyDeviceRemovalInstructions()}',
     TimeoutException() => 'Passkey verification timed out. Please try again.',
     PasskeyAuthCancelledException() => 'Passkey sign-in was cancelled.',
     UnhandledAuthenticatorException() =>

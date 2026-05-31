@@ -619,7 +619,7 @@ class _PasskeyManagementSheetState
     return ConsciaBottomSheetScaffold(
       title: 'Manage passkeys',
       subtitle:
-          'Remove account passkeys from Cognito, or forget this device shortcut.',
+          'Remove account passkeys from Cognito, then clear the saved passkey from your device too.',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -656,6 +656,16 @@ class _PasskeyManagementSheetState
               ),
               const SizedBox(height: 10),
             ],
+          InlineNotice(
+            message: passkeyDeviceRemovalInstructions(),
+            tone: InlineNoticeTone.info,
+            icon: AppIcons.icon(
+              AppIconKey.passkey,
+              color: Theme.of(context).appColors.angelAccent,
+              size: 16,
+            ),
+          ),
+          const SizedBox(height: 12),
           OutlinedButton(
             onPressed: _forgetLocalPreference,
             child: const Text('Forget on this device'),

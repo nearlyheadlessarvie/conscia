@@ -5,6 +5,7 @@ import 'package:conscia_app/core/errors/app_error.dart';
 import 'package:conscia_app/core/network/request_options.dart';
 import 'package:conscia_app/services/passkey_service.dart';
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:passkeys/exceptions.dart';
@@ -30,7 +31,10 @@ class _JsonAdapter implements HttpClientAdapter {
 }
 
 void main() {
-  tearDown(AppError.resetForTests);
+  tearDown(() {
+    AppError.resetForTests();
+    debugDefaultTargetPlatformOverride = null;
+  });
 
   test('friendlyPasskeyErrorMessage preserves API/server failures', () {
     AppError.configure(
@@ -78,6 +82,24 @@ void main() {
         ),
       ),
       'Passkey sign-in could not use the saved credential on this device. Sign in with email, then remove and set up the passkey again.',
+    );
+  });
+
+  test('friendlyPasskeyErrorMessage explains duplicate iOS passkeys', () {
+    debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+
+    expect(
+      friendlyPasskeyErrorMessage(
+        ExcludeCredentialsCanNotBeRegisteredException(),
+      ),
+      'A passkey may already be saved on this device. Also remove the saved passkey in iOS Settings > Passwords > getconscia.com before setting it up again.',
+    );
+  });
+
+  test('passkeyDeviceRemovalInstructions returns Android guidance', () {
+    expect(
+      passkeyDeviceRemovalInstructions(platform: TargetPlatform.android),
+      'Also remove the saved passkey in Google Password Manager > Passwords & passkeys > getconscia.com before setting it up again.',
     );
   });
 
