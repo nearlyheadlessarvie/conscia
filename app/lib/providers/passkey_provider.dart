@@ -25,8 +25,7 @@ class PasskeySignInPreference {
   final Map<String, String> credentialIdsByEmail;
   final bool isPasskeyFirstEnabled;
 
-  bool get canUsePasskeyFirst =>
-      isPasskeyFirstEnabled && registeredEmails.isNotEmpty;
+  bool get canUsePasskeyFirst => registeredEmails.isNotEmpty;
 
   bool hasRegisteredEmail(String email) {
     return registeredEmails.contains(_normalizePasskeyEmail(email));
@@ -82,12 +81,14 @@ class PasskeySignInPreferenceNotifier
     state = state.copyWith(
       registeredEmails: List.unmodifiable(emails),
       credentialIdsByEmail: Map.unmodifiable(credentialIds),
+      isPasskeyFirstEnabled: true,
     );
     await _prefs.setStringList(passkeyRegisteredEmailsPreferenceKey, emails);
     await _prefs.setString(
       passkeyRegisteredCredentialIdsPreferenceKey,
       jsonEncode(credentialIds),
     );
+    await _prefs.setBool(passkeyFirstSignInEnabledPreferenceKey, true);
   }
 
   Future<void> forgetEmail(String email) async {
@@ -99,8 +100,7 @@ class PasskeySignInPreferenceNotifier
         .toList(growable: false);
     final credentialIds = Map<String, String>.from(state.credentialIdsByEmail)
       ..remove(normalized);
-    final passkeyFirstEnabled =
-        emails.isNotEmpty && state.isPasskeyFirstEnabled;
+    final passkeyFirstEnabled = emails.isNotEmpty;
 
     state = state.copyWith(
       registeredEmails: List.unmodifiable(emails),

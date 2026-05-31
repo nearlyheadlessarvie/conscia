@@ -227,6 +227,51 @@ void main() {
     expect(find.text('Sign in with Apple'), findsOneWidget);
   });
 
+  testWidgets('email field passkey action signs in with typed email',
+      (tester) async {
+    final authNotifier = _RecordingAuthNotifier();
+    final passkeyService = _RecordingPasskeyService();
+
+    await _pumpSignInScreen(
+      tester,
+      authNotifier: authNotifier,
+      passkeysAvailable: true,
+      passkeyService: passkeyService,
+    );
+
+    await tester.enterText(
+      find.byType(TextField).first,
+      'story-demo@example.com',
+    );
+    await tester.tap(find.byTooltip('Sign in with passkey'));
+    await tester.pump();
+
+    expect(passkeyService.lastSignInEmail, 'story-demo@example.com');
+    expect(authNotifier.completedExternalEmail, 'story-demo@example.com');
+  });
+
+  testWidgets('email field passkey action validates email first',
+      (tester) async {
+    final authNotifier = _RecordingAuthNotifier();
+    final passkeyService = _RecordingPasskeyService();
+
+    await _pumpSignInScreen(
+      tester,
+      authNotifier: authNotifier,
+      passkeysAvailable: true,
+      passkeyService: passkeyService,
+    );
+
+    await tester.tap(find.byTooltip('Sign in with passkey'));
+    await tester.pump();
+
+    expect(passkeyService.lastSignInEmail, isNull);
+    expect(
+      find.textContaining('Enter your email to use a passkey'),
+      findsOneWidget,
+    );
+  });
+
   testWidgets('sign in submits typed email and password', (tester) async {
     final authNotifier = _RecordingAuthNotifier();
 
@@ -451,7 +496,6 @@ void main() {
       (tester) async {
     SharedPreferences.setMockInitialValues({
       passkeyRegisteredEmailsPreferenceKey: ['story-demo@example.com'],
-      passkeyFirstSignInEnabledPreferenceKey: true,
     });
     final authNotifier = _RecordingAuthNotifier();
     final passkeyService = _RecordingPasskeyService();

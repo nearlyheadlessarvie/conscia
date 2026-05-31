@@ -87,4 +87,24 @@ void main() {
     expect(preference.isPasskeyFirstEnabled, isFalse);
     expect(prefs.getBool(passkeyFirstSignInEnabledPreferenceKey), isFalse);
   });
+
+  test('passkey first sign-in is automatic for saved local accounts', () async {
+    SharedPreferences.setMockInitialValues({
+      passkeyRegisteredEmailsPreferenceKey: ['story-demo@example.com'],
+      passkeyFirstSignInEnabledPreferenceKey: false,
+    });
+    final prefs = await SharedPreferences.getInstance();
+    final container = ProviderContainer(
+      overrides: [
+        sharedPreferencesProvider.overrideWithValue(prefs),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    final preference = container.read(passkeySignInPreferenceProvider);
+
+    expect(preference.registeredEmails, ['story-demo@example.com']);
+    expect(preference.isPasskeyFirstEnabled, isFalse);
+    expect(preference.canUsePasskeyFirst, isTrue);
+  });
 }
