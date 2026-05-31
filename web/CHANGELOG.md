@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.4](https://github.com/nearlyheadlessarvie/conscia/compare/web/v1.2.3...web/v1.2.4) (2026-05-31)
+
+
+### Bug Fixes
+
+* **web:** add crawler and 404 handling ([#180](https://github.com/nearlyheadlessarvie/conscia/issues/180)) ([5fac10b](https://github.com/nearlyheadlessarvie/conscia/commit/5fac10b32419ea19faa06e593b9249011a1004c8))
+
 ## [1.2.3](https://github.com/nearlyheadlessarvie/conscia/compare/web/v1.2.2...web/v1.2.3) (2026-05-31)
 
 
