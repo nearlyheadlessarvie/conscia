@@ -106,6 +106,19 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen> {
     }
   }
 
+  Future<void> _showPasskeySheet(String email) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      backgroundColor: Theme.of(context).appColors.paper,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      builder: (context) => _PasskeyManagementSheet(email: email),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -179,7 +192,9 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen> {
                                 : 'Use Face ID, fingerprint, or device unlock next time'
                             : 'Passkeys are unavailable for this sign-in session',
                         onTap: canUsePasskeys && !_isRegisteringPasskey
-                            ? _registerPasskey
+                            ? hasRegisteredCurrentPasskey
+                                ? () => _showPasskeySheet(currentEmail)
+                                : _registerPasskey
                             : null,
                       ),
                       if (passkeyPreference.registeredEmails.isNotEmpty) ...[
@@ -487,6 +502,234 @@ class _PasswordSheetState extends ConsumerState<_PasswordSheet> {
                 () => _obscureConfirm = !_obscureConfirm,
               ),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PasskeyManagementSheet extends ConsumerStatefulWidget {
+  const _PasskeyManagementSheet({required this.email});
+
+  final String email;
+
+  @override
+  ConsumerState<_PasskeyManagementSheet> createState() =>
+      _PasskeyManagementSheetState();
+}
+
+class _PasskeyManagementSheetState
+    extends ConsumerState<_PasskeyManagementSheet> {
+  bool _isLoading = true;
+  String? _deletingCredentialId;
+  String? _error;
+  List<PasskeyCredential> _credentials = const [];
+
+  @override
+  void initState() {
+    super.initState();
+    unawaited(_loadCredentials());
+  }
+
+  Future<void> _loadCredentials() async {
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+
+    try {
+      final credentials =
+          await ref.read(passkeyServiceProvider).listCurrentUserPasskeys();
+      if (!mounted) return;
+      setState(() {
+        _credentials = credentials;
+        _isLoading = false;
+      });
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _error = AppError.from(error, log: false).userMessage;
+        _isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _forgetLocalPreference() async {
+    await ref
+        .read(passkeySignInPreferenceProvider.notifier)
+        .forgetEmail(widget.email);
+    if (mounted) Navigator.of(context).pop();
+  }
+
+  Future<void> _deleteCredential(PasskeyCredential credential) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Remove this passkey?'),
+        content: const Text(
+          'This removes the selected passkey from your Conscia account.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Remove'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    setState(() {
+      _deletingCredentialId = credential.credentialId;
+      _error = null;
+    });
+
+    try {
+      await ref
+          .read(passkeyServiceProvider)
+          .deleteCurrentUserPasskey(credential.credentialId);
+      final nextCredentials =
+          await ref.read(passkeyServiceProvider).listCurrentUserPasskeys();
+      if (nextCredentials.isEmpty) {
+        await ref
+            .read(passkeySignInPreferenceProvider.notifier)
+            .forgetEmail(widget.email);
+      }
+      if (!mounted) return;
+      setState(() {
+        _credentials = nextCredentials;
+        _deletingCredentialId = null;
+      });
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _error = AppError.from(error, log: false).userMessage;
+        _deletingCredentialId = null;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ConsciaBottomSheetScaffold(
+      title: 'Manage passkeys',
+      subtitle:
+          'Remove account passkeys from Cognito, then clear the saved passkey from your device too.',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (_error != null) ...[
+            InlineNotice(
+              message: _error!,
+              tone: InlineNoticeTone.error,
+              icon: AppIcons.icon(
+                AppIconKey.lock,
+                color: Theme.of(context).colorScheme.error,
+                size: 16,
+              ),
+            ),
+            const SizedBox(height: 12),
+          ],
+          if (_isLoading)
+            const Center(
+              child: Padding(
+                padding: EdgeInsets.symmetric(vertical: 24),
+                child: CircularProgressIndicator(),
+              ),
+            )
+          else if (_credentials.isEmpty)
+            Text(
+              'No Cognito passkeys are registered for this account.',
+              style: Theme.of(context).textTheme.bodyMedium,
+            )
+          else
+            for (final credential in _credentials) ...[
+              _PasskeyCredentialRow(
+                credential: credential,
+                isDeleting: _deletingCredentialId == credential.credentialId,
+                onRemove: () => _deleteCredential(credential),
+              ),
+              const SizedBox(height: 10),
+            ],
+          InlineNotice(
+            message: passkeyDeviceRemovalInstructions(),
+            tone: InlineNoticeTone.info,
+            icon: AppIcons.icon(
+              AppIconKey.passkey,
+              color: Theme.of(context).appColors.angelAccent,
+              size: 16,
+            ),
+          ),
+          const SizedBox(height: 12),
+          OutlinedButton(
+            onPressed: _forgetLocalPreference,
+            child: const Text('Forget on this device'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PasskeyCredentialRow extends StatelessWidget {
+  const _PasskeyCredentialRow({
+    required this.credential,
+    required this.isDeleting,
+    required this.onRemove,
+  });
+
+  final PasskeyCredential credential;
+  final bool isDeleting;
+  final VoidCallback onRemove;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).appColors;
+    final title = credential.friendlyName?.trim().isNotEmpty == true
+        ? credential.friendlyName!.trim()
+        : 'Passkey';
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: colors.surfaceRaised,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: colors.border),
+      ),
+      child: Row(
+        children: [
+          const _SecurityIconBox(icon: AppIconKey.passkey),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w800,
+                      ),
+                ),
+                if (credential.relyingPartyId != null) ...[
+                  const SizedBox(height: 3),
+                  Text(
+                    credential.relyingPartyId!,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: colors.mutedInk,
+                        ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          TextButton(
+            onPressed: isDeleting ? null : onRemove,
+            child: Text(isDeleting ? 'Removing...' : 'Remove'),
           ),
         ],
       ),

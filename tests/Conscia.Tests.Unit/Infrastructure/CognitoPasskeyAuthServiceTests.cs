@@ -157,6 +157,56 @@ public class CognitoPasskeyAuthServiceTests
     }
 
     [Fact]
+    public async Task ListCredentialsAsync_ReturnsRegisteredPasskeys()
+    {
+        _cognito
+            .Setup(c => c.ListWebAuthnCredentialsAsync(
+                It.Is<ListWebAuthnCredentialsRequest>(r => r.AccessToken == "access-token"),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ListWebAuthnCredentialsResponse
+            {
+                Credentials =
+                [
+                    new WebAuthnCredentialDescription
+                    {
+                        CredentialId = "credential-id",
+                        FriendlyCredentialName = "Android",
+                        RelyingPartyId = "getconscia.com",
+                        AuthenticatorAttachment = "platform",
+                        AuthenticatorTransports = ["internal"],
+                        CreatedAt = new DateTime(2026, 5, 31, 2, 15, 0, DateTimeKind.Utc)
+                    }
+                ]
+            });
+
+        var credentials = await _passkeys.ListCredentialsAsync("access-token");
+
+        var credential = Assert.Single(credentials);
+        Assert.Equal("credential-id", credential.CredentialId);
+        Assert.Equal("Android", credential.FriendlyName);
+        Assert.Equal("getconscia.com", credential.RelyingPartyId);
+        Assert.Equal("platform", credential.AuthenticatorAttachment);
+        Assert.Equal(["internal"], credential.Transports);
+        Assert.Equal(new DateTimeOffset(2026, 5, 31, 2, 15, 0, TimeSpan.Zero), credential.CreatedAt);
+    }
+
+    [Fact]
+    public async Task DeleteCredentialAsync_DeletesSelectedPasskey()
+    {
+        _cognito
+            .Setup(c => c.DeleteWebAuthnCredentialAsync(
+                It.Is<DeleteWebAuthnCredentialRequest>(r =>
+                    r.AccessToken == "access-token" &&
+                    r.CredentialId == "credential-id"),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new DeleteWebAuthnCredentialResponse());
+
+        await _passkeys.DeleteCredentialAsync("access-token", "credential-id");
+
+        _cognito.VerifyAll();
+    }
+
+    [Fact]
     public async Task CompleteAuthenticationAsync_ExistingLocalUserWithSameEmail_ReturnsResolvedLocalUserId()
     {
         var cognitoSub = Guid.NewGuid();

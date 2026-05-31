@@ -57,6 +57,9 @@ class ApiConstants {
   static const String passkeyRegisterStart = 'auth/passkeys/register/start';
   static const String passkeyRegisterComplete =
       'auth/passkeys/register/complete';
+  static const String passkeys = 'auth/passkeys';
+  static String passkeyCredential(String credentialId) =>
+      'auth/passkeys/${Uri.encodeComponent(credentialId)}';
   static const String passkeyLoginStart = 'auth/passkeys/login/start';
   static const String passkeyLoginComplete = 'auth/passkeys/login/complete';
 

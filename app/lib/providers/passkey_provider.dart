@@ -66,9 +66,31 @@ class PasskeySignInPreferenceNotifier
     await _prefs.setStringList(passkeyRegisteredEmailsPreferenceKey, emails);
   }
 
+  Future<void> forgetEmail(String email) async {
+    final normalized = _normalizePasskeyEmail(email);
+    if (normalized.isEmpty) return;
+
+    final emails = state.registeredEmails
+        .where((registeredEmail) => registeredEmail != normalized)
+        .toList(growable: false);
+    final passkeyFirstEnabled =
+        emails.isNotEmpty && state.isPasskeyFirstEnabled;
+
+    state = state.copyWith(
+      registeredEmails: List.unmodifiable(emails),
+      isPasskeyFirstEnabled: passkeyFirstEnabled,
+    );
+    await _prefs.setStringList(passkeyRegisteredEmailsPreferenceKey, emails);
+    await _prefs.setBool(
+      passkeyFirstSignInEnabledPreferenceKey,
+      passkeyFirstEnabled,
+    );
+  }
+
   Future<void> setPasskeyFirstEnabled(bool value) async {
-    state = state.copyWith(isPasskeyFirstEnabled: value);
-    await _prefs.setBool(passkeyFirstSignInEnabledPreferenceKey, value);
+    final enabled = value && state.registeredEmails.isNotEmpty;
+    state = state.copyWith(isPasskeyFirstEnabled: enabled);
+    await _prefs.setBool(passkeyFirstSignInEnabledPreferenceKey, enabled);
   }
 }
 

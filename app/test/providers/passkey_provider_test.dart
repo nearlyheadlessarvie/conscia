@@ -30,4 +30,38 @@ void main() {
     );
     expect(prefs.getBool(passkeyFirstSignInEnabledPreferenceKey), isTrue);
   });
+
+  test('passkey preference forgets saved emails and disables passkey first',
+      () async {
+    SharedPreferences.setMockInitialValues({
+      passkeyRegisteredEmailsPreferenceKey: [
+        'one@example.com',
+        'two@example.com',
+      ],
+      passkeyFirstSignInEnabledPreferenceKey: true,
+    });
+    final prefs = await SharedPreferences.getInstance();
+    final container = ProviderContainer(
+      overrides: [
+        sharedPreferencesProvider.overrideWithValue(prefs),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    final notifier = container.read(passkeySignInPreferenceProvider.notifier);
+    await notifier.forgetEmail('ONE@example.com');
+
+    expect(
+      container.read(passkeySignInPreferenceProvider).registeredEmails,
+      ['two@example.com'],
+    );
+    expect(prefs.getBool(passkeyFirstSignInEnabledPreferenceKey), isTrue);
+
+    await notifier.forgetEmail('two@example.com');
+
+    final preference = container.read(passkeySignInPreferenceProvider);
+    expect(preference.registeredEmails, isEmpty);
+    expect(preference.isPasskeyFirstEnabled, isFalse);
+    expect(prefs.getBool(passkeyFirstSignInEnabledPreferenceKey), isFalse);
+  });
 }

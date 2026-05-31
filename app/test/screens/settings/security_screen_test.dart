@@ -7,6 +7,7 @@ import 'package:conscia_app/services/account_password_service.dart';
 import 'package:conscia_app/services/passkey_service.dart';
 import 'package:conscia_app/services/user_service.dart';
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -38,6 +39,9 @@ class _RecordingPasskeyService extends PasskeyService {
         );
 
   int registerCount = 0;
+  int listCount = 0;
+  final deletedCredentialIds = <String>[];
+  List<PasskeyCredential> credentials = const [];
 
   @override
   Future<bool> isSupported() async => true;
@@ -45,6 +49,20 @@ class _RecordingPasskeyService extends PasskeyService {
   @override
   Future<void> registerCurrentUserPasskey() async {
     registerCount += 1;
+  }
+
+  @override
+  Future<List<PasskeyCredential>> listCurrentUserPasskeys() async {
+    listCount += 1;
+    return credentials;
+  }
+
+  @override
+  Future<void> deleteCurrentUserPasskey(String credentialId) async {
+    deletedCredentialIds.add(credentialId);
+    credentials = credentials
+        .where((credential) => credential.credentialId != credentialId)
+        .toList(growable: false);
   }
 }
 
@@ -90,7 +108,10 @@ Future<void> _pumpSecurityScreen(
 }
 
 void main() {
-  tearDown(AppError.resetForTests);
+  tearDown(() {
+    AppError.resetForTests();
+    debugDefaultTargetPlatformOverride = null;
+  });
 
   testWidgets('security screen adds a password without current password', (
     tester,
@@ -246,5 +267,54 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Passkey First Sign-In'), findsOneWidget);
+  });
+
+  testWidgets('security screen removes saved passkeys from settings',
+      (tester) async {
+    try {
+      debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+      SharedPreferences.setMockInitialValues({
+        passkeyRegisteredEmailsPreferenceKey: ['security@example.com'],
+        passkeyFirstSignInEnabledPreferenceKey: true,
+      });
+      final prefs = await SharedPreferences.getInstance();
+      final passkeys = _RecordingPasskeyService()
+        ..credentials = const [
+          PasskeyCredential(
+            credentialId: 'credential-id',
+            friendlyName: 'Android',
+            relyingPartyId: 'getconscia.com',
+            transports: ['internal'],
+          ),
+        ];
+
+      await _pumpSecurityScreen(tester, prefs: prefs, passkeyService: passkeys);
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Passkey Ready'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Manage passkeys'), findsOneWidget);
+      expect(find.text('Android'), findsOneWidget);
+      expect(
+        find.textContaining('iOS Settings > Passwords > getconscia.com'),
+        findsOneWidget,
+      );
+
+      await tester.tap(find.text('Remove'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Remove this passkey?'), findsOneWidget);
+
+      await tester.tap(find.widgetWithText(FilledButton, 'Remove'));
+      await tester.pumpAndSettle();
+
+      expect(passkeys.deletedCredentialIds, ['credential-id']);
+      expect(
+          prefs.getStringList(passkeyRegisteredEmailsPreferenceKey), isEmpty);
+      expect(prefs.getBool(passkeyFirstSignInEnabledPreferenceKey), isFalse);
+    } finally {
+      debugDefaultTargetPlatformOverride = null;
+    }
   });
 }

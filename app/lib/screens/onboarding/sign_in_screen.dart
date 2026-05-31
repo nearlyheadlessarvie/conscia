@@ -156,6 +156,11 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
     } catch (e) {
       if (!mounted) return;
       if (!isPasskeyCancellation(e)) {
+        if (isPasskeyCredentialUnavailable(e)) {
+          await ref
+              .read(passkeySignInPreferenceProvider.notifier)
+              .forgetEmail(email);
+        }
         setState(() => _errorMessage = friendlyPasskeyErrorMessage(e));
       }
     } finally {
