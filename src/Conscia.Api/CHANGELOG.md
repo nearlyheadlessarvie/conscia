@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.4.0](https://github.com/nearlyheadlessarvie/conscia/compare/api/v1.3.5...api/v1.4.0) (2026-05-31)
+
+
+### Features
+
+* manage Cognito passkeys ([#170](https://github.com/nearlyheadlessarvie/conscia/issues/170)) ([83c1505](https://github.com/nearlyheadlessarvie/conscia/commit/83c1505d1d2ee41a65d347a8cdfcb30cdde71568))
+
 ## [1.3.5](https://github.com/nearlyheadlessarvie/conscia/compare/api/v1.3.4...api/v1.3.5) (2026-05-30)
 
 
