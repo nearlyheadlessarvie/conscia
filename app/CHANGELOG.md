@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.2.2](https://github.com/nearlyheadlessarvie/conscia/compare/app/v2.2.1...app/v2.2.2) (2026-05-31)
+
+
+### Bug Fixes
+
+* handle Cognito passkey setup diagnostics ([#183](https://github.com/nearlyheadlessarvie/conscia/issues/183)) ([3c625a3](https://github.com/nearlyheadlessarvie/conscia/commit/3c625a30432db89609d3602b0dccf77193841fe1))
+
 ## [2.2.1](https://github.com/nearlyheadlessarvie/conscia/compare/app/v2.2.0...app/v2.2.1) (2026-05-31)
 
 
