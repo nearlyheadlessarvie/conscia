@@ -84,7 +84,7 @@ public class AuthStack : Stack
                 {
                     PreSignUp = preSignupLinker
                 },
-            RemovalPolicy = RemovalPolicy.DESTROY
+            RemovalPolicy = RemovalPolicy.RETAIN
         });
         var userPoolResource = (CfnUserPool)(UserPool.Node.DefaultChild
             ?? throw new InvalidOperationException("User pool CloudFormation resource was not created."));

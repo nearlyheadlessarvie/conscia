@@ -94,6 +94,19 @@ public class StackTests
     }
 
     [Fact]
+    public void DatabaseStack_StatefulTables_AreRetained()
+    {
+        var template = CreateDatabaseTemplate();
+        var tables = template.FindResources("AWS::DynamoDB::Table");
+        Assert.Equal(11, tables.Count);
+
+        foreach (var (_, resource) in tables)
+        {
+            AssertResourceRetained(resource);
+        }
+    }
+
+    [Fact]
     public void StorageStack_CreatesPrivateS3BucketWithCors()
     {
         var app = new App();
@@ -124,6 +137,18 @@ public class StackTests
                 ])
             }
         });
+    }
+
+    [Fact]
+    public void StorageStack_StatefulBucket_IsRetainedAndNotAutoDeleted()
+    {
+        var app = new App();
+        var stack = new StorageStack(app, "TestStorageRetain", new StorageStackProps { Env = TestEnv });
+        var template = Template.FromStack(stack);
+
+        var bucket = Assert.Single(template.FindResources("AWS::S3::Bucket")).Value;
+        AssertResourceRetained(bucket);
+        template.ResourceCountIs("Custom::S3AutoDeleteObjects", 0);
     }
 
     [Fact]
@@ -267,6 +292,17 @@ public class StackTests
                 ])
             })
         }));
+    }
+
+    [Fact]
+    public void AuthStack_StatefulUserPool_IsRetained()
+    {
+        var app = new App();
+        var stack = new AuthStack(app, "TestAuthRetain", new AuthStackProps { Env = TestEnv });
+        var template = Template.FromStack(stack);
+
+        var userPool = Assert.Single(template.FindResources("AWS::Cognito::UserPool")).Value;
+        AssertResourceRetained(userPool);
     }
 
     [Fact]
@@ -808,6 +844,12 @@ public class StackTests
         var app = new App();
         var db = new DatabaseStack(app, "D", new StackProps { Env = TestEnv });
         return Template.FromStack(db);
+    }
+
+    private static void AssertResourceRetained(IDictionary<string, object> resource)
+    {
+        Assert.Equal("Retain", resource["DeletionPolicy"].ToString());
+        Assert.Equal("Retain", resource["UpdateReplacePolicy"].ToString());
     }
 
     private static (App App, DatabaseStack Database, StorageStack Storage, AuthStack Auth, AIStack Ai) CreateCoreStacks()

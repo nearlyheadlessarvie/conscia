@@ -135,7 +135,7 @@ public class DatabaseStack : Stack
             TableName = name,
             PartitionKey = new Attribute { Name = pk, Type = AttributeType.STRING },
             BillingMode = BillingMode.PAY_PER_REQUEST,
-            RemovalPolicy = RemovalPolicy.DESTROY,
+            RemovalPolicy = RemovalPolicy.RETAIN,
             PointInTimeRecoverySpecification = new PointInTimeRecoverySpecification
             {
                 PointInTimeRecoveryEnabled = true

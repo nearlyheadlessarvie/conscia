@@ -23,8 +23,8 @@ public class StorageStack : Stack
             BucketName = $"conscia-receipts-{Account}",
             Encryption = BucketEncryption.S3_MANAGED,
             BlockPublicAccess = BlockPublicAccess.BLOCK_ALL,
-            RemovalPolicy = RemovalPolicy.DESTROY,
-            AutoDeleteObjects = true,
+            RemovalPolicy = RemovalPolicy.RETAIN,
+            AutoDeleteObjects = false,
             Cors =
             [
                 new CorsRule
