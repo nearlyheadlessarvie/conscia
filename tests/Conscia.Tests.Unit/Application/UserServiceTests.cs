@@ -12,6 +12,7 @@ public class UserServiceTests
     private readonly Mock<IUserRepository> _repoMock = new();
     private readonly Mock<ITransactionRepository> _transactionRepoMock = new();
     private readonly Mock<IUserIdentityDeletionService> _identityDeletionMock = new();
+    private readonly Mock<IUserDataErasureService> _dataErasureMock = new();
     private readonly UserService _svc;
 
     public UserServiceTests()
@@ -29,7 +30,8 @@ public class UserServiceTests
         _svc = new UserService(
             _repoMock.Object,
             _transactionRepoMock.Object,
-            _identityDeletionMock.Object);
+            _identityDeletionMock.Object,
+            _dataErasureMock.Object);
     }
 
     [Fact]
@@ -223,7 +225,7 @@ public class UserServiceTests
     }
 
     [Fact]
-    public async Task DeleteAccountAsync_DeletesIdentityBeforeLocalUser()
+    public async Task DeleteAccountAsync_DeletesIdentityAndUserDataBeforeLocalUser()
     {
         var id = Guid.NewGuid();
         var user = new User { Id = id, Email = "delete@example.com" };
@@ -236,6 +238,10 @@ public class UserServiceTests
             .Setup(s => s.DeleteUserAsync(user, It.IsAny<CancellationToken>()))
             .Callback(() => calls.Add("identity"))
             .Returns(Task.CompletedTask);
+        _dataErasureMock
+            .Setup(s => s.EraseUserDataAsync(id, It.IsAny<CancellationToken>()))
+            .Callback(() => calls.Add("data"))
+            .Returns(Task.CompletedTask);
         _repoMock
             .Setup(r => r.DeleteAsync(id, It.IsAny<CancellationToken>()))
             .Callback(() => calls.Add("local"))
@@ -243,9 +249,12 @@ public class UserServiceTests
 
         await _svc.DeleteAccountAsync(id);
 
-        Assert.Equal(["identity", "local"], calls);
+        Assert.Equal(["identity", "data", "local"], calls);
         _identityDeletionMock.Verify(
             s => s.DeleteUserAsync(user, It.IsAny<CancellationToken>()),
+            Times.Once);
+        _dataErasureMock.Verify(
+            s => s.EraseUserDataAsync(id, It.IsAny<CancellationToken>()),
             Times.Once);
         _repoMock.Verify(r => r.DeleteAsync(id, It.IsAny<CancellationToken>()), Times.Once);
     }
@@ -261,6 +270,9 @@ public class UserServiceTests
 
         _identityDeletionMock.Verify(
             s => s.DeleteUserAsync(It.IsAny<User>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        _dataErasureMock.Verify(
+            s => s.EraseUserDataAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()),
             Times.Never);
         _repoMock.Verify(r => r.DeleteAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
     }

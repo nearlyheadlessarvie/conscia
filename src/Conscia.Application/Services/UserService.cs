@@ -10,15 +10,18 @@ public class UserService : IUserService
     private readonly IUserRepository _repo;
     private readonly ITransactionRepository _transactions;
     private readonly IUserIdentityDeletionService _identityDeletion;
+    private readonly IUserDataErasureService _dataErasure;
 
     public UserService(
         IUserRepository repo,
         ITransactionRepository transactions,
-        IUserIdentityDeletionService identityDeletion)
+        IUserIdentityDeletionService identityDeletion,
+        IUserDataErasureService dataErasure)
     {
         _repo = repo;
         _transactions = transactions;
         _identityDeletion = identityDeletion;
+        _dataErasure = dataErasure;
     }
 
     public Task<User?> GetByIdAsync(Guid id, CancellationToken ct = default) =>
@@ -78,6 +81,7 @@ public class UserService : IUserService
         }
 
         await _identityDeletion.DeleteUserAsync(user, ct);
+        await _dataErasure.EraseUserDataAsync(id, ct);
         await _repo.DeleteAsync(id, ct);
     }
 }

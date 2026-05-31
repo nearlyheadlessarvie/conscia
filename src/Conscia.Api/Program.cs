@@ -142,6 +142,7 @@ builder.Services.AddScoped<IAppleServerNotificationVerifier, AppleServerNotifica
 // --- Services ---
 builder.Services.AddSingleton<IS3StorageService, S3StorageService>();
 builder.Services.AddSingleton<ISqsQueueService, SqsQueueService>();
+builder.Services.AddScoped<IUserDataErasureService, DynamoUserDataErasureService>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IBudgetService, BudgetService>();
 builder.Services.AddScoped<ITransactionService, TransactionService>();
