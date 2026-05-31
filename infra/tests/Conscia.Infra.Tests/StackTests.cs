@@ -714,7 +714,27 @@ public class StackTests
         var distribution = Assert.Single(distributions);
         var properties = Assert.IsAssignableFrom<IDictionary<string, object>>(distribution.Value["Properties"]);
         var config = Assert.IsAssignableFrom<IDictionary<string, object>>(properties["DistributionConfig"]);
-        Assert.DoesNotContain("CustomErrorResponses", config.Keys);
+        Assert.Contains("CustomErrorResponses", config.Keys);
+        template.HasResourceProperties("AWS::CloudFront::Distribution", new Dictionary<string, object>
+        {
+            ["DistributionConfig"] = Match.ObjectLike(new Dictionary<string, object>
+            {
+                ["CustomErrorResponses"] = Match.ArrayWith([
+                    Match.ObjectLike(new Dictionary<string, object>
+                    {
+                        ["ErrorCode"] = 403,
+                        ["ResponseCode"] = 404,
+                        ["ResponsePagePath"] = "/404.html"
+                    }),
+                    Match.ObjectLike(new Dictionary<string, object>
+                    {
+                        ["ErrorCode"] = 404,
+                        ["ResponseCode"] = 404,
+                        ["ResponsePagePath"] = "/404.html"
+                    })
+                ])
+            })
+        });
 
         template.ResourceCountIs("AWS::Route53::RecordSet", 2);
     }
