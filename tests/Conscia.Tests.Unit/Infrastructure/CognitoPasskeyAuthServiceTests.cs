@@ -157,6 +157,36 @@ public class CognitoPasskeyAuthServiceTests
     }
 
     [Fact]
+    public async Task CompleteRegistrationAsync_InvalidCredentialData_ThrowsFriendlyRegistrationError()
+    {
+        const string credentialJson = """
+            {
+              "id": "credential-id",
+              "rawId": "credential-id",
+              "type": "public-key",
+              "response": {
+                "clientDataJSON": "client-data",
+                "attestationObject": "attestation-object"
+              },
+              "clientExtensionResults": {}
+            }
+            """;
+
+        _cognito
+            .Setup(c => c.CompleteWebAuthnRegistrationAsync(
+                It.IsAny<CompleteWebAuthnRegistrationRequest>(),
+                It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidParameterException("Credential data is not valid"));
+
+        var ex = await Assert.ThrowsAsync<PasskeyRegistrationFailedException>(() =>
+            _passkeys.CompleteRegistrationAsync("access-token", credentialJson));
+
+        Assert.Equal(
+            "Passkey setup could not be completed on this device. Remove the saved passkey from this device, then try again.",
+            ex.Message);
+    }
+
+    [Fact]
     public async Task ListCredentialsAsync_ReturnsRegisteredPasskeys()
     {
         _cognito

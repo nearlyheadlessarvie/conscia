@@ -224,8 +224,15 @@ public static class AuthEndpoints
                     statusCode: StatusCodes.Status403Forbidden);
             }
 
-            await passkeys.CompleteRegistrationAsync(accessToken, req.Credential, ctx.RequestAborted);
-            return Results.NoContent();
+            try
+            {
+                await passkeys.CompleteRegistrationAsync(accessToken, req.Credential, ctx.RequestAborted);
+                return Results.NoContent();
+            }
+            catch (PasskeyRegistrationFailedException ex)
+            {
+                return Results.BadRequest(new { error = ex.Message });
+            }
         }).WithName("CompletePasskeyRegistration").RequireAuthorization().RequireRateLimiting("auth");
 
         group.MapPost("/passkeys/login/start", async (
