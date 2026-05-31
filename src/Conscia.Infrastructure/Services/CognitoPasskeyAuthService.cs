@@ -66,6 +66,54 @@ public sealed class CognitoPasskeyAuthService : IPasskeyAuthService
             ct);
     }
 
+    public async Task<IReadOnlyList<PasskeyCredentialResponse>> ListCredentialsAsync(
+        string accessToken,
+        CancellationToken ct = default)
+    {
+        var credentials = new List<PasskeyCredentialResponse>();
+        string? nextToken = null;
+
+        do
+        {
+            var response = await _cognito.ListWebAuthnCredentialsAsync(
+                new ListWebAuthnCredentialsRequest
+                {
+                    AccessToken = accessToken,
+                    NextToken = nextToken
+                },
+                ct);
+
+            foreach (var credential in response.Credentials ?? [])
+            {
+                credentials.Add(new PasskeyCredentialResponse(
+                    credential.CredentialId,
+                    credential.FriendlyCredentialName,
+                    ToDateTimeOffset(credential.CreatedAt),
+                    credential.RelyingPartyId,
+                    credential.AuthenticatorAttachment,
+                    credential.AuthenticatorTransports?.ToArray() ?? []));
+            }
+
+            nextToken = response.NextToken;
+        } while (!string.IsNullOrWhiteSpace(nextToken));
+
+        return credentials;
+    }
+
+    public async Task DeleteCredentialAsync(
+        string accessToken,
+        string credentialId,
+        CancellationToken ct = default)
+    {
+        await _cognito.DeleteWebAuthnCredentialAsync(
+            new DeleteWebAuthnCredentialRequest
+            {
+                AccessToken = accessToken,
+                CredentialId = credentialId
+            },
+            ct);
+    }
+
     public async Task<StartPasskeyAuthenticationResponse> StartAuthenticationAsync(string email, CancellationToken ct = default)
     {
         var normalizedEmail = NormalizeEmail(email);
@@ -218,6 +266,11 @@ public sealed class CognitoPasskeyAuthService : IPasskeyAuthService
     }
 
     private static string NormalizeEmail(string email) => email.Trim().ToLowerInvariant();
+
+    private static DateTimeOffset? ToDateTimeOffset(DateTime? createdAt)
+        => createdAt is null || createdAt.Value == default
+            ? null
+            : new DateTimeOffset(DateTime.SpecifyKind(createdAt.Value, DateTimeKind.Utc));
 
     private static string? SerializeDocument(Document? document)
     {

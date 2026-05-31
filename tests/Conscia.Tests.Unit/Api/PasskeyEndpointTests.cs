@@ -40,6 +40,32 @@ public class PasskeyEndpointTests
     }
 
     [Fact]
+    public async Task ListCredentials_NonCognitoSession_Returns403()
+    {
+        await using var factory = new TestWebAppFactory();
+        using var client = factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue("Bearer", factory.GenerateTestToken());
+
+        var response = await client.GetAsync("/api/auth/passkeys");
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task DeleteCredential_NonCognitoSession_Returns403()
+    {
+        await using var factory = new TestWebAppFactory();
+        using var client = factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue("Bearer", factory.GenerateTestToken());
+
+        var response = await client.DeleteAsync("/api/auth/passkeys/credential-id");
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Fact]
     public async Task StartLogin_ReturnsChallengePayload()
     {
         await using var factory = new TestWebAppFactory();

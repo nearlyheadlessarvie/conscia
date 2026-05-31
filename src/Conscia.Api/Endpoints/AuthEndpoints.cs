@@ -173,6 +173,44 @@ public static class AuthEndpoints
             return Results.Ok(result);
         }).WithName("StartPasskeyRegistration").RequireAuthorization().RequireRateLimiting("auth");
 
+        group.MapGet("/passkeys", async (
+            HttpContext ctx,
+            IPasskeyAuthService passkeys) =>
+        {
+            var accessToken = ReadBearerToken(ctx.Request.Headers.Authorization.ToString());
+            if (accessToken is null || !LooksLikeCognitoToken(accessToken))
+            {
+                return Results.Json(
+                    new { error = "Passkeys are only available for Conscia account sessions." },
+                    statusCode: StatusCodes.Status403Forbidden);
+            }
+
+            var result = await passkeys.ListCredentialsAsync(accessToken, ctx.RequestAborted);
+            return Results.Ok(result);
+        }).WithName("ListPasskeys").RequireAuthorization().RequireRateLimiting("auth");
+
+        group.MapDelete("/passkeys/{credentialId}", async (
+            HttpContext ctx,
+            string credentialId,
+            IPasskeyAuthService passkeys) =>
+        {
+            if (string.IsNullOrWhiteSpace(credentialId))
+            {
+                return Results.BadRequest(new { error = "Credential id is required" });
+            }
+
+            var accessToken = ReadBearerToken(ctx.Request.Headers.Authorization.ToString());
+            if (accessToken is null || !LooksLikeCognitoToken(accessToken))
+            {
+                return Results.Json(
+                    new { error = "Passkeys are only available for Conscia account sessions." },
+                    statusCode: StatusCodes.Status403Forbidden);
+            }
+
+            await passkeys.DeleteCredentialAsync(accessToken, credentialId, ctx.RequestAborted);
+            return Results.NoContent();
+        }).WithName("DeletePasskey").RequireAuthorization().RequireRateLimiting("auth");
+
         group.MapPost("/passkeys/register/complete", async (
             HttpContext ctx,
             CompletePasskeyRegistrationRequest req,

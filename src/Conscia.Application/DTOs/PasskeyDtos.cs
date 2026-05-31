@@ -4,6 +4,14 @@ public sealed record StartPasskeyRegistrationResponse(string CredentialCreationO
 
 public sealed record CompletePasskeyRegistrationRequest(string Credential);
 
+public sealed record PasskeyCredentialResponse(
+    string CredentialId,
+    string? FriendlyName,
+    DateTimeOffset? CreatedAt,
+    string? RelyingPartyId,
+    string? AuthenticatorAttachment,
+    IReadOnlyList<string> Transports);
+
 public sealed record StartPasskeyAuthenticationRequest(string Email);
 
 public sealed record StartPasskeyAuthenticationResponse(

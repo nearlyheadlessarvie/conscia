@@ -19,6 +19,17 @@ public sealed class UnavailablePasskeyAuthService : IPasskeyAuthService
         CancellationToken ct = default) =>
         throw new InvalidOperationException(Message);
 
+    public Task<IReadOnlyList<PasskeyCredentialResponse>> ListCredentialsAsync(
+        string accessToken,
+        CancellationToken ct = default) =>
+        throw new InvalidOperationException(Message);
+
+    public Task DeleteCredentialAsync(
+        string accessToken,
+        string credentialId,
+        CancellationToken ct = default) =>
+        throw new InvalidOperationException(Message);
+
     public Task<StartPasskeyAuthenticationResponse> StartAuthenticationAsync(
         string email,
         CancellationToken ct = default) =>
