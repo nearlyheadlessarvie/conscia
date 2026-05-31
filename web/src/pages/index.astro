@@ -10,10 +10,8 @@ import { storyChapters } from '../data/marketingChapters.js';
 <Layout>
   <Hero />
   <HowItWorks />
-  <StoryChapter chapter={storyChapters[0]} />
-  <StoryChapter chapter={storyChapters[1]} reverse={true} />
-  <StoryChapter chapter={storyChapters[2]} />
-  <StoryChapter chapter={storyChapters[3]} reverse={true} />
-  <StoryChapter chapter={storyChapters[4]} />
+  {storyChapters.map((chapter, index) => (
+    <StoryChapter chapter={chapter} reverse={index % 2 === 1} />
+  ))}
   <Footer />
 </Layout>
