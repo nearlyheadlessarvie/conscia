@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.6.7](https://github.com/nearlyheadlessarvie/conscia/compare/infra/v1.6.6...infra/v1.6.7) (2026-05-31)
+
+
+### Bug Fixes
+
+* remediate whole-project audit findings ([b9806f5](https://github.com/nearlyheadlessarvie/conscia/commit/b9806f510ec04ebe658cb573c25f798ad2cec23f))
+
 ## [1.6.6](https://github.com/nearlyheadlessarvie/conscia/compare/infra/v1.6.5...infra/v1.6.6) (2026-05-30)
 
 
