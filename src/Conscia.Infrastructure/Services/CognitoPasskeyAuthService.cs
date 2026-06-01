@@ -210,16 +210,24 @@ public sealed class CognitoPasskeyAuthService : IPasskeyAuthService
     public async Task<StartPasskeyAuthenticationResponse> StartAuthenticationAsync(string email, CancellationToken ct = default)
     {
         var normalizedEmail = NormalizeEmail(email);
-        var response = await _cognito.InitiateAuthAsync(new InitiateAuthRequest
+        InitiateAuthResponse response;
+        try
         {
-            ClientId = _clientId,
-            AuthFlow = AuthFlowType.USER_AUTH,
-            AuthParameters = new Dictionary<string, string>
+            response = await _cognito.InitiateAuthAsync(new InitiateAuthRequest
             {
-                ["USERNAME"] = normalizedEmail,
-                ["PREFERRED_CHALLENGE"] = "WEB_AUTHN"
-            }
-        }, ct);
+                ClientId = _clientId,
+                AuthFlow = AuthFlowType.USER_AUTH,
+                AuthParameters = new Dictionary<string, string>
+                {
+                    ["USERNAME"] = normalizedEmail,
+                    ["PREFERRED_CHALLENGE"] = "WEB_AUTHN"
+                }
+            }, ct);
+        }
+        catch (UserNotFoundException)
+        {
+            throw new PasskeyAuthenticationUnavailableException(NoRegisteredPasskeyMessage);
+        }
 
         var challengeName = response.ChallengeName?.Value;
         if (string.IsNullOrWhiteSpace(challengeName))
