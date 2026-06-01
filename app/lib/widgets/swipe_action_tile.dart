@@ -70,18 +70,20 @@ class SwipeActionBackground extends StatelessWidget {
     super.key,
     required this.alignment,
     required this.children,
+    this.backgroundColor,
     this.padding = const EdgeInsets.symmetric(horizontal: 12),
   });
 
   final Alignment alignment;
   final List<Widget> children;
+  final Color? backgroundColor;
   final EdgeInsetsGeometry padding;
 
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).appColors;
     return ColoredBox(
-      color: colors.paper,
+      color: backgroundColor ?? colors.paper,
       child: Padding(
         padding: padding,
         child: Align(

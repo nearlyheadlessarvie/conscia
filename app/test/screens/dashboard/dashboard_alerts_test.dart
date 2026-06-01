@@ -2463,6 +2463,63 @@ void main() {
     expect(find.text('Notifications'), findsOneWidget);
   });
 
+  testWidgets('notification swipe keeps the dismiss action anchored',
+      (tester) async {
+    final container = ProviderContainer(
+      overrides: [
+        sharedPreferencesProvider.overrideWithValue(prefs),
+        budgetServiceProvider.overrideWithValue(_StaticBudgetService(const [])),
+        transactionServiceProvider
+            .overrideWithValue(_StaticTransactionService()),
+        behavioralInsightsProvider.overrideWith((ref) async => null),
+        insightsSummaryProvider.overrideWith((ref) async => null),
+        insightsCategoriesProvider.overrideWith((ref) async => const []),
+        insightsMerchantsProvider.overrideWith((ref) async => const []),
+        localAlertsProvider.overrideWith(
+          (ref) => _LocalAlertsTestNotifier(
+            [
+              AppAlert(
+                id: 'budget-nudge-dining',
+                type: 'budget_nudge',
+                title: 'No budget for Dining yet',
+                message:
+                    'You logged an expense in Dining without a matching budget.',
+                isDismissed: false,
+                createdAt: DateTime(2026, 5, 7),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    await tester.pumpWidget(_buildApp(container));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('Notifications').hitTestable().first);
+    await tester.pumpAndSettle();
+
+    final row = find.text('No budget for Dining yet');
+    final gesture = await tester.startGesture(tester.getCenter(row));
+    await gesture.moveBy(const Offset(-120, 0));
+    await tester.pump();
+
+    final label = find.text('Dismiss');
+    expect(label, findsOneWidget);
+    final openedCenter = tester.getCenter(label);
+
+    await gesture.moveBy(const Offset(-360, 0));
+    await tester.pump();
+
+    expect(label, findsOneWidget);
+    final committedCenter = tester.getCenter(label);
+    expect((committedCenter.dx - openedCenter.dx).abs(), lessThan(1));
+
+    await gesture.up();
+    await tester.pumpAndSettle();
+  });
+
   testWidgets(
       'matching-budget nudges stay in notifications instead of rendering in the feed',
       (tester) async {

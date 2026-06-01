@@ -1,4 +1,5 @@
 import 'package:conscia_app/models/family_space.dart';
+import 'package:conscia_app/core/theme/app_colors.dart';
 import 'package:conscia_app/providers/auth_provider.dart';
 import 'package:conscia_app/providers/budget_providers.dart';
 import 'package:conscia_app/providers/family_space_provider.dart';
@@ -371,6 +372,56 @@ void main() {
 
     expect(budgetService.deletedId, 'budget-delete');
     expect(find.text('Budget deleted.'), findsOneWidget);
+  });
+
+  testWidgets('budget delete swipe background spans the row', (tester) async {
+    final budgetService = _RecordingBudgetService(const [
+      Budget(
+        id: 'budget-delete',
+        category: 'Coffee',
+        monthlyLimit: 2000,
+        spent: 250,
+        currencyCode: 'PHP',
+        percentage: 0.125,
+        isOverBudget: false,
+      ),
+    ]);
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          _authenticatedOverride,
+          budgetServiceProvider.overrideWithValue(budgetService),
+          sharedPreferencesProvider.overrideWithValue(prefs),
+          subscriptionProvider.overrideWith(
+            (ref) async => const SubscriptionStatus(
+              tier: 'premium',
+              isPremium: true,
+            ),
+          ),
+        ],
+        child: const MaterialApp(home: BudgetsScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.drag(find.text('Coffee').first, const Offset(-120, 0));
+    await tester.pump();
+
+    final colors =
+        Theme.of(tester.element(find.byType(BudgetsScreen))).appColors;
+    final expectedBackground =
+        colors.expenseSoft.withValues(alpha: 0.38).toARGB32();
+    final fullRowBackground = find.byWidgetPredicate(
+      (widget) =>
+          widget is ColoredBox && widget.color.toARGB32() == expectedBackground,
+    );
+    expect(
+      fullRowBackground,
+      findsOneWidget,
+    );
   });
 
   testWidgets('tapping a budget donut segment calls out its mix pill',
