@@ -250,9 +250,12 @@ public static class AuthEndpoints
             {
                 result = await passkeys.StartAuthenticationAsync(req.Email, ctx.RequestAborted);
             }
-            catch (PasskeyAuthenticationUnavailableException ex)
+            catch (PasskeyAuthenticationUnavailableException)
             {
-                return Results.BadRequest(new { error = ex.Message });
+                return Results.BadRequest(new
+                {
+                    error = "Couldn't sign in with that passkey. Try again or sign in with email."
+                });
             }
 
             return Results.Ok(result);
