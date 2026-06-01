@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.5.0](https://github.com/nearlyheadlessarvie/conscia/compare/api/v1.4.6...api/v1.5.0) (2026-06-01)
+
+
+### Features
+
+* **app:** personalize passkey sign-in ([#199](https://github.com/nearlyheadlessarvie/conscia/issues/199)) ([9c5b02f](https://github.com/nearlyheadlessarvie/conscia/commit/9c5b02f64ca0b3fce35caeec481b7e03bb0adcf7))
+
 ## [1.4.6](https://github.com/nearlyheadlessarvie/conscia/compare/api/v1.4.5...api/v1.4.6) (2026-06-01)
 
 
