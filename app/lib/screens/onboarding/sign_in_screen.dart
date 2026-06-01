@@ -142,14 +142,21 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
     _clearLoadingUnlessAuthenticated();
   }
 
-  Future<void> _signInWithPasskey(String email) async {
+  Future<void> _signInWithPasskey(
+    String email, {
+    bool preferImmediatelyAvailableCredentials = true,
+  }) async {
     setState(() {
       _isLoading = true;
       _errorMessage = null;
     });
 
     try {
-      final tokens = await ref.read(passkeyServiceProvider).signIn(email);
+      final tokens = await ref.read(passkeyServiceProvider).signIn(
+            email,
+            preferImmediatelyAvailableCredentials:
+                preferImmediatelyAvailableCredentials,
+          );
       await ref
           .read(authProvider.notifier)
           .completeExternalSignIn(tokens, email: email);
@@ -185,7 +192,10 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
     }
 
     _dismissKeyboard();
-    await _signInWithPasskey(email);
+    await _signInWithPasskey(
+      email,
+      preferImmediatelyAvailableCredentials: false,
+    );
   }
 
   void _dismissKeyboard() {
@@ -204,9 +214,9 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
     final passkeyPreference = ref.watch(passkeySignInPreferenceProvider);
     final passkeysAvailable =
         ref.watch(passkeyAvailabilityProvider).valueOrNull ?? false;
-    final showPasskeyFirst = !_showEmailSignIn &&
-        passkeysAvailable &&
-        passkeyPreference.canUsePasskeyFirst;
+    final canShowPasskeyFirst =
+        passkeysAvailable && passkeyPreference.canUsePasskeyFirst;
+    final showPasskeyFirst = !_showEmailSignIn && canShowPasskeyFirst;
 
     return Scaffold(
       extendBodyBehindAppBar: true,
@@ -265,6 +275,23 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                               emails: passkeyPreference.registeredEmails,
                               isLoading: _isLoading,
                               onPasskeySignIn: _signInWithPasskey,
+                              onUseAnotherPasskey: () {
+                                final emails =
+                                    passkeyPreference.registeredEmails;
+                                if (emails.length == 1) {
+                                  _signInWithPasskey(
+                                    emails.single,
+                                    preferImmediatelyAvailableCredentials:
+                                        false,
+                                  );
+                                  return;
+                                }
+
+                                setState(() {
+                                  _showEmailSignIn = true;
+                                  _errorMessage = null;
+                                });
+                              },
                               onEmailSignIn: () {
                                 setState(() {
                                   _showEmailSignIn = true;
@@ -363,6 +390,22 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                                 child: const Text('Forgot password?'),
                               ),
                             ),
+                            if (canShowPasskeyFirst) ...[
+                              Center(
+                                child: TextButton(
+                                  onPressed: _isLoading
+                                      ? null
+                                      : () {
+                                          setState(() {
+                                            _showEmailSignIn = false;
+                                            _errorMessage = null;
+                                          });
+                                        },
+                                  child: const Text('Sign in with passkey'),
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                            ],
                             const SizedBox(height: 32),
                             SizedBox(
                               height: 48,
@@ -497,12 +540,14 @@ class _PasskeyFirstSignIn extends StatelessWidget {
     required this.emails,
     required this.isLoading,
     required this.onPasskeySignIn,
+    required this.onUseAnotherPasskey,
     required this.onEmailSignIn,
   });
 
   final List<String> emails;
   final bool isLoading;
   final ValueChanged<String> onPasskeySignIn;
+  final VoidCallback onUseAnotherPasskey;
   final VoidCallback onEmailSignIn;
 
   @override
@@ -514,71 +559,105 @@ class _PasskeyFirstSignIn extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        DecoratedBox(
-          decoration: BoxDecoration(
-            color: colors.surface.withValues(alpha: 0.92),
-            border: Border.all(color: colors.outlineVariant),
-            borderRadius: BorderRadius.circular(24),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      color: colors.primaryContainer.withValues(alpha: 0.45),
-                      borderRadius: BorderRadius.circular(18),
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(12),
-                      child: AppIcons.icon(
-                        AppIconKey.passkey,
-                        color: colors.primary,
-                        size: 26,
+        if (hasOneAccount)
+          Center(
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                key: const ValueKey('saved-passkey-primary'),
+                borderRadius: BorderRadius.circular(28),
+                onTap: isLoading ? null : () => onPasskeySignIn(emails.single),
+                child: Padding(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 24, vertical: 18),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      DecoratedBox(
+                        decoration: BoxDecoration(
+                          color:
+                              colors.primaryContainer.withValues(alpha: 0.52),
+                          borderRadius: BorderRadius.circular(26),
+                          boxShadow: [
+                            BoxShadow(
+                              color: colors.primary.withValues(alpha: 0.14),
+                              blurRadius: 22,
+                              offset: const Offset(0, 10),
+                            ),
+                          ],
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.all(18),
+                          child: AppIcons.icon(
+                            AppIconKey.fingerprint,
+                            color: colors.primary,
+                            size: 38,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 18),
+                      Text(
+                        emails.single,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.center,
+                        style: textTheme.titleMedium?.copyWith(
+                          color: colors.onSurface,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          )
+        else
+          DecoratedBox(
+            decoration: BoxDecoration(
+              color: colors.surface.withValues(alpha: 0.92),
+              border: Border.all(color: colors.outlineVariant),
+              borderRadius: BorderRadius.circular(24),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: colors.primaryContainer.withValues(alpha: 0.45),
+                        borderRadius: BorderRadius.circular(18),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(12),
+                        child: AppIcons.icon(
+                          AppIconKey.passkey,
+                          color: colors.primary,
+                          size: 26,
+                        ),
                       ),
                     ),
                   ),
-                ),
-                const SizedBox(height: 18),
-                Text(
-                  hasOneAccount ? 'Sign in with passkey' : 'Choose an account',
-                  style: textTheme.headlineSmall?.copyWith(
-                    color: colors.primary,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  hasOneAccount
-                      ? 'Use the passkey saved for ${emails.single}.'
-                      : 'Select a passkey account saved on this device.',
-                  style: textTheme.bodyMedium?.copyWith(
-                    color: colors.onSurfaceVariant,
-                    height: 1.35,
-                  ),
-                ),
-                const SizedBox(height: 20),
-                if (hasOneAccount) ...[
-                  _PasskeyAccountPill(email: emails.single),
-                  const SizedBox(height: 16),
-                  SizedBox(
-                    height: 48,
-                    child: FilledButton.icon(
-                      onPressed: isLoading
-                          ? null
-                          : () => onPasskeySignIn(emails.single),
-                      icon: AppIcons.icon(
-                        AppIconKey.passkey,
-                        color: colors.onPrimary,
-                        size: 20,
-                      ),
-                      label: const Text('Continue with Passkey'),
+                  const SizedBox(height: 18),
+                  Text(
+                    'Sign in with passkey',
+                    style: textTheme.headlineSmall?.copyWith(
+                      color: colors.primary,
+                      fontWeight: FontWeight.w800,
                     ),
                   ),
-                ] else ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    'Choose an account',
+                    style: textTheme.bodyMedium?.copyWith(
+                      color: colors.onSurfaceVariant,
+                      height: 1.35,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
                   for (final email in emails) ...[
                     _PasskeyAccountButton(
                       email: email,
@@ -588,11 +667,16 @@ class _PasskeyFirstSignIn extends StatelessWidget {
                     if (email != emails.last) const SizedBox(height: 10),
                   ],
                 ],
-              ],
+              ),
             ),
           ),
-        ),
         const SizedBox(height: 16),
+        Center(
+          child: TextButton(
+            onPressed: isLoading ? null : onUseAnotherPasskey,
+            child: const Text('Use another passkey'),
+          ),
+        ),
         Center(
           child: TextButton(
             onPressed: isLoading ? null : onEmailSignIn,
@@ -600,47 +684,6 @@ class _PasskeyFirstSignIn extends StatelessWidget {
           ),
         ),
       ],
-    );
-  }
-}
-
-class _PasskeyAccountPill extends StatelessWidget {
-  const _PasskeyAccountPill({required this.email});
-
-  final String email;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: colors.secondaryContainer.withValues(alpha: 0.35),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        child: Row(
-          children: [
-            AppIcons.icon(
-              AppIconKey.email,
-              color: colors.onSecondaryContainer,
-              size: 18,
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                email,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                      color: colors.onSecondaryContainer,
-                      fontWeight: FontWeight.w700,
-                    ),
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }
@@ -682,6 +725,11 @@ class _PasskeyAccountButton extends StatelessWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
+            ),
+            AppIcons.icon(
+              AppIconKey.chevronRight,
+              color: colors.onSurfaceVariant,
+              size: 18,
             ),
           ],
         ),
