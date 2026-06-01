@@ -72,7 +72,8 @@ public class PasskeyEndpointTests
         factory.PasskeyAuthServiceMock
             .Setup(service => service.StartAuthenticationAsync(
                 "demo@example.com",
-                It.IsAny<CancellationToken>()))
+                It.IsAny<CancellationToken>(),
+                false))
             .ReturnsAsync(new StartPasskeyAuthenticationResponse(
                 "challenge-session",
                 "WEB_AUTHN",
@@ -93,13 +94,39 @@ public class PasskeyEndpointTests
     }
 
     [Fact]
+    public async Task StartLogin_ExternalPasskeysRequested_PassesFlag()
+    {
+        await using var factory = new TestWebAppFactory();
+        factory.PasskeyAuthServiceMock
+            .Setup(service => service.StartAuthenticationAsync(
+                "demo@example.com",
+                It.IsAny<CancellationToken>(),
+                true))
+            .ReturnsAsync(new StartPasskeyAuthenticationResponse(
+                "challenge-session",
+                "WEB_AUTHN",
+                "{\"challenge\":\"abc\"}"));
+
+        using var client = factory.CreateClient();
+        var response = await client.PostAsJsonAsync("/api/auth/passkeys/login/start", new
+        {
+            email = "demo@example.com",
+            allowExternalPasskeys = true
+        });
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        factory.PasskeyAuthServiceMock.VerifyAll();
+    }
+
+    [Fact]
     public async Task StartLogin_PasskeyUnavailable_ReturnsBadRequest()
     {
         await using var factory = new TestWebAppFactory();
         factory.PasskeyAuthServiceMock
             .Setup(service => service.StartAuthenticationAsync(
                 "demo@example.com",
-                It.IsAny<CancellationToken>()))
+                It.IsAny<CancellationToken>(),
+                false))
             .ThrowsAsync(new PasskeyAuthenticationUnavailableException(
                 "No passkey is registered for this account yet. Sign in with your password, then set up a passkey in Settings."));
 
