@@ -11,6 +11,7 @@ import '../../core/routing/app_router.dart';
 import '../../core/utils/email_validator.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/passkey_provider.dart';
+import '../../providers/sign_in_preference_provider.dart';
 import '../../services/cognito_managed_login_service.dart';
 import '../../services/passkey_service.dart';
 import '../../widgets/conscia_loading_overlay.dart';
@@ -54,7 +55,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
   final _passwordController = TextEditingController();
 
   bool _obscurePassword = true;
-  bool _showEmailSignIn = false;
+  bool _showPasswordSignIn = false;
   bool _isLoading = false;
   String? _errorMessage;
   String? _emailFieldError;
@@ -103,8 +104,9 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
     }
   }
 
-  Future<void> _submit() async {
-    final emailError = _validateEmail(_emailController.text.trim());
+  Future<void> _submit({String? emailOverride}) async {
+    final email = (emailOverride ?? _emailController.text).trim();
+    final emailError = emailOverride == null ? _validateEmail(email) : null;
     final passwordError = _validatePassword(_passwordController.text);
     if (emailError != null || passwordError != null) {
       setState(() {
@@ -124,7 +126,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
 
     try {
       await ref.read(authProvider.notifier).login(
-            _emailController.text.trim(),
+            email,
             _passwordController.text,
           );
     } catch (e) {
@@ -202,6 +204,46 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
     FocusManager.instance.primaryFocus?.unfocus();
   }
 
+  Future<void> _signInWithApple() async {
+    _dismissKeyboard();
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+    try {
+      await ref.read(authProvider.notifier).signInWithApple();
+    } on CognitoManagedLoginCancelledException {
+      // User intentionally closed the hosted auth sheet.
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _errorMessage = friendlySignInErrorMessage(e);
+      });
+    } finally {
+      _clearLoadingUnlessAuthenticated();
+    }
+  }
+
+  Future<void> _signInWithGoogle() async {
+    _dismissKeyboard();
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+    try {
+      await ref.read(authProvider.notifier).signInWithGoogle();
+    } on CognitoManagedLoginCancelledException {
+      // User intentionally closed the hosted auth sheet.
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _errorMessage = friendlySignInErrorMessage(e);
+      });
+    } finally {
+      _clearLoadingUnlessAuthenticated();
+    }
+  }
+
   void _clearLoadingUnlessAuthenticated() {
     if (!mounted) return;
     if (ref.read(authProvider).isAuthenticated) return;
@@ -212,11 +254,20 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     final passkeyPreference = ref.watch(passkeySignInPreferenceProvider);
+    final rememberedSignIn = ref.watch(rememberedSignInPreferenceProvider);
     final passkeysAvailable =
         ref.watch(passkeyAvailabilityProvider).valueOrNull ?? false;
-    final canShowPasskeyFirst =
-        passkeysAvailable && passkeyPreference.canUsePasskeyFirst;
-    final showPasskeyFirst = !_showEmailSignIn && canShowPasskeyFirst;
+    final rememberedEmail = rememberedSignIn.email;
+    final hasReturningIdentity = rememberedSignIn.hasRememberedIdentity &&
+        !rememberedSignIn.showInitialSignIn &&
+        rememberedEmail != null;
+    final rememberedHasLocalPasskey = rememberedEmail != null &&
+        passkeyPreference.hasRegisteredEmail(rememberedEmail);
+    final canUseRememberedPasskey =
+        passkeysAvailable && rememberedHasLocalPasskey;
+    final showPasskeyPriority =
+        hasReturningIdentity && canUseRememberedPasskey && !_showPasswordSignIn;
+    final showReturningPassword = hasReturningIdentity && !showPasskeyPriority;
 
     return Scaffold(
       extendBodyBehindAppBar: true,
@@ -270,254 +321,97 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                             ),
                             const SizedBox(height: 16),
                           ],
-                          if (showPasskeyFirst)
-                            _PasskeyFirstSignIn(
-                              emails: passkeyPreference.registeredEmails,
+                          if (showPasskeyPriority || showReturningPassword)
+                            _ReturningSignIn(
+                              displayName: rememberedSignIn.displayNameOrEmail,
+                              email: rememberedEmail,
+                              passwordController: _passwordController,
+                              obscurePassword: _obscurePassword,
+                              passwordError: _passwordFieldError,
                               isLoading: _isLoading,
-                              onPasskeySignIn: _signInWithPasskey,
-                              onUseAnotherPasskey: () {
-                                final emails =
-                                    passkeyPreference.registeredEmails;
-                                if (emails.length == 1) {
-                                  _signInWithPasskey(
-                                    emails.single,
-                                    preferImmediatelyAvailableCredentials:
-                                        false,
-                                  );
-                                  return;
-                                }
-
+                              showPasskeyPriority: showPasskeyPriority,
+                              canUsePasskey: canUseRememberedPasskey,
+                              onNotYou: () async {
+                                await ref
+                                    .read(
+                                      rememberedSignInPreferenceProvider
+                                          .notifier,
+                                    )
+                                    .showInitialSignIn();
+                                if (!mounted) return;
                                 setState(() {
-                                  _showEmailSignIn = true;
+                                  _showPasswordSignIn = false;
+                                  _errorMessage = null;
+                                  _emailFieldError = null;
+                                  _passwordFieldError = null;
+                                });
+                              },
+                              onPasskeySignIn: () =>
+                                  _signInWithPasskey(rememberedEmail),
+                              onPasswordSignIn: () {
+                                setState(() {
+                                  _showPasswordSignIn = true;
                                   _errorMessage = null;
                                 });
                               },
-                              onEmailSignIn: () {
-                                setState(() {
-                                  _showEmailSignIn = true;
-                                  _errorMessage = null;
-                                });
-                              },
+                              onPasswordVisibilityChanged: () => setState(
+                                () => _obscurePassword = !_obscurePassword,
+                              ),
+                              onPasswordChanged: (_) => _clearInlineErrors(),
+                              onSubmitPassword: () => _submit(
+                                emailOverride: rememberedEmail,
+                              ),
+                              onForgotPassword: () =>
+                                  context.go(AppRoutes.passwordReset),
                             )
                           else ...[
-                            Form(
-                              key: _formKey,
-                              child: Column(
-                                children: [
-                                  FloatingLabelTextField(
-                                    controller: _emailController,
-                                    label: 'Email',
-                                    prefix: AppIcons.icon(
-                                      AppIconKey.email,
-                                      color: colors.onSurfaceVariant,
-                                      size: 20,
-                                    ),
-                                    keyboardType: TextInputType.emailAddress,
-                                    textInputAction: TextInputAction.next,
-                                    onChanged: (_) => _clearInlineErrors(),
-                                    errorText: _emailFieldError,
-                                    autofillHints: const [
-                                      AutofillHints.email,
-                                    ],
-                                    trailing: passkeysAvailable
-                                        ? IconButton(
-                                            key: const ValueKey(
-                                              'email-passkey-sign-in-button',
-                                            ),
-                                            tooltip: 'Sign in with passkey',
-                                            visualDensity:
-                                                VisualDensity.compact,
-                                            onPressed: _isLoading
-                                                ? null
-                                                : _signInWithTypedPasskey,
-                                            icon: AppIcons.icon(
-                                              AppIconKey.passkey,
-                                              color: colors.primary,
-                                              size: 20,
-                                            ),
-                                          )
-                                        : null,
-                                  ),
-                                  const SizedBox(height: 16),
-                                  FloatingLabelTextField(
-                                    controller: _passwordController,
-                                    label: 'Password',
-                                    prefix: AppIcons.icon(
-                                      AppIconKey.password,
-                                      color: colors.onSurfaceVariant,
-                                      size: 20,
-                                    ),
-                                    obscureText: _obscurePassword,
-                                    textInputAction: TextInputAction.done,
-                                    onChanged: (_) => _clearInlineErrors(),
-                                    onSubmitted: (_) {
-                                      if (!_isLoading) {
-                                        _submit();
-                                      }
-                                    },
-                                    errorText: _passwordFieldError,
-                                    enableSuggestions: false,
-                                    autocorrect: false,
-                                    autofillHints: const [
-                                      AutofillHints.password,
-                                    ],
-                                    trailing: IconButton(
-                                      icon: AppIcons.icon(
-                                        _obscurePassword
-                                            ? AppIconKey.visibility
-                                            : AppIconKey.visibilityOff,
-                                        color: _obscurePassword
-                                            ? colors.onSurfaceVariant
-                                            : colors.primary,
-                                      ),
-                                      onPressed: () => setState(
-                                        () => _obscurePassword =
-                                            !_obscurePassword,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            Align(
-                              alignment: Alignment.centerRight,
-                              child: TextButton(
-                                onPressed: _isLoading
-                                    ? null
-                                    : () => context.go(
-                                          AppRoutes.passwordReset,
-                                        ),
-                                child: const Text('Forgot password?'),
-                              ),
-                            ),
-                            if (canShowPasskeyFirst) ...[
-                              Center(
-                                child: TextButton(
-                                  onPressed: _isLoading
-                                      ? null
-                                      : () {
-                                          setState(() {
-                                            _showEmailSignIn = false;
-                                            _errorMessage = null;
-                                          });
-                                        },
-                                  child: const Text('Sign in with passkey'),
-                                ),
-                              ),
-                              const SizedBox(height: 12),
-                            ],
-                            const SizedBox(height: 32),
-                            SizedBox(
-                              height: 48,
-                              child: FilledButton(
-                                onPressed: _isLoading ? null : _submit,
-                                child: const Text('Sign In'),
-                              ),
-                            ),
-                            const SizedBox(height: 24),
-                            Row(
-                              children: [
-                                const Expanded(child: Divider()),
-                                Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 16,
-                                  ),
-                                  child: Text(
-                                    'or',
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .bodyMedium
-                                        ?.copyWith(
-                                          color: colors.onSurfaceVariant,
-                                        ),
-                                  ),
-                                ),
-                                const Expanded(child: Divider()),
-                              ],
-                            ),
-                            const SizedBox(height: 24),
-                            SizedBox(
-                              height: 48,
-                              width: double.infinity,
-                              child: ElevatedButton.icon(
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.black,
-                                  foregroundColor: Colors.white,
-                                  elevation: 0,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(24),
-                                  ),
-                                ),
-                                icon: AppIcons.icon(
-                                  AppIconKey.appleBrand,
-                                  color: Colors.white,
-                                  size: 24,
-                                ),
-                                label: const Text('Sign in with Apple'),
-                                onPressed: _isLoading
-                                    ? null
-                                    : () async {
-                                        _dismissKeyboard();
-                                        setState(() {
-                                          _isLoading = true;
-                                          _errorMessage = null;
-                                        });
-                                        try {
-                                          await ref
-                                              .read(authProvider.notifier)
-                                              .signInWithApple();
-                                        } on CognitoManagedLoginCancelledException {
-                                          // User intentionally closed the hosted auth sheet.
-                                        } catch (e) {
-                                          if (!mounted) return;
-                                          setState(() {
-                                            _errorMessage =
-                                                friendlySignInErrorMessage(e);
-                                          });
-                                        } finally {
-                                          _clearLoadingUnlessAuthenticated();
-                                        }
-                                      },
-                              ),
-                            ),
-                            const SizedBox(height: 12),
-                            _GoogleSignInButton(
+                            _InitialEmailPasswordSignIn(
+                              formKey: _formKey,
+                              emailController: _emailController,
+                              passwordController: _passwordController,
+                              obscurePassword: _obscurePassword,
+                              emailError: _emailFieldError,
+                              passwordError: _passwordFieldError,
+                              passkeysAvailable: passkeysAvailable,
                               isLoading: _isLoading,
-                              onPressed: () async {
-                                _dismissKeyboard();
-                                setState(() {
-                                  _isLoading = true;
-                                  _errorMessage = null;
-                                });
-                                try {
-                                  await ref
-                                      .read(authProvider.notifier)
-                                      .signInWithGoogle();
-                                } on CognitoManagedLoginCancelledException {
-                                  // User intentionally closed the hosted auth sheet.
-                                } catch (e) {
-                                  if (!mounted) return;
-                                  setState(() {
-                                    _errorMessage =
-                                        friendlySignInErrorMessage(e);
-                                  });
-                                } finally {
-                                  _clearLoadingUnlessAuthenticated();
-                                }
-                              },
+                              onEmailChanged: (_) => _clearInlineErrors(),
+                              onPasswordChanged: (_) => _clearInlineErrors(),
+                              onPasswordVisibilityChanged: () => setState(
+                                () => _obscurePassword = !_obscurePassword,
+                              ),
+                              onTypedPasskey: _signInWithTypedPasskey,
+                              onForgotPassword: () =>
+                                  context.go(AppRoutes.passwordReset),
+                              onSubmit: _submit,
+                            ),
+                            const SizedBox(height: 24),
+                            const _SocialSignInDivider(),
+                            const SizedBox(height: 24),
+                            _SocialSignInButtons(
+                              isLoading: _isLoading,
+                              onApple: _signInWithApple,
+                              onGoogle: _signInWithGoogle,
                             ),
                             const SizedBox(height: 16),
                             Center(
                               child: TextButton(
                                 onPressed: _isLoading
                                     ? null
-                                    : () => context.go(
-                                          '/onboarding/sign-up',
-                                        ),
+                                    : () => context.go('/onboarding/sign-up'),
                                 child: const Text(
                                   "Don't have an account? Sign Up",
                                 ),
                               ),
+                            ),
+                          ],
+                          if (showPasskeyPriority || showReturningPassword) ...[
+                            const SizedBox(height: 24),
+                            const _SocialSignInDivider(),
+                            const SizedBox(height: 24),
+                            _SocialSignInButtons(
+                              isLoading: _isLoading,
+                              onApple: _signInWithApple,
+                              onGoogle: _signInWithGoogle,
                             ),
                           ],
                         ],
@@ -535,152 +429,124 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
   }
 }
 
-class _PasskeyFirstSignIn extends StatelessWidget {
-  const _PasskeyFirstSignIn({
-    required this.emails,
+class _InitialEmailPasswordSignIn extends StatelessWidget {
+  const _InitialEmailPasswordSignIn({
+    required this.formKey,
+    required this.emailController,
+    required this.passwordController,
+    required this.obscurePassword,
+    required this.emailError,
+    required this.passwordError,
+    required this.passkeysAvailable,
     required this.isLoading,
-    required this.onPasskeySignIn,
-    required this.onUseAnotherPasskey,
-    required this.onEmailSignIn,
+    required this.onEmailChanged,
+    required this.onPasswordChanged,
+    required this.onPasswordVisibilityChanged,
+    required this.onTypedPasskey,
+    required this.onForgotPassword,
+    required this.onSubmit,
   });
 
-  final List<String> emails;
+  final GlobalKey<FormState> formKey;
+  final TextEditingController emailController;
+  final TextEditingController passwordController;
+  final bool obscurePassword;
+  final String? emailError;
+  final String? passwordError;
+  final bool passkeysAvailable;
   final bool isLoading;
-  final ValueChanged<String> onPasskeySignIn;
-  final VoidCallback onUseAnotherPasskey;
-  final VoidCallback onEmailSignIn;
+  final ValueChanged<String> onEmailChanged;
+  final ValueChanged<String> onPasswordChanged;
+  final VoidCallback onPasswordVisibilityChanged;
+  final VoidCallback onTypedPasskey;
+  final VoidCallback onForgotPassword;
+  final VoidCallback onSubmit;
 
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
-    final hasOneAccount = emails.length == 1;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        if (hasOneAccount)
-          Center(
-            child: Material(
-              color: Colors.transparent,
-              child: InkWell(
-                key: const ValueKey('saved-passkey-primary'),
-                borderRadius: BorderRadius.circular(28),
-                onTap: isLoading ? null : () => onPasskeySignIn(emails.single),
-                child: Padding(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 24, vertical: 18),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      DecoratedBox(
-                        decoration: BoxDecoration(
-                          color:
-                              colors.primaryContainer.withValues(alpha: 0.52),
-                          borderRadius: BorderRadius.circular(26),
-                          boxShadow: [
-                            BoxShadow(
-                              color: colors.primary.withValues(alpha: 0.14),
-                              blurRadius: 22,
-                              offset: const Offset(0, 10),
-                            ),
-                          ],
-                        ),
-                        child: Padding(
-                          padding: const EdgeInsets.all(18),
-                          child: AppIcons.icon(
-                            AppIconKey.fingerprint,
-                            color: colors.primary,
-                            size: 38,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 18),
-                      Text(
-                        emails.single,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        textAlign: TextAlign.center,
-                        style: textTheme.titleMedium?.copyWith(
-                          color: colors.onSurface,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                    ],
-                  ),
+        Form(
+          key: formKey,
+          child: Column(
+            children: [
+              FloatingLabelTextField(
+                controller: emailController,
+                label: 'Email',
+                prefix: AppIcons.icon(
+                  AppIconKey.email,
+                  color: colors.onSurfaceVariant,
+                  size: 20,
                 ),
-              ),
-            ),
-          )
-        else
-          DecoratedBox(
-            decoration: BoxDecoration(
-              color: colors.surface.withValues(alpha: 0.92),
-              border: Border.all(color: colors.outlineVariant),
-              borderRadius: BorderRadius.circular(24),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        color: colors.primaryContainer.withValues(alpha: 0.45),
-                        borderRadius: BorderRadius.circular(18),
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.all(12),
-                        child: AppIcons.icon(
+                keyboardType: TextInputType.emailAddress,
+                textInputAction: TextInputAction.next,
+                onChanged: onEmailChanged,
+                errorText: emailError,
+                autofillHints: const [AutofillHints.email],
+                trailing: passkeysAvailable
+                    ? IconButton(
+                        key: const ValueKey('email-passkey-sign-in-button'),
+                        tooltip: 'Sign in with passkey',
+                        visualDensity: VisualDensity.compact,
+                        onPressed: isLoading ? null : onTypedPasskey,
+                        icon: AppIcons.icon(
                           AppIconKey.passkey,
                           color: colors.primary,
-                          size: 26,
+                          size: 20,
                         ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 18),
-                  Text(
-                    'Sign in with passkey',
-                    style: textTheme.headlineSmall?.copyWith(
-                      color: colors.primary,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Choose an account',
-                    style: textTheme.bodyMedium?.copyWith(
-                      color: colors.onSurfaceVariant,
-                      height: 1.35,
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  for (final email in emails) ...[
-                    _PasskeyAccountButton(
-                      email: email,
-                      onPressed:
-                          isLoading ? null : () => onPasskeySignIn(email),
-                    ),
-                    if (email != emails.last) const SizedBox(height: 10),
-                  ],
-                ],
+                      )
+                    : null,
               ),
-            ),
-          ),
-        const SizedBox(height: 16),
-        Center(
-          child: TextButton(
-            onPressed: isLoading ? null : onUseAnotherPasskey,
-            child: const Text('Use another passkey'),
+              const SizedBox(height: 16),
+              FloatingLabelTextField(
+                controller: passwordController,
+                label: 'Password',
+                prefix: AppIcons.icon(
+                  AppIconKey.password,
+                  color: colors.onSurfaceVariant,
+                  size: 20,
+                ),
+                obscureText: obscurePassword,
+                textInputAction: TextInputAction.done,
+                onChanged: onPasswordChanged,
+                onSubmitted: (_) {
+                  if (!isLoading) onSubmit();
+                },
+                errorText: passwordError,
+                enableSuggestions: false,
+                autocorrect: false,
+                autofillHints: const [AutofillHints.password],
+                trailing: IconButton(
+                  icon: AppIcons.icon(
+                    obscurePassword
+                        ? AppIconKey.visibility
+                        : AppIconKey.visibilityOff,
+                    color: obscurePassword
+                        ? colors.onSurfaceVariant
+                        : colors.primary,
+                  ),
+                  onPressed: onPasswordVisibilityChanged,
+                ),
+              ),
+            ],
           ),
         ),
-        Center(
+        Align(
+          alignment: Alignment.centerRight,
           child: TextButton(
-            onPressed: isLoading ? null : onEmailSignIn,
-            child: const Text('Sign in with email'),
+            onPressed: isLoading ? null : onForgotPassword,
+            child: const Text('Forgot password?'),
+          ),
+        ),
+        const SizedBox(height: 32),
+        SizedBox(
+          height: 48,
+          child: FilledButton(
+            onPressed: isLoading ? null : onSubmit,
+            child: const Text('Sign In'),
           ),
         ),
       ],
@@ -688,52 +554,364 @@ class _PasskeyFirstSignIn extends StatelessWidget {
   }
 }
 
-class _PasskeyAccountButton extends StatelessWidget {
-  const _PasskeyAccountButton({
+class _ReturningSignIn extends StatelessWidget {
+  const _ReturningSignIn({
+    required this.displayName,
     required this.email,
-    required this.onPressed,
+    required this.passwordController,
+    required this.obscurePassword,
+    required this.passwordError,
+    required this.isLoading,
+    required this.showPasskeyPriority,
+    required this.canUsePasskey,
+    required this.onNotYou,
+    required this.onPasskeySignIn,
+    required this.onPasswordSignIn,
+    required this.onPasswordVisibilityChanged,
+    required this.onPasswordChanged,
+    required this.onSubmitPassword,
+    required this.onForgotPassword,
   });
 
+  final String displayName;
   final String email;
-  final VoidCallback? onPressed;
+  final TextEditingController passwordController;
+  final bool obscurePassword;
+  final String? passwordError;
+  final bool isLoading;
+  final bool showPasskeyPriority;
+  final bool canUsePasskey;
+  final VoidCallback onNotYou;
+  final VoidCallback onPasskeySignIn;
+  final VoidCallback onPasswordSignIn;
+  final VoidCallback onPasswordVisibilityChanged;
+  final ValueChanged<String> onPasswordChanged;
+  final VoidCallback onSubmitPassword;
+  final VoidCallback onForgotPassword;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _RememberedIdentityHeader(
+          displayName: displayName,
+          onNotYou: onNotYou,
+        ),
+        if (showPasskeyPriority)
+          _PasskeyPrioritySignIn(
+            email: email,
+            isLoading: isLoading,
+            onPasskeySignIn: onPasskeySignIn,
+            onPasswordSignIn: onPasswordSignIn,
+          )
+        else
+          _ReturningPasswordSignIn(
+            passwordController: passwordController,
+            obscurePassword: obscurePassword,
+            passwordError: passwordError,
+            isLoading: isLoading,
+            canUsePasskey: canUsePasskey,
+            onPasswordVisibilityChanged: onPasswordVisibilityChanged,
+            onPasswordChanged: onPasswordChanged,
+            onSubmit: onSubmitPassword,
+            onForgotPassword: onForgotPassword,
+            onPasskeySignIn: onPasskeySignIn,
+          ),
+      ],
+    );
+  }
+}
+
+class _RememberedIdentityHeader extends StatelessWidget {
+  const _RememberedIdentityHeader({
+    required this.displayName,
+    required this.onNotYou,
+  });
+
+  final String displayName;
+  final VoidCallback onNotYou;
 
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
-    return SizedBox(
-      height: 52,
-      child: OutlinedButton(
-        onPressed: onPressed,
-        style: OutlinedButton.styleFrom(
-          alignment: Alignment.centerLeft,
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(18),
+    final textTheme = Theme.of(context).textTheme;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Welcome back,',
+          style: textTheme.titleMedium?.copyWith(
+            color: colors.onSurfaceVariant,
           ),
         ),
-        child: Row(
+        const SizedBox(height: 4),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            AppIcons.icon(
-              AppIconKey.passkey,
-              color: colors.primary,
-              size: 20,
-            ),
-            const SizedBox(width: 12),
             Expanded(
               child: Text(
-                email,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+                displayName,
+                style: textTheme.headlineSmall?.copyWith(
+                  color: colors.onSurface,
+                  height: 1.12,
+                ),
               ),
             ),
-            AppIcons.icon(
-              AppIconKey.chevronRight,
-              color: colors.onSurfaceVariant,
-              size: 18,
+            TextButton(
+              onPressed: onNotYou,
+              child: const Text('Not you?'),
             ),
           ],
         ),
-      ),
+      ],
+    );
+  }
+}
+
+class _PasskeyPrioritySignIn extends StatelessWidget {
+  const _PasskeyPrioritySignIn({
+    required this.email,
+    required this.isLoading,
+    required this.onPasskeySignIn,
+    required this.onPasswordSignIn,
+  });
+
+  final String email;
+  final bool isLoading;
+  final VoidCallback onPasskeySignIn;
+  final VoidCallback onPasswordSignIn;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        const SizedBox(height: 32),
+        Material(
+          color: Colors.transparent,
+          child: InkWell(
+            key: const ValueKey('saved-passkey-primary'),
+            borderRadius: BorderRadius.circular(28),
+            onTap: isLoading ? null : onPasskeySignIn,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: colors.primaryContainer.withValues(alpha: 0.52),
+                      borderRadius: BorderRadius.circular(26),
+                      boxShadow: [
+                        BoxShadow(
+                          color: colors.primary.withValues(alpha: 0.14),
+                          blurRadius: 22,
+                          offset: const Offset(0, 10),
+                        ),
+                      ],
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(18),
+                      child: AppIcons.icon(
+                        AppIconKey.fingerprint,
+                        color: colors.primary,
+                        size: 38,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    email,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
+                    style: textTheme.bodyMedium?.copyWith(
+                      color: colors.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 8),
+        TextButton(
+          onPressed: isLoading ? null : onPasswordSignIn,
+          child: const Text('Sign in with password'),
+        ),
+      ],
+    );
+  }
+}
+
+class _ReturningPasswordSignIn extends StatelessWidget {
+  const _ReturningPasswordSignIn({
+    required this.passwordController,
+    required this.obscurePassword,
+    required this.passwordError,
+    required this.isLoading,
+    required this.canUsePasskey,
+    required this.onPasswordVisibilityChanged,
+    required this.onPasswordChanged,
+    required this.onSubmit,
+    required this.onForgotPassword,
+    required this.onPasskeySignIn,
+  });
+
+  final TextEditingController passwordController;
+  final bool obscurePassword;
+  final String? passwordError;
+  final bool isLoading;
+  final bool canUsePasskey;
+  final VoidCallback onPasswordVisibilityChanged;
+  final ValueChanged<String> onPasswordChanged;
+  final VoidCallback onSubmit;
+  final VoidCallback onForgotPassword;
+  final VoidCallback onPasskeySignIn;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const SizedBox(height: 24),
+        FloatingLabelTextField(
+          controller: passwordController,
+          label: 'Password',
+          prefix: AppIcons.icon(
+            AppIconKey.password,
+            color: colors.onSurfaceVariant,
+            size: 20,
+          ),
+          obscureText: obscurePassword,
+          textInputAction: TextInputAction.done,
+          onChanged: onPasswordChanged,
+          onSubmitted: (_) {
+            if (!isLoading) onSubmit();
+          },
+          errorText: passwordError,
+          enableSuggestions: false,
+          autocorrect: false,
+          autofillHints: const [AutofillHints.password],
+          trailing: IconButton(
+            icon: AppIcons.icon(
+              obscurePassword
+                  ? AppIconKey.visibility
+                  : AppIconKey.visibilityOff,
+              color: obscurePassword ? colors.onSurfaceVariant : colors.primary,
+            ),
+            onPressed: onPasswordVisibilityChanged,
+          ),
+        ),
+        Align(
+          alignment: Alignment.centerRight,
+          child: TextButton(
+            onPressed: isLoading ? null : onForgotPassword,
+            child: const Text('Forgot password?'),
+          ),
+        ),
+        const SizedBox(height: 32),
+        SizedBox(
+          height: 48,
+          child: FilledButton(
+            onPressed: isLoading ? null : onSubmit,
+            child: const Text('Sign In'),
+          ),
+        ),
+        if (canUsePasskey) ...[
+          const SizedBox(height: 12),
+          Center(
+            child: TextButton.icon(
+              onPressed: isLoading ? null : onPasskeySignIn,
+              icon: AppIcons.icon(
+                AppIconKey.passkey,
+                color: colors.primary,
+                size: 18,
+              ),
+              label: const Text('Sign in with passkey'),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+class _SocialSignInDivider extends StatelessWidget {
+  const _SocialSignInDivider();
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+
+    return Row(
+      children: [
+        const Expanded(child: Divider()),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Text(
+            'or',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: colors.onSurfaceVariant,
+                ),
+          ),
+        ),
+        const Expanded(child: Divider()),
+      ],
+    );
+  }
+}
+
+class _SocialSignInButtons extends StatelessWidget {
+  const _SocialSignInButtons({
+    required this.isLoading,
+    required this.onApple,
+    required this.onGoogle,
+  });
+
+  final bool isLoading;
+  final VoidCallback onApple;
+  final VoidCallback onGoogle;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        SizedBox(
+          height: 48,
+          width: double.infinity,
+          child: ElevatedButton.icon(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.black,
+              foregroundColor: Colors.white,
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(24),
+              ),
+            ),
+            icon: AppIcons.icon(
+              AppIconKey.appleBrand,
+              color: Colors.white,
+              size: 24,
+            ),
+            label: const Text('Sign in with Apple'),
+            onPressed: isLoading ? null : onApple,
+          ),
+        ),
+        const SizedBox(height: 12),
+        _GoogleSignInButton(
+          isLoading: isLoading,
+          onPressed: onGoogle,
+        ),
+      ],
     );
   }
 }
