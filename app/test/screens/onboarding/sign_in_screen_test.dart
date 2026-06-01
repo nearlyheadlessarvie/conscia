@@ -526,8 +526,11 @@ void main() {
       passkeyService: passkeyService,
     );
 
-    expect(find.text('Welcome back,'), findsNothing);
-    expect(find.text('Welcome back, Story Demo'), findsOneWidget);
+    expect(find.text('Welcome back,\nStory Demo'), findsOneWidget);
+    expect(
+      find.text('Good to see you again. Your money space is ready.'),
+      findsOneWidget,
+    );
     expect(find.text('Not you?'), findsOneWidget);
     expect(find.text('story-demo@example.com'), findsOneWidget);
     expect(find.byKey(const ValueKey('saved-passkey-primary')), findsOneWidget);
@@ -560,7 +563,11 @@ void main() {
       passkeyService: passkeyService,
     );
 
-    expect(find.text('Welcome back, Story Demo'), findsOneWidget);
+    expect(find.text('Welcome back,\nStory Demo'), findsOneWidget);
+    expect(
+      find.text('Good to see you again. Your money space is ready.'),
+      findsOneWidget,
+    );
     expect(find.byKey(const ValueKey('saved-passkey-primary')), findsNothing);
     expect(find.byType(TextField), findsOneWidget);
     expect(find.text('Sign in with passkey'), findsOneWidget);
@@ -593,7 +600,7 @@ void main() {
     await tester.tap(find.text('Sign in with password'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Welcome back, Story Demo'), findsOneWidget);
+    expect(find.text('Welcome back,\nStory Demo'), findsOneWidget);
     expect(find.byType(TextField), findsOneWidget);
     expect(find.text('Forgot password?'), findsOneWidget);
     expect(find.widgetWithText(FilledButton, 'Sign In'), findsOneWidget);

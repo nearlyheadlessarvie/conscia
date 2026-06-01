@@ -282,10 +282,10 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
         hasReturningIdentity && canUseRememberedPasskey && !_showPasswordSignIn;
     final showReturningPassword = hasReturningIdentity && !showPasskeyPriority;
     final introTitle = hasReturningIdentity
-        ? 'Welcome back, ${rememberedSignIn.displayNameOrEmail}'
+        ? 'Welcome back,\n${rememberedSignIn.displayNameOrEmail}'
         : 'Welcome back';
     final introSubtitle = hasReturningIdentity
-        ? 'Pick up where you left off with a little more calm.'
+        ? 'Good to see you again. Your money space is ready.'
         : 'Return to your money rhythm with a little more calm.';
 
     return Scaffold(
@@ -319,6 +319,13 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                       action: hasReturningIdentity
                           ? TextButton(
                               onPressed: _isLoading ? null : _showInitialSignIn,
+                              style: TextButton.styleFrom(
+                                foregroundColor: colors.primary,
+                                minimumSize: Size.zero,
+                                padding: EdgeInsets.zero,
+                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                visualDensity: VisualDensity.compact,
+                              ),
                               child: const Text('Not you?'),
                             )
                           : null,
