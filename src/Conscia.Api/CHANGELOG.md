@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.4.6](https://github.com/nearlyheadlessarvie/conscia/compare/api/v1.4.5...api/v1.4.6) (2026-06-01)
+
+
+### Bug Fixes
+
+* **app:** improve passkey management ([#196](https://github.com/nearlyheadlessarvie/conscia/issues/196)) ([b3572ee](https://github.com/nearlyheadlessarvie/conscia/commit/b3572eeef2e0c9f12cc539c71776021c7e11da14))
+
 ## [1.4.5](https://github.com/nearlyheadlessarvie/conscia/compare/api/v1.4.4...api/v1.4.5) (2026-05-31)
 
 
