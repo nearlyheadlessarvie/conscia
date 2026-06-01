@@ -1,5 +1,5 @@
 {
-  "app": "2.2.5",
+  "app": "2.3.0",
   "src": "1.4.6",
   "infra/src/Conscia.Infra": "1.6.9",
   "web": "1.2.4"

@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.3.0](https://github.com/nearlyheadlessarvie/conscia/compare/app/v2.2.5...app/v2.3.0) (2026-06-01)
+
+
+### Features
+
+* **app:** personalize passkey sign-in ([#199](https://github.com/nearlyheadlessarvie/conscia/issues/199)) ([9c5b02f](https://github.com/nearlyheadlessarvie/conscia/commit/9c5b02f64ca0b3fce35caeec481b7e03bb0adcf7))
+
 ## [2.2.5](https://github.com/nearlyheadlessarvie/conscia/compare/app/v2.2.4...app/v2.2.5) (2026-06-01)
 
 
