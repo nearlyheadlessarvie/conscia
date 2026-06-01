@@ -4,6 +4,7 @@ import 'package:conscia_app/core/errors/app_error.dart';
 import 'package:conscia_app/core/routing/app_router.dart';
 import 'package:conscia_app/providers/auth_provider.dart';
 import 'package:conscia_app/providers/passkey_provider.dart';
+import 'package:conscia_app/providers/sign_in_preference_provider.dart';
 import 'package:conscia_app/providers/usage_provider.dart';
 import 'package:conscia_app/screens/onboarding/sign_in_screen.dart';
 import 'package:conscia_app/services/auth_service.dart';
@@ -233,7 +234,7 @@ void main() {
     expect(find.text('Sign in with Apple'), findsOneWidget);
   });
 
-  testWidgets('email field passkey action signs in with typed email',
+  testWidgets('initial passkey action signs in with typed email',
       (tester) async {
     final authNotifier = _RecordingAuthNotifier();
     final passkeyService = _RecordingPasskeyService();
@@ -249,7 +250,12 @@ void main() {
       find.byType(TextField).first,
       'story-demo@example.com',
     );
-    await tester.tap(find.byTooltip('Sign in with passkey'));
+    expect(
+      find.byKey(const ValueKey('email-passkey-sign-in-button')),
+      findsNothing,
+    );
+
+    await tester.tap(find.text('Sign in with passkey'));
     await tester.pump();
 
     expect(passkeyService.lastSignInEmail, 'story-demo@example.com');
@@ -257,8 +263,7 @@ void main() {
     expect(authNotifier.completedExternalEmail, 'story-demo@example.com');
   });
 
-  testWidgets('email field passkey action validates email first',
-      (tester) async {
+  testWidgets('initial passkey action validates email first', (tester) async {
     final authNotifier = _RecordingAuthNotifier();
     final passkeyService = _RecordingPasskeyService();
 
@@ -269,7 +274,12 @@ void main() {
       passkeyService: passkeyService,
     );
 
-    await tester.tap(find.byTooltip('Sign in with passkey'));
+    expect(
+      find.byKey(const ValueKey('email-passkey-sign-in-button')),
+      findsNothing,
+    );
+
+    await tester.tap(find.text('Sign in with passkey'));
     await tester.pump();
 
     expect(passkeyService.lastSignInEmail, isNull);
@@ -499,9 +509,11 @@ void main() {
     expect(find.text('Dismiss'), findsNothing);
   });
 
-  testWidgets('passkey-first sign in uses the saved single account',
+  testWidgets('returning user with local passkey sees passkey priority',
       (tester) async {
     SharedPreferences.setMockInitialValues({
+      rememberedSignInEmailPreferenceKey: 'story-demo@example.com',
+      rememberedSignInDisplayNamePreferenceKey: 'Story Demo',
       passkeyRegisteredEmailsPreferenceKey: ['story-demo@example.com'],
     });
     final authNotifier = _RecordingAuthNotifier();
@@ -514,12 +526,17 @@ void main() {
       passkeyService: passkeyService,
     );
 
-    expect(find.text('Sign in with passkey'), findsNothing);
+    expect(find.text('Welcome back,\nStory Demo'), findsOneWidget);
+    expect(
+      find.text('Good to see you again. Your money space is ready.'),
+      findsOneWidget,
+    );
+    expect(find.text('Not you?'), findsOneWidget);
     expect(find.text('story-demo@example.com'), findsOneWidget);
-    expect(find.text('Use another passkey'), findsOneWidget);
-    expect(find.text('Sign in with email'), findsOneWidget);
-    expect(find.text('Continue with Passkey'), findsNothing);
+    expect(find.byKey(const ValueKey('saved-passkey-primary')), findsOneWidget);
+    expect(find.text('Sign in with password'), findsOneWidget);
     expect(find.byType(TextField), findsNothing);
+    expect(find.text('Sign in with Apple'), findsOneWidget);
 
     await tester.tap(find.byKey(const ValueKey('saved-passkey-primary')));
     await tester.pump();
@@ -529,9 +546,46 @@ void main() {
     expect(authNotifier.completedExternalEmail, 'story-demo@example.com');
   });
 
-  testWidgets('passkey-first fallback can return from email sign in',
+  testWidgets(
+      'returning password mode supports external passkey without local passkey',
       (tester) async {
     SharedPreferences.setMockInitialValues({
+      rememberedSignInEmailPreferenceKey: 'story-demo@example.com',
+      rememberedSignInDisplayNamePreferenceKey: 'Story Demo',
+    });
+    final authNotifier = _RecordingAuthNotifier();
+    final passkeyService = _RecordingPasskeyService();
+
+    await _pumpSignInScreen(
+      tester,
+      authNotifier: authNotifier,
+      passkeysAvailable: true,
+      passkeyService: passkeyService,
+    );
+
+    expect(find.text('Welcome back,\nStory Demo'), findsOneWidget);
+    expect(
+      find.text('Good to see you again. Your money space is ready.'),
+      findsOneWidget,
+    );
+    expect(find.byKey(const ValueKey('saved-passkey-primary')), findsNothing);
+    expect(find.byType(TextField), findsOneWidget);
+    expect(find.text('Sign in with passkey'), findsOneWidget);
+
+    await tester.ensureVisible(find.text('Sign in with passkey'));
+    await tester.tap(find.text('Sign in with passkey'));
+    await tester.pump();
+
+    expect(passkeyService.lastSignInEmail, 'story-demo@example.com');
+    expect(passkeyService.lastPreferImmediatelyAvailableCredentials, isFalse);
+    expect(authNotifier.completedExternalEmail, 'story-demo@example.com');
+  });
+
+  testWidgets('returning user password mode signs in with remembered email',
+      (tester) async {
+    SharedPreferences.setMockInitialValues({
+      rememberedSignInEmailPreferenceKey: 'story-demo@example.com',
+      rememberedSignInDisplayNamePreferenceKey: 'Story Demo',
       passkeyRegisteredEmailsPreferenceKey: ['story-demo@example.com'],
     });
     final authNotifier = _RecordingAuthNotifier();
@@ -543,22 +597,28 @@ void main() {
       passkeyService: _RecordingPasskeyService(),
     );
 
-    await tester.tap(find.text('Sign in with email'));
+    await tester.tap(find.text('Sign in with password'));
     await tester.pumpAndSettle();
 
-    expect(find.byType(TextField), findsNWidgets(2));
+    expect(find.text('Welcome back,\nStory Demo'), findsOneWidget);
+    expect(find.byType(TextField), findsOneWidget);
+    expect(find.text('Forgot password?'), findsOneWidget);
+    expect(find.widgetWithText(FilledButton, 'Sign In'), findsOneWidget);
     expect(find.text('Sign in with passkey'), findsOneWidget);
 
-    await tester.tap(find.text('Sign in with passkey'));
-    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), 'SecurePass123');
+    await tester.tap(find.widgetWithText(FilledButton, 'Sign In'));
+    await tester.pump();
 
-    expect(find.byType(TextField), findsNothing);
-    expect(find.byKey(const ValueKey('saved-passkey-primary')), findsOneWidget);
+    expect(authNotifier.lastLoginEmail, 'story-demo@example.com');
+    expect(authNotifier.lastLoginPassword, 'SecurePass123');
   });
 
   testWidgets('passkey sign in keeps the loading overlay after auth succeeds',
       (tester) async {
     SharedPreferences.setMockInitialValues({
+      rememberedSignInEmailPreferenceKey: 'story-demo@example.com',
+      rememberedSignInDisplayNamePreferenceKey: 'Story Demo',
       passkeyRegisteredEmailsPreferenceKey: ['story-demo@example.com'],
       passkeyFirstSignInEnabledPreferenceKey: true,
     });
@@ -581,40 +641,66 @@ void main() {
     );
   });
 
-  testWidgets('passkey-first sign in prompts for multiple saved accounts',
+  testWidgets('not you returns to initial sign in without clearing passkeys',
       (tester) async {
     SharedPreferences.setMockInitialValues({
-      passkeyRegisteredEmailsPreferenceKey: [
-        'one@example.com',
-        'two@example.com',
-      ],
+      rememberedSignInEmailPreferenceKey: 'story-demo@example.com',
+      rememberedSignInDisplayNamePreferenceKey: 'Story Demo',
+      passkeyRegisteredEmailsPreferenceKey: ['story-demo@example.com'],
       passkeyFirstSignInEnabledPreferenceKey: true,
     });
-    final authNotifier = _RecordingAuthNotifier();
-    final passkeyService = _RecordingPasskeyService();
+    final prefs = await SharedPreferences.getInstance();
 
     await _pumpSignInScreen(
       tester,
-      authNotifier: authNotifier,
+      authNotifier: _RecordingAuthNotifier(),
       passkeysAvailable: true,
-      passkeyService: passkeyService,
+      passkeyService: _RecordingPasskeyService(),
     );
 
-    expect(find.text('Choose an account'), findsOneWidget);
-    expect(find.text('one@example.com'), findsOneWidget);
-    expect(find.text('two@example.com'), findsOneWidget);
+    await tester.tap(find.text('Not you?'));
+    await tester.pumpAndSettle();
 
-    await tester.tap(find.text('two@example.com'));
-    await tester.pump();
-
-    expect(passkeyService.lastSignInEmail, 'two@example.com');
-    expect(passkeyService.lastPreferImmediatelyAvailableCredentials, isTrue);
-    expect(authNotifier.completedExternalEmail, 'two@example.com');
+    expect(find.byType(TextField), findsNWidgets(2));
+    expect(find.text('Password'), findsOneWidget);
+    expect(find.text('Sign In'), findsOneWidget);
+    expect(prefs.getBool(showInitialSignInPreferenceKey), isTrue);
+    expect(
+      prefs.getString(rememberedSignInEmailPreferenceKey),
+      'story-demo@example.com',
+    );
+    expect(
+      prefs.getStringList(passkeyRegisteredEmailsPreferenceKey),
+      ['story-demo@example.com'],
+    );
   });
 
-  testWidgets('passkey-first sign in forgets stale local credentials',
+  testWidgets('initial sign in stays visible when not you flag is set',
       (tester) async {
     SharedPreferences.setMockInitialValues({
+      rememberedSignInEmailPreferenceKey: 'story-demo@example.com',
+      rememberedSignInDisplayNamePreferenceKey: 'Story Demo',
+      showInitialSignInPreferenceKey: true,
+      passkeyRegisteredEmailsPreferenceKey: ['story-demo@example.com'],
+    });
+
+    await _pumpSignInScreen(
+      tester,
+      authNotifier: _RecordingAuthNotifier(),
+      passkeysAvailable: true,
+      passkeyService: _RecordingPasskeyService(),
+    );
+
+    expect(find.byType(TextField), findsNWidgets(2));
+    expect(find.text('Not you?'), findsNothing);
+    expect(find.byKey(const ValueKey('saved-passkey-primary')), findsNothing);
+  });
+
+  testWidgets('returning passkey sign in forgets stale local credentials',
+      (tester) async {
+    SharedPreferences.setMockInitialValues({
+      rememberedSignInEmailPreferenceKey: 'story-demo@example.com',
+      rememberedSignInDisplayNamePreferenceKey: 'Story Demo',
       passkeyRegisteredEmailsPreferenceKey: ['story-demo@example.com'],
       passkeyFirstSignInEnabledPreferenceKey: true,
     });
@@ -637,7 +723,7 @@ void main() {
     expect(prefs.getBool(passkeyFirstSignInEnabledPreferenceKey), isFalse);
     expect(
       find.text(
-          "Couldn't sign in with that passkey. Try again or sign in with email."),
+          "Couldn't sign in with that passkey. Try again or use another sign-in method."),
       findsOneWidget,
     );
   });

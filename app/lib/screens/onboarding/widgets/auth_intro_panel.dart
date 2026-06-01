@@ -10,11 +10,13 @@ class AuthIntroPanel extends StatelessWidget {
     required this.title,
     required this.subtitle,
     required this.icon,
+    this.action,
   });
 
   final String title;
   final String subtitle;
   final AppIconKey icon;
+  final Widget? action;
 
   @override
   Widget build(BuildContext context) {
@@ -86,6 +88,8 @@ class AuthIntroPanel extends StatelessWidget {
                   children: [
                     Text(
                       title,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                       style: textTheme.headlineLarge?.copyWith(
                         color: colors.deepNavy,
                         height: 1.08,
@@ -99,6 +103,13 @@ class AuthIntroPanel extends StatelessWidget {
                         height: 1.38,
                       ),
                     ),
+                    if (action != null) ...[
+                      const SizedBox(height: 6),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: action!,
+                      ),
+                    ],
                   ],
                 ),
               ),

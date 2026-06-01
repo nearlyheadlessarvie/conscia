@@ -75,6 +75,53 @@ class _RecordingAuthenticateAuthenticator extends PasskeyAuthenticator {
   }
 }
 
+_JsonAdapter _successfulPasskeySignInAdapter() {
+  return _JsonAdapter(
+    (options) {
+      if (options.path == 'auth/passkeys/login/start') {
+        return ResponseBody.fromString(
+          jsonEncode({
+            'session': 'challenge-session',
+            'challengeName': 'WEB_AUTHN',
+            'credentialRequestOptions': jsonEncode({
+              'challenge': 'Y2hhbGxlbmdl',
+              'rpId': 'getconscia.com',
+              'allowCredentials': [
+                {
+                  'type': 'public-key',
+                  'id': 'credential-id',
+                  'transports': ['internal']
+                }
+              ],
+              'userVerification': 'preferred',
+            }),
+          }),
+          200,
+          headers: {
+            Headers.contentTypeHeader: [Headers.jsonContentType],
+          },
+        );
+      }
+
+      if (options.path == 'auth/passkeys/login/complete') {
+        return ResponseBody.fromString(
+          jsonEncode({
+            'accessToken': 'access-token',
+            'refreshToken': 'refresh-token',
+            'userId': 'user-id',
+          }),
+          200,
+          headers: {
+            Headers.contentTypeHeader: [Headers.jsonContentType],
+          },
+        );
+      }
+
+      throw StateError('Unexpected request to ${options.path}');
+    },
+  );
+}
+
 void main() {
   tearDown(() {
     AppError.resetForTests();
@@ -148,7 +195,7 @@ void main() {
           null,
         ),
       ),
-      "Couldn't sign in with that passkey. Try again or sign in with email.",
+      "Couldn't sign in with that passkey. Try again or use another sign-in method.",
     );
   });
 
@@ -156,7 +203,7 @@ void main() {
       () {
     expect(
       friendlyPasskeyErrorMessage(NoCredentialsAvailableException()),
-      "Couldn't sign in with that passkey. Try again or sign in with email.",
+      "Couldn't sign in with that passkey. Try again or use another sign-in method.",
     );
   });
 
@@ -289,50 +336,7 @@ void main() {
 
   test('signIn can allow external passkey selection', () async {
     final authenticator = _RecordingAuthenticateAuthenticator();
-    final adapter = _JsonAdapter(
-      (options) {
-        if (options.path == 'auth/passkeys/login/start') {
-          return ResponseBody.fromString(
-            jsonEncode({
-              'session': 'challenge-session',
-              'challengeName': 'WEB_AUTHN',
-              'credentialRequestOptions': jsonEncode({
-                'challenge': 'Y2hhbGxlbmdl',
-                'rpId': 'getconscia.com',
-                'allowCredentials': [
-                  {
-                    'type': 'public-key',
-                    'id': 'credential-id',
-                    'transports': ['internal']
-                  }
-                ],
-                'userVerification': 'preferred',
-              }),
-            }),
-            200,
-            headers: {
-              Headers.contentTypeHeader: [Headers.jsonContentType],
-            },
-          );
-        }
-
-        if (options.path == 'auth/passkeys/login/complete') {
-          return ResponseBody.fromString(
-            jsonEncode({
-              'accessToken': 'access-token',
-              'refreshToken': 'refresh-token',
-              'userId': 'user-id',
-            }),
-            200,
-            headers: {
-              Headers.contentTypeHeader: [Headers.jsonContentType],
-            },
-          );
-        }
-
-        throw StateError('Unexpected request to ${options.path}');
-      },
-    );
+    final adapter = _successfulPasskeySignInAdapter();
     final service = PasskeyService(
       publicDio: Dio()..httpClientAdapter = adapter,
       authenticatedDio: Dio(),
@@ -345,11 +349,40 @@ void main() {
     );
 
     expect(tokens.accessToken, 'access-token');
+    final startRequest = adapter.requests.firstWhere(
+      (request) => request.path == 'auth/passkeys/login/start',
+    );
+    expect(startRequest.data, {
+      'email': 'story-demo@example.com',
+      'allowExternalPasskeys': true,
+    });
     expect(
       authenticator.lastRequest?.preferImmediatelyAvailableCredentials,
       isFalse,
     );
     expect(authenticator.lastRequest?.mediation, MediationType.Required);
+  });
+
+  test('signIn keeps external passkey flag off by default', () async {
+    final authenticator = _RecordingAuthenticateAuthenticator();
+    final adapter = _successfulPasskeySignInAdapter();
+    final service = PasskeyService(
+      publicDio: Dio()..httpClientAdapter = adapter,
+      authenticatedDio: Dio(),
+      authenticator: authenticator,
+    );
+
+    final tokens = await service.signIn('story-demo@example.com');
+
+    expect(tokens.accessToken, 'access-token');
+    final startRequest = adapter.requests.firstWhere(
+      (request) => request.path == 'auth/passkeys/login/start',
+    );
+    expect(startRequest.data, {'email': 'story-demo@example.com'});
+    expect(
+      authenticator.lastRequest?.preferImmediatelyAvailableCredentials,
+      isTrue,
+    );
   });
 
   test('registerCurrentUserPasskey returns the device credential id', () async {

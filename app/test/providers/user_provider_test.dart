@@ -1,4 +1,6 @@
 import 'package:conscia_app/providers/auth_provider.dart';
+import 'package:conscia_app/providers/sign_in_preference_provider.dart';
+import 'package:conscia_app/providers/usage_provider.dart';
 import 'package:conscia_app/providers/user_provider.dart';
 import 'package:conscia_app/services/auth_service.dart';
 import 'package:conscia_app/services/user_service.dart';
@@ -6,6 +8,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class _FakeAuthService extends AuthService {
   _FakeAuthService() : super(Dio());
@@ -67,6 +70,8 @@ class _FakeUserService extends UserService {
 void main() {
   test('currentUserProvider refreshes when authenticated user changes',
       () async {
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
     final fakeAuthNotifier = _TestAuthNotifier(
       const AuthState(
         status: AuthStatus.authenticated,
@@ -96,6 +101,7 @@ void main() {
       overrides: [
         authProvider.overrideWith((ref) => fakeAuthNotifier),
         userServiceProvider.overrideWithValue(fakeUserService),
+        sharedPreferencesProvider.overrideWithValue(prefs),
       ],
     );
     addTearDown(container.dispose);
@@ -119,6 +125,8 @@ void main() {
 
   test('currentSessionUserProvider hides stale profile while switching users',
       () async {
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
     final fakeAuthNotifier = _TestAuthNotifier(
       const AuthState(
         status: AuthStatus.authenticated,
@@ -148,6 +156,7 @@ void main() {
       overrides: [
         authProvider.overrideWith((ref) => fakeAuthNotifier),
         userServiceProvider.overrideWithValue(fakeUserService),
+        sharedPreferencesProvider.overrideWithValue(prefs),
       ],
     );
     addTearDown(container.dispose);
@@ -165,5 +174,91 @@ void main() {
     );
 
     expect(container.read(currentSessionUserProvider), isNull);
+  });
+
+  test('currentUserProvider remembers profile display name over email fallback',
+      () async {
+    SharedPreferences.setMockInitialValues({
+      rememberedSignInEmailPreferenceKey: 'story-demo@example.com',
+      rememberedSignInDisplayNamePreferenceKey: 'story-demo@example.com',
+    });
+    final prefs = await SharedPreferences.getInstance();
+    final fakeAuthNotifier = _TestAuthNotifier(
+      const AuthState(
+        status: AuthStatus.authenticated,
+        userId: 'user-1',
+      ),
+    );
+    final fakeUserService = _FakeUserService({
+      'user-1': UserProfile(
+        id: 'user-1',
+        email: 'story-demo@example.com',
+        displayName: 'Story Demo',
+        currencyCode: 'USD',
+        locale: 'en_US',
+        createdAt: DateTime(2026),
+        hasCompletedOnboarding: true,
+      ),
+    })
+      ..activeUserId = 'user-1';
+
+    final container = ProviderContainer(
+      overrides: [
+        authProvider.overrideWith((ref) => fakeAuthNotifier),
+        userServiceProvider.overrideWithValue(fakeUserService),
+        sharedPreferencesProvider.overrideWithValue(prefs),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    await container.read(currentUserProvider.future);
+
+    expect(
+      prefs.getString(rememberedSignInDisplayNamePreferenceKey),
+      'Story Demo',
+    );
+  });
+
+  test('currentUserProvider keeps claimed display name when profile loads',
+      () async {
+    SharedPreferences.setMockInitialValues({
+      rememberedSignInEmailPreferenceKey: 'story-demo@example.com',
+      rememberedSignInDisplayNamePreferenceKey: 'Claimed Name',
+    });
+    final prefs = await SharedPreferences.getInstance();
+    final fakeAuthNotifier = _TestAuthNotifier(
+      const AuthState(
+        status: AuthStatus.authenticated,
+        userId: 'user-1',
+      ),
+    );
+    final fakeUserService = _FakeUserService({
+      'user-1': UserProfile(
+        id: 'user-1',
+        email: 'story-demo@example.com',
+        displayName: 'Profile Name',
+        currencyCode: 'USD',
+        locale: 'en_US',
+        createdAt: DateTime(2026),
+        hasCompletedOnboarding: true,
+      ),
+    })
+      ..activeUserId = 'user-1';
+
+    final container = ProviderContainer(
+      overrides: [
+        authProvider.overrideWith((ref) => fakeAuthNotifier),
+        userServiceProvider.overrideWithValue(fakeUserService),
+        sharedPreferencesProvider.overrideWithValue(prefs),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    await container.read(currentUserProvider.future);
+
+    expect(
+      prefs.getString(rememberedSignInDisplayNamePreferenceKey),
+      'Claimed Name',
+    );
   });
 }

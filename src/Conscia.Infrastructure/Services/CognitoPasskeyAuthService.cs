@@ -207,7 +207,10 @@ public sealed class CognitoPasskeyAuthService : IPasskeyAuthService
             ct);
     }
 
-    public async Task<StartPasskeyAuthenticationResponse> StartAuthenticationAsync(string email, CancellationToken ct = default)
+    public async Task<StartPasskeyAuthenticationResponse> StartAuthenticationAsync(
+        string email,
+        CancellationToken ct = default,
+        bool allowExternalPasskeys = false)
     {
         var normalizedEmail = NormalizeEmail(email);
         InitiateAuthResponse response;
@@ -245,6 +248,11 @@ public sealed class CognitoPasskeyAuthService : IPasskeyAuthService
         if (string.IsNullOrWhiteSpace(credentialRequestOptions))
         {
             throw CreatePasskeyUnavailable(normalizedEmail, response, "blank credential request options");
+        }
+
+        if (allowExternalPasskeys)
+        {
+            credentialRequestOptions = AddHybridTransportToAllowedCredentials(credentialRequestOptions);
         }
 
         return new StartPasskeyAuthenticationResponse(
@@ -458,6 +466,35 @@ public sealed class CognitoPasskeyAuthService : IPasskeyAuthService
 
     private static string? SerializeDocument(string? documentJson)
         => documentJson;
+
+    private static string AddHybridTransportToAllowedCredentials(string credentialRequestOptions)
+    {
+        var node = JsonNode.Parse(credentialRequestOptions);
+        if (node is not JsonObject root ||
+            root["allowCredentials"] is not JsonArray allowedCredentials)
+        {
+            return credentialRequestOptions;
+        }
+
+        foreach (var credential in allowedCredentials.OfType<JsonObject>())
+        {
+            if (credential["transports"] is not JsonArray transports ||
+                HasTransport(transports, "hybrid"))
+            {
+                continue;
+            }
+
+            transports.Add("hybrid");
+        }
+
+        return root.ToJsonString();
+    }
+
+    private static bool HasTransport(JsonArray transports, string expected)
+        => transports.Any(transport =>
+            transport is JsonValue value &&
+            value.TryGetValue<string>(out var actual) &&
+            string.Equals(actual, expected, StringComparison.OrdinalIgnoreCase));
 
     private static Document ParseJsonDocument(string json)
     {

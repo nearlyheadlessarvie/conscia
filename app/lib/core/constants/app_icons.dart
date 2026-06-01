@@ -270,7 +270,7 @@ List<List<dynamic>> _hugeIconFor(AppIconKey key) {
     AppIconKey.aiReflect =>
       HugeIconsStrokeRounded.aiContentGenerator01,
     AppIconKey.payments => HugeIconsStrokeRounded.payment02,
-    AppIconKey.logout => HugeIconsStrokeRounded.logout01,
+    AppIconKey.logout => HugeIconsStrokeRounded.logout05,
     AppIconKey.language => HugeIconsStrokeRounded.languageCircle,
     AppIconKey.currency => HugeIconsStrokeRounded.exchangeDollar,
     AppIconKey.location => HugeIconsStrokeRounded.location04,

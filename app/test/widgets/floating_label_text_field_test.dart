@@ -120,4 +120,24 @@ void main() {
 
     expect(focusNode.hasFocus, isTrue);
   });
+
+  testWidgets('FloatingLabelTextField renders inline errors without icon',
+      (tester) async {
+    final controller = TextEditingController(text: 'not-an-email');
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: FloatingLabelTextField(
+            controller: controller,
+            label: 'Email',
+            errorText: 'Enter a valid email',
+          ),
+        ),
+      ),
+    );
+
+    expect(find.text('Enter a valid email'), findsOneWidget);
+    expect(find.textContaining('⚠'), findsNothing);
+  });
 }

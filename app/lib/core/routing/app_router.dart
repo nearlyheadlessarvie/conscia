@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../providers/auth_provider.dart';
 import '../../providers/conscience_journey_provider.dart';
+import '../../providers/sign_in_preference_provider.dart';
 import '../../providers/user_provider.dart';
 import '../../services/user_service.dart';
 import '../../screens/assistant/pre_purchase_screen.dart';
@@ -87,7 +88,6 @@ abstract class AppRoutes {
 }
 
 const _hasOnboardedKey = 'has_completed_onboarding';
-const _lastEmailKey = 'last_login_email';
 
 Future<bool> hasCompletedOnboarding() async {
   final prefs = await SharedPreferences.getInstance();
@@ -106,12 +106,12 @@ Future<void> clearOnboardingComplete() async {
 
 Future<void> saveLastEmail(String email) async {
   final prefs = await SharedPreferences.getInstance();
-  await prefs.setString(_lastEmailKey, email);
+  await prefs.setString(rememberedSignInEmailPreferenceKey, email.trim());
 }
 
 Future<String?> getLastEmail() async {
   final prefs = await SharedPreferences.getInstance();
-  return prefs.getString(_lastEmailKey);
+  return prefs.getString(rememberedSignInEmailPreferenceKey);
 }
 
 String familyInviteRoute({String? inviteId}) {

@@ -248,13 +248,16 @@ public static class AuthEndpoints
             StartPasskeyAuthenticationResponse result;
             try
             {
-                result = await passkeys.StartAuthenticationAsync(req.Email, ctx.RequestAborted);
+                result = await passkeys.StartAuthenticationAsync(
+                    req.Email,
+                    ctx.RequestAborted,
+                    req.AllowExternalPasskeys);
             }
             catch (PasskeyAuthenticationUnavailableException)
             {
                 return Results.BadRequest(new
                 {
-                    error = "Couldn't sign in with that passkey. Try again or sign in with email."
+                    error = "Couldn't sign in with that passkey. Try again or use another sign-in method."
                 });
             }
 

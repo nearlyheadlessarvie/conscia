@@ -48,7 +48,7 @@ class PasskeyCredential {
 enum PasskeyOperation { signIn, register, delete }
 
 const _genericPasskeySignInFailureMessage =
-    "Couldn't sign in with that passkey. Try again or sign in with email.";
+    "Couldn't sign in with that passkey. Try again or use another sign-in method.";
 
 class ExistingPasskeyRegistrationException implements Exception {
   const ExistingPasskeyRegistrationException(this.source);
@@ -103,7 +103,11 @@ class PasskeyService {
   }) async {
     final startResponse = await _publicDio.post(
       ApiConstants.passkeyLoginStart,
-      data: {'email': email},
+      data: {
+        'email': email,
+        if (!preferImmediatelyAvailableCredentials)
+          'allowExternalPasskeys': true,
+      },
     );
     final startData = startResponse.data as Map<String, dynamic>;
     final request = AuthenticateRequestType.fromJsonString(

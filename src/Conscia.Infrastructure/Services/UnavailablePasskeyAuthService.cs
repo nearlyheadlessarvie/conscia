@@ -32,7 +32,8 @@ public sealed class UnavailablePasskeyAuthService : IPasskeyAuthService
 
     public Task<StartPasskeyAuthenticationResponse> StartAuthenticationAsync(
         string email,
-        CancellationToken ct = default) =>
+        CancellationToken ct = default,
+        bool allowExternalPasskeys = false) =>
         throw new InvalidOperationException(Message);
 
     public Task<AuthResult> CompleteAuthenticationAsync(
