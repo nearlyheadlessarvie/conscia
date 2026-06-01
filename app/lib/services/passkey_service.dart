@@ -48,7 +48,7 @@ class PasskeyCredential {
 enum PasskeyOperation { signIn, register, delete }
 
 const _genericPasskeySignInFailureMessage =
-    "Couldn't sign in with that passkey. Try again or sign in with password.";
+    "Couldn't sign in with that passkey. Try again or use another sign-in method.";
 
 class ExistingPasskeyRegistrationException implements Exception {
   const ExistingPasskeyRegistrationException(this.source);
