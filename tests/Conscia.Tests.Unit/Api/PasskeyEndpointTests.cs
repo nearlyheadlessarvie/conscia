@@ -140,7 +140,7 @@ public class PasskeyEndpointTests
         var body = await response.Content.ReadFromJsonAsync<Dictionary<string, string>>();
         Assert.NotNull(body);
         Assert.Equal(
-            "Couldn't sign in with that passkey. Try again or sign in with email.",
+            "Couldn't sign in with that passkey. Try again or sign in with password.",
             body!["error"]);
     }
 
