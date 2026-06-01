@@ -245,7 +245,7 @@ String passkeyDeviceRemovalInstructions({
     TargetPlatform.android =>
       'Also remove the saved passkey in Google Password Manager > Passwords & passkeys > getconscia.com before setting it up again.',
     TargetPlatform.iOS =>
-      'Also remove the saved passkey in iOS Settings > Passwords > getconscia.com before setting it up again.',
+      'Also remove the saved passkey in the Passwords app > getconscia.com before setting it up again.',
     TargetPlatform.macOS =>
       'Also remove the saved passkey in macOS System Settings > Passwords > getconscia.com before setting it up again.',
     TargetPlatform.windows =>

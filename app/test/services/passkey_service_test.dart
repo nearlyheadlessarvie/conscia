@@ -168,7 +168,15 @@ void main() {
       friendlyPasskeyErrorMessage(
         ExcludeCredentialsCanNotBeRegisteredException(),
       ),
-      'A passkey may already be saved on this device. Also remove the saved passkey in iOS Settings > Passwords > getconscia.com before setting it up again.',
+      'A passkey may already be saved on this device. Also remove the saved passkey in the Passwords app > getconscia.com before setting it up again.',
+    );
+  });
+
+  test('passkeyDeviceRemovalInstructions returns iOS Passwords app guidance',
+      () {
+    expect(
+      passkeyDeviceRemovalInstructions(platform: TargetPlatform.iOS),
+      'Also remove the saved passkey in the Passwords app > getconscia.com before setting it up again.',
     );
   });
 
