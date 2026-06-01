@@ -571,7 +571,7 @@ void main() {
     expect(prefs.getBool(showInitialSignInPreferenceKey), isFalse);
   });
 
-  test('login falls back to email-derived remembered display name', () async {
+  test('login falls back to email when claims omit display name', () async {
     SharedPreferences.setMockInitialValues({});
     final prefs = await SharedPreferences.getInstance();
     final service = _FakeAuthService(
@@ -587,7 +587,7 @@ void main() {
 
     expect(
       prefs.getString(rememberedSignInDisplayNamePreferenceKey),
-      'Story Demo',
+      'story-demo@example.com',
     );
   });
 

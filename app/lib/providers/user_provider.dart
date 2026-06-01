@@ -4,6 +4,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'auth_provider.dart';
+import 'sign_in_preference_provider.dart';
 import '../core/network/dio_client.dart';
 import '../services/user_service.dart';
 
@@ -18,7 +19,9 @@ final currentUserProvider = FutureProvider<UserProfile>((ref) async {
   }
 
   final service = ref.watch(userServiceProvider);
-  return service.getProfile();
+  final profile = await service.getProfile();
+  await _rememberProfileSignInIdentity(ref, profile);
+  return profile;
 });
 
 final currentSessionUserAsyncProvider =
@@ -43,6 +46,37 @@ final currentSessionUserAsyncProvider =
 final currentSessionUserProvider = Provider<UserProfile?>((ref) {
   return ref.watch(currentSessionUserAsyncProvider).valueOrNull;
 });
+
+Future<void> _rememberProfileSignInIdentity(
+  Ref ref,
+  UserProfile profile,
+) async {
+  final email = _normalizeEmail(profile.email);
+  if (email == null) return;
+
+  final current = ref.read(rememberedSignInPreferenceProvider);
+  final sameEmail = current.email == email;
+  if (sameEmail && !_hasFallbackDisplayName(current.displayName, email)) {
+    return;
+  }
+
+  await ref.read(rememberedSignInPreferenceProvider.notifier).remember(
+        email: email,
+        displayName: profile.displayName,
+      );
+}
+
+bool _hasFallbackDisplayName(String? displayName, String email) {
+  final trimmed = displayName?.trim();
+  if (trimmed == null || trimmed.isEmpty) return true;
+  if (_normalizeEmail(trimmed) == email) return true;
+  return trimmed == rememberedDisplayNameFromEmail(email);
+}
+
+String? _normalizeEmail(String? email) {
+  final trimmed = email?.trim().toLowerCase();
+  return trimmed == null || trimmed.isEmpty ? null : trimmed;
+}
 
 ({String currency, String locale}) deviceDefaults() {
   final deviceLocale = _bestDeviceLocale();

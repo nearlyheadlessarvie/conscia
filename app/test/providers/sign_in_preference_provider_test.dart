@@ -56,6 +56,24 @@ void main() {
     expect(prefs.getBool(showInitialSignInPreferenceKey), isFalse);
   });
 
+  test('remembered sign-in preference falls back to email', () async {
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+    final container = ProviderContainer(
+      overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
+    );
+    addTearDown(container.dispose);
+
+    await container.read(rememberedSignInPreferenceProvider.notifier).remember(
+          email: ' Story-Demo@Example.COM ',
+        );
+
+    final preference = container.read(rememberedSignInPreferenceProvider);
+    expect(preference.email, 'story-demo@example.com');
+    expect(preference.displayName, 'story-demo@example.com');
+    expect(preference.displayNameOrEmail, 'story-demo@example.com');
+  });
+
   test('not you shows initial sign-in without clearing identity', () async {
     SharedPreferences.setMockInitialValues({
       rememberedSignInEmailPreferenceKey: 'story-demo@example.com',

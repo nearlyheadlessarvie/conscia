@@ -82,8 +82,7 @@ Future<RememberedSignInPreference> persistRememberedSignInIdentity(
     return _loadRememberedSignIn(prefs);
   }
 
-  final normalizedDisplayName =
-      _normalizeText(displayName) ?? rememberedDisplayNameFromEmail(email);
+  final normalizedDisplayName = _normalizeText(displayName) ?? normalizedEmail;
 
   await prefs.setString(rememberedSignInEmailPreferenceKey, normalizedEmail);
   await prefs.setString(
