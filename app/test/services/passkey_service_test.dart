@@ -195,7 +195,7 @@ void main() {
           null,
         ),
       ),
-      "Couldn't sign in with that passkey. Try again or sign in with email.",
+      "Couldn't sign in with that passkey. Try again or sign in with password.",
     );
   });
 
@@ -203,7 +203,7 @@ void main() {
       () {
     expect(
       friendlyPasskeyErrorMessage(NoCredentialsAvailableException()),
-      "Couldn't sign in with that passkey. Try again or sign in with email.",
+      "Couldn't sign in with that passkey. Try again or sign in with password.",
     );
   });
 

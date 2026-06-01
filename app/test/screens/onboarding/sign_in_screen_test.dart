@@ -723,7 +723,7 @@ void main() {
     expect(prefs.getBool(passkeyFirstSignInEnabledPreferenceKey), isFalse);
     expect(
       find.text(
-          "Couldn't sign in with that passkey. Try again or sign in with email."),
+          "Couldn't sign in with that passkey. Try again or sign in with password."),
       findsOneWidget,
     );
   });
