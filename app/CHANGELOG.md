@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.2.5](https://github.com/nearlyheadlessarvie/conscia/compare/app/v2.2.4...app/v2.2.5) (2026-06-01)
+
+
+### Bug Fixes
+
+* **app:** improve passkey management ([#196](https://github.com/nearlyheadlessarvie/conscia/issues/196)) ([b3572ee](https://github.com/nearlyheadlessarvie/conscia/commit/b3572eeef2e0c9f12cc539c71776021c7e11da14))
+
 ## [2.2.4](https://github.com/nearlyheadlessarvie/conscia/compare/app/v2.2.3...app/v2.2.4) (2026-05-31)
 
 
