@@ -200,6 +200,19 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
     );
   }
 
+  Future<void> _showInitialSignIn() async {
+    await ref
+        .read(rememberedSignInPreferenceProvider.notifier)
+        .showInitialSignIn();
+    if (!mounted) return;
+    setState(() {
+      _showPasswordSignIn = false;
+      _errorMessage = null;
+      _emailFieldError = null;
+      _passwordFieldError = null;
+    });
+  }
+
   void _dismissKeyboard() {
     FocusManager.instance.primaryFocus?.unfocus();
   }
@@ -268,6 +281,12 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
     final showPasskeyPriority =
         hasReturningIdentity && canUseRememberedPasskey && !_showPasswordSignIn;
     final showReturningPassword = hasReturningIdentity && !showPasskeyPriority;
+    final introTitle = hasReturningIdentity
+        ? 'Welcome back, ${rememberedSignIn.displayNameOrEmail}'
+        : 'Welcome back';
+    final introSubtitle = hasReturningIdentity
+        ? 'Pick up where you left off with a little more calm.'
+        : 'Return to your money rhythm with a little more calm.';
 
     return Scaffold(
       extendBodyBehindAppBar: true,
@@ -293,11 +312,16 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    const AuthIntroPanel(
-                      title: 'Welcome back',
-                      subtitle:
-                          'Return to your money rhythm with a little more calm.',
+                    AuthIntroPanel(
+                      title: introTitle,
+                      subtitle: introSubtitle,
                       icon: AppIconKey.sparkleGuidance,
+                      action: hasReturningIdentity
+                          ? TextButton(
+                              onPressed: _isLoading ? null : _showInitialSignIn,
+                              child: const Text('Not you?'),
+                            )
+                          : null,
                     ),
                     Padding(
                       padding: EdgeInsets.fromLTRB(
@@ -323,31 +347,19 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                           ],
                           if (showPasskeyPriority || showReturningPassword)
                             _ReturningSignIn(
-                              displayName: rememberedSignIn.displayNameOrEmail,
                               email: rememberedEmail,
                               passwordController: _passwordController,
                               obscurePassword: _obscurePassword,
                               passwordError: _passwordFieldError,
                               isLoading: _isLoading,
                               showPasskeyPriority: showPasskeyPriority,
-                              canUsePasskey: canUseRememberedPasskey,
-                              onNotYou: () async {
-                                await ref
-                                    .read(
-                                      rememberedSignInPreferenceProvider
-                                          .notifier,
-                                    )
-                                    .showInitialSignIn();
-                                if (!mounted) return;
-                                setState(() {
-                                  _showPasswordSignIn = false;
-                                  _errorMessage = null;
-                                  _emailFieldError = null;
-                                  _passwordFieldError = null;
-                                });
-                              },
+                              canUsePasskey: passkeysAvailable,
                               onPasskeySignIn: () =>
                                   _signInWithPasskey(rememberedEmail),
+                              onExternalPasskeySignIn: () => _signInWithPasskey(
+                                rememberedEmail,
+                                preferImmediatelyAvailableCredentials: false,
+                              ),
                               onPasswordSignIn: () {
                                 setState(() {
                                   _showPasswordSignIn = true;
@@ -557,7 +569,6 @@ class _InitialEmailPasswordSignIn extends StatelessWidget {
 
 class _ReturningSignIn extends StatelessWidget {
   const _ReturningSignIn({
-    required this.displayName,
     required this.email,
     required this.passwordController,
     required this.obscurePassword,
@@ -565,8 +576,8 @@ class _ReturningSignIn extends StatelessWidget {
     required this.isLoading,
     required this.showPasskeyPriority,
     required this.canUsePasskey,
-    required this.onNotYou,
     required this.onPasskeySignIn,
+    required this.onExternalPasskeySignIn,
     required this.onPasswordSignIn,
     required this.onPasswordVisibilityChanged,
     required this.onPasswordChanged,
@@ -574,7 +585,6 @@ class _ReturningSignIn extends StatelessWidget {
     required this.onForgotPassword,
   });
 
-  final String displayName;
   final String email;
   final TextEditingController passwordController;
   final bool obscurePassword;
@@ -582,8 +592,8 @@ class _ReturningSignIn extends StatelessWidget {
   final bool isLoading;
   final bool showPasskeyPriority;
   final bool canUsePasskey;
-  final VoidCallback onNotYou;
   final VoidCallback onPasskeySignIn;
+  final VoidCallback onExternalPasskeySignIn;
   final VoidCallback onPasswordSignIn;
   final VoidCallback onPasswordVisibilityChanged;
   final ValueChanged<String> onPasswordChanged;
@@ -595,10 +605,6 @@ class _ReturningSignIn extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        _RememberedIdentityHeader(
-          displayName: displayName,
-          onNotYou: onNotYou,
-        ),
         if (showPasskeyPriority)
           _PasskeyPrioritySignIn(
             email: email,
@@ -617,55 +623,8 @@ class _ReturningSignIn extends StatelessWidget {
             onPasswordChanged: onPasswordChanged,
             onSubmit: onSubmitPassword,
             onForgotPassword: onForgotPassword,
-            onPasskeySignIn: onPasskeySignIn,
+            onPasskeySignIn: onExternalPasskeySignIn,
           ),
-      ],
-    );
-  }
-}
-
-class _RememberedIdentityHeader extends StatelessWidget {
-  const _RememberedIdentityHeader({
-    required this.displayName,
-    required this.onNotYou,
-  });
-
-  final String displayName;
-  final VoidCallback onNotYou;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Welcome back,',
-          style: textTheme.titleMedium?.copyWith(
-            color: colors.onSurfaceVariant,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Expanded(
-              child: Text(
-                displayName,
-                style: textTheme.headlineSmall?.copyWith(
-                  color: colors.onSurface,
-                  height: 1.12,
-                ),
-              ),
-            ),
-            TextButton(
-              onPressed: onNotYou,
-              child: const Text('Not you?'),
-            ),
-          ],
-        ),
       ],
     );
   }

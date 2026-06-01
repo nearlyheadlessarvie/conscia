@@ -526,8 +526,8 @@ void main() {
       passkeyService: passkeyService,
     );
 
-    expect(find.text('Welcome back,'), findsOneWidget);
-    expect(find.text('Story Demo'), findsOneWidget);
+    expect(find.text('Welcome back,'), findsNothing);
+    expect(find.text('Welcome back, Story Demo'), findsOneWidget);
     expect(find.text('Not you?'), findsOneWidget);
     expect(find.text('story-demo@example.com'), findsOneWidget);
     expect(find.byKey(const ValueKey('saved-passkey-primary')), findsOneWidget);
@@ -540,6 +540,37 @@ void main() {
 
     expect(passkeyService.lastSignInEmail, 'story-demo@example.com');
     expect(passkeyService.lastPreferImmediatelyAvailableCredentials, isTrue);
+    expect(authNotifier.completedExternalEmail, 'story-demo@example.com');
+  });
+
+  testWidgets(
+      'returning password mode supports external passkey without local passkey',
+      (tester) async {
+    SharedPreferences.setMockInitialValues({
+      rememberedSignInEmailPreferenceKey: 'story-demo@example.com',
+      rememberedSignInDisplayNamePreferenceKey: 'Story Demo',
+    });
+    final authNotifier = _RecordingAuthNotifier();
+    final passkeyService = _RecordingPasskeyService();
+
+    await _pumpSignInScreen(
+      tester,
+      authNotifier: authNotifier,
+      passkeysAvailable: true,
+      passkeyService: passkeyService,
+    );
+
+    expect(find.text('Welcome back, Story Demo'), findsOneWidget);
+    expect(find.byKey(const ValueKey('saved-passkey-primary')), findsNothing);
+    expect(find.byType(TextField), findsOneWidget);
+    expect(find.text('Sign in with passkey'), findsOneWidget);
+
+    await tester.ensureVisible(find.text('Sign in with passkey'));
+    await tester.tap(find.text('Sign in with passkey'));
+    await tester.pump();
+
+    expect(passkeyService.lastSignInEmail, 'story-demo@example.com');
+    expect(passkeyService.lastPreferImmediatelyAvailableCredentials, isFalse);
     expect(authNotifier.completedExternalEmail, 'story-demo@example.com');
   });
 
@@ -562,7 +593,7 @@ void main() {
     await tester.tap(find.text('Sign in with password'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Story Demo'), findsOneWidget);
+    expect(find.text('Welcome back, Story Demo'), findsOneWidget);
     expect(find.byType(TextField), findsOneWidget);
     expect(find.text('Forgot password?'), findsOneWidget);
     expect(find.widgetWithText(FilledButton, 'Sign In'), findsOneWidget);
