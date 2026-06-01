@@ -3,6 +3,7 @@ import 'dart:typed_data';
 
 import 'package:conscia_app/core/routing/app_router.dart';
 import 'package:conscia_app/providers/auth_provider.dart';
+import 'package:conscia_app/providers/sign_in_preference_provider.dart';
 import 'package:conscia_app/services/auth_service.dart';
 import 'package:conscia_app/services/cognito_managed_login_service.dart';
 import 'package:dio/dio.dart';
@@ -14,6 +15,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 String _fakeJwt({
   required DateTime expiresAt,
+  Map<String, Object?> claims = const {},
 }) {
   final header = base64Url.encode(utf8.encode('{"alg":"none","typ":"JWT"}'));
   final payload = base64Url.encode(
@@ -21,6 +23,7 @@ String _fakeJwt({
       jsonEncode({
         'sub': 'user-1',
         'exp': expiresAt.millisecondsSinceEpoch ~/ 1000,
+        ...claims,
       }),
     ),
   );
@@ -531,6 +534,82 @@ void main() {
     expect(notifier.state.pendingEmail, 'new@example.com');
     expect(notifier.state.accessToken, isNull);
     expect(await storage.read(key: 'access_token'), isNull);
+  });
+
+  test('login stores remembered identity and clears initial sign-in flag',
+      () async {
+    SharedPreferences.setMockInitialValues({
+      showInitialSignInPreferenceKey: true,
+    });
+    final prefs = await SharedPreferences.getInstance();
+    final service = _FakeAuthService(
+      AuthTokens(
+        accessToken: 'access.token',
+        idToken: _fakeJwt(
+          expiresAt: DateTime.now().add(const Duration(hours: 1)),
+          claims: {
+            'email': 'Story-Demo@Example.COM',
+            'name': 'Story Demo',
+          },
+        ),
+        refreshToken: 'refresh-token',
+        userId: 'user-1',
+      ),
+    );
+    final notifier = AuthNotifier(service, _FakeSecureStorage());
+
+    await notifier.login('Story-Demo@Example.COM', 'SecureP@ss123');
+
+    expect(
+      prefs.getString(rememberedSignInEmailPreferenceKey),
+      'story-demo@example.com',
+    );
+    expect(
+      prefs.getString(rememberedSignInDisplayNamePreferenceKey),
+      'Story Demo',
+    );
+    expect(prefs.getBool(showInitialSignInPreferenceKey), isFalse);
+  });
+
+  test('login falls back to email-derived remembered display name', () async {
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+    final service = _FakeAuthService(
+      const AuthTokens(
+        accessToken: 'access.token',
+        refreshToken: 'refresh-token',
+        userId: 'user-1',
+      ),
+    );
+    final notifier = AuthNotifier(service, _FakeSecureStorage());
+
+    await notifier.login('story-demo@example.com', 'SecureP@ss123');
+
+    expect(
+      prefs.getString(rememberedSignInDisplayNamePreferenceKey),
+      'Story Demo',
+    );
+  });
+
+  test('login requiring confirmation does not store remembered identity',
+      () async {
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+    final service = _FakeAuthService(
+      const AuthTokens(
+        accessToken: 'verified.access.token',
+        refreshToken: 'verified-refresh-token',
+        userId: 'verified-user',
+      ),
+    )..loginError = const AuthConfirmationRequiredException(
+        email: 'new@example.com',
+      );
+    final notifier = AuthNotifier(service, _FakeSecureStorage());
+
+    await notifier.login('new@example.com', 'SecureP@ss123');
+
+    expect(prefs.getString(rememberedSignInDisplayNamePreferenceKey), isNull);
+    expect(prefs.getBool(showInitialSignInPreferenceKey), isNull);
   });
 
   test('login requiring password change stores challenge without tokens',

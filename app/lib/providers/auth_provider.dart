@@ -12,6 +12,7 @@ import '../core/errors/app_error.dart';
 import '../core/routing/app_router.dart';
 import '../services/auth_service.dart';
 import '../services/cognito_managed_login_service.dart';
+import 'sign_in_preference_provider.dart';
 
 enum AuthStatus {
   unauthenticated,
@@ -182,19 +183,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
     );
     try {
       final tokens = await _authService.login(email, password);
-      await _persistTokens(tokens);
-      saveLastEmail(email);
-      state = state.copyWith(
-        status: AuthStatus.authenticated,
-        accessToken: tokens.accessToken,
-        idToken: tokens.idToken,
-        refreshToken: tokens.refreshToken,
-        userId: tokens.userId,
-        pendingEmail: null,
-        isLoading: false,
-        isRestoringSession: false,
-        wasExplicitLogout: false,
-      );
+      await _setAuthenticated(tokens, rememberedEmail: email);
     } on AuthConfirmationRequiredException catch (e) {
       saveLastEmail(email);
       await _rememberPendingConfirmation(e.email, password: password);
@@ -226,8 +215,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
         session,
         password,
       );
-      await saveLastEmail(email);
-      await _setAuthenticated(tokens);
+      await _setAuthenticated(tokens, rememberedEmail: email);
     } catch (e, s) {
       final error = AppError.from(e, stackTrace: s);
       state = state.copyWith(isLoading: false, error: error.userMessage);
@@ -259,7 +247,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       }
 
       final tokens = await _authService.login(email, password);
-      await _setAuthenticated(tokens);
+      await _setAuthenticated(tokens, rememberedEmail: email);
     } catch (e, s) {
       final error = AppError.from(e, stackTrace: s);
       state = state.copyWith(isLoading: false, error: error.userMessage);
@@ -297,7 +285,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
       final tokens = await _authService.login(email, password);
       _pendingPassword = null;
-      await _setAuthenticated(tokens);
+      await _setAuthenticated(tokens, rememberedEmail: email);
     } catch (e, s) {
       final error = AppError.from(e, stackTrace: s);
       state = state.copyWith(isLoading: false, error: error.userMessage);
@@ -375,8 +363,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
         password,
       );
       final tokens = await _authService.login(normalizedEmail, password);
-      await saveLastEmail(normalizedEmail);
-      await _setAuthenticated(tokens);
+      await _setAuthenticated(tokens, rememberedEmail: normalizedEmail);
     } catch (e, s) {
       final error = AppError.from(e, stackTrace: s);
       state = state.copyWith(isLoading: false, error: error.userMessage);
@@ -418,7 +405,10 @@ class AuthNotifier extends StateNotifier<AuthState> {
       if (!_useManagedLogin) {
         final tokens =
             await _authService.login('google_user@gmail.com', 'mock');
-        await _setAuthenticated(tokens);
+        await _setAuthenticated(
+          tokens,
+          rememberedEmail: 'google_user@gmail.com',
+        );
         return;
       }
       final tokens = await _signInWithManagedProvider(
@@ -449,7 +439,10 @@ class AuthNotifier extends StateNotifier<AuthState> {
       if (!_useManagedLogin) {
         final tokens = await _authService.login(
             'apple_user@privaterelay.appleid.com', 'mock');
-        await _setAuthenticated(tokens);
+        await _setAuthenticated(
+          tokens,
+          rememberedEmail: 'apple_user@privaterelay.appleid.com',
+        );
         return;
       }
       final tokens = await _signInWithManagedProvider(
@@ -474,10 +467,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
     AuthTokens tokens, {
     String? email,
   }) async {
-    if (email != null && email.trim().isNotEmpty) {
-      saveLastEmail(email.trim());
-    }
-    await _setAuthenticated(tokens);
+    await _setAuthenticated(tokens, rememberedEmail: email?.trim());
   }
 
   Future<void> continueWithManagedLogin({String? emailHint}) async {
@@ -488,10 +478,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
     );
     try {
       final tokens = await _managedLoginService.signIn(emailHint: emailHint);
-      if (emailHint != null && emailHint.trim().isNotEmpty) {
-        saveLastEmail(emailHint.trim());
-      }
-      await _setAuthenticated(tokens);
+      await _setAuthenticated(tokens, rememberedEmail: emailHint?.trim());
     } on CognitoManagedLoginCancelledException {
       state = state.copyWith(
         isLoading: false,
@@ -514,10 +501,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
     );
     try {
       final tokens = await _managedLoginService.signUp(emailHint: emailHint);
-      if (emailHint != null && emailHint.trim().isNotEmpty) {
-        saveLastEmail(emailHint.trim());
-      }
-      await _setAuthenticated(tokens);
+      await _setAuthenticated(tokens, rememberedEmail: emailHint?.trim());
     } on CognitoManagedLoginCancelledException {
       state = state.copyWith(
         isLoading: false,
@@ -697,8 +681,12 @@ class AuthNotifier extends StateNotifier<AuthState> {
     await _storage.write(key: _userIdKey, value: tokens.userId);
   }
 
-  Future<void> _setAuthenticated(AuthTokens tokens) async {
+  Future<void> _setAuthenticated(
+    AuthTokens tokens, {
+    String? rememberedEmail,
+  }) async {
     await _persistTokens(tokens);
+    await _rememberSignedInIdentity(tokens, email: rememberedEmail);
     await clearOnboardingComplete();
     await _clearPendingConfirmation();
     state = state.copyWith(
@@ -714,6 +702,45 @@ class AuthNotifier extends StateNotifier<AuthState> {
       error: null,
       wasExplicitLogout: false,
     );
+  }
+
+  Future<void> _rememberSignedInIdentity(
+    AuthTokens tokens, {
+    String? email,
+  }) async {
+    final claims = _tryDecodeJwtPayload(tokens.idToken ?? '') ??
+        _tryDecodeJwtPayload(tokens.accessToken);
+    final normalizedEmail = _normalizeEmail(email) ??
+        _normalizeEmail(_stringClaim(claims, 'email')) ??
+        _normalizeEmail(_stringClaim(claims, 'cognito:username'));
+    if (normalizedEmail == null) return;
+
+    final prefs = await SharedPreferences.getInstance();
+    await persistRememberedSignInIdentity(
+      prefs,
+      email: normalizedEmail,
+      displayName: _displayNameFromClaims(claims),
+    );
+  }
+
+  static String? _displayNameFromClaims(Map<String, dynamic>? claims) {
+    final name = _stringClaim(claims, 'name');
+    if (name != null) return name;
+
+    final givenName = _stringClaim(claims, 'given_name');
+    final familyName = _stringClaim(claims, 'family_name');
+    final combined = [
+      if (givenName != null) givenName,
+      if (familyName != null) familyName,
+    ].join(' ').trim();
+    return combined.isEmpty ? null : combined;
+  }
+
+  static String? _stringClaim(Map<String, dynamic>? claims, String key) {
+    final value = claims?[key];
+    if (value is! String) return null;
+    final trimmed = value.trim();
+    return trimmed.isEmpty ? null : trimmed;
   }
 
   Future<AuthTokens> _signInWithManagedProvider(
