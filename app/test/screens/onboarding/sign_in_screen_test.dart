@@ -161,18 +161,24 @@ class _RecordingPasskeyService extends PasskeyService {
         );
 
   String? lastSignInEmail;
+  bool? lastPreferImmediatelyAvailableCredentials;
   Object? signInError;
 
   @override
   Future<bool> isSupported() async => true;
 
   @override
-  Future<AuthTokens> signIn(String email) async {
+  Future<AuthTokens> signIn(
+    String email, {
+    bool preferImmediatelyAvailableCredentials = true,
+  }) async {
     final error = signInError;
     if (error != null) {
       throw error;
     }
     lastSignInEmail = email;
+    lastPreferImmediatelyAvailableCredentials =
+        preferImmediatelyAvailableCredentials;
     return const AuthTokens(
       accessToken: 'passkey-access-token',
       refreshToken: 'passkey-refresh-token',
@@ -247,6 +253,7 @@ void main() {
     await tester.pump();
 
     expect(passkeyService.lastSignInEmail, 'story-demo@example.com');
+    expect(passkeyService.lastPreferImmediatelyAvailableCredentials, isFalse);
     expect(authNotifier.completedExternalEmail, 'story-demo@example.com');
   });
 
@@ -507,16 +514,46 @@ void main() {
       passkeyService: passkeyService,
     );
 
-    expect(find.text('Sign in with passkey'), findsOneWidget);
+    expect(find.text('Sign in with passkey'), findsNothing);
     expect(find.text('story-demo@example.com'), findsOneWidget);
+    expect(find.text('Use another passkey'), findsOneWidget);
     expect(find.text('Sign in with email'), findsOneWidget);
+    expect(find.text('Continue with Passkey'), findsNothing);
     expect(find.byType(TextField), findsNothing);
 
-    await tester.tap(find.text('Continue with Passkey'));
+    await tester.tap(find.byKey(const ValueKey('saved-passkey-primary')));
     await tester.pump();
 
     expect(passkeyService.lastSignInEmail, 'story-demo@example.com');
+    expect(passkeyService.lastPreferImmediatelyAvailableCredentials, isTrue);
     expect(authNotifier.completedExternalEmail, 'story-demo@example.com');
+  });
+
+  testWidgets('passkey-first fallback can return from email sign in',
+      (tester) async {
+    SharedPreferences.setMockInitialValues({
+      passkeyRegisteredEmailsPreferenceKey: ['story-demo@example.com'],
+    });
+    final authNotifier = _RecordingAuthNotifier();
+
+    await _pumpSignInScreen(
+      tester,
+      authNotifier: authNotifier,
+      passkeysAvailable: true,
+      passkeyService: _RecordingPasskeyService(),
+    );
+
+    await tester.tap(find.text('Sign in with email'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(TextField), findsNWidgets(2));
+    expect(find.text('Sign in with passkey'), findsOneWidget);
+
+    await tester.tap(find.text('Sign in with passkey'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(TextField), findsNothing);
+    expect(find.byKey(const ValueKey('saved-passkey-primary')), findsOneWidget);
   });
 
   testWidgets('passkey sign in keeps the loading overlay after auth succeeds',
@@ -535,7 +572,7 @@ void main() {
       passkeyService: passkeyService,
     );
 
-    await tester.tap(find.text('Continue with Passkey'));
+    await tester.tap(find.byKey(const ValueKey('saved-passkey-primary')));
     await tester.pump();
 
     expect(
@@ -571,6 +608,7 @@ void main() {
     await tester.pump();
 
     expect(passkeyService.lastSignInEmail, 'two@example.com');
+    expect(passkeyService.lastPreferImmediatelyAvailableCredentials, isTrue);
     expect(authNotifier.completedExternalEmail, 'two@example.com');
   });
 
@@ -592,13 +630,14 @@ void main() {
       passkeyService: passkeyService,
     );
 
-    await tester.tap(find.text('Continue with Passkey'));
+    await tester.tap(find.byKey(const ValueKey('saved-passkey-primary')));
     await tester.pump();
 
     expect(prefs.getStringList(passkeyRegisteredEmailsPreferenceKey), isEmpty);
     expect(prefs.getBool(passkeyFirstSignInEnabledPreferenceKey), isFalse);
     expect(
-      find.text('No passkey was found for this account on this device.'),
+      find.text(
+          "Couldn't sign in with that passkey. Try again or sign in with email."),
       findsOneWidget,
     );
   });

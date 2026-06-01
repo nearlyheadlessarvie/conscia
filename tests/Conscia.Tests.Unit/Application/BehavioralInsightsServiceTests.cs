@@ -82,6 +82,9 @@ public class BehavioralInsightsServiceTests
     {
         var userId = Guid.NewGuid();
         var now = DateTime.UtcNow;
+        var monthKeys = Enumerable.Range(0, 3)
+            .Select(offset => now.AddMonths(offset - 2).ToString("yyyy-MM"))
+            .ToArray();
         var latestInsights = new WeeklyInsights
         {
             UserId = userId,
@@ -119,7 +122,7 @@ public class BehavioralInsightsServiceTests
                 new MonthlyCategorySpend
                 {
                     UserId = userId,
-                    MonthKey = "2026-03",
+                    MonthKey = monthKeys[0],
                     Category = "Dining",
                     NormalizedCategory = "dining",
                     CurrencyCode = "PHP",
@@ -130,7 +133,7 @@ public class BehavioralInsightsServiceTests
                 new MonthlyCategorySpend
                 {
                     UserId = userId,
-                    MonthKey = "2026-04",
+                    MonthKey = monthKeys[1],
                     Category = "Dining",
                     NormalizedCategory = "dining",
                     CurrencyCode = "PHP",
@@ -141,7 +144,7 @@ public class BehavioralInsightsServiceTests
                 new MonthlyCategorySpend
                 {
                     UserId = userId,
-                    MonthKey = "2026-05",
+                    MonthKey = monthKeys[2],
                     Category = "Dining",
                     NormalizedCategory = "dining",
                     CurrencyCode = "PHP",
@@ -152,7 +155,7 @@ public class BehavioralInsightsServiceTests
                 new MonthlyCategorySpend
                 {
                     UserId = userId,
-                    MonthKey = "2026-03",
+                    MonthKey = monthKeys[0],
                     Category = "Subscriptions",
                     NormalizedCategory = "subscriptions",
                     CurrencyCode = "PHP",
@@ -163,7 +166,7 @@ public class BehavioralInsightsServiceTests
                 new MonthlyCategorySpend
                 {
                     UserId = userId,
-                    MonthKey = "2026-04",
+                    MonthKey = monthKeys[1],
                     Category = "Subscriptions",
                     NormalizedCategory = "subscriptions",
                     CurrencyCode = "PHP",
@@ -174,7 +177,7 @@ public class BehavioralInsightsServiceTests
                 new MonthlyCategorySpend
                 {
                     UserId = userId,
-                    MonthKey = "2026-05",
+                    MonthKey = monthKeys[2],
                     Category = "Subscriptions",
                     NormalizedCategory = "subscriptions",
                     CurrencyCode = "PHP",

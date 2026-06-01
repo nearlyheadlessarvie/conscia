@@ -296,6 +296,8 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Manage passkeys'), findsOneWidget);
+    expect(
+        find.text('View and remove passkeys for this account'), findsWidgets);
     expect(find.text('Other account passkeys'), findsOneWidget);
     expect(find.text('Arvie iPhone'), findsOneWidget);
     expect(find.text('No account passkeys'), findsNothing);
@@ -329,11 +331,15 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Manage passkeys'), findsOneWidget);
+      expect(
+        find.text('View and remove passkeys for this account'),
+        findsWidgets,
+      );
       expect(find.text('This device'), findsOneWidget);
       expect(find.text('Android'), findsOneWidget);
       expect(
         find.textContaining('iOS Settings > Passwords > getconscia.com'),
-        findsOneWidget,
+        findsNothing,
       );
       expect(find.text('Remove'), findsNothing);
 
@@ -344,6 +350,14 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Forget this passkey?'), findsOneWidget);
+      expect(
+        find.text('This removes the device passkey from your account.'),
+        findsOneWidget,
+      );
+      expect(
+        find.textContaining('Passwords app > getconscia.com'),
+        findsOneWidget,
+      );
 
       await tester.tap(find.widgetWithText(FilledButton, 'Forget'));
       await tester.pumpAndSettle();
@@ -384,8 +398,12 @@ void main() {
 
     expect(find.text('Remove this passkey?'), findsOneWidget);
     expect(
+      find.text('This removes the passkey from your account.'),
+      findsOneWidget,
+    );
+    expect(
       find.text(
-        'This removes the passkey from your Conscia account. If it still exists on another device, remove it from that device\'s password manager too.',
+        'If it still exists on another device, remove it from that device\'s password manager too.',
       ),
       findsOneWidget,
     );
@@ -394,6 +412,36 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(passkeys.deletedCredentialIds, ['other-device-credential-id']);
+  });
+
+  testWidgets('security screen opens passkey confirmation on committed swipe',
+      (tester) async {
+    SharedPreferences.setMockInitialValues({
+      passkeyRegisteredEmailsPreferenceKey: ['security@example.com'],
+      passkeyRegisteredCredentialIdsPreferenceKey:
+          '{"security@example.com":"credential-id"}',
+    });
+    final prefs = await SharedPreferences.getInstance();
+    final passkeys = _RecordingPasskeyService()
+      ..credentials = const [
+        PasskeyCredential(
+          credentialId: 'credential-id',
+          friendlyName: 'iPhone',
+          relyingPartyId: 'getconscia.com',
+          transports: ['internal'],
+        ),
+      ];
+
+    await _pumpSecurityScreen(tester, prefs: prefs, passkeyService: passkeys);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Manage Passkeys'));
+    await tester.pumpAndSettle();
+
+    await tester.drag(find.text('iPhone'), const Offset(-700, 0));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Forget this passkey?'), findsOneWidget);
   });
 
   testWidgets('security screen shows one clean empty passkey state',

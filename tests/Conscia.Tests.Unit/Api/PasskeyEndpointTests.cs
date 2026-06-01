@@ -113,7 +113,7 @@ public class PasskeyEndpointTests
         var body = await response.Content.ReadFromJsonAsync<Dictionary<string, string>>();
         Assert.NotNull(body);
         Assert.Equal(
-            "No passkey is registered for this account yet. Sign in with your password, then set up a passkey in Settings.",
+            "Couldn't sign in with that passkey. Try again or sign in with email.",
             body!["error"]);
     }
 

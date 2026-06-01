@@ -2372,6 +2372,7 @@ class _SwipeableNotificationActionRowState
           foregroundColor: colors.expense,
           backgroundColor: colors.expenseSoft,
           alignment: Alignment.centerRight,
+          widthFactor: _dismissExtent,
         ),
         children: [
           _NotificationSlidableAction(
@@ -2395,6 +2396,7 @@ class _NotificationSlidablePreview extends StatelessWidget {
     required this.foregroundColor,
     required this.backgroundColor,
     required this.alignment,
+    required this.widthFactor,
   });
 
   final String label;
@@ -2402,6 +2404,7 @@ class _NotificationSlidablePreview extends StatelessWidget {
   final Color foregroundColor;
   final Color backgroundColor;
   final Alignment alignment;
+  final double widthFactor;
 
   @override
   Widget build(BuildContext context) {
@@ -2409,31 +2412,28 @@ class _NotificationSlidablePreview extends StatelessWidget {
 
     return ColoredBox(
       color: backgroundColor.withValues(alpha: 0.38),
-      child: Align(
+      child: FractionallySizedBox(
         alignment: alignment,
-        child: SizedBox(
-          width: 92,
-          height: double.infinity,
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              AppIcons.icon(
-                icon,
-                color: foregroundColor,
-                size: 20,
-              ),
-              const SizedBox(height: 4),
-              Text(
-                label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      color: colors.ink,
-                      fontWeight: FontWeight.w800,
-                    ),
-              ),
-            ],
-          ),
+        widthFactor: widthFactor,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            AppIcons.icon(
+              icon,
+              color: foregroundColor,
+              size: 20,
+            ),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: colors.ink,
+                    fontWeight: FontWeight.w800,
+                  ),
+            ),
+          ],
         ),
       ),
     );

@@ -56,6 +56,25 @@ class _SuccessfulRegisterAuthenticator extends PasskeyAuthenticator {
   }
 }
 
+class _RecordingAuthenticateAuthenticator extends PasskeyAuthenticator {
+  AuthenticateRequestType? lastRequest;
+
+  @override
+  Future<AuthenticateResponseType> authenticate(
+    AuthenticateRequestType request,
+  ) async {
+    lastRequest = request;
+    return const AuthenticateResponseType(
+      id: 'credential-id',
+      rawId: 'credential-id',
+      clientDataJSON: 'client-data',
+      authenticatorData: 'authenticator-data',
+      signature: 'signature',
+      userHandle: 'user-handle',
+    );
+  }
+}
+
 void main() {
   tearDown(() {
     AppError.resetForTests();
@@ -129,7 +148,15 @@ void main() {
           null,
         ),
       ),
-      'Passkey sign-in could not use the saved credential on this device. Sign in with email, then remove and set up the passkey again.',
+      "Couldn't sign in with that passkey. Try again or sign in with email.",
+    );
+  });
+
+  test('friendlyPasskeyErrorMessage avoids account-specific unavailable copy',
+      () {
+    expect(
+      friendlyPasskeyErrorMessage(NoCredentialsAvailableException()),
+      "Couldn't sign in with that passkey. Try again or sign in with email.",
     );
   });
 
@@ -168,7 +195,15 @@ void main() {
       friendlyPasskeyErrorMessage(
         ExcludeCredentialsCanNotBeRegisteredException(),
       ),
-      'A passkey may already be saved on this device. Also remove the saved passkey in iOS Settings > Passwords > getconscia.com before setting it up again.',
+      'A passkey may already be saved on this device. Also remove the saved passkey in the Passwords app > getconscia.com before setting it up again.',
+    );
+  });
+
+  test('passkeyDeviceRemovalInstructions returns iOS Passwords app guidance',
+      () {
+    expect(
+      passkeyDeviceRemovalInstructions(platform: TargetPlatform.iOS),
+      'Also remove the saved passkey in the Passwords app > getconscia.com before setting it up again.',
     );
   });
 
@@ -250,6 +285,71 @@ void main() {
       adapter.lastRequestOptions?.extra[useAccessTokenRequestExtraKey],
       isTrue,
     );
+  });
+
+  test('signIn can allow external passkey selection', () async {
+    final authenticator = _RecordingAuthenticateAuthenticator();
+    final adapter = _JsonAdapter(
+      (options) {
+        if (options.path == 'auth/passkeys/login/start') {
+          return ResponseBody.fromString(
+            jsonEncode({
+              'session': 'challenge-session',
+              'challengeName': 'WEB_AUTHN',
+              'credentialRequestOptions': jsonEncode({
+                'challenge': 'Y2hhbGxlbmdl',
+                'rpId': 'getconscia.com',
+                'allowCredentials': [
+                  {
+                    'type': 'public-key',
+                    'id': 'credential-id',
+                    'transports': ['internal']
+                  }
+                ],
+                'userVerification': 'preferred',
+              }),
+            }),
+            200,
+            headers: {
+              Headers.contentTypeHeader: [Headers.jsonContentType],
+            },
+          );
+        }
+
+        if (options.path == 'auth/passkeys/login/complete') {
+          return ResponseBody.fromString(
+            jsonEncode({
+              'accessToken': 'access-token',
+              'refreshToken': 'refresh-token',
+              'userId': 'user-id',
+            }),
+            200,
+            headers: {
+              Headers.contentTypeHeader: [Headers.jsonContentType],
+            },
+          );
+        }
+
+        throw StateError('Unexpected request to ${options.path}');
+      },
+    );
+    final service = PasskeyService(
+      publicDio: Dio()..httpClientAdapter = adapter,
+      authenticatedDio: Dio(),
+      authenticator: authenticator,
+    );
+
+    final tokens = await service.signIn(
+      'story-demo@example.com',
+      preferImmediatelyAvailableCredentials: false,
+    );
+
+    expect(tokens.accessToken, 'access-token');
+    expect(
+      authenticator.lastRequest?.preferImmediatelyAvailableCredentials,
+      isFalse,
+    );
+    expect(authenticator.lastRequest?.mediation, MediationType.Required);
   });
 
   test('registerCurrentUserPasskey returns the device credential id', () async {

@@ -99,6 +99,25 @@ public class CognitoPasskeyAuthServiceTests
     }
 
     [Fact]
+    public async Task StartAuthenticationAsync_UserNotFound_ThrowsFriendlyUnavailableError()
+    {
+        _cognito
+            .Setup(c => c.InitiateAuthAsync(
+                It.Is<InitiateAuthRequest>(r =>
+                    r.ClientId == "client-123" &&
+                    r.AuthFlow == AuthFlowType.USER_AUTH &&
+                    r.AuthParameters["USERNAME"] == "missing@example.com" &&
+                    r.AuthParameters["PREFERRED_CHALLENGE"] == "WEB_AUTHN"),
+                It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new UserNotFoundException("User does not exist."));
+
+        var ex = await Assert.ThrowsAsync<PasskeyAuthenticationUnavailableException>(() =>
+            _passkeys.StartAuthenticationAsync(" Missing@Example.com "));
+
+        Assert.Equal("No passkey is registered for this account yet. Sign in with your password, then set up a passkey in Settings.", ex.Message);
+    }
+
+    [Fact]
     public async Task CompleteRegistrationAsync_SendsCredentialAsJsonDocument()
     {
         const string credentialJson = """

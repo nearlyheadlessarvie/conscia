@@ -1,3 +1,4 @@
+import 'package:conscia_app/core/theme/app_colors.dart';
 import 'package:conscia_app/models/managed_category.dart';
 import 'package:conscia_app/providers/category_provider.dart';
 import 'package:conscia_app/providers/subscription_provider.dart';
@@ -290,6 +291,34 @@ void main() {
 
     expect(actions.archivedId, 'coffee');
     expect(find.text('Category archived.'), findsOneWidget);
+  });
+
+  testWidgets('category archive swipe background spans the row',
+      (tester) async {
+    final actions = _RecordingCategoryActions();
+    await _pumpScreen(
+      tester,
+      actions: actions,
+      categories: [_category(id: 'coffee', name: 'Coffee', type: 'Expense')],
+    );
+    await tester.pumpAndSettle();
+
+    await tester.drag(find.text('Coffee').first, const Offset(-120, 0));
+    await tester.pump();
+
+    final colors = Theme.of(
+      tester.element(find.byType(CategoryManagementScreen)),
+    ).appColors;
+    final expectedBackground =
+        colors.navySoft.withValues(alpha: 0.38).toARGB32();
+    final fullRowBackground = find.byWidgetPredicate(
+      (widget) =>
+          widget is ColoredBox && widget.color.toARGB32() == expectedBackground,
+    );
+    expect(
+      fullRowBackground,
+      findsOneWidget,
+    );
   });
 
   testWidgets('default category rows use centralized colors over stale blue',

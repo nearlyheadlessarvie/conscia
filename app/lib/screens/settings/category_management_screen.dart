@@ -535,6 +535,7 @@ class _CategoryRow extends StatelessWidget {
       background: const SizedBox.shrink(),
       secondaryBackground: SwipeActionBackground(
         alignment: Alignment.centerRight,
+        backgroundColor: colors.navySoft.withValues(alpha: 0.38),
         padding: const EdgeInsets.only(right: 0),
         children: [
           SwipeActionTile(
@@ -542,7 +543,7 @@ class _CategoryRow extends StatelessWidget {
             icon: AppIconKey.archive,
             label: 'Archive',
             foregroundColor: colors.deepNavy,
-            backgroundColor: colors.navySoft,
+            backgroundColor: colors.navySoft.withValues(alpha: 0.38),
             onTap: () => onArchive(category),
           ),
         ],

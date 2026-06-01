@@ -742,15 +742,17 @@ class _SwipeDeleteBackground extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).appColors;
+    final backgroundColor = colors.expenseSoft.withValues(alpha: 0.38);
     return SwipeActionBackground(
       alignment: Alignment.centerRight,
+      backgroundColor: backgroundColor,
       padding: const EdgeInsets.only(right: 10),
       children: [
         SwipeActionTile(
           icon: AppIconKey.delete,
           label: label,
           foregroundColor: color,
-          backgroundColor: colors.expenseSoft,
+          backgroundColor: backgroundColor,
           onTap: () {},
         ),
       ],

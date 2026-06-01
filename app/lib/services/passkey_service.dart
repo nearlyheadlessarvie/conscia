@@ -47,6 +47,9 @@ class PasskeyCredential {
 
 enum PasskeyOperation { signIn, register, delete }
 
+const _genericPasskeySignInFailureMessage =
+    "Couldn't sign in with that passkey. Try again or sign in with email.";
+
 class ExistingPasskeyRegistrationException implements Exception {
   const ExistingPasskeyRegistrationException(this.source);
 
@@ -94,7 +97,10 @@ class PasskeyService {
     }
   }
 
-  Future<AuthTokens> signIn(String email) async {
+  Future<AuthTokens> signIn(
+    String email, {
+    bool preferImmediatelyAvailableCredentials = true,
+  }) async {
     final startResponse = await _publicDio.post(
       ApiConstants.passkeyLoginStart,
       data: {'email': email},
@@ -103,7 +109,8 @@ class PasskeyService {
     final request = AuthenticateRequestType.fromJsonString(
       startData['credentialRequestOptions'] as String,
       mediation: MediationType.Required,
-      preferImmediatelyAvailableCredentials: true,
+      preferImmediatelyAvailableCredentials:
+          preferImmediatelyAvailableCredentials,
     );
     final platformResponse = await _authenticator.authenticate(request);
 
@@ -245,7 +252,7 @@ String passkeyDeviceRemovalInstructions({
     TargetPlatform.android =>
       'Also remove the saved passkey in Google Password Manager > Passwords & passkeys > getconscia.com before setting it up again.',
     TargetPlatform.iOS =>
-      'Also remove the saved passkey in iOS Settings > Passwords > getconscia.com before setting it up again.',
+      'Also remove the saved passkey in the Passwords app > getconscia.com before setting it up again.',
     TargetPlatform.macOS =>
       'Also remove the saved passkey in macOS System Settings > Passwords > getconscia.com before setting it up again.',
     TargetPlatform.windows =>
@@ -379,8 +386,7 @@ String friendlyPasskeyErrorMessage(
   }
 
   return switch (error) {
-    NoCredentialsAvailableException() =>
-      'No passkey was found for this account on this device.',
+    NoCredentialsAvailableException() => _genericPasskeySignInFailureMessage,
     DomainNotAssociatedException() =>
       'Passkeys are not fully configured for this app yet.',
     DeviceNotSupportedException() ||
@@ -396,8 +402,7 @@ String friendlyPasskeyErrorMessage(
       'A passkey may already be saved on this device. ${passkeyDeviceRemovalInstructions()}',
     TimeoutException() => 'Passkey verification timed out. Please try again.',
     PasskeyAuthCancelledException() => 'Passkey sign-in was cancelled.',
-    UnhandledAuthenticatorException() =>
-      'Passkey sign-in could not use the saved credential on this device. Sign in with email, then remove and set up the passkey again.',
+    UnhandledAuthenticatorException() => _genericPasskeySignInFailureMessage,
     _ => 'Passkey sign-in is unavailable right now.',
   };
 }
@@ -424,7 +429,7 @@ String? _genericPasskeyApiFailureMessage(
     PasskeyOperation.register => 'Passkey setup failed. Please try again.',
     PasskeyOperation.delete =>
       'Passkey removal failed. Please refresh and try again.',
-    PasskeyOperation.signIn => 'Passkey sign-in failed. Please try again.',
+    PasskeyOperation.signIn => _genericPasskeySignInFailureMessage,
   };
 }
 
