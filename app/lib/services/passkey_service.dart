@@ -103,7 +103,11 @@ class PasskeyService {
   }) async {
     final startResponse = await _publicDio.post(
       ApiConstants.passkeyLoginStart,
-      data: {'email': email},
+      data: {
+        'email': email,
+        if (!preferImmediatelyAvailableCredentials)
+          'allowExternalPasskeys': true,
+      },
     );
     final startData = startResponse.data as Map<String, dynamic>;
     final request = AuthenticateRequestType.fromJsonString(
