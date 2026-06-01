@@ -12,7 +12,9 @@ public sealed record PasskeyCredentialResponse(
     string? AuthenticatorAttachment,
     IReadOnlyList<string> Transports);
 
-public sealed record StartPasskeyAuthenticationRequest(string Email);
+public sealed record StartPasskeyAuthenticationRequest(
+    string Email,
+    bool AllowExternalPasskeys = false);
 
 public sealed record StartPasskeyAuthenticationResponse(
     string Session,

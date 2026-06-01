@@ -248,7 +248,10 @@ public static class AuthEndpoints
             StartPasskeyAuthenticationResponse result;
             try
             {
-                result = await passkeys.StartAuthenticationAsync(req.Email, ctx.RequestAborted);
+                result = await passkeys.StartAuthenticationAsync(
+                    req.Email,
+                    ctx.RequestAborted,
+                    req.AllowExternalPasskeys);
             }
             catch (PasskeyAuthenticationUnavailableException)
             {

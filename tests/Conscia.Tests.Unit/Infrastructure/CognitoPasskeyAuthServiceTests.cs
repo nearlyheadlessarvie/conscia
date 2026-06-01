@@ -118,6 +118,102 @@ public class CognitoPasskeyAuthServiceTests
     }
 
     [Fact]
+    public async Task StartAuthenticationAsync_ExternalPasskeysRequested_AddsHybridTransport()
+    {
+        _cognito
+            .Setup(c => c.InitiateAuthAsync(
+                It.Is<InitiateAuthRequest>(r =>
+                    r.ClientId == "client-123" &&
+                    r.AuthFlow == AuthFlowType.USER_AUTH &&
+                    r.AuthParameters["USERNAME"] == "demo@example.com" &&
+                    r.AuthParameters["PREFERRED_CHALLENGE"] == "WEB_AUTHN"),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new InitiateAuthResponse
+            {
+                Session = "session-token-1234567890",
+                ChallengeName = ChallengeNameType.WEB_AUTHN,
+                ChallengeParameters = new Dictionary<string, string>
+                {
+                    ["CREDENTIAL_REQUEST_OPTIONS"] = """
+                        {
+                          "challenge": "abc",
+                          "rpId": "getconscia.com",
+                          "allowCredentials": [
+                            {
+                              "type": "public-key",
+                              "id": "credential-id",
+                              "transports": ["internal"]
+                            }
+                          ],
+                          "userVerification": "preferred"
+                        }
+                        """
+                }
+            });
+
+        var result = await _passkeys.StartAuthenticationAsync(
+            " Demo@Example.com ",
+            allowExternalPasskeys: true);
+
+        using var payload = JsonDocument.Parse(result.CredentialRequestOptions);
+        var transports = payload.RootElement
+            .GetProperty("allowCredentials")[0]
+            .GetProperty("transports")
+            .EnumerateArray()
+            .Select(value => value.GetString())
+            .ToArray();
+
+        Assert.Equal(["internal", "hybrid"], transports);
+    }
+
+    [Fact]
+    public async Task StartAuthenticationAsync_LocalPasskeysRequested_PreservesCognitoTransports()
+    {
+        _cognito
+            .Setup(c => c.InitiateAuthAsync(
+                It.Is<InitiateAuthRequest>(r =>
+                    r.ClientId == "client-123" &&
+                    r.AuthFlow == AuthFlowType.USER_AUTH &&
+                    r.AuthParameters["USERNAME"] == "demo@example.com" &&
+                    r.AuthParameters["PREFERRED_CHALLENGE"] == "WEB_AUTHN"),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new InitiateAuthResponse
+            {
+                Session = "session-token-1234567890",
+                ChallengeName = ChallengeNameType.WEB_AUTHN,
+                ChallengeParameters = new Dictionary<string, string>
+                {
+                    ["CREDENTIAL_REQUEST_OPTIONS"] = """
+                        {
+                          "challenge": "abc",
+                          "rpId": "getconscia.com",
+                          "allowCredentials": [
+                            {
+                              "type": "public-key",
+                              "id": "credential-id",
+                              "transports": ["internal"]
+                            }
+                          ],
+                          "userVerification": "preferred"
+                        }
+                        """
+                }
+            });
+
+        var result = await _passkeys.StartAuthenticationAsync(" Demo@Example.com ");
+
+        using var payload = JsonDocument.Parse(result.CredentialRequestOptions);
+        var transports = payload.RootElement
+            .GetProperty("allowCredentials")[0]
+            .GetProperty("transports")
+            .EnumerateArray()
+            .Select(value => value.GetString())
+            .ToArray();
+
+        Assert.Equal(["internal"], transports);
+    }
+
+    [Fact]
     public async Task CompleteRegistrationAsync_SendsCredentialAsJsonDocument()
     {
         const string credentialJson = """
