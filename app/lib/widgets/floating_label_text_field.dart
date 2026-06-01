@@ -266,7 +266,7 @@ class _FloatingLabelTextFieldState extends State<FloatingLabelTextField> {
         field,
         const SizedBox(height: 6),
         Text(
-          '⚠ ${widget.errorText!}',
+          widget.errorText!,
           style: theme.textTheme.bodySmall?.copyWith(
             color: colors.expense,
             fontWeight: FontWeight.w500,

@@ -486,19 +486,6 @@ class _InitialEmailPasswordSignIn extends StatelessWidget {
                 onChanged: onEmailChanged,
                 errorText: emailError,
                 autofillHints: const [AutofillHints.email],
-                trailing: passkeysAvailable
-                    ? IconButton(
-                        key: const ValueKey('email-passkey-sign-in-button'),
-                        tooltip: 'Sign in with passkey',
-                        visualDensity: VisualDensity.compact,
-                        onPressed: isLoading ? null : onTypedPasskey,
-                        icon: AppIcons.icon(
-                          AppIconKey.passkey,
-                          color: colors.primary,
-                          size: 20,
-                        ),
-                      )
-                    : null,
               ),
               const SizedBox(height: 16),
               FloatingLabelTextField(
@@ -549,6 +536,20 @@ class _InitialEmailPasswordSignIn extends StatelessWidget {
             child: const Text('Sign In'),
           ),
         ),
+        if (passkeysAvailable) ...[
+          const SizedBox(height: 12),
+          Center(
+            child: TextButton.icon(
+              onPressed: isLoading ? null : onTypedPasskey,
+              icon: AppIcons.icon(
+                AppIconKey.passkey,
+                color: colors.primary,
+                size: 18,
+              ),
+              label: const Text('Sign in with passkey'),
+            ),
+          ),
+        ],
       ],
     );
   }

@@ -234,7 +234,7 @@ void main() {
     expect(find.text('Sign in with Apple'), findsOneWidget);
   });
 
-  testWidgets('email field passkey action signs in with typed email',
+  testWidgets('initial passkey action signs in with typed email',
       (tester) async {
     final authNotifier = _RecordingAuthNotifier();
     final passkeyService = _RecordingPasskeyService();
@@ -250,7 +250,12 @@ void main() {
       find.byType(TextField).first,
       'story-demo@example.com',
     );
-    await tester.tap(find.byTooltip('Sign in with passkey'));
+    expect(
+      find.byKey(const ValueKey('email-passkey-sign-in-button')),
+      findsNothing,
+    );
+
+    await tester.tap(find.text('Sign in with passkey'));
     await tester.pump();
 
     expect(passkeyService.lastSignInEmail, 'story-demo@example.com');
@@ -258,8 +263,7 @@ void main() {
     expect(authNotifier.completedExternalEmail, 'story-demo@example.com');
   });
 
-  testWidgets('email field passkey action validates email first',
-      (tester) async {
+  testWidgets('initial passkey action validates email first', (tester) async {
     final authNotifier = _RecordingAuthNotifier();
     final passkeyService = _RecordingPasskeyService();
 
@@ -270,7 +274,12 @@ void main() {
       passkeyService: passkeyService,
     );
 
-    await tester.tap(find.byTooltip('Sign in with passkey'));
+    expect(
+      find.byKey(const ValueKey('email-passkey-sign-in-button')),
+      findsNothing,
+    );
+
+    await tester.tap(find.text('Sign in with passkey'));
     await tester.pump();
 
     expect(passkeyService.lastSignInEmail, isNull);
