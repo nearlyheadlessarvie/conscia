@@ -5,7 +5,7 @@ public class ReleaseApiWorkflowTests
     [Fact]
     public void ReleaseApiWorkflow_DoesNotReferenceLegacyAppJwtSecret()
     {
-        var repoRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", ".."));
+        var repoRoot = FindRepoRoot();
         var workflowPath = Path.Combine(repoRoot, ".github", "workflows", "release-api.yml");
 
         var source = File.ReadAllText(workflowPath);
@@ -16,11 +16,14 @@ public class ReleaseApiWorkflowTests
     [Fact]
     public void ReleaseApiWorkflow_PublishesCognitoPreSignupLinkerAsset()
     {
-        var repoRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", ".."));
+        var repoRoot = FindRepoRoot();
         var workflowPath = Path.Combine(repoRoot, ".github", "workflows", "release-api.yml");
 
         var source = File.ReadAllText(workflowPath);
 
+        Assert.Contains(
+            "dotnet publish src/Conscia.CognitoCustomEmailSender -c Release -r linux-arm64 --self-contained -o publish/cognito-custom-email-sender",
+            source);
         Assert.Contains(
             "dotnet publish src/Conscia.CognitoPreSignupLinker -c Release -r linux-arm64 --self-contained -o publish/cognito-pre-signup-linker",
             source);
@@ -29,7 +32,7 @@ public class ReleaseApiWorkflowTests
     [Fact]
     public void ReleaseApiWorkflow_PreservesManagedLoginSocialProviderParameters()
     {
-        var repoRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", ".."));
+        var repoRoot = FindRepoRoot();
         var workflowPath = Path.Combine(repoRoot, ".github", "workflows", "release-api.yml");
 
         var source = File.ReadAllText(workflowPath);
@@ -38,8 +41,25 @@ public class ReleaseApiWorkflowTests
         Assert.Contains("APPLE_TEAM_ID: ${{ vars.APPLE_TEAM_ID }}", source);
         Assert.Contains("COGNITO_APPLE_KEY_ID: ${{ secrets.COGNITO_APPLE_KEY_ID }}", source);
         Assert.Contains("COGNITO_APPLE_PRIVATE_KEY: ${{ secrets.COGNITO_APPLE_PRIVATE_KEY }}", source);
+        Assert.DoesNotContain("COGNITO_GOOGLE_CLIENT_SECRET", source);
         Assert.Contains(
             "--parameters \"Conscia-Auth:ManagedLoginApplePrivateKey=$COGNITO_APPLE_PRIVATE_KEY\"",
             source);
+    }
+
+    private static string FindRepoRoot()
+    {
+        var current = new DirectoryInfo(AppContext.BaseDirectory);
+        while (current is not null)
+        {
+            if (Directory.Exists(Path.Combine(current.FullName, ".github")))
+            {
+                return current.FullName;
+            }
+
+            current = current.Parent;
+        }
+
+        throw new InvalidOperationException("Could not locate repository root.");
     }
 }

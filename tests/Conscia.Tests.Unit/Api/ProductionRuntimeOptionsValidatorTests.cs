@@ -36,7 +36,8 @@ public class ProductionRuntimeOptionsValidatorTests
         Assert.Contains(result.Failures!, failure => failure.Contains("Auth:UseMock"));
         Assert.Contains(result.Failures!, failure => failure.Contains("GooglePlay:ServiceAccountJson"));
         Assert.Contains(result.Failures!, failure => failure.Contains("Firebase:AdminServiceAccountJson"));
-        Assert.Contains(result.Failures!, failure => failure.Contains("InviteEmail:FromEmail"));
+        Assert.Contains(result.Failures!, failure => failure.Contains("Brevo:ApiKey"));
+        Assert.Contains(result.Failures!, failure => failure.Contains("Brevo:SenderEmail"));
         Assert.Contains(result.Failures!, failure => failure.Contains("AppCompatibility:CurrentSupportedAppVersion"));
     }
 
@@ -57,7 +58,8 @@ public class ProductionRuntimeOptionsValidatorTests
                 ["GooglePlay:PackageName"] = "com.getconscia.app.ai",
                 ["GooglePlay:ServiceAccountJson"] = "service-account",
                 ["Firebase:AdminServiceAccountJson"] = "{\"project_id\":\"conscia-prod\"}",
-                ["InviteEmail:FromEmail"] = "invites@getconscia.com",
+                ["Brevo:ApiKey"] = "brevo-api-key",
+                ["Brevo:SenderEmail"] = "invites@getconscia.com",
                 ["AppCompatibility:CurrentSupportedAppVersion"] = "1.2.0+5",
                 ["AppCompatibility:PreviousSupportedAppVersion"] = "1.1.0+4"
             });

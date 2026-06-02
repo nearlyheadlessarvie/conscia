@@ -7,7 +7,7 @@ public class ReleasePleaseConfigTests
     [Fact]
     public void ApiReleasePackage_CoversDeployedRuntimePaths()
     {
-        var repoRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", ".."));
+        var repoRoot = FindRepoRoot();
         var configPath = Path.Combine(repoRoot, ".release-please-config.json");
         var manifestPath = Path.Combine(repoRoot, ".release-please-manifest.json");
 
@@ -33,6 +33,7 @@ public class ReleasePleaseConfigTests
             "src/Conscia.Infrastructure",
             "src/Conscia.AI",
             "src/Conscia.Domain",
+            "src/Conscia.CognitoCustomEmailSender",
             "src/Conscia.CognitoPreSignupLinker",
             "src/Conscia.OutboxProcessor",
             "src/Conscia.RecurringProcessor",
@@ -41,5 +42,21 @@ public class ReleasePleaseConfigTests
 
         foreach (var path in runtimePaths)
             Assert.StartsWith($"{apiReleasePath}/", $"{path}/", StringComparison.Ordinal);
+    }
+
+    private static string FindRepoRoot()
+    {
+        var current = new DirectoryInfo(AppContext.BaseDirectory);
+        while (current is not null)
+        {
+            if (File.Exists(Path.Combine(current.FullName, ".release-please-config.json")))
+            {
+                return current.FullName;
+            }
+
+            current = current.Parent;
+        }
+
+        throw new InvalidOperationException("Could not locate repository root.");
     }
 }

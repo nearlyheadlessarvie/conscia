@@ -2,6 +2,7 @@ using Amazon.CDK;
 using Amazon.CDK.AWS.CertificateManager;
 using Amazon.CDK.AWS.Cognito;
 using Amazon.CDK.AWS.IAM;
+using Amazon.CDK.AWS.KMS;
 using Amazon.CDK.AWS.Lambda;
 using Amazon.CDK.AWS.Route53;
 using Amazon.CDK.AWS.Route53.Targets;
@@ -11,9 +12,11 @@ namespace Conscia.Infra;
 
 public sealed class AuthStackProps : StackProps
 {
+    public string? CognitoCustomEmailSenderAssetPath { get; init; }
     public string? CognitoPreSignupLinkerAssetPath { get; init; }
     public DomainSettings? DomainSettings { get; init; }
     public ManagedLoginProviderSettings? ManagedLoginProviderSettings { get; init; }
+    public ProductionRuntimeSettings? RuntimeSettings { get; init; }
 }
 
 public class AuthStack : Stack
@@ -32,16 +35,44 @@ public class AuthStack : Stack
         var logoutUri = props?.DomainSettings?.ResolvedManagedLoginLogoutUri ?? devLogoutUri;
         var hasFederatedProviders = props?.ManagedLoginProviderSettings?.HasGoogle == true
             || props?.ManagedLoginProviderSettings?.HasApple == true;
-        var cognitoEmail = props?.DomainSettings is null
-            ? null
-            : UserPoolEmail.WithSES(new UserPoolSESOptions
-            {
-                ConfigurationSetName = "conscia-production",
-                FromEmail = $"no-reply@{rootDomainName}",
-                SesRegion = Region,
-                SesVerifiedDomain = rootDomainName
-            });
         Function? preSignupLinker = null;
+        Function? customEmailSender = null;
+        Key? customEmailSenderKey = null;
+
+        if (props?.RuntimeSettings is not null)
+        {
+            var customEmailSenderAssetPath = props.CognitoCustomEmailSenderAssetPath
+                ?? AssetPathResolver.ResolvePublishedAsset("../publish/cognito-custom-email-sender", "cognito-custom-email-sender");
+            customEmailSenderKey = new Key(this, "CognitoCustomEmailSenderKey", new KeyProps
+            {
+                Description = "Encrypts Cognito custom email sender codes and temporary passwords.",
+                EnableKeyRotation = true,
+                RemovalPolicy = RemovalPolicy.RETAIN
+            });
+            var brevoSenderEmail = props.RuntimeSettings.BrevoSenderEmail
+                ?? props.RuntimeSettings.InviteEmailFromEmail
+                ?? (props.DomainSettings is null ? string.Empty : $"no-reply@{rootDomainName}");
+
+            customEmailSender = new Function(this, "CognitoCustomEmailSender", new FunctionProps
+            {
+                FunctionName = "conscia-cognito-custom-email-sender",
+                Runtime = Runtime.DOTNET_8,
+                Handler = "Conscia.CognitoCustomEmailSender",
+                Code = Code.FromAsset(customEmailSenderAssetPath),
+                MemorySize = 512,
+                Timeout = Duration.Seconds(30),
+                Architecture = Architecture.ARM_64,
+                Environment = new Dictionary<string, string>
+                {
+                    ["COGNITO_CUSTOM_SENDER_KMS_KEY_ARN"] = customEmailSenderKey.KeyArn,
+                    ["Brevo__ApiKey"] = props.RuntimeSettings.BrevoApiKey ?? string.Empty,
+                    ["Brevo__SenderEmail"] = brevoSenderEmail,
+                    ["Brevo__SenderName"] = props.RuntimeSettings.BrevoSenderName
+                },
+                Tracing = Tracing.ACTIVE
+            });
+            customEmailSenderKey.GrantDecrypt(customEmailSender);
+        }
 
         if (hasFederatedProviders)
         {
@@ -67,7 +98,6 @@ public class AuthStack : Stack
             SelfSignUpEnabled = true,
             SignInAliases = new SignInAliases { Email = true },
             AutoVerify = new AutoVerifiedAttrs { Email = true },
-            Email = cognitoEmail,
             Mfa = Mfa.OFF,
             PasswordPolicy = new PasswordPolicy
             {
@@ -78,12 +108,6 @@ public class AuthStack : Stack
                 RequireSymbols = false
             },
             AccountRecovery = AccountRecovery.EMAIL_ONLY,
-            LambdaTriggers = preSignupLinker is null
-                ? null
-                : new UserPoolTriggers
-                {
-                    PreSignUp = preSignupLinker
-                },
             RemovalPolicy = RemovalPolicy.RETAIN
         });
         var userPoolResource = (CfnUserPool)(UserPool.Node.DefaultChild
@@ -94,6 +118,31 @@ public class AuthStack : Stack
             new[] { "PASSWORD", "WEB_AUTHN" });
         userPoolResource.WebAuthnRelyingPartyId = rootDomainName;
         userPoolResource.WebAuthnUserVerification = "preferred";
+        if (customEmailSender is not null && customEmailSenderKey is not null)
+        {
+            userPoolResource.LambdaConfig = new CfnUserPool.LambdaConfigProperty
+            {
+                PreSignUp = preSignupLinker?.FunctionArn,
+                CustomEmailSender = new CfnUserPool.CustomEmailSenderProperty
+                {
+                    LambdaArn = customEmailSender.FunctionArn,
+                    LambdaVersion = "V1_0"
+                },
+                KmsKeyId = customEmailSenderKey.KeyArn
+            };
+            customEmailSender.AddPermission("AllowCognitoInvokeCustomEmailSender", new Permission
+            {
+                Principal = new ServicePrincipal("cognito-idp.amazonaws.com"),
+                SourceArn = UserPool.UserPoolArn
+            });
+        }
+        else if (preSignupLinker is not null)
+        {
+            userPoolResource.LambdaConfig = new CfnUserPool.LambdaConfigProperty
+            {
+                PreSignUp = preSignupLinker.FunctionArn
+            };
+        }
 
         if (preSignupLinker is not null)
         {
@@ -111,6 +160,11 @@ public class AuthStack : Stack
                     "*"
                 ]
             }));
+            preSignupLinker.AddPermission("AllowCognitoInvokePreSignUp", new Permission
+            {
+                Principal = new ServicePrincipal("cognito-idp.amazonaws.com"),
+                SourceArn = UserPool.UserPoolArn
+            });
         }
 
         var supportedIdentityProviders = new List<UserPoolClientIdentityProvider>

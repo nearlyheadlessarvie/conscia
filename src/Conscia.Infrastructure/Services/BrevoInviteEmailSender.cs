@@ -1,5 +1,4 @@
-using Amazon.SimpleEmailV2;
-using Amazon.SimpleEmailV2.Model;
+using System.Net.Http.Json;
 using Conscia.Application.Configuration;
 using Conscia.Application.Interfaces;
 using Microsoft.Extensions.Logging;
@@ -7,18 +6,18 @@ using Microsoft.Extensions.Options;
 
 namespace Conscia.Infrastructure.Services;
 
-public sealed class SesInviteEmailSender : IInviteEmailSender
+public sealed class BrevoInviteEmailSender : IInviteEmailSender
 {
-    private readonly IAmazonSimpleEmailServiceV2 _ses;
-    private readonly InviteEmailOptions _options;
-    private readonly ILogger<SesInviteEmailSender> _logger;
+    private readonly HttpClient _http;
+    private readonly BrevoEmailOptions _options;
+    private readonly ILogger<BrevoInviteEmailSender> _logger;
 
-    public SesInviteEmailSender(
-        IAmazonSimpleEmailServiceV2 ses,
-        IOptions<InviteEmailOptions> options,
-        ILogger<SesInviteEmailSender> logger)
+    public BrevoInviteEmailSender(
+        HttpClient http,
+        IOptions<BrevoEmailOptions> options,
+        ILogger<BrevoInviteEmailSender> logger)
     {
-        _ses = ses;
+        _http = http;
         _options = options.Value;
         _logger = logger;
     }
@@ -30,6 +29,9 @@ public sealed class SesInviteEmailSender : IInviteEmailSender
             throw new InvalidOperationException("Invite email delivery is not configured.");
         }
 
+        var senderName = string.IsNullOrWhiteSpace(_options.SenderName)
+            ? "Conscia"
+            : _options.SenderName.Trim();
         var familySpaceName = string.IsNullOrWhiteSpace(message.FamilySpaceName)
             ? "your Family Space"
             : message.FamilySpaceName;
@@ -56,31 +58,42 @@ This invite expires on {message.ExpiresAt:MMMM d, yyyy}.";
   </body>
 </html>";
 
-        var request = new SendEmailRequest
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/v3/smtp/email")
         {
-            FromEmailAddress = _options.FromEmail,
-            ConfigurationSetName = string.IsNullOrWhiteSpace(_options.ConfigurationSetName)
-                ? null
-                : _options.ConfigurationSetName,
-            Destination = new Destination
+            Content = JsonContent.Create(new
             {
-                ToAddresses = [message.RecipientEmail]
-            },
-            Content = new EmailContent
-            {
-                Simple = new Message
+                sender = new
                 {
-                    Subject = new Content { Data = subject },
-                    Body = new Body
+                    email = _options.SenderEmail!.Trim(),
+                    name = senderName
+                },
+                to = new[]
+                {
+                    new
                     {
-                        Text = new Content { Data = plainTextBody },
-                        Html = new Content { Data = htmlBody }
+                        email = message.RecipientEmail
                     }
-                }
-            }
+                },
+                subject,
+                htmlContent = htmlBody,
+                textContent = plainTextBody
+            })
         };
+        request.Headers.Add("api-key", _options.ApiKey!.Trim());
 
-        await _ses.SendEmailAsync(request, ct);
+        using var response = await _http.SendAsync(request, ct);
+        if (!response.IsSuccessStatusCode)
+        {
+            var responseBody = await response.Content.ReadAsStringAsync(ct);
+            _logger.LogWarning(
+                "Brevo invite email send failed for {InviteId} to {Email}. StatusCode: {StatusCode}. Response: {ResponseBody}",
+                message.InviteId,
+                message.RecipientEmail,
+                (int)response.StatusCode,
+                responseBody);
+        }
+
+        response.EnsureSuccessStatusCode();
 
         _logger.LogInformation(
             "Sent family invite email {InviteId} to {Email}",
