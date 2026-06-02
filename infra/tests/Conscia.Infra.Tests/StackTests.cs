@@ -182,7 +182,10 @@ public class StackTests
                 "conscia://invite",
                 "brevo-api-key",
                 "no-reply@getconscia.com",
-                "Conscia")
+                "Conscia",
+                "backend-signup-token",
+                "conscia-prod",
+                "android-site-key,ios-site-key")
         });
         var template = Template.FromStack(stack);
 
@@ -293,7 +296,14 @@ public class StackTests
         }));
         template.HasResourceProperties("AWS::Lambda::Function", Match.ObjectLike(new Dictionary<string, object>
         {
-            ["FunctionName"] = "conscia-cognito-pre-signup-linker"
+            ["FunctionName"] = "conscia-cognito-pre-signup-linker",
+            ["Environment"] = Match.ObjectLike(new Dictionary<string, object>
+            {
+                ["Variables"] = Match.ObjectLike(new Dictionary<string, object>
+                {
+                    ["COGNITO_SIGNUP_GUARD_TOKEN"] = "backend-signup-token"
+                })
+            })
         }));
         template.HasResourceProperties("AWS::Lambda::Function", Match.ObjectLike(new Dictionary<string, object>
         {
@@ -337,6 +347,46 @@ public class StackTests
 
         var userPool = Assert.Single(template.FindResources("AWS::Cognito::UserPool")).Value;
         AssertResourceRetained(userPool);
+    }
+
+    [Fact]
+    public void AuthStack_WithSignupGuard_CreatesPreSignupLambdaWithoutFederatedProviders()
+    {
+        var app = new App();
+        var stack = new AuthStack(app, "TestAuthSignupGuard", new AuthStackProps
+        {
+            Env = TestEnv,
+            CognitoCustomEmailSenderAssetPath = CreateAssetStub("cognito-custom-email-sender"),
+            CognitoPreSignupLinkerAssetPath = CreateAssetStub("cognito-pre-signup-linker"),
+            RuntimeSettings = new ProductionRuntimeSettings(
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                "conscia://invite",
+                CognitoSignupGuardToken: "backend-signup-token")
+        });
+        var template = Template.FromStack(stack);
+
+        template.HasResourceProperties("AWS::Lambda::Function", Match.ObjectLike(new Dictionary<string, object>
+        {
+            ["FunctionName"] = "conscia-cognito-pre-signup-linker"
+        }));
+        template.HasResourceProperties("AWS::Cognito::UserPool", Match.ObjectLike(new Dictionary<string, object>
+        {
+            ["LambdaConfig"] = Match.ObjectLike(new Dictionary<string, object>
+            {
+                ["PreSignUp"] = Match.AnyValue()
+            })
+        }));
     }
 
     [Fact]
@@ -427,11 +477,15 @@ public class StackTests
                 "conscia://invite",
                 "brevo-api-key",
                 "invites@getconscia.com",
-                "Conscia"),
+                "Conscia",
+                "backend-signup-token",
+                "conscia-prod",
+                "android-site-key,ios-site-key"),
             RuntimeSecretSettings = new RuntimeSecretSettings(
                 "test/apple-private-key",
                 "test/google-play-service-account-json",
-                "test/firebase-admin-service-account-json"),
+                "test/firebase-admin-service-account-json",
+                "test/recaptcha-api-key"),
             ApiAssetPath = CreateAssetStub("api"),
             DomainSettings = TestDomainSettings
         });
@@ -489,7 +543,11 @@ public class StackTests
                     ["Brevo__ApiKey"] = "brevo-api-key",
                     ["Brevo__SenderEmail"] = "invites@getconscia.com",
                     ["Brevo__SenderName"] = "Conscia",
-                    ["Auth__Cognito__LoginDomain"] = "https://login.getconscia.com"
+                    ["Auth__Cognito__LoginDomain"] = "https://login.getconscia.com",
+                    ["Auth__Cognito__SignupGuardToken"] = "backend-signup-token",
+                    ["Recaptcha__ProjectId"] = "conscia-prod",
+                    ["Recaptcha__AllowedSiteKeys"] = "android-site-key,ios-site-key",
+                    ["Recaptcha__ApiKeySecretId"] = "test/recaptcha-api-key"
                 })
             }
         });

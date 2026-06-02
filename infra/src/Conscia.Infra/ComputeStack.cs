@@ -62,6 +62,7 @@ public class ComputeStack : Stack
             ["Auth__Cognito__LoginDomain"] = props.DomainSettings is null
                 ? string.Empty
                 : $"https://{props.DomainSettings.ResolvedCognitoDomainName}",
+            ["Auth__Cognito__SignupGuardToken"] = props.RuntimeSettings.CognitoSignupGuardToken ?? string.Empty,
             ["Auth__Google__ClientId"] = props.RuntimeSettings.AuthGoogleClientId ?? string.Empty,
             ["Auth__Apple__ClientId"] = props.RuntimeSettings.AuthAppleClientId ?? string.Empty,
             ["Apple__KeyId"] = props.RuntimeSettings.AppleKeyId ?? string.Empty,
@@ -72,6 +73,10 @@ public class ComputeStack : Stack
             ["GooglePlay__ServiceAccountJsonSecretId"] = props.RuntimeSecretSettings.GooglePlayServiceAccountJsonSecretName,
             ["Firebase__AdminServiceAccountJsonSecretId"] = props.RuntimeSecretSettings.FirebaseAdminServiceAccountJsonSecretName,
             ["Firebase__ProjectId"] = props.RuntimeSettings.FirebaseProjectId ?? string.Empty,
+            ["Recaptcha__ApiKeySecretId"] = props.RuntimeSecretSettings.RecaptchaApiKeySecretName,
+            ["Recaptcha__ProjectId"] = props.RuntimeSettings.RecaptchaProjectId ?? string.Empty,
+            ["Recaptcha__AllowedSiteKeys"] = props.RuntimeSettings.RecaptchaAllowedSiteKeys ?? string.Empty,
+            ["Recaptcha__MinimumScore"] = props.RuntimeSettings.RecaptchaMinimumScore ?? string.Empty,
             ["AdminBootstrap__Emails"] = adminBootstrapEmails.ValueAsString,
             ["InviteEmail__FromEmail"] = props.RuntimeSettings.InviteEmailFromEmail ?? string.Empty,
             ["InviteEmail__ConfigurationSetName"] = props.RuntimeSettings.InviteEmailConfigurationSetName ?? string.Empty,
@@ -211,6 +216,8 @@ public class ComputeStack : Stack
         Secret.FromSecretNameV2(this, "GooglePlayServiceAccountJsonSecret", runtimeSecretSettings.GooglePlayServiceAccountJsonSecretName)
             .GrantRead(ApiLambda);
         Secret.FromSecretNameV2(this, "FirebaseAdminServiceAccountJsonSecret", runtimeSecretSettings.FirebaseAdminServiceAccountJsonSecretName)
+            .GrantRead(ApiLambda);
+        Secret.FromSecretNameV2(this, "RecaptchaApiKeySecret", runtimeSecretSettings.RecaptchaApiKeySecretName)
             .GrantRead(ApiLambda);
     }
 

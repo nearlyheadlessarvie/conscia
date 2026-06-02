@@ -16,7 +16,11 @@ public sealed record ProductionRuntimeSettings(
     string InviteEmailDeepLinkBaseUri,
     string? BrevoApiKey = null,
     string? BrevoSenderEmail = null,
-    string BrevoSenderName = "Conscia")
+    string BrevoSenderName = "Conscia",
+    string? CognitoSignupGuardToken = null,
+    string? RecaptchaProjectId = null,
+    string? RecaptchaAllowedSiteKeys = null,
+    string? RecaptchaMinimumScore = null)
 {
     public static ProductionRuntimeSettings FromEnvironment() => new(
         AuthGoogleClientId: Get("AUTH_GOOGLE_CLIENT_ID"),
@@ -34,7 +38,11 @@ public sealed record ProductionRuntimeSettings(
         InviteEmailDeepLinkBaseUri: Get("INVITE_EMAIL_DEEP_LINK_BASE_URI") ?? "https://getconscia.com/open/family-invite",
         BrevoApiKey: Get("BREVO_API_KEY"),
         BrevoSenderEmail: Get("BREVO_SENDER_EMAIL") ?? Get("SES_FROM_EMAIL"),
-        BrevoSenderName: Get("BREVO_SENDER_NAME") ?? "Conscia");
+        BrevoSenderName: Get("BREVO_SENDER_NAME") ?? "Conscia",
+        CognitoSignupGuardToken: Get("COGNITO_SIGNUP_GUARD_TOKEN"),
+        RecaptchaProjectId: Get("RECAPTCHA_PROJECT_ID"),
+        RecaptchaAllowedSiteKeys: Get("RECAPTCHA_ALLOWED_SITE_KEYS"),
+        RecaptchaMinimumScore: Get("RECAPTCHA_MINIMUM_SCORE"));
 
     private static string? Get(string name)
     {
