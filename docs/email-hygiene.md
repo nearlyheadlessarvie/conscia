@@ -42,6 +42,18 @@ aws sesv2 get-account
 
 Use the `conscia-production` configuration set for transactional sends so the configuration-set suppression and EventBridge route both apply.
 
+## Email Authentication
+
+`Conscia-Email` also provisions SES domain-authentication DNS in Route53 when `DomainSettings` are configured:
+
+- Easy DKIM is enabled for the `getconscia.com` SES domain identity;
+- three SES DKIM CNAME records are published from the SES identity tokens;
+- `feedback.getconscia.com` is configured as the custom MAIL FROM domain;
+- `feedback.getconscia.com` publishes the SES regional MX record and SPF TXT record;
+- `_dmarc.getconscia.com` publishes a monitoring-only DMARC policy by default.
+
+Keep DMARC at `p=none` while validating low-volume transactional traffic across Brevo, iCloud inbox records, and SES. Move to a stricter policy only after legitimate senders are confirmed to pass authentication.
+
 For an SES production access request, summarize the implemented controls as:
 
 - We send transactional email only for user-initiated account/family workflows, not marketing.
@@ -49,6 +61,7 @@ For an SES production access request, summarize the implemented controls as:
 - Family invite and future non-auth transactional outbox sends check that table before delivery and do not retry suppressed recipients.
 - SES bounce and complaint events are routed through EventBridge into the existing outbox Lambda, which upserts the suppression table.
 - SES account-level suppression is enabled or verified for `BOUNCE` and `COMPLAINT` in the sending region before SES traffic resumes.
+- SES sends use a verified domain identity with Easy DKIM, custom MAIL FROM SPF, and DMARC monitoring.
 
 ## Monitoring
 

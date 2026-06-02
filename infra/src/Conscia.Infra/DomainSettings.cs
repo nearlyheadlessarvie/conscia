@@ -20,7 +20,7 @@ public sealed record DomainSettings(
     string DevManagedLoginLogoutUri = "conscia://auth/logout",
     string SesMailFromSubdomain = "feedback",
     string DmarcRecordName = "_dmarc",
-    string DmarcValue = "v=DMARC1; p=quarantine; adkim=s; aspf=s; pct=100",
+    string DmarcValue = "v=DMARC1; p=none",
     IReadOnlyList<DnsMxRecord>? IcloudInboxMxRecords = null,
     IReadOnlyList<DnsTxtRecord>? IcloudInboxTxtRecords = null,
     IReadOnlyList<DnsCnameRecord>? IcloudInboxCnameRecords = null)
@@ -66,7 +66,7 @@ public sealed record DomainSettings(
             Get("COGNITO_DEV_LOGOUT_URI") ?? "conscia://auth/logout",
             Get("CONSCIA_SES_MAIL_FROM_SUBDOMAIN") ?? "feedback",
             Get("CONSCIA_DMARC_RECORD_NAME") ?? "_dmarc",
-            Get("CONSCIA_DMARC_VALUE") ?? "v=DMARC1; p=quarantine; adkim=s; aspf=s; pct=100",
+            Get("CONSCIA_DMARC_VALUE") ?? "v=DMARC1; p=none",
             ParseJsonList<DnsMxRecord>("ICLOUD_INBOX_MX_RECORDS_JSON"),
             ParseJsonList<DnsTxtRecord>("ICLOUD_INBOX_TXT_RECORDS_JSON"),
             ParseJsonList<DnsCnameRecord>("ICLOUD_INBOX_CNAME_RECORDS_JSON"));
