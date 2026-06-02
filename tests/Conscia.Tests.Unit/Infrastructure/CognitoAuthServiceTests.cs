@@ -22,7 +22,8 @@ public class CognitoAuthServiceTests
         var config = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
-                ["Auth:Cognito:ClientId"] = "client-123"
+                ["Auth:Cognito:ClientId"] = "client-123",
+                ["Auth:Cognito:SignupGuardToken"] = "backend-signup-token"
             })
             .Build();
 
@@ -43,6 +44,7 @@ public class CognitoAuthServiceTests
                     r.ClientId == "client-123" &&
                     r.Username == "new@example.com" &&
                     r.Password == "SecureP@ss123" &&
+                    r.ClientMetadata["conscia_signup_guard"] == "backend-signup-token" &&
                     r.UserAttributes.Any(a => a.Name == "email" && a.Value == "new@example.com")),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(new SignUpResponse

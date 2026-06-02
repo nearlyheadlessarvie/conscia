@@ -8,7 +8,10 @@ using Microsoft.Extensions.Logging;
 var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
 var logger = loggerFactory.CreateLogger<CognitoPreSignupLinker>();
 var cognito = new AmazonCognitoIdentityProviderClient();
-var linker = new CognitoPreSignupLinker(cognito, logger);
+var linker = new CognitoPreSignupLinker(
+    cognito,
+    logger,
+    Environment.GetEnvironmentVariable("COGNITO_SIGNUP_GUARD_TOKEN"));
 
 Func<CognitoPreSignupEvent, ILambdaContext, Task<CognitoPreSignupEvent>> handler = async (request, _) =>
     await linker.HandleAsync(request, CancellationToken.None);

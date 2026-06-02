@@ -29,6 +29,9 @@ public sealed class CognitoPreSignupEvent
 
 public sealed class CognitoPreSignupRequest
 {
+    [JsonPropertyName("clientMetadata")]
+    public Dictionary<string, string> ClientMetadata { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+
     [JsonPropertyName("userAttributes")]
     public Dictionary<string, string> UserAttributes { get; set; } = new(StringComparer.OrdinalIgnoreCase);
 

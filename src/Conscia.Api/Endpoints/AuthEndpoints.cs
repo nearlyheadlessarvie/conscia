@@ -14,10 +14,13 @@ public static class AuthEndpoints
             .MapToApiVersion(1.0)
             .WithTags("Auth");
 
-        group.MapPost("/register", async (HttpContext ctx, RegisterRequest req, IAuthService auth) =>
+        group.MapPost("/register", async (HttpContext ctx, RegisterRequest req, IAuthService auth, ICaptchaVerifier captcha) =>
         {
             if (string.IsNullOrWhiteSpace(req.Email) || string.IsNullOrWhiteSpace(req.Password))
                 return Results.BadRequest(new { error = "Email and password are required" });
+
+            if (!await VerifyCaptchaAsync(ctx, captcha, req.CaptchaToken, req.CaptchaSiteKey, "signup"))
+                return Results.BadRequest(new { error = "Captcha verification failed" });
 
             var result = await auth.RegisterAsync(req.Email, req.Password, ctx.RequestAborted);
             return result.Success
@@ -42,10 +45,13 @@ public static class AuthEndpoints
                 : Results.BadRequest(new { result.Error, result.RequiresConfirmation });
         }).WithName("ConfirmRegistration").RequireRateLimiting("auth");
 
-        group.MapPost("/resend-confirmation", async (HttpContext ctx, ResendConfirmationRequest req, IAuthService auth) =>
+        group.MapPost("/resend-confirmation", async (HttpContext ctx, ResendConfirmationRequest req, IAuthService auth, ICaptchaVerifier captcha) =>
         {
             if (string.IsNullOrWhiteSpace(req.Email))
                 return Results.BadRequest(new { error = "Email is required" });
+
+            if (!await VerifyCaptchaAsync(ctx, captcha, req.CaptchaToken, req.CaptchaSiteKey, "resend_confirmation"))
+                return Results.BadRequest(new { error = "Captcha verification failed" });
 
             var result = await auth.ResendConfirmationAsync(req.Email, ctx.RequestAborted);
             return result.Success
@@ -53,10 +59,13 @@ public static class AuthEndpoints
                 : Results.BadRequest(new { result.Error });
         }).WithName("ResendConfirmation").RequireRateLimiting("auth");
 
-        group.MapPost("/password-reset/start", async (HttpContext ctx, StartPasswordResetRequest req, IAuthService auth) =>
+        group.MapPost("/password-reset/start", async (HttpContext ctx, StartPasswordResetRequest req, IAuthService auth, ICaptchaVerifier captcha) =>
         {
             if (string.IsNullOrWhiteSpace(req.Email))
                 return Results.BadRequest(new { error = "Email is required" });
+
+            if (!await VerifyCaptchaAsync(ctx, captcha, req.CaptchaToken, req.CaptchaSiteKey, "password_reset_start"))
+                return Results.BadRequest(new { error = "Captcha verification failed" });
 
             var result = await auth.StartPasswordResetAsync(req.Email, ctx.RequestAborted);
             return result.Success
@@ -312,12 +321,40 @@ public static class AuthEndpoints
             return false;
         }
     }
+
+    private static Task<bool> VerifyCaptchaAsync(
+        HttpContext ctx,
+        ICaptchaVerifier captcha,
+        string? token,
+        string? siteKey,
+        string expectedAction)
+    {
+        return captcha.VerifyAsync(
+            new CaptchaVerificationRequest(
+                token,
+                siteKey,
+                expectedAction,
+                ReadClientIpAddress(ctx),
+                ctx.Request.Headers.UserAgent.ToString()),
+            ctx.RequestAborted);
+    }
+
+    private static string? ReadClientIpAddress(HttpContext ctx)
+    {
+        var forwardedFor = ctx.Request.Headers["X-Forwarded-For"].FirstOrDefault();
+        if (!string.IsNullOrWhiteSpace(forwardedFor))
+        {
+            return forwardedFor.Split(',')[0].Trim();
+        }
+
+        return ctx.Connection.RemoteIpAddress?.ToString();
+    }
 }
 
-public record RegisterRequest(string Email, string Password);
+public record RegisterRequest(string Email, string Password, string? CaptchaToken = null, string? CaptchaSiteKey = null);
 public record ConfirmRegistrationRequest(string Email, string ConfirmationCode);
-public record ResendConfirmationRequest(string Email);
-public record StartPasswordResetRequest(string Email);
+public record ResendConfirmationRequest(string Email, string? CaptchaToken = null, string? CaptchaSiteKey = null);
+public record StartPasswordResetRequest(string Email, string? CaptchaToken = null, string? CaptchaSiteKey = null);
 public record ConfirmPasswordResetRequest(string Email, string ConfirmationCode, string Password);
 public record LoginRequest(string Email, string Password);
 public record CompletePasswordChangeRequest(string Email, string Session, string Password);

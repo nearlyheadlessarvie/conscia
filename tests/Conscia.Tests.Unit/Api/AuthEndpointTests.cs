@@ -8,6 +8,8 @@ namespace Conscia.Tests.Unit.Api;
 
 public class AuthEndpointTests
 {
+    private const string CaptchaSiteKey = "captcha-site-key";
+
     [Fact]
     public async Task Register_ValidCredentials_Returns202AndRequiresConfirmation()
     {
@@ -49,6 +51,32 @@ public class AuthEndpointTests
         Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
         Assert.Contains(factory.UserRepo.Users, user => user.Email == email);
         Assert.DoesNotContain(factory.UserRepo.Users, user => user.Email == "stale-token@example.com");
+    }
+
+    [Fact]
+    public async Task Register_InvalidCaptcha_Returns400AndDoesNotCreateUser()
+    {
+        await using var factory = new TestWebAppFactory();
+        factory.CaptchaVerifierMock
+            .Setup(v => v.VerifyAsync(
+                It.Is<CaptchaVerificationRequest>(r =>
+                    r.Token == "bad-token" &&
+                    r.SiteKey == CaptchaSiteKey &&
+                    r.ExpectedAction == "signup"),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
+        using var client = factory.CreateClient();
+
+        var response = await client.PostAsJsonAsync("/api/auth/register", new
+        {
+            email = "captcha-blocked@example.com",
+            password = "SecureP@ss123",
+            captchaToken = "bad-token",
+            captchaSiteKey = CaptchaSiteKey
+        });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.DoesNotContain(factory.UserRepo.Users, user => user.Email == "captcha-blocked@example.com");
     }
 
     [Fact]
@@ -98,6 +126,27 @@ public class AuthEndpointTests
     }
 
     [Fact]
+    public async Task ResendConfirmation_InvalidCaptcha_Returns400()
+    {
+        await using var factory = new TestWebAppFactory();
+        factory.CaptchaVerifierMock
+            .Setup(v => v.VerifyAsync(
+                It.Is<CaptchaVerificationRequest>(r => r.ExpectedAction == "resend_confirmation"),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
+        using var client = factory.CreateClient();
+
+        var response = await client.PostAsJsonAsync("/api/auth/resend-confirmation", new
+        {
+            email = "pending@example.com",
+            captchaToken = "bad-token",
+            captchaSiteKey = CaptchaSiteKey
+        });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
     public async Task StartPasswordReset_ExistingUser_Returns200()
     {
         await using var factory = new TestWebAppFactory();
@@ -119,6 +168,27 @@ public class AuthEndpointTests
         var body = await response.Content.ReadFromJsonAsync<Dictionary<string, object>>();
         Assert.NotNull(body);
         Assert.Equal("True", body!["success"].ToString());
+    }
+
+    [Fact]
+    public async Task StartPasswordReset_InvalidCaptcha_Returns400()
+    {
+        await using var factory = new TestWebAppFactory();
+        factory.CaptchaVerifierMock
+            .Setup(v => v.VerifyAsync(
+                It.Is<CaptchaVerificationRequest>(r => r.ExpectedAction == "password_reset_start"),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
+        using var client = factory.CreateClient();
+
+        var response = await client.PostAsJsonAsync("/api/auth/password-reset/start", new
+        {
+            email = "reset@example.com",
+            captchaToken = "bad-token",
+            captchaSiteKey = CaptchaSiteKey
+        });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 
     [Fact]

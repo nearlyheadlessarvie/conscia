@@ -66,4 +66,31 @@ public class RuntimeSecretConfigurationLoaderTests
         Assert.Null(configuration["Auth:AppJwtSigningKey"]);
         Assert.Equal("{\"project_id\":\"conscia-prod\"}", configuration["Firebase:AdminServiceAccountJson"]);
     }
+
+    [Fact]
+    public async Task LoadAsync_LoadsRecaptchaApiKeySecret()
+    {
+        var configuration = new ConfigurationManager();
+        configuration.AddInMemoryCollection(new Dictionary<string, string?>
+        {
+            ["Recaptcha:ApiKeySecretId"] = "conscia/prod/recaptcha-api-key"
+        });
+
+        var secretsManager = new Mock<IAmazonSecretsManager>();
+        secretsManager
+            .Setup(client => client.GetSecretValueAsync(
+                It.Is<GetSecretValueRequest>(request => request.SecretId == "conscia/prod/recaptcha-api-key"),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new GetSecretValueResponse
+            {
+                SecretString = "recaptcha-api-key"
+            });
+
+        var overrides = await RuntimeSecretConfigurationLoader.LoadAsync(
+            configuration,
+            isProduction: true,
+            secretsManager: secretsManager.Object);
+
+        Assert.Equal("recaptcha-api-key", overrides["Recaptcha:ApiKey"]);
+    }
 }

@@ -10,7 +10,8 @@ public static class RuntimeSecretConfigurationLoader
     [
         ("Apple:PrivateKeySecretId", "Apple:PrivateKey"),
         ("GooglePlay:ServiceAccountJsonSecretId", "GooglePlay:ServiceAccountJson"),
-        ("Firebase:AdminServiceAccountJsonSecretId", "Firebase:AdminServiceAccountJson")
+        ("Firebase:AdminServiceAccountJsonSecretId", "Firebase:AdminServiceAccountJson"),
+        ("Recaptcha:ApiKeySecretId", "Recaptcha:ApiKey")
     ];
 
     public static async Task<Dictionary<string, string>> LoadAsync(

@@ -48,9 +48,19 @@ public class TestWebAppFactory : WebApplicationFactory<Program>
     public Mock<IReceiptRepository> ReceiptRepoMock { get; } = new();
     public Mock<IS3StorageService> S3StorageServiceMock { get; } = new();
     public Mock<IPasskeyAuthService> PasskeyAuthServiceMock { get; } = new();
+    public Mock<ICaptchaVerifier> CaptchaVerifierMock { get; } = new();
     public InMemoryUserRepository UserRepo { get; } = new();
 
     private const string SigningKey = "this-is-a-test-signing-key-at-least-32-chars!!";
+
+    public TestWebAppFactory()
+    {
+        CaptchaVerifierMock
+            .Setup(v => v.VerifyAsync(
+                It.IsAny<CaptchaVerificationRequest>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+    }
 
     public HttpClient CreateRawClient() => base.CreateClient();
 
@@ -100,6 +110,7 @@ public class TestWebAppFactory : WebApplicationFactory<Program>
             ReplaceService<IReceiptRepository>(services, ReceiptRepoMock.Object);
             ReplaceService<IS3StorageService>(services, S3StorageServiceMock.Object);
             ReplaceService<IPasskeyAuthService>(services, PasskeyAuthServiceMock.Object);
+            ReplaceService<ICaptchaVerifier>(services, CaptchaVerifierMock.Object);
         });
 
         builder.UseSetting("Auth:UseMock", "true");
