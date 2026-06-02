@@ -42,6 +42,31 @@ public class EmailSuppressionRepositoryTests
     }
 
     [Fact]
+    public async Task UpsertAsync_WritesRecipientRequestSuppressionReason()
+    {
+        var dynamoMock = new Mock<IAmazonDynamoDB>();
+        PutItemRequest? captured = null;
+        dynamoMock
+            .Setup(d => d.PutItemAsync(It.IsAny<PutItemRequest>(), It.IsAny<CancellationToken>()))
+            .Callback<PutItemRequest, CancellationToken>((request, _) => captured = request)
+            .ReturnsAsync(new PutItemResponse());
+
+        var repository = new EmailSuppressionRepository(dynamoMock.Object);
+
+        await repository.UpsertAsync(new EmailSuppression
+        {
+            Email = "recipient@example.com",
+            Reason = EmailSuppressionReason.RecipientRequest,
+            Source = "Support",
+            SuppressedAt = new DateTime(2026, 6, 2, 8, 0, 0, DateTimeKind.Utc)
+        });
+
+        Assert.NotNull(captured);
+        Assert.Equal("RecipientRequest", captured!.Item["Reason"].S);
+        Assert.Equal("Support", captured.Item["Source"].S);
+    }
+
+    [Fact]
     public async Task IsSuppressedAsync_ReturnsTrueWhenRecordExists()
     {
         var dynamoMock = new Mock<IAmazonDynamoDB>();

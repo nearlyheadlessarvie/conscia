@@ -1,14 +1,26 @@
 # Email Hygiene
 
-This is intentionally narrow. It covers hard bounces and complaints for transactional family invites and future non-auth notification emails. It is not a marketing preference center, and it does not change Cognito account-security email behavior.
+This is intentionally narrow. It covers hard bounces, complaints, and direct recipient requests for transactional family invites and future non-auth notification emails. It is not a marketing preference center, and it does not change Cognito account-security email behavior.
 
 ## Current Behavior
 
-- `EmailSuppressions` stores normalized recipient addresses suppressed for `HardBounce` or `Complaint`.
+- `EmailSuppressions` stores normalized recipient addresses suppressed for `HardBounce`, `Complaint`, or `RecipientRequest`.
 - Family invite outbox processing checks `EmailSuppressions` before sending email.
 - Suppressed invite recipients do not receive invite email, and the outbox event is still marked processed so delivery retries do not loop.
 - Registered suppressed recipients can still receive in-app alerts and push notifications for the invite.
 - Brevo transactional webhooks are not wired here. SES hardening is the target of this change.
+
+## Recipient Requests
+
+If a recipient explicitly asks not to receive transactional invite or non-auth notification email, add the normalized address to `EmailSuppressions` with `Reason = RecipientRequest` and `Source = Support`. The same send guard applies regardless of suppression reason.
+
+Example manual suppression:
+
+```bash
+aws dynamodb put-item \
+  --table-name EmailSuppressions \
+  --item '{"PK":{"S":"EMAIL#recipient@example.com"},"Email":{"S":"recipient@example.com"},"Reason":{"S":"RecipientRequest"},"Source":{"S":"Support"},"SuppressedAt":{"S":"2026-06-02T00:00:00Z"}}'
+```
 
 ## SES Production Readiness
 
@@ -29,6 +41,14 @@ aws sesv2 get-account
 ```
 
 Use the `conscia-production` configuration set for transactional sends so the configuration-set suppression and EventBridge route both apply.
+
+For an SES production access request, summarize the implemented controls as:
+
+- We send transactional email only for user-initiated account/family workflows, not marketing.
+- We maintain an application-level suppression table for hard bounces, complaints, and direct recipient requests.
+- Family invite and future non-auth transactional outbox sends check that table before delivery and do not retry suppressed recipients.
+- SES bounce and complaint events are routed through EventBridge into the existing outbox Lambda, which upserts the suppression table.
+- SES account-level suppression is enabled or verified for `BOUNCE` and `COMPLAINT` in the sending region before SES traffic resumes.
 
 ## Monitoring
 
