@@ -50,7 +50,7 @@ Public unauthenticated endpoints that can trigger account-security email are pro
 - the API verifies that token server-side against configured Conscia mobile site keys and a configurable score threshold;
 - direct unauthenticated Cognito `SignUp` calls are rejected by the Cognito pre-signup Lambda unless the request includes server-only client metadata added by the API registration service.
 
-The reCAPTCHA API key is loaded from Secrets Manager. Mobile site keys are public app build configuration.
+The reCAPTCHA API key is supplied as a GitHub deploy secret and written to the API Lambda environment during infra deploy. Mobile site keys are public app build configuration.
 
 ## Email Authentication
 
