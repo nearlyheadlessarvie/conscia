@@ -49,21 +49,31 @@ public sealed class CognitoPreSignupLinker(
             email,
             existingUser.Username);
 
-        await cognito.AdminLinkProviderForUserAsync(new AdminLinkProviderForUserRequest
+        try
         {
-            UserPoolId = userPoolId,
-            DestinationUser = new ProviderUserIdentifierType
+            await cognito.AdminLinkProviderForUserAsync(new AdminLinkProviderForUserRequest
             {
-                ProviderName = "Cognito",
-                ProviderAttributeValue = existingUser.Username
-            },
-            SourceUser = new ProviderUserIdentifierType
-            {
-                ProviderName = providerName,
-                ProviderAttributeName = "Cognito_Subject",
-                ProviderAttributeValue = providerSubject
-            }
-        }, ct);
+                UserPoolId = userPoolId,
+                DestinationUser = new ProviderUserIdentifierType
+                {
+                    ProviderName = "Cognito",
+                    ProviderAttributeValue = existingUser.Username
+                },
+                SourceUser = new ProviderUserIdentifierType
+                {
+                    ProviderName = providerName,
+                    ProviderAttributeName = "Cognito_Subject",
+                    ProviderAttributeValue = providerSubject
+                }
+            }, ct);
+        }
+        catch (InvalidParameterException ex) when (IsAlreadyLinkedProvider(ex))
+        {
+            logger.LogInformation(
+                "Skipping {ProviderName} link for {Email} because Cognito reports the source identity is already linked.",
+                providerName,
+                email);
+        }
 
         return request;
     }
@@ -201,6 +211,11 @@ public sealed class CognitoPreSignupLinker(
     private static bool IsTrue(string? value)
     {
         return string.Equals(value, "true", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsAlreadyLinkedProvider(InvalidParameterException ex)
+    {
+        return ex.Message.Contains("already linked", StringComparison.OrdinalIgnoreCase);
     }
 
     private static string EscapeFilterValue(string value)
