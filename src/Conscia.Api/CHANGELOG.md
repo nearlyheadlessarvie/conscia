@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.6.2](https://github.com/nearlyheadlessarvie/conscia/compare/api/v1.6.1...api/v1.6.2) (2026-06-02)
+
+
+### Bug Fixes
+
+* **api:** normalize runtime secret overrides ([#212](https://github.com/nearlyheadlessarvie/conscia/issues/212)) ([5ffc38e](https://github.com/nearlyheadlessarvie/conscia/commit/5ffc38e559c7fc10aa2a9bf3d32829d21c8c7f5e))
+
 ## [1.6.1](https://github.com/nearlyheadlessarvie/conscia/compare/api/v1.6.0...api/v1.6.1) (2026-06-02)
 
 
