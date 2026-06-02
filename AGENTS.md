@@ -43,6 +43,8 @@
 - Use `git commit -m`; do not use interactive commit editors.
 - Use GitHub CLI (`gh`) for PR lookup, creation, editing, and status checks.
 - Never stage unrelated user changes silently. Inspect `git status -sb` and stage explicit paths when the worktree is mixed.
+- For PRs that may be squash-merged, make the PR title a valid Conventional Commit before merge because GitHub commonly uses the PR title as the squash commit subject.
+- Do not prefix PR titles with `[codex]` or other non-Conventional text when the PR should be releasable.
 
 ## Release Rules
 
@@ -62,6 +64,8 @@
   - `feat(api): ...`, `fix(api): ...`, `ci(api): ...`
   - `feat(infra): ...`, `fix(infra): ...`, `ci(infra): ...`
   - `feat(web): ...`, `fix(web): ...`, `ci(web): ...`
+- If a releasable PR touches multiple release components, either keep separate component-scoped commits and avoid squash-merging them into one non-component commit, or split the work into separate component PRs. Verify the final merge commit(s) on `main` will be parseable by release-please.
+- Editing a merged PR title or body is not a reliable way to repair release-please parsing; the squash/merge commit already on `main` is the source of truth.
 - Release impact by type:
   - `feat(...)` creates a minor release for the affected component.
   - `fix(...)` creates a patch release for the affected component.
