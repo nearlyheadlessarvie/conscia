@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.7.1](https://github.com/nearlyheadlessarvie/conscia/compare/infra/v1.7.0...infra/v1.7.1) (2026-06-02)
+
+
+### Bug Fixes
+
+* **api:** require captcha-protected signup ([#207](https://github.com/nearlyheadlessarvie/conscia/issues/207)) ([715bef3](https://github.com/nearlyheadlessarvie/conscia/commit/715bef300c59c6623d39beeff734f07d13ec609f))
+
 ## [1.7.0](https://github.com/nearlyheadlessarvie/conscia/compare/infra/v1.6.9...infra/v1.7.0) (2026-06-02)
 
 
