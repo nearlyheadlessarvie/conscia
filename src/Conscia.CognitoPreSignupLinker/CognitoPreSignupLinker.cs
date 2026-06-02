@@ -30,7 +30,8 @@ public sealed class CognitoPreSignupLinker(
         var email = GetAttribute(request, "email")?.Trim().ToLowerInvariant();
         if (string.IsNullOrWhiteSpace(email) || !IsTrue(GetAttribute(request, "email_verified")))
         {
-            return request;
+            throw new InvalidOperationException(
+                "Social sign-in requires a verified email from Google or Apple.");
         }
 
         var userPoolId = request.UserPoolId;
@@ -109,10 +110,12 @@ public sealed class CognitoPreSignupLinker(
 
     private async Task<UserType> CreateLocalAnchorUserAsync(string userPoolId, string email, CancellationToken ct)
     {
+        var anchorPassword = GenerateAnchorPassword();
         var response = await cognito.AdminCreateUserAsync(new AdminCreateUserRequest
         {
             UserPoolId = userPoolId,
             Username = email,
+            TemporaryPassword = anchorPassword,
             MessageAction = MessageActionType.SUPPRESS,
             UserAttributes =
             [
@@ -135,7 +138,7 @@ public sealed class CognitoPreSignupLinker(
         {
             UserPoolId = userPoolId,
             Username = username,
-            Password = GenerateAnchorPassword(),
+            Password = anchorPassword,
             Permanent = true
         }, ct);
 

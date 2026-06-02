@@ -57,6 +57,8 @@ public class CognitoPreSignupLinkerTests
     public async Task HandleAsync_NoLocalUser_CreatesSuppressedAnchorAndLinksProvider()
     {
         var request = CreateRequest("PreSignUp_ExternalProvider", "SignInWithApple_000644.989a6e2a48");
+        AdminCreateUserRequest? createRequest = null;
+        AdminSetUserPasswordRequest? setPasswordRequest = null;
 
         _cognito
             .Setup(client => client.ListUsersAsync(
@@ -71,9 +73,11 @@ public class CognitoPreSignupLinkerTests
                     r.UserPoolId == "ap-southeast-1_example" &&
                     r.Username == "person@example.com" &&
                     r.MessageAction == MessageActionType.SUPPRESS &&
+                    !string.IsNullOrWhiteSpace(r.TemporaryPassword) &&
                     r.UserAttributes.Any(a => a.Name == "email" && a.Value == "person@example.com") &&
                     r.UserAttributes.Any(a => a.Name == "email_verified" && a.Value == "true")),
                 It.IsAny<CancellationToken>()))
+            .Callback<AdminCreateUserRequest, CancellationToken>((r, _) => createRequest = r)
             .ReturnsAsync(new AdminCreateUserResponse
             {
                 User = new UserType { Username = "person@example.com" }
@@ -85,10 +89,14 @@ public class CognitoPreSignupLinkerTests
                     r.Username == "person@example.com" &&
                     r.Permanent == true),
                 It.IsAny<CancellationToken>()))
+            .Callback<AdminSetUserPasswordRequest, CancellationToken>((r, _) => setPasswordRequest = r)
             .ReturnsAsync(new AdminSetUserPasswordResponse());
 
         await _linker.HandleAsync(request, CancellationToken.None);
 
+        Assert.NotNull(createRequest);
+        Assert.NotNull(setPasswordRequest);
+        Assert.Equal(createRequest!.TemporaryPassword, setPasswordRequest!.Password);
         _cognito.Verify(client => client.AdminSetUserPasswordAsync(
             It.Is<AdminSetUserPasswordRequest>(r =>
                 r.Password.Length >= 32 &&
@@ -108,13 +116,29 @@ public class CognitoPreSignupLinkerTests
     }
 
     [Fact]
-    public async Task HandleAsync_UnverifiedEmail_DoesNotAttemptLinking()
+    public async Task HandleAsync_UnverifiedEmail_RejectsExternalProviderSignup()
     {
         var request = CreateRequest("PreSignUp_ExternalProvider", "Google_103448169750402666663");
         request.Request.UserAttributes["email_verified"] = "false";
 
-        await _linker.HandleAsync(request, CancellationToken.None);
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => _linker.HandleAsync(request, CancellationToken.None));
 
+        Assert.Contains("verified email", ex.Message);
+        _cognito.Verify(client => client.ListUsersAsync(It.IsAny<ListUsersRequest>(), It.IsAny<CancellationToken>()), Times.Never);
+        _cognito.Verify(client => client.AdminLinkProviderForUserAsync(It.IsAny<AdminLinkProviderForUserRequest>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task HandleAsync_MissingEmail_RejectsExternalProviderSignup()
+    {
+        var request = CreateRequest("PreSignUp_ExternalProvider", "SignInWithApple_000644.989a6e2a48");
+        request.Request.UserAttributes.Remove("email");
+
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => _linker.HandleAsync(request, CancellationToken.None));
+
+        Assert.Contains("verified email", ex.Message);
         _cognito.Verify(client => client.ListUsersAsync(It.IsAny<ListUsersRequest>(), It.IsAny<CancellationToken>()), Times.Never);
         _cognito.Verify(client => client.AdminLinkProviderForUserAsync(It.IsAny<AdminLinkProviderForUserRequest>(), It.IsAny<CancellationToken>()), Times.Never);
     }
