@@ -1,5 +1,8 @@
 using System.Net;
+using System.Reflection;
 using System.Text.Json;
+using AWS.Cryptography.EncryptionSDK;
+using AWS.Cryptography.MaterialProviders;
 using Conscia.Application.Configuration;
 using Conscia.CognitoCustomEmailSender;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -80,6 +83,20 @@ public class CognitoCustomEmailSenderTests
 
         await Assert.ThrowsAsync<HttpRequestException>(() =>
             sender.HandleAsync(CreateEvent("CustomEmailSender_SignUp"), CancellationToken.None));
+    }
+
+    [Fact]
+    public void AwsEncryptionSdkCognitoCodeDecryptor_AllowsDecryptingCognitoCiphertext()
+    {
+        var method = typeof(AwsEncryptionSdkCognitoCodeDecryptor).GetMethod(
+            "CreateEncryptionSdkConfig",
+            BindingFlags.NonPublic | BindingFlags.Static);
+
+        var config = Assert.IsType<AwsEncryptionSdkConfig>(method!.Invoke(null, null));
+
+        Assert.Equal(
+            ESDKCommitmentPolicy.REQUIRE_ENCRYPT_ALLOW_DECRYPT,
+            config.CommitmentPolicy);
     }
 
     private static CognitoCustomEmailSenderHandler CreateSender(
