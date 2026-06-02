@@ -28,11 +28,15 @@ sealed class Program
         var auth = new AuthStack(app, "Conscia-Auth", new AuthStackProps
         {
             Env = env,
+            CognitoCustomEmailSenderAssetPath = AssetPathResolver.ResolvePublishedAsset(
+                "../publish/cognito-custom-email-sender",
+                "cognito-custom-email-sender"),
             CognitoPreSignupLinkerAssetPath = AssetPathResolver.ResolvePublishedAsset(
                 "../publish/cognito-pre-signup-linker",
                 "cognito-pre-signup-linker"),
             DomainSettings = domainSettings,
-            ManagedLoginProviderSettings = managedLoginProviderSettings
+            ManagedLoginProviderSettings = managedLoginProviderSettings,
+            RuntimeSettings = runtimeSettings
         });
 
         var ai = new AIStack(app, "Conscia-AI", new StackProps { Env = env });

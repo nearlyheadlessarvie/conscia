@@ -1,6 +1,5 @@
 using Amazon.CDK;
 using Amazon.CDK.AWS.DynamoDB;
-using Amazon.CDK.AWS.IAM;
 using Amazon.CDK.AWS.Lambda;
 using Amazon.CDK.AWS.Lambda.EventSources;
 using Amazon.CDK.AWS.SecretsManager;
@@ -56,6 +55,11 @@ public class OutboxStack : Stack
                 ["InviteEmail__ConfigurationSetName"] = props.RuntimeSettings.InviteEmailConfigurationSetName
                     ?? (props.DomainSettings is null ? string.Empty : "conscia-production"),
                 ["InviteEmail__DeepLinkBaseUri"] = props.RuntimeSettings.InviteEmailDeepLinkBaseUri,
+                ["Brevo__ApiKey"] = props.RuntimeSettings.BrevoApiKey ?? string.Empty,
+                ["Brevo__SenderEmail"] = props.RuntimeSettings.BrevoSenderEmail
+                    ?? props.RuntimeSettings.InviteEmailFromEmail
+                    ?? (props.DomainSettings is null ? string.Empty : $"invites@{props.DomainSettings.RootDomainName}"),
+                ["Brevo__SenderName"] = props.RuntimeSettings.BrevoSenderName,
                 ["SES_FROM_EMAIL"] = props.RuntimeSettings.InviteEmailFromEmail
                     ?? (props.DomainSettings is null ? string.Empty : $"invites@{props.DomainSettings.RootDomainName}"),
                 ["SES_CONFIGURATION_SET"] = props.RuntimeSettings.InviteEmailConfigurationSetName
@@ -81,17 +85,5 @@ public class OutboxStack : Stack
         props.PushDeviceTokensTable.GrantReadData(OutboxLambda);
         Secret.FromSecretNameV2(this, "FirebaseAdminServiceAccountJsonSecret", props.RuntimeSecretSettings.FirebaseAdminServiceAccountJsonSecretName)
             .GrantRead(OutboxLambda);
-
-        if (props.DomainSettings is not null)
-        {
-            OutboxLambda.AddToRolePolicy(new PolicyStatement(new PolicyStatementProps
-            {
-                Actions = ["ses:SendEmail", "ses:SendRawEmail"],
-                Resources =
-                [
-                    $"arn:aws:ses:{Region}:{Account}:identity/{props.DomainSettings.RootDomainName}"
-                ]
-            }));
-        }
     }
 }

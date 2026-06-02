@@ -1,6 +1,5 @@
 using Amazon;
 using Amazon.DynamoDBv2;
-using Amazon.SimpleEmailV2;
 using Amazon.Lambda.Core;
 using Amazon.Lambda.DynamoDBEvents;
 using Amazon.Lambda.RuntimeSupport;
@@ -43,9 +42,6 @@ services.AddSingleton<IAmazonDynamoDB>(_ =>
         RegionEndpoint = RegionEndpoint.GetBySystemName(
             Environment.GetEnvironmentVariable("AWS_DEFAULT_REGION") ?? "ap-southeast-1")
     }));
-services.AddSingleton<IAmazonSimpleEmailServiceV2>(_ =>
-    new AmazonSimpleEmailServiceV2Client(RegionEndpoint.GetBySystemName(
-        Environment.GetEnvironmentVariable("AWS_DEFAULT_REGION") ?? "ap-southeast-1")));
 
 services.AddScoped<ITransactionRepository, TransactionRepository>();
 services.AddScoped<IOutboxEventRepository, OutboxEventRepository>();
@@ -63,8 +59,23 @@ services.Configure<InviteEmailOptions>(options =>
     options.DeepLinkBaseUri = Environment.GetEnvironmentVariable("InviteEmail__DeepLinkBaseUri")
         ?? "https://getconscia.com/open/family-invite";
 });
+services.Configure<BrevoEmailOptions>(options =>
+{
+    options.ApiKey = Environment.GetEnvironmentVariable("Brevo__ApiKey")
+        ?? Environment.GetEnvironmentVariable("BREVO_API_KEY");
+    options.SenderEmail = Environment.GetEnvironmentVariable("Brevo__SenderEmail")
+        ?? Environment.GetEnvironmentVariable("BREVO_SENDER_EMAIL")
+        ?? Environment.GetEnvironmentVariable("InviteEmail__FromEmail")
+        ?? Environment.GetEnvironmentVariable("SES_FROM_EMAIL");
+    options.SenderName = Environment.GetEnvironmentVariable("Brevo__SenderName")
+        ?? Environment.GetEnvironmentVariable("BREVO_SENDER_NAME")
+        ?? "Conscia";
+});
 services.AddHttpClient<IPushNotificationSender, FirebasePushNotificationSender>();
-services.AddScoped<IInviteEmailSender, SesInviteEmailSender>();
+services.AddHttpClient<IInviteEmailSender, BrevoInviteEmailSender>(client =>
+{
+    client.BaseAddress = new Uri("https://api.brevo.com");
+});
 
 services.AddScoped<OutboxProcessor>();
 

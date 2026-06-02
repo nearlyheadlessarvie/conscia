@@ -51,7 +51,8 @@ public sealed class ProductionRuntimeOptionsValidator : IValidateOptions<Product
 
         if (options.RequireInviteEmail)
         {
-            Require(errors, "InviteEmail:FromEmail");
+            Require(errors, "Brevo:ApiKey");
+            Require(errors, "Brevo:SenderEmail");
         }
 
         if (options.RequireAppCompatibility)

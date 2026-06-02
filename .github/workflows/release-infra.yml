@@ -44,6 +44,9 @@ jobs:
       ADMIN_BOOTSTRAP_EMAILS: ${{ secrets.ADMIN_BOOTSTRAP_EMAILS }}
       SES_FROM_EMAIL: ${{ vars.SES_FROM_EMAIL }}
       SES_CONFIGURATION_SET: ${{ vars.SES_CONFIGURATION_SET }}
+      BREVO_API_KEY: ${{ secrets.BREVO_API_KEY }}
+      BREVO_SENDER_EMAIL: ${{ vars.BREVO_SENDER_EMAIL || vars.SES_FROM_EMAIL }}
+      BREVO_SENDER_NAME: ${{ vars.BREVO_SENDER_NAME || 'Conscia' }}
       INVITE_EMAIL_DEEP_LINK_BASE_URI: ${{ vars.INVITE_EMAIL_DEEP_LINK_BASE_URI }}
     steps:
       - name: Validate release ref
@@ -73,6 +76,7 @@ jobs:
       - name: Publish Lambda assets
         run: |
           dotnet publish src/Conscia.Api -c Release -r linux-arm64 --self-contained -o publish/api
+          dotnet publish src/Conscia.CognitoCustomEmailSender -c Release -r linux-arm64 --self-contained -o publish/cognito-custom-email-sender
           dotnet publish src/Conscia.CognitoPreSignupLinker -c Release -r linux-arm64 --self-contained -o publish/cognito-pre-signup-linker
           dotnet publish src/Conscia.OutboxProcessor -c Release -r linux-arm64 --self-contained -o publish/outbox
           dotnet publish src/Conscia.RecurringProcessor -c Release -r linux-arm64 --self-contained -o publish/recurring-processor

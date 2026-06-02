@@ -8,7 +8,6 @@ using Amazon.CognitoIdentityProvider;
 using Amazon.DynamoDBv2;
 using Amazon.Runtime;
 using Amazon.S3;
-using Amazon.SimpleEmailV2;
 using Amazon.SQS;
 using Amazon.Textract;
 using Asp.Versioning;
@@ -134,6 +133,7 @@ builder.Services.Configure<AppleStoreOptions>(builder.Configuration.GetSection(A
 builder.Services.Configure<GooglePlayOptions>(builder.Configuration.GetSection(GooglePlayOptions.SectionName));
 builder.Services.Configure<FirebaseAdminOptions>(builder.Configuration.GetSection(FirebaseAdminOptions.SectionName));
 builder.Services.Configure<InviteEmailOptions>(builder.Configuration.GetSection(InviteEmailOptions.SectionName));
+builder.Services.Configure<BrevoEmailOptions>(builder.Configuration.GetSection(BrevoEmailOptions.SectionName));
 builder.Services.Configure<AdminBootstrapOptions>(builder.Configuration.GetSection(AdminBootstrapOptions.SectionName));
 builder.Services.AddHttpClient<IAppleReceiptValidator, AppleReceiptValidator>();
 builder.Services.AddHttpClient<IGooglePlayValidator, GooglePlayValidator>();
@@ -186,9 +186,11 @@ if (builder.Environment.IsDevelopment())
 }
 else
 {
-    builder.Services.AddAWSService<IAmazonSimpleEmailServiceV2>();
     builder.Services.AddHttpClient<IPushNotificationSender, FirebasePushNotificationSender>();
-    builder.Services.AddScoped<IInviteEmailSender, SesInviteEmailSender>();
+    builder.Services.AddHttpClient<IInviteEmailSender, BrevoInviteEmailSender>(client =>
+    {
+        client.BaseAddress = new Uri("https://api.brevo.com");
+    });
     builder.Services.AddScoped<IOcrService, AwsReceiptOcrService>();
 }
 

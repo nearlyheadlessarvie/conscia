@@ -159,12 +159,30 @@ public class StackTests
         {
             Env = TestEnv,
             DomainSettings = TestDomainSettings,
+            CognitoCustomEmailSenderAssetPath = CreateAssetStub("cognito-custom-email-sender"),
             CognitoPreSignupLinkerAssetPath = CreateAssetStub("cognito-pre-signup-linker"),
             ManagedLoginProviderSettings = new ManagedLoginProviderSettings(
                 "google-web-client-id.apps.googleusercontent.com",
                 "com.getconscia.auth",
                 "ABCDE12345",
-                "1A2B3C4D5E")
+                "1A2B3C4D5E"),
+            RuntimeSettings = new ProductionRuntimeSettings(
+                "google-client-id",
+                "com.getconscia.app.ai",
+                "APPLEKEYID",
+                "00000000-0000-0000-0000-000000000000",
+                "com.getconscia.app.ai",
+                "private-key",
+                "com.getconscia.app.ai",
+                "service-account-json",
+                "firebase-service-account",
+                "conscia-prod",
+                "invites@getconscia.com",
+                "conscia-production",
+                "conscia://invite",
+                "brevo-api-key",
+                "no-reply@getconscia.com",
+                "Conscia")
         });
         var template = Template.FromStack(stack);
 
@@ -174,6 +192,7 @@ public class StackTests
         template.ResourceCountIs("AWS::Cognito::UserPoolIdentityProvider", 2);
         template.ResourceCountIs("AWS::Cognito::ManagedLoginBranding", 0);
         template.ResourceCountIs("AWS::Cognito::Terms", 2);
+        template.ResourceCountIs("AWS::KMS::Key", 1);
         template.HasResourceProperties("AWS::Cognito::UserPool", new Dictionary<string, object>
         {
             ["UserPoolName"] = "conscia-users",
@@ -183,13 +202,13 @@ public class StackTests
             ["WebAuthnUserVerification"] = "preferred",
             ["LambdaConfig"] = Match.ObjectLike(new Dictionary<string, object>
             {
-                ["PreSignUp"] = Match.AnyValue()
-            }),
-            ["EmailConfiguration"] = Match.ObjectLike(new Dictionary<string, object>
-            {
-                ["EmailSendingAccount"] = "DEVELOPER",
-                ["From"] = "no-reply@getconscia.com",
-                ["SourceArn"] = Match.AnyValue()
+                ["PreSignUp"] = Match.AnyValue(),
+                ["CustomEmailSender"] = Match.ObjectLike(new Dictionary<string, object>
+                {
+                    ["LambdaVersion"] = "V1_0",
+                    ["LambdaArn"] = Match.AnyValue()
+                }),
+                ["KMSKeyID"] = Match.AnyValue()
             }),
             ["Policies"] = Match.ObjectLike(new Dictionary<string, object>
             {
@@ -275,6 +294,20 @@ public class StackTests
         template.HasResourceProperties("AWS::Lambda::Function", Match.ObjectLike(new Dictionary<string, object>
         {
             ["FunctionName"] = "conscia-cognito-pre-signup-linker"
+        }));
+        template.HasResourceProperties("AWS::Lambda::Function", Match.ObjectLike(new Dictionary<string, object>
+        {
+            ["FunctionName"] = "conscia-cognito-custom-email-sender",
+            ["Environment"] = Match.ObjectLike(new Dictionary<string, object>
+            {
+                ["Variables"] = Match.ObjectLike(new Dictionary<string, object>
+                {
+                    ["Brevo__ApiKey"] = "brevo-api-key",
+                    ["Brevo__SenderEmail"] = "no-reply@getconscia.com",
+                    ["Brevo__SenderName"] = "Conscia",
+                    ["COGNITO_CUSTOM_SENDER_KMS_KEY_ARN"] = Match.AnyValue()
+                })
+            })
         }));
         template.HasResourceProperties("AWS::IAM::Policy", Match.ObjectLike(new Dictionary<string, object>
         {
@@ -391,7 +424,10 @@ public class StackTests
                 "conscia-prod",
                 "invites@getconscia.com",
                 "conscia-production",
-                "conscia://invite"),
+                "conscia://invite",
+                "brevo-api-key",
+                "invites@getconscia.com",
+                "Conscia"),
             RuntimeSecretSettings = new RuntimeSecretSettings(
                 "test/apple-private-key",
                 "test/google-play-service-account-json",
@@ -450,6 +486,9 @@ public class StackTests
                     ["GooglePlay__ServiceAccountJsonSecretId"] = "test/google-play-service-account-json",
                     ["AdminBootstrap__Emails"] = Match.AnyValue(),
                     ["InviteEmail__FromEmail"] = "invites@getconscia.com",
+                    ["Brevo__ApiKey"] = "brevo-api-key",
+                    ["Brevo__SenderEmail"] = "invites@getconscia.com",
+                    ["Brevo__SenderName"] = "Conscia",
                     ["Auth__Cognito__LoginDomain"] = "https://login.getconscia.com"
                 })
             }
@@ -491,7 +530,10 @@ public class StackTests
                 "conscia-prod",
                 "invites@getconscia.com",
                 "conscia-production",
-                "conscia://invite"),
+                "conscia://invite",
+                "brevo-api-key",
+                "invites@getconscia.com",
+                "Conscia"),
             RuntimeSecretSettings = new RuntimeSecretSettings(
                 "test/apple-private-key",
                 "test/google-play-service-account-json",
@@ -521,7 +563,10 @@ public class StackTests
                 {
                     ["AWS__DynamoDB__PushDeviceTokensTable"] = Match.AnyValue(),
                     ["Firebase__AdminServiceAccountJsonSecretId"] = "test/firebase-admin-service-account-json",
-                    ["InviteEmail__FromEmail"] = "invites@getconscia.com"
+                    ["InviteEmail__FromEmail"] = "invites@getconscia.com",
+                    ["Brevo__ApiKey"] = "brevo-api-key",
+                    ["Brevo__SenderEmail"] = "invites@getconscia.com",
+                    ["Brevo__SenderName"] = "Conscia"
                 })
             }
         });
