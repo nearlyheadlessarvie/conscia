@@ -30,6 +30,8 @@ env:
   COGNITO_CLIENT_ID: ${{ vars.COGNITO_CLIENT_ID }}
   MOCK_AUTH: ${{ vars.MOCK_AUTH || 'false' }}
   PUSH_NOTIFICATIONS_ENABLED: ${{ vars.PUSH_NOTIFICATIONS_ENABLED || 'false' }}
+  RECAPTCHA_ANDROID_SITE_KEY: ${{ vars.RECAPTCHA_ANDROID_SITE_KEY }}
+  RECAPTCHA_IOS_SITE_KEY: ${{ vars.RECAPTCHA_IOS_SITE_KEY }}
   FIREBASE_OPTIONS_DART_BASE64: ${{ secrets.FIREBASE_OPTIONS_DART_BASE64 }}
 
 jobs:
@@ -72,6 +74,7 @@ jobs:
         run: |
           test -n "${API_BASE_URL}" || (echo "Missing API_BASE_URL variable" && exit 1)
           test -n "${COGNITO_CLIENT_ID}" || (echo "Missing COGNITO_CLIENT_ID variable" && exit 1)
+          test -n "${RECAPTCHA_ANDROID_SITE_KEY}" || (echo "Missing RECAPTCHA_ANDROID_SITE_KEY variable" && exit 1)
           test -n "${ANDROID_GOOGLE_SERVICES_JSON_BASE64}" || (echo "Missing ANDROID_GOOGLE_SERVICES_JSON_BASE64 secret" && exit 1)
           test -n "${ANDROID_KEYSTORE_BASE64}" || (echo "Missing ANDROID_KEYSTORE_BASE64 secret" && exit 1)
           test -n "${ANDROID_KEYSTORE_PASSWORD}" || (echo "Missing ANDROID_KEYSTORE_PASSWORD secret" && exit 1)
@@ -172,7 +175,8 @@ jobs:
             --dart-define=API_BASE_URL="${API_BASE_URL}" \
             --dart-define=COGNITO_CLIENT_ID="${COGNITO_CLIENT_ID}" \
             --dart-define=MOCK_AUTH="${MOCK_AUTH}" \
-            --dart-define=PUSH_NOTIFICATIONS_ENABLED="${PUSH_NOTIFICATIONS_ENABLED}"
+            --dart-define=PUSH_NOTIFICATIONS_ENABLED="${PUSH_NOTIFICATIONS_ENABLED}" \
+            --dart-define=RECAPTCHA_ANDROID_SITE_KEY="${RECAPTCHA_ANDROID_SITE_KEY}"
 
       - name: Upload Android artifact
         uses: actions/upload-artifact@v4
@@ -217,6 +221,7 @@ jobs:
         run: |
           test -n "${API_BASE_URL}" || (echo "Missing API_BASE_URL variable" && exit 1)
           test -n "${COGNITO_CLIENT_ID}" || (echo "Missing COGNITO_CLIENT_ID variable" && exit 1)
+          test -n "${RECAPTCHA_IOS_SITE_KEY}" || (echo "Missing RECAPTCHA_IOS_SITE_KEY variable" && exit 1)
           test -n "${IOS_GOOGLE_SERVICE_INFO_PLIST_BASE64}" || (echo "Missing IOS_GOOGLE_SERVICE_INFO_PLIST_BASE64 secret" && exit 1)
           test -n "${APP_STORE_CONNECT_API_KEY_ID}" || (echo "Missing APP_STORE_CONNECT_API_KEY_ID secret" && exit 1)
           test -n "${APP_STORE_CONNECT_ISSUER_ID}" || (echo "Missing APP_STORE_CONNECT_ISSUER_ID secret" && exit 1)
@@ -286,7 +291,8 @@ jobs:
             --dart-define=API_BASE_URL="${API_BASE_URL}" \
             --dart-define=COGNITO_CLIENT_ID="${COGNITO_CLIENT_ID}" \
             --dart-define=MOCK_AUTH="${MOCK_AUTH}" \
-            --dart-define=PUSH_NOTIFICATIONS_ENABLED="${PUSH_NOTIFICATIONS_ENABLED}"
+            --dart-define=PUSH_NOTIFICATIONS_ENABLED="${PUSH_NOTIFICATIONS_ENABLED}" \
+            --dart-define=RECAPTCHA_IOS_SITE_KEY="${RECAPTCHA_IOS_SITE_KEY}"
 
       - name: Build and upload iOS release with Fastlane
         working-directory: app/ios
