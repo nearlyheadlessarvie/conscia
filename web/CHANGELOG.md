@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.0](https://github.com/nearlyheadlessarvie/conscia/compare/web/v1.2.4...web/v1.3.0) (2026-06-02)
+
+
+### Features
+
+* **web:** add support page ([#214](https://github.com/nearlyheadlessarvie/conscia/issues/214)) ([48b151f](https://github.com/nearlyheadlessarvie/conscia/commit/48b151f059472b20ac7a398087da1c7b55a66104))
+
 ## [1.2.4](https://github.com/nearlyheadlessarvie/conscia/compare/web/v1.2.3...web/v1.2.4) (2026-05-31)
 
 
