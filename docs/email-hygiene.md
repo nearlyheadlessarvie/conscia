@@ -50,9 +50,9 @@ Use the `conscia-production` configuration set for transactional sends so the co
 - three SES DKIM CNAME records are published from the SES identity tokens;
 - `feedback.getconscia.com` is configured as the custom MAIL FROM domain;
 - `feedback.getconscia.com` publishes the SES regional MX record and SPF TXT record;
-- `_dmarc.getconscia.com` publishes a monitoring-only DMARC policy by default.
+- `_dmarc.getconscia.com` publishes a monitoring-only DMARC policy with aggregate reports sent to a Conscia-owned mailbox by default.
 
-Keep DMARC at `p=none` while validating low-volume transactional traffic across Brevo, iCloud inbox records, and SES. Move to a stricter policy only after legitimate senders are confirmed to pass authentication.
+Keep DMARC at `p=none` while validating low-volume transactional traffic across all legitimate senders. Move to a stricter policy only after legitimate senders are confirmed to pass authentication.
 
 For an SES production access request, summarize the implemented controls as:
 

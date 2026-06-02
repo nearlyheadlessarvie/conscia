@@ -870,7 +870,7 @@ public class StackTests
         {
             ["Name"] = "_dmarc.getconscia.com.",
             ["Type"] = "TXT",
-            ["ResourceRecords"] = new object[] { "\"v=DMARC1; p=none\"" }
+            ["ResourceRecords"] = new object[] { "\"v=DMARC1; p=none; rua=mailto:dmarc@getconscia.com\"" }
         });
         template.HasResourceProperties("AWS::Route53::RecordSet", new Dictionary<string, object>
         {
