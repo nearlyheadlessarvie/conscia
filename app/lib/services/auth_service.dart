@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 
 import '../core/constants/api_constants.dart';
+import 'captcha_service.dart';
 
 class AuthTokens {
   final String accessToken;
@@ -98,14 +99,17 @@ class AuthConfirmationResult {
 // AccountPasswordService.
 class AuthService {
   final Dio _dio;
+  final CaptchaService? _captchaService;
 
-  AuthService(this._dio);
+  AuthService(this._dio, {CaptchaService? captchaService})
+      : _captchaService = captchaService ?? GoogleCaptchaService();
 
   Future<AuthRegistrationResult> register(String email, String password) async {
     try {
+      final captcha = await _captchaFields(CaptchaAction.signup);
       final response = await _dio.post(
         ApiConstants.register,
-        data: {'email': email, 'password': password},
+        data: {'email': email, 'password': password, ...captcha},
       );
       return AuthRegistrationResult.fromJson(
         response.data as Map<String, dynamic>,
@@ -134,9 +138,10 @@ class AuthService {
 
   Future<AuthConfirmationResult> resendConfirmation(String email) async {
     try {
+      final captcha = await _captchaFields(CaptchaAction.resendConfirmation);
       final response = await _dio.post(
         ApiConstants.resendConfirmation,
-        data: {'email': email},
+        data: {'email': email, ...captcha},
       );
       return AuthConfirmationResult.fromJson(
         response.data as Map<String, dynamic>,
@@ -148,9 +153,10 @@ class AuthService {
 
   Future<AuthConfirmationResult> startPasswordReset(String email) async {
     try {
+      final captcha = await _captchaFields(CaptchaAction.passwordResetStart);
       final response = await _dio.post(
         ApiConstants.passwordResetStart,
-        data: {'email': email},
+        data: {'email': email, ...captcha},
       );
       return AuthConfirmationResult.fromJson(
         response.data as Map<String, dynamic>,
@@ -239,5 +245,17 @@ class AuthService {
     } on DioException {
       rethrow;
     }
+  }
+
+  Future<Map<String, String>> _captchaFields(CaptchaAction action) async {
+    final challenge = await _captchaService?.execute(action);
+    if (challenge == null) {
+      return {};
+    }
+
+    return {
+      'captchaToken': challenge.token,
+      'captchaSiteKey': challenge.siteKey,
+    };
   }
 }

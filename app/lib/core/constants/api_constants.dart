@@ -43,6 +43,16 @@ class ApiConstants {
     defaultValue: 'http://localhost:5248/api/',
   );
 
+  static const String recaptchaAndroidSiteKey = String.fromEnvironment(
+    'RECAPTCHA_ANDROID_SITE_KEY',
+    defaultValue: '',
+  );
+
+  static const String recaptchaIosSiteKey = String.fromEnvironment(
+    'RECAPTCHA_IOS_SITE_KEY',
+    defaultValue: '',
+  );
+
   // Auth
   static const String register = 'auth/register';
   static const String confirmRegistration = 'auth/confirm';
