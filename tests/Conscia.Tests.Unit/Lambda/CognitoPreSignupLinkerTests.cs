@@ -54,6 +54,40 @@ public class CognitoPreSignupLinkerTests
     }
 
     [Fact]
+    public async Task HandleAsync_AlreadyLinkedProvider_AllowsIdempotentSocialSignIn()
+    {
+        var request = CreateRequest("PreSignUp_ExternalProvider", "Google_103448169750402666663");
+
+        _cognito
+            .Setup(client => client.ListUsersAsync(
+                It.Is<ListUsersRequest>(r =>
+                    r.UserPoolId == "ap-southeast-1_example" &&
+                    r.Filter == "email = \"person@example.com\""),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ListUsersResponse
+            {
+                Users =
+                [
+                    new UserType { Username = "09fa25bc-1081-70e0-4ba1-3b56973d5000" }
+                ]
+            });
+        _cognito
+            .Setup(client => client.AdminLinkProviderForUserAsync(
+                It.IsAny<AdminLinkProviderForUserRequest>(),
+                It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidParameterException("SourceUser is already linked to DestinationUser"));
+
+        await _linker.HandleAsync(request, CancellationToken.None);
+
+        _cognito.Verify(client => client.AdminCreateUserAsync(
+            It.IsAny<AdminCreateUserRequest>(),
+            It.IsAny<CancellationToken>()), Times.Never);
+        _cognito.Verify(client => client.AdminLinkProviderForUserAsync(
+            It.IsAny<AdminLinkProviderForUserRequest>(),
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
     public async Task HandleAsync_NoLocalUser_CreatesSuppressedAnchorAndLinksProvider()
     {
         var request = CreateRequest("PreSignUp_ExternalProvider", "SignInWithApple_000644.989a6e2a48");

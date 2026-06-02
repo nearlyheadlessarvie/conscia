@@ -73,6 +73,7 @@ sealed class Program
             InAppAlertsTable = database.InAppAlertsTable,
             MonthlyCategorySpendsTable = database.MonthlyCategorySpendsTable,
             PushDeviceTokensTable = database.PushDeviceTokensTable,
+            EmailSuppressionsTable = database.EmailSuppressionsTable,
             RuntimeSettings = runtimeSettings,
             RuntimeSecretSettings = runtimeSecretSettings,
             DomainSettings = domainSettings
@@ -108,7 +109,8 @@ sealed class Program
         _ = new EmailStack(app, "Conscia-Email", new EmailStackProps
         {
             Env = env,
-            DomainSettings = domainSettings
+            DomainSettings = domainSettings,
+            SesEventHandler = outbox.OutboxLambda
         });
 
         _ = new WebStack(app, "Conscia-Web", new WebStackProps

@@ -15,6 +15,7 @@ public class OutboxStackProps : StackProps
     public required ITable InAppAlertsTable { get; set; }
     public required ITable MonthlyCategorySpendsTable { get; set; }
     public required ITable PushDeviceTokensTable { get; set; }
+    public required ITable EmailSuppressionsTable { get; set; }
     public required ProductionRuntimeSettings RuntimeSettings { get; set; }
     public required RuntimeSecretSettings RuntimeSecretSettings { get; set; }
     public string? AssetPath { get; set; }
@@ -48,6 +49,7 @@ public class OutboxStack : Stack
                 ["AWS__DynamoDB__InAppAlertsTable"] = props.InAppAlertsTable.TableName,
                 ["AWS__DynamoDB__MonthlyCategorySpendsTable"] = props.MonthlyCategorySpendsTable.TableName,
                 ["AWS__DynamoDB__PushDeviceTokensTable"] = props.PushDeviceTokensTable.TableName,
+                ["AWS__DynamoDB__EmailSuppressionsTable"] = props.EmailSuppressionsTable.TableName,
                 ["Firebase__AdminServiceAccountJsonSecretId"] = props.RuntimeSecretSettings.FirebaseAdminServiceAccountJsonSecretName,
                 ["Firebase__ProjectId"] = props.RuntimeSettings.FirebaseProjectId ?? string.Empty,
                 ["InviteEmail__FromEmail"] = props.RuntimeSettings.InviteEmailFromEmail
@@ -83,6 +85,7 @@ public class OutboxStack : Stack
         props.InAppAlertsTable.GrantReadWriteData(OutboxLambda);
         props.MonthlyCategorySpendsTable.GrantReadWriteData(OutboxLambda);
         props.PushDeviceTokensTable.GrantReadData(OutboxLambda);
+        props.EmailSuppressionsTable.GrantReadWriteData(OutboxLambda);
         Secret.FromSecretNameV2(this, "FirebaseAdminServiceAccountJsonSecret", props.RuntimeSecretSettings.FirebaseAdminServiceAccountJsonSecretName)
             .GrantRead(OutboxLambda);
     }

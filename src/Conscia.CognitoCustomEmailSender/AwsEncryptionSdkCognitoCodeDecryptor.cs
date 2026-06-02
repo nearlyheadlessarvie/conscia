@@ -25,7 +25,7 @@ public sealed class AwsEncryptionSdkCognitoCodeDecryptor : ICognitoCodeDecryptor
     public string DecryptCode(string encryptedCode)
     {
         var encryptedBytes = Convert.FromBase64String(encryptedCode);
-        var encryptionSdk = new ESDK(new AwsEncryptionSdkConfig());
+        var encryptionSdk = new ESDK(CreateEncryptionSdkConfig());
         var materialProviders = new MaterialProviders(new MaterialProvidersConfig());
         var keyring = materialProviders.CreateAwsKmsKeyring(new CreateAwsKmsKeyringInput
         {
@@ -41,6 +41,11 @@ public sealed class AwsEncryptionSdkCognitoCodeDecryptor : ICognitoCodeDecryptor
 
         return WebUtility.HtmlDecode(Encoding.UTF8.GetString(output.Plaintext.ToArray()));
     }
+
+    private static AwsEncryptionSdkConfig CreateEncryptionSdkConfig() => new()
+    {
+        CommitmentPolicy = ESDKCommitmentPolicy.REQUIRE_ENCRYPT_ALLOW_DECRYPT
+    };
 
     public void Dispose()
     {

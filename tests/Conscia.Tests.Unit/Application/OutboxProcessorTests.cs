@@ -19,7 +19,15 @@ public class OutboxProcessorTests
     private readonly Mock<IInAppAlertRepository> _alertRepoMock = new();
     private readonly Mock<IPushNotificationSender> _pushSenderMock = new();
     private readonly Mock<IInviteEmailSender> _inviteEmailSenderMock = new();
+    private readonly Mock<IEmailSuppressionRepository> _emailSuppressionRepoMock = new();
     private readonly Mock<ILogger<OutboxProcessor>> _loggerMock = new();
+
+    public OutboxProcessorTests()
+    {
+        _emailSuppressionRepoMock
+            .Setup(r => r.IsSuppressedAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
+    }
 
     private OutboxProcessor CreateProcessor()
     {
@@ -31,6 +39,7 @@ public class OutboxProcessorTests
         services.AddScoped(_ => _alertRepoMock.Object);
         services.AddScoped(_ => _pushSenderMock.Object);
         services.AddScoped(_ => _inviteEmailSenderMock.Object);
+        services.AddScoped(_ => _emailSuppressionRepoMock.Object);
         services.Configure<InviteEmailOptions>(options =>
         {
             options.FromEmail = "invites@getconscia.com";
@@ -358,6 +367,103 @@ public class OutboxProcessorTests
                 It.IsAny<string?>(),
                 It.IsAny<CancellationToken>()),
             Times.Never);
+        _outboxRepoMock.Verify(r => r.MarkProcessedAsync(evt, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task ProcessBatchAsync_FamilyInviteCreated_SkipsEmailForSuppressedInvitee()
+    {
+        var inviteId = Guid.NewGuid();
+        var evt = new OutboxEvent
+        {
+            Id = Guid.NewGuid(),
+            AggregateId = inviteId,
+            EventType = OutboxEventType.FamilyInviteCreated,
+            Payload = System.Text.Json.JsonSerializer.Serialize(new
+            {
+                InviteId = inviteId,
+                Email = "bounced@example.com",
+                FamilySpaceName = "Santos Household",
+                ExpiresAt = DateTime.Parse("2026-06-01T00:00:00Z")
+            }),
+            CreatedAt = DateTime.UtcNow
+        };
+
+        _outboxRepoMock.Setup(r => r.GetPendingAsync(50, It.IsAny<CancellationToken>()))
+            .ReturnsAsync([evt]);
+        _outboxRepoMock.Setup(r => r.TryStartProcessingAsync(evt, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+        _emailSuppressionRepoMock
+            .Setup(r => r.IsSuppressedAsync("bounced@example.com", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+        _userRepoMock.Setup(r => r.GetByEmailAsync("bounced@example.com", It.IsAny<CancellationToken>()))
+            .ReturnsAsync((User?)null);
+
+        await CreateProcessor().ProcessBatchAsync(CancellationToken.None);
+
+        _inviteEmailSenderMock.Verify(sender => sender.SendFamilyInviteAsync(
+            It.IsAny<FamilyInviteEmailMessage>(),
+            It.IsAny<CancellationToken>()), Times.Never);
+        _alertRepoMock.Verify(
+            r => r.AddAsync(It.IsAny<Conscia.Application.Models.InAppAlert>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        _pushSenderMock.Verify(
+            s => s.SendToUserAsync(
+                It.IsAny<Guid>(),
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<string?>(),
+                It.IsAny<CancellationToken>()),
+            Times.Never);
+        _outboxRepoMock.Verify(r => r.MarkProcessedAsync(evt, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task ProcessBatchAsync_FamilyInviteCreated_StillNotifiesRegisteredSuppressedInviteeInApp()
+    {
+        var invitedUserId = Guid.NewGuid();
+        var inviteId = Guid.NewGuid();
+        var evt = new OutboxEvent
+        {
+            Id = Guid.NewGuid(),
+            AggregateId = inviteId,
+            EventType = OutboxEventType.FamilyInviteCreated,
+            Payload = System.Text.Json.JsonSerializer.Serialize(new
+            {
+                InviteId = inviteId,
+                Email = "wife@example.com",
+                FamilySpaceName = "Santos Household",
+                InvitedByUserId = Guid.NewGuid()
+            }),
+            CreatedAt = DateTime.UtcNow
+        };
+
+        _outboxRepoMock.Setup(r => r.GetPendingAsync(50, It.IsAny<CancellationToken>()))
+            .ReturnsAsync([evt]);
+        _outboxRepoMock.Setup(r => r.TryStartProcessingAsync(evt, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+        _emailSuppressionRepoMock
+            .Setup(r => r.IsSuppressedAsync("wife@example.com", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+        _userRepoMock.Setup(r => r.GetByEmailAsync("wife@example.com", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new User { Id = invitedUserId, Email = "wife@example.com" });
+
+        await CreateProcessor().ProcessBatchAsync(CancellationToken.None);
+
+        _inviteEmailSenderMock.Verify(sender => sender.SendFamilyInviteAsync(
+            It.IsAny<FamilyInviteEmailMessage>(),
+            It.IsAny<CancellationToken>()), Times.Never);
+        _alertRepoMock.Verify(r => r.AddAsync(
+            It.Is<Conscia.Application.Models.InAppAlert>(alert =>
+                alert.UserId == invitedUserId &&
+                alert.AlertKey == $"family-invite:{inviteId}"),
+            It.IsAny<CancellationToken>()), Times.Once);
+        _pushSenderMock.Verify(s => s.SendToUserAsync(
+            invitedUserId,
+            "Family invite",
+            "You were invited to Santos Household.",
+            $"/settings/family-space/invites?inviteId={inviteId}",
+            It.IsAny<CancellationToken>()), Times.Once);
         _outboxRepoMock.Verify(r => r.MarkProcessedAsync(evt, It.IsAny<CancellationToken>()), Times.Once);
     }
 }

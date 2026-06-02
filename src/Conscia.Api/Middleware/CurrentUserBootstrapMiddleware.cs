@@ -106,7 +106,23 @@ public sealed class CurrentUserBootstrapMiddleware
                 EmailConfirmed = emailConfirmed,
                 CreatedAt = DateTime.UtcNow
             };
-            await users.AddAsync(user, ct);
+            try
+            {
+                await users.AddAsync(user, ct);
+            }
+            catch (Exception ex) when (IsConditionalCreateConflict(ex))
+            {
+                _logger.LogInformation(
+                    ex,
+                    "Local user bootstrap found an existing user for {Email}; reloading before continuing.",
+                    email);
+                user = await users.GetByIdAsync(userId, ct)
+                    ?? await users.GetByEmailAsync(email, ct);
+                if (user is null)
+                {
+                    throw;
+                }
+            }
         }
         else
         {
@@ -253,6 +269,12 @@ public sealed class CurrentUserBootstrapMiddleware
         string.IsNullOrWhiteSpace(email)
             ? null
             : email.Trim().ToLowerInvariant();
+
+    private static bool IsConditionalCreateConflict(Exception ex)
+    {
+        return ex.GetType().Name == "TransactionCanceledException" &&
+            ex.Message.Contains("ConditionalCheckFailed", StringComparison.Ordinal);
+    }
 
     private static void AddResolvedEmailClaims(HttpContext context, string? email, bool emailConfirmed)
     {

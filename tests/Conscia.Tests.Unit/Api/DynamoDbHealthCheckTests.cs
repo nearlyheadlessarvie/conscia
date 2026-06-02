@@ -28,7 +28,8 @@ public class DynamoDbHealthCheckTests
                     "InAppAlerts",
                     "MonthlyCategorySpends",
                     "PushDeviceTokens",
-                    "ConscienceJourney"
+                    "ConscienceJourney",
+                    "EmailSuppressions"
                 ]
             });
 
@@ -77,7 +78,8 @@ public class DynamoDbHealthCheckTests
                     "PurchasePatterns",
                     "MonthlyCategorySpends",
                     "PushDeviceTokens",
-                    "ConscienceJourney"
+                    "ConscienceJourney",
+                    "EmailSuppressions"
                 ]
             });
 
@@ -107,7 +109,8 @@ public class DynamoDbHealthCheckTests
                     "InAppAlerts",
                     "MonthlyCategorySpends",
                     "PushDeviceTokens",
-                    "ConscienceJourney"
+                    "ConscienceJourney",
+                    "EmailSuppressions"
                 ]
             });
 
@@ -157,7 +160,8 @@ public class DynamoDbHealthCheckTests
                     "PurchasePatterns",
                     "InAppAlerts",
                     "PushDeviceTokens",
-                    "ConscienceJourney"
+                    "ConscienceJourney",
+                    "EmailSuppressions"
                 ]
             });
 
