@@ -1,7 +1,10 @@
 using Amazon.CDK;
+using Amazon.CDK.AWS.Events;
+using Amazon.CDK.AWS.Lambda;
 using Amazon.CDK.AWS.Route53;
 using Amazon.CDK.AWS.SES;
 using Constructs;
+using LambdaFunctionTarget = Amazon.CDK.AWS.Events.Targets.LambdaFunction;
 
 namespace Conscia.Infra;
 
@@ -9,6 +12,7 @@ public class EmailStackProps : StackProps
 {
     public DomainSettings? DomainSettings { get; set; }
     public string FromLocalPart { get; set; } = "invites";
+    public IFunction? SesEventHandler { get; set; }
 }
 
 public class EmailStack : Stack
@@ -35,8 +39,28 @@ public class EmailStack : Stack
 
         var configurationSet = new CfnConfigurationSet(this, "SesConfigurationSet", new CfnConfigurationSetProps
         {
-            Name = "conscia-production"
+            Name = "conscia-production",
+            SuppressionOptions = new CfnConfigurationSet.SuppressionOptionsProperty
+            {
+                SuppressedReasons = ["BOUNCE", "COMPLAINT"]
+            }
         });
+        var defaultEventBus = EventBus.FromEventBusName(this, "DefaultEventBus", "default");
+        var eventDestination = new CfnConfigurationSetEventDestination(this, "SesBounceComplaintEventDestination", new CfnConfigurationSetEventDestinationProps
+        {
+            ConfigurationSetName = configurationSet.Name!,
+            EventDestination = new CfnConfigurationSetEventDestination.EventDestinationProperty
+            {
+                Name = "ses-bounce-complaint-eventbridge",
+                Enabled = true,
+                MatchingEventTypes = ["BOUNCE", "COMPLAINT"],
+                EventBridgeDestination = new CfnConfigurationSetEventDestination.EventBridgeDestinationProperty
+                {
+                    EventBusArn = defaultEventBus.EventBusArn
+                }
+            }
+        });
+        eventDestination.AddDependency(configurationSet);
 
         var identity = new CfnEmailIdentity(this, "SesDomainIdentity", new CfnEmailIdentityProps
         {
@@ -61,6 +85,7 @@ public class EmailStack : Stack
         });
 
         identity.AddDependency(configurationSet);
+        ConfigureSesEventRouting(defaultEventBus, props.SesEventHandler);
         PublishSesDnsRecords(props.DomainSettings, hostedZone, identity);
         PublishInboxDnsRecords(props.DomainSettings, hostedZone);
 
@@ -77,6 +102,11 @@ public class EmailStack : Stack
         new CfnOutput(this, "SesConfigurationSetName", new CfnOutputProps
         {
             Value = configurationSet.Name!
+        });
+
+        new CfnOutput(this, "SesSuppressionStatus", new CfnOutputProps
+        {
+            Value = "Configuration set suppresses BOUNCE and COMPLAINT events. Also enable account-level suppression with SESv2 for regional account coverage."
         });
 
         new CfnOutput(this, "SesMailFromDomain", new CfnOutputProps
@@ -136,6 +166,24 @@ public class EmailStack : Stack
                 QuoteTxt(domainSettings.DmarcValue)
             ]
         });
+    }
+
+    private void ConfigureSesEventRouting(IEventBus eventBus, IFunction? sesEventHandler)
+    {
+        if (sesEventHandler is null)
+            return;
+
+        var rule = new Rule(this, "SesBounceComplaintRule", new RuleProps
+        {
+            EventBus = eventBus,
+            EventPattern = new EventPattern
+            {
+                Source = ["aws.ses"],
+                DetailType = ["Email Bounced", "Email Complaint Received"]
+            }
+        });
+
+        rule.AddTarget(new LambdaFunctionTarget(sesEventHandler));
     }
 
     private void PublishInboxDnsRecords(DomainSettings domainSettings, IHostedZone hostedZone)

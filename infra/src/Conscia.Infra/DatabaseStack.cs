@@ -21,6 +21,7 @@ public class DatabaseStack : Stack
     public ITable MonthlyCategorySpendsTable { get; }
     public ITable PushDeviceTokensTable { get; }
     public ITable ConscienceJourneyTable { get; }
+    public ITable EmailSuppressionsTable { get; }
 
     public DatabaseStack(Construct scope, string id, IStackProps? props = null)
         : base(scope, id, props)
@@ -113,6 +114,7 @@ public class DatabaseStack : Stack
         MonthlyCategorySpendsTable = CreateTable("MonthlyCategorySpends", "PK", "SK");
         PushDeviceTokensTable = CreateTable("PushDeviceTokens", "PK", "SK");
         ConscienceJourneyTable = CreateTable("ConscienceJourney", "PK", "SK");
+        EmailSuppressionsTable = CreateTable("EmailSuppressions", "PK");
 
         var legacyTransactionsStreamExport = new CfnOutput(this, "LegacyTransactionsStreamArnExport", new CfnOutputProps
         {

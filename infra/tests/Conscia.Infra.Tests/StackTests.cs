@@ -23,7 +23,7 @@ public class StackTests
     {
         var template = CreateDatabaseTemplate();
 
-        template.ResourceCountIs("AWS::DynamoDB::Table", 11);
+        template.ResourceCountIs("AWS::DynamoDB::Table", 12);
         template.ResourceCountIs("AWS::RDS::DBInstance", 0);
         template.ResourceCountIs("AWS::SecretsManager::Secret", 0);
         template.HasResourceProperties("AWS::DynamoDB::Table", new Dictionary<string, object>
@@ -84,7 +84,7 @@ public class StackTests
     {
         var template = CreateDatabaseTemplate();
         var tables = template.FindResources("AWS::DynamoDB::Table");
-        Assert.Equal(11, tables.Count);
+        Assert.Equal(12, tables.Count);
 
         foreach (var (_, resource) in tables)
         {
@@ -98,7 +98,7 @@ public class StackTests
     {
         var template = CreateDatabaseTemplate();
         var tables = template.FindResources("AWS::DynamoDB::Table");
-        Assert.Equal(11, tables.Count);
+        Assert.Equal(12, tables.Count);
 
         foreach (var (_, resource) in tables)
         {
@@ -517,6 +517,7 @@ public class StackTests
             InAppAlertsTable = database.InAppAlertsTable,
             MonthlyCategorySpendsTable = database.MonthlyCategorySpendsTable,
             PushDeviceTokensTable = database.PushDeviceTokensTable,
+            EmailSuppressionsTable = database.EmailSuppressionsTable,
             RuntimeSettings = new ProductionRuntimeSettings(
                 "google-client-id",
                 "com.getconscia.app.ai",
@@ -562,6 +563,7 @@ public class StackTests
                 ["Variables"] = Match.ObjectLike(new Dictionary<string, object>
                 {
                     ["AWS__DynamoDB__PushDeviceTokensTable"] = Match.AnyValue(),
+                    ["AWS__DynamoDB__EmailSuppressionsTable"] = Match.AnyValue(),
                     ["Firebase__AdminServiceAccountJsonSecretId"] = "test/firebase-admin-service-account-json",
                     ["InviteEmail__FromEmail"] = "invites@getconscia.com",
                     ["Brevo__ApiKey"] = "brevo-api-key",
@@ -822,7 +824,25 @@ public class StackTests
                 ["MailFromDomain"] = "feedback.getconscia.com"
             }
         });
+        template.HasResourceProperties("AWS::SES::ConfigurationSet", new Dictionary<string, object>
+        {
+            ["Name"] = "conscia-production",
+            ["SuppressionOptions"] = new Dictionary<string, object>
+            {
+                ["SuppressedReasons"] = Match.ArrayWith(["BOUNCE", "COMPLAINT"])
+            }
+        });
         template.ResourceCountIs("AWS::SES::ConfigurationSet", 1);
+        template.HasResourceProperties("AWS::SES::ConfigurationSetEventDestination", new Dictionary<string, object>
+        {
+            ["ConfigurationSetName"] = "conscia-production",
+            ["EventDestination"] = Match.ObjectLike(new Dictionary<string, object>
+            {
+                ["Enabled"] = true,
+                ["MatchingEventTypes"] = Match.ArrayWith(["BOUNCE", "COMPLAINT"]),
+                ["EventBridgeDestination"] = Match.AnyValue()
+            })
+        });
         template.ResourceCountIs("AWS::Route53::RecordSet", 10);
         template.HasResourceProperties("AWS::Route53::RecordSet", new Dictionary<string, object>
         {
@@ -861,6 +881,71 @@ public class StackTests
                 "\"v=spf1 include:icloud.com ~all\"",
                 "\"apple-domain=abc123\""
             })
+        });
+    }
+
+    [Fact]
+    public void EmailStack_RoutesSesBounceAndComplaintEventsToOutboxLambda()
+    {
+        var app = new App();
+        var database = new DatabaseStack(app, "D", new StackProps { Env = TestEnv });
+        var outbox = new OutboxStack(app, "O", new OutboxStackProps
+        {
+            Env = TestEnv,
+            ControlPlaneTable = database.ControlPlaneTable,
+            TransactionsTable = database.TransactionsTable,
+            OutboxEventsTable = database.OutboxEventsTable,
+            InAppAlertsTable = database.InAppAlertsTable,
+            MonthlyCategorySpendsTable = database.MonthlyCategorySpendsTable,
+            PushDeviceTokensTable = database.PushDeviceTokensTable,
+            EmailSuppressionsTable = database.EmailSuppressionsTable,
+            RuntimeSettings = new ProductionRuntimeSettings(
+                "google-client-id",
+                "com.getconscia.app.ai",
+                "APPLEKEYID",
+                "00000000-0000-0000-0000-000000000000",
+                "com.getconscia.app.ai",
+                "private-key",
+                "com.getconscia.app.ai",
+                "service-account-json",
+                "firebase-service-account",
+                "conscia-prod",
+                "invites@getconscia.com",
+                "conscia-production",
+                "conscia://invite",
+                "brevo-api-key",
+                "invites@getconscia.com",
+                "Conscia"),
+            RuntimeSecretSettings = new RuntimeSecretSettings(
+                "test/apple-private-key",
+                "test/google-play-service-account-json",
+                "test/firebase-admin-service-account-json"),
+            AssetPath = CreateAssetStub("outbox"),
+            DomainSettings = TestDomainSettings
+        });
+        var stack = new EmailStack(app, "TestEmailRouting", new EmailStackProps
+        {
+            Env = TestEnv,
+            DomainSettings = TestDomainSettings,
+            SesEventHandler = outbox.OutboxLambda
+        });
+
+        var template = Template.FromStack(stack);
+
+        template.HasResourceProperties("AWS::Events::Rule", new Dictionary<string, object>
+        {
+            ["EventPattern"] = new Dictionary<string, object>
+            {
+                ["source"] = new[] { "aws.ses" },
+                ["detail-type"] = Match.ArrayWith(["Email Bounced", "Email Complaint Received"])
+            },
+            ["State"] = "ENABLED",
+            ["Targets"] = Match.ArrayWith([
+                Match.ObjectLike(new Dictionary<string, object>
+                {
+                    ["Arn"] = Match.AnyValue()
+                })
+            ])
         });
     }
 
