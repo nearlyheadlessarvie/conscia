@@ -45,7 +45,9 @@ var runtimeSecretOverrides = await RuntimeSecretConfigurationLoader.LoadAsync(
     builder.Environment.IsProduction());
 if (runtimeSecretOverrides.Count > 0)
 {
-    builder.Configuration.AddInMemoryCollection(runtimeSecretOverrides);
+    builder.Configuration.AddInMemoryCollection(runtimeSecretOverrides.ToDictionary(
+        pair => pair.Key,
+        pair => (string?)pair.Value));
 }
 
 builder.Host.UseSerilog((context, config) =>
