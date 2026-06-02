@@ -47,6 +47,22 @@ public class ReleaseApiWorkflowTests
             source);
     }
 
+    [Fact]
+    public void ReleaseApiWorkflow_PassesSignupAbuseRuntimeSettings()
+    {
+        var repoRoot = FindRepoRoot();
+        var workflowPath = Path.Combine(repoRoot, ".github", "workflows", "release-api.yml");
+
+        var source = File.ReadAllText(workflowPath);
+
+        Assert.Contains("COGNITO_SIGNUP_GUARD_TOKEN: ${{ secrets.COGNITO_SIGNUP_GUARD_TOKEN }}", source);
+        Assert.Contains("RECAPTCHA_API_KEY_SECRET: ${{ secrets.RECAPTCHA_API_KEY_SECRET }}", source);
+        Assert.Contains("RECAPTCHA_PROJECT_ID: ${{ vars.RECAPTCHA_PROJECT_ID }}", source);
+        Assert.Contains("RECAPTCHA_ALLOWED_SITE_KEYS: ${{ vars.RECAPTCHA_ALLOWED_SITE_KEYS || vars.RECAPTCHA_SITE_KEY }}", source);
+        Assert.Contains("RECAPTCHA_MINIMUM_SCORE: ${{ vars.RECAPTCHA_MINIMUM_SCORE || '0.5' }}", source);
+        Assert.DoesNotContain("RECAPTCHA_API_KEY_SECRET_NAME", source);
+    }
+
     private static string FindRepoRoot()
     {
         var current = new DirectoryInfo(AppContext.BaseDirectory);
