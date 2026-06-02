@@ -174,6 +174,11 @@ builder.Services.AddScoped<ITriggerEvaluator, ReflectionFollowUpEvaluator>();
 // --- Exchange Rates ---
 builder.Services.AddMemoryCache();
 builder.Services.AddHttpClient<ICognitoUserInfoEmailResolver, CognitoUserInfoEmailResolver>();
+builder.Services.AddHttpClient<ICaptchaVerifier, GoogleRecaptchaVerifier>(client =>
+{
+    client.BaseAddress = new Uri("https://recaptchaenterprise.googleapis.com");
+    client.Timeout = TimeSpan.FromSeconds(10);
+});
 builder.Services.AddHttpClient<IExchangeRateService, ExchangeRateService>(client =>
 {
     client.BaseAddress = new Uri("https://open.er-api.com");

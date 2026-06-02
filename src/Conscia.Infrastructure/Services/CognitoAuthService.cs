@@ -17,11 +17,13 @@ public class CognitoAuthService : IAuthService
 {
     private const string ExistingSocialAccountMessage =
         "An account already exists for this email. Sign in with Google or Apple.";
+    private const string SignupGuardMetadataKey = "conscia_signup_guard";
 
     private readonly IAmazonCognitoIdentityProvider _cognito;
     private readonly IUserRepository _users;
     private readonly ILogger<CognitoAuthService> _logger;
     private readonly string _clientId;
+    private readonly string? _signupGuardToken;
 
     public CognitoAuthService(
         IConfiguration config,
@@ -34,6 +36,7 @@ public class CognitoAuthService : IAuthService
         _logger = logger;
         _clientId = config["Auth:Cognito:ClientId"]
             ?? throw new InvalidOperationException("Auth:Cognito:ClientId not configured");
+        _signupGuardToken = config["Auth:Cognito:SignupGuardToken"];
     }
 
     public async Task<AuthResult> RegisterAsync(string email, string password, CancellationToken ct = default)
@@ -50,7 +53,8 @@ public class CognitoAuthService : IAuthService
                 UserAttributes =
                 [
                     new AttributeType { Name = "email", Value = email }
-                ]
+                ],
+                ClientMetadata = CreateSignupClientMetadata()
             }, ct);
 
             if (!Guid.TryParse(response.UserSub, out var userId))
@@ -542,6 +546,16 @@ public class CognitoAuthService : IAuthService
     private static bool IsExistingSocialAccountValidation(UserLambdaValidationException ex)
     {
         return ex.Message.Contains(ExistingSocialAccountMessage, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private Dictionary<string, string> CreateSignupClientMetadata()
+    {
+        return string.IsNullOrWhiteSpace(_signupGuardToken)
+            ? []
+            : new Dictionary<string, string>
+            {
+                [SignupGuardMetadataKey] = _signupGuardToken.Trim()
+            };
     }
 
     private static AuthResult PasswordResetError(string email, string error) =>

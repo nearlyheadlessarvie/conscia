@@ -42,6 +42,16 @@ aws sesv2 get-account
 
 Use the `conscia-production` configuration set for transactional sends so the configuration-set suppression and EventBridge route both apply.
 
+## Signup And Email Abuse Controls
+
+Public unauthenticated endpoints that can trigger account-security email are protected before Cognito is called:
+
+- mobile signup, resend-confirmation, and password-reset-start requests include a reCAPTCHA token generated for the specific action;
+- the API verifies that token server-side against configured Conscia mobile site keys and a configurable score threshold;
+- direct unauthenticated Cognito `SignUp` calls are rejected by the Cognito pre-signup Lambda unless the request includes server-only client metadata added by the API registration service.
+
+The reCAPTCHA API key is supplied as a GitHub deploy secret and written to the API Lambda environment during infra deploy. Mobile site keys are public app build configuration.
+
 ## Email Authentication
 
 `Conscia-Email` also provisions SES domain-authentication DNS in Route53 when `DomainSettings` are configured:
@@ -62,6 +72,7 @@ For an SES production access request, summarize the implemented controls as:
 - SES bounce and complaint events are routed through EventBridge into the existing outbox Lambda, which upserts the suppression table.
 - SES account-level suppression is enabled or verified for `BOUNCE` and `COMPLAINT` in the sending region before SES traffic resumes.
 - SES sends use a verified domain identity with Easy DKIM, custom MAIL FROM SPF, and DMARC monitoring.
+- Public signup and auth-email trigger endpoints use server-side reCAPTCHA assessment, and direct Cognito sign-up calls without API-added private metadata are rejected.
 
 ## Monitoring
 

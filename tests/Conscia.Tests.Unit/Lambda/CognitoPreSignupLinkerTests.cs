@@ -181,6 +181,11 @@ public class CognitoPreSignupLinkerTests
     public async Task HandleAsync_EmailSignUpWithExistingSocialIdentity_RejectsDuplicateAccount()
     {
         var request = CreateRequest("PreSignUp_SignUp", "person@example.com");
+        request.Request.ClientMetadata["conscia_signup_guard"] = "backend-signup-token";
+        var linker = new CognitoPreSignupLinkerHandler(
+            _cognito.Object,
+            NullLogger<CognitoPreSignupLinkerHandler>.Instance,
+            "backend-signup-token");
 
         _cognito
             .Setup(client => client.ListUsersAsync(
@@ -201,12 +206,81 @@ public class CognitoPreSignupLinkerTests
             });
 
         var ex = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _linker.HandleAsync(request, CancellationToken.None));
+            () => linker.HandleAsync(request, CancellationToken.None));
 
         Assert.Contains("Sign in with Google or Apple", ex.Message);
         _cognito.Verify(client => client.AdminLinkProviderForUserAsync(
             It.IsAny<AdminLinkProviderForUserRequest>(),
             It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task HandleAsync_EmailSignUpWithoutBackendGuard_RejectsSignup()
+    {
+        var request = CreateRequest("PreSignUp_SignUp", "person@example.com");
+        var linker = new CognitoPreSignupLinkerHandler(
+            _cognito.Object,
+            NullLogger<CognitoPreSignupLinkerHandler>.Instance,
+            "backend-signup-token");
+
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => linker.HandleAsync(request, CancellationToken.None));
+
+        Assert.Contains("backend registration service", ex.Message);
+        _cognito.Verify(client => client.ListUsersAsync(
+            It.IsAny<ListUsersRequest>(),
+            It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task HandleAsync_EmailSignUpWithBackendGuard_AllowsSignup()
+    {
+        var request = CreateRequest("PreSignUp_SignUp", "person@example.com");
+        request.Request.ClientMetadata["conscia_signup_guard"] = "backend-signup-token";
+        var linker = new CognitoPreSignupLinkerHandler(
+            _cognito.Object,
+            NullLogger<CognitoPreSignupLinkerHandler>.Instance,
+            "backend-signup-token");
+
+        _cognito
+            .Setup(client => client.ListUsersAsync(
+                It.IsAny<ListUsersRequest>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ListUsersResponse { Users = [] });
+
+        await linker.HandleAsync(request, CancellationToken.None);
+
+        _cognito.Verify(client => client.ListUsersAsync(
+            It.IsAny<ListUsersRequest>(),
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task HandleAsync_ExternalProviderWithoutBackendGuard_AllowsTrustedSocialSignup()
+    {
+        var request = CreateRequest("PreSignUp_ExternalProvider", "Google_103448169750402666663");
+        var linker = new CognitoPreSignupLinkerHandler(
+            _cognito.Object,
+            NullLogger<CognitoPreSignupLinkerHandler>.Instance,
+            "backend-signup-token");
+
+        _cognito
+            .Setup(client => client.ListUsersAsync(
+                It.IsAny<ListUsersRequest>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ListUsersResponse
+            {
+                Users =
+                [
+                    new UserType { Username = "09fa25bc-1081-70e0-4ba1-3b56973d5000" }
+                ]
+            });
+
+        await linker.HandleAsync(request, CancellationToken.None);
+
+        _cognito.Verify(client => client.AdminLinkProviderForUserAsync(
+            It.IsAny<AdminLinkProviderForUserRequest>(),
+            It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -288,6 +362,7 @@ public class CognitoPreSignupLinkerTests
         Assert.Equal(
             "local-test",
             root.GetProperty("request").GetProperty("clientMetadata").GetProperty("source").GetString());
+        Assert.Equal("local-test", result.Request.ClientMetadata["source"]);
         Assert.True(root.GetProperty("request").TryGetProperty("validationData", out _));
     }
 

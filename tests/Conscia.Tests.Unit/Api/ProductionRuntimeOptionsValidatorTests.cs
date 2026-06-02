@@ -38,6 +38,10 @@ public class ProductionRuntimeOptionsValidatorTests
         Assert.Contains(result.Failures!, failure => failure.Contains("Firebase:AdminServiceAccountJson"));
         Assert.Contains(result.Failures!, failure => failure.Contains("Brevo:ApiKey"));
         Assert.Contains(result.Failures!, failure => failure.Contains("Brevo:SenderEmail"));
+        Assert.Contains(result.Failures!, failure => failure.Contains("Auth:Cognito:SignupGuardToken"));
+        Assert.Contains(result.Failures!, failure => failure.Contains("Recaptcha:ApiKey"));
+        Assert.Contains(result.Failures!, failure => failure.Contains("Recaptcha:ProjectId"));
+        Assert.Contains(result.Failures!, failure => failure.Contains("Recaptcha:AllowedSiteKeys"));
         Assert.Contains(result.Failures!, failure => failure.Contains("AppCompatibility:CurrentSupportedAppVersion"));
     }
 
@@ -51,6 +55,10 @@ public class ProductionRuntimeOptionsValidatorTests
                 ["Auth:UseMock"] = "false",
                 ["Auth:Cognito:ClientId"] = "client-123",
                 ["Auth:Cognito:UserPoolId"] = "pool-123",
+                ["Auth:Cognito:SignupGuardToken"] = "backend-signup-token",
+                ["Recaptcha:ApiKey"] = "recaptcha-api-key",
+                ["Recaptcha:ProjectId"] = "conscia-prod",
+                ["Recaptcha:AllowedSiteKeys"] = "android-site-key,ios-site-key",
                 ["Apple:KeyId"] = "ABC1234567",
                 ["Apple:IssuerId"] = "00000000-0000-0000-0000-000000000000",
                 ["Apple:BundleId"] = "com.getconscia.app.ai",

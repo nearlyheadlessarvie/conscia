@@ -33,6 +33,10 @@ public sealed class ProductionRuntimeOptionsValidator : IValidateOptions<Product
 
         Require(errors, "Auth:Cognito:ClientId");
         Require(errors, "Auth:Cognito:UserPoolId");
+        Require(errors, "Auth:Cognito:SignupGuardToken");
+        Require(errors, "Recaptcha:ApiKey");
+        Require(errors, "Recaptcha:ProjectId");
+        Require(errors, "Recaptcha:AllowedSiteKeys");
 
         if (options.RequireSubscriptionValidation)
         {

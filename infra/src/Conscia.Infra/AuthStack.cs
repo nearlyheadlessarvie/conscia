@@ -35,6 +35,7 @@ public class AuthStack : Stack
         var logoutUri = props?.DomainSettings?.ResolvedManagedLoginLogoutUri ?? devLogoutUri;
         var hasFederatedProviders = props?.ManagedLoginProviderSettings?.HasGoogle == true
             || props?.ManagedLoginProviderSettings?.HasApple == true;
+        var hasSignupGuard = !string.IsNullOrWhiteSpace(props?.RuntimeSettings?.CognitoSignupGuardToken);
         Function? preSignupLinker = null;
         Function? customEmailSender = null;
         Key? customEmailSenderKey = null;
@@ -74,10 +75,15 @@ public class AuthStack : Stack
             customEmailSenderKey.GrantDecrypt(customEmailSender);
         }
 
-        if (hasFederatedProviders)
+        if (hasFederatedProviders || hasSignupGuard)
         {
             var linkerAssetPath = props?.CognitoPreSignupLinkerAssetPath
                 ?? AssetPathResolver.ResolvePublishedAsset("../publish/cognito-pre-signup-linker", "cognito-pre-signup-linker");
+            var linkerEnvironment = new Dictionary<string, string>();
+            if (hasSignupGuard)
+            {
+                linkerEnvironment["COGNITO_SIGNUP_GUARD_TOKEN"] = props!.RuntimeSettings!.CognitoSignupGuardToken!;
+            }
 
             preSignupLinker = new Function(this, "CognitoPreSignupLinker", new FunctionProps
             {
@@ -88,6 +94,7 @@ public class AuthStack : Stack
                 MemorySize = 512,
                 Timeout = Duration.Seconds(30),
                 Architecture = Architecture.ARM_64,
+                Environment = linkerEnvironment,
                 Tracing = Tracing.ACTIVE
             });
         }

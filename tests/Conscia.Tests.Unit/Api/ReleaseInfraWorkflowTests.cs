@@ -40,4 +40,18 @@ public class ReleaseInfraWorkflowTests
         Assert.DoesNotContain("ADMIN_BOOTSTRAP_EMAILS_SECRET_NAME", source);
         Assert.DoesNotContain("upsert_secret \"$ADMIN_BOOTSTRAP_EMAILS", source);
     }
+
+    [Fact]
+    public void ReleaseInfraWorkflow_PassesRecaptchaKeyAsDeploySecret()
+    {
+        var repoRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", ".."));
+        var workflowPath = Path.Combine(repoRoot, ".github", "workflows", "release-infra.yml");
+
+        var source = File.ReadAllText(workflowPath);
+
+        Assert.Contains("RECAPTCHA_API_KEY_SECRET: ${{ secrets.RECAPTCHA_API_KEY_SECRET }}", source);
+        Assert.Contains("RECAPTCHA_ALLOWED_SITE_KEYS: ${{ vars.RECAPTCHA_ALLOWED_SITE_KEYS || vars.RECAPTCHA_SITE_KEY }}", source);
+        Assert.DoesNotContain("RECAPTCHA_API_KEY_SECRET_NAME", source);
+        Assert.DoesNotContain("upsert_secret \"$RECAPTCHA_API_KEY", source);
+    }
 }

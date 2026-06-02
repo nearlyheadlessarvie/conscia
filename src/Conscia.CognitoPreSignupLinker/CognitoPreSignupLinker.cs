@@ -7,12 +7,16 @@ namespace Conscia.CognitoPreSignupLinker;
 
 public sealed class CognitoPreSignupLinker(
     IAmazonCognitoIdentityProvider cognito,
-    ILogger<CognitoPreSignupLinker> logger)
+    ILogger<CognitoPreSignupLinker> logger,
+    string? signupGuardToken = null)
 {
+    private const string SignupGuardMetadataKey = "conscia_signup_guard";
+
     public async Task<CognitoPreSignupEvent> HandleAsync(CognitoPreSignupEvent request, CancellationToken ct)
     {
         if (string.Equals(request.TriggerSource, "PreSignUp_SignUp", StringComparison.Ordinal))
         {
+            ValidateBackendSignupGuard(request);
             await RejectEmailSignupForExistingSocialIdentityAsync(request, ct);
             return request;
         }
@@ -76,6 +80,21 @@ public sealed class CognitoPreSignupLinker(
         }
 
         return request;
+    }
+
+    private void ValidateBackendSignupGuard(CognitoPreSignupEvent request)
+    {
+        if (string.IsNullOrWhiteSpace(signupGuardToken))
+        {
+            return;
+        }
+
+        if (!request.Request.ClientMetadata.TryGetValue(SignupGuardMetadataKey, out var provided) ||
+            !string.Equals(provided, signupGuardToken, StringComparison.Ordinal))
+        {
+            throw new InvalidOperationException(
+                "Email signup must originate from the backend registration service.");
+        }
     }
 
     private async Task RejectEmailSignupForExistingSocialIdentityAsync(CognitoPreSignupEvent request, CancellationToken ct)
