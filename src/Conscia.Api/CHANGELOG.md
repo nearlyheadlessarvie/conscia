@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.6.0](https://github.com/nearlyheadlessarvie/conscia/compare/api/v1.5.0...api/v1.6.0) (2026-06-02)
+
+
+### Features
+
+* **api:** add SES email suppression hygiene ([#204](https://github.com/nearlyheadlessarvie/conscia/issues/204)) ([fd4bb6d](https://github.com/nearlyheadlessarvie/conscia/commit/fd4bb6d5c288ae22f8bcbb0d90224391e5212f39))
+
 ## [1.5.0](https://github.com/nearlyheadlessarvie/conscia/compare/api/v1.4.6...api/v1.5.0) (2026-06-01)
 
 
