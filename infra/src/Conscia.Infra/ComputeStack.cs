@@ -73,7 +73,7 @@ public class ComputeStack : Stack
             ["GooglePlay__ServiceAccountJsonSecretId"] = props.RuntimeSecretSettings.GooglePlayServiceAccountJsonSecretName,
             ["Firebase__AdminServiceAccountJsonSecretId"] = props.RuntimeSecretSettings.FirebaseAdminServiceAccountJsonSecretName,
             ["Firebase__ProjectId"] = props.RuntimeSettings.FirebaseProjectId ?? string.Empty,
-            ["Recaptcha__ApiKeySecretId"] = props.RuntimeSecretSettings.RecaptchaApiKeySecretName,
+            ["Recaptcha__ApiKey"] = props.RuntimeSettings.RecaptchaApiKey ?? string.Empty,
             ["Recaptcha__ProjectId"] = props.RuntimeSettings.RecaptchaProjectId ?? string.Empty,
             ["Recaptcha__AllowedSiteKeys"] = props.RuntimeSettings.RecaptchaAllowedSiteKeys ?? string.Empty,
             ["Recaptcha__MinimumScore"] = props.RuntimeSettings.RecaptchaMinimumScore ?? string.Empty,
@@ -216,8 +216,6 @@ public class ComputeStack : Stack
         Secret.FromSecretNameV2(this, "GooglePlayServiceAccountJsonSecret", runtimeSecretSettings.GooglePlayServiceAccountJsonSecretName)
             .GrantRead(ApiLambda);
         Secret.FromSecretNameV2(this, "FirebaseAdminServiceAccountJsonSecret", runtimeSecretSettings.FirebaseAdminServiceAccountJsonSecretName)
-            .GrantRead(ApiLambda);
-        Secret.FromSecretNameV2(this, "RecaptchaApiKeySecret", runtimeSecretSettings.RecaptchaApiKeySecretName)
             .GrantRead(ApiLambda);
     }
 

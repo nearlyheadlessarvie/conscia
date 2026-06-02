@@ -184,6 +184,7 @@ public class StackTests
                 "no-reply@getconscia.com",
                 "Conscia",
                 "backend-signup-token",
+                "recaptcha-api-key",
                 "conscia-prod",
                 "android-site-key,ios-site-key")
         });
@@ -479,13 +480,13 @@ public class StackTests
                 "invites@getconscia.com",
                 "Conscia",
                 "backend-signup-token",
+                "recaptcha-api-key",
                 "conscia-prod",
                 "android-site-key,ios-site-key"),
             RuntimeSecretSettings = new RuntimeSecretSettings(
                 "test/apple-private-key",
                 "test/google-play-service-account-json",
-                "test/firebase-admin-service-account-json",
-                "test/recaptcha-api-key"),
+                "test/firebase-admin-service-account-json"),
             ApiAssetPath = CreateAssetStub("api"),
             DomainSettings = TestDomainSettings
         });
@@ -545,9 +546,9 @@ public class StackTests
                     ["Brevo__SenderName"] = "Conscia",
                     ["Auth__Cognito__LoginDomain"] = "https://login.getconscia.com",
                     ["Auth__Cognito__SignupGuardToken"] = "backend-signup-token",
+                    ["Recaptcha__ApiKey"] = "recaptcha-api-key",
                     ["Recaptcha__ProjectId"] = "conscia-prod",
-                    ["Recaptcha__AllowedSiteKeys"] = "android-site-key,ios-site-key",
-                    ["Recaptcha__ApiKeySecretId"] = "test/recaptcha-api-key"
+                    ["Recaptcha__AllowedSiteKeys"] = "android-site-key,ios-site-key"
                 })
             }
         });
@@ -559,6 +560,7 @@ public class StackTests
         Assert.DoesNotContain("Auth__AppJwtSigningKeySecretId", variables.Keys.Cast<string>());
         Assert.DoesNotContain("AdminBootstrap__EmailsSecretId", variables.Keys.Cast<string>());
         Assert.DoesNotContain("AdminBootstrap__Emails__0", variables.Keys.Cast<string>());
+        Assert.DoesNotContain("Recaptcha__ApiKeySecretId", variables.Keys.Cast<string>());
     }
 
     [Fact]

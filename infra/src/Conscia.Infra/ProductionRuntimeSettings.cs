@@ -18,6 +18,7 @@ public sealed record ProductionRuntimeSettings(
     string? BrevoSenderEmail = null,
     string BrevoSenderName = "Conscia",
     string? CognitoSignupGuardToken = null,
+    string? RecaptchaApiKey = null,
     string? RecaptchaProjectId = null,
     string? RecaptchaAllowedSiteKeys = null,
     string? RecaptchaMinimumScore = null)
@@ -40,8 +41,9 @@ public sealed record ProductionRuntimeSettings(
         BrevoSenderEmail: Get("BREVO_SENDER_EMAIL") ?? Get("SES_FROM_EMAIL"),
         BrevoSenderName: Get("BREVO_SENDER_NAME") ?? "Conscia",
         CognitoSignupGuardToken: Get("COGNITO_SIGNUP_GUARD_TOKEN"),
+        RecaptchaApiKey: Get("RECAPTCHA_API_KEY_SECRET"),
         RecaptchaProjectId: Get("RECAPTCHA_PROJECT_ID"),
-        RecaptchaAllowedSiteKeys: Get("RECAPTCHA_ALLOWED_SITE_KEYS"),
+        RecaptchaAllowedSiteKeys: Get("RECAPTCHA_ALLOWED_SITE_KEYS") ?? Get("RECAPTCHA_SITE_KEY"),
         RecaptchaMinimumScore: Get("RECAPTCHA_MINIMUM_SCORE"));
 
     private static string? Get(string name)
