@@ -6,6 +6,7 @@ import { dirname, resolve } from 'node:path';
 
 const testDir = dirname(fileURLToPath(import.meta.url));
 const html = readFileSync(resolve(testDir, '../dist/index.html'), 'utf8');
+const supportHtml = readFileSync(resolve(testDir, '../dist/support/index.html'), 'utf8');
 const underDevelopmentHtml = readFileSync(resolve(testDir, '../dist/under-development/index.html'), 'utf8');
 const notFoundHtml = readFileSync(resolve(testDir, '../dist/404.html'), 'utf8');
 const robotsTxt = readFileSync(resolve(testDir, '../dist/robots.txt'), 'utf8');
@@ -74,7 +75,15 @@ test('homepage contains no mascot references', () => {
 
 test('footer keeps the lockup while the homepage atmosphere shifts app-ward', () => {
   assert.match(html, /Small choices, big freedom/);
+  assert.match(html, /href="\/support"/);
   assert.doesNotMatch(html, /Meet the inner voices/);
+});
+
+test('support page provides app review support contact details', () => {
+  assert.match(supportHtml, /Support/);
+  assert.match(supportHtml, /hello@getconscia\.com/);
+  assert.match(supportHtml, /privacy@getconscia\.com/);
+  assert.match(supportHtml, /account deletion page/);
 });
 
 test('app store placeholder keeps visitors in the Conscia experience', () => {
