@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.3.1](https://github.com/nearlyheadlessarvie/conscia/compare/app/v2.3.0...app/v2.3.1) (2026-06-02)
+
+
+### Bug Fixes
+
+* **api:** require captcha-protected signup ([#207](https://github.com/nearlyheadlessarvie/conscia/issues/207)) ([715bef3](https://github.com/nearlyheadlessarvie/conscia/commit/715bef300c59c6623d39beeff734f07d13ec609f))
+
 ## [2.3.0](https://github.com/nearlyheadlessarvie/conscia/compare/app/v2.2.5...app/v2.3.0) (2026-06-01)
 
 
