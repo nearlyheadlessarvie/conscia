@@ -125,6 +125,7 @@ builder.Services.AddScoped<IPurchasePatternRepository, PurchasePatternRepository
 builder.Services.AddScoped<IInAppAlertRepository, InAppAlertRepository>();
 builder.Services.AddScoped<IPushDeviceTokenRepository, PushDeviceTokenRepository>();
 builder.Services.AddScoped<IOutboxEventRepository, OutboxEventRepository>();
+builder.Services.AddScoped<IEmailSuppressionRepository, EmailSuppressionRepository>();
 builder.Services.AddScoped<IMonthlyCategorySpendRepository, MonthlyCategorySpendRepository>();
 builder.Services.AddScoped<IConscienceJourneyRepository, ConscienceJourneyRepository>();
 

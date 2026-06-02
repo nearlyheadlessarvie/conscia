@@ -1,9 +1,9 @@
 using Amazon;
 using Amazon.DynamoDBv2;
 using Amazon.Lambda.Core;
-using Amazon.Lambda.DynamoDBEvents;
 using Amazon.Lambda.RuntimeSupport;
 using Amazon.Lambda.Serialization.SystemTextJson;
+using System.Text.Json;
 using Conscia.Application.Configuration;
 using Conscia.Application.Interfaces;
 using Conscia.Infrastructure.Repositories;
@@ -49,6 +49,7 @@ services.AddScoped<IMonthlyCategorySpendRepository, MonthlyCategorySpendReposito
 services.AddScoped<IInAppAlertRepository, InAppAlertRepository>();
 services.AddScoped<IUserRepository, UserRepository>();
 services.AddScoped<IPushDeviceTokenRepository, PushDeviceTokenRepository>();
+services.AddScoped<IEmailSuppressionRepository, EmailSuppressionRepository>();
 services.Configure<FirebaseAdminOptions>(configuration.GetSection(FirebaseAdminOptions.SectionName));
 services.Configure<InviteEmailOptions>(options =>
 {
@@ -78,12 +79,19 @@ services.AddHttpClient<IInviteEmailSender, BrevoInviteEmailSender>(client =>
 });
 
 services.AddScoped<OutboxProcessor>();
+services.AddScoped<SesEmailEventProcessor>();
 
 var provider = services.BuildServiceProvider();
 
-Func<DynamoDBEvent, ILambdaContext, Task> handler = async (_, context) =>
+Func<JsonElement, ILambdaContext, Task> handler = async (evt, context) =>
 {
     using var scope = provider.CreateScope();
+    var sesEmailEvents = scope.ServiceProvider.GetRequiredService<SesEmailEventProcessor>();
+    if (await sesEmailEvents.TryProcessAsync(evt, CancellationToken.None))
+    {
+        return;
+    }
+
     var processor = scope.ServiceProvider.GetRequiredService<OutboxProcessor>();
     await processor.ProcessBatchAsync(CancellationToken.None);
 };

@@ -288,6 +288,21 @@ var tables = new (string Name, CreateTableRequest Request)[]
         BillingMode = BillingMode.PAY_PER_REQUEST
     }),
 
+    // ---------------- EMAIL SUPPRESSIONS ----------------
+    ("EmailSuppressions", new CreateTableRequest
+    {
+        TableName = "EmailSuppressions",
+        KeySchema =
+        [
+            new("PK", KeyType.HASH)
+        ],
+        AttributeDefinitions =
+        [
+            new("PK", ScalarAttributeType.S)
+        ],
+        BillingMode = BillingMode.PAY_PER_REQUEST
+    }),
+
 };
 
 var existingTables = await client.ListTablesAsync();

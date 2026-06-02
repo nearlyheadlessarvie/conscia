@@ -70,6 +70,7 @@ public class OutboxProcessor : BackgroundService
         var alertRepo = scope.ServiceProvider.GetRequiredService<IInAppAlertRepository>();
         var pushSender = scope.ServiceProvider.GetRequiredService<IPushNotificationSender>();
         var inviteEmailSender = scope.ServiceProvider.GetRequiredService<IInviteEmailSender>();
+        var emailSuppressions = scope.ServiceProvider.GetRequiredService<IEmailSuppressionRepository>();
         var inviteOptions = scope.ServiceProvider.GetRequiredService<IOptions<InviteEmailOptions>>().Value;
 
         var pending = await outboxRepo.GetPendingAsync(50, ct);
@@ -97,6 +98,7 @@ public class OutboxProcessor : BackgroundService
                     alertRepo,
                     pushSender,
                     inviteEmailSender,
+                    emailSuppressions,
                     inviteOptions,
                     ct);
                 await outboxRepo.MarkProcessedAsync(evt, ct);
@@ -128,6 +130,7 @@ public class OutboxProcessor : BackgroundService
         IInAppAlertRepository alerts,
         IPushNotificationSender pushSender,
         IInviteEmailSender inviteEmailSender,
+        IEmailSuppressionRepository emailSuppressions,
         InviteEmailOptions inviteOptions,
         CancellationToken ct)
     {
@@ -143,7 +146,15 @@ public class OutboxProcessor : BackgroundService
                 await ApplyUpdatedAsync(evt, projections, ct);
                 break;
             case OutboxEventType.FamilyInviteCreated:
-                await ApplyFamilyInviteCreatedAsync(evt, users, alerts, pushSender, inviteEmailSender, inviteOptions, ct);
+                await ApplyFamilyInviteCreatedAsync(
+                    evt,
+                    users,
+                    alerts,
+                    pushSender,
+                    inviteEmailSender,
+                    emailSuppressions,
+                    inviteOptions,
+                    ct);
                 break;
             default:
                 _logger.LogWarning("Unknown outbox event type: {EventType}", evt.EventType);
@@ -157,6 +168,7 @@ public class OutboxProcessor : BackgroundService
         IInAppAlertRepository alerts,
         IPushNotificationSender pushSender,
         IInviteEmailSender inviteEmailSender,
+        IEmailSuppressionRepository emailSuppressions,
         InviteEmailOptions inviteOptions,
         CancellationToken ct)
     {
@@ -171,22 +183,36 @@ public class OutboxProcessor : BackgroundService
         var body = $"You were invited to {invite.FamilySpaceName}.";
         var route = $"/settings/family-space/invites?inviteId={invite.InviteId}";
 
-        await inviteEmailSender.SendFamilyInviteAsync(
-            new FamilyInviteEmailMessage(
+        var isSuppressed = await emailSuppressions.IsSuppressedAsync(invite.Email, ct);
+        if (isSuppressed)
+        {
+            _logger.LogInformation(
+                "Skipping family invite email {InviteId} to suppressed recipient {Email}",
                 invite.InviteId,
-                invite.Email,
-                invite.FamilySpaceName,
-                inviteOptions.BuildInviteLink(invite.InviteId),
-                invite.ExpiresAt),
-            ct);
+                invite.Email);
+        }
+        else
+        {
+            await inviteEmailSender.SendFamilyInviteAsync(
+                new FamilyInviteEmailMessage(
+                    invite.InviteId,
+                    invite.Email,
+                    invite.FamilySpaceName,
+                    inviteOptions.BuildInviteLink(invite.InviteId),
+                    invite.ExpiresAt),
+                ct);
+        }
 
         var user = await users.GetByEmailAsync(invite.Email, ct);
         if (user is null)
         {
-            _logger.LogInformation(
-                "Family invite {InviteId} targets unregistered email {Email}; email sent with deep link only",
-                invite.InviteId,
-                invite.Email);
+            if (!isSuppressed)
+            {
+                _logger.LogInformation(
+                    "Family invite {InviteId} targets unregistered email {Email}; email sent with deep link only",
+                    invite.InviteId,
+                    invite.Email);
+            }
             return;
         }
 

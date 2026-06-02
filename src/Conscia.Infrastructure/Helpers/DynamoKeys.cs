@@ -34,6 +34,9 @@ public static class DynamoKeys
     public static string Outbox(Guid aggregateId)
         => $"AGG#{aggregateId}";    
 
+    public static string EmailSuppression(string email)
+        => $"EMAIL#{email.Trim().ToLowerInvariant()}";
+
 
     // ---------------- SK ----------------
 
