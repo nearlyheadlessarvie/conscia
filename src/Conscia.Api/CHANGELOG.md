@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.6.3](https://github.com/nearlyheadlessarvie/conscia/compare/api/v1.6.2...api/v1.6.3) (2026-06-03)
+
+
+### Bug Fixes
+
+* **api:** tolerate empty storage prefixes during erasure ([#216](https://github.com/nearlyheadlessarvie/conscia/issues/216)) ([a751ce4](https://github.com/nearlyheadlessarvie/conscia/commit/a751ce43d3412a62322c724bd4f7c7189ef40313))
+
 ## [1.6.2](https://github.com/nearlyheadlessarvie/conscia/compare/api/v1.6.1...api/v1.6.2) (2026-06-02)
 
 
