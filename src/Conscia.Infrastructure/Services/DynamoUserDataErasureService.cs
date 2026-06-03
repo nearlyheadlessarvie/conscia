@@ -302,7 +302,7 @@ public sealed class DynamoUserDataErasureService : DynamoRepository, IUserDataEr
                 ContinuationToken = continuationToken
             }, ct);
 
-            await DeleteS3ObjectsAsync(response.S3Objects.Select(o => o.Key), ct);
+            await DeleteS3ObjectsAsync(response.S3Objects?.Select(o => o.Key) ?? [], ct);
             continuationToken = response.IsTruncated == true
                 ? response.NextContinuationToken
                 : null;
