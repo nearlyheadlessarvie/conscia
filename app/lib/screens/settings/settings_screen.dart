@@ -20,6 +20,7 @@ import '../../providers/auth_provider.dart';
 import '../../providers/admin_entitlement_provider.dart';
 import '../../providers/family_space_provider.dart';
 import '../../providers/location_assistance_provider.dart';
+import '../../providers/passkey_provider.dart';
 import '../../providers/subscription_provider.dart';
 import '../../providers/transaction_providers.dart';
 import '../../providers/user_provider.dart';
@@ -697,10 +698,16 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     if (!confirmed) return;
 
     try {
+      final currentEmail = ref.read(currentSessionUserProvider)?.email;
       final dio = ref.read(dioProvider);
       await dio.delete('users/me');
+      if (currentEmail != null && currentEmail.trim().isNotEmpty) {
+        await ref
+            .read(passkeySignInPreferenceProvider.notifier)
+            .forgetEmail(currentEmail);
+      }
+      await ref.read(authProvider.notifier).logout();
       if (!context.mounted) return;
-      ref.read(authProvider.notifier).logout();
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Account deleted.')),
       );
