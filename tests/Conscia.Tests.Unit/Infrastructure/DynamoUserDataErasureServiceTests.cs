@@ -148,6 +148,40 @@ public class DynamoUserDataErasureServiceTests
         Assert.Contains("receipts/custom-scan.jpg", deletedS3Keys);
     }
 
+    [Fact]
+    public async Task EraseUserDataAsync_AllowsEmptyStoragePrefixes()
+    {
+        var userId = Guid.NewGuid();
+
+        var dynamoMock = new Mock<IAmazonDynamoDB>();
+        dynamoMock
+            .Setup(d => d.QueryAsync(It.IsAny<QueryRequest>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new QueryResponse { Items = [] });
+        dynamoMock
+            .Setup(d => d.ScanAsync(It.IsAny<ScanRequest>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ScanResponse { Items = [] });
+        dynamoMock
+            .Setup(d => d.BatchWriteItemAsync(It.IsAny<BatchWriteItemRequest>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new BatchWriteItemResponse());
+
+        var s3Mock = new Mock<IAmazonS3>();
+        s3Mock
+            .Setup(s => s.ListObjectsV2Async(It.IsAny<ListObjectsV2Request>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ListObjectsV2Response());
+        s3Mock
+            .Setup(s => s.DeleteObjectsAsync(It.IsAny<DeleteObjectsRequest>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new DeleteObjectsResponse());
+
+        var config = new ConfigurationBuilder().Build();
+        var service = new DynamoUserDataErasureService(dynamoMock.Object, s3Mock.Object, config);
+
+        await service.EraseUserDataAsync(userId);
+
+        s3Mock.Verify(
+            s => s.DeleteObjectsAsync(It.IsAny<DeleteObjectsRequest>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
     private static void AssertDeleteQueued(
         IEnumerable<BatchWriteItemRequest> batchWrites,
         string tableName,
