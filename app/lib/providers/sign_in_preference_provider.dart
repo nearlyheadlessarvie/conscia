@@ -63,6 +63,10 @@ class RememberedSignInPreferenceNotifier
     await _prefs.setBool(showInitialSignInPreferenceKey, true);
     state = state.copyWith(showInitialSignIn: true);
   }
+
+  Future<void> clear() async {
+    state = await clearRememberedSignInIdentity(_prefs);
+  }
 }
 
 final rememberedSignInPreferenceProvider = StateNotifierProvider<
@@ -96,6 +100,15 @@ Future<RememberedSignInPreference> persistRememberedSignInIdentity(
     displayName: normalizedDisplayName,
     showInitialSignIn: false,
   );
+}
+
+Future<RememberedSignInPreference> clearRememberedSignInIdentity(
+  SharedPreferences prefs,
+) async {
+  await prefs.remove(rememberedSignInEmailPreferenceKey);
+  await prefs.remove(rememberedSignInDisplayNamePreferenceKey);
+  await prefs.remove(showInitialSignInPreferenceKey);
+  return _loadRememberedSignIn(prefs);
 }
 
 RememberedSignInPreference _loadRememberedSignIn(SharedPreferences prefs) {

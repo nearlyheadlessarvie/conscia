@@ -309,6 +309,10 @@ public class FamilySpaceService : IFamilySpaceService
         if (target.Role == FamilyMemberRole.Owner)
             throw new InvalidOperationException("This member is already the Family Space owner.");
 
+        var targetIsPremium = await _subscriptions.IsPremiumAsync(target.UserId, ct);
+        if (!targetIsPremium)
+            throw new InvalidOperationException("New Family Space owner must have Premium.");
+
         owner.Role = FamilyMemberRole.Contributor;
         target.Role = FamilyMemberRole.Owner;
 

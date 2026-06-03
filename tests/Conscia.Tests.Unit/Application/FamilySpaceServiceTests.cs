@@ -465,6 +465,8 @@ public class FamilySpaceServiceTests
             .ReturnsAsync(ownerMember);
         _repo.Setup(r => r.ListMembersAsync(familySpaceId, It.IsAny<CancellationToken>()))
             .ReturnsAsync([ownerMember, targetMember]);
+        _subscriptions.Setup(s => s.IsPremiumAsync(targetUserId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
         _users.Setup(r => r.GetByIdAsync(targetUserId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new User { Id = targetUserId, Email = "spouse@example.com" });
 
@@ -476,6 +478,44 @@ public class FamilySpaceServiceTests
             It.Is<FamilyMember>(m => m.Id == ownerMemberId && m.Role == FamilyMemberRole.Contributor),
             It.Is<FamilyMember>(m => m.Id == targetMemberId && m.Role == FamilyMemberRole.Owner),
             It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task TransferOwnershipAsync_TargetMustBePremium()
+    {
+        var ownerId = Guid.NewGuid();
+        var targetUserId = Guid.NewGuid();
+        var familySpaceId = Guid.NewGuid();
+        var ownerMember = new FamilyMember
+        {
+            Id = Guid.NewGuid(),
+            UserId = ownerId,
+            FamilySpaceId = familySpaceId,
+            Role = FamilyMemberRole.Owner
+        };
+        var targetMember = new FamilyMember
+        {
+            Id = Guid.NewGuid(),
+            UserId = targetUserId,
+            FamilySpaceId = familySpaceId,
+            Role = FamilyMemberRole.Contributor
+        };
+
+        _repo.Setup(r => r.GetMembershipByUserIdAsync(ownerId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(ownerMember);
+        _repo.Setup(r => r.ListMembersAsync(familySpaceId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync([ownerMember, targetMember]);
+        _subscriptions.Setup(s => s.IsPremiumAsync(targetUserId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
+
+        var error = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            CreateService().TransferOwnershipAsync(ownerId, targetMember.Id));
+
+        Assert.Equal("New Family Space owner must have Premium.", error.Message);
+        _repo.Verify(r => r.TransferOwnershipAsync(
+            It.IsAny<FamilyMember>(),
+            It.IsAny<FamilyMember>(),
+            It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
