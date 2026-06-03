@@ -1,3 +1,7 @@
+import 'dart:convert';
+import 'dart:typed_data';
+
+import 'package:conscia_app/core/network/dio_client.dart';
 import 'package:conscia_app/models/family_space.dart';
 import 'package:conscia_app/providers/admin_entitlement_provider.dart';
 import 'package:conscia_app/providers/family_space_provider.dart';
@@ -170,6 +174,27 @@ class _RecordingPasskeyService extends PasskeyService {
     registerCount += 1;
     return 'device-credential-id';
   }
+}
+
+class _DeleteAccountAdapter implements HttpClientAdapter {
+  int deleteRequestCount = 0;
+  RequestOptions? lastDeleteRequestOptions;
+
+  @override
+  Future<ResponseBody> fetch(
+    RequestOptions options,
+    Stream<Uint8List>? requestStream,
+    Future<void>? cancelFuture,
+  ) async {
+    if (options.method == 'DELETE' && options.path == 'users/me') {
+      deleteRequestCount += 1;
+      lastDeleteRequestOptions = options;
+    }
+    return ResponseBody.fromString('', 204);
+  }
+
+  @override
+  void close({bool force = false}) {}
 }
 
 Future<ProviderContainer> _pumpSettingsScreen(
@@ -1161,6 +1186,60 @@ void main() {
     expect(find.text('Delete this account?'), findsOneWidget);
     expect(find.widgetWithText(FilledButton, 'Delete account'), findsOneWidget);
     expect(find.widgetWithText(OutlinedButton, 'Cancel'), findsOneWidget);
+  });
+
+  testWidgets('delete account clears the signed-in passkey preference',
+      (tester) async {
+    SharedPreferences.setMockInitialValues({
+      passkeyRegisteredEmailsPreferenceKey: <String>[
+        'settings@example.com',
+        'other@example.com',
+      ],
+      passkeyRegisteredCredentialIdsPreferenceKey: jsonEncode({
+        'settings@example.com': 'settings-credential-id',
+        'other@example.com': 'other-credential-id',
+      }),
+      passkeyFirstSignInEnabledPreferenceKey: true,
+    });
+    final prefs = await SharedPreferences.getInstance();
+    final locationService =
+        _RecordingLocationAssistanceService(permissionGranted: true);
+    final deleteAccountAdapter = _DeleteAccountAdapter();
+    final dio = Dio(BaseOptions(baseUrl: 'https://api.example.test/'))
+      ..httpClientAdapter = deleteAccountAdapter;
+
+    await _pumpSettingsScreen(
+      tester,
+      prefs: prefs,
+      locationService: locationService,
+      overrides: [
+        dioProvider.overrideWithValue(dio),
+      ],
+    );
+
+    await tester.pumpAndSettle();
+
+    await tester.scrollUntilVisible(find.text('Delete account'), 280);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Delete account'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.widgetWithText(FilledButton, 'Delete account'));
+    await tester.pumpAndSettle();
+
+    expect(deleteAccountAdapter.deleteRequestCount, 1);
+    expect(deleteAccountAdapter.lastDeleteRequestOptions?.method, 'DELETE');
+    expect(deleteAccountAdapter.lastDeleteRequestOptions?.path, 'users/me');
+    expect(
+      prefs.getStringList(passkeyRegisteredEmailsPreferenceKey),
+      <String>['other@example.com'],
+    );
+    expect(
+      jsonDecode(prefs.getString(passkeyRegisteredCredentialIdsPreferenceKey)!),
+      {'other@example.com': 'other-credential-id'},
+    );
+    expect(prefs.getBool(passkeyFirstSignInEnabledPreferenceKey), isTrue);
   });
 
   testWidgets('settings list groups are flat with separators, not cards',
