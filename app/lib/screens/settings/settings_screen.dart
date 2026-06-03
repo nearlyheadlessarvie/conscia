@@ -16,6 +16,7 @@ import '../../core/routing/app_router.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_layout.dart';
 import '../../models/family_space.dart';
+import '../../providers/account_local_data_cleanup.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/admin_entitlement_provider.dart';
 import '../../providers/family_space_provider.dart';
@@ -24,6 +25,7 @@ import '../../providers/passkey_provider.dart';
 import '../../providers/subscription_provider.dart';
 import '../../providers/transaction_providers.dart';
 import '../../providers/user_provider.dart';
+import '../../providers/usage_provider.dart';
 import '../../services/user_service.dart';
 import '../../widgets/conscia_app_bar.dart';
 import '../../widgets/conscia_bottom_sheet.dart';
@@ -688,11 +690,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     BuildContext context,
     WidgetRef ref,
   ) async {
+    final familySpace = ref.read(familySpaceProvider).valueOrNull;
     final confirmed = await ConsciaConfirmSheet.show(
       context,
       title: 'Delete this account?',
-      message:
-          'This permanently removes your account, transactions, budgets, AI interactions, receipts, and profile data. This can\'t be undone. Export your data first if you want a copy.',
+      message: _deleteAccountMessage(familySpace),
       confirmLabel: 'Delete account',
     );
     if (!confirmed) return;
@@ -706,6 +708,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             .read(passkeySignInPreferenceProvider.notifier)
             .forgetEmail(currentEmail);
       }
+      await clearDeletedAccountLocalData(ref.read(sharedPreferencesProvider));
       await ref.read(authProvider.notifier).logout();
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -739,6 +742,17 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       if (option.value == intensity) return option.label;
     }
     return 'Balanced';
+  }
+
+  String _deleteAccountMessage(FamilySpace? familySpace) {
+    const baseMessage =
+        'This permanently removes your account, transactions, budgets, AI interactions, receipts, and profile data. This can\'t be undone. Export your data first if you want a copy.';
+
+    if (familySpace == null || familySpace.role.toLowerCase() != 'owner') {
+      return baseMessage;
+    }
+
+    return '$baseMessage\n\nBecause you own ${familySpace.name}, ${familySpace.name} will also be deleted, including shared household records. Transfer ownership to another Premium member first if you want to keep it.';
   }
 }
 

@@ -1188,7 +1188,49 @@ void main() {
     expect(find.widgetWithText(OutlinedButton, 'Cancel'), findsOneWidget);
   });
 
-  testWidgets('delete account clears the signed-in passkey preference',
+  testWidgets('delete account warns family owners to transfer before deleting',
+      (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+    final locationService =
+        _RecordingLocationAssistanceService(permissionGranted: true);
+
+    await _pumpSettingsScreen(
+      tester,
+      prefs: prefs,
+      locationService: locationService,
+      familySpace: const FamilySpace(
+        id: 'family-1',
+        name: 'Santos Household',
+        currencyCode: 'PHP',
+        isReadOnly: false,
+        role: 'Owner',
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    await tester.scrollUntilVisible(find.text('Delete account'), 280);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Delete account'));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.textContaining(
+        'Santos Household will also be deleted, including shared household records.',
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.textContaining(
+        'Transfer ownership to another Premium member first if you want to keep it.',
+      ),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('delete account clears local account preferences',
       (tester) async {
     SharedPreferences.setMockInitialValues({
       passkeyRegisteredEmailsPreferenceKey: <String>[
@@ -1200,6 +1242,17 @@ void main() {
         'other@example.com': 'other-credential-id',
       }),
       passkeyFirstSignInEnabledPreferenceKey: true,
+      'last_login_email': 'settings@example.com',
+      'remembered_sign_in_display_name': 'Settings',
+      'show_initial_sign_in': false,
+      'usage_ai_assists': 4,
+      'usage_reflections': 2,
+      'usage_month': 6,
+      'usage_year': 2026,
+      'recent_categories': <String>['Dining'],
+      'smart_location_current_geohash': 'wdw4g3h',
+      'smart_location_merchant_history': '[]',
+      'dismissed_insight_feed_ids': <String>['dashboard-1'],
     });
     final prefs = await SharedPreferences.getInstance();
     final locationService =
@@ -1240,6 +1293,17 @@ void main() {
       {'other@example.com': 'other-credential-id'},
     );
     expect(prefs.getBool(passkeyFirstSignInEnabledPreferenceKey), isTrue);
+    expect(prefs.getString('last_login_email'), isNull);
+    expect(prefs.getString('remembered_sign_in_display_name'), isNull);
+    expect(prefs.getBool('show_initial_sign_in'), isNull);
+    expect(prefs.getInt('usage_ai_assists'), isNull);
+    expect(prefs.getInt('usage_reflections'), isNull);
+    expect(prefs.getInt('usage_month'), isNull);
+    expect(prefs.getInt('usage_year'), isNull);
+    expect(prefs.getStringList('recent_categories'), isNull);
+    expect(prefs.getString('smart_location_current_geohash'), isNull);
+    expect(prefs.getString('smart_location_merchant_history'), isNull);
+    expect(prefs.getStringList('dismissed_insight_feed_ids'), isNull);
   });
 
   testWidgets('settings list groups are flat with separators, not cards',
