@@ -201,16 +201,10 @@ public class UserRepository : DynamoRepository, IUserRepository
             }
         }
 
-        foreach (var batch in deletes.Chunk(25))
+        await BatchWriteAllAsync(new Dictionary<string, List<WriteRequest>>
         {
-            await Dynamo.BatchWriteItemAsync(new BatchWriteItemRequest
-            {
-                RequestItems = new Dictionary<string, List<WriteRequest>>
-                {
-                    [TableName] = batch.ToList()
-                }
-            }, ct);
-        }
+            [TableName] = deletes
+        }, ct);
     }
 
     public async Task<UserIdentity> AddIdentityAsync(UserIdentity identity, CancellationToken ct = default)

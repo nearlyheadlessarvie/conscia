@@ -91,6 +91,13 @@ class MonthlyUsageNotifier extends StateNotifier<MonthlyUsage> {
   }
 }
 
+Future<void> clearMonthlyUsage(SharedPreferences prefs) async {
+  await prefs.remove(_keyAiAssists);
+  await prefs.remove(_keyReflections);
+  await prefs.remove(_keyMonth);
+  await prefs.remove(_keyYear);
+}
+
 final sharedPreferencesProvider = Provider<SharedPreferences>((ref) {
   throw UnimplementedError(
     'sharedPreferencesProvider must be overridden in main() with '

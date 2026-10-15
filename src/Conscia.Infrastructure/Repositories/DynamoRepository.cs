@@ -6,6 +6,8 @@ namespace Conscia.Infrastructure.Repositories;
 
 public abstract class DynamoRepository
 {
+    private const int MaxBatchWriteAttempts = 8;
+
     protected readonly IAmazonDynamoDB Dynamo;
 
     protected DynamoRepository(IAmazonDynamoDB dynamo)
@@ -95,4 +97,44 @@ public abstract class DynamoRepository
 
     protected static string NormalizeKeyPart(string value) =>
         value.Trim().ToLowerInvariant();
+
+    protected async Task BatchWriteAllAsync(
+        Dictionary<string, List<WriteRequest>> requestItems,
+        CancellationToken ct)
+    {
+        foreach (var (tableName, requests) in requestItems)
+        {
+            foreach (var batch in requests.Chunk(25))
+            {
+                var pending = new Dictionary<string, List<WriteRequest>>
+                {
+                    [tableName] = batch.ToList()
+                };
+
+                for (var attempt = 1; pending.Count > 0; attempt++)
+                {
+                    var response = await Dynamo.BatchWriteItemAsync(new BatchWriteItemRequest
+                    {
+                        RequestItems = pending
+                    }, ct);
+
+                    pending = response.UnprocessedItems?
+                        .Where(entry => entry.Value.Count > 0)
+                        .ToDictionary(entry => entry.Key, entry => entry.Value)
+                        ?? [];
+
+                    if (pending.Count == 0)
+                        break;
+
+                    if (attempt >= MaxBatchWriteAttempts)
+                        throw new InvalidOperationException("DynamoDB batch write left unprocessed items after retries.");
+
+                    await Task.Delay(BatchWriteRetryDelay(attempt), ct);
+                }
+            }
+        }
+    }
+
+    private static TimeSpan BatchWriteRetryDelay(int attempt) =>
+        TimeSpan.FromMilliseconds(Math.Min(1000, 25 * Math.Pow(2, attempt - 1)));
 }

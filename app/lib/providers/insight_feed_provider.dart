@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../core/insights/insight_feed_builder.dart';
 import '../models/behavioral_insights.dart';
@@ -32,6 +33,10 @@ class InsightDismissalsNotifier extends StateNotifier<Set<String>> {
   }
 
   bool isDismissed(String id) => state.contains(id);
+}
+
+Future<void> clearInsightDismissals(SharedPreferences prefs) async {
+  await prefs.remove(dismissedInsightFeedIdsKey);
 }
 
 final insightDismissalsProvider =

@@ -205,6 +205,10 @@ void main() {
     await tester.tap(find.text('Transfer ownership'));
     await tester.pumpAndSettle();
     expect(find.text('Transfer ownership?'), findsOneWidget);
+    expect(
+      find.textContaining('This member must have Premium to host it.'),
+      findsOneWidget,
+    );
 
     await tester.tap(find.widgetWithText(FilledButton, 'Transfer ownership'));
     await tester.pumpAndSettle();

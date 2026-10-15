@@ -28,6 +28,11 @@ abstract class LocationAssistanceService {
   String? categoryForMerchant(String merchant) => null;
 }
 
+Future<void> clearLocationAssistanceHistory(SharedPreferences prefs) async {
+  await prefs.remove(LocalLocationAssistanceService.currentGeohashKey);
+  await prefs.remove(LocalLocationAssistanceService.merchantHistoryKey);
+}
+
 enum LocationPermissionStatus {
   granted,
   denied,
@@ -107,8 +112,8 @@ class LocalLocationAssistanceService implements LocationAssistanceService {
     this.locationGateway = const GeolocatorLocationGateway(),
   });
 
-  static const _currentGeohashKey = 'smart_location_current_geohash';
-  static const _merchantHistoryKey = 'smart_location_merchant_history';
+  static const currentGeohashKey = 'smart_location_current_geohash';
+  static const merchantHistoryKey = 'smart_location_merchant_history';
   static const _geohashPrecision = 7;
   static const _maxHistoryEntries = 80;
   static const _base32 = '0123456789bcdefghjkmnpqrstuvwxyz';
@@ -160,7 +165,7 @@ class LocalLocationAssistanceService implements LocationAssistanceService {
     if (position == null) return;
 
     await prefs.setString(
-      _currentGeohashKey,
+      currentGeohashKey,
       _encodeGeohash(position, precision: _geohashPrecision),
     );
   }
@@ -183,7 +188,7 @@ class LocalLocationAssistanceService implements LocationAssistanceService {
     if (position == null) return;
 
     final geohash = _encodeGeohash(position, precision: _geohashPrecision);
-    await prefs.setString(_currentGeohashKey, geohash);
+    await prefs.setString(currentGeohashKey, geohash);
 
     final history = _loadHistory();
     final normalizedKey = _normalizeMerchant(normalizedMerchant);
@@ -216,7 +221,7 @@ class LocalLocationAssistanceService implements LocationAssistanceService {
     history.sort(_compareHistoryEntries);
     final bounded = history.take(_maxHistoryEntries).toList();
     await prefs.setString(
-      _merchantHistoryKey,
+      merchantHistoryKey,
       jsonEncode(bounded.map((entry) => entry.toJson()).toList()),
     );
   }
@@ -244,7 +249,7 @@ class LocalLocationAssistanceService implements LocationAssistanceService {
   ({List<String> nearbyMerchants, List<String> likelyCategories})
       _getLocalHistorySuggestions() {
     final prefs = this.prefs;
-    final currentGeohash = prefs?.getString(_currentGeohashKey);
+    final currentGeohash = prefs?.getString(currentGeohashKey);
     if (prefs == null || currentGeohash == null || currentGeohash.isEmpty) {
       return const (
         nearbyMerchants: <String>[],
@@ -276,7 +281,7 @@ class LocalLocationAssistanceService implements LocationAssistanceService {
 
   String? _categoryForLocalMerchant(String merchant) {
     final prefs = this.prefs;
-    final currentGeohash = prefs?.getString(_currentGeohashKey);
+    final currentGeohash = prefs?.getString(currentGeohashKey);
     if (prefs == null || currentGeohash == null) return null;
 
     final normalized = _normalizeMerchant(merchant);
@@ -290,7 +295,7 @@ class LocalLocationAssistanceService implements LocationAssistanceService {
   }
 
   List<_MerchantHistoryEntry> _loadHistory() {
-    final raw = prefs?.getString(_merchantHistoryKey);
+    final raw = prefs?.getString(merchantHistoryKey);
     if (raw == null || raw.isEmpty) return [];
 
     try {

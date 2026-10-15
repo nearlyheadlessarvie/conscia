@@ -1,3 +1,7 @@
+import 'dart:convert';
+import 'dart:typed_data';
+
+import 'package:conscia_app/core/network/dio_client.dart';
 import 'package:conscia_app/models/family_space.dart';
 import 'package:conscia_app/providers/admin_entitlement_provider.dart';
 import 'package:conscia_app/providers/family_space_provider.dart';
@@ -170,6 +174,27 @@ class _RecordingPasskeyService extends PasskeyService {
     registerCount += 1;
     return 'device-credential-id';
   }
+}
+
+class _DeleteAccountAdapter implements HttpClientAdapter {
+  int deleteRequestCount = 0;
+  RequestOptions? lastDeleteRequestOptions;
+
+  @override
+  Future<ResponseBody> fetch(
+    RequestOptions options,
+    Stream<Uint8List>? requestStream,
+    Future<void>? cancelFuture,
+  ) async {
+    if (options.method == 'DELETE' && options.path == 'users/me') {
+      deleteRequestCount += 1;
+      lastDeleteRequestOptions = options;
+    }
+    return ResponseBody.fromString('', 204);
+  }
+
+  @override
+  void close({bool force = false}) {}
 }
 
 Future<ProviderContainer> _pumpSettingsScreen(
@@ -1161,6 +1186,124 @@ void main() {
     expect(find.text('Delete this account?'), findsOneWidget);
     expect(find.widgetWithText(FilledButton, 'Delete account'), findsOneWidget);
     expect(find.widgetWithText(OutlinedButton, 'Cancel'), findsOneWidget);
+  });
+
+  testWidgets('delete account warns family owners to transfer before deleting',
+      (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+    final locationService =
+        _RecordingLocationAssistanceService(permissionGranted: true);
+
+    await _pumpSettingsScreen(
+      tester,
+      prefs: prefs,
+      locationService: locationService,
+      familySpace: const FamilySpace(
+        id: 'family-1',
+        name: 'Santos Household',
+        currencyCode: 'PHP',
+        isReadOnly: false,
+        role: 'Owner',
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    await tester.scrollUntilVisible(find.text('Delete account'), 280);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Delete account'));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.textContaining(
+        'Santos Household will also be deleted, including shared household records.',
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.textContaining(
+        'Transfer ownership to another Premium member first if you want to keep it.',
+      ),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('delete account clears local account preferences',
+      (tester) async {
+    SharedPreferences.setMockInitialValues({
+      passkeyRegisteredEmailsPreferenceKey: <String>[
+        'settings@example.com',
+        'other@example.com',
+      ],
+      passkeyRegisteredCredentialIdsPreferenceKey: jsonEncode({
+        'settings@example.com': 'settings-credential-id',
+        'other@example.com': 'other-credential-id',
+      }),
+      passkeyFirstSignInEnabledPreferenceKey: true,
+      'last_login_email': 'settings@example.com',
+      'remembered_sign_in_display_name': 'Settings',
+      'show_initial_sign_in': false,
+      'usage_ai_assists': 4,
+      'usage_reflections': 2,
+      'usage_month': 6,
+      'usage_year': 2026,
+      'recent_categories': <String>['Dining'],
+      'smart_location_current_geohash': 'wdw4g3h',
+      'smart_location_merchant_history': '[]',
+      'dismissed_insight_feed_ids': <String>['dashboard-1'],
+    });
+    final prefs = await SharedPreferences.getInstance();
+    final locationService =
+        _RecordingLocationAssistanceService(permissionGranted: true);
+    final deleteAccountAdapter = _DeleteAccountAdapter();
+    final dio = Dio(BaseOptions(baseUrl: 'https://api.example.test/'))
+      ..httpClientAdapter = deleteAccountAdapter;
+
+    await _pumpSettingsScreen(
+      tester,
+      prefs: prefs,
+      locationService: locationService,
+      overrides: [
+        dioProvider.overrideWithValue(dio),
+      ],
+    );
+
+    await tester.pumpAndSettle();
+
+    await tester.scrollUntilVisible(find.text('Delete account'), 280);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Delete account'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.widgetWithText(FilledButton, 'Delete account'));
+    await tester.pumpAndSettle();
+
+    expect(deleteAccountAdapter.deleteRequestCount, 1);
+    expect(deleteAccountAdapter.lastDeleteRequestOptions?.method, 'DELETE');
+    expect(deleteAccountAdapter.lastDeleteRequestOptions?.path, 'users/me');
+    expect(
+      prefs.getStringList(passkeyRegisteredEmailsPreferenceKey),
+      <String>['other@example.com'],
+    );
+    expect(
+      jsonDecode(prefs.getString(passkeyRegisteredCredentialIdsPreferenceKey)!),
+      {'other@example.com': 'other-credential-id'},
+    );
+    expect(prefs.getBool(passkeyFirstSignInEnabledPreferenceKey), isTrue);
+    expect(prefs.getString('last_login_email'), isNull);
+    expect(prefs.getString('remembered_sign_in_display_name'), isNull);
+    expect(prefs.getBool('show_initial_sign_in'), isNull);
+    expect(prefs.getInt('usage_ai_assists'), isNull);
+    expect(prefs.getInt('usage_reflections'), isNull);
+    expect(prefs.getInt('usage_month'), isNull);
+    expect(prefs.getInt('usage_year'), isNull);
+    expect(prefs.getStringList('recent_categories'), isNull);
+    expect(prefs.getString('smart_location_current_geohash'), isNull);
+    expect(prefs.getString('smart_location_merchant_history'), isNull);
+    expect(prefs.getStringList('dismissed_insight_feed_ids'), isNull);
   });
 
   testWidgets('settings list groups are flat with separators, not cards',

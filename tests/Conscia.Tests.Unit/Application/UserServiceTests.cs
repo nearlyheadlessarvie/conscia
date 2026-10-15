@@ -225,7 +225,7 @@ public class UserServiceTests
     }
 
     [Fact]
-    public async Task DeleteAccountAsync_DeletesIdentityAndUserDataBeforeLocalUser()
+    public async Task DeleteAccountAsync_ErasesUserDataAndLocalUserBeforeIdentity()
     {
         var id = Guid.NewGuid();
         var user = new User { Id = id, Email = "delete@example.com" };
@@ -249,7 +249,7 @@ public class UserServiceTests
 
         await _svc.DeleteAccountAsync(id);
 
-        Assert.Equal(["identity", "data", "local"], calls);
+        Assert.Equal(["data", "local", "identity"], calls);
         _identityDeletionMock.Verify(
             s => s.DeleteUserAsync(user, It.IsAny<CancellationToken>()),
             Times.Once);
