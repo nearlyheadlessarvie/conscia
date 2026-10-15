@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.3.3](https://github.com/nearlyheadlessarvie/conscia/compare/app/v2.3.2...app/v2.3.3) (2026-10-15)
+
+
+### Bug Fixes
+
+* **app:** clear local data on account deletion ([#219](https://github.com/nearlyheadlessarvie/conscia/issues/219)) ([d9d7032](https://github.com/nearlyheadlessarvie/conscia/commit/d9d70321f6e2f6ddd4b46803b9077f0c4d189f30))
+
 ## [2.3.2](https://github.com/nearlyheadlessarvie/conscia/compare/app/v2.3.1...app/v2.3.2) (2026-06-03)
 
 
