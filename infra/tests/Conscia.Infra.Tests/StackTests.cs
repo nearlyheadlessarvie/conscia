@@ -507,9 +507,6 @@ public class StackTests
         template.ResourceCountIs("AWS::EC2::SecurityGroup", 0);
         AssertIamPoliciesContainActions(
             template,
-            "aws-marketplace:ViewSubscriptions",
-            "aws-marketplace:Subscribe",
-            "aws-marketplace:Unsubscribe",
             "cognito-idp:AdminCreateUser",
             "cognito-idp:AdminDeleteUser",
             "cognito-idp:AdminSetUserPassword");
