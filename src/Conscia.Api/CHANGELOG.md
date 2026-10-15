@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.6.4](https://github.com/nearlyheadlessarvie/conscia/compare/api/v1.6.3...api/v1.6.4) (2026-10-15)
+
+
+### Bug Fixes
+
+* **app:** clear local data on account deletion ([#219](https://github.com/nearlyheadlessarvie/conscia/issues/219)) ([d9d7032](https://github.com/nearlyheadlessarvie/conscia/commit/d9d70321f6e2f6ddd4b46803b9077f0c4d189f30))
+
 ## [1.6.3](https://github.com/nearlyheadlessarvie/conscia/compare/api/v1.6.2...api/v1.6.3) (2026-06-03)
 
 
