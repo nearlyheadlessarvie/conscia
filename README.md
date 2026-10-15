@@ -1,11 +1,11 @@
 # Conscia
 
-Conscia is a mobile-first financial coaching product with a Flutter app, a .NET 8 API, an Astro marketing site, and AWS CDK infrastructure. This file is the canonical implemented-state document for the repo as of 2026-05-26.
+Conscia is a mobile-first financial coaching product with a Flutter app, a .NET 10 API, an Astro marketing site, and AWS CDK infrastructure. This file is the canonical implemented-state document for the repo as of 2026-05-26.
 
 ## Architecture
 
 - `app/`: Flutter client for iOS and Android using Riverpod, GoRouter, Dio, and Material 3.
-- `src/Conscia.Api`: ASP.NET 8 minimal API, production-hosted on Lambda behind API Gateway.
+- `src/Conscia.Api`: ASP.NET 10 minimal API, production-hosted on Lambda behind API Gateway.
 - `src/Conscia.Application`: service layer, DTOs, validators, trigger evaluators, and business rules.
 - `src/Conscia.Infrastructure`: DynamoDB repositories plus Cognito, SES, S3, SQS, Firebase, Apple, Google Play, OCR, and exchange-rate integrations.
 - `src/Conscia.AI`: Ollama-backed local AI and Bedrock-backed production AI services.
@@ -109,7 +109,7 @@ Conscia is a mobile-first financial coaching product with a Flutter app, a .NET 
 
 ### Prerequisites
 
-- `.NET 8 SDK`
+- `.NET 10 SDK`
 - `Flutter`
 - `Node.js 20+`
 - `Docker`
