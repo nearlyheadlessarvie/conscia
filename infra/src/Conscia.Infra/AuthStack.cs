@@ -57,7 +57,7 @@ public class AuthStack : Stack
             customEmailSender = new Function(this, "CognitoCustomEmailSender", new FunctionProps
             {
                 FunctionName = "conscia-cognito-custom-email-sender",
-                Runtime = Runtime.DOTNET_8,
+                Runtime = Runtime.DOTNET_10,
                 Handler = "Conscia.CognitoCustomEmailSender",
                 Code = Code.FromAsset(customEmailSenderAssetPath),
                 MemorySize = 512,
@@ -88,7 +88,7 @@ public class AuthStack : Stack
             preSignupLinker = new Function(this, "CognitoPreSignupLinker", new FunctionProps
             {
                 FunctionName = "conscia-cognito-pre-signup-linker",
-                Runtime = Runtime.DOTNET_8,
+                Runtime = Runtime.DOTNET_10,
                 Handler = "Conscia.CognitoPreSignupLinker",
                 Code = Code.FromAsset(linkerAssetPath),
                 MemorySize = 512,

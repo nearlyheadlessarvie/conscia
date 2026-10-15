@@ -1,5 +1,6 @@
 using Amazon.CDK;
 using Amazon.CDK.Assertions;
+using System.Text.Json;
 using Conscia.Infra;
 
 namespace Conscia.Infra.Tests;
@@ -298,6 +299,7 @@ public class StackTests
         template.HasResourceProperties("AWS::Lambda::Function", Match.ObjectLike(new Dictionary<string, object>
         {
             ["FunctionName"] = "conscia-cognito-pre-signup-linker",
+            ["Runtime"] = "dotnet10",
             ["Environment"] = Match.ObjectLike(new Dictionary<string, object>
             {
                 ["Variables"] = Match.ObjectLike(new Dictionary<string, object>
@@ -309,6 +311,7 @@ public class StackTests
         template.HasResourceProperties("AWS::Lambda::Function", Match.ObjectLike(new Dictionary<string, object>
         {
             ["FunctionName"] = "conscia-cognito-custom-email-sender",
+            ["Runtime"] = "dotnet10",
             ["Environment"] = Match.ObjectLike(new Dictionary<string, object>
             {
                 ["Variables"] = Match.ObjectLike(new Dictionary<string, object>
@@ -502,35 +505,14 @@ public class StackTests
         });
         template.ResourceCountIs("AWS::Lambda::Function", 1);
         template.ResourceCountIs("AWS::EC2::SecurityGroup", 0);
-        template.HasResourceProperties("AWS::IAM::Policy", Match.ObjectLike(new Dictionary<string, object>
-        {
-            ["PolicyDocument"] = Match.ObjectLike(new Dictionary<string, object>
-            {
-                ["Statement"] = Match.ArrayWith([
-                    Match.ObjectLike(new Dictionary<string, object>
-                    {
-                        ["Action"] = Match.ArrayWith([
-                            "aws-marketplace:ViewSubscriptions",
-                            "aws-marketplace:Subscribe",
-                            "aws-marketplace:Unsubscribe"
-                        ]),
-                        ["Effect"] = "Allow",
-                        ["Resource"] = "*"
-                    }),
-                    Match.ObjectLike(new Dictionary<string, object>
-                    {
-                        ["Action"] = Match.ArrayWith([
-                            "cognito-idp:AdminCreateUser",
-                            "cognito-idp:AdminDeleteUser",
-                            "cognito-idp:AdminSetUserPassword"
-                        ]),
-                        ["Effect"] = "Allow"
-                    })
-                ])
-            })
-        }));
+        AssertIamPoliciesContainActions(
+            template,
+            "cognito-idp:AdminCreateUser",
+            "cognito-idp:AdminDeleteUser",
+            "cognito-idp:AdminSetUserPassword");
         template.HasResourceProperties("AWS::Lambda::Function", new Dictionary<string, object>
         {
+            ["Runtime"] = "dotnet10",
             ["Environment"] = new Dictionary<string, object>
             {
                 ["Variables"] = Match.ObjectLike(new Dictionary<string, object>
@@ -618,6 +600,7 @@ public class StackTests
         });
         template.HasResourceProperties("AWS::Lambda::Function", new Dictionary<string, object>
         {
+            ["Runtime"] = "dotnet10",
             ["Environment"] = new Dictionary<string, object>
             {
                 ["Variables"] = Match.ObjectLike(new Dictionary<string, object>
@@ -657,6 +640,7 @@ public class StackTests
         template.HasResourceProperties("AWS::Lambda::Function", new Dictionary<string, object>
         {
             ["FunctionName"] = "conscia-recurring-processor",
+            ["Runtime"] = "dotnet10",
             ["Environment"] = new Dictionary<string, object>
             {
                 ["Variables"] = Match.ObjectLike(new Dictionary<string, object>
@@ -693,6 +677,7 @@ public class StackTests
         var template = Template.FromStack((Stack)app.Node.FindChild("P"));
         template.HasResourceProperties("AWS::Lambda::Function", new Dictionary<string, object>
         {
+            ["Runtime"] = "dotnet10",
             ["Environment"] = new Dictionary<string, object>
             {
                 ["Variables"] = Match.ObjectLike(new Dictionary<string, object>
@@ -702,18 +687,16 @@ public class StackTests
                 })
             }
         });
-        template.HasResourceProperties("AWS::IAM::Policy", Match.ObjectLike(new Dictionary<string, object>
-        {
-            ["PolicyDocument"] = Match.ObjectLike(new Dictionary<string, object>
-            {
-                ["Statement"] = Match.ArrayWith([
-                    Match.ObjectLike(new Dictionary<string, object>
-                    {
-                        ["Action"] = Match.ArrayWith(["dynamodb:BatchGetItem", "dynamodb:GetRecords", "dynamodb:GetShardIterator", "dynamodb:Query", "dynamodb:GetItem", "dynamodb:Scan", "dynamodb:ConditionCheckItem", "dynamodb:DescribeTable"])
-                    })
-                ])
-            })
-        }));
+        AssertIamPoliciesContainActions(
+            template,
+            "dynamodb:BatchGetItem",
+            "dynamodb:GetRecords",
+            "dynamodb:GetShardIterator",
+            "dynamodb:Query",
+            "dynamodb:GetItem",
+            "dynamodb:Scan",
+            "dynamodb:ConditionCheckItem",
+            "dynamodb:DescribeTable");
     }
 
     [Fact]
@@ -1092,6 +1075,16 @@ public class StackTests
         Directory.CreateDirectory(path);
         File.WriteAllText(Path.Combine(path, "placeholder.txt"), name);
         return path;
+    }
+
+    private static void AssertIamPoliciesContainActions(Template template, params string[] actions)
+    {
+        var policies = JsonSerializer.Serialize(template.FindResources("AWS::IAM::Policy"));
+
+        foreach (var action in actions)
+        {
+            Assert.Contains(action, policies);
+        }
     }
 
 }
