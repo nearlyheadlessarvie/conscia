@@ -298,6 +298,7 @@ public class StackTests
         template.HasResourceProperties("AWS::Lambda::Function", Match.ObjectLike(new Dictionary<string, object>
         {
             ["FunctionName"] = "conscia-cognito-pre-signup-linker",
+            ["Runtime"] = "dotnet10",
             ["Environment"] = Match.ObjectLike(new Dictionary<string, object>
             {
                 ["Variables"] = Match.ObjectLike(new Dictionary<string, object>
@@ -309,6 +310,7 @@ public class StackTests
         template.HasResourceProperties("AWS::Lambda::Function", Match.ObjectLike(new Dictionary<string, object>
         {
             ["FunctionName"] = "conscia-cognito-custom-email-sender",
+            ["Runtime"] = "dotnet10",
             ["Environment"] = Match.ObjectLike(new Dictionary<string, object>
             {
                 ["Variables"] = Match.ObjectLike(new Dictionary<string, object>
@@ -531,6 +533,7 @@ public class StackTests
         }));
         template.HasResourceProperties("AWS::Lambda::Function", new Dictionary<string, object>
         {
+            ["Runtime"] = "dotnet10",
             ["Environment"] = new Dictionary<string, object>
             {
                 ["Variables"] = Match.ObjectLike(new Dictionary<string, object>
@@ -618,6 +621,7 @@ public class StackTests
         });
         template.HasResourceProperties("AWS::Lambda::Function", new Dictionary<string, object>
         {
+            ["Runtime"] = "dotnet10",
             ["Environment"] = new Dictionary<string, object>
             {
                 ["Variables"] = Match.ObjectLike(new Dictionary<string, object>
@@ -657,6 +661,7 @@ public class StackTests
         template.HasResourceProperties("AWS::Lambda::Function", new Dictionary<string, object>
         {
             ["FunctionName"] = "conscia-recurring-processor",
+            ["Runtime"] = "dotnet10",
             ["Environment"] = new Dictionary<string, object>
             {
                 ["Variables"] = Match.ObjectLike(new Dictionary<string, object>
@@ -693,6 +698,7 @@ public class StackTests
         var template = Template.FromStack((Stack)app.Node.FindChild("P"));
         template.HasResourceProperties("AWS::Lambda::Function", new Dictionary<string, object>
         {
+            ["Runtime"] = "dotnet10",
             ["Environment"] = new Dictionary<string, object>
             {
                 ["Variables"] = Match.ObjectLike(new Dictionary<string, object>
