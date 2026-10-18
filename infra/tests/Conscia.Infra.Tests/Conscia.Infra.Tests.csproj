@@ -9,8 +9,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Amazon.CDK.Lib" Version="2.178.2" />
-    <PackageReference Include="Constructs" Version="10.4.2" />
+    <PackageReference Include="Amazon.CDK.Lib" Version="2.253.0" />
+    <PackageReference Include="Constructs" Version="10.5.0" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.8.0" />
     <PackageReference Include="System.Net.Http" Version="4.3.4" />
     <PackageReference Include="System.Text.RegularExpressions" Version="4.3.1" />
