@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.7.2](https://github.com/nearlyheadlessarvie/conscia/compare/infra/v1.7.1...infra/v1.7.2) (2026-11-13)
+
+
+### Bug Fixes
+
+* **api:** upgrade services and Lambdas to .NET 10 ([#231](https://github.com/nearlyheadlessarvie/conscia/issues/231)) ([1586b77](https://github.com/nearlyheadlessarvie/conscia/commit/1586b778580125746e836707120ec23bbf1d24e6))
+
 ## [1.7.1](https://github.com/nearlyheadlessarvie/conscia/compare/infra/v1.7.0...infra/v1.7.1) (2026-06-02)
 
 
