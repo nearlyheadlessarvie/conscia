@@ -102,7 +102,7 @@ public class ComputeStack : Stack
         ApiLambda = new Function(this, "ApiLambda", new FunctionProps
         {
             FunctionName = "conscia-api",
-            Runtime = Runtime.DOTNET_8,
+            Runtime = Runtime.DOTNET_10,
             Handler = "Conscia.Api",
             Code = Code.FromAsset(apiAssetPath),
             MemorySize = 1024,
