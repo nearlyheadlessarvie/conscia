@@ -29,7 +29,7 @@ public class RecurringProcessorStack : Stack
         RecurringProcessorLambda = new Function(this, "RecurringProcessorLambda", new FunctionProps
         {
             FunctionName = "conscia-recurring-processor",
-            Runtime = Runtime.DOTNET_8,
+            Runtime = Runtime.DOTNET_10,
             Handler = "Conscia.RecurringProcessor",
             Code = Code.FromAsset(assetPath),
             MemorySize = 512,

@@ -80,8 +80,8 @@ public class UserService : IUserService
             return;
         }
 
-        await _identityDeletion.DeleteUserAsync(user, ct);
         await _dataErasure.EraseUserDataAsync(id, ct);
         await _repo.DeleteAsync(id, ct);
+        await _identityDeletion.DeleteUserAsync(user, ct);
     }
 }

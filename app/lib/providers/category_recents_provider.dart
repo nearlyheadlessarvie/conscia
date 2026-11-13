@@ -33,7 +33,8 @@ class RecentCategoryNotifier extends StateNotifier<List<String>> {
   final SharedPreferences _prefs;
 
   static List<String> _load(SharedPreferences prefs) {
-    return List<String>.from(prefs.getStringList(_recentCategoriesKey) ?? const []);
+    return List<String>.from(
+        prefs.getStringList(_recentCategoriesKey) ?? const []);
   }
 
   void record(String category) {
@@ -46,6 +47,10 @@ class RecentCategoryNotifier extends StateNotifier<List<String>> {
     ].take(_maxRecentCategories).toList();
     _prefs.setStringList(_recentCategoriesKey, state);
   }
+}
+
+Future<void> clearRecentCategories(SharedPreferences prefs) async {
+  await prefs.remove(_recentCategoriesKey);
 }
 
 final recentCategoryProvider =

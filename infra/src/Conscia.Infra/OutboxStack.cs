@@ -35,7 +35,7 @@ public class OutboxStack : Stack
         OutboxLambda = new Function(this, "OutboxLambda", new FunctionProps
         {
             FunctionName = "conscia-outbox-processor",
-            Runtime = Runtime.DOTNET_8,
+            Runtime = Runtime.DOTNET_10,
             Handler = "Conscia.OutboxProcessor",
             Code = Code.FromAsset(assetPath),
             MemorySize = 512,
