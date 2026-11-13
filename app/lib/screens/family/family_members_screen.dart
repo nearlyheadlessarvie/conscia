@@ -375,7 +375,7 @@ class _MemberRowState extends ConsumerState<_MemberRow> {
       context,
       title: 'Transfer ownership?',
       message:
-          '${widget.member.email} will become the Family Space owner. Your access will change to Contributor.',
+          '${widget.member.email} will become the Family Space owner. Your access will change to Contributor. This member must have Premium to host it.',
       confirmLabel: 'Transfer ownership',
       destructive: false,
     );
@@ -589,9 +589,7 @@ class _LeaveFamilySectionState extends ConsumerState<_LeaveFamilySection> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _IconBubble(
-                    icon: widget.isOwner
-                        ? AppIconKey.lock
-                        : AppIconKey.logout,
+                    icon: widget.isOwner ? AppIconKey.lock : AppIconKey.logout,
                     background:
                         widget.isOwner ? colors.navySoft : colors.expenseSoft,
                     foreground:

@@ -234,6 +234,7 @@ public class SubscriptionServiceTests
     [Fact]
     public async Task ProcessAppleServerNotificationAsync_GracePeriodPreservesAccess()
     {
+        var now = DateTime.UtcNow;
         var subscription = new UserSubscription
         {
             Id = Guid.NewGuid(),
@@ -242,7 +243,7 @@ public class SubscriptionServiceTests
             Tier = SubscriptionTier.Premium,
             Status = SubscriptionStatus.Active,
             OriginalTransactionId = "orig-grace",
-            ExpiresAt = new DateTime(2026, 06, 20, 0, 0, 0, DateTimeKind.Utc)
+            ExpiresAt = now.AddDays(7)
         };
         var subscriptions = new Mock<IUserSubscriptionRepository>();
         subscriptions.Setup(r => r.GetByOriginalTransactionIdAsync("orig-grace", It.IsAny<CancellationToken>()))
@@ -258,19 +259,19 @@ public class SubscriptionServiceTests
         await service.ProcessAppleServerNotificationAsync(new AppleServerNotification(
             "DID_FAIL_TO_RENEW",
             "GRACE_PERIOD",
-            DateTime.UtcNow,
+            now,
             new AppleServerNotificationData(
                 "Sandbox",
                 "orig-grace",
                 subscription.ExpiresAt,
                 null,
                 true,
-                new DateTime(2026, 06, 27, 0, 0, 0, DateTimeKind.Utc))),
+                now.AddDays(14))),
             CancellationToken.None);
 
         Assert.Equal(SubscriptionStatus.GracePeriod, subscription.Status);
         Assert.True(subscription.IsActive);
-        Assert.Equal(new DateTime(2026, 06, 27, 0, 0, 0, DateTimeKind.Utc), subscription.ExpiresAt);
+        Assert.Equal(now.AddDays(14), subscription.ExpiresAt);
     }
 
     [Fact]

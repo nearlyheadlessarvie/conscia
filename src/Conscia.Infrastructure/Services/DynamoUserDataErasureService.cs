@@ -57,7 +57,10 @@ public sealed class DynamoUserDataErasureService : DynamoRepository, IUserDataEr
             }
         }
 
-        await QueueControlPlaneUserOwnedDeletesAsync(userId, deletes, queuedKeys, s3Keys, ct);
+        var ownedFamilySpaceIds = await QueueControlPlaneUserOwnedDeletesAsync(userId, deletes, queuedKeys, s3Keys, ct);
+        foreach (var familySpaceId in ownedFamilySpaceIds)
+            await QueueOwnedFamilySpaceDeletesAsync(familySpaceId, deletes, queuedKeys, s3Keys, ct);
+
         await FlushDeletesAsync(deletes, ct);
 
         await DeleteS3PrefixAsync($"profile-pictures/{userId}/", ct);
@@ -94,7 +97,7 @@ public sealed class DynamoUserDataErasureService : DynamoRepository, IUserDataEr
         return items;
     }
 
-    private async Task QueueControlPlaneUserOwnedDeletesAsync(
+    private async Task<IReadOnlyCollection<Guid>> QueueControlPlaneUserOwnedDeletesAsync(
         Guid userId,
         Dictionary<string, List<WriteRequest>> deletes,
         HashSet<string> queuedKeys,
@@ -102,6 +105,7 @@ public sealed class DynamoUserDataErasureService : DynamoRepository, IUserDataEr
         CancellationToken ct)
     {
         var userIdValue = userId.ToString();
+        var ownedFamilySpaceIds = new HashSet<Guid>();
         Dictionary<string, AttributeValue>? lastEvaluatedKey = null;
 
         do
@@ -109,7 +113,7 @@ public sealed class DynamoUserDataErasureService : DynamoRepository, IUserDataEr
             var response = await Dynamo.ScanAsync(new ScanRequest
             {
                 TableName = ControlPlaneTable,
-                FilterExpression = "UserId = :userId OR InvitedByUserId = :userId",
+                FilterExpression = "UserId = :userId OR InvitedByUserId = :userId OR CreatedByUserId = :userId",
                 ExpressionAttributeValues = new Dictionary<string, AttributeValue>
                 {
                     [":userId"] = new(userIdValue)
@@ -118,17 +122,137 @@ public sealed class DynamoUserDataErasureService : DynamoRepository, IUserDataEr
             }, ct);
 
             foreach (var item in Items(response))
-                QueueControlPlaneDeletes(userId, item, deletes, queuedKeys, s3Keys);
+            {
+                QueueControlPlaneDeletes(item, deletes, queuedKeys, s3Keys);
+
+                if (item.TryGetValue("EntityType", out var type)
+                    && type.S == "FamilySpace"
+                    && item.TryGetValue("Id", out var id)
+                    && Guid.TryParse(id.S, out var familySpaceId))
+                {
+                    ownedFamilySpaceIds.Add(familySpaceId);
+                }
+            }
 
             lastEvaluatedKey = response.LastEvaluatedKey;
         }
         while (lastEvaluatedKey is { Count: > 0 });
 
         QueueDelete(deletes, queuedKeys, ControlPlaneTable, $"MEMBER_USER#{userId}", "MEMBERSHIP");
+        return ownedFamilySpaceIds;
+    }
+
+    private async Task QueueOwnedFamilySpaceDeletesAsync(
+        Guid familySpaceId,
+        Dictionary<string, List<WriteRequest>> deletes,
+        HashSet<string> queuedKeys,
+        HashSet<string> s3Keys,
+        CancellationToken ct)
+    {
+        await QueueFamilySpacePartitionDeletesAsync(familySpaceId, deletes, queuedKeys, s3Keys, ct);
+        await QueueFamilySpaceControlPlaneReferenceDeletesAsync(familySpaceId, deletes, queuedKeys, s3Keys, ct);
+
+        foreach (var tableName in UserPartitionTables)
+            await QueueFamilySpaceTableDeletesAsync(tableName, familySpaceId, deletes, queuedKeys, ct);
+    }
+
+    private async Task QueueFamilySpacePartitionDeletesAsync(
+        Guid familySpaceId,
+        Dictionary<string, List<WriteRequest>> deletes,
+        HashSet<string> queuedKeys,
+        HashSet<string> s3Keys,
+        CancellationToken ct)
+    {
+        Dictionary<string, AttributeValue>? lastEvaluatedKey = null;
+
+        do
+        {
+            var response = await Dynamo.QueryAsync(new QueryRequest
+            {
+                TableName = ControlPlaneTable,
+                KeyConditionExpression = "PK = :pk",
+                ExpressionAttributeValues = new Dictionary<string, AttributeValue>
+                {
+                    [":pk"] = new(FamilySpaceRepository.FamilyPk(familySpaceId))
+                },
+                ExclusiveStartKey = lastEvaluatedKey
+            }, ct);
+
+            foreach (var item in Items(response))
+                QueueControlPlaneDeletes(item, deletes, queuedKeys, s3Keys);
+
+            lastEvaluatedKey = response.LastEvaluatedKey;
+        }
+        while (lastEvaluatedKey is { Count: > 0 });
+    }
+
+    private async Task QueueFamilySpaceControlPlaneReferenceDeletesAsync(
+        Guid familySpaceId,
+        Dictionary<string, List<WriteRequest>> deletes,
+        HashSet<string> queuedKeys,
+        HashSet<string> s3Keys,
+        CancellationToken ct)
+    {
+        Dictionary<string, AttributeValue>? lastEvaluatedKey = null;
+
+        do
+        {
+            var response = await Dynamo.ScanAsync(new ScanRequest
+            {
+                TableName = ControlPlaneTable,
+                FilterExpression = "FamilySpaceId = :familySpaceId OR GSI2PK = :familyPk",
+                ExpressionAttributeValues = new Dictionary<string, AttributeValue>
+                {
+                    [":familySpaceId"] = new(familySpaceId.ToString()),
+                    [":familyPk"] = new(FamilySpaceRepository.FamilyPk(familySpaceId))
+                },
+                ExclusiveStartKey = lastEvaluatedKey
+            }, ct);
+
+            foreach (var item in Items(response))
+                QueueControlPlaneDeletes(item, deletes, queuedKeys, s3Keys);
+
+            lastEvaluatedKey = response.LastEvaluatedKey;
+        }
+        while (lastEvaluatedKey is { Count: > 0 });
+    }
+
+    private async Task QueueFamilySpaceTableDeletesAsync(
+        string tableName,
+        Guid familySpaceId,
+        Dictionary<string, List<WriteRequest>> deletes,
+        HashSet<string> queuedKeys,
+        CancellationToken ct)
+    {
+        Dictionary<string, AttributeValue>? lastEvaluatedKey = null;
+
+        do
+        {
+            var response = await Dynamo.ScanAsync(new ScanRequest
+            {
+                TableName = tableName,
+                FilterExpression = "FamilySpaceId = :familySpaceId",
+                ExpressionAttributeValues = new Dictionary<string, AttributeValue>
+                {
+                    [":familySpaceId"] = new(familySpaceId.ToString())
+                },
+                ExclusiveStartKey = lastEvaluatedKey
+            }, ct);
+
+            foreach (var item in Items(response))
+            {
+                QueueDelete(deletes, queuedKeys, tableName, item);
+
+                if (tableName == "Transactions")
+                    QueueRecurringOccurrenceSentinelDelete(deletes, queuedKeys, item);
+            }
+
+            lastEvaluatedKey = response.LastEvaluatedKey;
+        }
+        while (lastEvaluatedKey is { Count: > 0 });
     }
 
     private static void QueueControlPlaneDeletes(
-        Guid userId,
         Dictionary<string, AttributeValue> item,
         Dictionary<string, List<WriteRequest>> deletes,
         HashSet<string> queuedKeys,
@@ -150,7 +274,8 @@ public sealed class DynamoUserDataErasureService : DynamoRepository, IUserDataEr
                     s3Keys.Add(s3Key.S);
                 break;
             case "FamilyMember":
-                QueueDelete(deletes, queuedKeys, ControlPlaneTable, $"MEMBER_USER#{userId}", "MEMBERSHIP");
+                if (item.TryGetValue("UserId", out var memberUserId) && Guid.TryParse(memberUserId.S, out var parsedMemberUserId))
+                    QueueDelete(deletes, queuedKeys, ControlPlaneTable, $"MEMBER_USER#{parsedMemberUserId}", "MEMBERSHIP");
                 break;
             case "UserSubscription":
                 if (item.TryGetValue("OriginalTransactionId", out var originalTransactionId))
@@ -274,19 +399,7 @@ public sealed class DynamoUserDataErasureService : DynamoRepository, IUserDataEr
 
     private async Task FlushDeletesAsync(Dictionary<string, List<WriteRequest>> deletes, CancellationToken ct)
     {
-        foreach (var (tableName, requests) in deletes)
-        {
-            foreach (var batch in requests.Chunk(25))
-            {
-                await Dynamo.BatchWriteItemAsync(new BatchWriteItemRequest
-                {
-                    RequestItems = new Dictionary<string, List<WriteRequest>>
-                    {
-                        [tableName] = batch.ToList()
-                    }
-                }, ct);
-            }
-        }
+        await BatchWriteAllAsync(deletes, ct);
     }
 
     private async Task DeleteS3PrefixAsync(string prefix, CancellationToken ct)

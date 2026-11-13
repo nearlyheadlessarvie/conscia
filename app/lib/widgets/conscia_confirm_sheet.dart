@@ -57,7 +57,7 @@ class ConsciaConfirmSheet extends StatelessWidget {
         messageLines.length > 1 ? messageLines.skip(1).join('\n') : null;
 
     return SafeArea(
-      child: Padding(
+      child: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
         child: Column(
           mainAxisSize: MainAxisSize.min,

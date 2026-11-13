@@ -28,7 +28,7 @@ public class PatternAggregatorStack : Stack
         var lambda = new Function(this, "PatternAggregatorLambda", new FunctionProps
         {
             FunctionName = "conscia-pattern-aggregator",
-            Runtime = Runtime.DOTNET_8,
+            Runtime = Runtime.DOTNET_10,
             Handler = "Conscia.PatternAggregator",
             Code = Code.FromAsset(assetPath),
             MemorySize = 512,

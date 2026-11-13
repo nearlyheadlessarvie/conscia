@@ -182,6 +182,192 @@ public class DynamoUserDataErasureServiceTests
             Times.Never);
     }
 
+    [Fact]
+    public async Task EraseUserDataAsync_RetriesUnprocessedBatchWriteItems()
+    {
+        var userId = Guid.NewGuid();
+        var transactionId = Guid.NewGuid();
+        var date = new DateTime(2026, 6, 3, 0, 0, 0, DateTimeKind.Utc);
+
+        var dynamoMock = new Mock<IAmazonDynamoDB>();
+        var batchWrites = new List<BatchWriteItemRequest>();
+
+        dynamoMock
+            .Setup(d => d.QueryAsync(It.IsAny<QueryRequest>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((QueryRequest request, CancellationToken _) =>
+                request.TableName == "Transactions"
+                    ? new QueryResponse
+                    {
+                        Items =
+                        [
+                            new Dictionary<string, AttributeValue>
+                            {
+                                ["PK"] = new($"USER#{userId}"),
+                                ["SK"] = new($"DATE#{date:O}#TX#{transactionId}")
+                            }
+                        ]
+                    }
+                    : new QueryResponse { Items = [] });
+
+        dynamoMock
+            .Setup(d => d.ScanAsync(It.IsAny<ScanRequest>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ScanResponse { Items = [] });
+
+        dynamoMock
+            .Setup(d => d.BatchWriteItemAsync(It.IsAny<BatchWriteItemRequest>(), It.IsAny<CancellationToken>()))
+            .Callback<BatchWriteItemRequest, CancellationToken>((request, _) => batchWrites.Add(request))
+            .ReturnsAsync((BatchWriteItemRequest request, CancellationToken _) =>
+                batchWrites.Count == 1
+                    ? new BatchWriteItemResponse { UnprocessedItems = request.RequestItems }
+                    : new BatchWriteItemResponse());
+
+        var s3Mock = EmptyS3Mock();
+        var service = new DynamoUserDataErasureService(
+            dynamoMock.Object,
+            s3Mock.Object,
+            new ConfigurationBuilder().Build());
+
+        await service.EraseUserDataAsync(userId);
+
+        Assert.Equal(2, batchWrites.Count(request => request.RequestItems.ContainsKey("Transactions")));
+        AssertDeleteQueued(batchWrites, "Transactions", $"USER#{userId}", $"DATE#{date:O}#TX#{transactionId}");
+    }
+
+    [Fact]
+    public async Task EraseUserDataAsync_DeletesOwnedFamilySpaceAndSharedRecords()
+    {
+        var ownerId = Guid.NewGuid();
+        var memberId = Guid.NewGuid();
+        var memberUserId = Guid.NewGuid();
+        var familySpaceId = Guid.NewGuid();
+        var budgetId = Guid.NewGuid();
+        var transactionId = Guid.NewGuid();
+        var transactionDate = new DateTime(2026, 6, 3, 0, 0, 0, DateTimeKind.Utc);
+
+        var dynamoMock = new Mock<IAmazonDynamoDB>();
+        var batchWrites = new List<BatchWriteItemRequest>();
+
+        dynamoMock
+            .Setup(d => d.QueryAsync(It.IsAny<QueryRequest>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((QueryRequest request, CancellationToken _) =>
+            {
+                var pk = request.ExpressionAttributeValues.TryGetValue(":pk", out var value)
+                    ? value.S
+                    : null;
+
+                if (request.TableName == "ControlPlane" && pk == $"FAMILY#{familySpaceId}")
+                {
+                    return new QueryResponse
+                    {
+                        Items =
+                        [
+                            new Dictionary<string, AttributeValue>
+                            {
+                                ["PK"] = new($"FAMILY#{familySpaceId}"),
+                                ["SK"] = new("PROFILE"),
+                                ["EntityType"] = new("FamilySpace"),
+                                ["Id"] = new(familySpaceId.ToString()),
+                                ["CreatedByUserId"] = new(ownerId.ToString())
+                            },
+                            new Dictionary<string, AttributeValue>
+                            {
+                                ["PK"] = new($"FAMILY#{familySpaceId}"),
+                                ["SK"] = new($"MEMBER#2026-01-01T00:00:00.0000000Z#{memberId}"),
+                                ["EntityType"] = new("FamilyMember"),
+                                ["Id"] = new(memberId.ToString()),
+                                ["FamilySpaceId"] = new(familySpaceId.ToString()),
+                                ["UserId"] = new(memberUserId.ToString())
+                            }
+                        ]
+                    };
+                }
+
+                return new QueryResponse { Items = [] };
+            });
+
+        dynamoMock
+            .Setup(d => d.ScanAsync(It.IsAny<ScanRequest>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((ScanRequest request, CancellationToken _) =>
+            {
+                if (request.TableName == "ControlPlane" &&
+                    request.FilterExpression.Contains("CreatedByUserId", StringComparison.Ordinal))
+                {
+                    return new ScanResponse
+                    {
+                        Items =
+                        [
+                            new Dictionary<string, AttributeValue>
+                            {
+                                ["PK"] = new($"FAMILY#{familySpaceId}"),
+                                ["SK"] = new("PROFILE"),
+                                ["EntityType"] = new("FamilySpace"),
+                                ["Id"] = new(familySpaceId.ToString()),
+                                ["CreatedByUserId"] = new(ownerId.ToString())
+                            }
+                        ]
+                    };
+                }
+
+                if (request.TableName == "ControlPlane" &&
+                    request.FilterExpression.Contains("FamilySpaceId", StringComparison.Ordinal))
+                {
+                    return new ScanResponse
+                    {
+                        Items =
+                        [
+                            new Dictionary<string, AttributeValue>
+                            {
+                                ["PK"] = new($"BUDGET#{budgetId}"),
+                                ["SK"] = new("PROFILE"),
+                                ["EntityType"] = new("Budget"),
+                                ["UserId"] = new(memberUserId.ToString()),
+                                ["Scope"] = new("Family"),
+                                ["FamilySpaceId"] = new(familySpaceId.ToString()),
+                                ["Category"] = new("Groceries")
+                            }
+                        ]
+                    };
+                }
+
+                if (request.TableName == "Transactions" &&
+                    request.FilterExpression.Contains("FamilySpaceId", StringComparison.Ordinal))
+                {
+                    return new ScanResponse
+                    {
+                        Items =
+                        [
+                            new Dictionary<string, AttributeValue>
+                            {
+                                ["PK"] = new($"USER#{memberUserId}"),
+                                ["SK"] = new($"DATE#{transactionDate:O}#TX#{transactionId}"),
+                                ["FamilySpaceId"] = new(familySpaceId.ToString())
+                            }
+                        ]
+                    };
+                }
+
+                return new ScanResponse { Items = [] };
+            });
+
+        dynamoMock
+            .Setup(d => d.BatchWriteItemAsync(It.IsAny<BatchWriteItemRequest>(), It.IsAny<CancellationToken>()))
+            .Callback<BatchWriteItemRequest, CancellationToken>((request, _) => batchWrites.Add(request))
+            .ReturnsAsync(new BatchWriteItemResponse());
+
+        var service = new DynamoUserDataErasureService(
+            dynamoMock.Object,
+            EmptyS3Mock().Object,
+            new ConfigurationBuilder().Build());
+
+        await service.EraseUserDataAsync(ownerId);
+
+        AssertDeleteQueued(batchWrites, "ControlPlane", $"FAMILY#{familySpaceId}", "PROFILE");
+        AssertDeleteQueued(batchWrites, "ControlPlane", $"MEMBER_USER#{memberUserId}", "MEMBERSHIP");
+        AssertDeleteQueued(batchWrites, "ControlPlane", $"BUDGET#{budgetId}", "PROFILE");
+        AssertDeleteQueued(batchWrites, "ControlPlane", $"BUDGET_UNIQUE#Family#{familySpaceId}#groceries", "BUDGET");
+        AssertDeleteQueued(batchWrites, "Transactions", $"USER#{memberUserId}", $"DATE#{transactionDate:O}#TX#{transactionId}");
+    }
+
     private static void AssertDeleteQueued(
         IEnumerable<BatchWriteItemRequest> batchWrites,
         string tableName,
@@ -193,5 +379,17 @@ public class DynamoUserDataErasureServiceTests
             writes.Any(write =>
                 write.DeleteRequest?.Key["PK"].S == pk &&
                 write.DeleteRequest.Key["SK"].S == sk));
+    }
+
+    private static Mock<IAmazonS3> EmptyS3Mock()
+    {
+        var s3Mock = new Mock<IAmazonS3>();
+        s3Mock
+            .Setup(s => s.ListObjectsV2Async(It.IsAny<ListObjectsV2Request>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ListObjectsV2Response());
+        s3Mock
+            .Setup(s => s.DeleteObjectsAsync(It.IsAny<DeleteObjectsRequest>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new DeleteObjectsResponse());
+        return s3Mock;
     }
 }
