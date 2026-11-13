@@ -507,9 +507,8 @@ public class StackTests
         template.ResourceCountIs("AWS::EC2::SecurityGroup", 0);
         AssertIamPoliciesContainActions(
             template,
-            "cognito-idp:AdminCreateUser",
-            "cognito-idp:AdminDeleteUser",
-            "cognito-idp:AdminSetUserPassword");
+            "dynamodb:BatchGetItem",
+            "dynamodb:BatchWriteItem");
         template.HasResourceProperties("AWS::Lambda::Function", new Dictionary<string, object>
         {
             ["Runtime"] = "dotnet10",
